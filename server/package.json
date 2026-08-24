@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "cross-env PORT=3000 tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -30,6 +30,7 @@
   "devDependencies": {
     "@types/node": "^22.10.7",
     "@types/pg": "^8.11.11",
+    "cross-env": "^10.1.0",
     "drizzle-kit": "^0.30.2",
     "rimraf": "^6.0.1",
     "tsx": "^4.19.2",
