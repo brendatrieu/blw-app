@@ -14,6 +14,10 @@ import { registerBabyRoutes } from "./routes/babies.js";
 import { registerServeLogRoutes } from "./routes/serve-logs.js";
 import { registerFavoriteRoutes } from "./routes/favorites.js";
 import { registerPantryRoutes } from "./routes/pantry.js";
+import { registerAiKeyRoutes } from "./routes/ai-keys.js";
+import { registerSymptomRoutes, type SymptomRoutesOptions } from "./routes/symptom.js";
+import { registerChatRoutes, type ChatRoutesOptions } from "./routes/chat.js";
+import type { ApiKeyVerifier } from "./ai/client.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDistDir = path.resolve(__dirname, "../../client/dist");
@@ -26,6 +30,16 @@ export interface BuildAppOptions {
   // Lets tests silence the dev email logger (verification links are printed
   // to the log when RESEND_API_KEY is unset).
   authLogger?: AuthLogger;
+  // Lets tests exercise AI-key validation without a live Anthropic round
+  // trip. Production leaves this unset and the real verifier is used.
+  verifyApiKey?: ApiKeyVerifier;
+  // Lets tests inject a fake Anthropic client factory / analyzer so the
+  // symptom checker's branches can be driven without the network — and so a
+  // test can assert the red-flag path made zero SDK calls.
+  symptom?: SymptomRoutesOptions;
+  // Lets tests drive the chat tool-runner loop without a live Anthropic
+  // round trip, and assert exactly what was sent to it.
+  chat?: ChatRoutesOptions;
 }
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
@@ -50,11 +64,18 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       return { status: "ok" };
     });
 
+    // Must come before any /api/ai/* route: it installs the shared per-user
+    // AI budget through an onRoute hook, which only sees routes declared
+    // after it.
+    registerAiKeyRoutes(app, db, { env, verifyApiKey: options.verifyApiKey }); // BYO Anthropic key
+
     registerCatalogRoutes(app, db); // catalog routes
     registerBabyRoutes(app, db); // baby profiles CRUD
     registerServeLogRoutes(app, db); // serve logs + allergen progress
     registerFavoriteRoutes(app, db); // recipe favorites
     registerPantryRoutes(app, db); // pantry items + expiry tracking
+    registerSymptomRoutes(app, db, options.symptom); // triage + symptom checker
+    registerChatRoutes(app, db, options.chat); // recipe assistant + ask-anything BLW chat
   });
 
   const clientBuildExists = fs.existsSync(path.join(clientDistDir, "index.html"));

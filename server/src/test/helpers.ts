@@ -4,7 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import type { FastifyInstance } from "fastify";
-import { buildApp } from "../app.js";
+import { buildApp, type BuildAppOptions } from "../app.js";
 import type { AuthLogger } from "../auth.js";
 import type { Env } from "../config.js";
 import type { Database } from "../db/index.js";
@@ -35,8 +35,11 @@ export function testEnv(overrides: Partial<Env> = {}): Env {
     GOOGLE_CLIENT_SECRET: undefined,
     RESEND_API_KEY: undefined,
     EMAIL_FROM: "test@example.com",
+    KEY_ENCRYPTION_SECRET: "test-key-encryption-secret-0123456789-abcdef",
     AUTH_RATE_LIMIT_MAX: 10,
     GLOBAL_RATE_LIMIT_MAX: 300,
+    AI_RATE_LIMIT_MAX: 20,
+    AI_KEY_RATE_LIMIT_MAX: 5,
     ...overrides,
   };
 }
@@ -60,9 +63,12 @@ export async function createTestDb(): Promise<{ db: Database; close: () => Promi
  */
 export async function createTestApp(
   envOverrides: Partial<Env> = {},
+  // Passthrough for buildApp's other injection points (currently the AI key
+  // verifier, so key-validation tests never touch the network).
+  appOverrides: Omit<BuildAppOptions, "env" | "db" | "authLogger"> = {},
 ): Promise<{ app: FastifyInstance; db: Database; close: () => Promise<void> }> {
   const { db, close } = await createTestDb();
-  const app = buildApp({ env: testEnv(envOverrides), db, authLogger: silentLogger });
+  const app = buildApp({ ...appOverrides, env: testEnv(envOverrides), db, authLogger: silentLogger });
   await app.ready();
   return {
     app,

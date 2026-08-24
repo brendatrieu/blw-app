@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { Baby } from "@blw/shared";
-import { ageInMonths } from "@blw/shared";
+import { ANTHROPIC_CONSOLE_URL, ageInMonths, maskAiKey } from "@blw/shared";
+import { useAiKeyStatus, useDeleteAiKey, useSaveAiKey } from "../features/ai/hooks.js";
 import { useBabies, useCreateBaby, useDeleteBaby, useUpdateBaby } from "../features/babies/hooks.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useSession } from "../lib/auth.js";
@@ -305,6 +306,194 @@ function BabiesSection() {
   );
 }
 
+/**
+ * The server answers with machine codes; parents get sentences. Anything
+ * unrecognised falls through to the raw code rather than a wrong guess.
+ */
+function aiKeyErrorMessage(code: string): string {
+  switch (code) {
+    case "invalid_key":
+      return "That key was not accepted. Check you copied the whole key from the Anthropic console — it starts with sk-ant- — and that it has not been revoked.";
+    case "validation_unavailable":
+      return "Could not reach Anthropic to check the key just now. Nothing was saved — please try again in a moment.";
+    case "rate_limited":
+      return "Too many attempts. Wait an hour before trying another key.";
+    case "unauthorized":
+      return "Your session expired. Sign in again and retry.";
+    default:
+      return code;
+  }
+}
+
+function formatValidatedAt(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function AiSection() {
+  const status = useAiKeyStatus();
+  const saveKey = useSaveAiKey();
+  const removeKey = useDeleteAiKey();
+
+  const [apiKey, setApiKey] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const configured = status.data?.configured === true;
+  const validatedAt = formatValidatedAt(status.data?.lastValidatedAt);
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setSaved(false);
+    saveKey.mutate(apiKey.trim(), {
+      onSuccess: () => {
+        // Drop the plaintext from component state the moment it is stored.
+        setApiKey("");
+        setSaved(true);
+      },
+      onError: (mutationError) => {
+        setError(aiKeyErrorMessage(mutationError.message));
+      },
+    });
+  }
+
+  function handleRemove() {
+    const confirmed = window.confirm(
+      "Remove your Anthropic key? AI features switch off; everything else keeps working.",
+    );
+    if (!confirmed) return;
+    setError(null);
+    setSaved(false);
+    removeKey.mutate(undefined, {
+      onError: (mutationError) => {
+        setError(aiKeyErrorMessage(mutationError.message));
+      },
+    });
+  }
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>
+        AI features (optional)
+      </h2>
+
+      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+        A few extras — the symptom helper and the recipe and weaning chats — run on Anthropic&apos;s
+        Claude. They use <strong>your own</strong> Anthropic API key, so the usage is billed to you
+        and nothing goes through a shared account. Everything else in this app works fully without
+        a key.
+      </p>
+
+      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+        Your key is encrypted before it is stored, is never shown again, and is deleted with your
+        account. What we send Claude is limited to your baby&apos;s age in months, food names,
+        symptoms and pantry items — never their name, your email, or any account id.{" "}
+        <a
+          href={ANTHROPIC_CONSOLE_URL}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="underline"
+          style={{ color: "var(--color-primary)" }}
+        >
+          Get a key from the Anthropic console
+        </a>
+        .
+      </p>
+
+      {status.isPending ? (
+        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+          Loading…
+        </p>
+      ) : null}
+
+      {status.isError ? (
+        <p role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
+          Could not check whether a key is set up. {status.error.message}
+        </p>
+      ) : null}
+
+      {configured ? (
+        <div
+          className="flex flex-col gap-2 rounded-xl border p-3"
+          style={{ borderColor: "var(--color-border)" }}
+        >
+          <span className="font-medium" style={{ color: "var(--color-text)" }}>
+            Key on file: {maskAiKey(status.data?.last4 ?? "")}
+          </span>
+          <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+            {validatedAt ? `Checked with Anthropic on ${validatedAt}` : "Not yet checked"}
+          </span>
+          <button
+            type="button"
+            disabled={removeKey.isPending}
+            onClick={handleRemove}
+            className="self-start rounded-lg border px-3 py-1.5 text-sm disabled:opacity-60"
+            style={{ borderColor: "var(--color-border)", color: "var(--color-danger)" }}
+          >
+            {removeKey.isPending ? "Removing…" : "Remove key"}
+          </button>
+        </div>
+      ) : null}
+
+      <form
+        className="flex flex-col gap-3 rounded-xl border p-3"
+        style={{ borderColor: "var(--color-border)" }}
+        onSubmit={handleSubmit}
+      >
+        <h3 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
+          {configured ? "Replace key" : "Add your key"}
+        </h3>
+
+        <label className="flex flex-col gap-1 text-sm" style={{ color: "var(--color-text)" }}>
+          Anthropic API key
+          <input
+            type="password"
+            required
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            name="anthropic-api-key"
+            placeholder="sk-ant-…"
+            className={fieldClass}
+            style={fieldStyle}
+            value={apiKey}
+            onChange={(event) => {
+              setApiKey(event.target.value);
+              setError(null);
+              setSaved(false);
+            }}
+          />
+        </label>
+
+        {error ? (
+          <p role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
+            {error}
+          </p>
+        ) : null}
+
+        {saved ? (
+          <p role="status" className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+            Key checked with Anthropic and saved. AI features are on.
+          </p>
+        ) : null}
+
+        <button
+          type="submit"
+          disabled={saveKey.isPending || apiKey.trim().length === 0}
+          className="self-start rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
+          style={{ backgroundColor: "var(--color-primary)", color: "var(--color-primary-contrast)" }}
+        >
+          {saveKey.isPending ? "Checking key…" : "Save key"}
+        </button>
+      </form>
+    </section>
+  );
+}
+
 function AccountSection() {
   const { data: session } = useSession();
 
@@ -351,6 +540,7 @@ export function SettingsPage() {
         Settings
       </h1>
       <BabiesSection />
+      <AiSection />
       <AccountSection />
     </div>
   );

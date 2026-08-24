@@ -7,6 +7,13 @@ import { z } from "zod";
  */
 const DEV_AUTH_SECRET = "dev-only-insecure-secret-set-BETTER_AUTH_SECRET-in-prod";
 
+/**
+ * Development-only fallback for the key-encryption secret. Same deal as
+ * DEV_AUTH_SECRET: production refuses to boot without a real
+ * KEY_ENCRYPTION_SECRET, so this can never protect a real user's API key.
+ */
+const DEV_KEY_ENCRYPTION_SECRET = "dev-only-insecure-set-KEY_ENCRYPTION_SECRET-in-prod";
+
 /** Treats an unset variable and an empty one as the same thing. */
 const optionalNonEmpty = z
   .string()
@@ -50,9 +57,22 @@ const baseEnvSchema = z.object({
     (value) => value ?? "Baby-Led Weaning <onboarding@resend.dev>",
   ),
 
+  // --- AI (bring-your-own key) -----------------------------------------
+  /**
+   * Master secret the per-user Anthropic API keys are encrypted with
+   * (AES-256-GCM, key derived via scrypt). Required in production; rotating
+   * it makes every stored key undecryptable, so users would have to re-enter
+   * theirs.
+   */
+  KEY_ENCRYPTION_SECRET: optionalNonEmpty,
+
   // --- rate limiting ----------------------------------------------------
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   GLOBAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+  /** Per-user hourly budget for `/api/ai/*` — protects the user's own bill. */
+  AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+  /** Per-user hourly budget for `PUT /api/account/ai-key` (live validation). */
+  AI_KEY_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
 });
 
 const envSchema = baseEnvSchema
@@ -71,6 +91,20 @@ const envSchema = baseEnvSchema
         message: "BETTER_AUTH_SECRET must be at least 32 characters",
       });
     }
+    if (value.NODE_ENV === "production" && !value.KEY_ENCRYPTION_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["KEY_ENCRYPTION_SECRET"],
+        message: "KEY_ENCRYPTION_SECRET is required when NODE_ENV=production",
+      });
+    }
+    if (value.KEY_ENCRYPTION_SECRET && value.KEY_ENCRYPTION_SECRET.length < 32) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["KEY_ENCRYPTION_SECRET"],
+        message: "KEY_ENCRYPTION_SECRET must be at least 32 characters",
+      });
+    }
     // A half-configured OAuth provider fails at redirect time with an opaque
     // Google error, so refuse to start instead.
     const hasId = Boolean(value.GOOGLE_CLIENT_ID);
@@ -86,6 +120,7 @@ const envSchema = baseEnvSchema
   .transform((value) => ({
     ...value,
     BETTER_AUTH_SECRET: value.BETTER_AUTH_SECRET ?? DEV_AUTH_SECRET,
+    KEY_ENCRYPTION_SECRET: value.KEY_ENCRYPTION_SECRET ?? DEV_KEY_ENCRYPTION_SECRET,
   }));
 
 export type Env = z.infer<typeof envSchema>;

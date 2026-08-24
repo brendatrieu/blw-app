@@ -17,5 +17,16 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Plain Node scripts (no tsx/ts-node, run with `node`) — everything else
+    // in the repo is TypeScript, where typescript-eslint's recommended
+    // config already turns off `no-undef` in favor of TS's own checking, so
+    // this override only needs to cover the runtime globals a `.mjs` script
+    // actually touches.
+    files: ["**/*.mjs"],
+    languageOptions: {
+      globals: { console: "readonly", process: "readonly" },
+    },
+  },
   eslintConfigPrettier,
 );

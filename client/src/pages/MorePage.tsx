@@ -19,13 +19,11 @@ const moreLinks: MoreLink[] = [
     to: "/symptom-check",
     label: "Symptom Check",
     description: "Pattern-spotting after a reaction, not a diagnosis.",
-    badge: "Coming soon",
   },
   {
     to: "/chat",
     label: "Chat",
-    description: "Ask anything about baby-led weaning.",
-    badge: "Coming soon",
+    description: "Recipe help and ask-anything BLW questions.",
   },
   { to: "/settings", label: "Settings", description: "Babies, account, and app preferences." },
 ];

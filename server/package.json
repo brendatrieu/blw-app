@@ -13,9 +13,11 @@
     "clean": "rimraf dist",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
-    "db:seed": "pnpm run db:migrate && tsx db/seeds/index.ts"
+    "db:seed": "pnpm run db:migrate && tsx db/seeds/index.ts",
+    "prebuild:corpus": "node scripts/build-safety-corpus.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.72.0",
     "@blw/shared": "workspace:*",
     "@electric-sql/pglite": "^0.2.17",
     "@fastify/cookie": "^11.0.2",
