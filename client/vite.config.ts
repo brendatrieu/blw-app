@@ -108,7 +108,12 @@ export default defineConfig({
     }),
   ],
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
+    // The persisted react-query cache buster (see src/main.tsx): the
+    // deploy commit SHA when available (set via Dockerfile ARG/ENV from
+    // the GitHub Actions build-args), so it actually changes across
+    // deploys. Falls back to the package version for local/dev builds,
+    // where it previously always resolved anyway.
+    __APP_VERSION__: JSON.stringify(process.env.GITHUB_SHA?.slice(0, 12) || `${pkg.version}-dev`),
   },
   server: {
     fs: {

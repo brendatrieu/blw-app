@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Baby } from "@blw/shared";
 import { ACCOUNT_DELETE_CONFIRMATION, ANTHROPIC_CONSOLE_URL, ageInMonths, maskAiKey } from "@blw/shared";
 import { useDeleteAccount, useExportAccount } from "../features/account/hooks.js";
 import { useAiKeyStatus, useDeleteAiKey, useSaveAiKey } from "../features/ai/hooks.js";
 import { useBabies, useCreateBaby, useDeleteBaby, useUpdateBaby } from "../features/babies/hooks.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { signOut, useSession } from "../lib/auth.js";
+import { useSession } from "../lib/auth.js";
+import { createSignOutDeps, performSignOut } from "../lib/signout.js";
 
 const fieldClass = "w-full rounded-lg border px-3 py-2 text-base";
 const fieldStyle = {
@@ -520,6 +522,7 @@ function accountErrorMessage(code: string): string {
 function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
   const deleteAccount = useDeleteAccount();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [phrase, setPhrase] = useState("");
   const [password, setPassword] = useState("");
@@ -538,7 +541,7 @@ function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
         // routes do not briefly believe the user is still signed in.
         setPassword("");
         try {
-          await signOut();
+          await performSignOut(createSignOutDeps(queryClient));
         } catch {
           // The account is gone either way — never block the redirect on it.
         }

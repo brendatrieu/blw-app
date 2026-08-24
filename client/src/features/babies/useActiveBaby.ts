@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import type { Baby } from "@blw/shared";
 import { useBabies } from "./hooks.js";
 
-const STORAGE_KEY = "blw.activeBabyId";
+// Exported so sign-out/account-deletion cleanup paths can purge the same key
+// without duplicating the literal.
+export const ACTIVE_BABY_STORAGE_KEY = "blw.activeBabyId";
+const STORAGE_KEY = ACTIVE_BABY_STORAGE_KEY;
 
 /** Broadcasts a change to every hook instance in this tab. */
 const listeners = new Set<(id: string | null) => void>();

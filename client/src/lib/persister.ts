@@ -22,3 +22,12 @@ export function createIdbPersister(): Persister {
     },
   };
 }
+
+/**
+ * Deletes the persisted react-query cache from IndexedDB directly, without
+ * going through a `Persister` instance. Used by sign-out and account
+ * deletion so a shared device never rehydrates the previous account's data.
+ */
+export async function clearPersistedQueryCache(): Promise<void> {
+  await del(IDB_KEY);
+}

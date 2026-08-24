@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { signOut, useSession } from "../lib/auth.js";
+import { useSession } from "../lib/auth.js";
+import { createSignOutDeps, performSignOut } from "../lib/signout.js";
 import { BottomNav } from "./BottomNav.js";
 
 function BabySwitcher() {
@@ -52,6 +54,7 @@ function BabySwitcher() {
 function UserMenu() {
   const { data: session } = useSession();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -59,7 +62,7 @@ function UserMenu() {
 
   async function handleSignOut() {
     setSigningOut(true);
-    await signOut();
+    await performSignOut(createSignOutDeps(queryClient));
     setOpen(false);
     setSigningOut(false);
     void navigate("/login", { replace: true });

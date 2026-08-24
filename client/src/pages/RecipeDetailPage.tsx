@@ -5,6 +5,7 @@ import type { AgeStage } from "@blw/shared";
 import { ageInMonths } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useRecipe } from "../features/catalog/hooks.js";
+import { stageForAge } from "../features/catalog/stage.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { allergenLabel } from "../features/catalog/constants.js";
 import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
@@ -115,13 +116,6 @@ function PrepThis({ recipeId }: PrepThisProps) {
   );
 }
 
-/** 6mo below 9 months, 9mo below 12 months, otherwise 12mo. */
-function stageForAge(months: number): AgeStage {
-  if (months < 9) return "6";
-  if (months < 12) return "9";
-  return "12";
-}
-
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: recipe, isLoading, isError } = useRecipe(id);
@@ -133,7 +127,7 @@ export function RecipeDetailPage() {
   // but only until the user taps a tab themselves.
   useEffect(() => {
     if (userPickedStage.current || isBabyLoading) return;
-    const stage = activeBaby ? stageForAge(ageInMonths(activeBaby.birthDate)) : "6";
+    const stage = stageForAge(activeBaby ? ageInMonths(activeBaby.birthDate) : null);
     setActiveStage(stage);
   }, [activeBaby, isBabyLoading]);
 

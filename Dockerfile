@@ -33,6 +33,11 @@ RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
 # build: compile shared -> client -> server with full deps available
 # ---------------------------------------------------------------------------
 FROM deps AS build
+# Passed through from the deploy workflow's build-args so the client's
+# persisted-cache buster (see client/vite.config.ts) changes on every
+# deploy instead of staying pinned to the never-bumped package version.
+ARG GITHUB_SHA
+ENV GITHUB_SHA=${GITHUB_SHA}
 COPY . .
 RUN pnpm run build
 
