@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+/*
+ * Light/dark theming via CSS variables.
+ * - Default (no attribute on <html>): follows prefers-color-scheme.
+ * - Manual override: `data-theme="light" | "dark"` set on <html> by the
+ *   theme toggle, persisted to localStorage (see src/theme.ts).
+ */
+:root {
+  --color-bg: #ffffff;
+  --color-bg-elevated: #f7f7f5;
+  --color-text: #1a1a17;
+  --color-text-muted: #5c5c56;
+  --color-border: #e3e3de;
+  --color-primary: #2f6f4f;
+  --color-primary-contrast: #ffffff;
+  --color-accent: #d97a3a;
+  --color-danger: #b3261e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #14140f;
+    --color-bg-elevated: #1e1e17;
+    --color-text: #f2f2ec;
+    --color-text-muted: #b3b3a8;
+    --color-border: #33332a;
+    --color-primary: #5fb98a;
+    --color-primary-contrast: #0b1c14;
+    --color-accent: #e59a5f;
+    --color-danger: #ff8a80;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-bg: #14140f;
+  --color-bg-elevated: #1e1e17;
+  --color-text: #f2f2ec;
+  --color-text-muted: #b3b3a8;
+  --color-border: #33332a;
+  --color-primary: #5fb98a;
+  --color-primary-contrast: #0b1c14;
+  --color-accent: #e59a5f;
+  --color-danger: #ff8a80;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}

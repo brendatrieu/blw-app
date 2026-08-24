@@ -1,0 +1,50 @@
+[
+  {
+    "slug": "gagging-vs-choking",
+    "title": "Gagging vs. Choking — What's Normal and What's an Emergency",
+    "order": 1,
+    "summary": "How to tell the loud, red gag reflex from silent, blue choking — and how to set up every meal to keep it that way."
+  },
+  {
+    "slug": "allergic-reaction-signs",
+    "title": "Allergic Reaction Signs — Mild, Emergency, and the FPIES Pattern",
+    "order": 2,
+    "summary": "How to spot a mild allergic reaction, recognize a true emergency, and tell apart the delayed FPIES pattern."
+  },
+  {
+    "slug": "unsafe-foods",
+    "title": "Unsafe Foods and Choking Hazards to Avoid",
+    "order": 3,
+    "summary": "The specific foods and shapes that pose a real choking risk, and exactly how to make each one safe (or when to skip it entirely)."
+  },
+  {
+    "slug": "honey-salt-sugar",
+    "title": "Honey, Salt, Sugar, and Juice — The Non-Negotiables",
+    "order": 4,
+    "summary": "Why honey is off-limits under 12 months in any form, plus the sodium, added-sugar, juice, and cow's-milk rules that protect a developing baby."
+  },
+  {
+    "slug": "allergen-introduction",
+    "title": "Introducing Allergens — The Top-9 Ladder and Protocol",
+    "order": 5,
+    "summary": "The nine major allergens, a simple order to introduce them in, and the one-at-a-time protocol that makes reactions easy to spot and manage."
+  },
+  {
+    "slug": "iron-and-nutrition-basics",
+    "title": "Iron and Nutrition Basics — Why It's the First Priority",
+    "order": 6,
+    "summary": "Why iron-rich foods matter so much from 6 months, the difference between heme and non-heme iron, and how vitamin C helps absorption."
+  },
+  {
+    "slug": "storage-and-reheating",
+    "title": "Storage and Reheating — How Long Prepared Food Actually Lasts",
+    "order": 7,
+    "summary": "Conservative fridge, freezer, and room-temperature windows by food category, plus the reheat-once and saliva-contact rules that keep prepped meals safe."
+  },
+  {
+    "slug": "infant-first-aid-reference",
+    "title": "Infant First Aid Reference — What to Do While Help Is on the Way",
+    "order": 8,
+    "summary": "A general reminder of what to do while waiting for emergency services during a choking or breathing emergency — not a substitute for certified training."
+  }
+]

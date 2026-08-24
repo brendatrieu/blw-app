@@ -1,0 +1,25 @@
+{
+  "name": "blw-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "concurrently -n server,client -c blue,green \"pnpm --filter @blw/server dev\" \"pnpm --filter @blw/client dev\"",
+    "build": "pnpm --filter @blw/shared build && pnpm --filter @blw/client build && pnpm --filter @blw/server build",
+    "typecheck": "pnpm --filter @blw/shared build && pnpm --filter @blw/client typecheck && pnpm --filter @blw/server typecheck",
+    "lint": "eslint .",
+    "test": "pnpm -r --workspace-concurrency=1 test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.19.0",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.19.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.21.0"
+  }
+}
