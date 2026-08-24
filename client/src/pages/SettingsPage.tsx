@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Baby } from "@blw/shared";
@@ -9,13 +9,20 @@ import { useBabies, useCreateBaby, useDeleteBaby, useUpdateBaby } from "../featu
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useSession } from "../lib/auth.js";
 import { createSignOutDeps, performSignOut } from "../lib/signout.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
+import { Card } from "../components/ui/Card.js";
+import { Button } from "../components/ui/Button.js";
+import { Field } from "../components/ui/Field.js";
+import { Input, Textarea } from "../components/ui/Input.js";
+import { Sheet } from "../components/ui/Sheet.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
 
-const fieldClass = "w-full rounded-lg border px-3 py-2 text-base";
-const fieldStyle = {
-  backgroundColor: "var(--color-bg)",
-  borderColor: "var(--color-border)",
-  color: "var(--color-text)",
-};
+// A quiet, bordered "danger" affordance for small inline actions (remove
+// key, delete a baby, open the delete-account flow) — one step below the
+// solid `Button variant="danger"` fill, which is reserved for the actual
+// irreversible confirm buttons below.
+const dangerGhostButtonClass =
+  "min-h-9 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-danger)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-danger)] disabled:cursor-not-allowed disabled:opacity-60";
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -30,60 +37,56 @@ interface BabyFormValues {
 function BabyFields({
   values,
   onChange,
+  idPrefix,
 }: {
   values: BabyFormValues;
   onChange: (values: BabyFormValues) => void;
+  idPrefix: string;
 }) {
   return (
     <>
-      <label className="flex flex-col gap-1 text-sm" style={{ color: "var(--color-text)" }}>
-        Nickname
-        <input
+      <Field label="Nickname" htmlFor={`${idPrefix}-name`}>
+        <Input
+          id={`${idPrefix}-name`}
           type="text"
           required
           maxLength={60}
-          className={fieldClass}
-          style={fieldStyle}
           value={values.name}
           onChange={(event) => {
             onChange({ ...values, name: event.target.value });
           }}
         />
-      </label>
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm" style={{ color: "var(--color-text)" }}>
-        Birth date
-        <input
+      <Field label="Birth date" htmlFor={`${idPrefix}-birthdate`}>
+        <Input
+          id={`${idPrefix}-birthdate`}
           type="date"
           required
           max={today()}
-          className={fieldClass}
-          style={fieldStyle}
           value={values.birthDate}
           onChange={(event) => {
             onChange({ ...values, birthDate: event.target.value });
           }}
         />
-      </label>
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm" style={{ color: "var(--color-text)" }}>
-        Notes (optional)
-        <textarea
+      <Field label="Notes (optional)" htmlFor={`${idPrefix}-notes`}>
+        <Textarea
+          id={`${idPrefix}-notes`}
           rows={2}
           maxLength={500}
-          className={fieldClass}
-          style={fieldStyle}
           value={values.notes}
           onChange={(event) => {
             onChange({ ...values, notes: event.target.value });
           }}
         />
-      </label>
+      </Field>
     </>
   );
 }
 
-function AddBabyForm() {
+function AddBabySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const createBaby = useCreateBaby();
   const [values, setValues] = useState<BabyFormValues>({ name: "", birthDate: "", notes: "" });
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +99,7 @@ function AddBabyForm() {
       {
         onSuccess: () => {
           setValues({ name: "", birthDate: "", notes: "" });
+          onClose();
         },
         onError: (mutationError) => {
           setError(mutationError.message);
@@ -105,29 +109,24 @@ function AddBabyForm() {
   }
 
   return (
-    <form
-      className="flex flex-col gap-3 rounded-xl border p-3"
-      style={{ borderColor: "var(--color-border)" }}
-      onSubmit={handleSubmit}
-    >
-      <h3 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-        Add a baby
-      </h3>
-      <BabyFields values={values} onChange={setValues} />
-      {error ? (
-        <p role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
-          {error}
-        </p>
-      ) : null}
-      <button
-        type="submit"
-        disabled={createBaby.isPending}
-        className="self-start rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
-        style={{ backgroundColor: "var(--color-primary)", color: "var(--color-primary-contrast)" }}
-      >
-        {createBaby.isPending ? "Adding…" : "Add baby"}
-      </button>
-    </form>
+    <Sheet open={open} onClose={onClose} title="Add a baby 🍼">
+      <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+        <BabyFields values={values} onChange={setValues} idPrefix="new-baby" />
+        {error ? (
+          <p role="alert" className="text-sm text-[var(--color-danger)]">
+            {error}
+          </p>
+        ) : null}
+        <div className="flex gap-2">
+          <Button type="submit" disabled={createBaby.isPending}>
+            {createBaby.isPending ? "Adding…" : "Add baby"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </Sheet>
   );
 }
 
@@ -143,6 +142,12 @@ function BabyRow({ baby }: { baby: Baby }) {
     notes: baby.notes ?? "",
   });
   const [error, setError] = useState<string | null>(null);
+
+  function openEdit() {
+    setValues({ name: baby.name, birthDate: baby.birthDate, notes: baby.notes ?? "" });
+    setError(null);
+    setEditing(true);
+  }
 
   function handleSave(event: FormEvent) {
     event.preventDefault();
@@ -178,134 +183,95 @@ function BabyRow({ baby }: { baby: Baby }) {
     deleteBaby.mutate(baby.id);
   }
 
-  if (editing) {
-    return (
-      <form
-        className="flex flex-col gap-3 rounded-xl border p-3"
-        style={{ borderColor: "var(--color-border)" }}
-        onSubmit={handleSave}
-      >
-        <BabyFields values={values} onChange={setValues} />
-        {error ? (
-          <p role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
-            {error}
-          </p>
-        ) : null}
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={updateBaby.isPending}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-60"
-            style={{
-              backgroundColor: "var(--color-primary)",
-              color: "var(--color-primary-contrast)",
-            }}
-          >
-            Save
-          </button>
-          <button
+  return (
+    <>
+      <Card className={`flex flex-col gap-2 ${baby.archived ? "opacity-60" : ""}`}>
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="flex items-center gap-2 font-semibold text-[var(--color-text)]">
+            <span aria-hidden="true">👶</span>
+            {baby.name}
+          </span>
+          <span className="text-xs text-[var(--color-text-muted)]">
+            {ageInMonths(baby.birthDate)} months
+            {baby.archived ? " · archived" : ""}
+          </span>
+        </div>
+
+        {baby.notes ? <p className="text-sm text-[var(--color-text-muted)]">{baby.notes}</p> : null}
+
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={openEdit}>
+            Edit
+          </Button>
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
+            disabled={updateBaby.isPending}
             onClick={() => {
-              setEditing(false);
-              setValues({ name: baby.name, birthDate: baby.birthDate, notes: baby.notes ?? "" });
+              updateBaby.mutate({ id: baby.id, input: { archived: !baby.archived } });
             }}
-            className="rounded-lg border px-3 py-1.5 text-sm"
-            style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
           >
-            Cancel
+            {baby.archived ? "Restore" : "Archive"}
+          </Button>
+          <button type="button" disabled={deleteBaby.isPending} onClick={handleDelete} className={dangerGhostButtonClass}>
+            Delete
           </button>
         </div>
-      </form>
-    );
-  }
+      </Card>
 
-  return (
-    <div
-      className="flex flex-col gap-2 rounded-xl border p-3"
-      style={{ borderColor: "var(--color-border)", opacity: baby.archived ? 0.6 : 1 }}
-    >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="font-medium" style={{ color: "var(--color-text)" }}>
-          {baby.name}
-        </span>
-        <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-          {ageInMonths(baby.birthDate)} months
-          {baby.archived ? " · archived" : ""}
-        </span>
-      </div>
-
-      {baby.notes ? (
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          {baby.notes}
-        </p>
-      ) : null}
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setEditing(true);
-          }}
-          className="rounded-lg border px-3 py-1.5 text-sm"
-          style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
-        >
-          Edit
-        </button>
-        <button
-          type="button"
-          disabled={updateBaby.isPending}
-          onClick={() => {
-            updateBaby.mutate({ id: baby.id, input: { archived: !baby.archived } });
-          }}
-          className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-60"
-          style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
-        >
-          {baby.archived ? "Restore" : "Archive"}
-        </button>
-        <button
-          type="button"
-          disabled={deleteBaby.isPending}
-          onClick={handleDelete}
-          className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-60"
-          style={{ borderColor: "var(--color-border)", color: "var(--color-danger)" }}
-        >
-          Delete
-        </button>
-      </div>
-    </div>
+      <Sheet open={editing} onClose={() => setEditing(false)} title={`Edit ${baby.name}`}>
+        <form className="flex flex-col gap-3" onSubmit={handleSave}>
+          <BabyFields values={values} onChange={setValues} idPrefix={`baby-${baby.id}`} />
+          {error ? (
+            <p role="alert" className="text-sm text-[var(--color-danger)]">
+              {error}
+            </p>
+          ) : null}
+          <div className="flex gap-2">
+            <Button type="submit" disabled={updateBaby.isPending}>
+              {updateBaby.isPending ? "Saving…" : "Save"}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Sheet>
+    </>
   );
 }
 
 function BabiesSection() {
   const babies = useBabies(true);
+  const [addingOpen, setAddingOpen] = useState(false);
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>
-        Babies
-      </h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-h2 flex items-center gap-2 text-[var(--color-text)]">
+          <span aria-hidden="true">👶</span> Babies
+        </h2>
+        <Button type="button" size="sm" onClick={() => setAddingOpen(true)}>
+          + Add baby
+        </Button>
+      </div>
 
-      {babies.isPending ? (
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Loading…
-        </p>
-      ) : null}
+      {babies.isPending ? <p className="text-sm text-[var(--color-text-muted)]">Loading…</p> : null}
 
       {babies.isError ? (
-        <p role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
+        <p role="alert" className="text-sm text-[var(--color-danger)]">
           Could not load your babies. {babies.error.message}
         </p>
       ) : null}
 
       {babies.data?.length === 0 ? (
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          No babies yet. Add one to start tracking foods and allergens.
-        </p>
+        <EmptyState icon="👶" title="No babies yet" description="Add one to start tracking foods and allergens." />
       ) : null}
 
-      {babies.data?.map((baby) => <BabyRow key={baby.id} baby={baby} />)}
+      <div className="flex flex-col gap-2">{babies.data?.map((baby) => <BabyRow key={baby.id} baby={baby} />)}</div>
 
-      <AddBabyForm />
+      <AddBabySheet open={addingOpen} onClose={() => setAddingOpen(false)} />
     </section>
   );
 }
@@ -380,18 +346,18 @@ function AiSection() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>
-        AI features (optional)
+      <h2 className="font-h2 flex items-center gap-2 text-[var(--color-text)]">
+        <span aria-hidden="true">✨</span> AI features (optional)
       </h2>
 
-      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+      <p className="text-sm text-[var(--color-text-muted)]">
         A few extras — the symptom helper and the recipe and weaning chats — run on Anthropic&apos;s
         Claude. They use <strong>your own</strong> Anthropic API key, so the usage is billed to you
         and nothing goes through a shared account. Everything else in this app works fully without
         a key.
       </p>
 
-      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+      <p className="text-sm text-[var(--color-text-muted)]">
         Your key is encrypted before it is stored, is never shown again, and is deleted with your
         account. What we send Claude is limited to your baby&apos;s age in months, food names,
         symptoms and pantry items — never their name, your email, or any account id.{" "}
@@ -399,101 +365,76 @@ function AiSection() {
           href={ANTHROPIC_CONSOLE_URL}
           target="_blank"
           rel="noreferrer noopener"
-          className="underline"
-          style={{ color: "var(--color-primary)" }}
+          className="font-medium text-[var(--color-primary)] underline underline-offset-2"
         >
           Get a key from the Anthropic console
         </a>
         .
       </p>
 
-      {status.isPending ? (
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Loading…
-        </p>
-      ) : null}
+      {status.isPending ? <p className="text-sm text-[var(--color-text-muted)]">Loading…</p> : null}
 
       {status.isError ? (
-        <p role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
+        <p role="alert" className="text-sm text-[var(--color-danger)]">
           Could not check whether a key is set up. {status.error.message}
         </p>
       ) : null}
 
       {configured ? (
-        <div
-          className="flex flex-col gap-2 rounded-xl border p-3"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <span className="font-medium" style={{ color: "var(--color-text)" }}>
+        <Card className="flex flex-col gap-2">
+          <span className="font-semibold text-[var(--color-text)]">
             Key on file: {maskAiKey(status.data?.last4 ?? "")}
           </span>
-          <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+          <span className="text-xs text-[var(--color-text-muted)]">
             {validatedAt ? `Checked with Anthropic on ${validatedAt}` : "Not yet checked"}
           </span>
-          <button
-            type="button"
-            disabled={removeKey.isPending}
-            onClick={handleRemove}
-            className="self-start rounded-lg border px-3 py-1.5 text-sm disabled:opacity-60"
-            style={{ borderColor: "var(--color-border)", color: "var(--color-danger)" }}
-          >
+          <button type="button" disabled={removeKey.isPending} onClick={handleRemove} className={`w-fit ${dangerGhostButtonClass}`}>
             {removeKey.isPending ? "Removing…" : "Remove key"}
           </button>
-        </div>
+        </Card>
       ) : null}
 
-      <form
-        className="flex flex-col gap-3 rounded-xl border p-3"
-        style={{ borderColor: "var(--color-border)" }}
-        onSubmit={handleSubmit}
-      >
-        <h3 className="text-sm font-semibold" style={{ color: "var(--color-text)" }}>
-          {configured ? "Replace key" : "Add your key"}
-        </h3>
+      <Card>
+        <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+          <h3 className="text-sm font-semibold text-[var(--color-text)]">{configured ? "Replace key" : "Add your key"}</h3>
 
-        <label className="flex flex-col gap-1 text-sm" style={{ color: "var(--color-text)" }}>
-          Anthropic API key
-          <input
-            type="password"
-            required
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            name="anthropic-api-key"
-            placeholder="sk-ant-…"
-            className={fieldClass}
-            style={fieldStyle}
-            value={apiKey}
-            onChange={(event) => {
-              setApiKey(event.target.value);
-              setError(null);
-              setSaved(false);
-            }}
-          />
-        </label>
+          <Field label="Anthropic API key" htmlFor="anthropic-api-key">
+            <Input
+              id="anthropic-api-key"
+              type="password"
+              required
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              name="anthropic-api-key"
+              placeholder="sk-ant-…"
+              value={apiKey}
+              onChange={(event) => {
+                setApiKey(event.target.value);
+                setError(null);
+                setSaved(false);
+              }}
+            />
+          </Field>
 
-        {error ? (
-          <p role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
-            {error}
-          </p>
-        ) : null}
+          {error ? (
+            <p role="alert" className="text-sm text-[var(--color-danger)]">
+              {error}
+            </p>
+          ) : null}
 
-        {saved ? (
-          <p role="status" className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-            Key checked with Anthropic and saved. AI features are on.
-          </p>
-        ) : null}
+          {saved ? (
+            <p role="status" className="text-sm text-[var(--color-text-muted)]">
+              Key checked with Anthropic and saved. AI features are on.
+            </p>
+          ) : null}
 
-        <button
-          type="submit"
-          disabled={saveKey.isPending || apiKey.trim().length === 0}
-          className="self-start rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
-          style={{ backgroundColor: "var(--color-primary)", color: "var(--color-primary-contrast)" }}
-        >
-          {saveKey.isPending ? "Checking key…" : "Save key"}
-        </button>
-      </form>
+          <Button type="submit" disabled={saveKey.isPending || apiKey.trim().length === 0} className="w-fit">
+            {saveKey.isPending ? "Checking key…" : "Save key"}
+          </Button>
+        </form>
+      </Card>
     </section>
   );
 }
@@ -554,89 +495,76 @@ function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
     });
   }
 
+  const confirmLabel: ReactNode = (
+    <>
+      Type <strong>{ACCOUNT_DELETE_CONFIRMATION}</strong> to confirm
+    </>
+  );
+
   return (
-    <form
-      className="flex flex-col gap-3 rounded-xl border p-3"
-      style={{ borderColor: "var(--color-danger)" }}
-      onSubmit={handleSubmit}
-    >
-      <h3 className="text-sm font-semibold" style={{ color: "var(--color-danger)" }}>
-        Delete this account
-      </h3>
+    <Card className="border-2 border-[var(--color-danger)]">
+      <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+        <h3 className="text-sm font-bold text-[var(--color-danger)]">Delete this account</h3>
 
-      <p className="text-sm" style={{ color: "var(--color-text)" }}>
-        This permanently deletes your account and everything in it — every baby profile, the whole
-        food log, your allergen progress, favourites, pantry, symptom checks, chats, and your
-        Anthropic key. <strong>It cannot be undone and there is no backup we can restore from.</strong>
-      </p>
-
-      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-        If you might want this data later, export it first — the button above saves everything as a
-        JSON file.
-      </p>
-
-      <label className="flex flex-col gap-1 text-sm" style={{ color: "var(--color-text)" }}>
-        Type <strong>{ACCOUNT_DELETE_CONFIRMATION}</strong> to confirm
-        <input
-          type="text"
-          required
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="characters"
-          spellCheck={false}
-          className={fieldClass}
-          style={fieldStyle}
-          value={phrase}
-          onChange={(event) => {
-            setPhrase(event.target.value);
-            setError(null);
-          }}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1 text-sm" style={{ color: "var(--color-text)" }}>
-        Your password
-        <input
-          type="password"
-          required
-          autoComplete="current-password"
-          name="current-password"
-          className={fieldClass}
-          style={fieldStyle}
-          value={password}
-          onChange={(event) => {
-            setPassword(event.target.value);
-            setError(null);
-          }}
-        />
-      </label>
-
-      {error ? (
-        <p role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
-          {error}
+        <p className="text-sm text-[var(--color-text)]">
+          This permanently deletes your account and everything in it — every baby profile, the whole
+          food log, your allergen progress, favourites, pantry, symptom checks, chats, and your
+          Anthropic key. <strong>It cannot be undone and there is no backup we can restore from.</strong>
         </p>
-      ) : null}
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
-          style={{ backgroundColor: "var(--color-danger)", color: "var(--color-primary-contrast)" }}
-        >
-          {deleteAccount.isPending ? "Deleting…" : "Delete my account forever"}
-        </button>
-        <button
-          type="button"
-          disabled={deleteAccount.isPending}
-          onClick={onCancel}
-          className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-60"
-          style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
+        <p className="text-sm text-[var(--color-text-muted)]">
+          If you might want this data later, export it first — the button above saves everything as a
+          JSON file.
+        </p>
+
+        <Field label={confirmLabel} htmlFor="delete-confirm-phrase">
+          <Input
+            id="delete-confirm-phrase"
+            type="text"
+            required
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            value={phrase}
+            onChange={(event) => {
+              setPhrase(event.target.value);
+              setError(null);
+            }}
+          />
+        </Field>
+
+        <Field label="Your password" htmlFor="delete-confirm-password">
+          <Input
+            id="delete-confirm-password"
+            type="password"
+            required
+            autoComplete="current-password"
+            name="current-password"
+            value={password}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              setError(null);
+            }}
+          />
+        </Field>
+
+        {error ? (
+          <p role="alert" className="text-sm text-[var(--color-danger)]">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" variant="danger" disabled={!canSubmit}>
+            {deleteAccount.isPending ? "Deleting…" : "Delete my account forever"}
+          </Button>
+          <Button type="button" variant="secondary" disabled={deleteAccount.isPending} onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }
 
@@ -647,52 +575,49 @@ function AccountSection() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold" style={{ color: "var(--color-text)" }}>
-        Account
+      <h2 className="font-h2 flex items-center gap-2 text-[var(--color-text)]">
+        <span aria-hidden="true">🔐</span> Account
       </h2>
-      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-        Signed in as {session?.user.email}
-      </p>
+      <p className="text-sm text-[var(--color-text-muted)]">Signed in as {session?.user.email}</p>
 
       <div className="flex flex-wrap gap-2">
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           disabled={exportData.isPending}
           onClick={() => {
             exportData.mutate();
           }}
-          className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-60"
-          style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
         >
           {exportData.isPending ? "Preparing…" : "Export my data"}
-        </button>
+        </Button>
         {confirmingDelete ? null : (
           <button
             type="button"
             onClick={() => {
               setConfirmingDelete(true);
             }}
-            className="rounded-lg border px-3 py-1.5 text-sm"
-            style={{ borderColor: "var(--color-border)", color: "var(--color-danger)" }}
+            className={dangerGhostButtonClass}
           >
             Delete account
           </button>
         )}
       </div>
 
-      <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
+      <p className="text-xs text-[var(--color-text-muted)]">
         The export is a single JSON file with everything on your account: babies, food log,
         favourites, pantry, symptom checks and chats. It never contains your API key.
       </p>
 
       {exportData.isError ? (
-        <p role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
+        <p role="alert" className="text-sm text-[var(--color-danger)]">
           Could not build your export. {accountErrorMessage(exportData.error.message)}
         </p>
       ) : null}
 
       {exportData.isSuccess ? (
-        <p role="status" className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+        <p role="status" className="text-sm text-[var(--color-text-muted)]">
           Export saved to your downloads.
         </p>
       ) : null}
@@ -711,9 +636,7 @@ function AccountSection() {
 export function SettingsPage() {
   return (
     <div className="flex flex-col gap-6 p-4">
-      <h1 className="text-xl font-semibold" style={{ color: "var(--color-text)" }}>
-        Settings
-      </h1>
+      <PageHeader title="Settings" emoji="⚙️" />
       <BabiesSection />
       <AiSection />
       <AccountSection />

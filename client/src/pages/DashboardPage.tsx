@@ -5,67 +5,43 @@ import { useAllergenProgress } from "../features/tracking/hooks.js";
 import { usePantryItems } from "../features/pantry/hooks.js";
 import { PantryItemCard } from "../features/pantry/components/PantryItemCard.js";
 import { ButtonLink } from "../components/ui/Button.js";
+import { Card, CardLink } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
+import { ProgressRing } from "../components/ui/ProgressRing.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
-const RING_RADIUS = 40;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const ALLERGEN_TOTAL = 9;
-
-interface AllergenRingProps {
-  established: number;
-  started: number;
-}
-
-function AllergenRing({ established, started }: AllergenRingProps) {
-  const progressed = Math.min(established + started, ALLERGEN_TOTAL);
-  const offset = RING_CIRCUMFERENCE * (1 - progressed / ALLERGEN_TOTAL);
-
-  return (
-    <svg viewBox="0 0 100 100" className="h-20 w-20 shrink-0" role="img" aria-label={`${progressed} of ${ALLERGEN_TOTAL} allergens started or established`}>
-      <circle cx="50" cy="50" r={RING_RADIUS} fill="none" stroke="var(--color-border)" strokeWidth="10" />
-      <circle
-        cx="50"
-        cy="50"
-        r={RING_RADIUS}
-        fill="none"
-        stroke="var(--color-primary)"
-        strokeWidth="10"
-        strokeLinecap="round"
-        strokeDasharray={RING_CIRCUMFERENCE}
-        strokeDashoffset={offset}
-        transform="rotate(-90 50 50)"
-      />
-      <text x="50" y="54" textAnchor="middle" fontSize="22" fill="var(--color-text)" fontWeight="600">
-        {progressed}/{ALLERGEN_TOTAL}
-      </text>
-    </svg>
-  );
-}
 
 function AllergenProgressSummary({ babyId }: { babyId: string }) {
   const { data, isLoading } = useAllergenProgress(babyId);
 
   if (isLoading || !data) {
-    return <Skeleton className="h-[5.5rem] w-full rounded-xl" />;
+    return <Skeleton className="h-[5.5rem] w-full rounded-[var(--radius-lg)]" />;
   }
 
   const established = data.items.filter((item) => item.status === "established").length;
   const started = data.items.filter((item) => item.status === "started").length;
   const notStarted = data.items.length - established - started;
+  const progressed = Math.min(established + started, ALLERGEN_TOTAL);
 
   return (
-    <Link
-      to={`/babies/${babyId}/allergens`}
-      className="flex items-center gap-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3 transition-colors hover:border-[var(--color-primary)]"
-    >
-      <AllergenRing established={established} started={started} />
+    <CardLink to={`/babies/${babyId}/allergens`} padding="sm" className="flex items-center gap-4">
+      <ProgressRing
+        value={progressed / ALLERGEN_TOTAL}
+        label={`${progressed} of ${ALLERGEN_TOTAL} allergens started or established`}
+      >
+        <span className="font-h2 text-[var(--color-text)]">
+          {progressed}/{ALLERGEN_TOTAL}
+        </span>
+      </ProgressRing>
       <div className="flex flex-col gap-0.5 text-sm">
-        <span className="font-semibold text-[var(--color-text)]">Allergen ladder</span>
-        <span className="text-[var(--color-text-muted)]">{established} established, {started} started</span>
+        <span className="font-semibold text-[var(--color-text)]">🌟 Allergen ladder</span>
+        <span className="text-[var(--color-text-muted)]">
+          {established} established, {started} started
+        </span>
         <span className="text-[var(--color-text-muted)]">{notStarted} not started yet</span>
       </div>
-    </Link>
+    </CardLink>
   );
 }
 
@@ -76,8 +52,8 @@ function ExpiringSoon() {
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[var(--color-text)]">Expiring soon</h2>
-        <Link to="/pantry" className="text-xs font-medium underline" style={{ color: "var(--color-primary)" }}>
+        <h2 className="text-sm font-semibold text-[var(--color-text)]">⏰ Expiring soon</h2>
+        <Link to="/pantry" className="text-xs font-medium text-[var(--color-primary)] underline">
           See pantry
         </Link>
       </div>
@@ -86,6 +62,7 @@ function ExpiringSoon() {
 
       {!isLoading && topFive.length === 0 && (
         <EmptyState
+          icon="🧺"
           title="Nothing in the pantry yet"
           description="Log what you've prepped so nothing gets forgotten in the fridge."
           action={
@@ -113,10 +90,10 @@ export function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-5 p-4">
-        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-20 w-full rounded-[var(--radius-lg)]" />
         <div className="flex gap-2">
-          <Skeleton className="h-11 flex-1 rounded-lg" />
-          <Skeleton className="h-11 flex-1 rounded-lg" />
+          <Skeleton className="h-11 flex-1 rounded-[var(--radius-md)]" />
+          <Skeleton className="h-11 flex-1 rounded-[var(--radius-md)]" />
         </div>
         <SkeletonList count={2} />
       </div>
@@ -140,19 +117,20 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-5 p-4">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">
+      <Card padding="md" className="flex flex-col gap-1">
+        <h1 className="font-display flex items-center gap-2 text-[var(--color-text)]">
+          <span aria-hidden="true">👋</span>
           Hi! {activeBaby.name} is {months} {months === 1 ? "month" : "months"} old.
         </h1>
         <p className="text-sm text-[var(--color-text-muted)]">Here's what's going on today.</p>
-      </div>
+      </Card>
 
       <div className="flex gap-2">
         <ButtonLink to="/foods" className="flex-1">
-          Log a food
+          🍽️ Log a food
         </ButtonLink>
         <ButtonLink to="/pantry" variant="secondary" className="flex-1">
-          Add pantry item
+          🧺 Add pantry item
         </ButtonLink>
       </div>
 

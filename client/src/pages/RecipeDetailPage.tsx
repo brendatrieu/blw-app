@@ -8,8 +8,10 @@ import { useRecipe } from "../features/catalog/hooks.js";
 import { stageForAge } from "../features/catalog/stage.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { allergenLabel } from "../features/catalog/constants.js";
+import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
 import { apiPost } from "../lib/api.js";
+import { BackButton } from "../components/ui/BackButton.js";
 import { Button } from "../components/ui/Button.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
@@ -51,14 +53,20 @@ function FavoriteHeart({ recipeId, title, minAgeMonths, ironFocus, allergens }: 
           favorited,
         })
       }
-      className="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60"
-      style={{
-        borderColor: favorited ? "var(--color-danger)" : "var(--color-border)",
-        color: favorited ? "var(--color-danger)" : "var(--color-text)",
-        backgroundColor: "var(--color-bg-elevated)",
-      }}
+      // The spring easing overshoots on the scale transition itself, so
+      // toggling between the two scale values reads as a little heart-pop —
+      // no keyframe needed, and it collapses to an instant swap for
+      // reduced-motion users via motion-reduce:transition-none.
+      className={`inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3.5 py-1.5 text-sm font-medium transition-[transform,background-color,border-color,color] duration-[var(--duration-base)] ease-[var(--ease-spring)] motion-reduce:transition-none motion-reduce:scale-100 disabled:opacity-60 ${
+        favorited
+          ? "scale-105 border-transparent bg-[var(--color-coral-soft)] text-[var(--color-coral-deep)]"
+          : "scale-100 border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]"
+      }`}
     >
-      {favorited ? "♥ Favorited" : "♡ Favorite"}
+      <span aria-hidden="true" className="text-base leading-none">
+        {favorited ? "♥" : "♡"}
+      </span>
+      {favorited ? "Favorited" : "Favorite"}
     </button>
   );
 }
@@ -89,16 +97,16 @@ function PrepThis({ recipeId }: PrepThisProps) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+    <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
       <p className="text-xs font-medium text-[var(--color-text-muted)]">Where's it stored?</p>
-      <div className="flex gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         {PANTRY_LOCATIONS.map((loc) => (
           <button
             key={loc.value}
             type="button"
             disabled={prepped.isPending}
             onClick={() => prepped.mutate(loc.value)}
-            className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1 text-xs font-medium text-[var(--color-text)] disabled:opacity-60"
+            className="min-h-9 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-bg)] px-3.5 py-1.5 text-xs font-semibold text-[var(--color-text)] disabled:opacity-60"
           >
             {prepped.isPending ? "Saving…" : loc.label}
           </button>
@@ -106,7 +114,7 @@ function PrepThis({ recipeId }: PrepThisProps) {
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-full px-3 py-1 text-xs font-medium text-[var(--color-text-muted)]"
+          className="min-h-9 rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-medium text-[var(--color-text-muted)]"
         >
           Cancel
         </button>
@@ -134,23 +142,30 @@ export function RecipeDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-5 p-4">
+        <BackButton fallback="/foods" />
         <Skeleton className="h-6 w-2/3" />
-        <Skeleton className="h-24 w-full rounded-lg" />
-        <Skeleton className="h-40 w-full rounded-lg" />
+        <Skeleton className="h-24 w-full rounded-[var(--radius-lg)]" />
+        <Skeleton className="h-40 w-full rounded-[var(--radius-lg)]" />
       </div>
     );
   }
   if (isError || !recipe) {
-    return <p className="p-4 text-sm text-[var(--color-danger)]">Couldn't find that recipe.</p>;
+    return (
+      <div className="flex flex-col gap-3 p-4">
+        <BackButton fallback="/foods" />
+        <p className="text-sm text-[var(--color-danger)]">Couldn't find that recipe.</p>
+      </div>
+    );
   }
 
   const activeVariant = recipe.variants.find((v) => v.ageStage === activeStage) ?? recipe.variants[0];
 
   return (
     <div className="flex flex-col gap-5 p-4">
+      <BackButton fallback="/foods" />
       <div className="flex flex-col gap-2">
         <div className="flex items-start justify-between gap-2">
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">{recipe.title}</h1>
+          <h1 className="font-display text-[var(--color-text)]">{recipe.title}</h1>
           <FavoriteHeart
             recipeId={recipe.id}
             title={recipe.title}
@@ -172,15 +187,30 @@ export function RecipeDetailPage() {
       </div>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-[var(--color-text)]">Ingredients</h2>
-        <ul className="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+        <h2 className="font-h2 text-[var(--color-text)]">Ingredients</h2>
+        <ul className="flex flex-col gap-1.5">
           {recipe.ingredients.map((ingredient) => (
-            <li key={ingredient.foodSlug}>
-              <span className="font-medium">{ingredient.foodName}</span> — {ingredient.quantityNote}
+            <li
+              key={ingredient.foodSlug}
+              className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text)]"
+            >
+              <span aria-hidden="true" className="text-lg leading-none">
+                {getFoodEmoji(ingredient.foodSlug)}
+              </span>
+              <span>
+                <span className="font-medium">{ingredient.foodName}</span>{" "}
+                <span className="text-[var(--color-text-muted)]">— {ingredient.quantityNote}</span>
+              </span>
             </li>
           ))}
           {recipe.extraIngredients.map((extra) => (
-            <li key={extra} className="text-[var(--color-text-muted)]">
+            <li
+              key={extra}
+              className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text-muted)]"
+            >
+              <span aria-hidden="true" className="text-lg leading-none">
+                🧂
+              </span>
               {extra}
             </li>
           ))}
@@ -188,7 +218,7 @@ export function RecipeDetailPage() {
       </section>
 
       <section className="flex flex-col gap-2">
-        <div className="flex gap-1.5">
+        <div className="inline-flex w-fit gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] p-1">
           {AGE_STAGES.map((stage) => {
             const available = recipe.variants.some((v) => v.ageStage === stage.value);
             const active = stage.value === activeStage;
@@ -201,10 +231,10 @@ export function RecipeDetailPage() {
                   userPickedStage.current = true;
                   setActiveStage(stage.value);
                 }}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                className={`min-h-9 rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-semibold transition-[background-color,color] duration-[var(--duration-fast)] ease-[var(--ease-spring)] motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 ${
                   active
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
-                    : "border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]"
+                    ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-sm)]"
+                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                 }`}
               >
                 {stage.label}
@@ -214,7 +244,7 @@ export function RecipeDetailPage() {
         </div>
 
         {activeVariant && (
-          <div className="flex flex-col gap-2 rounded-lg bg-[var(--color-bg-elevated)] p-3">
+          <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
             <p className="text-xs font-medium text-[var(--color-text-muted)]">{activeVariant.textureNote}</p>
             <ol className="flex flex-col gap-1.5 text-sm text-[var(--color-text)]">
               {activeVariant.steps.map((step, i) => (

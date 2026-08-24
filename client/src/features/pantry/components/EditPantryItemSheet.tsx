@@ -2,6 +2,10 @@ import { useState } from "react";
 import type { PantryItem, PantryLocation } from "@blw/shared";
 import { useUpdatePantryItem } from "../hooks.js";
 import { LOCATIONS, toDateTimeLocal } from "../format.js";
+import { Field } from "../../../components/ui/Field.js";
+import { Input } from "../../../components/ui/Input.js";
+import { Button } from "../../../components/ui/Button.js";
+import { Card } from "../../../components/ui/Card.js";
 
 interface EditPantryItemSheetProps {
   item: PantryItem;
@@ -30,14 +34,11 @@ export function EditPantryItemSheet({ item, onDone }: EditPantryItemSheetProps) 
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] p-3"
-    >
-      <p className="text-xs font-semibold text-[var(--color-text)]">Edit item</p>
+    <Card as="form" onSubmit={handleSubmit} padding="sm" className="flex flex-col gap-3">
+      <p className="font-h2 text-[var(--color-text)]">✏️ Edit item</p>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text-muted)]">Location</span>
+      <label className="flex flex-col gap-1.5 text-sm">
+        <span className="text-sm font-semibold text-[var(--color-text)]">Location</span>
         <div className="flex gap-1.5">
           {LOCATIONS.map((loc) => (
             <button
@@ -45,7 +46,7 @@ export function EditPantryItemSheet({ item, onDone }: EditPantryItemSheetProps) 
               type="button"
               onClick={() => setLocation(loc.value)}
               aria-pressed={location === loc.value}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-medium transition-colors ${
                 location === loc.value
                   ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
                   : "border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]"
@@ -57,46 +58,36 @@ export function EditPantryItemSheet({ item, onDone }: EditPantryItemSheetProps) 
         </div>
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text-muted)]">Prepared</span>
-        <input
+      <Field label="Prepared" htmlFor="pantry-edit-prepared">
+        <Input
+          id="pantry-edit-prepared"
           type="datetime-local"
           value={preparedAt}
           max={toDateTimeLocal(new Date())}
           onChange={(e) => setPreparedAt(e.target.value)}
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-[var(--color-text)]"
         />
-      </label>
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text-muted)]">Quantity note (optional)</span>
-        <input
+      <Field label="Quantity note (optional)" htmlFor="pantry-edit-note">
+        <Input
+          id="pantry-edit-note"
           type="text"
           value={quantityNote}
           onChange={(e) => setQuantityNote(e.target.value)}
           placeholder="e.g. 2 cubes left"
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-[var(--color-text)]"
         />
-      </label>
+      </Field>
 
       {updateItem.isError && <p className="text-xs text-[var(--color-danger)]">Couldn't save that — try again.</p>}
 
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={updateItem.isPending}
-          className="flex-1 rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-[var(--color-primary-contrast)] disabled:opacity-60"
-        >
+        <Button type="submit" disabled={updateItem.isPending} className="flex-1">
           {updateItem.isPending ? "Saving…" : "Save"}
-        </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-text)]"
-        >
+        </Button>
+        <Button type="button" variant="secondary" onClick={onDone}>
           Cancel
-        </button>
+        </Button>
       </div>
-    </form>
+    </Card>
   );
 }

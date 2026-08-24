@@ -6,6 +6,7 @@ interface MoreLink {
   to: string;
   label: string;
   description: string;
+  emoji: string;
   badge?: string;
 }
 
@@ -14,19 +15,22 @@ const moreLinks: MoreLink[] = [
     to: "/safety",
     label: "Safety Library",
     description: "Choking, allergies, storage, and more — works offline.",
+    emoji: "🛟",
   },
-  { to: "/favorites", label: "Favorites", description: "Recipes you've saved." },
+  { to: "/favorites", label: "Favorites", description: "Recipes you've saved.", emoji: "❤️" },
   {
     to: "/symptom-check",
     label: "Symptom Check",
     description: "Pattern-spotting after a reaction, not a diagnosis.",
+    emoji: "🩺",
   },
   {
     to: "/chat",
     label: "Chat",
     description: "Recipe help and ask-anything BLW questions.",
+    emoji: "💬",
   },
-  { to: "/settings", label: "Settings", description: "Babies, account, and app preferences." },
+  { to: "/settings", label: "Settings", description: "Babies, account, and app preferences.", emoji: "⚙️" },
 ];
 
 function ComingSoonChip({ children }: { children: ReactNode }) {
@@ -40,12 +44,18 @@ function ComingSoonChip({ children }: { children: ReactNode }) {
 export function MorePage() {
   return (
     <div className="flex flex-col gap-4 p-4">
-      <PageHeader title="More" />
+      <PageHeader title="More" emoji="✨" />
 
       <nav className="flex flex-col gap-2">
         {moreLinks.map((link) => (
-          <CardLink key={link.to} to={link.to} padding="sm" className="flex items-center justify-between gap-3">
-            <span className="flex flex-col gap-0.5">
+          <CardLink key={link.to} to={link.to} padding="sm" className="flex items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg-inset)] text-xl leading-none"
+            >
+              {link.emoji}
+            </span>
+            <span className="flex flex-1 flex-col gap-0.5">
               <span className="text-sm font-semibold text-[var(--color-text)]">{link.label}</span>
               <span className="text-xs text-[var(--color-text-muted)]">{link.description}</span>
             </span>
@@ -54,7 +64,7 @@ export function MorePage() {
         ))}
       </nav>
 
-      <p className="mt-2 text-center text-xs text-[var(--color-text-muted)]">blw-app v{__APP_VERSION__}</p>
+      <p className="mt-2 text-center font-caption text-[var(--color-text-muted)]">blw-app v{__APP_VERSION__}</p>
     </div>
   );
 }

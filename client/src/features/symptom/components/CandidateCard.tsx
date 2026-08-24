@@ -12,10 +12,10 @@ const LIKELIHOOD_LABELS: Record<Likelihood, string> = {
  * statement about timing, so it borrows the accent colour rather than the
  * danger red the emergency card owns.
  */
-const LIKELIHOOD_STYLE: Record<Likelihood, { backgroundColor: string; color: string }> = {
-  high: { backgroundColor: "var(--color-accent)", color: "var(--color-primary-contrast)" },
-  medium: { backgroundColor: "var(--color-callout-bg)", color: "var(--color-callout-icon)" },
-  low: { backgroundColor: "var(--color-bg)", color: "var(--color-text-muted)" },
+const LIKELIHOOD_CLASS: Record<Likelihood, string> = {
+  high: "bg-[var(--color-accent)] text-[var(--color-primary-contrast)]",
+  medium: "bg-[var(--color-callout-bg)] text-[var(--color-callout-icon)]",
+  low: "bg-[var(--color-bg)] text-[var(--color-text-muted)]",
 };
 
 function Chip({ children }: { children: React.ReactNode }) {
@@ -37,8 +37,7 @@ export function CandidateCard({ candidate, rank }: { candidate: SymptomCandidate
           <span className="text-xs text-[var(--color-text-muted)]">{candidate.windowFit}</span>
         </div>
         <span
-          className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-          style={LIKELIHOOD_STYLE[candidate.likelihood]}
+          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${LIKELIHOOD_CLASS[candidate.likelihood]}`}
         >
           {LIKELIHOOD_LABELS[candidate.likelihood]}
         </span>

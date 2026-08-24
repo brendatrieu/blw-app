@@ -3,7 +3,7 @@ import { ButtonLink } from "../components/ui/Button.js";
 
 export function NotFoundPage() {
   return (
-    <div className="p-4">
+    <div className="flex min-h-full flex-col items-center justify-center p-4">
       <EmptyState
         icon="🔍"
         title="Not found"

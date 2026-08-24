@@ -3,13 +3,9 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthConfig } from "../features/babies/hooks.js";
 import { authErrorMessage, signIn } from "../lib/auth.js";
 import { Button } from "../components/ui/Button.js";
-
-const fieldClass = "w-full rounded-lg border px-3 py-2 text-base";
-const fieldStyle = {
-  backgroundColor: "var(--color-bg)",
-  borderColor: "var(--color-border)",
-  color: "var(--color-text)",
-};
+import { Card } from "../components/ui/Card.js";
+import { Field } from "../components/ui/Field.js";
+import { Input } from "../components/ui/Input.js";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -41,81 +37,76 @@ export function LoginPage() {
 
   return (
     <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center gap-6 p-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold" style={{ color: "var(--color-text)" }}>
-          Welcome back
-        </h1>
-        <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-          Sign in to pick up where you left off.
-        </p>
-      </header>
-
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <label className="flex flex-col gap-1 text-sm" style={{ color: "var(--color-text)" }}>
-          Email
-          <input
-            type="email"
-            name="email"
-            autoComplete="email"
-            required
-            className={fieldClass}
-            style={fieldStyle}
-            value={email}
-            onChange={(event) => {
-              setEmail(event.target.value);
-            }}
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm" style={{ color: "var(--color-text)" }}>
-          Password
-          <input
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            required
-            className={fieldClass}
-            style={fieldStyle}
-            value={password}
-            onChange={(event) => {
-              setPassword(event.target.value);
-            }}
-          />
-        </label>
-
-        {error ? (
-          <p role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
-            {error}
-          </p>
-        ) : null}
-
-        <Button type="submit" disabled={submitting} className="text-base">
-          {submitting ? "Signing in…" : "Sign in"}
-        </Button>
-      </form>
-
-      <div className="flex flex-col gap-2">
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={!googleEnabled}
-          className="text-base"
-          onClick={() => {
-            void signIn.social({ provider: "google", callbackURL: redirectTo });
-          }}
-        >
-          Continue with Google
-        </Button>
-        {!googleEnabled && authConfig.isSuccess ? (
-          <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-            Google sign-in is not configured on this server.
-          </p>
-        ) : null}
+      <div className="flex flex-col items-center gap-2 text-center">
+        <span aria-hidden="true" className="text-4xl leading-none">
+          👋
+        </span>
+        <h1 className="font-display text-[var(--color-text)]">Welcome back</h1>
+        <p className="text-sm text-[var(--color-text-muted)]">Sign in to pick up where you left off.</p>
       </div>
 
-      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+      <Card padding="md" className="flex flex-col gap-4">
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <Field label="Email" htmlFor="login-email">
+            <Input
+              id="login-email"
+              type="email"
+              name="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(event) => {
+                setEmail(event.target.value);
+              }}
+            />
+          </Field>
+
+          <Field label="Password" htmlFor="login-password">
+            <Input
+              id="login-password"
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(event) => {
+                setPassword(event.target.value);
+              }}
+            />
+          </Field>
+
+          {error ? (
+            <p role="alert" className="text-sm text-[var(--color-danger)]">
+              {error}
+            </p>
+          ) : null}
+
+          <Button type="submit" disabled={submitting} className="text-base">
+            {submitting ? "Signing in…" : "Sign in"}
+          </Button>
+        </form>
+
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!googleEnabled}
+            className="text-base"
+            onClick={() => {
+              void signIn.social({ provider: "google", callbackURL: redirectTo });
+            }}
+          >
+            Continue with Google
+          </Button>
+          {!googleEnabled && authConfig.isSuccess ? (
+            <p className="text-xs text-[var(--color-text-muted)]">Google sign-in is not configured on this server.</p>
+          ) : null}
+        </div>
+      </Card>
+
+      <p className="text-center text-sm text-[var(--color-text-muted)]">
         New here?{" "}
-        <Link to="/signup" className="underline" style={{ color: "var(--color-primary)" }}>
+        <Link to="/signup" className="font-semibold text-[var(--color-primary)] underline">
           Create an account
         </Link>
       </p>

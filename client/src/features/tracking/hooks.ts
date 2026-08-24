@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CreateServeLogInput, FavoriteItem, FavoritesResponse, ServeLogItem, ServeLogsResponse } from "@blw/shared";
+import type {
+  AllergenProgressResponse,
+  CreateServeLogInput,
+  FavoriteItem,
+  FavoritesResponse,
+  ServeLogItem,
+  ServeLogsResponse,
+} from "@blw/shared";
 import {
   createServeLog,
   deleteFavorite,
@@ -10,6 +17,7 @@ import {
   putFavorite,
   type ServeLogsQuery,
 } from "./api.js";
+import { useCelebration } from "../../components/ui/Celebration.js";
 
 export const trackingKeys = {
   serveLogs: (babyId: string) => ["serve-logs", babyId] as const,
@@ -50,19 +58,50 @@ export function useIsFavorited(recipeId: string | undefined): boolean {
   return Boolean(recipeId && data?.items.some((item) => item.recipeId === recipeId));
 }
 
+/**
+ * Creating a serve log also drives the app's two celebration moments: the
+ * very first log ever ("First food logged!") and an allergen crossing into
+ * "established" as a result of this log. `onMutate` snapshots what was true
+ * just before the mutation (whether any logs already existed, and each
+ * allergen's status) so `onSuccess` can diff against a fresh fetch and fire
+ * at most one celebration — never both, and never on delete.
+ */
 export function useCreateServeLog(babyId: string | undefined) {
   const queryClient = useQueryClient();
+  const { celebrate } = useCelebration();
   return useMutation({
     mutationFn: (input: CreateServeLogInput) => {
       if (!babyId) throw new Error("useCreateServeLog called with no active baby");
       return createServeLog(babyId, input);
     },
-    onSuccess: (created) => {
+    onMutate: () => {
+      if (!babyId) return undefined;
+      const previousProgress = queryClient.getQueryData<AllergenProgressResponse>(trackingKeys.allergenProgress(babyId));
+      const logSnapshots = queryClient.getQueriesData<ServeLogsResponse>({ queryKey: trackingKeys.serveLogs(babyId) });
+      const hadAnyLogs = logSnapshots.some(([, data]) => (data?.items.length ?? 0) > 0);
+      return { previousProgress, hadAnyLogs };
+    },
+    onSuccess: (created, _input, context) => {
       if (!babyId) return;
       const snapshots = queryClient.getQueriesData<ServeLogsResponse>({ queryKey: trackingKeys.serveLogs(babyId) });
       for (const [key, data] of snapshots) {
         if (data) queryClient.setQueryData(key, { items: [created, ...data.items] });
       }
+
+      if (!context?.hadAnyLogs) {
+        celebrate({ title: "First food logged!", emoji: "🎉" });
+        return;
+      }
+
+      void fetchAllergenProgress(babyId).then((fresh) => {
+        const previousStatus = new Map((context.previousProgress?.items ?? []).map((item) => [item.allergenSlug, item.status]));
+        const newlyEstablished = fresh.items.find(
+          (item) => item.status === "established" && previousStatus.get(item.allergenSlug) !== "established",
+        );
+        if (newlyEstablished) {
+          celebrate({ title: `${newlyEstablished.allergenName} is established!`, emoji: "🌟" });
+        }
+      });
     },
     onSettled: () => {
       if (!babyId) return;

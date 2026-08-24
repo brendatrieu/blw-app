@@ -28,9 +28,9 @@ export function MessageBubble({ role, text, pending }: MessageBubbleProps) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[15px] leading-relaxed ${
+        className={`max-w-[85%] rounded-[var(--radius-lg)] px-3.5 py-2.5 text-[15px] leading-relaxed ${
           isUser
-            ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+            ? "bg-[var(--color-coral-soft)] text-[var(--color-text)]"
             : "border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]"
         } ${pending ? "opacity-70" : ""}`}
       >

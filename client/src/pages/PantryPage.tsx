@@ -60,6 +60,7 @@ export function PantryPage() {
     <div className="flex flex-col gap-4 p-4">
       <PageHeader
         title="Pantry"
+        emoji="🧺"
         action={
           !showAddForm && (
             <Button size="sm" onClick={() => setShowAddForm(true)}>
@@ -90,15 +91,16 @@ export function PantryPage() {
       </div>
 
       {recentChange && (
-        <div
-          className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm"
-          style={{ backgroundColor: "var(--color-callout-bg)", color: "var(--color-text)" }}
-        >
+        <div className="flex items-center justify-between gap-2 rounded-[var(--radius-md)] bg-[var(--color-callout-bg)] px-3 py-2 text-sm text-[var(--color-text)]">
           <span>
             {recentChange.to === "finished" ? "Marked finished: " : "Marked discarded: "}
             {recentChange.title}
           </span>
-          <button type="button" onClick={handleUndo} className="font-semibold underline" style={{ color: "var(--color-primary)" }}>
+          <button
+            type="button"
+            onClick={handleUndo}
+            className="font-semibold text-[var(--color-primary)] underline"
+          >
             Undo
           </button>
         </div>

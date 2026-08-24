@@ -3,9 +3,14 @@ import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useFoods } from "../features/catalog/hooks.js";
 import { useCreateServeLog, useDeleteServeLog, useServeLogs } from "../features/tracking/hooks.js";
 import type { ServeLogItem } from "@blw/shared";
+import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
+import { Card } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
+import { Field } from "../components/ui/Field.js";
+import { Input, Textarea } from "../components/ui/Input.js";
+import { Select } from "../components/ui/Select.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 /** yyyy-mm-dd in the viewer's local timezone, used to group the timeline by day. */
@@ -68,15 +73,14 @@ function QuickLogForm({ babyId, onDone }: QuickLogFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3"
+      className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4"
     >
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text-muted)]">Food</span>
-        <select
+      <Field label="Food" htmlFor="quick-log-food">
+        <Select
+          id="quick-log-food"
           required
           value={foodId}
           onChange={(e) => setFoodId(e.target.value)}
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
         >
           <option value="" disabled>
             {foodsLoading ? "Loading foods…" : "Select a food"}
@@ -86,33 +90,33 @@ function QuickLogForm({ babyId, onDone }: QuickLogFormProps) {
               {food.name}
             </option>
           ))}
-        </select>
-      </label>
+        </Select>
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text-muted)]">When</span>
-        <input
+      <Field label="When" htmlFor="quick-log-when">
+        <Input
+          id="quick-log-when"
           type="datetime-local"
           value={servedAt}
           max={nowForDateTimeLocal()}
           onChange={(e) => setServedAt(e.target.value)}
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
         />
-      </label>
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text-muted)]">Reaction note (optional)</span>
-        <textarea
+      <Field label="Reaction note (optional)" htmlFor="quick-log-note">
+        <Textarea
+          id="quick-log-note"
           value={reactionNote}
           onChange={(e) => setReactionNote(e.target.value)}
           rows={2}
           placeholder="e.g. mild rash around mouth"
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
         />
-      </label>
+      </Field>
 
       {createServeLog.isError && (
-        <p className="text-xs text-[var(--color-danger)]">Couldn't save that — try again.</p>
+        <p role="alert" className="text-xs text-[var(--color-danger)]">
+          Couldn't save that — try again.
+        </p>
       )}
 
       <div className="flex gap-2">
@@ -140,28 +144,37 @@ function LogEntryRow({ entry, babyId, pendingDeleteId, onRequestDelete, onCancel
   const confirming = pendingDeleteId === entry.id;
 
   return (
-    <li className="flex flex-col gap-1 rounded-lg bg-[var(--color-bg-elevated)] p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col">
-          <span className="text-sm font-medium text-[var(--color-text)]">
-            {entry.foodName}
-            {entry.recipeTitle && <span className="font-normal text-[var(--color-text-muted)]"> · {entry.recipeTitle}</span>}
-          </span>
+    <Card as="li" padding="sm" className="flex flex-col gap-2">
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-coral-soft)] text-lg leading-none"
+        >
+          {getFoodEmoji(entry.foodSlug)}
+        </span>
+        <div className="flex flex-1 flex-col">
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-sm font-medium text-[var(--color-text)]">
+              {entry.foodName}
+              {entry.recipeTitle && (
+                <span className="font-normal text-[var(--color-text-muted)]"> · {entry.recipeTitle}</span>
+              )}
+            </span>
+            {!confirming && (
+              <button
+                type="button"
+                onClick={() => onRequestDelete(entry.id)}
+                className="shrink-0 rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
+              >
+                Delete
+              </button>
+            )}
+          </div>
           <span className="text-xs text-[var(--color-text-muted)]">{timeLabel(entry.servedAt)}</span>
           {entry.reactionNote && (
             <span className="mt-1 text-xs text-[var(--color-danger)]">Reaction: {entry.reactionNote}</span>
           )}
         </div>
-
-        {!confirming && (
-          <button
-            type="button"
-            onClick={() => onRequestDelete(entry.id)}
-            className="shrink-0 rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
-          >
-            Delete
-          </button>
-        )}
       </div>
 
       {confirming && (
@@ -171,21 +184,20 @@ function LogEntryRow({ entry, babyId, pendingDeleteId, onRequestDelete, onCancel
             type="button"
             disabled={deleteServeLog.isPending}
             onClick={() => deleteServeLog.mutate(entry.id, { onSettled: onCancelDelete })}
-            className="rounded px-2 py-1 text-xs font-medium text-[var(--color-primary-contrast)]"
-            style={{ backgroundColor: "var(--color-danger)" }}
+            className="rounded-[var(--radius-md)] bg-[var(--color-danger)] px-2 py-1 text-xs font-medium text-[var(--color-primary-contrast)] disabled:opacity-60"
           >
             {deleteServeLog.isPending ? "Removing…" : "Yes, delete"}
           </button>
           <button
             type="button"
             onClick={onCancelDelete}
-            className="rounded border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-[var(--color-text)]"
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-[var(--color-text)]"
           >
             Cancel
           </button>
         </div>
       )}
-    </li>
+    </Card>
   );
 }
 
@@ -233,6 +245,7 @@ export function LogPage() {
     <div className="flex flex-col gap-4 p-4">
       <PageHeader
         title={`Log — ${activeBaby.name}`}
+        emoji="📖"
         action={
           !showForm && (
             <Button size="sm" onClick={() => setShowForm(true)}>
@@ -258,9 +271,7 @@ export function LogPage() {
       <div className="flex flex-col gap-4">
         {groups.map(([key, items]) => (
           <section key={key} className="flex flex-col gap-2">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-              {dayLabel(key)}
-            </h2>
+            <h2 className="font-caption uppercase tracking-wide text-[var(--color-text-muted)]">{dayLabel(key)}</h2>
             <ul className="flex flex-col gap-2">
               {items.map((entry) => (
                 <LogEntryRow

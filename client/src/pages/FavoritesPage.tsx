@@ -12,7 +12,12 @@ function FavoriteCard({ item }: { item: FavoriteItem }) {
   return (
     <CardLink to={`/recipes/${item.recipeId}`} padding="sm" className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-base font-semibold text-[var(--color-text)]">{item.title}</span>
+        <span className="flex items-center gap-2 text-base font-semibold text-[var(--color-text)]">
+          <span aria-hidden="true" className="text-xl leading-none">
+            💛
+          </span>
+          {item.title}
+        </span>
         <span className="text-xs text-[var(--color-text-muted)]">{item.minAgeMonths}m+</span>
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
@@ -32,7 +37,7 @@ export function FavoritesPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <PageHeader title="Favorites" />
+      <PageHeader title="Favorites" emoji="💛" description="Recipes you've saved to come back to." />
 
       {isLoading && <SkeletonList count={3} />}
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load favorites.</p>}

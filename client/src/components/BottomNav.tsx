@@ -1,11 +1,78 @@
+import type { SVGProps } from "react";
 import { NavLink } from "react-router-dom";
 
+// Five hand-drawn, friendly-geometry icons — rounded strokes, no sharp
+// corners, matching the Sunny Sprout illustration style. Color comes from
+// `currentColor` so the active/inactive state is set entirely by the
+// wrapping <span>'s text color.
+const ICON_PROPS: SVGProps<SVGSVGElement> = {
+  width: 24,
+  height: 24,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.8,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  "aria-hidden": true,
+};
+
+function HomeIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M4 11.5 12 4l8 7.5" />
+      <path d="M6 10v8.3a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V10" />
+      <path d="M10 19.3v-3.8a2 2 0 0 1 4 0v3.8" />
+    </svg>
+  );
+}
+
+function BasketIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M8.3 10a3.7 3.7 0 0 1 7.4 0" />
+      <path d="M5 10h14l-1.3 8.2a2 2 0 0 1-2 1.7H8.3a2 2 0 0 1-2-1.7L5 10Z" />
+      <path d="M10 13.2v4M14 13.2v4" />
+    </svg>
+  );
+}
+
+function AppleIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M12 8.7c-2.6-2.3-6.3-.7-6.3 3.1 0 3.6 2.9 7.2 5.2 7.2.5 0 .9-.2 1.1-.2.2 0 .6.2 1.1.2 2.3 0 5.2-3.6 5.2-7.2 0-3.8-3.7-5.4-6.3-3.1Z" />
+      <path d="M12 8.7V6.3" />
+      <path d="M12 6.3c.4-1 1.7-1.5 2.8-1.1" />
+    </svg>
+  );
+}
+
+function NotebookIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <rect x="5" y="4" width="14" height="16" rx="2.5" />
+      <path d="M9 4v16" />
+      <path d="M12.3 9h3.7M12.3 12.5h3.7M12.3 16h2.4" />
+    </svg>
+  );
+}
+
+function DotsIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <circle cx="6" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="18" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 const tabs = [
-  { to: "/", label: "Home" },
-  { to: "/pantry", label: "Pantry" },
-  { to: "/foods", label: "Foods" },
-  { to: "/log", label: "Log" },
-  { to: "/more", label: "More" },
+  { to: "/", label: "Home", Icon: HomeIcon },
+  { to: "/pantry", label: "Pantry", Icon: BasketIcon },
+  { to: "/foods", label: "Foods", Icon: AppleIcon },
+  { to: "/log", label: "Log", Icon: NotebookIcon },
+  { to: "/more", label: "More", Icon: DotsIcon },
 ];
 
 export function BottomNav() {
@@ -19,29 +86,30 @@ export function BottomNav() {
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
-      {tabs.map((tab) => (
+      {tabs.map(({ to, label, Icon }) => (
         <NavLink
-          key={tab.to}
-          to={tab.to}
-          end={tab.to === "/"}
-          className="flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg text-xs font-medium transition-colors"
+          key={to}
+          to={to}
+          end={to === "/"}
+          className="flex min-h-11 flex-1 flex-col items-center justify-center gap-1 text-xs"
         >
           {({ isActive }) => (
             <>
               <span
-                aria-hidden="true"
-                className="h-1 w-6 rounded-full transition-colors"
-                style={{ backgroundColor: isActive ? "var(--color-primary)" : "transparent" }}
-              />
-              <span
-                className="rounded-full px-2.5 py-1 transition-colors"
+                className="flex h-8 w-12 items-center justify-center rounded-[var(--radius-pill)] transition-[background-color,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] motion-reduce:transition-none"
                 style={{
-                  color: isActive ? "var(--color-primary)" : "var(--color-text-muted)",
-                  backgroundColor: isActive ? "var(--color-primary-soft)" : "transparent",
-                  fontWeight: isActive ? 600 : 500,
+                  backgroundColor: isActive ? "var(--color-primary)" : "transparent",
+                  color: isActive ? "var(--color-primary-contrast)" : "var(--color-text-muted)",
+                  transform: isActive ? "scale(1)" : "scale(0.92)",
                 }}
               >
-                {tab.label}
+                <Icon />
+              </span>
+              <span
+                className="font-caption"
+                style={{ color: isActive ? "var(--color-primary)" : "var(--color-text-muted)" }}
+              >
+                {label}
               </span>
             </>
           )}

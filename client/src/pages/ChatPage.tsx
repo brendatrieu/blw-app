@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { ChatKind } from "@blw/shared";
 import { useAiKeyStatus } from "../features/ai/hooks.js";
@@ -6,9 +6,11 @@ import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useCreateThread, useDeleteThread, useThreads } from "../features/chat/hooks.js";
 import { useChatSession } from "../features/chat/useChatSession.js";
 import { MessageBubble } from "../features/chat/components/MessageBubble.js";
+import { Composer } from "../features/chat/components/Composer.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { Card, CardLink } from "../components/ui/Card.js";
+import { Badge } from "../components/ui/Badge.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { SkeletonList, Skeleton } from "../components/ui/Skeleton.js";
 
@@ -19,6 +21,8 @@ const KIND_DESCRIPTION: Record<ChatKind, string> = {
   recipe: "Find and adapt recipes using your pantry and your baby's profile.",
   blw: "Ask anything about baby-led weaning, answered from our safety library.",
 };
+const KIND_EMOJI: Record<ChatKind, string> = { recipe: "🍳", blw: "🌱" };
+const KIND_BADGE_TONE: Record<ChatKind, "sunshine" | "leaf"> = { recipe: "sunshine", blw: "leaf" };
 
 function formatThreadDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -30,17 +34,18 @@ function formatThreadDate(iso: string): string {
 
 function LockedChat() {
   return (
-    <div className="flex flex-col gap-3 p-4">
-      <PageHeader title="Chat" />
-      <Card className="flex flex-col gap-2">
-        <p className="text-sm text-[var(--color-text)]">
-          Chat uses your own Anthropic API key so nobody else's usage affects your bill. Add one in Settings to unlock the
-          recipe assistant and the ask-anything BLW chat — everything else in the app works fine without it.
-        </p>
-        <ButtonLink to="/settings" variant="secondary" size="sm" className="w-fit">
-          Add your key in Settings →
-        </ButtonLink>
-      </Card>
+    <div className="flex flex-col gap-4 p-4">
+      <PageHeader title="Chat" emoji="💬" />
+      <EmptyState
+        icon="🔑"
+        title="Add a key to unlock chat"
+        description="Chat uses your own Anthropic API key so nobody else's usage affects your bill. Add one in Settings to unlock the recipe assistant and the ask-anything BLW chat — everything else in the app works fine without it."
+        action={
+          <ButtonLink to="/settings" size="sm">
+            Add your key in Settings →
+          </ButtonLink>
+        }
+      />
     </div>
   );
 }
@@ -75,6 +80,7 @@ function ThreadList() {
     <div className="flex flex-col gap-4 p-4">
       <PageHeader
         title="Chat"
+        emoji="💬"
         action={
           !picking && (
             <Button size="sm" onClick={() => setPicking(true)}>
@@ -86,17 +92,22 @@ function ThreadList() {
 
       {picking && (
         <Card className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-[var(--color-text)]">Start a new chat</p>
+          <p className="text-sm font-semibold text-[var(--color-text)]">Start a new chat</p>
           {(["recipe", "blw"] as const satisfies readonly ChatKind[]).map((kind) => (
             <button
               key={kind}
               type="button"
               disabled={createThread.isPending}
               onClick={() => startThread(kind)}
-              className="flex min-h-11 flex-col items-start gap-0.5 rounded-lg border border-[var(--color-border)] p-3 text-left transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+              className="flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 text-left transition-[transform,border-color] duration-[var(--duration-fast)] ease-[var(--ease-spring)] hover:border-[var(--color-primary)] active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 disabled:opacity-60"
             >
-              <span className="text-sm font-semibold text-[var(--color-text)]">{KIND_LABEL[kind]}</span>
-              <span className="text-xs text-[var(--color-text-muted)]">{KIND_DESCRIPTION[kind]}</span>
+              <span aria-hidden="true" className="text-2xl leading-none">
+                {KIND_EMOJI[kind]}
+              </span>
+              <span className="flex flex-col items-start gap-0.5">
+                <span className="text-sm font-semibold text-[var(--color-text)]">{KIND_LABEL[kind]}</span>
+                <span className="text-xs text-[var(--color-text-muted)]">{KIND_DESCRIPTION[kind]}</span>
+              </span>
             </button>
           ))}
           <Button variant="ghost" size="sm" className="w-fit" onClick={() => setPicking(false)}>
@@ -122,21 +133,22 @@ function ThreadList() {
             <CardLink
               to={`/chat/${thread.id}`}
               padding="sm"
-              className="flex flex-1 items-center justify-between gap-3"
+              className="flex flex-1 items-center gap-3"
             >
-              <span className="flex flex-col gap-0.5">
+              <span aria-hidden="true" className="text-2xl leading-none">
+                {KIND_EMOJI[thread.kind]}
+              </span>
+              <span className="flex flex-1 flex-col gap-0.5">
                 <span className="text-sm font-semibold text-[var(--color-text)]">{KIND_LABEL[thread.kind]}</span>
                 <span className="text-xs text-[var(--color-text-muted)]">{formatThreadDate(thread.createdAt)}</span>
               </span>
-              <span className="inline-flex items-center rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-text-muted)]">
-                {thread.kind === "recipe" ? "Recipe" : "BLW Q&A"}
-              </span>
+              <Badge tone={KIND_BADGE_TONE[thread.kind]}>{thread.kind === "recipe" ? "Recipe" : "BLW Q&A"}</Badge>
             </CardLink>
             <button
               type="button"
               aria-label="Delete chat"
               onClick={() => handleDelete(thread.id)}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] text-[var(--color-text-muted)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]"
             >
               ✕
             </button>
@@ -155,8 +167,7 @@ function EmergencyCard({ message }: { message: string }) {
   return (
     <div
       role="alert"
-      className="flex flex-col gap-1 rounded-xl border-2 p-3"
-      style={{ borderColor: "var(--color-danger)", backgroundColor: "var(--color-callout-bg)" }}
+      className="flex flex-col gap-1 rounded-[var(--radius-lg)] border-2 border-[var(--color-danger)] bg-[var(--color-callout-bg)] p-3"
     >
       <p className="text-sm font-bold text-[var(--color-danger)]">Possible emergency</p>
       <p className="text-sm text-[var(--color-text)]">{message}</p>
@@ -200,35 +211,22 @@ function ThreadConversation({ threadId }: { threadId: string }) {
     void sendMessage(trimmed);
   }
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    submitDraft();
-  }
-
-  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      submitDraft();
-    }
-  }
-
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-[var(--color-border)] p-4">
-        <Link to="/chat" className="text-sm font-medium text-[var(--color-primary)] underline">
+      <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4">
+        <Link
+          to="/chat"
+          className="text-sm font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline"
+        >
           {"← Chats"}
         </Link>
-        {thread && (
-          <span className="inline-flex items-center rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-text-muted)]">
-            {KIND_LABEL[thread.kind]}
-          </span>
-        )}
+        {thread && <Badge tone={KIND_BADGE_TONE[thread.kind]}>{KIND_LABEL[thread.kind]}</Badge>}
       </div>
 
       <div className="scroll-momentum flex flex-1 flex-col gap-3 overflow-y-auto p-4">
         {disclaimer && <p className="text-center text-xs text-[var(--color-text-muted)]">{disclaimer}</p>}
 
-        {isLoadingHistory && <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>}
+        {isLoadingHistory && <SkeletonList count={3} />}
         {historyError && <p className="text-sm text-[var(--color-danger)]">Couldn't load this chat.</p>}
 
         {messages.map((message) => (
@@ -238,26 +236,13 @@ function ThreadConversation({ threadId }: { threadId: string }) {
         {pendingUserText && <MessageBubble role="user" text={pendingUserText} pending />}
         {triage && <EmergencyCard message={triage} />}
         {!triage && (pendingUserText || isStreaming) && <MessageBubble role="assistant" text={streamingText} pending />}
-        {toolStatus && <p className="text-xs italic text-[var(--color-text-muted)]">{toolStatus}</p>}
+        {toolStatus && <p className="text-xs text-[var(--color-text-muted)] italic">{toolStatus}</p>}
         {error && <p className="text-sm text-[var(--color-danger)]">{error}</p>}
 
         <div ref={scrollRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="flex items-end gap-2 border-t border-[var(--color-border)] p-3">
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value.slice(0, MAX_MESSAGE_LENGTH))}
-          onKeyDown={handleKeyDown}
-          disabled={isStreaming}
-          rows={1}
-          placeholder="Ask a question…"
-          className="min-h-[2.5rem] flex-1 resize-none rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] p-2 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-primary)] disabled:opacity-60"
-        />
-        <Button type="submit" disabled={isStreaming || draft.trim().length === 0}>
-          Send
-        </Button>
-      </form>
+      <Composer value={draft} onChange={setDraft} onSubmit={submitDraft} disabled={isStreaming} maxLength={MAX_MESSAGE_LENGTH} />
     </div>
   );
 }

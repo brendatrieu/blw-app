@@ -7,12 +7,7 @@ export function DisclaimerBanner() {
   return (
     <div
       role="note"
-      className="sticky top-0 z-20 -mx-4 -mt-4 mb-1 border-b px-4 py-2 text-xs font-medium"
-      style={{
-        backgroundColor: "var(--color-callout-bg)",
-        borderColor: "var(--color-callout-border)",
-        color: "var(--color-callout-icon)",
-      }}
+      className="sticky top-0 z-20 -mx-4 -mt-4 mb-1 border-b border-[var(--color-callout-border)] bg-[var(--color-callout-bg)] px-4 py-2 text-xs font-medium text-[var(--color-callout-icon)]"
     >
       Not medical advice — pattern-spotting only. It cannot diagnose an allergy.
     </div>

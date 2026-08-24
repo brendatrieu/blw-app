@@ -1,6 +1,16 @@
 import type { PantryItem } from "@blw/shared";
 import { Badge } from "../../catalog/components/Badge.js";
+import { getFoodEmoji } from "../../catalog/foodEmoji.js";
 import { countdownLabel, LOCATION_LABEL, pantryItemTitle } from "../format.js";
+import { Button } from "../../../components/ui/Button.js";
+
+/** Emoji for a pantry item: the food's own emoji when it was prepped from a
+ * catalog food, otherwise a friendly stand-in for a recipe or free-form entry. */
+function pantryItemEmoji(item: PantryItem): string {
+  if (item.foodSlug) return getFoodEmoji(item.foodSlug);
+  if (item.recipeTitle) return "🍲";
+  return "📝";
+}
 
 interface PantryItemCardProps {
   item: PantryItem;
@@ -15,14 +25,19 @@ export function PantryItemCard({ item, busy, onFinish, onDiscard, onEdit, onRest
   const preparedLabel = new Date(item.preparedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
   return (
-    <li className="flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+    <li className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold text-[var(--color-text)]">{pantryItemTitle(item)}</span>
-          <span className="text-xs text-[var(--color-text-muted)]">
-            Prepared {preparedLabel}
-            {item.quantityNote ? ` · ${item.quantityNote}` : ""}
+        <div className="flex items-start gap-2">
+          <span aria-hidden="true" className="text-xl leading-none">
+            {pantryItemEmoji(item)}
           </span>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-[var(--color-text)]">{pantryItemTitle(item)}</span>
+            <span className="text-xs text-[var(--color-text-muted)]">
+              Prepared {preparedLabel}
+              {item.quantityNote ? ` · ${item.quantityNote}` : ""}
+            </span>
+          </div>
         </div>
         <Badge tone="neutral">{LOCATION_LABEL[item.location]}</Badge>
       </div>
@@ -32,7 +47,7 @@ export function PantryItemCard({ item, busy, onFinish, onDiscard, onEdit, onRest
           {item.expired ? (
             <Badge tone="danger">Expired — discard?</Badge>
           ) : item.useSoon ? (
-            <Badge tone="accent">Use soon</Badge>
+            <Badge tone="sunshine">⏰ Use soon</Badge>
           ) : (
             <span className="text-xs text-[var(--color-text-muted)]">{countdownLabel(item.expiresAt)}</span>
           )}
@@ -48,44 +63,31 @@ export function PantryItemCard({ item, busy, onFinish, onDiscard, onEdit, onRest
       {(onFinish || onDiscard || onEdit || onRestore) && (
       <div className="flex flex-wrap gap-2 border-t border-[var(--color-border)] pt-2">
         {onFinish && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onFinish}
-            className="rounded-lg border border-[var(--color-border)] px-2.5 py-1 text-xs font-medium text-[var(--color-text)] disabled:opacity-60"
-          >
+          <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={onFinish}>
             Mark finished
-          </button>
+          </Button>
         )}
         {onDiscard && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onDiscard}
-            className="rounded-lg border border-[var(--color-border)] px-2.5 py-1 text-xs font-medium text-[var(--color-text)] disabled:opacity-60"
-          >
+          <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={onDiscard}>
             Mark discarded
-          </button>
+          </Button>
         )}
         {onEdit && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onEdit}
-            className="rounded-lg border border-[var(--color-border)] px-2.5 py-1 text-xs font-medium text-[var(--color-text)] disabled:opacity-60"
-          >
+          <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={onEdit}>
             Edit
-          </button>
+          </Button>
         )}
         {onRestore && (
-          <button
+          <Button
             type="button"
+            size="sm"
+            variant="ghost"
             disabled={busy}
             onClick={onRestore}
-            className="rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--color-primary)] disabled:opacity-60"
+            className="text-[var(--color-primary)]"
           >
             Restore to active
-          </button>
+          </Button>
         )}
       </div>
       )}

@@ -2,8 +2,14 @@ import { useState } from "react";
 import type { PantryLocation } from "@blw/shared";
 import { useFoods } from "../../catalog/hooks.js";
 import { useFavorites } from "../../tracking/hooks.js";
+import { getFoodEmoji } from "../../catalog/foodEmoji.js";
 import { useCreatePantryItem } from "../hooks.js";
 import { LOCATIONS, toDateTimeLocal } from "../format.js";
+import { Field } from "../../../components/ui/Field.js";
+import { Input } from "../../../components/ui/Input.js";
+import { Select } from "../../../components/ui/Select.js";
+import { Button } from "../../../components/ui/Button.js";
+import { Card } from "../../../components/ui/Card.js";
 
 type Source = "food" | "recipe" | "label";
 
@@ -55,10 +61,7 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3"
-    >
+    <Card as="form" onSubmit={handleSubmit} padding="sm" className="flex flex-col gap-3">
       <div className="flex gap-1.5">
         {SOURCE_TABS.map((tab) => (
           <button
@@ -66,7 +69,7 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
             type="button"
             onClick={() => setSource(tab.value)}
             aria-pressed={source === tab.value}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-medium transition-colors ${
               source === tab.value
                 ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
                 : "border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)]"
@@ -78,40 +81,28 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
       </div>
 
       {source === "food" && (
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-xs font-medium text-[var(--color-text-muted)]">Food</span>
-          <select
-            required
-            value={foodId}
-            onChange={(e) => setFoodId(e.target.value)}
-            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
-          >
+        <Field label="Food" htmlFor="pantry-add-food">
+          <Select id="pantry-add-food" required value={foodId} onChange={(e) => setFoodId(e.target.value)}>
             <option value="" disabled>
               {foodsLoading ? "Loading foods…" : "Select a food"}
             </option>
             {foods.map((food) => (
               <option key={food.id} value={food.id}>
-                {food.name}
+                {getFoodEmoji(food.slug, food.category)} {food.name}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </Field>
       )}
 
       {source === "recipe" && (
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-xs font-medium text-[var(--color-text-muted)]">Recipe</span>
+        <Field label="Recipe" htmlFor="pantry-add-recipe">
           {!favoritesLoading && favorites.length === 0 ? (
             <p className="text-xs text-[var(--color-text-muted)]">
               No favorited recipes yet — favorite one from its recipe page first.
             </p>
           ) : (
-            <select
-              required
-              value={recipeId}
-              onChange={(e) => setRecipeId(e.target.value)}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
-            >
+            <Select id="pantry-add-recipe" required value={recipeId} onChange={(e) => setRecipeId(e.target.value)}>
               <option value="" disabled>
                 {favoritesLoading ? "Loading recipes…" : "Select a recipe"}
               </option>
@@ -120,27 +111,26 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
                   {recipe.title}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
-        </label>
+        </Field>
       )}
 
       {source === "label" && (
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-xs font-medium text-[var(--color-text-muted)]">What is it?</span>
-          <input
+        <Field label="What is it?" htmlFor="pantry-add-label">
+          <Input
+            id="pantry-add-label"
             type="text"
             required
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="e.g. Leftover lentil soup"
-            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
           />
-        </label>
+        </Field>
       )}
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text-muted)]">Location</span>
+      <label className="flex flex-col gap-1.5 text-sm">
+        <span className="text-sm font-semibold text-[var(--color-text)]">Location</span>
         <div className="flex gap-1.5">
           {LOCATIONS.map((loc) => (
             <button
@@ -148,7 +138,7 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
               type="button"
               onClick={() => setLocation(loc.value)}
               aria-pressed={location === loc.value}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-medium transition-colors ${
                 location === loc.value
                   ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
                   : "border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)]"
@@ -160,46 +150,36 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
         </div>
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text-muted)]">Prepared</span>
-        <input
+      <Field label="Prepared" htmlFor="pantry-add-prepared">
+        <Input
+          id="pantry-add-prepared"
           type="datetime-local"
           value={preparedAt}
           max={toDateTimeLocal(new Date())}
           onChange={(e) => setPreparedAt(e.target.value)}
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
         />
-      </label>
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text-muted)]">Quantity note (optional)</span>
-        <input
+      <Field label="Quantity note (optional)" htmlFor="pantry-add-note">
+        <Input
+          id="pantry-add-note"
           type="text"
           value={quantityNote}
           onChange={(e) => setQuantityNote(e.target.value)}
           placeholder="e.g. 6 ice-cube portions"
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
         />
-      </label>
+      </Field>
 
       {createItem.isError && <p className="text-xs text-[var(--color-danger)]">Couldn't save that — try again.</p>}
 
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={!canSubmit || createItem.isPending}
-          className="flex-1 rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-[var(--color-primary-contrast)] disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button type="submit" disabled={!canSubmit || createItem.isPending} className="flex-1">
           {createItem.isPending ? "Adding…" : "Add to pantry"}
-        </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-text)]"
-        >
+        </Button>
+        <Button type="button" variant="secondary" onClick={onDone}>
           Cancel
-        </button>
+        </Button>
       </div>
-    </form>
+    </Card>
   );
 }

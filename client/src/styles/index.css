@@ -1,107 +1,220 @@
 @import "tailwindcss";
+@import "@fontsource-variable/nunito/wght.css";
 
 /*
- * Design tokens
- * =============
+ * Design tokens — "Sunny Sprout"
+ * ===============================
  * Everything below is CSS custom properties, not a Tailwind @theme block —
  * the app already leans on `var(--color-x)` and `text-[var(--color-x)]`
- * throughout, so token *names* stay stable and only the palette itself is
- * tightened here. Radii and spacing intentionally reuse Tailwind's default
- * scale (rounded-lg for controls, rounded-xl for cards, rounded-full for
- * pills — already the de facto convention across the app) rather than
- * introducing a second, parallel scale.
+ * throughout, so token *names* stay stable across the v1 -> v1.1 palette
+ * swap and only the values (plus a handful of new tokens) change here.
  *
  * Light/dark theming:
  * - Default (no attribute on <html>): follows prefers-color-scheme.
  * - Manual override: `data-theme="light" | "dark"` set on <html> by the
  *   theme toggle, persisted to localStorage (see src/theme.ts).
  *
- * Every text/background pairing below is checked against WCAG AA
- * (4.5:1 for body text, 3:1 for large/UI text) in both themes.
+ * The dark palette's actual hex values are defined exactly once, as
+ * private `--_dark-*` tokens on bare `:root` (so they exist unconditionally
+ * and both the media-query path and the `[data-theme]` path can reference
+ * the same source of truth via `var()` instead of repeating literals).
+ *
+ * Every text/background pairing used anywhere in the app is checked against
+ * WCAG AA (4.5:1 for body text, 3:1 for large/UI text) in both themes — see
+ * `client/scripts/check-contrast.mjs` (npm script `check:contrast`).
+ *
+ * --color-bg (light) and --_dark-color-bg (dark) are duplicated as literal
+ * hex outside this file, in `client/vite.config.ts` (manifest theme_color /
+ * background_color) and `client/index.html` (the two `theme-color` meta
+ * tags). Keep all three in sync by hand when either value changes here.
  */
 :root {
-  /* Surfaces */
-  --color-bg: #ffffff;
-  --color-bg-elevated: #f7f7f5;
-  --color-bg-inset: #eeede8;
+  /* ---- Surfaces (warm cream) ---- */
+  --color-bg: #fff6ea;
+  --color-bg-elevated: #fffdf8;
+  --color-bg-inset: #f5eee2;
 
-  /* Text */
-  --color-text: #1a1a17;
-  --color-text-muted: #5c5c56;
-  --color-border: #e3e3de;
+  /* ---- Text (warm charcoal — warm-leaning but never brown) ---- */
+  --color-text: #3b3630;
+  --color-text-muted: #6e675e;
+  --color-border: #ece4d6;
 
-  /* Brand — one accent hue used with restraint. Primary green carries the
-     app; accent (warm terracotta) is reserved for a handful of "notice me
-     gently" moments (Vit-C pairing, "use soon"), never for large surfaces. */
-  --color-primary: #2f6f4f;
+  /* ---- Coral ramp ----
+     soft = pastel chip/pill backgrounds; mid = decorative/large accents
+     only (never text or a fill under body-size text); deep = the
+     accessible workhorse used for links, the primary button fill, and any
+     coral text-on-light. */
+  --color-coral-soft: #ffe3d6;
+  --color-coral-mid: #ff7a59;
+  --color-coral-deep: #b23a0a;
+
+  /* ---- Sunshine ---- */
+  --color-sunshine: #ffc94d;
+  --color-sunshine-soft: #fff0cc;
+  --color-sunshine-deep: #7a4e08;
+
+  /* ---- Leaf ---- */
+  --color-leaf: #4caf7d;
+  --color-leaf-soft: #d9f0e1;
+  --color-leaf-deep: #1f6b44;
+
+  /* ---- Brand roles ---- */
+  --color-primary: var(--color-coral-deep);
   --color-primary-contrast: #ffffff;
-  --color-primary-soft: #e5f0e9;
-  --color-accent: #a85a26;
-  --color-danger: #b3261e;
+  --color-primary-soft: var(--color-coral-soft);
+  --color-accent: var(--color-sunshine-deep);
+  --color-danger: #c23b22;
 
-  --color-callout-bg: #fdf3e0;
-  --color-callout-border: #eab676;
-  --color-callout-icon: #b5650a;
+  --color-callout-bg: #fcebc9;
+  --color-callout-border: #e7b66b;
+  --color-callout-icon: #8a5a0a;
 
-  /* Elevation — subtle by design; this is a calm app, not a dashboard. */
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05), 0 1px 1px rgb(0 0 0 / 0.04);
-  --shadow-md: 0 6px 16px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.05);
-  --shadow-lg: 0 16px 32px rgb(0 0 0 / 0.14), 0 2px 6px rgb(0 0 0 / 0.06);
+  /* ---- Elevation — warm-tinted (cocoa-brown) instead of neutral black,
+     so shadows read as part of the palette rather than generic UI murk. ---- */
+  --shadow-sm: 0 1px 2px rgb(58 51 44 / 0.08), 0 1px 1px rgb(58 51 44 / 0.06);
+  --shadow-md: 0 8px 20px rgb(58 51 44 / 0.12), 0 2px 6px rgb(58 51 44 / 0.08);
+  --shadow-lg: 0 20px 40px rgb(58 51 44 / 0.18), 0 4px 10px rgb(58 51 44 / 0.1);
+
+  /* ---- Shape ---- */
+  --radius-md: 14px; /* controls: buttons, inputs, chips */
+  --radius-lg: 20px; /* cards, sheets */
+  --radius-pill: 999px;
+
+  /* ---- Motion — springy but restrained; every use is guarded by
+     prefers-reduced-motion below. ---- */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 160ms;
+  --duration-base: 220ms;
+  --duration-slow: 320ms;
+
+  /* ---- Type ----
+     Nunito Variable, self-hosted via @fontsource-variable (no external
+     origin — the woff2 files are bundled by Vite as local assets), with a
+     rounded system stack as fallback so the app still feels friendly
+     before/without the webfont. */
+  --font-family-base:
+    "Nunito Variable", ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", system-ui, -apple-system,
+    "Helvetica Neue", Arial, sans-serif;
+
+  --font-display: 800 1.75rem/1.15 var(--font-family-base);
+  --font-h1: 700 1.25rem/1.3 var(--font-family-base);
+  --font-h2: 700 1.05rem/1.35 var(--font-family-base);
+  --font-body: 400 1rem/1.5 var(--font-family-base);
+  --font-caption: 600 0.75rem/1.4 var(--font-family-base);
 
   /* Fixed chrome heights, referenced by both the nav and page bottom padding
      so the two never drift out of sync. */
-  --nav-height: 4rem;
-  --header-height: 3.25rem;
+  --nav-height: 4.25rem;
+  --header-height: 4rem;
+
+  /* ---- Dark palette values (private) ----
+     Defined unconditionally here so both the prefers-color-scheme path and
+     the [data-theme="dark"] path below can assign the *same* literals via
+     var() instead of duplicating hex codes. */
+  --_dark-color-bg: #1a1815;
+  --_dark-color-bg-elevated: #26231e;
+  --_dark-color-bg-inset: #302c26;
+  --_dark-color-text: #f3efe8;
+  --_dark-color-text-muted: #b3ada3;
+  --_dark-color-border: #3b362f;
+
+  --_dark-coral-soft: #4a2c1e;
+  --_dark-coral-mid: #ff9b7d;
+  --_dark-coral-deep: #ff8e6e;
+
+  --_dark-sunshine: #ffd97a;
+  --_dark-sunshine-soft: #4a3b12;
+  --_dark-sunshine-deep: #ffd97a;
+
+  --_dark-leaf: #6fcb9a;
+  --_dark-leaf-soft: #20361f;
+  --_dark-leaf-deep: #6fcb9a;
+
+  --_dark-primary-contrast: #2a1710;
+  --_dark-danger: #ff8a75;
+
+  --_dark-callout-bg: #2e2412;
+  --_dark-callout-border: #6b4a22;
+  --_dark-callout-icon: #e3a855;
+
+  --_dark-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 1px rgb(0 0 0 / 0.24);
+  --_dark-shadow-md: 0 8px 20px rgb(0 0 0 / 0.36), 0 2px 6px rgb(0 0 0 / 0.24);
+  --_dark-shadow-lg: 0 20px 40px rgb(0 0 0 / 0.44), 0 4px 10px rgb(0 0 0 / 0.28);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg: #14140f;
-    --color-bg-elevated: #1e1e17;
-    --color-bg-inset: #26261d;
+    --color-bg: var(--_dark-color-bg);
+    --color-bg-elevated: var(--_dark-color-bg-elevated);
+    --color-bg-inset: var(--_dark-color-bg-inset);
 
-    --color-text: #f2f2ec;
-    --color-text-muted: #b3b3a8;
-    --color-border: #33332a;
+    --color-text: var(--_dark-color-text);
+    --color-text-muted: var(--_dark-color-text-muted);
+    --color-border: var(--_dark-color-border);
 
-    --color-primary: #5fb98a;
-    --color-primary-contrast: #0b1c14;
-    --color-primary-soft: #1b3327;
-    --color-accent: #e59a5f;
-    --color-danger: #ff8a80;
+    --color-coral-soft: var(--_dark-coral-soft);
+    --color-coral-mid: var(--_dark-coral-mid);
+    --color-coral-deep: var(--_dark-coral-deep);
 
-    --color-callout-bg: #2a2110;
-    --color-callout-border: #7a5220;
-    --color-callout-icon: #e5a95f;
+    --color-sunshine: var(--_dark-sunshine);
+    --color-sunshine-soft: var(--_dark-sunshine-soft);
+    --color-sunshine-deep: var(--_dark-sunshine-deep);
 
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 1px rgb(0 0 0 / 0.24);
-    --shadow-md: 0 6px 16px rgb(0 0 0 / 0.36), 0 1px 2px rgb(0 0 0 / 0.24);
-    --shadow-lg: 0 16px 32px rgb(0 0 0 / 0.44), 0 2px 6px rgb(0 0 0 / 0.28);
+    --color-leaf: var(--_dark-leaf);
+    --color-leaf-soft: var(--_dark-leaf-soft);
+    --color-leaf-deep: var(--_dark-leaf-deep);
+
+    --color-primary: var(--color-coral-deep);
+    --color-primary-contrast: var(--_dark-primary-contrast);
+    --color-primary-soft: var(--color-coral-soft);
+    --color-accent: var(--color-sunshine-deep);
+    --color-danger: var(--_dark-danger);
+
+    --color-callout-bg: var(--_dark-callout-bg);
+    --color-callout-border: var(--_dark-callout-border);
+    --color-callout-icon: var(--_dark-callout-icon);
+
+    --shadow-sm: var(--_dark-shadow-sm);
+    --shadow-md: var(--_dark-shadow-md);
+    --shadow-lg: var(--_dark-shadow-lg);
   }
 }
 
 :root[data-theme="dark"] {
-  --color-bg: #14140f;
-  --color-bg-elevated: #1e1e17;
-  --color-bg-inset: #26261d;
+  --color-bg: var(--_dark-color-bg);
+  --color-bg-elevated: var(--_dark-color-bg-elevated);
+  --color-bg-inset: var(--_dark-color-bg-inset);
 
-  --color-text: #f2f2ec;
-  --color-text-muted: #b3b3a8;
-  --color-border: #33332a;
+  --color-text: var(--_dark-color-text);
+  --color-text-muted: var(--_dark-color-text-muted);
+  --color-border: var(--_dark-color-border);
 
-  --color-primary: #5fb98a;
-  --color-primary-contrast: #0b1c14;
-  --color-primary-soft: #1b3327;
-  --color-accent: #e59a5f;
-  --color-danger: #ff8a80;
+  --color-coral-soft: var(--_dark-coral-soft);
+  --color-coral-mid: var(--_dark-coral-mid);
+  --color-coral-deep: var(--_dark-coral-deep);
 
-  --color-callout-bg: #2a2110;
-  --color-callout-border: #7a5220;
-  --color-callout-icon: #e5a95f;
+  --color-sunshine: var(--_dark-sunshine);
+  --color-sunshine-soft: var(--_dark-sunshine-soft);
+  --color-sunshine-deep: var(--_dark-sunshine-deep);
 
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 1px rgb(0 0 0 / 0.24);
-  --shadow-md: 0 6px 16px rgb(0 0 0 / 0.36), 0 1px 2px rgb(0 0 0 / 0.24);
-  --shadow-lg: 0 16px 32px rgb(0 0 0 / 0.44), 0 2px 6px rgb(0 0 0 / 0.28);
+  --color-leaf: var(--_dark-leaf);
+  --color-leaf-soft: var(--_dark-leaf-soft);
+  --color-leaf-deep: var(--_dark-leaf-deep);
+
+  --color-primary: var(--color-coral-deep);
+  --color-primary-contrast: var(--_dark-primary-contrast);
+  --color-primary-soft: var(--color-coral-soft);
+  --color-accent: var(--color-sunshine-deep);
+  --color-danger: var(--_dark-danger);
+
+  --color-callout-bg: var(--_dark-callout-bg);
+  --color-callout-border: var(--_dark-callout-border);
+  --color-callout-icon: var(--_dark-callout-icon);
+
+  --shadow-sm: var(--_dark-shadow-sm);
+  --shadow-md: var(--_dark-shadow-md);
+  --shadow-lg: var(--_dark-shadow-lg);
 }
 
 html,
@@ -113,9 +226,27 @@ body,
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
+  font: var(--font-body);
   /* Keep the app's own scroll containers from ever chaining into the
      browser's native pull-to-refresh / overscroll-navigate gestures. */
   overscroll-behavior-y: none;
+}
+
+/* ---- Type ramp utility classes — pair with the shorthand tokens above so
+   components can reach for one class instead of four separate properties. */
+.font-display {
+  font: var(--font-display);
+  letter-spacing: -0.01em;
+}
+.font-h1 {
+  font: var(--font-h1);
+}
+.font-h2 {
+  font: var(--font-h2);
+}
+.font-caption {
+  font: var(--font-caption);
+  letter-spacing: 0.01em;
 }
 
 /* Momentum, pull-refresh-safe scroll areas: apply to any element that owns
@@ -130,7 +261,7 @@ body {
  * on every interactive element across the app.
  * ---------------------------------------------------------------------- */
 :focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-coral-deep);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -151,17 +282,11 @@ body {
 }
 
 .page-transition {
-  animation: page-enter 220ms ease-out both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .page-transition {
-    animation: none;
-  }
+  animation: page-enter var(--duration-slow) var(--ease-out) both;
 }
 
 /* -------------------------------------------------------------------------
- * Skeleton loading — a slow, quiet shimmer; a still block for
+ * Skeleton loading — a slow, quiet warm shimmer; a still block for
  * reduced-motion users rather than a pulse.
  * ---------------------------------------------------------------------- */
 @keyframes skeleton-shimmer {
@@ -170,7 +295,7 @@ body {
     opacity: 1;
   }
   50% {
-    opacity: 0.55;
+    opacity: 0.5;
   }
 }
 
@@ -179,9 +304,84 @@ body {
   animation: skeleton-shimmer 1.6s ease-in-out infinite;
 }
 
+/* -------------------------------------------------------------------------
+ * Sheet — bottom-sheet overlay + slide-up panel (see ui/Sheet.tsx). Instant
+ * for reduced-motion users rather than skipped, so the sheet still appears.
+ * ---------------------------------------------------------------------- */
+@keyframes sheet-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-panel-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheet-overlay {
+  animation: sheet-overlay-in var(--duration-base) var(--ease-out) both;
+}
+
+.sheet-panel {
+  animation: sheet-panel-in var(--duration-base) var(--ease-spring) both;
+}
+
+/* -------------------------------------------------------------------------
+ * Celebration — CSS-only confetti burst (see ui/Celebration.tsx). Each
+ * piece is a small rotated rectangle that arcs up and settles down; the
+ * whole burst is skipped (no particle elements rendered) for
+ * reduced-motion users rather than played instantly, since a confetti
+ * burst has no readable "instant" equivalent.
+ * ---------------------------------------------------------------------- */
+@keyframes confetti-fall {
+  0% {
+    transform: translate(var(--_confetti-x, 0), 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(var(--_confetti-x, 0) * 1.4), 120px) rotate(var(--_confetti-spin, 360deg));
+    opacity: 0;
+  }
+}
+
+.confetti-piece {
+  animation: confetti-fall var(--_confetti-duration, 900ms) var(--ease-out) both;
+}
+
+@keyframes celebration-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.celebration-toast {
+  animation: celebration-toast-in var(--duration-base) var(--ease-spring) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    animation: none;
+  }
   .skeleton {
     animation: none;
     opacity: 0.75;
+  }
+  .sheet-overlay,
+  .sheet-panel,
+  .celebration-toast {
+    animation: none;
   }
 }

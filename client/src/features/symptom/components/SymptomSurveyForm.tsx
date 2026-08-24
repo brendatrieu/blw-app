@@ -162,12 +162,11 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
                 type="button"
                 aria-pressed={selected}
                 onClick={() => setBodyAreas((current) => toggle(current, area))}
-                className="rounded-full border px-3 py-1 text-xs"
-                style={{
-                  borderColor: selected ? "var(--color-primary)" : "var(--color-border)",
-                  backgroundColor: selected ? "var(--color-primary)" : "transparent",
-                  color: selected ? "var(--color-primary-contrast)" : "var(--color-text)",
-                }}
+                className={`rounded-full border px-3 py-1 text-xs ${
+                  selected
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+                    : "border-[var(--color-border)] bg-transparent text-[var(--color-text)]"
+                }`}
               >
                 {BODY_AREA_LABELS[area]}
               </button>

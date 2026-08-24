@@ -4,7 +4,7 @@ interface SkeletonProps {
 
 /** A single shimmering placeholder block. Compose with layout classes via `className`. */
 export function Skeleton({ className = "" }: SkeletonProps) {
-  return <div className={`skeleton rounded-md ${className}`} aria-hidden="true" />;
+  return <div className={`skeleton rounded-[var(--radius-md)] ${className}`} aria-hidden="true" />;
 }
 
 interface SkeletonListProps {
@@ -18,7 +18,7 @@ export function SkeletonList({ count = 3 }: SkeletonListProps) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3"
+          className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3"
         >
           <Skeleton className="h-4 w-2/3" />
           <Skeleton className="h-3 w-1/3" />

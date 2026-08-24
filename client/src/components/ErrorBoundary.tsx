@@ -33,11 +33,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   override render() {
     if (this.state.hasError) {
       return (
-        <div className="mx-auto flex min-h-full max-w-sm flex-col items-center justify-center gap-3 p-6 text-center">
-          <p className="text-3xl leading-none" aria-hidden="true">
+        <div
+          className="mx-auto flex min-h-full max-w-sm flex-col items-center justify-center gap-3 p-6 text-center"
+          style={{ backgroundColor: "var(--color-bg)" }}
+        >
+          <p className="text-5xl leading-none" aria-hidden="true">
             🙈
           </p>
-          <h1 className="text-lg font-semibold text-[var(--color-text)]">Something went wrong</h1>
+          <h1 className="font-h1 text-[var(--color-text)]">Something went wrong</h1>
           <p className="text-sm text-[var(--color-text-muted)]">
             This screen hit a snag. Your data is safe — reloading usually fixes it.
           </p>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { symptomLabel, type SymptomCheckHistoryItem, type TriageLevel } from "@blw/shared";
-import { alarmStyle } from "../alarmColors.js";
+import { alarmStyle, type AlarmLevel } from "../alarmColors.js";
 import { SymptomResultView } from "./SymptomResultView.js";
 
 const LEVEL_LABELS: Record<TriageLevel, string> = {
@@ -10,9 +10,8 @@ const LEVEL_LABELS: Record<TriageLevel, string> = {
   emergency: "Emergency",
 };
 
-function levelStyle(level: TriageLevel): { backgroundColor: string; color: string } {
-  if (level === "emergency" || level === "urgent_care") return alarmStyle(level);
-  return { backgroundColor: "var(--color-bg)", color: "var(--color-text)" };
+function isAlarmTriageLevel(level: TriageLevel): level is AlarmLevel {
+  return level === "emergency" || level === "urgent_care";
 }
 
 function whenLabel(iso: string): string {
@@ -32,8 +31,10 @@ function HistoryRow({ item }: { item: SymptomCheckHistoryItem }) {
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex flex-col gap-1 text-left">
         <span className="flex items-center gap-2">
           <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-            style={levelStyle(item.triageLevel)}
+            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+              isAlarmTriageLevel(item.triageLevel) ? "" : "bg-[var(--color-bg)] text-[var(--color-text)]"
+            }`}
+            style={isAlarmTriageLevel(item.triageLevel) ? alarmStyle(item.triageLevel) : undefined}
           >
             {LEVEL_LABELS[item.triageLevel]}
           </span>

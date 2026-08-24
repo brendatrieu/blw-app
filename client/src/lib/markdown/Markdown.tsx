@@ -11,11 +11,9 @@ import remarkGfm from "remark-gfm";
 // of the page.
 
 const components: Components = {
-  h2: ({ node: _node, ...props }) => (
-    <h2 className="mt-2 text-lg font-semibold text-[var(--color-text)]" {...props} />
-  ),
+  h2: ({ node: _node, ...props }) => <h2 className="font-h2 mt-2 text-[var(--color-text)]" {...props} />,
   h3: ({ node: _node, ...props }) => (
-    <h3 className="mt-1 text-base font-semibold text-[var(--color-text)]" {...props} />
+    <h3 className="mt-1 text-base font-bold text-[var(--color-text)]" {...props} />
   ),
   p: ({ node: _node, ...props }) => <p className="text-[var(--color-text)]" {...props} />,
   ul: ({ node: _node, ...props }) => (

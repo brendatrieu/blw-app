@@ -2,8 +2,9 @@ import { useParams } from "react-router-dom";
 import type { AllergenProgressItem, AllergenStatus } from "@blw/shared";
 import { useBabies } from "../features/babies/hooks.js";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
-import { Badge } from "../features/catalog/components/Badge.js";
+import { Badge, type BadgeTone } from "../features/catalog/components/Badge.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
+import { BackButton } from "../components/ui/BackButton.js";
 import { Card } from "../components/ui/Card.js";
 import { SkeletonList } from "../components/ui/Skeleton.js";
 
@@ -13,11 +14,28 @@ const STATUS_LABEL: Record<AllergenStatus, string> = {
   established: "Established",
 };
 
-const STATUS_TONE: Record<AllergenStatus, "neutral" | "accent" | "primary"> = {
+const STATUS_TONE: Record<AllergenStatus, BadgeTone> = {
   not_started: "neutral",
-  started: "accent",
-  established: "primary",
+  started: "sunshine",
+  established: "leaf",
 };
+
+/** One emoji per top-9 allergen slug (see `ALLERGEN_SLUGS` in catalog/constants.ts). */
+const ALLERGEN_EMOJI: Record<string, string> = {
+  milk: "🥛",
+  egg: "🥚",
+  peanut: "🥜",
+  tree_nut: "🌰",
+  fish: "🐟",
+  shellfish: "🍤",
+  wheat: "🌾",
+  soy: "🫘",
+  sesame: "🫙",
+};
+
+function allergenEmoji(slug: string): string {
+  return ALLERGEN_EMOJI[slug] ?? "🍽️";
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -27,8 +45,14 @@ function formatDate(iso: string | null): string {
 function AllergenRow({ item }: { item: AllergenProgressItem }) {
   return (
     <Card as="li" padding="sm" className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold text-[var(--color-text)]">{item.allergenName}</span>
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg-inset)] text-lg leading-none"
+        >
+          {allergenEmoji(item.allergenSlug)}
+        </span>
+        <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">{item.allergenName}</span>
         <Badge tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</Badge>
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
@@ -49,8 +73,10 @@ export function BabyAllergensPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      <BackButton fallback="/" />
       <PageHeader
         title={`Allergen ladder${baby ? ` — ${baby.name}` : ""}`}
+        emoji="🪜"
         description="Introduce one new allergen at a time, in the morning at home, and wait a few days before the next one."
       />
 

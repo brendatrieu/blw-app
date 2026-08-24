@@ -5,15 +5,20 @@ import { useFood } from "../features/catalog/hooks.js";
 import { FoodBadges } from "../features/catalog/components/FoodBadges.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { levelLabel } from "../features/catalog/constants.js";
+import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useCreateServeLog, useServeLogs } from "../features/tracking/hooks.js";
+import { BackButton } from "../components/ui/BackButton.js";
 import { Button } from "../components/ui/Button.js";
+import { CardLink } from "../components/ui/Card.js";
+import { Field } from "../components/ui/Field.js";
+import { Input, Textarea } from "../components/ui/Input.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
 const PREP_STAGES = [
-  { key: "prep6m" as const, label: "6-8 months" },
-  { key: "prep9m" as const, label: "9-11 months" },
-  { key: "prep12m" as const, label: "12+ months" },
+  { key: "prep6m" as const, label: "6-8 months", tone: "leaf" as const },
+  { key: "prep9m" as const, label: "9-11 months", tone: "sunshine" as const },
+  { key: "prep12m" as const, label: "12+ months", tone: "primary" as const },
 ];
 
 /** `<input type="date">` wants a local yyyy-mm-dd, not an ISO instant. */
@@ -44,7 +49,7 @@ function MarkAsServed({ food }: MarkAsServedProps) {
   if (!activeBaby) {
     return (
       <p className="text-xs text-[var(--color-text-muted)]">
-        <Link to="/settings" className="underline" style={{ color: "var(--color-primary)" }}>
+        <Link to="/settings" className="font-medium text-[var(--color-primary)] underline">
           Add a baby
         </Link>{" "}
         to log this as served.
@@ -87,29 +92,29 @@ function MarkAsServed({ food }: MarkAsServedProps) {
       {open && (
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3"
+          className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4"
         >
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs font-medium text-[var(--color-text-muted)]">Date</span>
-            <input
+          <Field label="Date" htmlFor="food-served-date">
+            <Input
+              id="food-served-date"
               type="date"
               value={servedDate}
               max={todayForDateInput()}
               onChange={(e) => setServedDate(e.target.value)}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
             />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs font-medium text-[var(--color-text-muted)]">Reaction note (optional)</span>
-            <textarea
+          </Field>
+          <Field label="Reaction note (optional)" htmlFor="food-reaction-note">
+            <Textarea
+              id="food-reaction-note"
               value={reactionNote}
               onChange={(e) => setReactionNote(e.target.value)}
               rows={2}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
             />
-          </label>
+          </Field>
           {createServeLog.isError && (
-            <p className="text-xs text-[var(--color-danger)]">Couldn't save that — try again.</p>
+            <p role="alert" className="text-xs text-[var(--color-danger)]">
+              Couldn't save that — try again.
+            </p>
           )}
           <div className="flex gap-2">
             <Button type="submit" disabled={createServeLog.isPending} className="flex-1">
@@ -132,65 +137,92 @@ export function FoodDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-5 p-4">
-        <Skeleton className="h-6 w-2/3" />
-        <Skeleton className="h-11 w-40 rounded-lg" />
-        <Skeleton className="h-32 w-full rounded-lg" />
+        <BackButton fallback="/foods" />
+        <div className="flex flex-col items-center gap-3">
+          <Skeleton className="h-24 w-24 rounded-full" />
+          <Skeleton className="h-6 w-2/3" />
+        </div>
+        <Skeleton className="h-11 w-40 rounded-[var(--radius-md)]" />
+        <Skeleton className="h-32 w-full rounded-[var(--radius-lg)]" />
       </div>
     );
   }
   if (isError || !food) {
-    return <p className="p-4 text-sm text-[var(--color-danger)]">Couldn't find that food.</p>;
+    return (
+      <div className="flex flex-col gap-3 p-4">
+        <BackButton fallback="/foods" />
+        <p className="text-sm text-[var(--color-danger)]">Couldn't find that food.</p>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col gap-5 p-4">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">{food.name}</h1>
-        <FoodBadges food={food} />
+      <BackButton fallback="/foods" />
+      <div className="flex flex-col items-center gap-3 text-center">
+        <span
+          aria-hidden="true"
+          className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-coral-soft)] text-5xl leading-none"
+        >
+          {getFoodEmoji(food.slug, food.category)}
+        </span>
+        <div className="flex flex-col items-center gap-2">
+          <h1 className="font-display text-[var(--color-text)]">{food.name}</h1>
+          <FoodBadges food={food} />
+        </div>
       </div>
 
       <MarkAsServed food={food} />
 
       {food.chokingNotes && (
-        <div className="rounded-lg border border-[var(--color-danger)] bg-[var(--color-bg-elevated)] p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-danger)]">Choking notes</p>
-          <p className="mt-1 text-sm text-[var(--color-text)]">{food.chokingNotes}</p>
+        <div className="flex flex-col gap-1 rounded-[var(--radius-lg)] border-2 border-[var(--color-danger)] bg-[var(--color-bg-elevated)] p-4">
+          <p className="font-caption text-[var(--color-danger)]">⚠️ Choking notes</p>
+          <p className="text-sm text-[var(--color-text)]">{food.chokingNotes}</p>
         </div>
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-[var(--color-text)]">Prep by age</h2>
+        <h2 className="font-h2 text-[var(--color-text)]">Prep by age</h2>
         {PREP_STAGES.map((stage) => (
-          <div key={stage.key} className="rounded-lg bg-[var(--color-bg-elevated)] p-3">
-            <p className="text-xs font-medium text-[var(--color-text-muted)]">{stage.label}</p>
-            <p className="mt-1 text-sm text-[var(--color-text)]">{food[stage.key]}</p>
+          <div
+            key={stage.key}
+            className="flex flex-col gap-1.5 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3"
+          >
+            <Badge tone={stage.tone}>{stage.label}</Badge>
+            <p className="text-sm text-[var(--color-text)]">{food[stage.key]}</p>
           </div>
         ))}
       </section>
 
       {food.notes && (
         <section>
-          <h2 className="text-sm font-semibold text-[var(--color-text)]">Notes</h2>
+          <h2 className="font-h2 text-[var(--color-text)]">Notes</h2>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">{food.notes}</p>
         </section>
       )}
 
       {food.pairings.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-[var(--color-text)]">Vitamin-C pairings</h2>
+          <h2 className="font-h2 text-[var(--color-text)]">Vitamin-C pairings</h2>
           <div className="scroll-momentum flex gap-2 overflow-x-auto pb-1">
             {food.pairings.map((pairing) => (
-              <Link
+              <CardLink
                 key={pairing.food.slug}
                 to={`/foods/${pairing.food.slug}`}
-                className="flex min-w-[10rem] flex-shrink-0 flex-col gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3"
+                padding="sm"
+                className="flex min-w-[11rem] flex-shrink-0 flex-col gap-1"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-[var(--color-text)]">{pairing.food.name}</span>
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-[var(--color-text)]">
+                    <span aria-hidden="true" className="text-lg leading-none">
+                      {getFoodEmoji(pairing.food.slug)}
+                    </span>
+                    {pairing.food.name}
+                  </span>
                   <Badge tone="accent">Vit C {levelLabel(pairing.food.vitaminCLevel)}</Badge>
                 </div>
                 <p className="text-xs text-[var(--color-text-muted)]">{pairing.reason}</p>
-              </Link>
+              </CardLink>
             ))}
           </div>
         </section>
@@ -198,17 +230,13 @@ export function FoodDetailPage() {
 
       {food.recipes.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-[var(--color-text)]">Recipes with {food.name.toLowerCase()}</h2>
+          <h2 className="font-h2 text-[var(--color-text)]">Recipes with {food.name.toLowerCase()}</h2>
           <div className="flex flex-col gap-2">
             {food.recipes.map((recipe) => (
-              <Link
-                key={recipe.id}
-                to={`/recipes/${recipe.id}`}
-                className="flex items-center justify-between gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3"
-              >
+              <CardLink key={recipe.id} to={`/recipes/${recipe.id}`} padding="sm" className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium text-[var(--color-text)]">{recipe.title}</span>
                 <Badge tone="neutral">{recipe.minAgeMonths}m+</Badge>
-              </Link>
+              </CardLink>
             ))}
           </div>
         </section>
