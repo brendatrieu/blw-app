@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Baby } from "@blw/shared";
@@ -9,6 +9,7 @@ import { useBabies, useCreateBaby, useDeleteBaby, useUpdateBaby } from "../featu
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useSession } from "../lib/auth.js";
 import { createSignOutDeps, performSignOut } from "../lib/signout.js";
+import { getStoredTheme, setTheme, type ThemePreference } from "../theme.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Card } from "../components/ui/Card.js";
 import { Button } from "../components/ui/Button.js";
@@ -16,6 +17,7 @@ import { Field } from "../components/ui/Field.js";
 import { Input, Textarea } from "../components/ui/Input.js";
 import { Sheet } from "../components/ui/Sheet.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
+import { SegmentedControl, type SegmentedControlOption } from "../components/ui/SegmentedControl.js";
 
 // A quiet, bordered "danger" affordance for small inline actions (remove
 // key, delete a baby, open the delete-account flow) — one step below the
@@ -439,6 +441,80 @@ function AiSection() {
   );
 }
 
+const themeIconProps = {
+  viewBox: "0 0 24 24",
+  width: 18,
+  height: 18,
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.8,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  "aria-hidden": true,
+};
+
+function SunIcon() {
+  return (
+    <svg {...themeIconProps}>
+      <circle cx="12" cy="12" r="4.2" />
+      <path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9" />
+    </svg>
+  );
+}
+
+function SystemIcon() {
+  return (
+    <svg {...themeIconProps}>
+      <path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="8.5" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg {...themeIconProps}>
+      <path d="M19.5 14.4A8.2 8.2 0 0 1 9.6 4.5a8.6 8.6 0 1 0 9.9 9.9z" />
+    </svg>
+  );
+}
+
+const THEME_OPTIONS: Array<SegmentedControlOption<ThemePreference>> = [
+  { value: "light", label: "Light", icon: <SunIcon /> },
+  { value: "system", label: "System", icon: <SystemIcon /> },
+  { value: "dark", label: "Dark", icon: <MoonIcon /> },
+];
+
+function AppearanceSection() {
+  const [preference, setPreference] = useState<ThemePreference>(() => getStoredTheme());
+
+  // Pick up the stored preference on mount in case it changed elsewhere
+  // (e.g. another tab) since the component's initial state was captured.
+  useEffect(() => {
+    setPreference(getStoredTheme());
+  }, []);
+
+  function handleChange(next: ThemePreference) {
+    setTheme(next);
+    setPreference(next);
+  }
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="font-h2 flex items-center gap-2 text-[var(--color-text)]">
+        <span aria-hidden="true">🎨</span> Appearance
+      </h2>
+      <p className="text-sm text-[var(--color-text-muted)]">Choose how BLW looks on this device.</p>
+      <SegmentedControl
+        options={THEME_OPTIONS}
+        value={preference}
+        onChange={handleChange}
+        aria-label="Appearance"
+      />
+    </section>
+  );
+}
+
 /**
  * The server answers with machine codes; parents get sentences. Anything
  * unrecognised falls through to the raw code rather than a wrong guess.
@@ -639,6 +715,7 @@ export function SettingsPage() {
       <PageHeader title="Settings" emoji="⚙️" />
       <BabiesSection />
       <AiSection />
+      <AppearanceSection />
       <AccountSection />
     </div>
   );

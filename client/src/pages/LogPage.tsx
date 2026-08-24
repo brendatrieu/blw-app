@@ -87,7 +87,7 @@ function QuickLogForm({ babyId, onDone }: QuickLogFormProps) {
           </option>
           {foods.map((food) => (
             <option key={food.id} value={food.id}>
-              {food.name}
+              {getFoodEmoji(food.slug, food.category)} {food.name}
             </option>
           ))}
         </Select>

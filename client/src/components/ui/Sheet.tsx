@@ -24,6 +24,15 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
   useEffect(() => {
     if (!open) return;
 
+    // Lock background scroll while the sheet is open. Restore whatever
+    // inline value was there before (usually "") so nested sheets or other
+    // code that also touches overflow don't get clobbered on close.
+    const root = document.documentElement;
+    const previousRootOverflow = root.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    root.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
     const focusable = panel?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
@@ -54,6 +63,8 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+      root.style.overflow = previousRootOverflow;
+      document.body.style.overflow = previousBodyOverflow;
       previouslyFocused.current?.focus();
     };
   }, [open, onClose]);
