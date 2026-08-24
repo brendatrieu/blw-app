@@ -16,6 +16,9 @@
   --color-primary-contrast: #ffffff;
   --color-accent: #d97a3a;
   --color-danger: #b3261e;
+  --color-callout-bg: #fdf3e0;
+  --color-callout-border: #eab676;
+  --color-callout-icon: #b5650a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -29,6 +32,9 @@
     --color-primary-contrast: #0b1c14;
     --color-accent: #e59a5f;
     --color-danger: #ff8a80;
+    --color-callout-bg: #2a2110;
+    --color-callout-border: #7a5220;
+    --color-callout-icon: #e5a95f;
   }
 }
 
@@ -42,6 +48,9 @@
   --color-primary-contrast: #0b1c14;
   --color-accent: #e59a5f;
   --color-danger: #ff8a80;
+  --color-callout-bg: #2a2110;
+  --color-callout-border: #7a5220;
+  --color-callout-icon: #e5a95f;
 }
 
 html,

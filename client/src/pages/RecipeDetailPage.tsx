@@ -1,15 +1,119 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import type { AgeStage } from "@blw/shared";
 import { useRecipe } from "../features/catalog/hooks.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { allergenLabel } from "../features/catalog/constants.js";
+import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
+import { apiPost } from "../lib/api.js";
 
 const AGE_STAGES: { value: AgeStage; label: string }[] = [
   { value: "6", label: "6mo" },
   { value: "9", label: "9mo" },
   { value: "12", label: "12mo" },
 ];
+
+type PantryLocation = "fridge" | "freezer" | "counter";
+
+const PANTRY_LOCATIONS: { value: PantryLocation; label: string }[] = [
+  { value: "fridge", label: "Fridge" },
+  { value: "freezer", label: "Freezer" },
+  { value: "counter", label: "Counter" },
+];
+
+interface FavoriteHeartProps {
+  recipeId: string;
+  title: string;
+  minAgeMonths: number;
+  ironFocus: boolean;
+  allergens: string[];
+}
+
+function FavoriteHeart({ recipeId, title, minAgeMonths, ironFocus, allergens }: FavoriteHeartProps) {
+  const favorited = useIsFavorited(recipeId);
+  const toggleFavorite = useToggleFavorite();
+
+  return (
+    <button
+      type="button"
+      aria-pressed={favorited}
+      aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
+      disabled={toggleFavorite.isPending}
+      onClick={() =>
+        toggleFavorite.mutate({
+          target: { recipeId, title, minAgeMonths, ironFocus, allergens },
+          favorited,
+        })
+      }
+      className="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60"
+      style={{
+        borderColor: favorited ? "var(--color-danger)" : "var(--color-border)",
+        color: favorited ? "var(--color-danger)" : "var(--color-text)",
+        backgroundColor: "var(--color-bg-elevated)",
+      }}
+    >
+      {favorited ? "♥ Favorited" : "♡ Favorite"}
+    </button>
+  );
+}
+
+interface PrepThisProps {
+  recipeId: string;
+}
+
+function PrepThis({ recipeId }: PrepThisProps) {
+  const [open, setOpen] = useState(false);
+  const prepped = useMutation({
+    mutationFn: (location: PantryLocation) =>
+      // The pantry endpoint ships from a parallel-phase agent; this route
+      // isn't owned here, only the request against its documented contract.
+      apiPost<unknown>("/api/pantry", { recipeId, location, preparedAt: new Date().toISOString() }),
+  });
+
+  if (prepped.isSuccess) {
+    return <p className="text-sm font-medium text-[var(--color-primary)]">Added to your pantry.</p>;
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 py-2 text-sm font-medium text-[var(--color-text)]"
+      >
+        I prepped this
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+      <p className="text-xs font-medium text-[var(--color-text-muted)]">Where's it stored?</p>
+      <div className="flex gap-1.5">
+        {PANTRY_LOCATIONS.map((loc) => (
+          <button
+            key={loc.value}
+            type="button"
+            disabled={prepped.isPending}
+            onClick={() => prepped.mutate(loc.value)}
+            className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1 text-xs font-medium text-[var(--color-text)] disabled:opacity-60"
+          >
+            {prepped.isPending ? "Saving…" : loc.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="rounded-full px-3 py-1 text-xs font-medium text-[var(--color-text-muted)]"
+        >
+          Cancel
+        </button>
+      </div>
+      {prepped.isError && <p className="text-xs text-[var(--color-danger)]">Couldn't save that — try again.</p>}
+    </div>
+  );
+}
 
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +132,16 @@ export function RecipeDetailPage() {
   return (
     <div className="flex flex-col gap-5 p-4">
       <div className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">{recipe.title}</h1>
+        <div className="flex items-start justify-between gap-2">
+          <h1 className="text-xl font-semibold text-[var(--color-text)]">{recipe.title}</h1>
+          <FavoriteHeart
+            recipeId={recipe.id}
+            title={recipe.title}
+            minAgeMonths={recipe.minAgeMonths}
+            ironFocus={recipe.ironFocus}
+            allergens={recipe.allergens}
+          />
+        </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge tone="neutral">{recipe.prepMinutes} min prep</Badge>
           {recipe.ironFocus && <Badge tone="primary">Iron focus</Badge>}
@@ -95,14 +208,7 @@ export function RecipeDetailPage() {
         )}
       </section>
 
-      <button
-        type="button"
-        disabled
-        title="Coming soon — pantry tracking"
-        className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 py-2 text-sm font-medium text-[var(--color-text-muted)] disabled:cursor-not-allowed"
-      >
-        I prepped this
-      </button>
+      <PrepThis recipeId={recipe.id} />
     </div>
   );
 }

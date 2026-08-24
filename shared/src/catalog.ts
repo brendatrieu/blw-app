@@ -29,6 +29,10 @@ export const foodsQuerySchema = z.object({
 export type FoodsQuery = z.infer<typeof foodsQuerySchema>;
 
 export const foodListItemSchema = z.object({
+  // The catalog's own read routes never needed this (slug is the
+  // client-facing key), but tracking (server/src/routes/serve-logs.ts)
+  // POSTs a real foods.id, so the client needs a way to learn it.
+  id: z.string().uuid(),
   slug: z.string(),
   name: z.string(),
   category: foodCategorySchema,

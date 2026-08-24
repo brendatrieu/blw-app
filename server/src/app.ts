@@ -11,6 +11,9 @@ import { registerRateLimit } from "./plugins/rate-limit.js";
 import { registerAuth } from "./plugins/auth.js";
 import { registerCatalogRoutes } from "./routes/catalog.js";
 import { registerBabyRoutes } from "./routes/babies.js";
+import { registerServeLogRoutes } from "./routes/serve-logs.js";
+import { registerFavoriteRoutes } from "./routes/favorites.js";
+import { registerPantryRoutes } from "./routes/pantry.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDistDir = path.resolve(__dirname, "../../client/dist");
@@ -49,6 +52,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
     registerCatalogRoutes(app, db); // catalog routes
     registerBabyRoutes(app, db); // baby profiles CRUD
+    registerServeLogRoutes(app, db); // serve logs + allergen progress
+    registerFavoriteRoutes(app, db); // recipe favorites
+    registerPantryRoutes(app, db); // pantry items + expiry tracking
   });
 
   const clientBuildExists = fs.existsSync(path.join(clientDistDir, "index.html"));

@@ -12,6 +12,7 @@ import { LogPage } from "./pages/LogPage.js";
 import { BabyAllergensPage } from "./pages/BabyAllergensPage.js";
 import { FavoritesPage } from "./pages/FavoritesPage.js";
 import { SafetyPage } from "./pages/SafetyPage.js";
+import { SafetyArticlePage } from "./pages/SafetyArticlePage.js";
 import { SymptomCheckPage } from "./pages/SymptomCheckPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
@@ -56,7 +57,7 @@ export function App() {
         <Route path="/babies/:id/allergens" element={<BabyAllergensPage />} />
         <Route path="/favorites" element={<FavoritesPage />} />
         <Route path="/safety" element={<SafetyPage />} />
-        <Route path="/safety/:slug" element={<SafetyPage />} />
+        <Route path="/safety/:slug" element={<SafetyArticlePage />} />
         <Route path="/symptom-check" element={<SymptomCheckPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/chat/:threadId" element={<ChatPage />} />

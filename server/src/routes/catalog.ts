@@ -79,6 +79,7 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
     }
 
     const items: FoodListItem[] = rows.map((f) => ({
+      id: f.id,
       slug: f.slug,
       name: f.name,
       category: f.category,
@@ -146,6 +147,7 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
       .where(eq(recipeIngredients.foodId, food.id));
 
     const detail: FoodDetail = {
+      id: food.id,
       slug: food.slug,
       name: food.name,
       category: food.category,

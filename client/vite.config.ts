@@ -1,7 +1,15 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
+import pkg from "./package.json";
+
+// Monorepo root (one level up from client/) — the safety library's
+// `content/safety/*.mdx` glob import lives there, outside vite's default
+// project root, so both dev-server fs access and the raw-string glob itself
+// need it explicitly allow-listed.
+const workspaceRoot = fileURLToPath(new URL("..", import.meta.url));
 
 // PWA strategy per plan: generateSW, precache app shell + safety content,
 // navigateFallback to index.html (denying /api/*), and runtime caching tuned
@@ -85,7 +93,13 @@ export default defineConfig({
       },
     }),
   ],
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   server: {
+    fs: {
+      allow: [workspaceRoot],
+    },
     proxy: {
       "/api": {
         target: "http://localhost:3000",
