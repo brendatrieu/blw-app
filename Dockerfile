@@ -52,9 +52,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
 # runner: final image — compiled output + prod deps only
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION} AS runner
-ARG PNPM_VERSION
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate && \
-    apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init
 WORKDIR /app
 ENV NODE_ENV=production
 
@@ -93,6 +91,8 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
 
 # Run migrations + idempotent seeds, then start the API (which also serves
-# the built SPA out of client/dist).
+# the built SPA out of client/dist). Deliberately no pnpm at runtime: pnpm's
+# verify-deps-before-run tries to write install tempfiles into /app, which
+# the non-root user can't (and shouldn't) do.
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "pnpm --filter @blw/server run db:seed && pnpm --filter @blw/server run start"]
+CMD ["sh", "-c", "cd server && node dist/db/migrate.js && tsx db/seeds/index.ts && node dist/index.js"]
