@@ -4,6 +4,9 @@ import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
 import { usePantryItems } from "../features/pantry/hooks.js";
 import { PantryItemCard } from "../features/pantry/components/PantryItemCard.js";
+import { ButtonLink } from "../components/ui/Button.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
+import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 const RING_RADIUS = 40;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -44,7 +47,7 @@ function AllergenProgressSummary({ babyId }: { babyId: string }) {
   const { data, isLoading } = useAllergenProgress(babyId);
 
   if (isLoading || !data) {
-    return <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>;
+    return <Skeleton className="h-[5.5rem] w-full rounded-xl" />;
   }
 
   const established = data.items.filter((item) => item.status === "established").length;
@@ -79,16 +82,18 @@ function ExpiringSoon() {
         </Link>
       </div>
 
-      {isLoading && <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>}
+      {isLoading && <SkeletonList count={2} />}
 
       {!isLoading && topFive.length === 0 && (
-        <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3 text-sm text-[var(--color-text-muted)]">
-          Nothing in the pantry yet.{" "}
-          <Link to="/pantry" className="underline" style={{ color: "var(--color-primary)" }}>
-            Add what you prepped
-          </Link>
-          .
-        </p>
+        <EmptyState
+          title="Nothing in the pantry yet"
+          description="Log what you've prepped so nothing gets forgotten in the fridge."
+          action={
+            <ButtonLink to="/pantry" size="sm" variant="secondary">
+              Add what you prepped
+            </ButtonLink>
+          }
+        />
       )}
 
       {topFive.length > 0 && (
@@ -106,17 +111,27 @@ export function DashboardPage() {
   const { activeBaby, isLoading } = useActiveBaby();
 
   if (isLoading) {
-    return <p className="p-4 text-sm text-[var(--color-text-muted)]">Loading…</p>;
+    return (
+      <div className="flex flex-col gap-5 p-4">
+        <Skeleton className="h-6 w-2/3" />
+        <div className="flex gap-2">
+          <Skeleton className="h-11 flex-1 rounded-lg" />
+          <Skeleton className="h-11 flex-1 rounded-lg" />
+        </div>
+        <SkeletonList count={2} />
+      </div>
+    );
   }
 
   if (!activeBaby) {
     return (
-      <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">Welcome</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">Add a baby profile to start tracking foods, pantry items, and allergens.</p>
-        <Link to="/settings" className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-[var(--color-primary-contrast)]">
-          Add a baby
-        </Link>
+      <div className="p-4">
+        <EmptyState
+          icon="👋"
+          title="Welcome"
+          description="Add a baby profile to start tracking foods, pantry items, and allergens."
+          action={<ButtonLink to="/settings">Add a baby</ButtonLink>}
+        />
       </div>
     );
   }
@@ -133,18 +148,12 @@ export function DashboardPage() {
       </div>
 
       <div className="flex gap-2">
-        <Link
-          to="/foods"
-          className="flex-1 rounded-lg bg-[var(--color-primary)] px-3 py-2 text-center text-sm font-medium text-[var(--color-primary-contrast)]"
-        >
+        <ButtonLink to="/foods" className="flex-1">
           Log a food
-        </Link>
-        <Link
-          to="/pantry"
-          className="flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-3 py-2 text-center text-sm font-medium text-[var(--color-text)]"
-        >
+        </ButtonLink>
+        <ButtonLink to="/pantry" variant="secondary" className="flex-1">
           Add pantry item
-        </Link>
+        </ButtonLink>
       </div>
 
       <ExpiringSoon />

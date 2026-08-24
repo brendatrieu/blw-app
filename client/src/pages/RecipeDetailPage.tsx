@@ -7,6 +7,8 @@ import { Badge } from "../features/catalog/components/Badge.js";
 import { allergenLabel } from "../features/catalog/constants.js";
 import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
 import { apiPost } from "../lib/api.js";
+import { Button } from "../components/ui/Button.js";
+import { Skeleton } from "../components/ui/Skeleton.js";
 
 const AGE_STAGES: { value: AgeStage; label: string }[] = [
   { value: "6", label: "6mo" },
@@ -77,13 +79,9 @@ function PrepThis({ recipeId }: PrepThisProps) {
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 py-2 text-sm font-medium text-[var(--color-text)]"
-      >
+      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
         I prepped this
-      </button>
+      </Button>
     );
   }
 
@@ -121,7 +119,13 @@ export function RecipeDetailPage() {
   const [activeStage, setActiveStage] = useState<AgeStage>("6");
 
   if (isLoading) {
-    return <p className="p-4 text-sm text-[var(--color-text-muted)]">Loading…</p>;
+    return (
+      <div className="flex flex-col gap-5 p-4">
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-24 w-full rounded-lg" />
+        <Skeleton className="h-40 w-full rounded-lg" />
+      </div>
+    );
   }
   if (isError || !recipe) {
     return <p className="p-4 text-sm text-[var(--color-danger)]">Couldn't find that recipe.</p>;

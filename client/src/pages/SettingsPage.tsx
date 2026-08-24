@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Baby } from "@blw/shared";
-import { ANTHROPIC_CONSOLE_URL, ageInMonths, maskAiKey } from "@blw/shared";
+import { ACCOUNT_DELETE_CONFIRMATION, ANTHROPIC_CONSOLE_URL, ageInMonths, maskAiKey } from "@blw/shared";
+import { useDeleteAccount, useExportAccount } from "../features/account/hooks.js";
 import { useAiKeyStatus, useDeleteAiKey, useSaveAiKey } from "../features/ai/hooks.js";
 import { useBabies, useCreateBaby, useDeleteBaby, useUpdateBaby } from "../features/babies/hooks.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { useSession } from "../lib/auth.js";
+import { signOut, useSession } from "../lib/auth.js";
 
 const fieldClass = "w-full rounded-lg border px-3 py-2 text-base";
 const fieldStyle = {
@@ -494,8 +496,151 @@ function AiSection() {
   );
 }
 
+/**
+ * The server answers with machine codes; parents get sentences. Anything
+ * unrecognised falls through to the raw code rather than a wrong guess.
+ */
+function accountErrorMessage(code: string): string {
+  switch (code) {
+    case "invalid_password":
+      return "That password is not right. Nothing has been deleted.";
+    case "reauth_required":
+      return "For your safety this needs a fresh sign-in. Sign out, sign back in, and try again.";
+    case "invalid_request":
+      return "Please type the confirmation phrase exactly as shown.";
+    case "rate_limited":
+      return "Too many attempts. Wait a few minutes and try again.";
+    case "unauthorized":
+      return "Your session expired. Sign in again and retry.";
+    default:
+      return code;
+  }
+}
+
+function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
+  const deleteAccount = useDeleteAccount();
+  const navigate = useNavigate();
+
+  const [phrase, setPhrase] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const phraseMatches = phrase.trim() === ACCOUNT_DELETE_CONFIRMATION;
+  const canSubmit = phraseMatches && password.length > 0 && !deleteAccount.isPending;
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    deleteAccount.mutate(password, {
+      onSuccess: async () => {
+        // The server already revoked the session and cleared the cookie;
+        // this clears the client's copy of the session state so the guarded
+        // routes do not briefly believe the user is still signed in.
+        setPassword("");
+        try {
+          await signOut();
+        } catch {
+          // The account is gone either way — never block the redirect on it.
+        }
+        void navigate("/login", { replace: true });
+      },
+      onError: (mutationError) => {
+        setPassword("");
+        setError(accountErrorMessage(mutationError.message));
+      },
+    });
+  }
+
+  return (
+    <form
+      className="flex flex-col gap-3 rounded-xl border p-3"
+      style={{ borderColor: "var(--color-danger)" }}
+      onSubmit={handleSubmit}
+    >
+      <h3 className="text-sm font-semibold" style={{ color: "var(--color-danger)" }}>
+        Delete this account
+      </h3>
+
+      <p className="text-sm" style={{ color: "var(--color-text)" }}>
+        This permanently deletes your account and everything in it — every baby profile, the whole
+        food log, your allergen progress, favourites, pantry, symptom checks, chats, and your
+        Anthropic key. <strong>It cannot be undone and there is no backup we can restore from.</strong>
+      </p>
+
+      <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+        If you might want this data later, export it first — the button above saves everything as a
+        JSON file.
+      </p>
+
+      <label className="flex flex-col gap-1 text-sm" style={{ color: "var(--color-text)" }}>
+        Type <strong>{ACCOUNT_DELETE_CONFIRMATION}</strong> to confirm
+        <input
+          type="text"
+          required
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          className={fieldClass}
+          style={fieldStyle}
+          value={phrase}
+          onChange={(event) => {
+            setPhrase(event.target.value);
+            setError(null);
+          }}
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm" style={{ color: "var(--color-text)" }}>
+        Your password
+        <input
+          type="password"
+          required
+          autoComplete="current-password"
+          name="current-password"
+          className={fieldClass}
+          style={fieldStyle}
+          value={password}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setError(null);
+          }}
+        />
+      </label>
+
+      {error ? (
+        <p role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
+          {error}
+        </p>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
+          style={{ backgroundColor: "var(--color-danger)", color: "var(--color-primary-contrast)" }}
+        >
+          {deleteAccount.isPending ? "Deleting…" : "Delete my account forever"}
+        </button>
+        <button
+          type="button"
+          disabled={deleteAccount.isPending}
+          onClick={onCancel}
+          className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-60"
+          style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function AccountSection() {
   const { data: session } = useSession();
+  const exportData = useExportAccount();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   return (
     <section className="flex flex-col gap-3">
@@ -507,28 +652,55 @@ function AccountSection() {
       </p>
 
       <div className="flex flex-wrap gap-2">
-        {/* Both land in a later phase; shown disabled so the account page
-            does not pretend the data is unexportable or undeletable. */}
         <button
           type="button"
-          disabled
-          className="rounded-lg border px-3 py-1.5 text-sm opacity-50"
+          disabled={exportData.isPending}
+          onClick={() => {
+            exportData.mutate();
+          }}
+          className="rounded-lg border px-3 py-1.5 text-sm disabled:opacity-60"
           style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
         >
-          Export my data
+          {exportData.isPending ? "Preparing…" : "Export my data"}
         </button>
-        <button
-          type="button"
-          disabled
-          className="rounded-lg border px-3 py-1.5 text-sm opacity-50"
-          style={{ borderColor: "var(--color-border)", color: "var(--color-danger)" }}
-        >
-          Delete account
-        </button>
+        {confirmingDelete ? null : (
+          <button
+            type="button"
+            onClick={() => {
+              setConfirmingDelete(true);
+            }}
+            className="rounded-lg border px-3 py-1.5 text-sm"
+            style={{ borderColor: "var(--color-border)", color: "var(--color-danger)" }}
+          >
+            Delete account
+          </button>
+        )}
       </div>
+
       <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
-        Export and account deletion are coming soon.
+        The export is a single JSON file with everything on your account: babies, food log,
+        favourites, pantry, symptom checks and chats. It never contains your API key.
       </p>
+
+      {exportData.isError ? (
+        <p role="alert" className="text-sm" style={{ color: "var(--color-danger)" }}>
+          Could not build your export. {accountErrorMessage(exportData.error.message)}
+        </p>
+      ) : null}
+
+      {exportData.isSuccess ? (
+        <p role="status" className="text-sm" style={{ color: "var(--color-text-muted)" }}>
+          Export saved to your downloads.
+        </p>
+      ) : null}
+
+      {confirmingDelete ? (
+        <DeleteAccountForm
+          onCancel={() => {
+            setConfirmingDelete(false);
+          }}
+        />
+      ) : null}
     </section>
   );
 }

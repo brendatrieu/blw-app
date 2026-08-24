@@ -5,6 +5,10 @@ import { PantryItemCard } from "../features/pantry/components/PantryItemCard.js"
 import { AddPantryItemSheet } from "../features/pantry/components/AddPantryItemSheet.js";
 import { EditPantryItemSheet } from "../features/pantry/components/EditPantryItemSheet.js";
 import { pantryItemTitle } from "../features/pantry/format.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
+import { Button } from "../components/ui/Button.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
+import { SkeletonList } from "../components/ui/Skeleton.js";
 
 const UNDO_WINDOW_MS = 6_000;
 
@@ -54,18 +58,16 @@ export function PantryPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">Pantry</h1>
-        {!showAddForm && (
-          <button
-            type="button"
-            onClick={() => setShowAddForm(true)}
-            className="rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-sm font-medium text-[var(--color-primary-contrast)]"
-          >
-            + Add item
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Pantry"
+        action={
+          !showAddForm && (
+            <Button size="sm" onClick={() => setShowAddForm(true)}>
+              + Add item
+            </Button>
+          )
+        }
+      />
 
       {showAddForm && <AddPantryItemSheet onDone={() => setShowAddForm(false)} />}
 
@@ -102,15 +104,24 @@ export function PantryPage() {
         </div>
       )}
 
-      {isLoading && <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>}
+      {isLoading && <SkeletonList count={4} />}
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load the pantry.</p>}
 
       {!isLoading && !isError && items.length === 0 && (
-        <p className="p-4 text-center text-sm text-[var(--color-text-muted)]">
-          {view === "active"
-            ? "Nothing in the pantry yet — add what you prepped so you don't lose track of it."
-            : "Nothing finished or discarded yet."}
-        </p>
+        <EmptyState
+          icon="🥣"
+          title={view === "active" ? "Nothing in the pantry yet" : "Nothing finished or discarded yet"}
+          description={
+            view === "active" ? "Add what you prepped so you don't lose track of it." : undefined
+          }
+          action={
+            view === "active" && !showAddForm ? (
+              <Button size="sm" variant="secondary" onClick={() => setShowAddForm(true)}>
+                + Add item
+              </Button>
+            ) : undefined
+          }
+        />
       )}
 
       <ul className="flex flex-col gap-2">

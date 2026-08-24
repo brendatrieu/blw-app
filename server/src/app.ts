@@ -8,6 +8,7 @@ import { loadConfig, type Env } from "./config.js";
 import { createDb, type Database } from "./db/index.js";
 import { createAuth, type AuthLogger } from "./auth.js";
 import { registerRateLimit } from "./plugins/rate-limit.js";
+import { registerSecurityHeaders } from "./plugins/security.js";
 import { registerAuth } from "./plugins/auth.js";
 import { registerCatalogRoutes } from "./routes/catalog.js";
 import { registerBabyRoutes } from "./routes/babies.js";
@@ -17,6 +18,7 @@ import { registerPantryRoutes } from "./routes/pantry.js";
 import { registerAiKeyRoutes } from "./routes/ai-keys.js";
 import { registerSymptomRoutes, type SymptomRoutesOptions } from "./routes/symptom.js";
 import { registerChatRoutes, type ChatRoutesOptions } from "./routes/chat.js";
+import { registerAccountRoutes } from "./routes/account.js";
 import type { ApiKeyVerifier } from "./ai/client.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -49,6 +51,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     logger: env.NODE_ENV !== "test",
   });
 
+  registerSecurityHeaders(app);
   registerRateLimit(app, env);
 
   // Routes go inside after(): @fastify/rate-limit wires per-route budgets
@@ -76,6 +79,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     registerPantryRoutes(app, db); // pantry items + expiry tracking
     registerSymptomRoutes(app, db, options.symptom); // triage + symptom checker
     registerChatRoutes(app, db, options.chat); // recipe assistant + ask-anything BLW chat
+    registerAccountRoutes(app, db); // data export + account deletion
   });
 
   const clientBuildExists = fs.existsSync(path.join(clientDistDir, "index.html"));

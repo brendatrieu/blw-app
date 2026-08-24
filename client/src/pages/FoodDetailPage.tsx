@@ -7,6 +7,8 @@ import { Badge } from "../features/catalog/components/Badge.js";
 import { levelLabel } from "../features/catalog/constants.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useCreateServeLog, useServeLogs } from "../features/tracking/hooks.js";
+import { Button } from "../components/ui/Button.js";
+import { Skeleton } from "../components/ui/Skeleton.js";
 
 const PREP_STAGES = [
   { key: "prep6m" as const, label: "6-8 months" },
@@ -71,13 +73,9 @@ function MarkAsServed({ food }: MarkAsServedProps) {
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         {!open && (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-[var(--color-primary-contrast)]"
-          >
+          <Button type="button" onClick={() => setOpen(true)}>
             Mark as served
-          </button>
+          </Button>
         )}
         {timesServed !== null && timesServed > 0 && (
           <span className="text-xs text-[var(--color-text-muted)]">
@@ -114,20 +112,12 @@ function MarkAsServed({ food }: MarkAsServedProps) {
             <p className="text-xs text-[var(--color-danger)]">Couldn't save that — try again.</p>
           )}
           <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={createServeLog.isPending}
-              className="flex-1 rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-[var(--color-primary-contrast)] disabled:opacity-60"
-            >
+            <Button type="submit" disabled={createServeLog.isPending} className="flex-1">
               {createServeLog.isPending ? "Saving…" : "Confirm"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-text)]"
-            >
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       )}
@@ -140,7 +130,13 @@ export function FoodDetailPage() {
   const { data: food, isLoading, isError } = useFood(slug);
 
   if (isLoading) {
-    return <p className="p-4 text-sm text-[var(--color-text-muted)]">Loading…</p>;
+    return (
+      <div className="flex flex-col gap-5 p-4">
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-11 w-40 rounded-lg" />
+        <Skeleton className="h-32 w-full rounded-lg" />
+      </div>
+    );
   }
   if (isError || !food) {
     return <p className="p-4 text-sm text-[var(--color-danger)]">Couldn't find that food.</p>;
@@ -182,7 +178,7 @@ export function FoodDetailPage() {
       {food.pairings.length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-[var(--color-text)]">Vitamin-C pairings</h2>
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="scroll-momentum flex gap-2 overflow-x-auto pb-1">
             {food.pairings.map((pairing) => (
               <Link
                 key={pairing.food.slug}

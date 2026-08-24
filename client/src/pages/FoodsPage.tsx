@@ -4,6 +4,9 @@ import { useFoods } from "../features/catalog/hooks.js";
 import { FoodCard } from "../features/catalog/components/FoodCard.js";
 import { ChipGroup } from "../features/catalog/components/ChipGroup.js";
 import { ALLERGEN_SLUGS, AGE_THRESHOLDS, CATEGORIES, IRON_LEVELS } from "../features/catalog/constants.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
+import { SkeletonList } from "../components/ui/Skeleton.js";
 
 export function FoodsPage() {
   const [q, setQ] = useState("");
@@ -27,10 +30,7 @@ export function FoodsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">Foods</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">Iron-rich foods first — filter by category, allergen, or age.</p>
-      </div>
+      <PageHeader title="Foods" description="Iron-rich foods first — filter by category, allergen, or age." />
 
       <input
         type="search"
@@ -53,9 +53,11 @@ export function FoodsPage() {
         />
       </div>
 
-      {isLoading && <p className="text-sm text-[var(--color-text-muted)]">Loading foods…</p>}
+      {isLoading && <SkeletonList count={4} />}
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load foods. Try again.</p>}
-      {data && data.foods.length === 0 && <p className="text-sm text-[var(--color-text-muted)]">No foods match those filters.</p>}
+      {data && data.foods.length === 0 && (
+        <EmptyState title="No foods match those filters" description="Try clearing a filter or two." />
+      )}
 
       {data && data.foods.length > 0 && (
         <div className="flex flex-col gap-2">

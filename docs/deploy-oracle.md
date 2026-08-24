@@ -262,6 +262,17 @@ restore the `.env` file from wherever you keep it outside the VM (a password
 manager — it's never in git), then run the restore procedure before
 `docker compose up -d --wait` starts serving traffic.
 
+## Security headers
+
+The app sets its own security headers via `@fastify/helmet` (locked-down
+CSP, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) —
+see `server/src/plugins/security.ts`. HSTS is deliberately left out of that
+config: Caddy already sends `Strict-Transport-Security` for the domain once
+TLS is up, and a second copy from the app would just be a duplicate header
+with its own maxAge to keep in sync. If you ever move behind a different
+edge proxy that doesn't set HSTS, add it there rather than re-enabling
+helmet's copy.
+
 ## Known follow-up
 
 `server/package.json`'s `db:migrate`/`db:seed` scripts run through `tsx`

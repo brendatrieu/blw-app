@@ -1,16 +1,14 @@
-import { Link } from "react-router-dom";
 import { safetyArticles } from "../features/safety/content.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
+import { CardLink } from "../components/ui/Card.js";
 
 export function SafetyPage() {
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">Safety Library</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">
-          Choking, allergies, storage, and more — every article here is saved on your device, so it's
-          readable even with no signal.
-        </p>
-      </div>
+      <PageHeader
+        title="Safety Library"
+        description="Choking, allergies, storage, and more — every article here is saved on your device, so it's readable even with no signal."
+      />
 
       <div
         role="note"
@@ -28,14 +26,10 @@ export function SafetyPage() {
 
       <div className="flex flex-col gap-2">
         {safetyArticles.map((article) => (
-          <Link
-            key={article.slug}
-            to={`/safety/${article.slug}`}
-            className="flex flex-col gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3 transition-colors hover:border-[var(--color-primary)]"
-          >
+          <CardLink key={article.slug} to={`/safety/${article.slug}`} padding="sm" className="flex flex-col gap-1">
             <span className="text-base font-semibold text-[var(--color-text)]">{article.title}</span>
             <span className="text-sm text-[var(--color-text-muted)]">{article.summary}</span>
-          </Link>
+          </CardLink>
         ))}
       </div>
     </div>

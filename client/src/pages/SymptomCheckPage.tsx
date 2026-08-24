@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import {
   isAlarmLevel,
   resultTriageLevel,
@@ -15,6 +14,10 @@ import { SymptomHistoryList } from "../features/symptom/components/SymptomHistor
 import { SymptomResultView } from "../features/symptom/components/SymptomResultView.js";
 import { SymptomSurveyForm } from "../features/symptom/components/SymptomSurveyForm.js";
 import { ApiError } from "../lib/api.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
+import { Button, ButtonLink } from "../components/ui/Button.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
+import { Skeleton } from "../components/ui/Skeleton.js";
 
 /** Server error codes turned into something a parent can act on. */
 function errorMessage(error: unknown): string {
@@ -64,21 +67,22 @@ export function SymptomCheckPage() {
   }
 
   if (babyLoading) {
-    return <p className="p-4 text-sm text-[var(--color-text-muted)]">Loading…</p>;
+    return (
+      <div className="flex flex-col gap-4 p-4">
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-40 w-full rounded-lg" />
+      </div>
+    );
   }
 
   if (!activeBaby) {
     return (
-      <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <p className="text-sm text-[var(--color-text-muted)]">
-          Add a baby profile first — the check reads that baby's food log for the last seven days.
-        </p>
-        <Link
-          to="/settings"
-          className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-[var(--color-primary-contrast)]"
-        >
-          Add a baby
-        </Link>
+      <div className="p-4">
+        <EmptyState
+          title="No baby profile yet"
+          description="Add a baby profile first — the check reads that baby's food log for the last seven days."
+          action={<ButtonLink to="/settings">Add a baby</ButtonLink>}
+        />
       </div>
     );
   }
@@ -99,13 +103,10 @@ export function SymptomCheckPage() {
         />
       )}
 
-      <header className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">Symptom check — {activeBaby.name}</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">
-          Tell us what you are seeing and we will line it up against everything {activeBaby.name} has eaten in the last
-          seven days.
-        </p>
-      </header>
+      <PageHeader
+        title={`Symptom check — ${activeBaby.name}`}
+        description={`Tell us what you are seeing and we will line it up against everything ${activeBaby.name} has eaten in the last seven days.`}
+      />
 
       {!response && !runCheck.isPending && (
         <SymptomSurveyForm
@@ -131,17 +132,18 @@ export function SymptomCheckPage() {
       {response && (
         <section className="flex flex-col gap-4">
           <SymptomResultView result={response.result} onReopenAlarm={() => setAlarmOpen(true)} />
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            className="self-start"
             onClick={() => {
               setResponse(null);
               setAlarmOpen(false);
               runCheck.reset();
             }}
-            className="self-start rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-text)]"
           >
             Start another check
-          </button>
+          </Button>
         </section>
       )}
 

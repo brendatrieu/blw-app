@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { signOut, useSession } from "../lib/auth.js";
 import { BottomNav } from "./BottomNav.js";
@@ -74,7 +74,7 @@ function UserMenu() {
         onClick={() => {
           setOpen((value) => !value);
         }}
-        className="rounded-lg border px-2 py-1 text-sm"
+        className="min-h-11 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors hover:border-[var(--color-primary)]"
         style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
       >
         {label}
@@ -83,14 +83,15 @@ function UserMenu() {
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 z-20 mt-1 flex w-48 flex-col rounded-lg border p-1 shadow-lg"
+          className="absolute right-0 z-20 mt-1 flex w-48 flex-col rounded-xl border p-1"
           style={{
             backgroundColor: "var(--color-bg-elevated)",
             borderColor: "var(--color-border)",
+            boxShadow: "var(--shadow-md)",
           }}
         >
           <span
-            className="truncate px-2 py-1 text-xs"
+            className="truncate px-2 py-1.5 text-xs"
             style={{ color: "var(--color-text-muted)" }}
             title={session?.user.email}
           >
@@ -102,7 +103,7 @@ function UserMenu() {
             onClick={() => {
               setOpen(false);
             }}
-            className="rounded px-2 py-1 text-sm"
+            className="flex min-h-11 items-center rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-[var(--color-bg-inset)]"
             style={{ color: "var(--color-text)" }}
           >
             Settings
@@ -114,7 +115,7 @@ function UserMenu() {
             onClick={() => {
               void handleSignOut();
             }}
-            className="rounded px-2 py-1 text-left text-sm disabled:opacity-60"
+            className="flex min-h-11 items-center rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-[var(--color-bg-inset)] disabled:opacity-60"
             style={{ color: "var(--color-danger)" }}
           >
             {signingOut ? "Signing out…" : "Sign out"}
@@ -126,21 +127,29 @@ function UserMenu() {
 }
 
 export function AppLayout() {
+  const location = useLocation();
+
   return (
-    <div className="mx-auto flex min-h-full max-w-lg flex-col pb-16">
+    <div
+      className="mx-auto flex min-h-full max-w-lg flex-col"
+      style={{ paddingBottom: "calc(var(--nav-height) + env(safe-area-inset-bottom))" }}
+    >
       <header
         className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b px-4 py-2"
         style={{
           backgroundColor: "var(--color-bg-elevated)",
           borderColor: "var(--color-border)",
+          paddingTop: "calc(0.5rem + env(safe-area-inset-top))",
         }}
       >
         <BabySwitcher />
         <UserMenu />
       </header>
 
-      <main className="flex-1">
-        <Outlet />
+      <main className="scroll-momentum flex-1">
+        <div key={location.pathname} className="page-transition">
+          <Outlet />
+        </div>
       </main>
       <BottomNav />
     </div>

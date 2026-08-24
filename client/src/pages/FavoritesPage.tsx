@@ -1,15 +1,16 @@
-import { Link } from "react-router-dom";
 import type { FavoriteItem } from "@blw/shared";
 import { useFavorites } from "../features/tracking/hooks.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { allergenLabel } from "../features/catalog/constants.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
+import { CardLink } from "../components/ui/Card.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
+import { ButtonLink } from "../components/ui/Button.js";
+import { SkeletonList } from "../components/ui/Skeleton.js";
 
 function FavoriteCard({ item }: { item: FavoriteItem }) {
   return (
-    <Link
-      to={`/recipes/${item.recipeId}`}
-      className="flex flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3 transition-colors hover:border-[var(--color-primary)]"
-    >
+    <CardLink to={`/recipes/${item.recipeId}`} padding="sm" className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-base font-semibold text-[var(--color-text)]">{item.title}</span>
         <span className="text-xs text-[var(--color-text-muted)]">{item.minAgeMonths}m+</span>
@@ -22,7 +23,7 @@ function FavoriteCard({ item }: { item: FavoriteItem }) {
           </Badge>
         ))}
       </div>
-    </Link>
+    </CardLink>
   );
 }
 
@@ -31,20 +32,18 @@ export function FavoritesPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <h1 className="text-xl font-semibold text-[var(--color-text)]">Favorites</h1>
+      <PageHeader title="Favorites" />
 
-      {isLoading && <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>}
+      {isLoading && <SkeletonList count={3} />}
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load favorites.</p>}
 
       {data && data.items.length === 0 && (
-        <div className="flex flex-col items-center gap-2 p-8 text-center">
-          <p className="text-sm text-[var(--color-text-muted)]">
-            No favorites yet — browse recipes and tap the heart to save one here.
-          </p>
-          <Link to="/foods" className="text-sm font-medium underline" style={{ color: "var(--color-primary)" }}>
-            Browse foods & recipes
-          </Link>
-        </div>
+        <EmptyState
+          icon="♡"
+          title="No favorites yet"
+          description="Browse recipes and tap the heart to save one here."
+          action={<ButtonLink to="/foods">Browse foods & recipes</ButtonLink>}
+        />
       )}
 
       {data && data.items.length > 0 && (

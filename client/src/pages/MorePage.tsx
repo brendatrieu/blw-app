@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { PageHeader } from "../components/ui/PageHeader.js";
+import { CardLink } from "../components/ui/Card.js";
 
 interface MoreLink {
   to: string;
@@ -39,21 +40,17 @@ function ComingSoonChip({ children }: { children: ReactNode }) {
 export function MorePage() {
   return (
     <div className="flex flex-col gap-4 p-4">
-      <h1 className="text-xl font-semibold text-[var(--color-text)]">More</h1>
+      <PageHeader title="More" />
 
       <nav className="flex flex-col gap-2">
         {moreLinks.map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3 transition-colors hover:border-[var(--color-primary)]"
-          >
+          <CardLink key={link.to} to={link.to} padding="sm" className="flex items-center justify-between gap-3">
             <span className="flex flex-col gap-0.5">
               <span className="text-sm font-semibold text-[var(--color-text)]">{link.label}</span>
               <span className="text-xs text-[var(--color-text-muted)]">{link.description}</span>
             </span>
             {link.badge ? <ComingSoonChip>{link.badge}</ComingSoonChip> : null}
-          </Link>
+          </CardLink>
         ))}
       </nav>
 

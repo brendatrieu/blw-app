@@ -1,56 +1,107 @@
 @import "tailwindcss";
 
 /*
- * Light/dark theming via CSS variables.
+ * Design tokens
+ * =============
+ * Everything below is CSS custom properties, not a Tailwind @theme block —
+ * the app already leans on `var(--color-x)` and `text-[var(--color-x)]`
+ * throughout, so token *names* stay stable and only the palette itself is
+ * tightened here. Radii and spacing intentionally reuse Tailwind's default
+ * scale (rounded-lg for controls, rounded-xl for cards, rounded-full for
+ * pills — already the de facto convention across the app) rather than
+ * introducing a second, parallel scale.
+ *
+ * Light/dark theming:
  * - Default (no attribute on <html>): follows prefers-color-scheme.
  * - Manual override: `data-theme="light" | "dark"` set on <html> by the
  *   theme toggle, persisted to localStorage (see src/theme.ts).
+ *
+ * Every text/background pairing below is checked against WCAG AA
+ * (4.5:1 for body text, 3:1 for large/UI text) in both themes.
  */
 :root {
+  /* Surfaces */
   --color-bg: #ffffff;
   --color-bg-elevated: #f7f7f5;
+  --color-bg-inset: #eeede8;
+
+  /* Text */
   --color-text: #1a1a17;
   --color-text-muted: #5c5c56;
   --color-border: #e3e3de;
+
+  /* Brand — one accent hue used with restraint. Primary green carries the
+     app; accent (warm terracotta) is reserved for a handful of "notice me
+     gently" moments (Vit-C pairing, "use soon"), never for large surfaces. */
   --color-primary: #2f6f4f;
   --color-primary-contrast: #ffffff;
-  --color-accent: #d97a3a;
+  --color-primary-soft: #e5f0e9;
+  --color-accent: #a85a26;
   --color-danger: #b3261e;
+
   --color-callout-bg: #fdf3e0;
   --color-callout-border: #eab676;
   --color-callout-icon: #b5650a;
+
+  /* Elevation — subtle by design; this is a calm app, not a dashboard. */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05), 0 1px 1px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 6px 16px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 16px 32px rgb(0 0 0 / 0.14), 0 2px 6px rgb(0 0 0 / 0.06);
+
+  /* Fixed chrome heights, referenced by both the nav and page bottom padding
+     so the two never drift out of sync. */
+  --nav-height: 4rem;
+  --header-height: 3.25rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-bg: #14140f;
     --color-bg-elevated: #1e1e17;
+    --color-bg-inset: #26261d;
+
     --color-text: #f2f2ec;
     --color-text-muted: #b3b3a8;
     --color-border: #33332a;
+
     --color-primary: #5fb98a;
     --color-primary-contrast: #0b1c14;
+    --color-primary-soft: #1b3327;
     --color-accent: #e59a5f;
     --color-danger: #ff8a80;
+
     --color-callout-bg: #2a2110;
     --color-callout-border: #7a5220;
     --color-callout-icon: #e5a95f;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 1px rgb(0 0 0 / 0.24);
+    --shadow-md: 0 6px 16px rgb(0 0 0 / 0.36), 0 1px 2px rgb(0 0 0 / 0.24);
+    --shadow-lg: 0 16px 32px rgb(0 0 0 / 0.44), 0 2px 6px rgb(0 0 0 / 0.28);
   }
 }
 
 :root[data-theme="dark"] {
   --color-bg: #14140f;
   --color-bg-elevated: #1e1e17;
+  --color-bg-inset: #26261d;
+
   --color-text: #f2f2ec;
   --color-text-muted: #b3b3a8;
   --color-border: #33332a;
+
   --color-primary: #5fb98a;
   --color-primary-contrast: #0b1c14;
+  --color-primary-soft: #1b3327;
   --color-accent: #e59a5f;
   --color-danger: #ff8a80;
+
   --color-callout-bg: #2a2110;
   --color-callout-border: #7a5220;
   --color-callout-icon: #e5a95f;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 1px rgb(0 0 0 / 0.24);
+  --shadow-md: 0 6px 16px rgb(0 0 0 / 0.36), 0 1px 2px rgb(0 0 0 / 0.24);
+  --shadow-lg: 0 16px 32px rgb(0 0 0 / 0.44), 0 2px 6px rgb(0 0 0 / 0.28);
 }
 
 html,
@@ -62,4 +113,75 @@ body,
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
+  /* Keep the app's own scroll containers from ever chaining into the
+     browser's native pull-to-refresh / overscroll-navigate gestures. */
+  overscroll-behavior-y: none;
+}
+
+/* Momentum, pull-refresh-safe scroll areas: apply to any element that owns
+   its own vertical scrolling (chat transcript, long lists, sheets). */
+.scroll-momentum {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* -------------------------------------------------------------------------
+ * Focus visibility — everywhere, for free. One rule instead of a className
+ * on every interactive element across the app.
+ * ---------------------------------------------------------------------- */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* -------------------------------------------------------------------------
+ * Page transition — a soft fade/rise on route change. Purely decorative,
+ * fully disabled for reduced-motion users.
+ * ---------------------------------------------------------------------- */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-transition {
+  animation: page-enter 220ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    animation: none;
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * Skeleton loading — a slow, quiet shimmer; a still block for
+ * reduced-motion users rather than a pulse.
+ * ---------------------------------------------------------------------- */
+@keyframes skeleton-shimmer {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.skeleton {
+  background-color: var(--color-bg-inset);
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    opacity: 0.75;
+  }
 }

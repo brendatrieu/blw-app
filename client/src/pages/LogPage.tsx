@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useFoods } from "../features/catalog/hooks.js";
 import { useCreateServeLog, useDeleteServeLog, useServeLogs } from "../features/tracking/hooks.js";
 import type { ServeLogItem } from "@blw/shared";
+import { PageHeader } from "../components/ui/PageHeader.js";
+import { Button, ButtonLink } from "../components/ui/Button.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
+import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 /** yyyy-mm-dd in the viewer's local timezone, used to group the timeline by day. */
 function dayKey(iso: string): string {
@@ -113,20 +116,12 @@ function QuickLogForm({ babyId, onDone }: QuickLogFormProps) {
       )}
 
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={!foodId || createServeLog.isPending}
-          className="flex-1 rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-[var(--color-primary-contrast)] disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button type="submit" disabled={!foodId || createServeLog.isPending} className="flex-1">
           {createServeLog.isPending ? "Logging…" : "Log it"}
-        </button>
-        <button
-          type="button"
-          onClick={onDone}
-          className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-text)]"
-        >
+        </Button>
+        <Button type="button" variant="secondary" onClick={onDone}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -214,47 +209,50 @@ export function LogPage() {
   }, [data]);
 
   if (babyLoading) {
-    return <p className="p-4 text-sm text-[var(--color-text-muted)]">Loading…</p>;
+    return (
+      <div className="flex flex-col gap-4 p-4">
+        <Skeleton className="h-6 w-1/2" />
+        <SkeletonList count={3} />
+      </div>
+    );
   }
 
   if (!activeBaby) {
     return (
-      <div className="flex flex-col items-center gap-3 p-8 text-center">
-        <p className="text-sm text-[var(--color-text-muted)]">Add a baby profile to start logging served foods.</p>
-        <Link
-          to="/settings"
-          className="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-[var(--color-primary-contrast)]"
-        >
-          Add a baby
-        </Link>
+      <div className="p-4">
+        <EmptyState
+          title="No baby profile yet"
+          description="Add a baby profile to start logging served foods."
+          action={<ButtonLink to="/settings">Add a baby</ButtonLink>}
+        />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">Log — {activeBaby.name}</h1>
-        {!showForm && (
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-sm font-medium text-[var(--color-primary-contrast)]"
-          >
-            + Log food
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title={`Log — ${activeBaby.name}`}
+        action={
+          !showForm && (
+            <Button size="sm" onClick={() => setShowForm(true)}>
+              + Log food
+            </Button>
+          )
+        }
+      />
 
       {showForm && <QuickLogForm babyId={activeBaby.id} onDone={() => setShowForm(false)} />}
 
-      {isLoading && <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>}
+      {isLoading && <SkeletonList count={3} />}
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load the log.</p>}
 
       {!isLoading && !isError && groups.length === 0 && (
-        <p className="p-4 text-center text-sm text-[var(--color-text-muted)]">
-          Nothing logged yet — tap "+ Log food" after the next meal.
-        </p>
+        <EmptyState
+          icon="🍽️"
+          title="Nothing logged yet"
+          description={'Tap "+ Log food" after the next meal.'}
+        />
       )}
 
       <div className="flex flex-col gap-4">

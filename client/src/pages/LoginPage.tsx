@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthConfig } from "../features/babies/hooks.js";
 import { authErrorMessage, signIn } from "../lib/auth.js";
+import { Button } from "../components/ui/Button.js";
 
 const fieldClass = "w-full rounded-lg border px-3 py-2 text-base";
 const fieldStyle = {
@@ -88,31 +89,23 @@ export function LoginPage() {
           </p>
         ) : null}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-lg px-4 py-2 text-base font-medium disabled:opacity-60"
-          style={{
-            backgroundColor: "var(--color-primary)",
-            color: "var(--color-primary-contrast)",
-          }}
-        >
+        <Button type="submit" disabled={submitting} className="text-base">
           {submitting ? "Signing in…" : "Sign in"}
-        </button>
+        </Button>
       </form>
 
       <div className="flex flex-col gap-2">
-        <button
+        <Button
           type="button"
+          variant="secondary"
           disabled={!googleEnabled}
+          className="text-base"
           onClick={() => {
             void signIn.social({ provider: "google", callbackURL: redirectTo });
           }}
-          className="rounded-lg border px-4 py-2 text-base font-medium disabled:opacity-50"
-          style={{ borderColor: "var(--color-border)", color: "var(--color-text)" }}
         >
           Continue with Google
-        </button>
+        </Button>
         {!googleEnabled && authConfig.isSuccess ? (
           <p className="text-xs" style={{ color: "var(--color-text-muted)" }}>
             Google sign-in is not configured on this server.
