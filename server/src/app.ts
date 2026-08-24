@@ -5,22 +5,50 @@ import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import type { HealthResponse } from "@blw/shared";
 import { loadConfig, type Env } from "./config.js";
+import { createDb, type Database } from "./db/index.js";
+import { createAuth, type AuthLogger } from "./auth.js";
+import { registerRateLimit } from "./plugins/rate-limit.js";
+import { registerAuth } from "./plugins/auth.js";
+import { registerCatalogRoutes } from "./routes/catalog.js";
+import { registerBabyRoutes } from "./routes/babies.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDistDir = path.resolve(__dirname, "../../client/dist");
 
 export interface BuildAppOptions {
   env?: Env;
+  // Injectable so tests can pass an isolated (e.g. in-memory PGlite) instance
+  // instead of buildApp() standing up the default persisted dev database.
+  db?: Database;
+  // Lets tests silence the dev email logger (verification links are printed
+  // to the log when RESEND_API_KEY is unset).
+  authLogger?: AuthLogger;
 }
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const env = options.env ?? loadConfig();
+  const db = options.db ?? createDb(env.DATABASE_URL);
   const app = Fastify({
     logger: env.NODE_ENV !== "test",
   });
 
-  app.get("/api/health", async (): Promise<HealthResponse> => {
-    return { status: "ok" };
+  registerRateLimit(app, env);
+
+  // Routes go inside after(): @fastify/rate-limit wires per-route budgets
+  // through an onRoute hook, which only sees routes declared once the plugin
+  // has finished loading.
+  app.after(() => {
+    registerAuth(app, {
+      auth: createAuth({ db, env, logger: options.authLogger ?? app.log }),
+      env,
+    });
+
+    app.get("/api/health", async (): Promise<HealthResponse> => {
+      return { status: "ok" };
+    });
+
+    registerCatalogRoutes(app, db); // catalog routes
+    registerBabyRoutes(app, db); // baby profiles CRUD
   });
 
   const clientBuildExists = fs.existsSync(path.join(clientDistDir, "index.html"));

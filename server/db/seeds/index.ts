@@ -5,6 +5,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
+import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import { createDb, type Database } from "../../src/db/index.js";
 import {
   allergenLadderSteps,
@@ -268,11 +269,17 @@ function sqlExcluded(column: string) {
   return sql.raw(`excluded.${column}`);
 }
 
-// Loose typing on purpose: this file runs standalone via tsx (outside the
-// package's tsc build) and is a thin, generic "slug -> id" lookup shared by
-// every seed step below.
-async function slugIdMap(db: Database, table: any, slugCol: any, idCol: any): Promise<Map<string, string>> {
-  const rows: { slug: string; id: string }[] = await (db as any).select({ slug: slugCol, id: idCol }).from(table);
+// Generic "slug -> id" lookup shared by every seed step below.
+async function slugIdMap(
+  db: Database,
+  table: PgTable,
+  slugCol: AnyPgColumn,
+  idCol: AnyPgColumn,
+): Promise<Map<string, string>> {
+  const rows: { slug: string; id: string }[] = await db
+    .select({ slug: slugCol, id: idCol })
+    .from(table)
+    .then((result) => result as { slug: string; id: string }[]);
   return new Map(rows.map((r) => [r.slug, r.id]));
 }
 

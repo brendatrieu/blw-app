@@ -1,0 +1,22 @@
+{
+	# admin off avoids exposing the Caddy admin API on the box.
+	admin off
+}
+
+{$DOMAIN} {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+
+	# SSE endpoints (recipe/BLW chat) need the response streamed to the
+	# client as it's written — Caddy's default response buffering would
+	# hold each chunk until the handler finished, defeating the stream.
+	@ai path /api/ai/*
+	reverse_proxy @ai app:3000 {
+		flush_interval -1
+	}
+
+	reverse_proxy app:3000
+}

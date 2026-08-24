@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout.js";
+import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { SignupPage } from "./pages/SignupPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
@@ -20,10 +21,32 @@ import { NotFoundPage } from "./pages/NotFoundPage.js";
 export function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
+      <Route
+        path="/login"
+        element={
+          <RequireAnonymous>
+            <LoginPage />
+          </RequireAnonymous>
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <RequireAnonymous>
+            <SignupPage />
+          </RequireAnonymous>
+        }
+      />
 
-      <Route element={<AppLayout />}>
+      {/* Everything below the guard needs a session. The server enforces
+          this independently; the wrapper just keeps the UI honest. */}
+      <Route
+        element={
+          <RequireAuth>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
         <Route path="/" element={<DashboardPage />} />
         <Route path="/pantry" element={<PantryPage />} />
         <Route path="/foods" element={<FoodsPage />} />
