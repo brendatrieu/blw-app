@@ -134,7 +134,7 @@ stack reads:
 |---|---|---|
 | `DATABASE_URL` | yes | `postgres://<POSTGRES_USER>:<POSTGRES_PASSWORD>@db:5432/<POSTGRES_DB>` — must use the same three values as the `POSTGRES_*` vars below, and the `db` hostname (the Compose service name), not the VM's IP. |
 | `POSTGRES_USER` | yes | Used by the `db` service to initialize Postgres. |
-| `POSTGRES_PASSWORD` | yes | Generate with `openssl rand -base64 24`. |
+| `POSTGRES_PASSWORD` | yes | Generate with `openssl rand -base64 24 \| tr '+/' '-_'` — the URL-safe alphabet matters, because this value is pasted into `DATABASE_URL` and a raw-base64 `/` or `+` breaks URL parsing intermittently. |
 | `POSTGRES_DB` | yes | Database name, e.g. `blw`. |
 | `DOMAIN` | yes | The hostname from step 4, e.g. `app.example.com` or `blw-app.duckdns.org`. Caddy reads this to request/renew its TLS cert. |
 | `BETTER_AUTH_SECRET` | yes | Generate with `openssl rand -base64 32`. |
