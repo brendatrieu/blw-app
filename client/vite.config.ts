@@ -4,6 +4,12 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import pkg from "./package.json";
+import {
+  isCatalogRoute,
+  isNetworkOnlyRoute,
+  isServeLogPostRoute,
+  isUserDataRoute,
+} from "./src/pwa/route-matchers";
 
 // Monorepo root (one level up from client/) — the safety library's
 // `content/safety/*.mdx` glob import lives there, outside vite's default
@@ -56,7 +62,7 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/],
         runtimeCaching: [
           {
-            urlPattern: /^\/api\/(foods|recipes)(\/|$|\?)/,
+            urlPattern: isCatalogRoute,
             handler: "StaleWhileRevalidate",
             options: {
               cacheName: "catalog-cache",
@@ -73,7 +79,7 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /^\/api\/(babies|pantry|favorites)(\/|$|\?)/,
+            urlPattern: isUserDataRoute,
             handler: "NetworkFirst",
             options: {
               cacheName: "user-data-cache",
@@ -81,11 +87,11 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /^\/api\/(auth|ai|account)(\/|$|\?)/,
+            urlPattern: isNetworkOnlyRoute,
             handler: "NetworkOnly",
           },
           {
-            urlPattern: /^\/api\/babies\/[^/]+\/serve-logs(\/|$|\?)/,
+            urlPattern: isServeLogPostRoute,
             handler: "NetworkOnly",
             method: "POST",
             options: {

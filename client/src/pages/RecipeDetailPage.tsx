@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import type { AgeStage } from "@blw/shared";
+import { ageInMonths } from "@blw/shared";
+import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useRecipe } from "../features/catalog/hooks.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { allergenLabel } from "../features/catalog/constants.js";
@@ -113,10 +115,27 @@ function PrepThis({ recipeId }: PrepThisProps) {
   );
 }
 
+/** 6mo below 9 months, 9mo below 12 months, otherwise 12mo. */
+function stageForAge(months: number): AgeStage {
+  if (months < 9) return "6";
+  if (months < 12) return "9";
+  return "12";
+}
+
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: recipe, isLoading, isError } = useRecipe(id);
+  const { activeBaby, isLoading: isBabyLoading } = useActiveBaby();
   const [activeStage, setActiveStage] = useState<AgeStage>("6");
+  const userPickedStage = useRef(false);
+
+  // Sync the initial stage to the active baby's age once that data resolves,
+  // but only until the user taps a tab themselves.
+  useEffect(() => {
+    if (userPickedStage.current || isBabyLoading) return;
+    const stage = activeBaby ? stageForAge(ageInMonths(activeBaby.birthDate)) : "6";
+    setActiveStage(stage);
+  }, [activeBaby, isBabyLoading]);
 
   if (isLoading) {
     return (
@@ -184,7 +203,10 @@ export function RecipeDetailPage() {
                 key={stage.value}
                 type="button"
                 disabled={!available}
-                onClick={() => setActiveStage(stage.value)}
+                onClick={() => {
+                  userPickedStage.current = true;
+                  setActiveStage(stage.value);
+                }}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                   active
                     ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"

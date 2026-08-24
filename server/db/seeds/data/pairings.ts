@@ -65,4 +65,14 @@ export const pairings: PairingSeed[] = [
     vitCFoodSlug: 'strawberry',
     reason: "Strawberry's vitamin C adds a nutrient boost alongside egg's easily-absorbed iron.",
   },
+  {
+    ironFoodSlug: 'tahini',
+    vitCFoodSlug: 'orange',
+    reason: "Vitamin C from orange segments boosts absorption of the non-heme iron in tahini's sesame paste.",
+  },
+  {
+    ironFoodSlug: 'tahini',
+    vitCFoodSlug: 'broccoli',
+    reason: "Broccoli's vitamin C helps baby absorb more of tahini's non-heme iron.",
+  },
 ]

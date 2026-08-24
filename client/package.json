@@ -14,7 +14,9 @@
   "dependencies": {
     "@blw/shared": "workspace:*",
     "@tanstack/react-query": "^5.65.1",
+    "@tanstack/react-query-persist-client": "^5.65.1",
     "better-auth": "^1.7.1",
+    "idb-keyval": "^6.2.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
