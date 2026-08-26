@@ -26,14 +26,31 @@ import { SegmentedControl, type SegmentedControlOption } from "../components/ui/
 const dangerGhostButtonClass =
   "min-h-9 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-danger)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-danger)] disabled:cursor-not-allowed disabled:opacity-60";
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
+/** Local-time YYYY-MM-DD for the birth-date input's `max` — no future dates.
+ * (Local date parts, not toISOString, so the cap is right near midnight.) */
+function todayYmd(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-interface BabyFormValues {
+export interface BabyFormValues {
   name: string;
   birthDate: string;
   notes: string;
+}
+
+/**
+ * The baby form's required-field validation, extracted so the submit guard
+ * and the submit button's `disabled` computation can never drift apart —
+ * both `AddBabySheet` and `BabyRow`'s edit form share this single source of
+ * truth. Checked in field order: name, then birth date — mirroring the
+ * native inputs' `required` attributes so the message and the disabled
+ * state agree with constraint validation.
+ */
+export function babyFormError(values: BabyFormValues): string | null {
+  if (values.name.trim().length === 0) return "Please enter a name.";
+  if (!values.birthDate) return "Please choose a birth date.";
+  return null;
 }
 
 function BabyFields({
@@ -61,11 +78,14 @@ function BabyFields({
       </Field>
 
       <Field label="Birth date" htmlFor={`${idPrefix}-birthdate`}>
+        {/* Deliberately the native calendar input, not the wheel picker: a
+            birth date is a single known faraway date — the wheels are for
+            recent-past log entries. */}
         <Input
           id={`${idPrefix}-birthdate`}
           type="date"
           required
-          max={today()}
+          max={todayYmd()}
           value={values.birthDate}
           onChange={(event) => {
             onChange({ ...values, birthDate: event.target.value });
@@ -96,6 +116,11 @@ function AddBabySheet({ open, onClose }: { open: boolean; onClose: () => void })
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    const formError = babyFormError(values);
+    if (formError) {
+      setError(formError);
+      return;
+    }
     createBaby.mutate(
       { name: values.name.trim(), birthDate: values.birthDate, notes: values.notes.trim() || null },
       {
@@ -120,7 +145,7 @@ function AddBabySheet({ open, onClose }: { open: boolean; onClose: () => void })
           </p>
         ) : null}
         <div className="flex gap-2">
-          <Button type="submit" disabled={createBaby.isPending}>
+          <Button type="submit" disabled={createBaby.isPending || babyFormError(values) !== null}>
             {createBaby.isPending ? "Adding…" : "Add baby"}
           </Button>
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -154,6 +179,11 @@ function BabyRow({ baby }: { baby: Baby }) {
   function handleSave(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    const formError = babyFormError(values);
+    if (formError) {
+      setError(formError);
+      return;
+    }
     updateBaby.mutate(
       {
         id: baby.id,
@@ -231,7 +261,7 @@ function BabyRow({ baby }: { baby: Baby }) {
             </p>
           ) : null}
           <div className="flex gap-2">
-            <Button type="submit" disabled={updateBaby.isPending}>
+            <Button type="submit" disabled={updateBaby.isPending || babyFormError(values) !== null}>
               {updateBaby.isPending ? "Saving…" : "Save"}
             </Button>
             <Button type="button" variant="secondary" onClick={() => setEditing(false)}>

@@ -175,7 +175,11 @@ export function MultiComboboxOptionList({
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => onToggleOption(option.value)}
               className={`flex min-h-11 cursor-pointer items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] ${
-                index === highlighted ? "bg-[var(--color-bg-inset)]" : ""
+                index === highlighted
+                  ? "bg-[var(--color-bg-inset)]"
+                  : selected
+                    ? "bg-[var(--color-primary-soft)]"
+                    : ""
               }`}
             >
               <span aria-hidden="true" className="w-4 shrink-0 text-center text-[var(--color-primary)]">
@@ -208,6 +212,7 @@ export function MultiCombobox({
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const listboxId = `${inputId}-listbox`;
+  const countBadgeId = `${inputId}-count`;
 
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -276,81 +281,109 @@ export function MultiCombobox({
 
   return (
     <div ref={containerRef} className="relative">
-      <div
-        onClick={() => !disabled && inputRef.current?.focus()}
-        className={`flex min-h-11 w-full flex-wrap items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 py-1.5 transition-colors duration-[var(--duration-fast)] focus-within:border-[var(--color-primary)] ${
-          disabled ? "cursor-not-allowed opacity-60" : "cursor-text"
-        }`}
-      >
-        {selectedOptions.map((option) => (
-          <span
-            key={option.value}
-            className="inline-flex min-h-8 items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] py-1 pr-1 pl-2.5 text-sm text-[var(--color-text)]"
+      <div className="relative">
+        <div
+          onClick={() => !disabled && inputRef.current?.focus()}
+          className={`flex min-h-11 w-full items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 transition-colors duration-[var(--duration-fast)] focus-within:border-[var(--color-primary)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-coral-deep)] ${
+            disabled ? "cursor-not-allowed opacity-60" : "cursor-text"
+          }`}
+        >
+          {/* Left magnifier icon, styled like Select's chevron: stroke
+              currentColor, muted token, purely decorative. */}
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="pointer-events-none h-4 w-4 shrink-0 text-[var(--color-text-muted)]"
+            fill="none"
           >
-            {option.emoji ? <span aria-hidden="true">{option.emoji}</span> : null}
-            {option.label}
-            <button
-              type="button"
-              aria-label={`Remove ${option.label}`}
-              disabled={disabled}
-              onClick={(event) => {
-                event.stopPropagation();
-                toggleOption(option.value);
-              }}
-              className="group flex shrink-0 items-center justify-center rounded-full p-[10px] -m-[10px] disabled:cursor-not-allowed"
+            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+            <path d="M21 21l-4.3-4.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <input
+            ref={inputRef}
+            id={inputId}
+            type="text"
+            {...getInputAriaProps({
+              open,
+              listboxId,
+              activeDescendantId: getActiveDescendantId(filtered, effectiveHighlighted, listboxId),
+            })}
+            {...(value.length >= 1 ? { "aria-describedby": countBadgeId } : {})}
+            autoComplete="off"
+            data-no-focus-ring=""
+            disabled={disabled}
+            value={query}
+            placeholder={selectedOptions.length === 0 ? placeholder : undefined}
+            onFocus={() => setOpen(true)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setOpen(true);
+              // Clear any explicit arrow/hover highlight on every keystroke so
+              // `resolveHighlight` re-lands the effective highlight on the
+              // FIRST filtered match — otherwise a stale index from before the
+              // query changed could survive and Enter would toggle the wrong
+              // option (item 14).
+              setHighlighted(-1);
+            }}
+            onKeyDown={handleKeyDown}
+            className="min-w-0 flex-1 border-none bg-transparent px-1 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] disabled:cursor-not-allowed"
+          />
+          {value.length >= 1 && (
+            <span
+              id={countBadgeId}
+              className="pointer-events-none shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-primary-soft)] px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-primary)]"
             >
-              {/* Visual size stays 24px (h-6 w-6); the button's own padding
-                  above extends the actual hit target to 44px without
-                  growing the chip, and the negative margin pulls the extra
-                  box back so surrounding layout doesn't shift. */}
-              <span
-                aria-hidden="true"
-                className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--color-text-muted)] group-hover:bg-[var(--color-border)] group-hover:text-[var(--color-text)]"
-              >
-                ×
-              </span>
-            </button>
-          </span>
-        ))}
-        <input
-          ref={inputRef}
-          id={inputId}
-          type="text"
-          {...getInputAriaProps({
-            open,
-            listboxId,
-            activeDescendantId: getActiveDescendantId(filtered, effectiveHighlighted, listboxId),
-          })}
-          autoComplete="off"
-          disabled={disabled}
-          value={query}
-          placeholder={selectedOptions.length === 0 ? placeholder : undefined}
-          onFocus={() => setOpen(true)}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setOpen(true);
-            // Clear any explicit arrow/hover highlight on every keystroke so
-            // `resolveHighlight` re-lands the effective highlight on the
-            // FIRST filtered match — otherwise a stale index from before the
-            // query changed could survive and Enter would toggle the wrong
-            // option (item 14).
-            setHighlighted(-1);
-          }}
-          onKeyDown={handleKeyDown}
-          className="min-w-[6rem] flex-1 border-none bg-transparent px-1 py-1 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] disabled:cursor-not-allowed"
-        />
+              {value.length} selected
+            </span>
+          )}
+        </div>
+
+        {open && !disabled && (
+          <MultiComboboxOptionList
+            listboxId={listboxId}
+            options={filtered}
+            selectedValues={value}
+            highlighted={effectiveHighlighted}
+            emptyMessage={emptyMessage}
+            onHoverOption={setHighlighted}
+            onToggleOption={toggleOption}
+          />
+        )}
       </div>
 
-      {open && !disabled && (
-        <MultiComboboxOptionList
-          listboxId={listboxId}
-          options={filtered}
-          selectedValues={value}
-          highlighted={effectiveHighlighted}
-          emptyMessage={emptyMessage}
-          onHoverOption={setHighlighted}
-          onToggleOption={toggleOption}
-        />
+      {value.length >= 1 && (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {selectedOptions.map((option) => (
+            <span
+              key={option.value}
+              className="inline-flex min-h-8 items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] py-1 pr-1 pl-2.5 text-sm text-[var(--color-text)]"
+            >
+              {option.emoji ? <span aria-hidden="true">{option.emoji}</span> : null}
+              {option.label}
+              <button
+                type="button"
+                aria-label={`Remove ${option.label}`}
+                disabled={disabled}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleOption(option.value);
+                }}
+                className="group flex shrink-0 items-center justify-center rounded-full p-[10px] -m-[10px] disabled:cursor-not-allowed"
+              >
+                {/* Visual size stays 24px (h-6 w-6); the button's own padding
+                    above extends the actual hit target to 44px without
+                    growing the chip, and the negative margin pulls the extra
+                    box back so surrounding layout doesn't shift. */}
+                <span
+                  aria-hidden="true"
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--color-text-muted)] group-hover:bg-[var(--color-border)] group-hover:text-[var(--color-text)]"
+                >
+                  ×
+                </span>
+              </button>
+            </span>
+          ))}
+        </div>
       )}
     </div>
   );

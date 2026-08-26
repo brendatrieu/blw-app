@@ -8,8 +8,9 @@ import { PageHeader } from "../components/ui/PageHeader.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
+import { DateTimeField, nowAtMinute } from "../components/ui/DateTimeField.js";
 import { Field } from "../components/ui/Field.js";
-import { Input, Textarea } from "../components/ui/Input.js";
+import { Textarea } from "../components/ui/Input.js";
 import { MultiCombobox, type MultiComboboxOption } from "../components/ui/MultiCombobox.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
@@ -35,14 +36,6 @@ function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
-/** `<input type="datetime-local">` wants local wall-clock time, no offset. */
-function nowForDateTimeLocal(): string {
-  const now = new Date();
-  now.setSeconds(0, 0);
-  const offsetMs = now.getTimezoneOffset() * 60_000;
-  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 16);
-}
-
 interface QuickLogFormProps {
   babyId: string;
   onDone: () => void;
@@ -52,7 +45,7 @@ function QuickLogForm({ babyId, onDone }: QuickLogFormProps) {
   const { data: foodsData, isLoading: foodsLoading } = useFoods();
   const createServeLog = useCreateServeLog(babyId);
   const [foodIds, setFoodIds] = useState<string[]>([]);
-  const [servedAt, setServedAt] = useState(() => nowForDateTimeLocal());
+  const [servedAt, setServedAt] = useState(() => nowAtMinute());
   const [reactionNote, setReactionNote] = useState("");
 
   const foods = foodsData?.foods ?? [];
@@ -67,7 +60,7 @@ function QuickLogForm({ babyId, onDone }: QuickLogFormProps) {
     createServeLog.mutate(
       {
         foodIds,
-        servedAt: new Date(servedAt).toISOString(),
+        servedAt: servedAt.toISOString(),
         reactionNote: reactionNote.trim() || undefined,
       },
       { onSuccess: onDone },
@@ -91,13 +84,7 @@ function QuickLogForm({ babyId, onDone }: QuickLogFormProps) {
       </Field>
 
       <Field label="When" htmlFor="quick-log-when">
-        <Input
-          id="quick-log-when"
-          type="datetime-local"
-          value={servedAt}
-          max={nowForDateTimeLocal()}
-          onChange={(e) => setServedAt(e.target.value)}
-        />
+        <DateTimeField id="quick-log-when" value={servedAt} onChange={setServedAt} />
       </Field>
 
       <Field label="Reaction note (optional)" htmlFor="quick-log-note">
@@ -118,7 +105,7 @@ function QuickLogForm({ babyId, onDone }: QuickLogFormProps) {
 
       <div className="flex gap-2">
         <Button type="submit" disabled={foodIds.length === 0 || createServeLog.isPending} className="flex-1">
-          {createServeLog.isPending ? "Logging…" : "Log it"}
+          {createServeLog.isPending ? "Saving…" : "Save"}
         </Button>
         <Button type="button" variant="secondary" onClick={onDone}>
           Cancel

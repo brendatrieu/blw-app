@@ -258,9 +258,12 @@ body {
 
 /* -------------------------------------------------------------------------
  * Focus visibility — everywhere, for free. One rule instead of a className
- * on every interactive element across the app.
+ * on every interactive element across the app. Being unlayered, it also
+ * outranks Tailwind utilities, so composite fields whose ring belongs on a
+ * wrapper (e.g. MultiCombobox) opt their inner input out via
+ * data-no-focus-ring and draw their own focus-within ring instead.
  * ---------------------------------------------------------------------- */
-:focus-visible {
+:focus-visible:not([data-no-focus-ring]) {
   outline: 2px solid var(--color-coral-deep);
   outline-offset: 2px;
   border-radius: 4px;

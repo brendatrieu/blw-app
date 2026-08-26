@@ -1,9 +1,10 @@
 import { useState } from "react";
 import type { PantryItem, PantryLocation } from "@blw/shared";
 import { useUpdatePantryItem } from "../hooks.js";
-import { LOCATIONS, toDateTimeLocal } from "../format.js";
+import { LOCATIONS } from "../format.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input } from "../../../components/ui/Input.js";
+import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
 import { Button } from "../../../components/ui/Button.js";
 import { Card } from "../../../components/ui/Card.js";
 
@@ -14,7 +15,7 @@ interface EditPantryItemSheetProps {
 
 export function EditPantryItemSheet({ item, onDone }: EditPantryItemSheetProps) {
   const [location, setLocation] = useState<PantryLocation>(item.location);
-  const [preparedAt, setPreparedAt] = useState(() => toDateTimeLocal(new Date(item.preparedAt)));
+  const [preparedAt, setPreparedAt] = useState(() => nowAtMinute(new Date(item.preparedAt)));
   const [quantityNote, setQuantityNote] = useState(item.quantityNote ?? "");
   const updateItem = useUpdatePantryItem();
 
@@ -25,7 +26,7 @@ export function EditPantryItemSheet({ item, onDone }: EditPantryItemSheetProps) 
         id: item.id,
         input: {
           location,
-          preparedAt: new Date(preparedAt).toISOString(),
+          preparedAt: preparedAt.toISOString(),
           quantityNote: quantityNote.trim() || null,
         },
       },
@@ -59,13 +60,7 @@ export function EditPantryItemSheet({ item, onDone }: EditPantryItemSheetProps) 
       </label>
 
       <Field label="Prepared" htmlFor="pantry-edit-prepared">
-        <Input
-          id="pantry-edit-prepared"
-          type="datetime-local"
-          value={preparedAt}
-          max={toDateTimeLocal(new Date())}
-          onChange={(e) => setPreparedAt(e.target.value)}
-        />
+        <DateTimeField id="pantry-edit-prepared" value={preparedAt} onChange={setPreparedAt} />
       </Field>
 
       <Field label="Quantity note (optional)" htmlFor="pantry-edit-note">

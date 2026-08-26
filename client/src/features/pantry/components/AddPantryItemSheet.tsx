@@ -4,11 +4,12 @@ import { useFoods } from "../../catalog/hooks.js";
 import { useFavorites } from "../../tracking/hooks.js";
 import { getFoodEmoji } from "../../catalog/foodEmoji.js";
 import { useCreatePantryItem } from "../hooks.js";
-import { LOCATIONS, toDateTimeLocal } from "../format.js";
+import { LOCATIONS } from "../format.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input } from "../../../components/ui/Input.js";
 import { Select } from "../../../components/ui/Select.js";
 import { MultiCombobox, type MultiComboboxOption } from "../../../components/ui/MultiCombobox.js";
+import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
 import { Button } from "../../../components/ui/Button.js";
 import { Card } from "../../../components/ui/Card.js";
 
@@ -30,7 +31,7 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
   const [recipeId, setRecipeId] = useState("");
   const [label, setLabel] = useState("");
   const [location, setLocation] = useState<PantryLocation>("fridge");
-  const [preparedAt, setPreparedAt] = useState(() => toDateTimeLocal(new Date()));
+  const [preparedAt, setPreparedAt] = useState(() => nowAtMinute());
   const [quantityNote, setQuantityNote] = useState("");
 
   const { data: foodsData, isLoading: foodsLoading } = useFoods();
@@ -59,7 +60,7 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
         foodIds: source === "food" ? foodIds : undefined,
         recipeId: source === "recipe" ? recipeId : undefined,
         label: source === "label" ? label.trim() : undefined,
-        preparedAt: new Date(preparedAt).toISOString(),
+        preparedAt: preparedAt.toISOString(),
         location,
         quantityNote: quantityNote.trim() || undefined,
       },
@@ -156,13 +157,7 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
       </label>
 
       <Field label="Prepared" htmlFor="pantry-add-prepared">
-        <Input
-          id="pantry-add-prepared"
-          type="datetime-local"
-          value={preparedAt}
-          max={toDateTimeLocal(new Date())}
-          onChange={(e) => setPreparedAt(e.target.value)}
-        />
+        <DateTimeField id="pantry-add-prepared" value={preparedAt} onChange={setPreparedAt} />
       </Field>
 
       <Field label="Quantity note (optional)" htmlFor="pantry-add-note">

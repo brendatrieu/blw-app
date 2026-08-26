@@ -34,11 +34,3 @@ export function countdownLabel(expiresAt: string): string {
   const days = Math.round(hours / 24);
   return `Use within ${days}d`;
 }
-
-/** `<input type="datetime-local">` wants local wall-clock time, no offset. */
-export function toDateTimeLocal(date: Date): string {
-  const copy = new Date(date);
-  copy.setSeconds(0, 0);
-  const offsetMs = copy.getTimezoneOffset() * 60_000;
-  return new Date(copy.getTime() - offsetMs).toISOString().slice(0, 16);
-}

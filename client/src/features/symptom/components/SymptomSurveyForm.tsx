@@ -16,13 +16,7 @@ import {
   type Symptom,
   type SymptomCheckRequest,
 } from "@blw/shared";
-
-/** `<input type="datetime-local">` wants local wall-clock time, no offset. */
-function nowForDateTimeLocal(): string {
-  const now = new Date();
-  now.setSeconds(0, 0);
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-}
+import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
 
 function toggle<T>(set: Set<T>, value: T): Set<T> {
   const next = new Set(set);
@@ -43,7 +37,7 @@ interface SymptomSurveyFormProps {
 export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: SymptomSurveyFormProps) {
   const [symptoms, setSymptoms] = useState<Set<Symptom>>(new Set());
   const [severity, setSeverity] = useState<Severity>("mild");
-  const [onsetAt, setOnsetAt] = useState(() => nowForDateTimeLocal());
+  const [onsetAt, setOnsetAt] = useState(() => nowAtMinute());
   const [mealTiming, setMealTiming] = useState<MealTiming>("unknown");
   const [bodyAreas, setBodyAreas] = useState<Set<BodyArea>>(new Set());
   const [notes, setNotes] = useState("");
@@ -65,7 +59,7 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
     onSubmit({
       symptoms: [...symptoms],
       severity,
-      onsetAt: new Date(onsetAt).toISOString(),
+      onsetAt: onsetAt.toISOString(),
       mealTiming,
       bodyAreas: [...bodyAreas],
       notes: notes.trim() || null,
@@ -125,13 +119,9 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-xs font-medium text-[var(--color-text-muted)]">When did it start?</span>
-        <input
-          type="datetime-local"
-          value={onsetAt}
-          max={nowForDateTimeLocal()}
-          onChange={(event) => setOnsetAt(event.target.value)}
-          className={inputClass}
-        />
+        {/* The server rejects an onset more than 14 days back — don't offer
+            wheel rows that can only produce a 400. */}
+        <DateTimeField value={onsetAt} onChange={setOnsetAt} daysBack={14} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">

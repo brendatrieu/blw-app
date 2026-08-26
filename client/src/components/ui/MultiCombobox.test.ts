@@ -231,6 +231,19 @@ describe("MultiCombobox (render)", () => {
     expect(html).not.toContain('role="listbox"');
   });
 
+  it("draws the focus ring on the field wrapper, opting the inner input out of the global rule", () => {
+    const html = renderToString(
+      createElement(MultiCombobox, { id: "veg", options: OPTIONS, value: [], onChange: () => {} }),
+    );
+    // The global :focus-visible rule in styles/index.css excludes
+    // [data-no-focus-ring]; the wrapper carries the equivalent ring via
+    // focus-within so the outline wraps icon + input + count badge as one.
+    expect(html).toContain('data-no-focus-ring=""');
+    expect(html).toContain("focus-within:outline-2");
+    expect(html).toContain("focus-within:outline-offset-2");
+    expect(html).toContain("focus-within:outline-[var(--color-coral-deep)]");
+  });
+
   it("renders selected values as chips with their emoji and an accessible, tappable remove button", () => {
     const html = renderToString(
       createElement(MultiCombobox, {
@@ -255,6 +268,56 @@ describe("MultiCombobox (render)", () => {
       createElement(MultiCombobox, { id: "veg", options: OPTIONS, value: [], onChange: () => {} }),
     );
     expect(html).not.toContain("aria-activedescendant");
+  });
+
+  it("omits the count badge and aria-describedby at zero selection", () => {
+    const html = renderToString(
+      createElement(MultiCombobox, { id: "veg", options: OPTIONS, value: [], onChange: () => {} }),
+    );
+    expect(html).not.toContain("selected</span>");
+    expect(html).not.toContain("aria-describedby");
+    expect(html).not.toContain('id="veg-count"');
+  });
+
+  it("renders a count badge referenced by the input's aria-describedby once something is selected", () => {
+    const html = renderToString(
+      createElement(MultiCombobox, {
+        id: "veg",
+        options: OPTIONS,
+        value: ["avocado", "banana"],
+        onChange: () => {},
+      }),
+    );
+    expect(html).toContain('id="veg-count"');
+    // renderToString interposes a comment node between the interpolated
+    // count and the literal text, so match loosely rather than verbatim.
+    expect(html).toMatch(/veg-count"[^>]*>2(?:<!--\s*-->)? selected</);
+    expect(html).toContain('aria-describedby="veg-count"');
+  });
+
+  it("renders the chip row below the field wrapper, inside the component's root container", () => {
+    const html = renderToString(
+      createElement(MultiCombobox, {
+        id: "veg",
+        options: OPTIONS,
+        value: ["avocado"],
+        onChange: () => {},
+      }),
+    );
+    // The field wrapper (icon + input + badge) closes before the chip row
+    // opens, so the chip row's own wrapping div comes after it in the markup.
+    const fieldEnd = html.indexOf("veg-count");
+    const chipRowStart = html.indexOf("mt-1.5 flex flex-wrap");
+    expect(fieldEnd).toBeGreaterThan(-1);
+    expect(chipRowStart).toBeGreaterThan(fieldEnd);
+    expect(html).toContain('aria-label="Remove Avocado"');
+  });
+
+  it("omits the chip row entirely at zero selection", () => {
+    const html = renderToString(
+      createElement(MultiCombobox, { id: "veg", options: OPTIONS, value: [], onChange: () => {} }),
+    );
+    expect(html).not.toContain("mt-1.5 flex flex-wrap");
   });
 });
 
@@ -284,6 +347,32 @@ describe("MultiComboboxOptionList (render)", () => {
     expect(html).toContain(`id="${optionId("veg-listbox", OPTIONS[1]!)}"`);
     expect(html).toContain('aria-selected="true"');
     expect(html).toContain('aria-selected="false"');
+  });
+
+  it("gives a selected (but not highlighted) row a tinted background, with the checkmark still preceding the label", () => {
+    const html = renderToString(
+      createElement(MultiComboboxOptionList, {
+        listboxId: "veg-listbox",
+        options: OPTIONS,
+        selectedValues: ["avocado"],
+        highlighted: 1, // banana is highlighted, avocado (selected) is not
+        emptyMessage: "No matches",
+        onHoverOption: () => {},
+        onToggleOption: () => {},
+      }),
+    );
+    const rows = html.split('role="option"').slice(1);
+    const avocadoRow = rows[0]!;
+    const bananaRow = rows[1]!;
+    // Selected, not highlighted: gets the tint.
+    expect(avocadoRow).toContain("bg-[var(--color-primary-soft)]");
+    // The check mark (✓) still comes before the label text in the markup.
+    expect(avocadoRow.indexOf("✓")).toBeGreaterThan(-1);
+    expect(avocadoRow.indexOf("✓")).toBeLessThan(avocadoRow.indexOf("Avocado"));
+    // Highlighted (keyboard/hover) still wins its own background and isn't
+    // also tinted as selected.
+    expect(bananaRow).toContain("bg-[var(--color-bg-inset)]");
+    expect(bananaRow).not.toContain("bg-[var(--color-primary-soft)]");
   });
 
   it("shows the empty message when there are no options", () => {

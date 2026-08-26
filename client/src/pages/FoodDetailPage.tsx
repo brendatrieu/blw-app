@@ -12,7 +12,8 @@ import { BackButton } from "../components/ui/BackButton.js";
 import { Button } from "../components/ui/Button.js";
 import { CardLink } from "../components/ui/Card.js";
 import { Field } from "../components/ui/Field.js";
-import { Input, Textarea } from "../components/ui/Input.js";
+import { Textarea } from "../components/ui/Input.js";
+import { DateField } from "../components/ui/DateField.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
 const PREP_STAGES = [
@@ -21,7 +22,7 @@ const PREP_STAGES = [
   { key: "prep12m" as const, label: "12+ months", tone: "primary" as const },
 ];
 
-/** `<input type="date">` wants a local yyyy-mm-dd, not an ISO instant. */
+/** `DateField` speaks local yyyy-mm-dd strings, not ISO instants. */
 function todayForDateInput(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -95,13 +96,7 @@ function MarkAsServed({ food }: MarkAsServedProps) {
           className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4"
         >
           <Field label="Date" htmlFor="food-served-date">
-            <Input
-              id="food-served-date"
-              type="date"
-              value={servedDate}
-              max={todayForDateInput()}
-              onChange={(e) => setServedDate(e.target.value)}
-            />
+            <DateField id="food-served-date" title="Date served" value={servedDate} onChange={setServedDate} />
           </Field>
           <Field label="Reaction note (optional)" htmlFor="food-reaction-note">
             <Textarea
