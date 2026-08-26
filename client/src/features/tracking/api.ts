@@ -50,8 +50,8 @@ export function fetchServeLogs(babyId: string, query: ServeLogsQuery = {}): Prom
   return apiGet<ServeLogsResponse>(`/api/babies/${babyId}/serve-logs${buildServeLogsQueryString(query)}`);
 }
 
-export function createServeLog(babyId: string, input: CreateServeLogInput): Promise<ServeLogItem> {
-  return apiPost<ServeLogItem>(`/api/babies/${babyId}/serve-logs`, input);
+export function createServeLog(babyId: string, input: CreateServeLogInput): Promise<ServeLogItem[]> {
+  return apiPost<ServeLogItem[]>(`/api/babies/${babyId}/serve-logs`, input);
 }
 
 export function deleteServeLog(id: string): Promise<void> {

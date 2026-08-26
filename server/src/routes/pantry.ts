@@ -194,46 +194,61 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
     const body = createPantryItemInputSchema.safeParse(request.body);
     if (!body.success) return badRequest(reply, body.error.flatten());
 
-    if (body.data.foodId) {
-      const [food] = await db.select({ id: foods.id }).from(foods).where(eq(foods.id, body.data.foodId)).limit(1);
-      if (!food) return badRequest(reply, { foodId: "unknown food" });
+    // Dedupe so the same food twice in one submission produces one row, not
+    // a duplicate pantry item.
+    const foodIds = body.data.foodIds ? [...new Set(body.data.foodIds)] : null;
+
+    if (foodIds) {
+      const foodRows = await db.select({ id: foods.id }).from(foods).where(inArray(foods.id, foodIds));
+      const knownFoodIds = new Set(foodRows.map((f) => f.id));
+      const unknownFoodIds = foodIds.filter((id) => !knownFoodIds.has(id));
+      if (unknownFoodIds.length > 0) return badRequest(reply, { foodIds: "unknown food", unknownFoodIds });
     }
     if (body.data.recipeId) {
       const [recipe] = await db.select({ id: recipes.id }).from(recipes).where(eq(recipes.id, body.data.recipeId)).limit(1);
       if (!recipe) return badRequest(reply, { recipeId: "unknown recipe" });
     }
 
-    const inserted = await db
-      .insert(pantryItems)
-      .values({
-        userId: currentUserId(request),
-        foodId: body.data.foodId,
-        recipeId: body.data.recipeId,
-        label: body.data.label,
-        preparedAt: body.data.preparedAt ? new Date(body.data.preparedAt) : new Date(),
-        location: body.data.location,
-        quantityNote: body.data.quantityNote,
-      })
-      .returning();
+    const userId = currentUserId(request);
+    const preparedAt = body.data.preparedAt ? new Date(body.data.preparedAt) : new Date();
 
-    const row = inserted[0];
-    if (!row) {
-      throw new Error("Insert of pantry item returned no row");
-    }
+    // One transaction so a batch is all-or-nothing: either every food gets a
+    // pantry row, or none do. A non-food (recipe- or label-sourced) item is
+    // still exactly one row.
+    const insertedIds = await db.transaction(async (tx) => {
+      const rows = await tx
+        .insert(pantryItems)
+        .values(
+          (foodIds ?? [null]).map((foodId) => ({
+            userId,
+            foodId,
+            recipeId: body.data.recipeId,
+            label: body.data.label,
+            preparedAt,
+            location: body.data.location,
+            quantityNote: body.data.quantityNote,
+          })),
+        )
+        .returning();
+      return rows.map((r) => r.id);
+    });
 
     const rows = await db
       .select(PANTRY_SELECTION)
       .from(pantryItems)
       .leftJoin(foods, eq(pantryItems.foodId, foods.id))
       .leftJoin(recipes, eq(pantryItems.recipeId, recipes.id))
-      .where(eq(pantryItems.id, row.id))
-      .limit(1);
+      .where(inArray(pantryItems.id, insertedIds));
 
-    const [item] = await hydratePantryItems(db, rows);
-    if (!item) {
-      throw new Error("Hydration of a just-inserted pantry item produced no item");
-    }
-    return reply.code(201).send(item);
+    const itemById = new Map((await hydratePantryItems(db, rows)).map((item) => [item.id, item]));
+    const items = insertedIds.map((id) => {
+      const item = itemById.get(id);
+      if (!item) {
+        throw new Error("Hydration of a just-inserted pantry item produced no item");
+      }
+      return item;
+    });
+    return reply.code(201).send(items);
   });
 
   // -----------------------------------------------------------------------

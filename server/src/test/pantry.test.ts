@@ -73,18 +73,31 @@ async function seedFixtures(db: Database) {
   return { banana: banana!, chicken: chicken!, recipe: recipe! };
 }
 
-async function postPantryItem(
+/** POST /api/pantry now returns an array (one row per batched food). Most
+ * existing tests exercise a single food/recipe/label, so this unwraps that
+ * one row for them; batch-specific behavior gets its own tests below using
+ * `postPantryItemBatch` directly. */
+async function postPantryItemBatch(
   app: FastifyInstance,
   cookie: string,
   payload: Record<string, unknown>,
-): Promise<{ statusCode: number; body: PantryItem }> {
+): Promise<{ statusCode: number; body: PantryItem[] }> {
   const response = await app.inject({
     method: "POST",
     url: "/api/pantry",
     headers: { cookie },
     payload,
   });
-  return { statusCode: response.statusCode, body: response.json<PantryItem>() };
+  return { statusCode: response.statusCode, body: response.statusCode === 201 ? response.json<PantryItem[]>() : [] };
+}
+
+async function postPantryItem(
+  app: FastifyInstance,
+  cookie: string,
+  payload: Record<string, unknown>,
+): Promise<{ statusCode: number; body: PantryItem }> {
+  const { statusCode, body } = await postPantryItemBatch(app, cookie, payload);
+  return { statusCode, body: body[0] as PantryItem };
 }
 
 async function getPantry(
@@ -121,7 +134,7 @@ describe("pantry routes", () => {
     it("uses the food's storage-guideline fridge window", async () => {
       const preparedAt = hoursAgoIso(0);
       const created = await postPantryItem(app, user.cookie, {
-        foodId: fixtures.banana.id,
+        foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt,
       });
@@ -135,7 +148,7 @@ describe("pantry routes", () => {
     it("uses the food's storage-guideline freezer window (days -> hours)", async () => {
       const preparedAt = hoursAgoIso(0);
       const created = await postPantryItem(app, user.cookie, {
-        foodId: fixtures.banana.id,
+        foodIds: [fixtures.banana.id],
         location: "freezer",
         preparedAt,
       });
@@ -146,7 +159,7 @@ describe("pantry routes", () => {
     it("uses the food's storage-guideline counter (room temp) window", async () => {
       const preparedAt = hoursAgoIso(0);
       const created = await postPantryItem(app, user.cookie, {
-        foodId: fixtures.banana.id,
+        foodIds: [fixtures.banana.id],
         location: "counter",
         preparedAt,
       });
@@ -193,7 +206,7 @@ describe("pantry routes", () => {
     it("flags useSoon at the 75% mark and clears it once expired", async () => {
       // banana/fridge window is 72h. 75% = 54h.
       const notYet = await postPantryItem(app, user.cookie, {
-        foodId: fixtures.banana.id,
+        foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt: hoursAgoIso(53),
       });
@@ -201,7 +214,7 @@ describe("pantry routes", () => {
       expect(notYet.body.expired).toBe(false);
 
       const justOver = await postPantryItem(app, user.cookie, {
-        foodId: fixtures.banana.id,
+        foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt: hoursAgoIso(55),
       });
@@ -209,7 +222,7 @@ describe("pantry routes", () => {
       expect(justOver.body.expired).toBe(false);
 
       const expired = await postPantryItem(app, user.cookie, {
-        foodId: fixtures.banana.id,
+        foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt: hoursAgoIso(73),
       });
@@ -222,12 +235,12 @@ describe("pantry routes", () => {
   describe("active/history sort and transitions", () => {
     it("sorts the active view soonest-expiry first, and lists finish/discard in history newest-changed first", async () => {
       const soon = await postPantryItem(app, user.cookie, {
-        foodId: fixtures.banana.id,
+        foodIds: [fixtures.banana.id],
         location: "counter", // 2h window
         preparedAt: hoursAgoIso(0),
       });
       const later = await postPantryItem(app, user.cookie, {
-        foodId: fixtures.banana.id,
+        foodIds: [fixtures.banana.id],
         location: "fridge", // 72h window
         preparedAt: hoursAgoIso(0),
       });
@@ -269,7 +282,7 @@ describe("pantry routes", () => {
 
     it("recomputes expiry when location or preparedAt changes via PATCH", async () => {
       const created = await postPantryItem(app, user.cookie, {
-        foodId: fixtures.banana.id,
+        foodIds: [fixtures.banana.id],
         location: "counter", // 2h window
         preparedAt: hoursAgoIso(0),
       });
@@ -294,7 +307,7 @@ describe("pantry routes", () => {
       const owner = user;
       const intruder = await signUpUser(app, "Intruder");
       const created = await postPantryItem(app, owner.cookie, {
-        foodId: fixtures.banana.id,
+        foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt: hoursAgoIso(0),
       });
@@ -315,7 +328,7 @@ describe("pantry routes", () => {
       const owner = user;
       const other = await signUpUser(app, "Other");
       await postPantryItem(app, owner.cookie, {
-        foodId: fixtures.banana.id,
+        foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt: hoursAgoIso(0),
       });
@@ -326,7 +339,7 @@ describe("pantry routes", () => {
   });
 
   describe("POST validation", () => {
-    it("rejects a body with none of foodId/recipeId/label", async () => {
+    it("rejects a body with none of foodIds/recipeId/label", async () => {
       const response = await postPantryItem(app, user.cookie, { location: "fridge" });
       expect(response.statusCode).toBe(400);
     });
@@ -339,10 +352,50 @@ describe("pantry routes", () => {
 
     it("rejects an unknown foodId", async () => {
       const response = await postPantryItem(app, user.cookie, {
-        foodId: "00000000-0000-4000-8000-000000000000",
+        foodIds: ["00000000-0000-4000-8000-000000000000"],
         location: "fridge",
       });
       expect(response.statusCode).toBe(400);
+    });
+
+    it("rejects an empty foodIds array", async () => {
+      const response = await postPantryItem(app, user.cookie, { foodIds: [], location: "fridge" });
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("rejects more than 25 foodIds", async () => {
+      const tooMany = Array.from({ length: 26 }, () => fixtures.banana.id);
+      const response = await postPantryItem(app, user.cookie, { foodIds: tooMany, location: "fridge" });
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  describe("batch create", () => {
+    it("creates one pantry row per food sharing the other fields, deduping repeated ids", async () => {
+      const preparedAt = hoursAgoIso(0);
+      const created = await postPantryItemBatch(app, user.cookie, {
+        foodIds: [fixtures.banana.id, fixtures.chicken.id, fixtures.banana.id],
+        location: "fridge",
+        preparedAt,
+      });
+      expect(created.statusCode).toBe(201);
+      expect(created.body).toHaveLength(2);
+      expect(created.body.map((item) => item.foodSlug).sort()).toEqual(["banana", "chicken"]);
+      expect(created.body.every((item) => item.location === "fridge")).toBe(true);
+
+      const active = await getPantry(app, user.cookie, "active");
+      expect(active.items).toHaveLength(2);
+    });
+
+    it("rejects the whole batch and persists nothing when one foodId among several is unknown", async () => {
+      const created = await postPantryItemBatch(app, user.cookie, {
+        foodIds: [fixtures.banana.id, "00000000-0000-4000-8000-000000000000"],
+        location: "fridge",
+      });
+      expect(created.statusCode).toBe(400);
+
+      const active = await getPantry(app, user.cookie, "active");
+      expect(active.items).toHaveLength(0);
     });
   });
 });

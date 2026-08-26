@@ -48,7 +48,7 @@ export const serveLogsQuerySchema = z.object({
 export type ServeLogsQuery = z.infer<typeof serveLogsQuerySchema>;
 
 export const createServeLogInputSchema = z.object({
-  foodId: z.string().uuid(),
+  foodIds: z.array(z.string().uuid()).min(1).max(25),
   recipeId: z
     .string()
     .uuid()

@@ -10,7 +10,7 @@ import { Card } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { Field } from "../components/ui/Field.js";
 import { Input, Textarea } from "../components/ui/Input.js";
-import { Select } from "../components/ui/Select.js";
+import { MultiCombobox, type MultiComboboxOption } from "../components/ui/MultiCombobox.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 /** yyyy-mm-dd in the viewer's local timezone, used to group the timeline by day. */
@@ -51,18 +51,22 @@ interface QuickLogFormProps {
 function QuickLogForm({ babyId, onDone }: QuickLogFormProps) {
   const { data: foodsData, isLoading: foodsLoading } = useFoods();
   const createServeLog = useCreateServeLog(babyId);
-  const [foodId, setFoodId] = useState("");
+  const [foodIds, setFoodIds] = useState<string[]>([]);
   const [servedAt, setServedAt] = useState(() => nowForDateTimeLocal());
   const [reactionNote, setReactionNote] = useState("");
 
   const foods = foodsData?.foods ?? [];
+  const foodOptions: MultiComboboxOption[] = useMemo(
+    () => foods.map((food) => ({ value: food.id, label: food.name, emoji: getFoodEmoji(food.slug, food.category) })),
+    [foods],
+  );
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!foodId) return;
+    if (foodIds.length === 0) return;
     createServeLog.mutate(
       {
-        foodId,
+        foodIds,
         servedAt: new Date(servedAt).toISOString(),
         reactionNote: reactionNote.trim() || undefined,
       },
@@ -76,21 +80,14 @@ function QuickLogForm({ babyId, onDone }: QuickLogFormProps) {
       className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4"
     >
       <Field label="Food" htmlFor="quick-log-food">
-        <Select
+        <MultiCombobox
           id="quick-log-food"
-          required
-          value={foodId}
-          onChange={(e) => setFoodId(e.target.value)}
-        >
-          <option value="" disabled>
-            {foodsLoading ? "Loading foods…" : "Select a food"}
-          </option>
-          {foods.map((food) => (
-            <option key={food.id} value={food.id}>
-              {getFoodEmoji(food.slug, food.category)} {food.name}
-            </option>
-          ))}
-        </Select>
+          options={foodOptions}
+          value={foodIds}
+          onChange={setFoodIds}
+          disabled={foodsLoading}
+          placeholder={foodsLoading ? "Loading foods…" : "Search foods…"}
+        />
       </Field>
 
       <Field label="When" htmlFor="quick-log-when">
@@ -120,7 +117,7 @@ function QuickLogForm({ babyId, onDone }: QuickLogFormProps) {
       )}
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={!foodId || createServeLog.isPending} className="flex-1">
+        <Button type="submit" disabled={foodIds.length === 0 || createServeLog.isPending} className="flex-1">
           {createServeLog.isPending ? "Logging…" : "Log it"}
         </Button>
         <Button type="button" variant="secondary" onClick={onDone}>

@@ -5,8 +5,8 @@ export function fetchPantry(view: PantryView): Promise<PantryResponse> {
   return apiGet<PantryResponse>(`/api/pantry?view=${view}`);
 }
 
-export function createPantryItem(input: CreatePantryItemInput): Promise<PantryItem> {
-  return apiPost<PantryItem>("/api/pantry", input);
+export function createPantryItem(input: CreatePantryItemInput): Promise<PantryItem[]> {
+  return apiPost<PantryItem[]>("/api/pantry", input);
 }
 
 export function updatePantryItem(id: string, input: UpdatePantryItemInput): Promise<PantryItem> {

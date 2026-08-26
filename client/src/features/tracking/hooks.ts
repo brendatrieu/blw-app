@@ -85,7 +85,7 @@ export function useCreateServeLog(babyId: string | undefined) {
       if (!babyId) return;
       const snapshots = queryClient.getQueriesData<ServeLogsResponse>({ queryKey: trackingKeys.serveLogs(babyId) });
       for (const [key, data] of snapshots) {
-        if (data) queryClient.setQueryData(key, { items: [created, ...data.items] });
+        if (data) queryClient.setQueryData(key, { items: [...created, ...data.items] });
       }
 
       if (!context?.hadAnyLogs) {

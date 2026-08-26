@@ -64,9 +64,10 @@ const optionalQuantityNote = quantityNoteSchema.nullish().transform((value) => (
 
 export const createPantryItemInputSchema = z
   .object({
-    foodId: z
-      .string()
-      .uuid()
+    foodIds: z
+      .array(z.string().uuid())
+      .min(1)
+      .max(25)
       .nullish()
       .transform((value) => value ?? null),
     recipeId: z
@@ -80,9 +81,9 @@ export const createPantryItemInputSchema = z
     location: pantryLocationSchema,
     quantityNote: optionalQuantityNote,
   })
-  .refine((value) => Boolean(value.foodId || value.recipeId || value.label), {
-    message: "At least one of foodId, recipeId, or label is required",
-    path: ["foodId"],
+  .refine((value) => Boolean(value.foodIds || value.recipeId || value.label), {
+    message: "At least one of foodIds, recipeId, or label is required",
+    path: ["foodIds"],
   });
 export type CreatePantryItemInput = z.input<typeof createPantryItemInputSchema>;
 

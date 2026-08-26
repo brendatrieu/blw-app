@@ -106,11 +106,12 @@ describe("tracking routes", () => {
         method: "POST",
         url: `/api/babies/${babyId}/serve-logs`,
         headers: { cookie: user.cookie },
-        payload: { foodId: fixtures.egg.id, recipeId: fixtures.recipe.id, reactionNote: "  mild rash  " },
+        payload: { foodIds: [fixtures.egg.id], recipeId: fixtures.recipe.id, reactionNote: "  mild rash  " },
       });
       expect(create.statusCode).toBe(201);
-      const created = create.json<ServeLogItem>();
-      expect(created).toMatchObject({
+      const created = create.json<ServeLogItem[]>();
+      expect(created).toHaveLength(1);
+      expect(created[0]).toMatchObject({
         foodId: fixtures.egg.id,
         foodSlug: "egg",
         foodName: "Egg",
@@ -127,11 +128,11 @@ describe("tracking routes", () => {
       expect(list.statusCode).toBe(200);
       const listBody = list.json<ServeLogsResponse>();
       expect(listBody.items).toHaveLength(1);
-      expect(listBody.items[0]?.id).toBe(created.id);
+      expect(listBody.items[0]?.id).toBe(created[0]?.id);
 
       const del = await app.inject({
         method: "DELETE",
-        url: `/api/serve-logs/${created.id}`,
+        url: `/api/serve-logs/${created[0]?.id}`,
         headers: { cookie: user.cookie },
       });
       expect(del.statusCode).toBe(204);
@@ -144,6 +145,56 @@ describe("tracking routes", () => {
       expect(listAfter.json<ServeLogsResponse>().items).toHaveLength(0);
     });
 
+    it("creates one serve log per food in a batch, deduping repeated ids", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      const create = await app.inject({
+        method: "POST",
+        url: `/api/babies/${babyId}/serve-logs`,
+        headers: { cookie: user.cookie },
+        payload: { foodIds: [fixtures.egg.id, fixtures.banana.id, fixtures.egg.id] },
+      });
+      expect(create.statusCode).toBe(201);
+      const created = create.json<ServeLogItem[]>();
+      expect(created).toHaveLength(2);
+      expect(created.map((item) => item.foodSlug).sort()).toEqual(["banana", "egg"]);
+
+      const list = await app.inject({
+        method: "GET",
+        url: `/api/babies/${babyId}/serve-logs`,
+        headers: { cookie: user.cookie },
+      });
+      expect(list.json<ServeLogsResponse>().items).toHaveLength(2);
+    });
+
+    it("rejects an empty foodIds array with 400", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/babies/${babyId}/serve-logs`,
+        headers: { cookie: user.cookie },
+        payload: { foodIds: [] },
+      });
+      expect(response.statusCode).toBe(400);
+    });
+
+    it("rejects more than 25 foodIds with 400", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      const tooMany = Array.from({ length: 26 }, () => fixtures.egg.id);
+
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/babies/${babyId}/serve-logs`,
+        headers: { cookie: user.cookie },
+        payload: { foodIds: tooMany },
+      });
+      expect(response.statusCode).toBe(400);
+    });
+
     it("rejects an unknown foodId with 400", async () => {
       const user = await signUpUser(app);
       const babyId = await createBaby(app, user);
@@ -152,9 +203,29 @@ describe("tracking routes", () => {
         method: "POST",
         url: `/api/babies/${babyId}/serve-logs`,
         headers: { cookie: user.cookie },
-        payload: { foodId: "00000000-0000-4000-8000-000000000000" },
+        payload: { foodIds: ["00000000-0000-4000-8000-000000000000"] },
       });
       expect(response.statusCode).toBe(400);
+    });
+
+    it("rejects the whole batch and persists nothing when one foodId among several is unknown", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/babies/${babyId}/serve-logs`,
+        headers: { cookie: user.cookie },
+        payload: { foodIds: [fixtures.egg.id, "00000000-0000-4000-8000-000000000000"] },
+      });
+      expect(response.statusCode).toBe(400);
+
+      const list = await app.inject({
+        method: "GET",
+        url: `/api/babies/${babyId}/serve-logs`,
+        headers: { cookie: user.cookie },
+      });
+      expect(list.json<ServeLogsResponse>().items).toHaveLength(0);
     });
 
     it("rejects a servedAt more than 24h in the future", async () => {
@@ -166,7 +237,7 @@ describe("tracking routes", () => {
         method: "POST",
         url: `/api/babies/${babyId}/serve-logs`,
         headers: { cookie: user.cookie },
-        payload: { foodId: fixtures.egg.id, servedAt: farFuture },
+        payload: { foodIds: [fixtures.egg.id], servedAt: farFuture },
       });
       expect(response.statusCode).toBe(400);
     });
@@ -187,7 +258,7 @@ describe("tracking routes", () => {
         method: "POST",
         url: `/api/babies/${babyId}/serve-logs`,
         headers: { cookie: intruder.cookie },
-        payload: { foodId: fixtures.egg.id },
+        payload: { foodIds: [fixtures.egg.id] },
       });
       expect(create.statusCode).toBe(404);
 
@@ -207,9 +278,9 @@ describe("tracking routes", () => {
         method: "POST",
         url: `/api/babies/${babyId}/serve-logs`,
         headers: { cookie: owner.cookie },
-        payload: { foodId: fixtures.egg.id },
+        payload: { foodIds: [fixtures.egg.id] },
       });
-      const id = created.json<ServeLogItem>().id;
+      const id = created.json<ServeLogItem[]>()[0]?.id;
 
       const del = await app.inject({
         method: "DELETE",
@@ -246,7 +317,7 @@ describe("tracking routes", () => {
         method: "POST",
         url: `/api/babies/${babyId}/serve-logs`,
         headers: { cookie: user.cookie },
-        payload: { foodId: fixtures.egg.id },
+        payload: { foodIds: [fixtures.egg.id] },
       });
 
       const progressOnce = await app.inject({
@@ -264,13 +335,13 @@ describe("tracking routes", () => {
         method: "POST",
         url: `/api/babies/${babyId}/serve-logs`,
         headers: { cookie: user.cookie },
-        payload: { foodId: fixtures.egg.id },
+        payload: { foodIds: [fixtures.egg.id] },
       });
       await app.inject({
         method: "POST",
         url: `/api/babies/${babyId}/serve-logs`,
         headers: { cookie: user.cookie },
-        payload: { foodId: fixtures.egg.id },
+        payload: { foodIds: [fixtures.egg.id] },
       });
 
       const progressThrice = await app.inject({

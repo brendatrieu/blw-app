@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { PantryLocation } from "@blw/shared";
 import { useFoods } from "../../catalog/hooks.js";
 import { useFavorites } from "../../tracking/hooks.js";
@@ -8,6 +8,7 @@ import { LOCATIONS, toDateTimeLocal } from "../format.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input } from "../../../components/ui/Input.js";
 import { Select } from "../../../components/ui/Select.js";
+import { MultiCombobox, type MultiComboboxOption } from "../../../components/ui/MultiCombobox.js";
 import { Button } from "../../../components/ui/Button.js";
 import { Card } from "../../../components/ui/Card.js";
 
@@ -25,7 +26,7 @@ interface AddPantryItemSheetProps {
 
 export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
   const [source, setSource] = useState<Source>("food");
-  const [foodId, setFoodId] = useState("");
+  const [foodIds, setFoodIds] = useState<string[]>([]);
   const [recipeId, setRecipeId] = useState("");
   const [label, setLabel] = useState("");
   const [location, setLocation] = useState<PantryLocation>("fridge");
@@ -42,14 +43,20 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
   const foods = foodsData?.foods ?? [];
   const favorites = favoritesData?.items ?? [];
 
-  const canSubmit = source === "food" ? Boolean(foodId) : source === "recipe" ? Boolean(recipeId) : label.trim().length > 0;
+  const foodOptions: MultiComboboxOption[] = useMemo(
+    () => foods.map((food) => ({ value: food.id, label: food.name, emoji: getFoodEmoji(food.slug, food.category) })),
+    [foods],
+  );
+
+  const canSubmit =
+    source === "food" ? foodIds.length > 0 : source === "recipe" ? Boolean(recipeId) : label.trim().length > 0;
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!canSubmit) return;
     createItem.mutate(
       {
-        foodId: source === "food" ? foodId : undefined,
+        foodIds: source === "food" ? foodIds : undefined,
         recipeId: source === "recipe" ? recipeId : undefined,
         label: source === "label" ? label.trim() : undefined,
         preparedAt: new Date(preparedAt).toISOString(),
@@ -82,16 +89,14 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
 
       {source === "food" && (
         <Field label="Food" htmlFor="pantry-add-food">
-          <Select id="pantry-add-food" required value={foodId} onChange={(e) => setFoodId(e.target.value)}>
-            <option value="" disabled>
-              {foodsLoading ? "Loading foods…" : "Select a food"}
-            </option>
-            {foods.map((food) => (
-              <option key={food.id} value={food.id}>
-                {getFoodEmoji(food.slug, food.category)} {food.name}
-              </option>
-            ))}
-          </Select>
+          <MultiCombobox
+            id="pantry-add-food"
+            options={foodOptions}
+            value={foodIds}
+            onChange={setFoodIds}
+            disabled={foodsLoading}
+            placeholder={foodsLoading ? "Loading foods…" : "Search foods…"}
+          />
         </Field>
       )}
 

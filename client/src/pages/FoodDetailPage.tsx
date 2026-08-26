@@ -61,7 +61,7 @@ function MarkAsServed({ food }: MarkAsServedProps) {
     event.preventDefault();
     createServeLog.mutate(
       {
-        foodId: food.id,
+        foodIds: [food.id],
         servedAt: new Date(`${servedDate}T12:00:00`).toISOString(),
         reactionNote: reactionNote.trim() || undefined,
       },

@@ -101,12 +101,17 @@ export function registerServeLogRoutes(app: FastifyInstance, db: Database): void
     const body = createServeLogInputSchema.safeParse(request.body);
     if (!body.success) return badRequest(reply, body.error.flatten());
 
-    const [food] = await db
+    // Dedupe so the same food twice in one submission produces one row, not
+    // a duplicate serve log.
+    const foodIds = [...new Set(body.data.foodIds)];
+
+    const foodRows = await db
       .select({ id: foods.id, slug: foods.slug, name: foods.name })
       .from(foods)
-      .where(eq(foods.id, body.data.foodId))
-      .limit(1);
-    if (!food) return badRequest(reply, { foodId: "unknown food" });
+      .where(inArray(foods.id, foodIds));
+    const foodById = new Map(foodRows.map((f) => [f.id, f]));
+    const unknownFoodIds = foodIds.filter((id) => !foodById.has(id));
+    if (unknownFoodIds.length > 0) return badRequest(reply, { foodIds: "unknown food", unknownFoodIds });
 
     let recipeTitle: string | null = null;
     if (body.data.recipeId) {
@@ -119,33 +124,42 @@ export function registerServeLogRoutes(app: FastifyInstance, db: Database): void
       recipeTitle = recipe.title;
     }
 
-    const inserted = await db
-      .insert(serveLogs)
-      .values({
-        babyId: params.data.babyId,
-        foodId: body.data.foodId,
-        recipeId: body.data.recipeId,
-        servedAt: body.data.servedAt ? new Date(body.data.servedAt) : new Date(),
-        reactionNote: body.data.reactionNote,
-      })
-      .returning();
+    const servedAt = body.data.servedAt ? new Date(body.data.servedAt) : new Date();
 
-    const row = inserted[0];
-    if (!row) {
-      throw new Error("Insert of serve log returned no row");
-    }
+    // One transaction so a batch is all-or-nothing: either every food gets a
+    // serve-log row, or none do.
+    const inserted = await db.transaction(async (tx) =>
+      tx
+        .insert(serveLogs)
+        .values(
+          foodIds.map((foodId) => ({
+            babyId: params.data.babyId,
+            foodId,
+            recipeId: body.data.recipeId,
+            servedAt,
+            reactionNote: body.data.reactionNote,
+          })),
+        )
+        .returning(),
+    );
 
-    const item: ServeLogItem = {
-      id: row.id,
-      foodId: row.foodId,
-      foodSlug: food.slug,
-      foodName: food.name,
-      recipeId: row.recipeId,
-      recipeTitle,
-      servedAt: row.servedAt.toISOString(),
-      reactionNote: row.reactionNote,
-    };
-    return reply.code(201).send(item);
+    const items: ServeLogItem[] = inserted.map((row) => {
+      const food = foodById.get(row.foodId);
+      if (!food) {
+        throw new Error("Inserted serve log references a food that was validated but not found");
+      }
+      return {
+        id: row.id,
+        foodId: row.foodId,
+        foodSlug: food.slug,
+        foodName: food.name,
+        recipeId: row.recipeId,
+        recipeTitle,
+        servedAt: row.servedAt.toISOString(),
+        reactionNote: row.reactionNote,
+      };
+    });
+    return reply.code(201).send(items);
   });
 
   // -----------------------------------------------------------------------
