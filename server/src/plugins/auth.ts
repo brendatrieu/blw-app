@@ -5,6 +5,7 @@ import type { Auth, AuthUser } from "../auth.js";
 import type { Env } from "../config.js";
 import { isGoogleEnabled } from "../config.js";
 import { authRateLimitConfig } from "./rate-limit.js";
+import { registerDevAutoAuth } from "./dev-auth.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -41,6 +42,11 @@ export function registerAuth(app: FastifyInstance, { auth, env }: RegisterAuthOp
   app.decorate("auth", auth);
   app.decorateRequest("user", null);
   app.decorateRequest("sessionId", null);
+
+  // Development convenience, installed before anything reads a session so it
+  // covers both `requireAuth` and the `/api/auth/*` handler below from one
+  // place. A no-op unless NODE_ENV === "development" — see dev-auth.ts.
+  registerDevAutoAuth(app, { auth, env });
 
   /**
    * Resolves the session directly through better-auth's server API rather

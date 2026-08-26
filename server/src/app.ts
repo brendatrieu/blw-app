@@ -42,13 +42,17 @@ export interface BuildAppOptions {
   // Lets tests drive the chat tool-runner loop without a live Anthropic
   // round trip, and assert exactly what was sent to it.
   chat?: ChatRoutesOptions;
+  // Request logging. Defaults to on outside NODE_ENV=test; tests that need a
+  // non-test NODE_ENV (the dev auto-auth suite) turn it off explicitly so the
+  // suite output stays readable.
+  logger?: boolean;
 }
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const env = options.env ?? loadConfig();
   const db = options.db ?? createDb(env.DATABASE_URL);
   const app = Fastify({
-    logger: env.NODE_ENV !== "test",
+    logger: options.logger ?? env.NODE_ENV !== "test",
   });
 
   registerSecurityHeaders(app);

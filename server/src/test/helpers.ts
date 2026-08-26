@@ -65,10 +65,18 @@ export async function createTestApp(
   envOverrides: Partial<Env> = {},
   // Passthrough for buildApp's other injection points (currently the AI key
   // verifier, so key-validation tests never touch the network).
-  appOverrides: Omit<BuildAppOptions, "env" | "db" | "authLogger"> = {},
+  appOverrides: Omit<BuildAppOptions, "env" | "db" | "authLogger" | "logger"> = {},
 ): Promise<{ app: FastifyInstance; db: Database; close: () => Promise<void> }> {
   const { db, close } = await createTestDb();
-  const app = buildApp({ ...appOverrides, env: testEnv(envOverrides), db, authLogger: silentLogger });
+  const app = buildApp({
+    ...appOverrides,
+    env: testEnv(envOverrides),
+    db,
+    authLogger: silentLogger,
+    // Off for every test, including the ones that override NODE_ENV away
+    // from "test" — request logs would otherwise flood the suite output.
+    logger: false,
+  });
   await app.ready();
   return {
     app,

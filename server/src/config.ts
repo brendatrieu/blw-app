@@ -36,6 +36,12 @@ const csvList = z
 const baseEnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().url().optional(),
+  /**
+   * Unset means "development", which is why server/.env.example ships this
+   * variable commented out: a local run needs no line, and a copy of that
+   * example used as a production env_file can never flip a real deployment
+   * into development mode. Production sets it explicitly (see the Dockerfile).
+   */
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 
   // --- auth -----------------------------------------------------------
