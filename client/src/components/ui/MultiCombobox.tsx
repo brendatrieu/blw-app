@@ -128,6 +128,15 @@ export function getActiveDescendantId(
   return highlighted >= 0 && highlighted < filtered.length ? optionId(listboxId, filtered[highlighted]!) : undefined;
 }
 
+/**
+ * aria-label for the field's chevron toggle button, synced to the listbox's
+ * open state so a screen reader announces what the button will do next
+ * (matching the toggle-button convention, not "what is true now").
+ */
+export function getChevronLabel(open: boolean): string {
+  return open ? "Hide options" : "Show options";
+}
+
 interface MultiComboboxOptionListProps {
   listboxId: string;
   options: MultiComboboxOption[];
@@ -158,7 +167,7 @@ export function MultiComboboxOptionList({
       id={listboxId}
       role="listbox"
       aria-multiselectable="true"
-      className="absolute top-full left-0 z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] py-1 shadow-[var(--shadow-lg)]"
+      className="max-h-60 overflow-y-auto py-1"
     >
       {options.length === 0 ? (
         <li className="px-3 py-2 text-sm text-[var(--color-text-muted)]">{emptyMessage}</li>
@@ -192,6 +201,106 @@ export function MultiComboboxOptionList({
         })
       )}
     </ul>
+  );
+}
+
+interface MultiComboboxPanelProps extends MultiComboboxOptionListProps {
+  /** Closes the menu only — must never touch selection or the query. */
+  onDone: () => void;
+}
+
+/**
+ * The open dropdown: the scrollable `MultiComboboxOptionList` plus a sticky
+ * "Done" footer row that stays visible below it (the list scrolls internally
+ * via its own max-h; the footer is a sibling after it, not inside the
+ * scroll area, so it never scrolls out of view). This component — not the
+ * list — owns the bordered/rounded/shadowed panel chrome and the absolute
+ * positioning under the field, so `MultiComboboxOptionList` stays a plain
+ * `<ul role="listbox">` usable on its own (and in its existing tests).
+ *
+ * Exported, like `MultiComboboxOptionList`, so open-state render tests can
+ * assert the Done button exists inside the panel without needing real
+ * keyboard/pointer events (this repo's tests render with `renderToString`
+ * under a Node test environment, with no DOM to dispatch events into).
+ */
+export function MultiComboboxPanel({ onDone, ...listProps }: MultiComboboxPanelProps) {
+  return (
+    <div className="absolute top-full left-0 z-20 mt-1 w-full overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-lg)]">
+      <MultiComboboxOptionList {...listProps} />
+      <button
+        type="button"
+        onClick={onDone}
+        className="flex min-h-11 w-full items-center justify-center bg-[var(--color-primary)] text-sm font-medium text-[var(--color-primary-contrast)]"
+      >
+        Done
+      </button>
+    </div>
+  );
+}
+
+interface MultiComboboxChevronButtonProps {
+  open: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+}
+
+/**
+ * Field-edge button that opens/closes the menu, independent of the input's
+ * own "focus opens it" behavior. Extracted as its own component (mirroring
+ * why `MultiComboboxOptionList` is exported) so a render test can pin its
+ * `open: true` markup directly — the real field can only ever be
+ * server-rendered closed, since `open` lives in `MultiCombobox`'s own state
+ * and this repo's render tests have no DOM to click/focus through.
+ *
+ * Focus handling, thought through: this button sits inside the same row
+ * `<div>` whose own `onClick` refocuses the input, so that tapping anywhere
+ * in the field (not just the input) resumes typing. Two guards keep that
+ * from fighting this toggle:
+ *  - `onClick` stops propagation, so a chevron tap never reaches that row
+ *    handler at all — clicking the chevron means "toggle the menu", not
+ *    "focus the input for text entry".
+ *  - `onMouseDown` prevents the browser's default focus-on-click for the
+ *    button. Without it, mousedown here would blur the input and move
+ *    focus to this button; if anything *else* then refocused the input
+ *    (e.g. that same row handler, if the stopPropagation above were ever
+ *    lost), that refocus would be a real focus change, re-firing the
+ *    input's `onFocus` and silently reopening the menu right after this
+ *    button just closed it. Keeping focus on the input the whole time
+ *    makes any such refocus a no-op instead.
+ * Tapping the input itself is untouched by either guard, so it keeps
+ * opening (never closing) the menu exactly as before.
+ */
+export function MultiComboboxChevronButton({ open, disabled, onToggle }: MultiComboboxChevronButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label={getChevronLabel(open)}
+      // APG combobox pattern: the popup's expanded state is announced by the
+      // combobox input alone, and the decorative toggle is removed from the
+      // Tab order (it stays touch/mouse-tappable, and keyboard users have
+      // ArrowDown/Escape on the input itself).
+      tabIndex={-1}
+      disabled={disabled}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
+      className="group flex shrink-0 items-center justify-center rounded-full p-[10px] -m-[10px] text-[var(--color-text-muted)] disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {/* Same chevron idiom as Select.tsx (viewBox 24, M6 9l6 6 6-6); a
+          single path rotated 180° for the open (chevron-up) state instead
+          of swapping to a second path. Visual size stays 24px (h-6 w-6);
+          the button's own padding above extends the tap target to 44px. */}
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        className={`h-6 w-6 transition-transform duration-[var(--duration-fast)] ${open ? "rotate-180" : ""}`}
+        fill="none"
+      >
+        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
   );
 }
 
@@ -283,7 +392,16 @@ export function MultiCombobox({
     <div ref={containerRef} className="relative">
       <div className="relative">
         <div
-          onClick={() => !disabled && inputRef.current?.focus()}
+          onClick={() => {
+            if (disabled) return;
+            inputRef.current?.focus();
+            // Open explicitly, not only via the input's onFocus: tapping an
+            // ALREADY-focused input fires no focus event, so after a
+            // chevron-collapse a tap here would otherwise never reopen.
+            // The chevron's own onClick stopPropagation keeps its close
+            // action from being immediately undone by this handler.
+            setOpen(true);
+          }}
           className={`flex min-h-11 w-full items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 transition-colors duration-[var(--duration-fast)] focus-within:border-[var(--color-primary)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-coral-deep)] ${
             disabled ? "cursor-not-allowed opacity-60" : "cursor-text"
           }`}
@@ -336,10 +454,28 @@ export function MultiCombobox({
               {value.length} selected
             </span>
           )}
+          <MultiComboboxChevronButton
+            open={open}
+            disabled={disabled}
+            onToggle={() => {
+              if (open) {
+                setOpen(false);
+                setHighlighted(-1);
+                // Release focus on collapse: the chevron's mousedown guard
+                // kept focus on the input, so without this blur a follow-up
+                // tap on the input would not refire onFocus and the menu
+                // could never reopen from a tap.
+                inputRef.current?.blur();
+              } else {
+                inputRef.current?.focus();
+                setOpen(true);
+              }
+            }}
+          />
         </div>
 
         {open && !disabled && (
-          <MultiComboboxOptionList
+          <MultiComboboxPanel
             listboxId={listboxId}
             options={filtered}
             selectedValues={value}
@@ -347,6 +483,11 @@ export function MultiCombobox({
             emptyMessage={emptyMessage}
             onHoverOption={setHighlighted}
             onToggleOption={toggleOption}
+            onDone={() => {
+              // Close only — selection and query are left exactly as they are.
+              setOpen(false);
+              setHighlighted(-1);
+            }}
           />
         )}
       </div>

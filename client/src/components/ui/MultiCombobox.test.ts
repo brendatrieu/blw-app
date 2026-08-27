@@ -4,10 +4,13 @@ import { describe, expect, it } from "vitest";
 import {
   filterOptions,
   getActiveDescendantId,
+  getChevronLabel,
   getInputAriaProps,
   moveHighlight,
   MultiCombobox,
+  MultiComboboxChevronButton,
   MultiComboboxOptionList,
+  MultiComboboxPanel,
   optionId,
   resolveEnterAction,
   resolveHighlight,
@@ -190,6 +193,16 @@ describe("resolveEnterAction", () => {
   });
 });
 
+describe("getChevronLabel", () => {
+  it("reads 'Show options' while closed (announces what tapping it will do)", () => {
+    expect(getChevronLabel(false)).toBe("Show options");
+  });
+
+  it("reads 'Hide options' while open", () => {
+    expect(getChevronLabel(true)).toBe("Hide options");
+  });
+});
+
 describe("optionId / getActiveDescendantId", () => {
   const OPTS: MultiComboboxOption[] = [
     { value: "avocado", label: "Avocado" },
@@ -259,8 +272,12 @@ describe("MultiCombobox (render)", () => {
     expect(html).toContain('aria-label="Remove Banana"');
     // Visual chip stays 24px (h-6 w-6); the tap target is enlarged via
     // padding + a matching negative margin, not by growing the chip.
-    expect(html).toContain("h-6 w-6");
-    expect(html).toContain("p-[10px] -m-[10px]");
+    // Scoped to the chip row slice: the field's chevron button carries the
+    // same sizing classes, so a whole-document assertion would stay green
+    // even if the chip lost its tap target.
+    const chipRow = html.slice(html.indexOf("mt-1.5 flex flex-wrap"));
+    expect(chipRow).toContain("h-6 w-6");
+    expect(chipRow).toContain("p-[10px] -m-[10px]");
   });
 
   it("omits aria-activedescendant when the combobox is closed", () => {
@@ -318,6 +335,99 @@ describe("MultiCombobox (render)", () => {
       createElement(MultiCombobox, { id: "veg", options: OPTIONS, value: [], onChange: () => {} }),
     );
     expect(html).not.toContain("mt-1.5 flex flex-wrap");
+  });
+
+  it("renders the chevron toggle button in the closed field, after the count badge, with the closed aria-label", () => {
+    const html = renderToString(
+      createElement(MultiCombobox, {
+        id: "veg",
+        options: OPTIONS,
+        value: ["avocado"],
+        onChange: () => {},
+      }),
+    );
+    expect(html).toContain('aria-label="Show options"');
+    // Per the APG combobox pattern only the input announces expanded state;
+    // the chevron is a tabIndex=-1 decorative toggle.
+    expect((html.match(/aria-expanded="false"/g) ?? []).length).toBe(1);
+    // Anchor on the badge's TEXT end, not "veg-count": that id first appears
+    // in the input's aria-describedby, well before the badge element itself,
+    // which would make this ordering assertion vacuous.
+    const badgeEnd = html.indexOf("selected</span>");
+    const chevronLabelStart = html.indexOf('aria-label="Show options"');
+    expect(badgeEnd).toBeGreaterThan(-1);
+    expect(chevronLabelStart).toBeGreaterThan(badgeEnd);
+  });
+});
+
+describe("MultiComboboxChevronButton (render)", () => {
+  it("closed: type=button, out of the Tab order, closed aria-label, no rotation class", () => {
+    const html = renderToString(createElement(MultiComboboxChevronButton, { open: false, onToggle: () => {} }));
+    expect(html).toContain('type="button"');
+    // APG: the input alone carries aria-expanded; the toggle is decorative.
+    expect(html).not.toContain("aria-expanded");
+    expect(html).toContain('tabindex="-1"');
+    expect(html).toContain('aria-label="Show options"');
+    expect(html).not.toContain("rotate-180");
+    // 24px visual, 44px tap target via the padding + negative-margin idiom —
+    // asserted here on the standalone button so the check is inherently
+    // scoped (cannot be satisfied by some other element's classes).
+    expect(html).toContain("h-6 w-6");
+    expect(html).toContain("p-[10px] -m-[10px]");
+  });
+
+  it("open: open aria-label and the chevron carries the rotation class", () => {
+    const html = renderToString(createElement(MultiComboboxChevronButton, { open: true, onToggle: () => {} }));
+    expect(html).toContain('aria-label="Hide options"');
+    expect(html).toContain("rotate-180");
+  });
+
+  it("respects disabled", () => {
+    const html = renderToString(
+      createElement(MultiComboboxChevronButton, { open: false, disabled: true, onToggle: () => {} }),
+    );
+    expect(html).toContain("disabled=\"\"");
+  });
+});
+
+describe("MultiComboboxPanel (render)", () => {
+  const OPTIONS: MultiComboboxOption[] = [
+    { value: "avocado", label: "Avocado", emoji: "🥑" },
+    { value: "banana", label: "Banana", emoji: "🍌" },
+  ];
+
+  it("renders the listbox followed by a sticky Done footer button, both inside the panel", () => {
+    const html = renderToString(
+      createElement(MultiComboboxPanel, {
+        listboxId: "veg-listbox",
+        options: OPTIONS,
+        selectedValues: [],
+        highlighted: -1,
+        emptyMessage: "No matches",
+        onHoverOption: () => {},
+        onToggleOption: () => {},
+        onDone: () => {},
+      }),
+    );
+    expect(html).toContain('role="listbox"');
+    // Done label, deliberately not "Save" (that's reserved for true commits
+    // elsewhere in the app) — this button only closes the menu.
+    expect(html).toContain(">Done<");
+    expect(html).not.toContain(">Save<");
+    // A real, non-submitting button spanning the row, min-h-11 tap target.
+    const doneButtonMarkup = html.slice(html.indexOf("<button"));
+    expect(doneButtonMarkup).toContain('type="button"');
+    expect(doneButtonMarkup).toContain("min-h-11");
+    // Primary-button treatment: primary fill + the theme-appropriate
+    // contrast text token, matching Button.tsx's primary variant.
+    expect(doneButtonMarkup).toContain("bg-[var(--color-primary)]");
+    expect(doneButtonMarkup).toContain("text-[var(--color-primary-contrast)]");
+    // The Done footer comes after the listbox in the markup (sibling below
+    // it), not nested inside the scrollable <ul>.
+    const listboxEnd = html.indexOf("</ul>");
+    const doneStart = html.indexOf(">Done<");
+    expect(listboxEnd).toBeGreaterThan(-1);
+    expect(doneStart).toBeGreaterThan(listboxEnd);
   });
 });
 
