@@ -11,7 +11,6 @@ import { Select } from "../../../components/ui/Select.js";
 import { MultiCombobox, type MultiComboboxOption } from "../../../components/ui/MultiCombobox.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
 import { Button } from "../../../components/ui/Button.js";
-import { Card } from "../../../components/ui/Card.js";
 
 type Source = "food" | "recipe" | "label";
 
@@ -21,11 +20,18 @@ const SOURCE_TABS: { value: Source; label: string }[] = [
   { value: "label", label: "Free-form" },
 ];
 
-interface AddPantryItemSheetProps {
+interface AddPantryItemFormProps {
   onDone: () => void;
 }
 
-export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
+/**
+ * The pantry "add" form, byte-compatible with the one that used to live in
+ * the inline AddPantryItemSheet: same source tabs, food combobox, recipe
+ * select, location segments, wheel "Prepared" field, and quantity note.
+ * Now rendered full-screen by PantryAddPage, which supplies `onDone` for
+ * both a successful save and Cancel.
+ */
+export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
   const [source, setSource] = useState<Source>("food");
   const [foodIds, setFoodIds] = useState<string[]>([]);
   const [recipeId, setRecipeId] = useState("");
@@ -69,7 +75,7 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
   }
 
   return (
-    <Card as="form" onSubmit={handleSubmit} padding="sm" className="flex flex-col gap-3">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <div className="flex gap-1.5">
         {SOURCE_TABS.map((tab) => (
           <button
@@ -180,6 +186,6 @@ export function AddPantryItemSheet({ onDone }: AddPantryItemSheetProps) {
           Cancel
         </Button>
       </div>
-    </Card>
+    </form>
   );
 }

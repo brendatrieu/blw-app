@@ -6,14 +6,20 @@ import { Field } from "../../../components/ui/Field.js";
 import { Input } from "../../../components/ui/Input.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
 import { Button } from "../../../components/ui/Button.js";
-import { Card } from "../../../components/ui/Card.js";
 
-interface EditPantryItemSheetProps {
+interface EditPantryItemFormProps {
   item: PantryItem;
   onDone: () => void;
 }
 
-export function EditPantryItemSheet({ item, onDone }: EditPantryItemSheetProps) {
+/**
+ * The pantry "edit" form, byte-compatible with the one that used to live in
+ * the inline EditPantryItemSheet: location segments, wheel "Prepared" field
+ * preset from the item's stored value, and quantity note. Now rendered
+ * full-screen by PantryEditPage, which supplies `onDone` for both a
+ * successful save and Cancel.
+ */
+export function EditPantryItemForm({ item, onDone }: EditPantryItemFormProps) {
   const [location, setLocation] = useState<PantryLocation>(item.location);
   const [preparedAt, setPreparedAt] = useState(() => nowAtMinute(new Date(item.preparedAt)));
   const [quantityNote, setQuantityNote] = useState(item.quantityNote ?? "");
@@ -35,9 +41,7 @@ export function EditPantryItemSheet({ item, onDone }: EditPantryItemSheetProps) 
   }
 
   return (
-    <Card as="form" onSubmit={handleSubmit} padding="sm" className="flex flex-col gap-3">
-      <p className="font-h2 text-[var(--color-text)]">✏️ Edit item</p>
-
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="text-sm font-semibold text-[var(--color-text)]">Location</span>
         <div className="flex gap-1.5">
@@ -83,6 +87,6 @@ export function EditPantryItemSheet({ item, onDone }: EditPantryItemSheetProps) 
           Cancel
         </Button>
       </div>
-    </Card>
+    </form>
   );
 }

@@ -47,12 +47,11 @@ function AppleIcon() {
   );
 }
 
-function NotebookIcon() {
+function BookIcon() {
   return (
     <svg {...ICON_PROPS}>
-      <rect x="5" y="4" width="14" height="16" rx="2.5" />
-      <path d="M9 4v16" />
-      <path d="M12.3 9h3.7M12.3 12.5h3.7M12.3 16h2.4" />
+      <path d="M12 6.2c-1.6-1.4-4-1.9-6.5-1.4a1 1 0 0 0-.8 1v11.7a1 1 0 0 0 1.2 1c2.1-.4 4.2 0 5.6 1.3.3.3.9.3 1.2 0 1.4-1.3 3.5-1.7 5.6-1.3a1 1 0 0 0 1.2-1V5.8a1 1 0 0 0-.8-1c-2.5-.5-4.9 0-6.5 1.4Z" />
+      <path d="M12 6.2v13" />
     </svg>
   );
 }
@@ -71,7 +70,7 @@ const tabs = [
   { to: "/", label: "Home", Icon: HomeIcon },
   { to: "/pantry", label: "Pantry", Icon: BasketIcon },
   { to: "/foods", label: "Foods", Icon: AppleIcon },
-  { to: "/log", label: "Log", Icon: NotebookIcon },
+  { to: "/safety", label: "Learn", Icon: BookIcon },
   { to: "/more", label: "More", Icon: DotsIcon },
 ];
 

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ageInMonths } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
+import { ServeLogList } from "../features/tracking/components/ServeLogList.js";
 import { usePantryItems } from "../features/pantry/hooks.js";
 import { PantryItemCard } from "../features/pantry/components/PantryItemCard.js";
 import { ButtonLink } from "../components/ui/Button.js";
@@ -66,7 +67,7 @@ function ExpiringSoon() {
           title="Nothing in the pantry yet"
           description="Log what you've prepped so nothing gets forgotten in the fridge."
           action={
-            <ButtonLink to="/pantry" size="sm" variant="secondary">
+            <ButtonLink to="/pantry/add" size="sm" variant="secondary">
               Add what you prepped
             </ButtonLink>
           }
@@ -126,10 +127,10 @@ export function DashboardPage() {
       </Card>
 
       <div className="flex gap-2">
-        <ButtonLink to="/foods" className="flex-1">
-          🍽️ Log a food
+        <ButtonLink to="/log-meal" className="flex-1">
+          🍽️ Log meal
         </ButtonLink>
-        <ButtonLink to="/pantry" variant="secondary" className="flex-1">
+        <ButtonLink to="/pantry/add" variant="secondary" className="flex-1">
           🧺 Add pantry item
         </ButtonLink>
       </div>
@@ -140,6 +141,8 @@ export function DashboardPage() {
         <h2 className="text-sm font-semibold text-[var(--color-text)]">Allergen progress</h2>
         <AllergenProgressSummary babyId={activeBaby.id} />
       </section>
+
+      <ServeLogList babyId={activeBaby.id} />
     </div>
   );
 }

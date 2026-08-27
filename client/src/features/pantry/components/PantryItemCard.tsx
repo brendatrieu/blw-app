@@ -2,7 +2,7 @@ import type { PantryItem } from "@blw/shared";
 import { Badge } from "../../catalog/components/Badge.js";
 import { getFoodEmoji } from "../../catalog/foodEmoji.js";
 import { countdownLabel, LOCATION_LABEL, pantryItemTitle } from "../format.js";
-import { Button } from "../../../components/ui/Button.js";
+import { Button, ButtonLink } from "../../../components/ui/Button.js";
 
 /** Emoji for a pantry item: the food's own emoji when it was prepped from a
  * catalog food, otherwise a friendly stand-in for a recipe or free-form entry. */
@@ -17,11 +17,12 @@ interface PantryItemCardProps {
   busy: boolean;
   onFinish?: () => void;
   onDiscard?: () => void;
-  onEdit?: () => void;
+  /** Route to the full-screen edit page (e.g. `/pantry/${item.id}/edit`); omit to hide the Edit affordance. */
+  editHref?: string;
   onRestore?: () => void;
 }
 
-export function PantryItemCard({ item, busy, onFinish, onDiscard, onEdit, onRestore }: PantryItemCardProps) {
+export function PantryItemCard({ item, busy, onFinish, onDiscard, editHref, onRestore }: PantryItemCardProps) {
   const preparedLabel = new Date(item.preparedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
   return (
@@ -60,7 +61,7 @@ export function PantryItemCard({ item, busy, onFinish, onDiscard, onEdit, onRest
         </Badge>
       )}
 
-      {(onFinish || onDiscard || onEdit || onRestore) && (
+      {(onFinish || onDiscard || editHref || onRestore) && (
       <div className="flex flex-wrap gap-2 border-t border-[var(--color-border)] pt-2">
         {onFinish && (
           <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={onFinish}>
@@ -72,10 +73,10 @@ export function PantryItemCard({ item, busy, onFinish, onDiscard, onEdit, onRest
             Mark discarded
           </Button>
         )}
-        {onEdit && (
-          <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={onEdit}>
+        {editHref && (
+          <ButtonLink to={editHref} size="sm" variant="secondary">
             Edit
-          </Button>
+          </ButtonLink>
         )}
         {onRestore && (
           <Button

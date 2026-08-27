@@ -9,23 +9,34 @@ interface BackButtonProps {
 }
 
 /**
- * Back navigation for detail pages — the installed PWA has no browser chrome,
- * so every page that's reached by drilling in needs its own way out. Pops
- * the router history when there's a previous entry to return to (so back
- * behaves like the user expects after navigating within the app), otherwise
- * lands on `fallback` (e.g. a bookmarked or shared deep link with no history).
+ * Shared history-aware back navigation: pops the router history when there's
+ * a previous entry to return to (so back behaves like the user expects after
+ * navigating within the app), otherwise lands on `fallback` (e.g. a
+ * bookmarked or shared deep link with no history). Extracted so both
+ * `BackButton` and icon-only controls (e.g. `CloseButton`) share one
+ * implementation of the idiom. Deliberately not memoized (no `useCallback`)
+ * so it keeps working when a test invokes the owning component as a plain
+ * function with `useNavigate` mocked, outside a real render pass.
  */
-export function BackButton({ fallback, children = "Back", className = "" }: BackButtonProps) {
+export function useBackNavigate(fallback: string): () => void {
   const navigate = useNavigate();
 
-  function handleClick() {
+  return () => {
     const historyIndex = (window.history.state as { idx?: number } | null)?.idx;
     if (typeof historyIndex === "number" && historyIndex > 0) {
       navigate(-1);
     } else {
       navigate(fallback);
     }
-  }
+  };
+}
+
+/**
+ * Back navigation for detail pages — the installed PWA has no browser chrome,
+ * so every page that's reached by drilling in needs its own way out.
+ */
+export function BackButton({ fallback, children = "Back", className = "" }: BackButtonProps) {
+  const handleClick = useBackNavigate(fallback);
 
   return (
     <button

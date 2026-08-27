@@ -552,12 +552,15 @@ export interface PickerSheetFooterProps {
  */
 export function PickerSheetFooter({ onCancel, onSave }: PickerSheetFooterProps) {
   return (
+    // Primary action first, Cancel second — same order as the app's page
+    // forms. "Done" (not "Save"): overlays close/commit with Done, only true
+    // form submits say Save.
     <div className="flex gap-2">
+      <Button type="button" onClick={onSave} className="flex-1">
+        Done
+      </Button>
       <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
         Cancel
-      </Button>
-      <Button type="button" onClick={onSave} className="flex-1">
-        Save
       </Button>
     </div>
   );
@@ -641,7 +644,7 @@ export function DateTimeField({ id, value, onChange, disabled = false, daysBack 
         <span className="flex-1">{formatDateTimeLabel(value, currentNow)}</span>
       </button>
 
-      <Sheet open={open} onClose={handleCancel} title="When">
+      <Sheet open={open} onClose={handleCancel} title="Time">
         <WheelPickerBody draft={draft} onDraftChange={setDraft} dateOptions={dateOptions} />
         <PickerSheetFooter onCancel={handleCancel} onSave={handleSave} />
       </Sheet>

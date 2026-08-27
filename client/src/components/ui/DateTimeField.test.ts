@@ -462,11 +462,13 @@ describe("stepLoopIndex (item 52 — keyboard-repeat-safe loop stepping)", () =>
   });
 });
 
-describe("PickerSheetFooter (item 53 — shared Cancel/Save footer)", () => {
-  it("renders a Save and a Cancel button, wired to the given handlers", () => {
+describe("PickerSheetFooter (item 53 — shared Done/Cancel footer)", () => {
+  it("renders Done first then Cancel, matching the page forms' primary-first order", () => {
     const html = renderToString(createElement(PickerSheetFooter, { onCancel: () => {}, onSave: () => {} }));
-    expect(html).toContain(">Save<");
+    expect(html).toContain(">Done<");
     expect(html).toContain(">Cancel<");
+    expect(html).not.toContain(">Save<");
+    expect(html.indexOf(">Done<")).toBeLessThan(html.indexOf(">Cancel<"));
     expect((html.match(/<button/g) ?? []).length).toBe(2);
   });
 });

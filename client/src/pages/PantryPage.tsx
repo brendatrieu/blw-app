@@ -2,11 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import type { PantryItem, PantryStatus, PantryView } from "@blw/shared";
 import { usePantryItems, useUpdatePantryItem } from "../features/pantry/hooks.js";
 import { PantryItemCard } from "../features/pantry/components/PantryItemCard.js";
-import { AddPantryItemSheet } from "../features/pantry/components/AddPantryItemSheet.js";
-import { EditPantryItemSheet } from "../features/pantry/components/EditPantryItemSheet.js";
 import { pantryItemTitle } from "../features/pantry/format.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
-import { Button } from "../components/ui/Button.js";
+import { ButtonLink } from "../components/ui/Button.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { SkeletonList } from "../components/ui/Skeleton.js";
 
@@ -21,8 +19,6 @@ interface RecentChange {
 
 export function PantryPage() {
   const [view, setView] = useState<PantryView>("active");
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [recentChange, setRecentChange] = useState<RecentChange | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -54,7 +50,6 @@ export function PantryPage() {
   }
 
   const items = data?.items ?? [];
-  const editingItem = items.find((item) => item.id === editingId) ?? null;
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -62,15 +57,11 @@ export function PantryPage() {
         title="Pantry"
         emoji="🧺"
         action={
-          !showAddForm && (
-            <Button size="sm" onClick={() => setShowAddForm(true)}>
-              + Add item
-            </Button>
-          )
+          <ButtonLink to="/pantry/add" size="sm">
+            + Add item
+          </ButtonLink>
         }
       />
-
-      {showAddForm && <AddPantryItemSheet onDone={() => setShowAddForm(false)} />}
 
       <div className="flex gap-1.5">
         {(["active", "history"] as const).map((tab) => (
@@ -117,33 +108,27 @@ export function PantryPage() {
             view === "active" ? "Add what you prepped so you don't lose track of it." : undefined
           }
           action={
-            view === "active" && !showAddForm ? (
-              <Button size="sm" variant="secondary" onClick={() => setShowAddForm(true)}>
+            view === "active" ? (
+              <ButtonLink to="/pantry/add" size="sm" variant="secondary">
                 + Add item
-              </Button>
+              </ButtonLink>
             ) : undefined
           }
         />
       )}
 
       <ul className="flex flex-col gap-2">
-        {items.map((item) =>
-          editingItem?.id === item.id ? (
-            <li key={item.id}>
-              <EditPantryItemSheet item={item} onDone={() => setEditingId(null)} />
-            </li>
-          ) : (
-            <PantryItemCard
-              key={item.id}
-              item={item}
-              busy={updateItem.isPending}
-              onFinish={item.status === "active" ? () => setStatus(item, "finished", true) : undefined}
-              onDiscard={item.status === "active" ? () => setStatus(item, "discarded", true) : undefined}
-              onEdit={item.status === "active" ? () => setEditingId(item.id) : undefined}
-              onRestore={item.status !== "active" ? () => setStatus(item, "active", false) : undefined}
-            />
-          ),
-        )}
+        {items.map((item) => (
+          <PantryItemCard
+            key={item.id}
+            item={item}
+            busy={updateItem.isPending}
+            onFinish={item.status === "active" ? () => setStatus(item, "finished", true) : undefined}
+            onDiscard={item.status === "active" ? () => setStatus(item, "discarded", true) : undefined}
+            editHref={item.status === "active" ? `/pantry/${item.id}/edit` : undefined}
+            onRestore={item.status !== "active" ? () => setStatus(item, "active", false) : undefined}
+          />
+        ))}
       </ul>
     </div>
   );

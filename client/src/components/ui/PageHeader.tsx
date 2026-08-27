@@ -11,7 +11,9 @@ interface PageHeaderProps {
 /** Consistent title/description/action row used at the top of every page. */
 export function PageHeader({ title, description, action, emoji }: PageHeaderProps) {
   return (
-    <div className="flex items-start justify-between gap-3">
+    // Single-line headers center the action against the title; only when a
+    // description makes the left block taller does top-alignment look right.
+    <div className={`flex justify-between gap-3 ${description ? "items-start" : "items-center"}`}>
       <div className="flex flex-col gap-1">
         <h1 className="font-display flex items-center gap-2 text-[var(--color-text)]">
           {emoji ? (
