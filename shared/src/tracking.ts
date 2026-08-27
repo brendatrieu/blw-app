@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { foodCategorySchema } from "./catalog.js";
 
 /**
- * Per-baby tracking: serve logs (the completion log + allergen-progress
- * source of truth), derived allergen-ladder progress, and recipe favorites.
- * Shared between server/src/routes/{serve-logs,favorites}.ts and the
- * client's features/tracking/** query layer.
+ * Per-baby tracking: meals (one sitting, one or more foods — the completion
+ * log and the allergen-progress source of truth), derived allergen-ladder
+ * progress, and recipe favorites. Shared between
+ * server/src/routes/{meals,favorites}.ts and the client's
+ * features/tracking/** query layer.
  */
 
 /** One day of slack: a parent east of UTC can log "just now" on a calendar
@@ -34,21 +36,30 @@ const optionalReactionNote = z
   .transform((value) => (value ? value : null));
 
 // ---------------------------------------------------------------------------
-// GET/POST /api/babies/:babyId/serve-logs, DELETE /api/serve-logs/:id
+// GET/POST /api/babies/:babyId/meals, PATCH/DELETE /api/meals/:id
 // ---------------------------------------------------------------------------
 
 export const babyIdRouteParamSchema = z.object({ babyId: z.string().uuid() });
-export const serveLogIdParamSchema = z.object({ id: z.string().uuid() });
+export const mealIdParamSchema = z.object({ id: z.string().uuid() });
 
-export const serveLogsQuerySchema = z.object({
+export const mealsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
-  /** Cursor: only rows served strictly before this timestamp. */
+  /** Cursor: only meals served strictly before this timestamp. */
   before: z.string().datetime().optional(),
 });
-export type ServeLogsQuery = z.infer<typeof serveLogsQuerySchema>;
+export type MealsQuery = z.infer<typeof mealsQuerySchema>;
 
-export const createServeLogInputSchema = z.object({
-  foodIds: z.array(z.string().uuid()).min(1).max(25),
+/**
+ * The final food list for the meal. The client sends what was actually
+ * eaten — recipe ingredients are pre-filled and removable client-side, so
+ * the server never expands a recipe itself. Duplicates are deduped by the
+ * route (and by `meal_foods`' unique index) rather than rejected.
+ */
+export const mealFoodIdsSchema = z.array(z.string().uuid()).min(1).max(25);
+
+export const createMealInputSchema = z.object({
+  foodIds: mealFoodIdsSchema,
+  /** Attribution only — never expanded into foods server-side. */
   recipeId: z
     .string()
     .uuid()
@@ -58,22 +69,61 @@ export const createServeLogInputSchema = z.object({
   servedAt: servedAtSchema.optional(),
   reactionNote: optionalReactionNote,
 });
-export type CreateServeLogInput = z.input<typeof createServeLogInputSchema>;
+export type CreateMealInput = z.input<typeof createMealInputSchema>;
 
-export const serveLogItemSchema = z.object({
+/**
+ * PATCH is a true partial update: an absent key leaves that column alone,
+ * where an explicit `null` clears it. `reactionNote` therefore cannot reuse
+ * `optionalReactionNote`, which collapses undefined into null.
+ */
+const patchReactionNote = z
+  .string()
+  .trim()
+  .max(500, "Reaction note must be 500 characters or fewer")
+  .nullable()
+  .optional()
+  .transform((value) => (value === undefined ? undefined : value ? value : null));
+
+export const updateMealInputSchema = z
+  .object({
+    /** Replaces the meal's foods wholesale when present. */
+    foodIds: mealFoodIdsSchema.optional(),
+    recipeId: z.string().uuid().nullable().optional(),
+    servedAt: servedAtSchema.optional(),
+    reactionNote: patchReactionNote,
+  })
+  .refine((value) => Object.values(value).some((field) => field !== undefined), {
+    message: "At least one field must be provided",
+  });
+export type UpdateMealInput = z.input<typeof updateMealInputSchema>;
+
+/**
+ * A food as it appears inside a meal. `category` is carried so the client
+ * can resolve its emoji (the emoji table is client-side, keyed by slug with
+ * a category fallback); the server has no emoji column.
+ */
+export const mealFoodSchema = z.object({
   id: z.string().uuid(),
-  foodId: z.string().uuid(),
-  foodSlug: z.string(),
-  foodName: z.string(),
-  recipeId: z.string().uuid().nullable(),
-  recipeTitle: z.string().nullable(),
+  slug: z.string(),
+  name: z.string(),
+  category: foodCategorySchema,
+});
+export type MealFood = z.infer<typeof mealFoodSchema>;
+
+export const mealItemSchema = z.object({
+  id: z.string().uuid(),
+  babyId: z.string().uuid(),
   servedAt: z.string(),
   reactionNote: z.string().nullable(),
+  recipeId: z.string().uuid().nullable(),
+  recipeTitle: z.string().nullable(),
+  /** Always at least one food, ordered by name for a stable render. */
+  foods: z.array(mealFoodSchema),
 });
-export type ServeLogItem = z.infer<typeof serveLogItemSchema>;
+export type MealItem = z.infer<typeof mealItemSchema>;
 
-export const serveLogsResponseSchema = z.object({ items: z.array(serveLogItemSchema) });
-export type ServeLogsResponse = z.infer<typeof serveLogsResponseSchema>;
+export const mealsResponseSchema = z.object({ items: z.array(mealItemSchema) });
+export type MealsResponse = z.infer<typeof mealsResponseSchema>;
 
 // ---------------------------------------------------------------------------
 // GET /api/babies/:babyId/allergen-progress

@@ -1,11 +1,12 @@
 import type {
   AllergenProgressResponse,
-  CreateServeLogInput,
+  CreateMealInput,
   FavoritesResponse,
-  ServeLogItem,
-  ServeLogsResponse,
+  MealItem,
+  MealsResponse,
+  UpdateMealInput,
 } from "@blw/shared";
-import { ApiError, apiDelete, apiGet, apiPost } from "../../lib/api.js";
+import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from "../../lib/api.js";
 
 // lib/api.ts only exposed GET/POST/PATCH/DELETE when this feature was
 // built (favoriting needs PUT). A tiny local wrapper avoids reaching outside
@@ -32,13 +33,13 @@ async function apiPut<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-export interface ServeLogsQuery {
+export interface MealsQuery {
   limit?: number;
-  /** Cursor: only rows served strictly before this ISO timestamp. */
+  /** Cursor: only meals served strictly before this ISO timestamp. */
   before?: string;
 }
 
-function buildServeLogsQueryString(query: ServeLogsQuery): string {
+function buildMealsQueryString(query: MealsQuery): string {
   const params = new URLSearchParams();
   if (query.limit !== undefined) params.set("limit", String(query.limit));
   if (query.before) params.set("before", query.before);
@@ -46,16 +47,20 @@ function buildServeLogsQueryString(query: ServeLogsQuery): string {
   return qs ? `?${qs}` : "";
 }
 
-export function fetchServeLogs(babyId: string, query: ServeLogsQuery = {}): Promise<ServeLogsResponse> {
-  return apiGet<ServeLogsResponse>(`/api/babies/${babyId}/serve-logs${buildServeLogsQueryString(query)}`);
+export function fetchMeals(babyId: string, query: MealsQuery = {}): Promise<MealsResponse> {
+  return apiGet<MealsResponse>(`/api/babies/${babyId}/meals${buildMealsQueryString(query)}`);
 }
 
-export function createServeLog(babyId: string, input: CreateServeLogInput): Promise<ServeLogItem[]> {
-  return apiPost<ServeLogItem[]>(`/api/babies/${babyId}/serve-logs`, input);
+export function createMeal(babyId: string, input: CreateMealInput): Promise<MealItem> {
+  return apiPost<MealItem>(`/api/babies/${babyId}/meals`, input);
 }
 
-export function deleteServeLog(id: string): Promise<void> {
-  return apiDelete<void>(`/api/serve-logs/${id}`);
+export function updateMeal(id: string, input: UpdateMealInput): Promise<MealItem> {
+  return apiPatch<MealItem>(`/api/meals/${id}`, input);
+}
+
+export function deleteMeal(id: string): Promise<void> {
+  return apiDelete<void>(`/api/meals/${id}`);
 }
 
 export function fetchAllergenProgress(babyId: string): Promise<AllergenProgressResponse> {

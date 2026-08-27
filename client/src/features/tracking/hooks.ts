@@ -1,34 +1,36 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AllergenProgressResponse,
-  CreateServeLogInput,
+  CreateMealInput,
   FavoriteItem,
   FavoritesResponse,
-  ServeLogItem,
-  ServeLogsResponse,
+  MealItem,
+  MealsResponse,
+  UpdateMealInput,
 } from "@blw/shared";
 import {
-  createServeLog,
+  createMeal,
   deleteFavorite,
-  deleteServeLog,
+  deleteMeal,
   fetchAllergenProgress,
   fetchFavorites,
-  fetchServeLogs,
+  fetchMeals,
   putFavorite,
-  type ServeLogsQuery,
+  updateMeal,
+  type MealsQuery,
 } from "./api.js";
 import { useCelebration } from "../../components/ui/Celebration.js";
 
 export const trackingKeys = {
-  serveLogs: (babyId: string) => ["serve-logs", babyId] as const,
+  meals: (babyId: string) => ["meals", babyId] as const,
   allergenProgress: (babyId: string) => ["allergen-progress", babyId] as const,
   favorites: ["favorites"] as const,
 };
 
-export function useServeLogs(babyId: string | undefined, query: ServeLogsQuery = {}) {
+export function useMeals(babyId: string | undefined, query: MealsQuery = {}) {
   return useQuery({
-    queryKey: [...trackingKeys.serveLogs(babyId ?? ""), query],
-    queryFn: () => fetchServeLogs(babyId as string, query),
+    queryKey: [...trackingKeys.meals(babyId ?? ""), query],
+    queryFn: () => fetchMeals(babyId as string, query),
     enabled: Boolean(babyId),
     staleTime: 15_000,
   });
@@ -59,36 +61,36 @@ export function useIsFavorited(recipeId: string | undefined): boolean {
 }
 
 /**
- * Creating a serve log also drives the app's two celebration moments: the
- * very first log ever ("First food logged!") and an allergen crossing into
- * "established" as a result of this log. `onMutate` snapshots what was true
- * just before the mutation (whether any logs already existed, and each
+ * Creating a meal also drives the app's two celebration moments: the very
+ * first meal ever logged ("First food logged!") and an allergen crossing
+ * into "established" as a result of this meal. `onMutate` snapshots what was
+ * true just before the mutation (whether any meals already existed, and each
  * allergen's status) so `onSuccess` can diff against a fresh fetch and fire
- * at most one celebration — never both, and never on delete.
+ * at most one celebration — never both, and never on edit/delete.
  */
-export function useCreateServeLog(babyId: string | undefined) {
+export function useCreateMeal(babyId: string | undefined) {
   const queryClient = useQueryClient();
   const { celebrate } = useCelebration();
   return useMutation({
-    mutationFn: (input: CreateServeLogInput) => {
-      if (!babyId) throw new Error("useCreateServeLog called with no active baby");
-      return createServeLog(babyId, input);
+    mutationFn: (input: CreateMealInput) => {
+      if (!babyId) throw new Error("useCreateMeal called with no active baby");
+      return createMeal(babyId, input);
     },
     onMutate: () => {
       if (!babyId) return undefined;
       const previousProgress = queryClient.getQueryData<AllergenProgressResponse>(trackingKeys.allergenProgress(babyId));
-      const logSnapshots = queryClient.getQueriesData<ServeLogsResponse>({ queryKey: trackingKeys.serveLogs(babyId) });
-      const hadAnyLogs = logSnapshots.some(([, data]) => (data?.items.length ?? 0) > 0);
-      return { previousProgress, hadAnyLogs };
+      const mealSnapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
+      const hadAnyMeals = mealSnapshots.some(([, data]) => (data?.items.length ?? 0) > 0);
+      return { previousProgress, hadAnyMeals };
     },
     onSuccess: (created, _input, context) => {
       if (!babyId) return;
-      const snapshots = queryClient.getQueriesData<ServeLogsResponse>({ queryKey: trackingKeys.serveLogs(babyId) });
+      const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
       for (const [key, data] of snapshots) {
-        if (data) queryClient.setQueryData(key, { items: [...created, ...data.items] });
+        if (data) queryClient.setQueryData(key, { items: [created, ...data.items] });
       }
 
-      if (!context?.hadAnyLogs) {
+      if (!context?.hadAnyMeals) {
         celebrate({ title: "First food logged!", emoji: "🎉" });
         return;
       }
@@ -105,22 +107,47 @@ export function useCreateServeLog(babyId: string | undefined) {
     },
     onSettled: () => {
       if (!babyId) return;
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.serveLogs(babyId) });
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
       void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
     },
   });
 }
 
-export function useDeleteServeLog(babyId: string | undefined) {
+/**
+ * Editing a meal never fires a celebration (only a fresh log does) but can
+ * still change allergen exposure counts (a food swap via `foodIds`), so both
+ * the meal list and allergen progress are invalidated on settle.
+ */
+export function useUpdateMeal(babyId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteServeLog(id),
+    mutationFn: ({ id, input }: { id: string; input: UpdateMealInput }) => updateMeal(id, input),
+    onSuccess: (updated: MealItem) => {
+      if (!babyId) return;
+      const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
+      for (const [key, data] of snapshots) {
+        if (!data) continue;
+        queryClient.setQueryData(key, { items: data.items.map((item) => (item.id === updated.id ? updated : item)) });
+      }
+    },
+    onSettled: () => {
+      if (!babyId) return;
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
+    },
+  });
+}
+
+export function useDeleteMeal(babyId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteMeal(id),
     onMutate: async (id) => {
       if (!babyId) return undefined;
-      await queryClient.cancelQueries({ queryKey: trackingKeys.serveLogs(babyId) });
-      const snapshots = queryClient.getQueriesData<ServeLogsResponse>({ queryKey: trackingKeys.serveLogs(babyId) });
+      await queryClient.cancelQueries({ queryKey: trackingKeys.meals(babyId) });
+      const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
       for (const [key, data] of snapshots) {
-        if (data) queryClient.setQueryData(key, { items: data.items.filter((item: ServeLogItem) => item.id !== id) });
+        if (data) queryClient.setQueryData(key, { items: data.items.filter((item: MealItem) => item.id !== id) });
       }
       return { snapshots };
     },
@@ -131,7 +158,7 @@ export function useDeleteServeLog(babyId: string | undefined) {
     },
     onSettled: () => {
       if (!babyId) return;
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.serveLogs(babyId) });
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
       void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
     },
   });

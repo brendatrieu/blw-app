@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isCatalogRoute,
   isNetworkOnlyRoute,
-  isServeLogPostRoute,
+  isMealPostRoute,
   isUserDataRoute,
 } from "./route-matchers.js";
 
@@ -13,23 +13,23 @@ function args(href: string, origin = ORIGIN) {
   return { url, sameOrigin: url.origin === origin };
 }
 
-describe("isServeLogPostRoute", () => {
-  it("matches a serve-log POST url", () => {
-    expect(isServeLogPostRoute(args(`${ORIGIN}/api/babies/abc-123/serve-logs`))).toBe(true);
+describe("isMealPostRoute", () => {
+  it("matches a meal POST url", () => {
+    expect(isMealPostRoute(args(`${ORIGIN}/api/babies/abc-123/meals`))).toBe(true);
   });
 
   it("matches with trailing query string", () => {
-    expect(isServeLogPostRoute(args(`${ORIGIN}/api/babies/abc-123/serve-logs?limit=1`))).toBe(true);
+    expect(isMealPostRoute(args(`${ORIGIN}/api/babies/abc-123/meals?limit=1`))).toBe(true);
   });
 
   it("rejects a cross-origin url with the same path", () => {
-    expect(isServeLogPostRoute(args("https://evil.example.com/api/babies/abc-123/serve-logs"))).toBe(
+    expect(isMealPostRoute(args("https://evil.example.com/api/babies/abc-123/meals"))).toBe(
       false,
     );
   });
 
   it("rejects unrelated api paths", () => {
-    expect(isServeLogPostRoute(args(`${ORIGIN}/api/babies/abc-123`))).toBe(false);
+    expect(isMealPostRoute(args(`${ORIGIN}/api/babies/abc-123`))).toBe(false);
   });
 });
 

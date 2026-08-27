@@ -19,7 +19,17 @@ import { and, asc, desc, eq, ilike, inArray, lte } from "drizzle-orm";
 import { betaTool } from "@anthropic-ai/sdk/helpers/beta/json-schema";
 import { ageInMonths, deriveAllergenStatus } from "@blw/shared";
 import type { Database } from "../db/index.js";
-import { allergens, babies, foodAllergens, foods, pantryItems, recipes, serveLogs, storageGuidelines } from "../db/schema.js";
+import {
+  allergens,
+  babies,
+  foodAllergens,
+  foods,
+  mealFoods,
+  meals,
+  pantryItems,
+  recipes,
+  storageGuidelines,
+} from "../db/schema.js";
 
 // ---------------------------------------------------------------------------
 // get_baby_profile
@@ -51,11 +61,15 @@ export async function fetchBabyProfileSummary(
     .limit(1);
   if (!baby) return null;
 
+  // One row per (meal, food): the note is meal-level, so every food in a
+  // meal that got a note counts as reactive — the same thing the old
+  // per-food serve log recorded when a batch was logged with one note.
   const servedRows = await db
-    .select({ foodName: foods.name, reactionNote: serveLogs.reactionNote })
-    .from(serveLogs)
-    .innerJoin(foods, eq(serveLogs.foodId, foods.id))
-    .where(eq(serveLogs.babyId, babyId));
+    .select({ foodName: foods.name, reactionNote: meals.reactionNote })
+    .from(mealFoods)
+    .innerJoin(meals, eq(mealFoods.mealId, meals.id))
+    .innerJoin(foods, eq(mealFoods.foodId, foods.id))
+    .where(eq(meals.babyId, babyId));
 
   const foodsIntroduced = new Set(servedRows.map((r) => r.foodName));
   const knownReactiveFoods = [...new Set(servedRows.filter((r) => r.reactionNote).map((r) => r.foodName))];
@@ -65,10 +79,11 @@ export async function fetchBabyProfileSummary(
   // the parent sees on /babies/:id/allergens.
   const exposureRows = await db
     .select({ allergenSlug: allergens.slug })
-    .from(serveLogs)
-    .innerJoin(foodAllergens, eq(serveLogs.foodId, foodAllergens.foodId))
+    .from(mealFoods)
+    .innerJoin(meals, eq(mealFoods.mealId, meals.id))
+    .innerJoin(foodAllergens, eq(mealFoods.foodId, foodAllergens.foodId))
     .innerJoin(allergens, eq(foodAllergens.allergenId, allergens.id))
-    .where(eq(serveLogs.babyId, babyId));
+    .where(eq(meals.babyId, babyId));
   const exposureCountBySlug = new Map<string, number>();
   for (const row of exposureRows) {
     exposureCountBySlug.set(row.allergenSlug, (exposureCountBySlug.get(row.allergenSlug) ?? 0) + 1);

@@ -7,7 +7,7 @@ import { Badge } from "../features/catalog/components/Badge.js";
 import { levelLabel } from "../features/catalog/constants.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { useCreateServeLog, useServeLogs } from "../features/tracking/hooks.js";
+import { useCreateMeal, useMeals } from "../features/tracking/hooks.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button } from "../components/ui/Button.js";
 import { CardLink } from "../components/ui/Card.js";
@@ -34,16 +34,19 @@ interface MarkAsServedProps {
 
 function MarkAsServed({ food }: MarkAsServedProps) {
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
-  // 100 is the server's max page size (serveLogsQuerySchema) — "times
-  // served" is a best-effort count over the most recent logs, not an exact
-  // lifetime total.
-  const { data: recentLogs } = useServeLogs(activeBaby?.id, { limit: 100 });
-  const createServeLog = useCreateServeLog(activeBaby?.id);
+  // 100 is the server's max page size (mealsQuerySchema) — "times served" is
+  // a best-effort count over the most recent meals, not an exact lifetime
+  // total. There's no server-side "times served" endpoint (the meal model
+  // moved off per-food serve-log rows), so it's derived here: one count per
+  // meal that includes this food, matching the old per-food-row granularity.
+  const { data: recentMeals } = useMeals(activeBaby?.id, { limit: 100 });
+  const createMeal = useCreateMeal(activeBaby?.id);
   const [open, setOpen] = useState(false);
   const [servedDate, setServedDate] = useState(() => todayForDateInput());
   const [reactionNote, setReactionNote] = useState("");
 
-  const timesServed = recentLogs?.items.filter((item) => item.foodId === food.id).length ?? null;
+  const timesServed =
+    recentMeals?.items.filter((meal) => meal.foods.some((mealFood) => mealFood.id === food.id)).length ?? null;
 
   if (babyLoading) return null;
 
@@ -60,11 +63,11 @@ function MarkAsServed({ food }: MarkAsServedProps) {
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    createServeLog.mutate(
+    createMeal.mutate(
       {
         foodIds: [food.id],
         servedAt: new Date(`${servedDate}T12:00:00`).toISOString(),
-        reactionNote: reactionNote.trim() || undefined,
+        reactionNote: reactionNote.trim() || null,
       },
       {
         onSuccess: () => {
@@ -106,14 +109,14 @@ function MarkAsServed({ food }: MarkAsServedProps) {
               rows={2}
             />
           </Field>
-          {createServeLog.isError && (
+          {createMeal.isError && (
             <p role="alert" className="text-xs text-[var(--color-danger)]">
               Couldn't save that — try again.
             </p>
           )}
           <div className="flex gap-2">
-            <Button type="submit" disabled={createServeLog.isPending} className="flex-1">
-              {createServeLog.isPending ? "Saving…" : "Confirm"}
+            <Button type="submit" disabled={createMeal.isPending} className="flex-1">
+              {createMeal.isPending ? "Saving…" : "Confirm"}
             </Button>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Cancel

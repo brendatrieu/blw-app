@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import type { ServeLogItem } from "@blw/shared";
-import { useDeleteServeLog, useServeLogs } from "../hooks.js";
+import { Link } from "react-router-dom";
+import type { MealItem } from "@blw/shared";
+import { useDeleteMeal, useMeals } from "../hooks.js";
 import { getFoodEmoji } from "../../catalog/foodEmoji.js";
 import { Card } from "../../../components/ui/Card.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
@@ -29,62 +30,75 @@ export function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
-interface LogEntryRowProps {
-  entry: ServeLogItem;
+export interface MealCardProps {
+  meal: MealItem;
   babyId: string;
   pendingDeleteId: string | null;
   onRequestDelete: (id: string) => void;
   onCancelDelete: () => void;
 }
 
-function LogEntryRow({ entry, babyId, pendingDeleteId, onRequestDelete, onCancelDelete }: LogEntryRowProps) {
-  const deleteServeLog = useDeleteServeLog(babyId);
-  const confirming = pendingDeleteId === entry.id;
+/** One meal in the day-grouped history: food chips (or a recipe title plus
+ * its chips), the served time, an optional reaction note, and Edit/Delete
+ * affordances. Exported standalone-renderable per the app's convention for
+ * card-shaped list items. */
+export function MealCard({ meal, babyId, pendingDeleteId, onRequestDelete, onCancelDelete }: MealCardProps) {
+  const deleteMeal = useDeleteMeal(babyId);
+  const confirming = pendingDeleteId === meal.id;
 
   return (
     <Card as="li" padding="sm" className="flex flex-col gap-2">
-      <div className="flex items-start gap-3">
-        <span
-          aria-hidden="true"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-coral-soft)] text-lg leading-none"
-        >
-          {getFoodEmoji(entry.foodSlug)}
-        </span>
-        <div className="flex flex-1 flex-col">
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-medium text-[var(--color-text)]">
-              {entry.foodName}
-              {entry.recipeTitle && (
-                <span className="font-normal text-[var(--color-text-muted)]"> · {entry.recipeTitle}</span>
-              )}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-1 flex-wrap items-center gap-1.5">
+          {meal.foods.map((food) => (
+            <span
+              key={food.id}
+              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] px-2 py-1 text-sm text-[var(--color-text)]"
+            >
+              <span aria-hidden="true">{getFoodEmoji(food.slug, food.category)}</span>
+              {food.name}
             </span>
-            {!confirming && (
-              <button
-                type="button"
-                onClick={() => onRequestDelete(entry.id)}
-                className="shrink-0 rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
-              >
-                Delete
-              </button>
-            )}
-          </div>
-          <span className="text-xs text-[var(--color-text-muted)]">{timeLabel(entry.servedAt)}</span>
-          {entry.reactionNote && (
-            <span className="mt-1 text-xs text-[var(--color-danger)]">Reaction: {entry.reactionNote}</span>
-          )}
+          ))}
         </div>
+        {!confirming && (
+          <div className="flex shrink-0 items-center gap-1">
+            <Link
+              to={`/log-meal?edit=${meal.id}`}
+              className="rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            >
+              Edit
+            </Link>
+            <button
+              type="button"
+              onClick={() => onRequestDelete(meal.id)}
+              className="rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
+
+      {meal.recipeTitle && (
+        <span className="text-xs font-medium text-[var(--color-text-muted)]">🍳 {meal.recipeTitle}</span>
+      )}
+
+      <span className="text-xs text-[var(--color-text-muted)]">{timeLabel(meal.servedAt)}</span>
+
+      {meal.reactionNote && (
+        <span className="text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</span>
+      )}
 
       {confirming && (
         <div className="flex items-center gap-2 border-t border-[var(--color-border)] pt-2">
-          <span className="text-xs text-[var(--color-text-muted)]">Remove this entry?</span>
+          <span className="text-xs text-[var(--color-text-muted)]">Remove this meal?</span>
           <button
             type="button"
-            disabled={deleteServeLog.isPending}
-            onClick={() => deleteServeLog.mutate(entry.id, { onSettled: onCancelDelete })}
+            disabled={deleteMeal.isPending}
+            onClick={() => deleteMeal.mutate(meal.id, { onSettled: onCancelDelete })}
             className="rounded-[var(--radius-md)] bg-[var(--color-danger)] px-2 py-1 text-xs font-medium text-[var(--color-primary-contrast)] disabled:opacity-60"
           >
-            {deleteServeLog.isPending ? "Removing…" : "Yes, delete"}
+            {deleteMeal.isPending ? "Removing…" : "Yes, delete"}
           </button>
           <button
             type="button"
@@ -104,17 +118,18 @@ export interface ServeLogListProps {
 }
 
 /**
- * The day-grouped serve-log history, formerly LogPage's list half. Rendered
- * as a Home section; logging itself now happens on the full-screen
- * /log-meal page (see LogFoodPage / LogFoodForm).
+ * The day-grouped meal history, formerly LogPage's list half. Rendered as a
+ * Home section; logging itself now happens on the full-screen /log-meal page
+ * (see LogFoodPage / LogFoodForm), which the per-meal Edit link also reopens
+ * (as `/log-meal?edit=:id`) to edit that meal in place.
  */
 export function ServeLogList({ babyId }: ServeLogListProps) {
-  const { data, isLoading, isError } = useServeLogs(babyId, { limit: 100 });
+  const { data, isLoading, isError } = useMeals(babyId, { limit: 100 });
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const groups = useMemo(() => {
     const items = data?.items ?? [];
-    const byDay = new Map<string, ServeLogItem[]>();
+    const byDay = new Map<string, MealItem[]>();
     for (const item of items) {
       const key = dayKey(item.servedAt);
       const list = byDay.get(key);
@@ -150,10 +165,10 @@ export function ServeLogList({ babyId }: ServeLogListProps) {
             <div key={key} className="flex flex-col gap-2">
               <h3 className="font-caption uppercase tracking-wide text-[var(--color-text-muted)]">{dayLabel(key)}</h3>
               <ul className="flex flex-col gap-2">
-                {items.map((entry) => (
-                  <LogEntryRow
-                    key={entry.id}
-                    entry={entry}
+                {items.map((meal) => (
+                  <MealCard
+                    key={meal.id}
+                    meal={meal}
                     babyId={babyId}
                     pendingDeleteId={pendingDeleteId}
                     onRequestDelete={setPendingDeleteId}

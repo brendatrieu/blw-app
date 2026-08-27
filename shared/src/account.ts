@@ -17,7 +17,7 @@ import { z } from "zod";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 1;
+export const ACCOUNT_EXPORT_VERSION = 2;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -48,18 +48,24 @@ export const exportBabySchema = z.object({
   createdAt: z.string(),
 });
 
-/** Food and recipe names are denormalised in so the file reads on its own. */
-export const exportServeLogSchema = z.object({
+/** Food and recipe names are denormalised in so the file reads on its own.
+ * v2 (meal model): one entry per meal, with its foods nested — where v1 had
+ * one flat entry per food served. */
+export const exportMealFoodSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+});
+
+export const exportMealSchema = z.object({
   id: z.string(),
   babyId: z.string(),
-  foodId: z.string(),
-  foodSlug: z.string(),
-  foodName: z.string(),
   recipeId: z.string().nullable(),
   recipeTitle: z.string().nullable(),
   servedAt: z.string(),
   reactionNote: z.string().nullable(),
   createdAt: z.string(),
+  foods: z.array(exportMealFoodSchema),
 });
 
 export const exportFavoriteSchema = z.object({
@@ -131,7 +137,7 @@ export const accountExportSchema = z.object({
   exportedAt: z.string(),
   profile: exportProfileSchema,
   babies: z.array(exportBabySchema),
-  serveLogs: z.array(exportServeLogSchema),
+  meals: z.array(exportMealSchema),
   favorites: z.array(exportFavoriteSchema),
   pantryItems: z.array(exportPantryItemSchema),
   symptomChecks: z.array(exportSymptomCheckSchema),
@@ -142,7 +148,8 @@ export const accountExportSchema = z.object({
 export type AccountExport = z.infer<typeof accountExportSchema>;
 export type ExportProfile = z.infer<typeof exportProfileSchema>;
 export type ExportBaby = z.infer<typeof exportBabySchema>;
-export type ExportServeLog = z.infer<typeof exportServeLogSchema>;
+export type ExportMeal = z.infer<typeof exportMealSchema>;
+export type ExportMealFood = z.infer<typeof exportMealFoodSchema>;
 export type ExportFavorite = z.infer<typeof exportFavoriteSchema>;
 export type ExportPantryItem = z.infer<typeof exportPantryItemSchema>;
 export type ExportSymptomCheck = z.infer<typeof exportSymptomCheckSchema>;

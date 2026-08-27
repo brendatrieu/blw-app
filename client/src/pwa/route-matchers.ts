@@ -33,7 +33,7 @@ export function isNetworkOnlyRoute({ url, sameOrigin }: RouteMatcherArgs): boole
   return sameOrigin && /^\/api\/(auth|ai|account)(\/|$|\?)/.test(url.pathname);
 }
 
-/** Serve-log POSTs, queued via BackgroundSync when offline. */
-export function isServeLogPostRoute({ url, sameOrigin }: RouteMatcherArgs): boolean {
-  return sameOrigin && /^\/api\/babies\/[^/]+\/serve-logs(\/|$|\?)/.test(url.pathname);
+/** Meal-log POSTs, queued via BackgroundSync when offline. */
+export function isMealPostRoute({ url, sameOrigin }: RouteMatcherArgs): boolean {
+  return sameOrigin && /^\/api\/babies\/[^/]+\/meals(\/|$|\?)/.test(url.pathname);
 }

@@ -25,9 +25,10 @@ import {
   chatThreads,
   favorites,
   foods,
+  mealFoods,
+  meals,
   pantryItems,
   recipes,
-  serveLogs,
   session,
   symptomChecks,
   user,
@@ -96,29 +97,48 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
 
     const babyIds = babyRows.map((row) => row.id);
 
-    // Serve logs and symptom checks hang off babies, not off the user, so
-    // an account with no babies has none of either — and `inArray` with an
+    // Meals and symptom checks hang off babies, not off the user, so an
+    // account with no babies has none of either — and `inArray` with an
     // empty list is not worth asking the database about.
-    const serveLogRows = babyIds.length
+    const mealRows = babyIds.length
       ? await db
           .select({
-            id: serveLogs.id,
-            babyId: serveLogs.babyId,
-            foodId: serveLogs.foodId,
-            foodSlug: foods.slug,
-            foodName: foods.name,
-            recipeId: serveLogs.recipeId,
+            id: meals.id,
+            babyId: meals.babyId,
+            recipeId: meals.recipeId,
             recipeTitle: recipes.title,
-            servedAt: serveLogs.servedAt,
-            reactionNote: serveLogs.reactionNote,
-            createdAt: serveLogs.createdAt,
+            servedAt: meals.servedAt,
+            reactionNote: meals.reactionNote,
+            createdAt: meals.createdAt,
           })
-          .from(serveLogs)
-          .innerJoin(foods, eq(serveLogs.foodId, foods.id))
-          .leftJoin(recipes, eq(serveLogs.recipeId, recipes.id))
-          .where(inArray(serveLogs.babyId, babyIds))
-          .orderBy(asc(serveLogs.servedAt))
+          .from(meals)
+          .leftJoin(recipes, eq(meals.recipeId, recipes.id))
+          .where(inArray(meals.babyId, babyIds))
+          .orderBy(asc(meals.servedAt))
       : [];
+
+    // Nested under their meal below; read in one pass rather than per meal.
+    const mealFoodRows = mealRows.length
+      ? await db
+          .select({ mealId: mealFoods.mealId, id: foods.id, slug: foods.slug, name: foods.name })
+          .from(mealFoods)
+          .innerJoin(foods, eq(mealFoods.foodId, foods.id))
+          .where(
+            inArray(
+              mealFoods.mealId,
+              mealRows.map((row) => row.id),
+            ),
+          )
+          .orderBy(asc(foods.name))
+      : [];
+
+    const foodsByMealId = new Map<string, { id: string; slug: string; name: string }[]>();
+    for (const row of mealFoodRows) {
+      const entry = { id: row.id, slug: row.slug, name: row.name };
+      const existing = foodsByMealId.get(row.mealId);
+      if (existing) existing.push(entry);
+      else foodsByMealId.set(row.mealId, [entry]);
+    }
 
     const symptomCheckRows = babyIds.length
       ? await db
@@ -221,17 +241,15 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         archivedAt: isoOrNull(row.archivedAt),
         createdAt: row.createdAt.toISOString(),
       })),
-      serveLogs: serveLogRows.map((row) => ({
+      meals: mealRows.map((row) => ({
         id: row.id,
         babyId: row.babyId,
-        foodId: row.foodId,
-        foodSlug: row.foodSlug,
-        foodName: row.foodName,
         recipeId: row.recipeId,
         recipeTitle: row.recipeTitle,
         servedAt: row.servedAt.toISOString(),
         reactionNote: row.reactionNote,
         createdAt: row.createdAt.toISOString(),
+        foods: foodsByMealId.get(row.id) ?? [],
       })),
       favorites: favoriteRows.map((row) => ({
         recipeId: row.recipeId,
@@ -380,7 +398,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       // One statement, therefore one transaction. Every table the account
       // owns hangs off `user` by an ON DELETE CASCADE chain, so this single
       // delete takes all of them atomically:
-      //   user -> babies -> serve_logs, symptom_checks
+      //   user -> babies -> meals -> meal_foods, babies -> symptom_checks
       //   user -> favorites, pantry_items, user_ai_keys
       //   user -> chat_threads -> chat_messages
       //   user -> session, account            (better-auth's own tables)

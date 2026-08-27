@@ -259,7 +259,7 @@ export const recipeVariants = pgTable(
 // ---------------------------------------------------------------------------
 // Per-user / per-baby tracking data. Everything here sits in the
 // ON DELETE CASCADE chain rooted at `user`, so account deletion is one
-// transaction (babies -> serve_logs/symptom_checks/chat_threads;
+// transaction (babies -> meals -> meal_foods, babies -> symptom_checks;
 // user -> favorites/pantry_items/chat_threads directly).
 // ---------------------------------------------------------------------------
 
@@ -293,16 +293,21 @@ export const favorites = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.recipeId] })],
 );
 
-export const serveLogs = pgTable(
-  "serve_logs",
+// A meal is one sitting: a timestamp, an optional note about how it went,
+// optional attribution to a recipe, and one or more foods through
+// `meal_foods`. Every exposure query (allergen progress, times served, the
+// symptom-checker snapshot) reads meal_foods JOIN meals, where one
+// (meal, food) pair is exactly one exposure — the unique index below is what
+// makes that count trustworthy.
+export const meals = pgTable(
+  "meals",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     babyId: uuid("baby_id")
       .notNull()
       .references(() => babies.id, { onDelete: "cascade" }),
-    foodId: uuid("food_id")
-      .notNull()
-      .references(() => foods.id),
+    // Attribution only: the foods actually eaten always come from
+    // `meal_foods`, never from the recipe's ingredient list at read time.
     recipeId: uuid("recipe_id").references(() => recipes.id, { onDelete: "set null" }),
     // Stored with time (not date-only): the symptom checker computes
     // hours_before_onset over a 168h window, which needs hour precision.
@@ -310,7 +315,24 @@ export const serveLogs = pgTable(
     reactionNote: text("reaction_note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("serve_logs_baby_id_served_at_idx").on(t.babyId, t.servedAt.desc())],
+  (t) => [index("meals_baby_id_served_at_idx").on(t.babyId, t.servedAt.desc())],
+);
+
+export const mealFoods = pgTable(
+  "meal_foods",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    mealId: uuid("meal_id")
+      .notNull()
+      .references(() => meals.id, { onDelete: "cascade" }),
+    foodId: uuid("food_id")
+      .notNull()
+      .references(() => foods.id),
+  },
+  (t) => [
+    uniqueIndex("meal_foods_meal_food_idx").on(t.mealId, t.foodId),
+    index("meal_foods_food_id_idx").on(t.foodId),
+  ],
 );
 
 export const pantryLocationEnum = pgEnum("pantry_location", ["fridge", "freezer", "counter"]);

@@ -34,7 +34,7 @@ const PERSISTED_QUERY_KEY_PREFIXES = new Set([
   "recipe",
   "babies",
   "pantry",
-  "serve-logs",
+  "meals",
   "favorites",
   "allergen-progress",
 ]);

@@ -88,6 +88,45 @@ export async function createTestApp(
   };
 }
 
+export interface MealSeed {
+  babyId: string;
+  /** Sugar for the common one-food sitting; `foodIds` for a real meal. */
+  foodId?: string;
+  foodIds?: string[];
+  servedAt: Date;
+  reactionNote?: string | null;
+  recipeId?: string | null;
+}
+
+/**
+ * Writes meals and their `meal_foods` children straight to the database, for
+ * tests that need exposure history without going through the API (the
+ * symptom snapshot's window arithmetic, the account export/delete sweep).
+ * Returns the new meal ids in the order given.
+ */
+export async function insertMeals(db: Database, seeds: MealSeed[]): Promise<string[]> {
+  const ids: string[] = [];
+  for (const seed of seeds) {
+    const foodIds = seed.foodIds ?? (seed.foodId ? [seed.foodId] : []);
+    if (foodIds.length === 0) throw new Error("insertMeals needs at least one food per meal");
+
+    const [meal] = await db
+      .insert(schema.meals)
+      .values({
+        babyId: seed.babyId,
+        servedAt: seed.servedAt,
+        reactionNote: seed.reactionNote ?? null,
+        recipeId: seed.recipeId ?? null,
+      })
+      .returning();
+    if (!meal) throw new Error("meal insert returned no row");
+
+    await db.insert(schema.mealFoods).values(foodIds.map((foodId) => ({ mealId: meal.id, foodId })));
+    ids.push(meal.id);
+  }
+  return ids;
+}
+
 /** Collects the cookie pairs from a Set-Cookie response header. */
 export function cookieHeader(setCookie: string | string[] | undefined): string {
   const values = setCookie === undefined ? [] : Array.isArray(setCookie) ? setCookie : [setCookie];

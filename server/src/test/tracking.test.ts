@@ -1,15 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import type {
-  AllergenProgressResponse,
-  Baby,
-  FavoritesResponse,
-  ServeLogItem,
-  ServeLogsResponse,
-} from "@blw/shared";
+import type { AllergenProgressResponse, Baby, FavoritesResponse, MealItem, MealsResponse } from "@blw/shared";
 import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
+
+const UNKNOWN_ID = "00000000-0000-4000-8000-000000000000";
 
 // Minimal fixture content (not the real seed data, which lives in
 // server/db/seeds and is out of this route file's ownership) — just enough
@@ -97,75 +94,100 @@ describe("tracking routes", () => {
     await close();
   });
 
-  describe("serve logs", () => {
-    it("creates, lists, and deletes a serve log for an owned baby", async () => {
+  /** POST a meal and return the created item, failing loudly on a non-201. */
+  async function postMeal(user: TestUser, babyId: string, payload: Record<string, unknown>): Promise<MealItem> {
+    const response = await app.inject({
+      method: "POST",
+      url: `/api/babies/${babyId}/meals`,
+      headers: { cookie: user.cookie },
+      payload,
+    });
+    if (response.statusCode !== 201) {
+      throw new Error(`meal create failed (${response.statusCode}): ${response.body}`);
+    }
+    return response.json<MealItem>();
+  }
+
+  async function listMeals(user: TestUser, babyId: string, query = ""): Promise<MealsResponse> {
+    const response = await app.inject({
+      method: "GET",
+      url: `/api/babies/${babyId}/meals${query}`,
+      headers: { cookie: user.cookie },
+    });
+    return response.json<MealsResponse>();
+  }
+
+  describe("meals", () => {
+    it("creates, lists, and deletes a meal for an owned baby", async () => {
       const user = await signUpUser(app);
       const babyId = await createBaby(app, user);
 
-      const create = await app.inject({
-        method: "POST",
-        url: `/api/babies/${babyId}/serve-logs`,
-        headers: { cookie: user.cookie },
-        payload: { foodIds: [fixtures.egg.id], recipeId: fixtures.recipe.id, reactionNote: "  mild rash  " },
+      const created = await postMeal(user, babyId, {
+        foodIds: [fixtures.egg.id],
+        recipeId: fixtures.recipe.id,
+        reactionNote: "  mild rash  ",
       });
-      expect(create.statusCode).toBe(201);
-      const created = create.json<ServeLogItem[]>();
-      expect(created).toHaveLength(1);
-      expect(created[0]).toMatchObject({
-        foodId: fixtures.egg.id,
-        foodSlug: "egg",
-        foodName: "Egg",
+      expect(created).toMatchObject({
+        babyId,
         recipeId: fixtures.recipe.id,
         recipeTitle: "Egg Toast Fingers",
         reactionNote: "mild rash",
       });
+      expect(created.foods).toEqual([
+        { id: fixtures.egg.id, slug: "egg", name: "Egg", category: "protein" },
+      ]);
 
-      const list = await app.inject({
-        method: "GET",
-        url: `/api/babies/${babyId}/serve-logs`,
-        headers: { cookie: user.cookie },
-      });
-      expect(list.statusCode).toBe(200);
-      const listBody = list.json<ServeLogsResponse>();
+      const listBody = await listMeals(user, babyId);
       expect(listBody.items).toHaveLength(1);
-      expect(listBody.items[0]?.id).toBe(created[0]?.id);
+      expect(listBody.items[0]?.id).toBe(created.id);
+      expect(listBody.items[0]?.foods).toHaveLength(1);
 
       const del = await app.inject({
         method: "DELETE",
-        url: `/api/serve-logs/${created[0]?.id}`,
+        url: `/api/meals/${created.id}`,
         headers: { cookie: user.cookie },
       });
       expect(del.statusCode).toBe(204);
 
-      const listAfter = await app.inject({
-        method: "GET",
-        url: `/api/babies/${babyId}/serve-logs`,
-        headers: { cookie: user.cookie },
-      });
-      expect(listAfter.json<ServeLogsResponse>().items).toHaveLength(0);
+      expect((await listMeals(user, babyId)).items).toHaveLength(0);
     });
 
-    it("creates one serve log per food in a batch, deduping repeated ids", async () => {
+    it("puts a batch of foods in ONE meal, deduping repeated ids", async () => {
       const user = await signUpUser(app);
       const babyId = await createBaby(app, user);
 
-      const create = await app.inject({
-        method: "POST",
-        url: `/api/babies/${babyId}/serve-logs`,
-        headers: { cookie: user.cookie },
-        payload: { foodIds: [fixtures.egg.id, fixtures.banana.id, fixtures.egg.id] },
+      const created = await postMeal(user, babyId, {
+        foodIds: [fixtures.egg.id, fixtures.banana.id, fixtures.egg.id],
       });
-      expect(create.statusCode).toBe(201);
-      const created = create.json<ServeLogItem[]>();
-      expect(created).toHaveLength(2);
-      expect(created.map((item) => item.foodSlug).sort()).toEqual(["banana", "egg"]);
+      // Foods come back ordered by name ("Banana" before "Egg").
+      expect(created.foods.map((food) => food.slug)).toEqual(["banana", "egg"]);
+      expect(created.recipeId).toBeNull();
+      expect(created.recipeTitle).toBeNull();
 
-      const list = await app.inject({
-        method: "GET",
-        url: `/api/babies/${babyId}/serve-logs`,
-        headers: { cookie: user.cookie },
-      });
-      expect(list.json<ServeLogsResponse>().items).toHaveLength(2);
+      // One sitting is one meal, however many foods it carried.
+      const listBody = await listMeals(user, babyId);
+      expect(listBody.items).toHaveLength(1);
+      expect(listBody.items[0]?.foods).toHaveLength(2);
+    });
+
+    it("lists meals newest first and honours limit + the `before` cursor", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      const base = Date.now() - 10 * 60 * 60 * 1000;
+      const at = (hours: number) => new Date(base + hours * 60 * 60 * 1000).toISOString();
+
+      const oldest = await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: at(0) });
+      const middle = await postMeal(user, babyId, { foodIds: [fixtures.banana.id], servedAt: at(1) });
+      const newest = await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: at(2) });
+
+      const all = await listMeals(user, babyId);
+      expect(all.items.map((item) => item.id)).toEqual([newest.id, middle.id, oldest.id]);
+
+      const limited = await listMeals(user, babyId, "?limit=2");
+      expect(limited.items.map((item) => item.id)).toEqual([newest.id, middle.id]);
+
+      const before = await listMeals(user, babyId, `?before=${encodeURIComponent(at(1))}`);
+      expect(before.items.map((item) => item.id)).toEqual([oldest.id]);
     });
 
     it("rejects an empty foodIds array with 400", async () => {
@@ -174,7 +196,7 @@ describe("tracking routes", () => {
 
       const response = await app.inject({
         method: "POST",
-        url: `/api/babies/${babyId}/serve-logs`,
+        url: `/api/babies/${babyId}/meals`,
         headers: { cookie: user.cookie },
         payload: { foodIds: [] },
       });
@@ -188,7 +210,7 @@ describe("tracking routes", () => {
 
       const response = await app.inject({
         method: "POST",
-        url: `/api/babies/${babyId}/serve-logs`,
+        url: `/api/babies/${babyId}/meals`,
         headers: { cookie: user.cookie },
         payload: { foodIds: tooMany },
       });
@@ -201,31 +223,41 @@ describe("tracking routes", () => {
 
       const response = await app.inject({
         method: "POST",
-        url: `/api/babies/${babyId}/serve-logs`,
+        url: `/api/babies/${babyId}/meals`,
         headers: { cookie: user.cookie },
-        payload: { foodIds: ["00000000-0000-4000-8000-000000000000"] },
+        payload: { foodIds: [UNKNOWN_ID] },
       });
       expect(response.statusCode).toBe(400);
     });
 
-    it("rejects the whole batch and persists nothing when one foodId among several is unknown", async () => {
+    it("rejects the whole meal and persists nothing when one foodId among several is unknown", async () => {
       const user = await signUpUser(app);
       const babyId = await createBaby(app, user);
 
       const response = await app.inject({
         method: "POST",
-        url: `/api/babies/${babyId}/serve-logs`,
+        url: `/api/babies/${babyId}/meals`,
         headers: { cookie: user.cookie },
-        payload: { foodIds: [fixtures.egg.id, "00000000-0000-4000-8000-000000000000"] },
+        payload: { foodIds: [fixtures.egg.id, UNKNOWN_ID] },
       });
       expect(response.statusCode).toBe(400);
 
-      const list = await app.inject({
-        method: "GET",
-        url: `/api/babies/${babyId}/serve-logs`,
+      expect((await listMeals(user, babyId)).items).toHaveLength(0);
+      expect(await db.select().from(schema.meals)).toHaveLength(0);
+    });
+
+    it("rejects an unknown recipeId with 400 and persists nothing", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/babies/${babyId}/meals`,
         headers: { cookie: user.cookie },
+        payload: { foodIds: [fixtures.egg.id], recipeId: UNKNOWN_ID },
       });
-      expect(list.json<ServeLogsResponse>().items).toHaveLength(0);
+      expect(response.statusCode).toBe(400);
+      expect(await db.select().from(schema.meals)).toHaveLength(0);
     });
 
     it("rejects a servedAt more than 24h in the future", async () => {
@@ -235,28 +267,28 @@ describe("tracking routes", () => {
 
       const response = await app.inject({
         method: "POST",
-        url: `/api/babies/${babyId}/serve-logs`,
+        url: `/api/babies/${babyId}/meals`,
         headers: { cookie: user.cookie },
         payload: { foodIds: [fixtures.egg.id], servedAt: farFuture },
       });
       expect(response.statusCode).toBe(400);
     });
 
-    it("404s serve-log and allergen-progress routes for a baby owned by somebody else", async () => {
+    it("404s meal and allergen-progress routes for a baby owned by somebody else", async () => {
       const owner = await signUpUser(app, "Owner");
       const intruder = await signUpUser(app, "Intruder");
       const babyId = await createBaby(app, owner);
 
       const list = await app.inject({
         method: "GET",
-        url: `/api/babies/${babyId}/serve-logs`,
+        url: `/api/babies/${babyId}/meals`,
         headers: { cookie: intruder.cookie },
       });
       expect(list.statusCode).toBe(404);
 
       const create = await app.inject({
         method: "POST",
-        url: `/api/babies/${babyId}/serve-logs`,
+        url: `/api/babies/${babyId}/meals`,
         headers: { cookie: intruder.cookie },
         payload: { foodIds: [fixtures.egg.id] },
       });
@@ -270,31 +302,176 @@ describe("tracking routes", () => {
       expect(progress.statusCode).toBe(404);
     });
 
-    it("404s deleting another account's serve log and leaves it intact", async () => {
+    it("404s deleting another account's meal and leaves it intact", async () => {
       const owner = await signUpUser(app, "Owner");
       const intruder = await signUpUser(app, "Intruder");
       const babyId = await createBaby(app, owner);
-      const created = await app.inject({
-        method: "POST",
-        url: `/api/babies/${babyId}/serve-logs`,
-        headers: { cookie: owner.cookie },
-        payload: { foodIds: [fixtures.egg.id] },
-      });
-      const id = created.json<ServeLogItem[]>()[0]?.id;
+      const created = await postMeal(owner, babyId, { foodIds: [fixtures.egg.id] });
 
       const del = await app.inject({
         method: "DELETE",
-        url: `/api/serve-logs/${id}`,
+        url: `/api/meals/${created.id}`,
         headers: { cookie: intruder.cookie },
       });
       expect(del.statusCode).toBe(404);
 
-      const stillThere = await app.inject({
-        method: "GET",
-        url: `/api/babies/${babyId}/serve-logs`,
-        headers: { cookie: owner.cookie },
+      expect((await listMeals(owner, babyId)).items).toHaveLength(1);
+    });
+
+    it("404s deleting an unknown meal id", async () => {
+      const user = await signUpUser(app);
+      const response = await app.inject({
+        method: "DELETE",
+        url: `/api/meals/${UNKNOWN_ID}`,
+        headers: { cookie: user.cookie },
       });
-      expect(stillThere.json<ServeLogsResponse>().items).toHaveLength(1);
+      expect(response.statusCode).toBe(404);
+    });
+
+    it("takes the meal's foods with it when the meal is deleted", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      const created = await postMeal(user, babyId, { foodIds: [fixtures.egg.id, fixtures.banana.id] });
+
+      expect(await db.select().from(schema.mealFoods).where(eq(schema.mealFoods.mealId, created.id))).toHaveLength(2);
+
+      const del = await app.inject({
+        method: "DELETE",
+        url: `/api/meals/${created.id}`,
+        headers: { cookie: user.cookie },
+      });
+      expect(del.statusCode).toBe(204);
+
+      expect(await db.select().from(schema.mealFoods).where(eq(schema.mealFoods.mealId, created.id))).toHaveLength(0);
+    });
+  });
+
+  describe("PATCH /api/meals/:id", () => {
+    it("replaces the meal's foods atomically and round-trips through the list", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      const created = await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
+
+      const patch = await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${created.id}`,
+        headers: { cookie: user.cookie },
+        payload: { foodIds: [fixtures.banana.id, fixtures.banana.id] },
+      });
+      expect(patch.statusCode).toBe(200);
+      const updated = patch.json<MealItem>();
+      expect(updated.id).toBe(created.id);
+      expect(updated.foods.map((food) => food.slug)).toEqual(["banana"]);
+
+      // The replaced child is gone, not merely hidden from the response.
+      const children = await db.select().from(schema.mealFoods).where(eq(schema.mealFoods.mealId, created.id));
+      expect(children).toHaveLength(1);
+      expect(children[0]?.foodId).toBe(fixtures.banana.id);
+
+      const listed = (await listMeals(user, babyId)).items[0];
+      expect(listed?.foods.map((food) => food.slug)).toEqual(["banana"]);
+    });
+
+    it("updates servedAt, reactionNote and recipeId, leaving absent fields alone", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      const created = await postMeal(user, babyId, {
+        foodIds: [fixtures.egg.id],
+        reactionNote: "sleepy",
+        recipeId: fixtures.recipe.id,
+      });
+
+      const movedTo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+      const first = await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${created.id}`,
+        headers: { cookie: user.cookie },
+        payload: { servedAt: movedTo },
+      });
+      expect(first.statusCode).toBe(200);
+      const afterTimeChange = first.json<MealItem>();
+      expect(new Date(afterTimeChange.servedAt).toISOString()).toBe(movedTo);
+      // Untouched by a servedAt-only patch.
+      expect(afterTimeChange.reactionNote).toBe("sleepy");
+      expect(afterTimeChange.recipeId).toBe(fixtures.recipe.id);
+      expect(afterTimeChange.foods.map((food) => food.slug)).toEqual(["egg"]);
+
+      const second = await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${created.id}`,
+        headers: { cookie: user.cookie },
+        payload: { reactionNote: "  happy  ", recipeId: null },
+      });
+      const afterNoteChange = second.json<MealItem>();
+      expect(afterNoteChange.reactionNote).toBe("happy");
+      expect(afterNoteChange.recipeId).toBeNull();
+      expect(afterNoteChange.recipeTitle).toBeNull();
+
+      // An empty note clears it rather than storing "".
+      const third = await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${created.id}`,
+        headers: { cookie: user.cookie },
+        payload: { reactionNote: "" },
+      });
+      expect(third.json<MealItem>().reactionNote).toBeNull();
+    });
+
+    it("rejects an empty body, an empty/oversized food list, and unknown ids", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      const created = await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
+
+      const patch = (payload: Record<string, unknown>) =>
+        app.inject({
+          method: "PATCH",
+          url: `/api/meals/${created.id}`,
+          headers: { cookie: user.cookie },
+          payload,
+        });
+
+      expect((await patch({})).statusCode).toBe(400);
+      expect((await patch({ foodIds: [] })).statusCode).toBe(400);
+      expect((await patch({ foodIds: Array.from({ length: 26 }, () => fixtures.egg.id) })).statusCode).toBe(400);
+      expect((await patch({ foodIds: [UNKNOWN_ID] })).statusCode).toBe(400);
+      expect((await patch({ recipeId: UNKNOWN_ID })).statusCode).toBe(400);
+      expect((await patch({ servedAt: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString() })).statusCode).toBe(
+        400,
+      );
+
+      // Nothing above changed the meal.
+      const listed = (await listMeals(user, babyId)).items[0];
+      expect(listed?.foods.map((food) => food.slug)).toEqual(["egg"]);
+      expect(listed?.recipeId).toBeNull();
+    });
+
+    it("404s patching another account's meal and leaves it intact", async () => {
+      const owner = await signUpUser(app, "Owner");
+      const intruder = await signUpUser(app, "Intruder");
+      const babyId = await createBaby(app, owner);
+      const created = await postMeal(owner, babyId, { foodIds: [fixtures.egg.id] });
+
+      const patch = await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${created.id}`,
+        headers: { cookie: intruder.cookie },
+        payload: { foodIds: [fixtures.banana.id] },
+      });
+      expect(patch.statusCode).toBe(404);
+
+      const listed = (await listMeals(owner, babyId)).items[0];
+      expect(listed?.foods.map((food) => food.slug)).toEqual(["egg"]);
+    });
+
+    it("404s patching an unknown meal id", async () => {
+      const user = await signUpUser(app);
+      const response = await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${UNKNOWN_ID}`,
+        headers: { cookie: user.cookie },
+        payload: { reactionNote: "hello" },
+      });
+      expect(response.statusCode).toBe(404);
     });
   });
 
@@ -313,12 +490,7 @@ describe("tracking routes", () => {
       expect(emptyItems.length).toBeGreaterThanOrEqual(2);
       expect(emptyItems.every((item) => item.status === "not_started" && item.exposures === 0)).toBe(true);
 
-      await app.inject({
-        method: "POST",
-        url: `/api/babies/${babyId}/serve-logs`,
-        headers: { cookie: user.cookie },
-        payload: { foodIds: [fixtures.egg.id] },
-      });
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
 
       const progressOnce = await app.inject({
         method: "GET",
@@ -331,28 +503,58 @@ describe("tracking routes", () => {
       const peanutOnce = onceItems.find((item) => item.allergenSlug === "peanut");
       expect(peanutOnce).toMatchObject({ status: "not_started", exposures: 0 });
 
-      await app.inject({
-        method: "POST",
-        url: `/api/babies/${babyId}/serve-logs`,
-        headers: { cookie: user.cookie },
-        payload: { foodIds: [fixtures.egg.id] },
-      });
-      await app.inject({
-        method: "POST",
-        url: `/api/babies/${babyId}/serve-logs`,
-        headers: { cookie: user.cookie },
-        payload: { foodIds: [fixtures.egg.id] },
-      });
+      // A meal carrying the allergen alongside another food is still exactly
+      // one exposure of that allergen.
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id, fixtures.banana.id] });
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
 
       const progressThrice = await app.inject({
         method: "GET",
         url: `/api/babies/${babyId}/allergen-progress`,
         headers: { cookie: user.cookie },
       });
-      const eggThrice = progressThrice.json<AllergenProgressResponse>().items.find((item) => item.allergenSlug === "egg");
+      const eggThrice = progressThrice.json<AllergenProgressResponse>().items.find((i) => i.allergenSlug === "egg");
       expect(eggThrice).toMatchObject({ status: "established", exposures: 3 });
       expect(eggThrice?.firstAt).toBeTruthy();
       expect(eggThrice?.lastAt).toBeTruthy();
+    });
+
+    it("drops the exposures a deleted meal contributed", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      const first = await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
+
+      await app.inject({ method: "DELETE", url: `/api/meals/${first.id}`, headers: { cookie: user.cookie } });
+
+      const progress = await app.inject({
+        method: "GET",
+        url: `/api/babies/${babyId}/allergen-progress`,
+        headers: { cookie: user.cookie },
+      });
+      const egg = progress.json<AllergenProgressResponse>().items.find((item) => item.allergenSlug === "egg");
+      expect(egg).toMatchObject({ status: "started", exposures: 1 });
+    });
+
+    it("follows a PATCH that swaps the allergen food out of the meal", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      const created = await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
+
+      await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${created.id}`,
+        headers: { cookie: user.cookie },
+        payload: { foodIds: [fixtures.banana.id] },
+      });
+
+      const progress = await app.inject({
+        method: "GET",
+        url: `/api/babies/${babyId}/allergen-progress`,
+        headers: { cookie: user.cookie },
+      });
+      const egg = progress.json<AllergenProgressResponse>().items.find((item) => item.allergenSlug === "egg");
+      expect(egg).toMatchObject({ status: "not_started", exposures: 0 });
     });
   });
 
@@ -412,7 +614,7 @@ describe("tracking routes", () => {
       const user = await signUpUser(app);
       const response = await app.inject({
         method: "PUT",
-        url: "/api/recipes/00000000-0000-4000-8000-000000000000/favorite",
+        url: `/api/recipes/${UNKNOWN_ID}/favorite`,
         headers: { cookie: user.cookie },
       });
       expect(response.statusCode).toBe(404);

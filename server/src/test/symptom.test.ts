@@ -12,7 +12,7 @@ import {
   symptomCandidateSchema,
   triageLevelSchema,
 } from "@blw/shared";
-import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
+import { createTestApp, insertMeals, signUpUser, type TestUser } from "./helpers.js";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
 import { buildExposureSnapshot, noveltyFor, rankFallbackCandidates, type ExposureSnapshotItem } from "../ai/snapshot.js";
@@ -405,7 +405,7 @@ describe("buildExposureSnapshot", () => {
     const foods = await seedFoods(db);
     const onset = new Date();
 
-    await db.insert(schema.serveLogs).values([
+    await insertMeals(db, [
       { babyId, foodId: foods.peanutButter.id, servedAt: new Date(onset.getTime() - 2 * HOUR_MS) },
       { babyId, foodId: foods.carrot.id, servedAt: new Date(onset.getTime() - 40 * HOUR_MS) },
       // 169h before onset: one hour outside the window.
@@ -424,7 +424,7 @@ describe("buildExposureSnapshot", () => {
   it("marks the allergen class and the top-9 flag", async () => {
     const foods = await seedFoods(db);
     const onset = new Date();
-    await db.insert(schema.serveLogs).values([
+    await insertMeals(db, [
       { babyId, foodId: foods.peanutButter.id, servedAt: new Date(onset.getTime() - HOUR_MS) },
       { babyId, foodId: foods.carrot.id, servedAt: new Date(onset.getTime() - 2 * HOUR_MS) },
     ]);
@@ -437,7 +437,7 @@ describe("buildExposureSnapshot", () => {
   it("counts lifetime servings, including ones older than the window", async () => {
     const foods = await seedFoods(db);
     const onset = new Date();
-    await db.insert(schema.serveLogs).values([
+    await insertMeals(db, [
       { babyId, foodId: foods.carrot.id, servedAt: new Date(onset.getTime() - 500 * HOUR_MS) },
       { babyId, foodId: foods.carrot.id, servedAt: new Date(onset.getTime() - 300 * HOUR_MS) },
       { babyId, foodId: foods.carrot.id, servedAt: new Date(onset.getTime() - 3 * HOUR_MS) },
@@ -452,25 +452,42 @@ describe("buildExposureSnapshot", () => {
   it("flags a food's very first serving as a first exposure", async () => {
     const foods = await seedFoods(db);
     const onset = new Date();
-    await db
-      .insert(schema.serveLogs)
-      .values({ babyId, foodId: foods.peanutButter.id, servedAt: new Date(onset.getTime() - HOUR_MS) });
+    await insertMeals(db, [{ babyId, foodId: foods.peanutButter.id, servedAt: new Date(onset.getTime() - HOUR_MS) }]);
 
     const snapshot = await buildExposureSnapshot(db, babyId, onset);
     expect(snapshot[0]).toMatchObject({ timesServedEver: 1, firstExposure: true });
   });
 
-  it("never sees another baby's serve logs", async () => {
+  it("never sees another baby's meals", async () => {
     const foods = await seedFoods(db);
     const otherUser = await signUpUser(app);
     const otherBabyId = await createBaby(app, otherUser.cookie);
     const onset = new Date();
 
-    await db
-      .insert(schema.serveLogs)
-      .values({ babyId: otherBabyId, foodId: foods.peanutButter.id, servedAt: new Date(onset.getTime() - HOUR_MS) });
+    await insertMeals(db, [
+      { babyId: otherBabyId, foodId: foods.peanutButter.id, servedAt: new Date(onset.getTime() - HOUR_MS) },
+    ]);
 
     expect(await buildExposureSnapshot(db, babyId, onset)).toEqual([]);
+  });
+
+  it("treats every food in one meal as its own serving, sharing the meal's timestamp", async () => {
+    const foods = await seedFoods(db);
+    const onset = new Date();
+
+    await insertMeals(db, [
+      {
+        babyId,
+        foodIds: [foods.peanutButter.id, foods.carrot.id],
+        servedAt: new Date(onset.getTime() - 3 * HOUR_MS),
+      },
+    ]);
+
+    const snapshot = await buildExposureSnapshot(db, babyId, onset);
+    expect(snapshot).toHaveLength(2);
+    expect(snapshot.map((item) => item.foodSlug).sort()).toEqual(["carrot", "peanut-butter"]);
+    expect(snapshot.every((item) => item.timesServedEver === 1 && item.firstExposure)).toBe(true);
+    expect(snapshot.every((item) => Math.abs(item.hoursBeforeOnset - 3) < 0.2)).toBe(true);
   });
 });
 
@@ -603,7 +620,7 @@ describe("POST /api/ai/symptom-check", () => {
     it("returns the ranked fallback rather than 403", async () => {
       await boot(null);
       const foods = await seedFoods(db);
-      await db.insert(schema.serveLogs).values([
+      await insertMeals(db, [
         { babyId, foodId: foods.peanutButter.id, servedAt: new Date(Date.now() - 60 * 60_000) },
         { babyId, foodId: foods.carrot.id, servedAt: new Date(Date.now() - 5 * HOUR_MS) },
       ]);
@@ -635,9 +652,7 @@ describe("POST /api/ai/symptom-check", () => {
     it("returns the parsed assessment and records the model", async () => {
       await boot(async () => fakeMessage({ parsedOutput: VALID_ASSESSMENT }));
       const foods = await seedFoods(db);
-      await db
-        .insert(schema.serveLogs)
-        .values({ babyId, foodId: foods.peanutButter.id, servedAt: new Date(Date.now() - HOUR_MS) });
+      await insertMeals(db, [{ babyId, foodId: foods.peanutButter.id, servedAt: new Date(Date.now() - HOUR_MS) }]);
 
       const response = await post({ babyId, survey: survey() });
       expect(response.statusCode).toBe(201);
@@ -681,9 +696,7 @@ describe("POST /api/ai/symptom-check", () => {
     it("puts every per-request detail in the first user message and no identifiers anywhere", async () => {
       await boot(async () => fakeMessage({ parsedOutput: VALID_ASSESSMENT }));
       const foods = await seedFoods(db);
-      await db
-        .insert(schema.serveLogs)
-        .values({ babyId, foodId: foods.peanutButter.id, servedAt: new Date(Date.now() - HOUR_MS) });
+      await insertMeals(db, [{ babyId, foodId: foods.peanutButter.id, servedAt: new Date(Date.now() - HOUR_MS) }]);
 
       await post({
         babyId,
@@ -720,9 +733,7 @@ describe("POST /api/ai/symptom-check", () => {
     it("falls back on a refusal without showing the parent an error", async () => {
       await boot(async () => fakeMessage({ stopReason: "refusal", parsedOutput: VALID_ASSESSMENT }));
       const foods = await seedFoods(db);
-      await db
-        .insert(schema.serveLogs)
-        .values({ babyId, foodId: foods.peanutButter.id, servedAt: new Date(Date.now() - HOUR_MS) });
+      await insertMeals(db, [{ babyId, foodId: foods.peanutButter.id, servedAt: new Date(Date.now() - HOUR_MS) }]);
 
       const response = await post({ babyId, survey: survey() });
       expect(response.statusCode).toBe(201);

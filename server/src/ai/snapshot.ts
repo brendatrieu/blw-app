@@ -15,7 +15,7 @@ import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import type { Novelty, ReactionType, Symptom, SymptomCandidate, SymptomSurvey } from "@blw/shared";
 import { MAX_CANDIDATES, SYMPTOM_WINDOW_HOURS, symptomEntry } from "@blw/shared";
 import type { Database } from "../db/index.js";
-import { allergens, foodAllergens, foods, serveLogs } from "../db/schema.js";
+import { allergens, foodAllergens, foods, mealFoods, meals } from "../db/schema.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -59,19 +59,21 @@ export async function buildExposureSnapshot(
 ): Promise<ExposureSnapshotItem[]> {
   const windowStart = new Date(onsetAt.getTime() - SYMPTOM_WINDOW_HOURS * HOUR_MS);
 
+  // One serving = one (meal, food) pair: a food eaten in two meals is two
+  // servings, a food listed once in one meal is one — the same granularity
+  // the old one-row-per-food serve log had.
   const servings = await db
     .select({
-      foodId: serveLogs.foodId,
+      foodId: mealFoods.foodId,
       foodSlug: foods.slug,
       foodName: foods.name,
-      servedAt: serveLogs.servedAt,
+      servedAt: meals.servedAt,
     })
-    .from(serveLogs)
-    .innerJoin(foods, eq(serveLogs.foodId, foods.id))
-    .where(
-      and(eq(serveLogs.babyId, babyId), lte(serveLogs.servedAt, onsetAt), gte(serveLogs.servedAt, windowStart)),
-    )
-    .orderBy(desc(serveLogs.servedAt));
+    .from(mealFoods)
+    .innerJoin(meals, eq(mealFoods.mealId, meals.id))
+    .innerJoin(foods, eq(mealFoods.foodId, foods.id))
+    .where(and(eq(meals.babyId, babyId), lte(meals.servedAt, onsetAt), gte(meals.servedAt, windowStart)))
+    .orderBy(desc(meals.servedAt));
 
   if (servings.length === 0) return [];
 
@@ -81,15 +83,14 @@ export async function buildExposureSnapshot(
   // established even though only seven servings fall inside the window.
   const totals = await db
     .select({
-      foodId: serveLogs.foodId,
+      foodId: mealFoods.foodId,
       timesServed: sql<number>`count(*)::int`,
-      firstServedAt: sql<string>`min(${serveLogs.servedAt})`,
+      firstServedAt: sql<string>`min(${meals.servedAt})`,
     })
-    .from(serveLogs)
-    .where(
-      and(eq(serveLogs.babyId, babyId), lte(serveLogs.servedAt, onsetAt), inArray(serveLogs.foodId, foodIds)),
-    )
-    .groupBy(serveLogs.foodId);
+    .from(mealFoods)
+    .innerJoin(meals, eq(mealFoods.mealId, meals.id))
+    .where(and(eq(meals.babyId, babyId), lte(meals.servedAt, onsetAt), inArray(mealFoods.foodId, foodIds)))
+    .groupBy(mealFoods.foodId);
 
   const totalsByFoodId = new Map(totals.map((row) => [row.foodId, row]));
 

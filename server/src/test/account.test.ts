@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { ACCOUNT_DELETE_CONFIRMATION, accountExportSchema, type AccountExport } from "@blw/shared";
-import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
+import { createTestApp, insertMeals, signUpUser, type TestUser } from "./helpers.js";
 import { encryptSecret, lastFour } from "../ai/crypto.js";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
@@ -12,7 +12,7 @@ const FAKE_KEY = "sk-ant-api03-EXPORTKEYEXPORTKEYEXPORTKEYEXPORT-zQ4t";
 const SECRET = "test-key-encryption-secret-0123456789-abcdef";
 
 /**
- * Minimal catalog: serve logs, favorites and pantry items all reference
+ * Minimal catalog: meals, favorites and pantry items all reference
  * `foods`/`recipes`, so the export's name-denormalising joins need real rows
  * behind them.
  */
@@ -25,21 +25,36 @@ async function seedCatalog(db: Database) {
     notes: "Cooked produce.",
   });
 
-  const [food] = await db
+  const [food, secondFood] = await db
     .insert(schema.foods)
-    .values({
-      slug: "sweet-potato",
-      name: "Sweet potato",
-      category: "veg",
-      ironLevel: "low",
-      vitaminCLevel: "high",
-      chokingRisk: "low",
-      minAgeMonths: 6,
-      prep6m: "strip",
-      prep9m: "chop",
-      prep12m: "dice",
-      storageCategory: "produce_cooked",
-    })
+    .values([
+      {
+        slug: "sweet-potato",
+        name: "Sweet potato",
+        category: "veg",
+        ironLevel: "low",
+        vitaminCLevel: "high",
+        chokingRisk: "low",
+        minAgeMonths: 6,
+        prep6m: "strip",
+        prep9m: "chop",
+        prep12m: "dice",
+        storageCategory: "produce_cooked",
+      },
+      {
+        slug: "broccoli",
+        name: "Broccoli",
+        category: "veg",
+        ironLevel: "low",
+        vitaminCLevel: "high",
+        chokingRisk: "low",
+        minAgeMonths: 6,
+        prep6m: "steam",
+        prep9m: "chop",
+        prep12m: "dice",
+        storageCategory: "produce_cooked",
+      },
+    ])
     .returning();
 
   const [recipe] = await db
@@ -53,7 +68,7 @@ async function seedCatalog(db: Database) {
     })
     .returning();
 
-  return { food: food!, recipe: recipe! };
+  return { food: food!, secondFood: secondFood!, recipe: recipe! };
 }
 
 interface SeededAccount {
@@ -83,13 +98,17 @@ async function seedOneOfEverything(
     .values({ userId, name: "Robin", birthDate: "2025-01-15", notes: "Loves squash" })
     .returning();
 
-  await db.insert(schema.serveLogs).values({
-    babyId: baby!.id,
-    foodId: catalog.food.id,
-    recipeId: catalog.recipe.id,
-    servedAt: new Date("2026-03-01T09:00:00Z"),
-    reactionNote: "Happy",
-  });
+  // One meal with two foods: enough for the export's nesting and for the
+  // delete sweep to prove `meal_foods` goes with its parent.
+  await insertMeals(db, [
+    {
+      babyId: baby!.id,
+      foodIds: [catalog.food.id, catalog.secondFood.id],
+      recipeId: catalog.recipe.id,
+      servedAt: new Date("2026-03-01T09:00:00Z"),
+      reactionNote: "Happy",
+    },
+  ]);
 
   await db.insert(schema.favorites).values({ userId, recipeId: catalog.recipe.id });
 
@@ -146,7 +165,7 @@ async function seedOneOfEverything(
 
 /** Every table the account owns, counted for this user specifically. */
 async function ownedRowCounts(db: Database, seeded: SeededAccount) {
-  const [babies, favorites, pantry, threads, aiKeys, users, sessions, accounts, serveLogs, symptomChecks, messages] =
+  const [babies, favorites, pantry, threads, aiKeys, users, sessions, accounts, meals, mealFoods, symptomChecks, messages] =
     await Promise.all([
       db.select().from(schema.babies).where(eq(schema.babies.userId, seeded.userId)),
       db.select().from(schema.favorites).where(eq(schema.favorites.userId, seeded.userId)),
@@ -158,7 +177,13 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
       db.select().from(schema.account).where(eq(schema.account.userId, seeded.userId)),
       // Reached through babies / threads, so these are counted by the id
       // seeded above rather than by user.
-      db.select().from(schema.serveLogs).where(eq(schema.serveLogs.babyId, seeded.babyId)),
+      db.select().from(schema.meals).where(eq(schema.meals.babyId, seeded.babyId)),
+      // Grandchildren of the baby: counted through the meal ids seeded above.
+      db
+        .select()
+        .from(schema.mealFoods)
+        .innerJoin(schema.meals, eq(schema.mealFoods.mealId, schema.meals.id))
+        .where(eq(schema.meals.babyId, seeded.babyId)),
       db.select().from(schema.symptomChecks).where(eq(schema.symptomChecks.babyId, seeded.babyId)),
       db.select().from(schema.chatMessages).where(eq(schema.chatMessages.threadId, seeded.threadId)),
     ]);
@@ -166,7 +191,8 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
   return {
     user: users.length,
     babies: babies.length,
-    serveLogs: serveLogs.length,
+    meals: meals.length,
+    mealFoods: mealFoods.length,
     favorites: favorites.length,
     pantryItems: pantry.length,
     symptomChecks: symptomChecks.length,
@@ -181,7 +207,8 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
 const FULL_COUNTS = {
   user: 1,
   babies: 1,
-  serveLogs: 1,
+  meals: 1,
+  mealFoods: 2,
   favorites: 1,
   pantryItems: 2,
   symptomChecks: 1,
@@ -195,7 +222,8 @@ const FULL_COUNTS = {
 const EMPTY_COUNTS = {
   user: 0,
   babies: 0,
-  serveLogs: 0,
+  meals: 0,
+  mealFoods: 0,
   favorites: 0,
   pantryItems: 0,
   symptomChecks: 0,
@@ -268,7 +296,7 @@ describe("account export", () => {
         "favorites",
         "pantryItems",
         "profile",
-        "serveLogs",
+        "meals",
         "symptomChecks",
       ].sort(),
     );
@@ -280,7 +308,7 @@ describe("account export", () => {
     expect(bundle.babies).toHaveLength(1);
     expect(bundle.babies[0]?.name).toBe("Robin");
 
-    expect(bundle.serveLogs).toHaveLength(1);
+    expect(bundle.meals).toHaveLength(1);
     expect(bundle.favorites).toHaveLength(1);
     // Closed pantry rows are history, not noise — both must be present.
     expect(bundle.pantryItems).toHaveLength(2);
@@ -298,9 +326,9 @@ describe("account export", () => {
     });
     const bundle = response.json<AccountExport>();
 
-    expect(bundle.serveLogs[0]?.foodName).toBe("Sweet potato");
-    expect(bundle.serveLogs[0]?.foodSlug).toBe("sweet-potato");
-    expect(bundle.serveLogs[0]?.recipeTitle).toBe("Sweet Potato Strips");
+    expect(bundle.meals[0]?.foods.map((food) => food.name)).toEqual(["Broccoli", "Sweet potato"]);
+    expect(bundle.meals[0]?.foods.map((food) => food.slug)).toEqual(["broccoli", "sweet-potato"]);
+    expect(bundle.meals[0]?.recipeTitle).toBe("Sweet Potato Strips");
     expect(bundle.favorites[0]?.recipeTitle).toBe("Sweet Potato Strips");
 
     const active = bundle.pantryItems.find((item) => item.status === "active");
@@ -368,7 +396,7 @@ describe("account export", () => {
 
     expect(bundle.profile.email).toBe(other.email);
     expect(bundle.babies).toHaveLength(0);
-    expect(bundle.serveLogs).toHaveLength(0);
+    expect(bundle.meals).toHaveLength(0);
     expect(bundle.favorites).toHaveLength(0);
     expect(bundle.pantryItems).toHaveLength(0);
     expect(bundle.symptomChecks).toHaveLength(0);

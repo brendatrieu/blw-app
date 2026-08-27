@@ -6,8 +6,8 @@ import { VitePWA } from "vite-plugin-pwa";
 import pkg from "./package.json";
 import {
   isCatalogRoute,
+  isMealPostRoute,
   isNetworkOnlyRoute,
-  isServeLogPostRoute,
   isUserDataRoute,
 } from "./src/pwa/route-matchers";
 
@@ -20,7 +20,7 @@ const workspaceRoot = fileURLToPath(new URL("..", import.meta.url));
 // PWA strategy per plan: generateSW, precache app shell + safety content,
 // navigateFallback to index.html (denying /api/*), and runtime caching tuned
 // per route class (catalog SWR, images cache-first, user data network-first,
-// auth/ai/account network-only) plus a BackgroundSync queue for serve-log POSTs.
+// auth/ai/account network-only) plus a BackgroundSync queue for meal POSTs.
 export default defineConfig({
   plugins: [
     react(),
@@ -91,12 +91,12 @@ export default defineConfig({
             handler: "NetworkOnly",
           },
           {
-            urlPattern: isServeLogPostRoute,
+            urlPattern: isMealPostRoute,
             handler: "NetworkOnly",
             method: "POST",
             options: {
               backgroundSync: {
-                name: "serve-log-queue",
+                name: "meal-queue",
                 options: {
                   maxRetentionTime: 24 * 60,
                 },

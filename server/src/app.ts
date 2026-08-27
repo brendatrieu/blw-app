@@ -12,7 +12,7 @@ import { registerSecurityHeaders } from "./plugins/security.js";
 import { registerAuth } from "./plugins/auth.js";
 import { registerCatalogRoutes } from "./routes/catalog.js";
 import { registerBabyRoutes } from "./routes/babies.js";
-import { registerServeLogRoutes } from "./routes/serve-logs.js";
+import { registerMealRoutes } from "./routes/meals.js";
 import { registerFavoriteRoutes } from "./routes/favorites.js";
 import { registerPantryRoutes } from "./routes/pantry.js";
 import { registerAiKeyRoutes } from "./routes/ai-keys.js";
@@ -78,7 +78,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
     registerCatalogRoutes(app, db); // catalog routes
     registerBabyRoutes(app, db); // baby profiles CRUD
-    registerServeLogRoutes(app, db); // serve logs + allergen progress
+    registerMealRoutes(app, db); // meals + allergen progress
     registerFavoriteRoutes(app, db); // recipe favorites
     registerPantryRoutes(app, db); // pantry items + expiry tracking
     registerSymptomRoutes(app, db, options.symptom); // triage + symptom checker
