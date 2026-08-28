@@ -18,8 +18,8 @@ describe("LogFoodForm (render)", () => {
     const html = renderWithProviders(createElement(LogFoodForm, { babyId: "baby-1", onDone: () => {} }));
     expect(html).toContain(">Food<");
     expect(html).toContain(">When<");
-    expect(html).toContain("Reaction note (optional)");
-    expect(html).toContain("Notes (optional)");
+    expect(html).toMatch(/Reaction note(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
+    expect(html).toMatch(/Notes(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
     expect(html).toContain(">Save<");
     expect(html).toContain(">Cancel<");
   });
@@ -31,7 +31,7 @@ describe("LogFoodForm (render)", () => {
 
   it("pins the 'Recipe (optional)' select as always present", () => {
     const html = renderWithProviders(createElement(LogFoodForm, { babyId: "baby-1", onDone: () => {} }));
-    expect(html).toContain("Recipe (optional)");
+    expect(html).toMatch(/Recipe(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
   });
 
   it("prefills edit mode from the meal fixture: food chips, note text, and recipe selection", () => {

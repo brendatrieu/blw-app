@@ -20,18 +20,18 @@ describe("AddPantryItemForm (render)", () => {
     expect(html).toContain(">Food<");
     expect(html).toContain(">Location<");
     expect(html).toContain(">Prepared<");
-    expect(html).toContain("Quantity note (optional)");
+    expect(html).toMatch(/Quantity note(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
   });
 
   it("renders the Notes field", () => {
     const html = renderForm();
-    expect(html).toContain("Notes (optional)");
+    expect(html).toMatch(/Notes(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
   });
 
   it("renders the optional Total servings and Best by fields", () => {
     const html = renderForm();
-    expect(html).toContain("Total servings (optional)");
-    expect(html).toContain("Best by (optional)");
+    expect(html).toMatch(/Total servings(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
+    expect(html).toMatch(/Best by(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
     // The Best by field is a DateField button, not a native date input.
     expect(html).toMatch(/aria-haspopup="dialog"[^>]*>[\s\S]*?Select a date/);
   });

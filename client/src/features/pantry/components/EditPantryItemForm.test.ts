@@ -38,7 +38,7 @@ describe("EditPantryItemForm (render)", () => {
     const html = renderForm();
     expect(html).toContain(">Location<");
     expect(html).toContain(">Prepared<");
-    expect(html).toContain("Quantity note (optional)");
+    expect(html).toMatch(/Quantity note(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
     expect(html).toContain("2 cubes left");
   });
 
@@ -55,8 +55,8 @@ describe("EditPantryItemForm (render)", () => {
 
   it("renders the Total servings and Best by fields, unset for an untracked item", () => {
     const html = renderForm();
-    expect(html).toContain("Total servings (optional)");
-    expect(html).toContain("Best by (optional)");
+    expect(html).toMatch(/Total servings(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
+    expect(html).toMatch(/Best by(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
     expect(html).toContain("Select a date");
   });
 
@@ -68,7 +68,7 @@ describe("EditPantryItemForm (render)", () => {
 
   it("renders the Notes field, empty for an item with no note", () => {
     const html = renderForm();
-    expect(html).toContain("Notes (optional)");
+    expect(html).toMatch(/Notes(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
   });
 
   it("prefills Notes from the item's stored value", () => {
