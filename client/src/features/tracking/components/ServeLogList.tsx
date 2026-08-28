@@ -57,6 +57,11 @@ export function MealCard({ meal, babyId, pendingDeleteId, onRequestDelete, onCan
             >
               <span aria-hidden="true">{getFoodEmoji(food.slug, food.category)}</span>
               {food.name}
+              {food.pantryItemId && (
+                <span aria-label="from pantry" title="From pantry" className="text-xs text-[var(--color-text-muted)]">
+                  🧺
+                </span>
+              )}
             </span>
           ))}
         </div>
@@ -84,6 +89,8 @@ export function MealCard({ meal, babyId, pendingDeleteId, onRequestDelete, onCan
       )}
 
       <span className="text-xs text-[var(--color-text-muted)]">{timeLabel(meal.servedAt)}</span>
+
+      {meal.notes && <span className="text-xs text-[var(--color-text-muted)]">{meal.notes}</span>}
 
       {meal.reactionNote && (
         <span className="text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</span>

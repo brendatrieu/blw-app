@@ -313,6 +313,11 @@ export const meals = pgTable(
     // hours_before_onset over a 168h window, which needs hour precision.
     servedAt: timestamp("served_at", { withTimezone: true }).notNull(),
     reactionNote: text("reaction_note"),
+    // General, non-clinical note ("ate it all", "second time trying this").
+    // Deliberately SEPARATE from reaction_note: the AI symptom/snapshot
+    // pipeline treats reaction_note — and only reaction_note — as a reaction
+    // signal, so writing here can never make a food look reactive.
+    notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("meals_baby_id_served_at_idx").on(t.babyId, t.servedAt.desc())],
@@ -328,6 +333,11 @@ export const mealFoods = pgTable(
     foodId: uuid("food_id")
       .notNull()
       .references(() => foods.id),
+    // Provenance: set only when this food row was created by serving a
+    // pantry item (POST /api/pantry/:id/serve). ON DELETE SET NULL so
+    // deleting the pantry item never removes eaten-food history — the meal
+    // simply loses its link back to the container it came from.
+    pantryItemId: uuid("pantry_item_id").references(() => pantryItems.id, { onDelete: "set null" }),
   },
   (t) => [
     uniqueIndex("meal_foods_meal_food_idx").on(t.mealId, t.foodId),
@@ -353,6 +363,19 @@ export const pantryItems = pgTable(
     status: pantryStatusEnum("status").notNull().default("active"),
     statusChangedAt: timestamp("status_changed_at", { withTimezone: true }).notNull().defaultNow(),
     quantityNote: text("quantity_note"),
+    // Optional servings tracking. Both columns are null together (tracking
+    // off) or both set (tracking on): servings_total is what the container
+    // held when it was prepared, servings_left what is still in it. Serving
+    // decrements servings_left and finishes the item when it hits 0.
+    servingsTotal: integer("servings_total"),
+    servingsLeft: integer("servings_left"),
+    // Parent-declared date on the packaging/container. Purely informational:
+    // the derived expiresAt/useSoon/expired window is still computed from
+    // prepared_at, and the client shows this instead when it is set.
+    bestBy: date("best_by"),
+    // Free-form note about the container itself, separate from the
+    // measurement-flavoured quantity_note ("half a portion", "3 cubes").
+    notes: text("notes"),
   },
   (t) => [
     index("pantry_items_user_id_idx").on(t.userId),

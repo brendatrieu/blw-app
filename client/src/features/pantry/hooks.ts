@@ -1,6 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CreatePantryItemInput, PantryItem, PantryResponse, PantryView, UpdatePantryItemInput } from "@blw/shared";
-import { createPantryItem, fetchPantry, updatePantryItem } from "./api.js";
+import type {
+  CreatePantryItemInput,
+  MealsResponse,
+  PantryItem,
+  PantryResponse,
+  PantryView,
+  ServePantryItemInput,
+  UpdatePantryItemInput,
+} from "@blw/shared";
+import { createPantryItem, fetchPantry, servePantryItem, updatePantryItem } from "./api.js";
+import { useCelebration } from "../../components/ui/Celebration.js";
+import { celebrateForNewMeal, snapshotMealCelebrationContext, trackingKeys } from "../tracking/hooks.js";
 
 export const pantryKeys = {
   list: (view: PantryView) => ["pantry", view] as const,
@@ -58,6 +68,41 @@ export function useUpdatePantryItem() {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["pantry"] });
+    },
+  });
+}
+
+/**
+ * Serving a pantry item creates a meal in the same stroke, so it drives the
+ * exact same celebration moments as logging one directly — see
+ * `celebrateForNewMeal` in the tracking feature, which this mirrors rather
+ * than duplicates (never both this AND `useCreateMeal` firing for the same
+ * action; a serve never goes through `useCreateMeal`).
+ *
+ * Both segments of the pantry cache are invalidated on settle: a tracked
+ * item that hits 0 servings flips to "finished" server-side and disappears
+ * from Active into History in the same response, so both views need a
+ * refetch regardless of which one the card was rendered in.
+ */
+export function usePantryServe(babyId: string | undefined) {
+  const queryClient = useQueryClient();
+  const { celebrate } = useCelebration();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ServePantryItemInput }) => servePantryItem(id, input),
+    onMutate: () => snapshotMealCelebrationContext(queryClient, babyId),
+    onSuccess: ({ meal }, _variables, context) => {
+      if (!babyId) return;
+      const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
+      for (const [key, data] of snapshots) {
+        if (data) queryClient.setQueryData(key, { items: [meal, ...data.items] });
+      }
+      celebrateForNewMeal(babyId, context, celebrate);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["pantry"] });
+      if (!babyId) return;
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
     },
   });
 }

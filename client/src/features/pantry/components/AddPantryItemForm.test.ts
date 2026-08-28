@@ -23,6 +23,19 @@ describe("AddPantryItemForm (render)", () => {
     expect(html).toContain("Quantity note (optional)");
   });
 
+  it("renders the Notes field", () => {
+    const html = renderForm();
+    expect(html).toContain("Notes (optional)");
+  });
+
+  it("renders the optional Total servings and Best by fields", () => {
+    const html = renderForm();
+    expect(html).toContain("Total servings (optional)");
+    expect(html).toContain("Best by (optional)");
+    // The Best by field is a DateField button, not a native date input.
+    expect(html).toMatch(/aria-haspopup="dialog"[^>]*>[\s\S]*?Select a date/);
+  });
+
   it("disables the submit button while zero foods are selected in the default 'food' source", () => {
     const html = renderForm();
     expect(html).toMatch(/<button[^>]*type="submit"[^>]*disabled[^>]*>Add to pantry</);

@@ -27,13 +27,39 @@ export const servedAtSchema = z
     }
   });
 
-/** Empty string from a form field means "no note", not an empty string. */
-const optionalReactionNote = z
+/** Empty string from a form field means "no note", not an empty string.
+ * Exported so the pantry serve endpoint takes the identical note field. */
+export const optionalReactionNote = z
   .string()
   .trim()
   .max(500, "Reaction note must be 500 characters or fewer")
   .nullish()
   .transform((value) => (value ? value : null));
+
+/**
+ * A general, non-clinical note on a meal ("ate the whole thing", "second
+ * try"). Deliberately a SEPARATE field from `reactionNote`: only
+ * `reactionNote` is read as a reaction signal by the AI symptom/snapshot
+ * pipeline, so anything written here can never mark a food reactive.
+ *
+ * Same handling as `optionalReactionNote` — trimmed, `""`/null/undefined all
+ * collapse to null, 500 characters max. Exported so the pantry create/edit
+ * and serve endpoints take the identical field.
+ */
+export const optionalNotes = z
+  .string()
+  .trim()
+  .max(500, "Notes must be 500 characters or fewer")
+  .nullish()
+  .transform((value) => (value ? value : null));
+
+/**
+ * The PATCH form of `optionalNotes`: an absent key leaves the column alone,
+ * where an explicit `null` (or `""`) clears it. `.optional()` short-circuits
+ * on `undefined` without running the inner transform, which is exactly the
+ * "absent means untouched" semantics a partial update needs.
+ */
+export const patchNotes = optionalNotes.optional();
 
 // ---------------------------------------------------------------------------
 // GET/POST /api/babies/:babyId/meals, PATCH/DELETE /api/meals/:id
@@ -68,6 +94,8 @@ export const createMealInputSchema = z.object({
   /** Defaults to now on the server when omitted. */
   servedAt: servedAtSchema.optional(),
   reactionNote: optionalReactionNote,
+  /** General note — never read as a reaction signal. See `optionalNotes`. */
+  notes: optionalNotes,
 });
 export type CreateMealInput = z.input<typeof createMealInputSchema>;
 
@@ -91,6 +119,7 @@ export const updateMealInputSchema = z
     recipeId: z.string().uuid().nullable().optional(),
     servedAt: servedAtSchema.optional(),
     reactionNote: patchReactionNote,
+    notes: patchNotes,
   })
   .refine((value) => Object.values(value).some((field) => field !== undefined), {
     message: "At least one field must be provided",
@@ -107,6 +136,12 @@ export const mealFoodSchema = z.object({
   slug: z.string(),
   name: z.string(),
   category: foodCategorySchema,
+  /**
+   * The pantry item this food was served from, or `null` for a meal logged
+   * by hand. Only POST /api/pantry/:id/serve sets it — logging through
+   * /api/babies/:babyId/meals never links to (or decrements) the pantry.
+   */
+  pantryItemId: z.string().uuid().nullable(),
 });
 export type MealFood = z.infer<typeof mealFoodSchema>;
 
@@ -115,6 +150,8 @@ export const mealItemSchema = z.object({
   babyId: z.string().uuid(),
   servedAt: z.string(),
   reactionNote: z.string().nullable(),
+  /** General note, distinct from `reactionNote` — see `optionalNotes`. */
+  notes: z.string().nullable(),
   recipeId: z.string().uuid().nullable(),
   recipeTitle: z.string().nullable(),
   /** Always at least one food, ordered by name for a stable render. */

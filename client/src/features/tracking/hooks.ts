@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type {
   AllergenProgressResponse,
   CreateMealInput,
@@ -19,7 +19,7 @@ import {
   updateMeal,
   type MealsQuery,
 } from "./api.js";
-import { useCelebration } from "../../components/ui/Celebration.js";
+import { useCelebration, type CelebrationOptions } from "../../components/ui/Celebration.js";
 
 export const trackingKeys = {
   meals: (babyId: string) => ["meals", babyId] as const,
@@ -60,13 +60,61 @@ export function useIsFavorited(recipeId: string | undefined): boolean {
   return Boolean(recipeId && data?.items.some((item) => item.recipeId === recipeId));
 }
 
+export interface MealCelebrationContext {
+  previousProgress: AllergenProgressResponse | undefined;
+  hadAnyMeals: boolean;
+}
+
 /**
- * Creating a meal also drives the app's two celebration moments: the very
- * first meal ever logged ("First food logged!") and an allergen crossing
- * into "established" as a result of this meal. `onMutate` snapshots what was
- * true just before the mutation (whether any meals already existed, and each
- * allergen's status) so `onSuccess` can diff against a fresh fetch and fire
- * at most one celebration — never both, and never on edit/delete.
+ * Snapshot taken just before a new meal is created — whether any meals
+ * already existed, and each allergen's status — so `celebrateForNewMeal` can
+ * later diff a fresh fetch against it and fire at most one celebration.
+ * Shared by every mutation that produces a brand-new meal (ordinary logging
+ * via `useCreateMeal`, and pantry's `usePantryServe`) so they fire the exact
+ * same celebration logic instead of each duplicating it.
+ */
+export function snapshotMealCelebrationContext(
+  queryClient: QueryClient,
+  babyId: string | undefined,
+): MealCelebrationContext | undefined {
+  if (!babyId) return undefined;
+  const previousProgress = queryClient.getQueryData<AllergenProgressResponse>(trackingKeys.allergenProgress(babyId));
+  const mealSnapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
+  const hadAnyMeals = mealSnapshots.some(([, data]) => (data?.items.length ?? 0) > 0);
+  return { previousProgress, hadAnyMeals };
+}
+
+/**
+ * The app's two celebration moments for a freshly-created meal: the very
+ * first meal ever logged ("First food logged!"), or — otherwise — an
+ * allergen that crossed into "established" as a result of this meal. Fires
+ * at most one, diffing a fresh allergen-progress fetch against the snapshot
+ * `snapshotMealCelebrationContext` took just before the mutation.
+ */
+export function celebrateForNewMeal(
+  babyId: string,
+  context: MealCelebrationContext | undefined,
+  celebrate: (options: CelebrationOptions) => void,
+): void {
+  if (!context?.hadAnyMeals) {
+    celebrate({ title: "First food logged!", emoji: "🎉" });
+    return;
+  }
+
+  void fetchAllergenProgress(babyId).then((fresh) => {
+    const previousStatus = new Map((context.previousProgress?.items ?? []).map((item) => [item.allergenSlug, item.status]));
+    const newlyEstablished = fresh.items.find(
+      (item) => item.status === "established" && previousStatus.get(item.allergenSlug) !== "established",
+    );
+    if (newlyEstablished) {
+      celebrate({ title: `${newlyEstablished.allergenName} is established!`, emoji: "🌟" });
+    }
+  });
+}
+
+/**
+ * Creating a meal also drives the app's celebration moments — see
+ * `celebrateForNewMeal` — and never fires on edit/delete.
  */
 export function useCreateMeal(babyId: string | undefined) {
   const queryClient = useQueryClient();
@@ -76,34 +124,14 @@ export function useCreateMeal(babyId: string | undefined) {
       if (!babyId) throw new Error("useCreateMeal called with no active baby");
       return createMeal(babyId, input);
     },
-    onMutate: () => {
-      if (!babyId) return undefined;
-      const previousProgress = queryClient.getQueryData<AllergenProgressResponse>(trackingKeys.allergenProgress(babyId));
-      const mealSnapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
-      const hadAnyMeals = mealSnapshots.some(([, data]) => (data?.items.length ?? 0) > 0);
-      return { previousProgress, hadAnyMeals };
-    },
+    onMutate: () => snapshotMealCelebrationContext(queryClient, babyId),
     onSuccess: (created, _input, context) => {
       if (!babyId) return;
       const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
       for (const [key, data] of snapshots) {
         if (data) queryClient.setQueryData(key, { items: [created, ...data.items] });
       }
-
-      if (!context?.hadAnyMeals) {
-        celebrate({ title: "First food logged!", emoji: "🎉" });
-        return;
-      }
-
-      void fetchAllergenProgress(babyId).then((fresh) => {
-        const previousStatus = new Map((context.previousProgress?.items ?? []).map((item) => [item.allergenSlug, item.status]));
-        const newlyEstablished = fresh.items.find(
-          (item) => item.status === "established" && previousStatus.get(item.allergenSlug) !== "established",
-        );
-        if (newlyEstablished) {
-          celebrate({ title: `${newlyEstablished.allergenName} is established!`, emoji: "🌟" });
-        }
-      });
+      celebrateForNewMeal(babyId, context, celebrate);
     },
     onSettled: () => {
       if (!babyId) return;

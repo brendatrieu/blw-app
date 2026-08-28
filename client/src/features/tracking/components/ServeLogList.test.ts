@@ -88,11 +88,12 @@ describe("MealCard (render)", () => {
     babyId: "baby-1",
     servedAt: new Date(2026, 7, 26, 14, 5).toISOString(),
     reactionNote: null,
+    notes: null,
     recipeId: null,
     recipeTitle: null,
     foods: [
-      { id: "food-1", slug: "avocado", name: "Avocado", category: "fruit" },
-      { id: "food-2", slug: "chicken", name: "Chicken", category: "protein" },
+      { id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", pantryItemId: null },
+      { id: "food-2", slug: "chicken", name: "Chicken", category: "protein", pantryItemId: null },
     ],
   };
 
@@ -103,6 +104,23 @@ describe("MealCard (render)", () => {
     // getFoodEmoji resolves a real emoji for both slugs; just assert an
     // aria-hidden emoji span precedes each name rather than pin the glyph.
     expect(html).toMatch(/<span aria-hidden="true">[^<]+<\/span>\s*Avocado/);
+  });
+
+  it("shows a 'from pantry' marker on a food whose pantryItemId is set", () => {
+    const html = renderMealCard({
+      ...baseMeal,
+      foods: [
+        { id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", pantryItemId: "pantry-1" },
+        { id: "food-2", slug: "chicken", name: "Chicken", category: "protein", pantryItemId: null },
+      ],
+    });
+    expect(html).toContain('aria-label="from pantry"');
+    expect((html.match(/aria-label="from pantry"/g) ?? []).length).toBe(1);
+  });
+
+  it("omits the 'from pantry' marker when no food has a pantryItemId", () => {
+    const html = renderMealCard(baseMeal);
+    expect(html).not.toContain('aria-label="from pantry"');
   });
 
   it("shows the recipe title line when the meal has one", () => {
@@ -130,6 +148,20 @@ describe("MealCard (render)", () => {
   it("omits the reaction note when absent", () => {
     const html = renderMealCard(baseMeal);
     expect(html).not.toContain("Reaction:");
+  });
+
+  it("shows the general note as a plain line, distinct from the reaction note", () => {
+    const html = renderMealCard({ ...baseMeal, notes: "ate the whole thing", reactionNote: "mild rash" });
+    expect(html).toContain("ate the whole thing");
+    expect(html).toContain("Reaction: ");
+    expect(html).toContain("mild rash");
+    // The general note text must not itself be prefixed "Reaction:".
+    expect(html).not.toMatch(/Reaction:\s*ate the whole thing/);
+  });
+
+  it("omits the general note line when absent", () => {
+    const html = renderMealCard(baseMeal);
+    expect(html).not.toContain("ate the whole thing");
   });
 
   it("links Edit to /log-meal?edit=<id>", () => {

@@ -66,12 +66,16 @@ export async function createTestApp(
   // Passthrough for buildApp's other injection points (currently the AI key
   // verifier, so key-validation tests never touch the network).
   appOverrides: Omit<BuildAppOptions, "env" | "db" | "authLogger" | "logger"> = {},
+  // Lets a test hand the routes a faulted view of the database (e.g. a write
+  // that throws mid-transaction) while keeping the returned `db` clean for
+  // assertions about what actually persisted.
+  wrapDb: (db: Database) => Database = (value) => value,
 ): Promise<{ app: FastifyInstance; db: Database; close: () => Promise<void> }> {
   const { db, close } = await createTestDb();
   const app = buildApp({
     ...appOverrides,
     env: testEnv(envOverrides),
-    db,
+    db: wrapDb(db),
     authLogger: silentLogger,
     // Off for every test, including the ones that override NODE_ENV away
     // from "test" — request logs would otherwise flood the suite output.
@@ -96,6 +100,13 @@ export interface MealSeed {
   servedAt: Date;
   reactionNote?: string | null;
   recipeId?: string | null;
+  /** General, non-clinical note on the meal itself (see schema.meals.notes). */
+  notes?: string | null;
+  /**
+   * Set when every food in this meal was served from the same pantry item
+   * (POST /api/pantry/:id/serve provenance). Applied to all of `foodIds`.
+   */
+  pantryItemId?: string | null;
 }
 
 /**
@@ -117,11 +128,14 @@ export async function insertMeals(db: Database, seeds: MealSeed[]): Promise<stri
         servedAt: seed.servedAt,
         reactionNote: seed.reactionNote ?? null,
         recipeId: seed.recipeId ?? null,
+        notes: seed.notes ?? null,
       })
       .returning();
     if (!meal) throw new Error("meal insert returned no row");
 
-    await db.insert(schema.mealFoods).values(foodIds.map((foodId) => ({ mealId: meal.id, foodId })));
+    await db
+      .insert(schema.mealFoods)
+      .values(foodIds.map((foodId) => ({ mealId: meal.id, foodId, pantryItemId: seed.pantryItemId ?? null })));
     ids.push(meal.id);
   }
   return ids;

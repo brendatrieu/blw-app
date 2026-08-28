@@ -1,7 +1,12 @@
 import { beforeEach, afterEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import { ACCOUNT_DELETE_CONFIRMATION, accountExportSchema, type AccountExport } from "@blw/shared";
+import {
+  ACCOUNT_DELETE_CONFIRMATION,
+  ACCOUNT_EXPORT_VERSION,
+  accountExportSchema,
+  type AccountExport,
+} from "@blw/shared";
 import { createTestApp, insertMeals, signUpUser, type TestUser } from "./helpers.js";
 import { encryptSecret, lastFour } from "../ai/crypto.js";
 import type { Database } from "../db/index.js";
@@ -98,8 +103,38 @@ async function seedOneOfEverything(
     .values({ userId, name: "Robin", birthDate: "2025-01-15", notes: "Loves squash" })
     .returning();
 
+  // Two pantry rows: one live, one closed. The closed row is the "history"
+  // half — an export that only carried active items would silently drop it.
+  const [activePantryItem] = await db
+    .insert(schema.pantryItems)
+    .values([
+      {
+        userId,
+        foodId: catalog.food.id,
+        preparedAt: new Date("2026-03-01T08:00:00Z"),
+        location: "fridge",
+        status: "active",
+        quantityNote: "2 strips",
+        servingsTotal: 4,
+        servingsLeft: 3,
+        bestBy: "2026-03-10",
+        notes: "Steamed extra soft.",
+      },
+      {
+        userId,
+        recipeId: catalog.recipe.id,
+        label: "Batch from Sunday",
+        preparedAt: new Date("2026-02-20T08:00:00Z"),
+        location: "freezer",
+        status: "finished",
+      },
+    ])
+    .returning();
+
   // One meal with two foods: enough for the export's nesting and for the
-  // delete sweep to prove `meal_foods` goes with its parent.
+  // delete sweep to prove `meal_foods` goes with its parent. Served from the
+  // active pantry item and carrying a meal note, so the export round-trips
+  // both `pantryItemId` and both notes fields with real, non-null values.
   await insertMeals(db, [
     {
       babyId: baby!.id,
@@ -107,31 +142,12 @@ async function seedOneOfEverything(
       recipeId: catalog.recipe.id,
       servedAt: new Date("2026-03-01T09:00:00Z"),
       reactionNote: "Happy",
+      notes: "Ate it all.",
+      pantryItemId: activePantryItem!.id,
     },
   ]);
 
   await db.insert(schema.favorites).values({ userId, recipeId: catalog.recipe.id });
-
-  // Two pantry rows: one live, one closed. The closed row is the "history"
-  // half — an export that only carried active items would silently drop it.
-  await db.insert(schema.pantryItems).values([
-    {
-      userId,
-      foodId: catalog.food.id,
-      preparedAt: new Date("2026-03-01T08:00:00Z"),
-      location: "fridge",
-      status: "active",
-      quantityNote: "2 strips",
-    },
-    {
-      userId,
-      recipeId: catalog.recipe.id,
-      label: "Batch from Sunday",
-      preparedAt: new Date("2026-02-20T08:00:00Z"),
-      location: "freezer",
-      status: "finished",
-    },
-  ]);
 
   await db.insert(schema.symptomChecks).values({
     babyId: baby!.id,
@@ -301,6 +317,9 @@ describe("account export", () => {
       ].sort(),
     );
 
+    expect(bundle.exportVersion).toBe(3);
+    expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
+
     expect(bundle.profile.email).toBe(user.email);
     expect(bundle.profile.name).toBe("Test Parent");
     expect(bundle.profile.createdAt).toBeTruthy();
@@ -335,6 +354,40 @@ describe("account export", () => {
     const finished = bundle.pantryItems.find((item) => item.status === "finished");
     expect(active?.foodName).toBe("Sweet potato");
     expect(finished?.recipeTitle).toBe("Sweet Potato Strips");
+  });
+
+  it("carries meal notes, pantry provenance, and the servings/bestBy/notes fields added in v3", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/account/export",
+      headers: { cookie: user.cookie },
+    });
+    const bundle = response.json<AccountExport>();
+
+    // The meal's own note (distinct from reactionNote) round-trips.
+    expect(bundle.meals[0]?.notes).toBe("Ate it all.");
+
+    // Both foods in this meal were served out of the same pantry item; the
+    // nested meal-food entries must carry that provenance through, non-null.
+    const servedSweetPotato = bundle.meals[0]?.foods.find((food) => food.slug === "sweet-potato");
+    const activePantryItem = bundle.pantryItems.find((item) => item.status === "active");
+    expect(servedSweetPotato?.pantryItemId).toBe(activePantryItem?.id);
+    expect(servedSweetPotato?.pantryItemId).not.toBeNull();
+
+    expect(activePantryItem).toMatchObject({
+      servingsTotal: 4,
+      servingsLeft: 3,
+      bestBy: "2026-03-10",
+      notes: "Steamed extra soft.",
+    });
+
+    const finishedPantryItem = bundle.pantryItems.find((item) => item.status === "finished");
+    expect(finishedPantryItem).toMatchObject({
+      servingsTotal: null,
+      servingsLeft: null,
+      bestBy: null,
+      notes: null,
+    });
   });
 
   it("carries the AI key status but no key material anywhere in the bundle", async () => {

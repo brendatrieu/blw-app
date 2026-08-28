@@ -60,9 +60,10 @@ describe("resolveEditState", () => {
     babyId: "baby-1",
     servedAt: "2026-08-20T08:30:00.000Z",
     reactionNote: null,
+    notes: null,
     recipeId: null,
     recipeTitle: null,
-    foods: [{ id: "food-1", slug: "avocado", name: "Avocado", category: "fruit" }],
+    foods: [{ id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", pantryItemId: null }],
   };
 
   it("reports 'loading' while still loading, regardless of items/error", () => {

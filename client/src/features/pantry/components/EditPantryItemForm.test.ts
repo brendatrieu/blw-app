@@ -20,6 +20,10 @@ const ITEM: PantryItem = {
   useSoon: false,
   expired: false,
   quantityNote: "2 cubes left",
+  servingsTotal: null,
+  servingsLeft: null,
+  bestBy: null,
+  notes: null,
 };
 
 function renderForm(item: PantryItem = ITEM) {
@@ -47,5 +51,28 @@ describe("EditPantryItemForm (render)", () => {
     const html = renderForm();
     expect(html).toContain(">Save<");
     expect(html).toContain(">Cancel<");
+  });
+
+  it("renders the Total servings and Best by fields, unset for an untracked item", () => {
+    const html = renderForm();
+    expect(html).toContain("Total servings (optional)");
+    expect(html).toContain("Best by (optional)");
+    expect(html).toContain("Select a date");
+  });
+
+  it("prefills Total servings and the Best by value from a tracked item", () => {
+    const html = renderForm({ ...ITEM, servingsTotal: 6, servingsLeft: 2, bestBy: "2026-08-29" });
+    expect(html).toMatch(/id="pantry-edit-servings"[^>]*value="6"/);
+    expect(html).toContain("Aug 29, 2026");
+  });
+
+  it("renders the Notes field, empty for an item with no note", () => {
+    const html = renderForm();
+    expect(html).toContain("Notes (optional)");
+  });
+
+  it("prefills Notes from the item's stored value", () => {
+    const html = renderForm({ ...ITEM, notes: "PANTRY-NOTES-FIXTURE unlike the placeholder" });
+    expect(html).toContain("PANTRY-NOTES-FIXTURE unlike the placeholder");
   });
 });

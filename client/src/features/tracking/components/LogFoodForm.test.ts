@@ -19,6 +19,7 @@ describe("LogFoodForm (render)", () => {
     expect(html).toContain(">Food<");
     expect(html).toContain(">When<");
     expect(html).toContain("Reaction note (optional)");
+    expect(html).toContain("Notes (optional)");
     expect(html).toContain(">Save<");
     expect(html).toContain(">Cancel<");
   });
@@ -68,11 +69,12 @@ describe("LogFoodForm (render)", () => {
       babyId: "baby-1",
       servedAt: new Date(2026, 7, 20, 8, 30).toISOString(),
       reactionNote: "mild rash around mouth",
+      notes: "NOTES-FIXTURE distinct from any placeholder",
       recipeId: favorite.recipeId,
       recipeTitle: favorite.title,
       foods: [
-        { id: food1.id, slug: food1.slug, name: food1.name, category: food1.category },
-        { id: food2.id, slug: food2.slug, name: food2.name, category: food2.category },
+        { id: food1.id, slug: food1.slug, name: food1.name, category: food1.category, pantryItemId: null },
+        { id: food2.id, slug: food2.slug, name: food2.name, category: food2.category, pantryItemId: null },
       ],
     };
 
@@ -88,8 +90,9 @@ describe("LogFoodForm (render)", () => {
     // Selected food chips (emoji + name), matched against the seeded foods cache.
     expect(html).toContain(food1.name);
     expect(html).toContain(food2.name);
-    // Reaction note prefilled verbatim.
+    // Reaction note and general note both prefilled verbatim, into distinct fields.
     expect(html).toContain(meal.reactionNote as string);
+    expect(html).toContain(meal.notes as string);
     // Recipe select shows the meal's recipe as the chosen <option> (node-env
     // SSR renders the matching option with a `selected` attribute).
     expect(html).toMatch(new RegExp(`<option[^>]*value="${favorite.recipeId}"[^>]*selected[^>]*>${favorite.title}<`));
@@ -102,6 +105,7 @@ describe("resolveMealSubmit", () => {
     recipeId: null,
     servedAt: "2026-08-20T08:30:00.000Z",
     reactionNote: null,
+    notes: null,
   };
 
   it("resolves to create when no meal id is given", () => {

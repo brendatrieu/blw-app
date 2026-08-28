@@ -6,10 +6,11 @@ import { getFoodEmoji } from "../../catalog/foodEmoji.js";
 import { useCreatePantryItem } from "../hooks.js";
 import { LOCATIONS } from "../format.js";
 import { Field } from "../../../components/ui/Field.js";
-import { Input } from "../../../components/ui/Input.js";
+import { Input, Textarea } from "../../../components/ui/Input.js";
 import { Select } from "../../../components/ui/Select.js";
 import { MultiCombobox, type MultiComboboxOption } from "../../../components/ui/MultiCombobox.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
+import { DateField } from "../../../components/ui/DateField.js";
 import { Button } from "../../../components/ui/Button.js";
 
 type Source = "food" | "recipe" | "label";
@@ -39,6 +40,9 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
   const [location, setLocation] = useState<PantryLocation>("fridge");
   const [preparedAt, setPreparedAt] = useState(() => nowAtMinute());
   const [quantityNote, setQuantityNote] = useState("");
+  const [servingsTotal, setServingsTotal] = useState("");
+  const [bestBy, setBestBy] = useState("");
+  const [notes, setNotes] = useState("");
 
   const { data: foodsData, isLoading: foodsLoading } = useFoods();
   // There's no standalone "list recipes" endpoint, so favorited recipes —
@@ -69,6 +73,9 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
         preparedAt: preparedAt.toISOString(),
         location,
         quantityNote: quantityNote.trim() || undefined,
+        servingsTotal: servingsTotal.trim() ? Number(servingsTotal) : undefined,
+        bestBy: bestBy || undefined,
+        notes: notes.trim() || undefined,
       },
       { onSuccess: onDone },
     );
@@ -173,6 +180,33 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
           value={quantityNote}
           onChange={(e) => setQuantityNote(e.target.value)}
           placeholder="e.g. 6 ice-cube portions"
+        />
+      </Field>
+
+      <Field label="Total servings (optional)" htmlFor="pantry-add-servings">
+        <Input
+          id="pantry-add-servings"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={999}
+          value={servingsTotal}
+          onChange={(e) => setServingsTotal(e.target.value)}
+          placeholder="e.g. 6"
+        />
+      </Field>
+
+      <Field label="Best by (optional)" htmlFor="pantry-add-best-by">
+        <DateField id="pantry-add-best-by" value={bestBy} onChange={setBestBy} allowFuture title="Best by" />
+      </Field>
+
+      <Field label="Notes (optional)" htmlFor="pantry-add-notes">
+        <Textarea
+          id="pantry-add-notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          placeholder="e.g. from the batch we made Sunday"
         />
       </Field>
 

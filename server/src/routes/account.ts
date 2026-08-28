@@ -109,6 +109,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
             recipeTitle: recipes.title,
             servedAt: meals.servedAt,
             reactionNote: meals.reactionNote,
+            notes: meals.notes,
             createdAt: meals.createdAt,
           })
           .from(meals)
@@ -120,7 +121,13 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
     // Nested under their meal below; read in one pass rather than per meal.
     const mealFoodRows = mealRows.length
       ? await db
-          .select({ mealId: mealFoods.mealId, id: foods.id, slug: foods.slug, name: foods.name })
+          .select({
+            mealId: mealFoods.mealId,
+            id: foods.id,
+            slug: foods.slug,
+            name: foods.name,
+            pantryItemId: mealFoods.pantryItemId,
+          })
           .from(mealFoods)
           .innerJoin(foods, eq(mealFoods.foodId, foods.id))
           .where(
@@ -132,9 +139,12 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
           .orderBy(asc(foods.name))
       : [];
 
-    const foodsByMealId = new Map<string, { id: string; slug: string; name: string }[]>();
+    const foodsByMealId = new Map<
+      string,
+      { id: string; slug: string; name: string; pantryItemId: string | null }[]
+    >();
     for (const row of mealFoodRows) {
-      const entry = { id: row.id, slug: row.slug, name: row.name };
+      const entry = { id: row.id, slug: row.slug, name: row.name, pantryItemId: row.pantryItemId };
       const existing = foodsByMealId.get(row.mealId);
       if (existing) existing.push(entry);
       else foodsByMealId.set(row.mealId, [entry]);
@@ -173,6 +183,10 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         status: pantryItems.status,
         statusChangedAt: pantryItems.statusChangedAt,
         quantityNote: pantryItems.quantityNote,
+        servingsTotal: pantryItems.servingsTotal,
+        servingsLeft: pantryItems.servingsLeft,
+        bestBy: pantryItems.bestBy,
+        notes: pantryItems.notes,
       })
       .from(pantryItems)
       // Left joins: a pantry row can be a free-text label with neither a
@@ -248,6 +262,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         recipeTitle: row.recipeTitle,
         servedAt: row.servedAt.toISOString(),
         reactionNote: row.reactionNote,
+        notes: row.notes,
         createdAt: row.createdAt.toISOString(),
         foods: foodsByMealId.get(row.id) ?? [],
       })),
@@ -269,6 +284,10 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         status: row.status,
         statusChangedAt: row.statusChangedAt.toISOString(),
         quantityNote: row.quantityNote,
+        servingsTotal: row.servingsTotal,
+        servingsLeft: row.servingsLeft,
+        bestBy: row.bestBy,
+        notes: row.notes,
       })),
       symptomChecks: symptomCheckRows.map((row) => ({
         id: row.id,

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { PantryItem, PantryStatus, PantryView } from "@blw/shared";
 import { usePantryItems, useUpdatePantryItem } from "../features/pantry/hooks.js";
+import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { PantryItemCard } from "../features/pantry/components/PantryItemCard.js";
 import { pantryItemTitle } from "../features/pantry/format.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
@@ -24,6 +25,7 @@ export function PantryPage() {
 
   const { data, isLoading, isError } = usePantryItems(view);
   const updateItem = useUpdatePantryItem();
+  const { activeBaby } = useActiveBaby();
 
   useEffect(() => {
     return () => clearTimeout(undoTimer.current);
@@ -127,6 +129,7 @@ export function PantryPage() {
             onDiscard={item.status === "active" ? () => setStatus(item, "discarded", true) : undefined}
             editHref={item.status === "active" ? `/pantry/${item.id}/edit` : undefined}
             onRestore={item.status !== "active" ? () => setStatus(item, "active", false) : undefined}
+            babyId={activeBaby?.id}
           />
         ))}
       </ul>

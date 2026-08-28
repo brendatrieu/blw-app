@@ -19,6 +19,8 @@ export interface MealSubmitInput {
   recipeId: string | null;
   servedAt: string;
   reactionNote: string | null;
+  /** General note, distinct from `reactionNote` — see `optionalNotes` in shared/tracking. */
+  notes: string | null;
 }
 
 export type MealSubmitAction =
@@ -70,6 +72,7 @@ export function LogFoodForm({ babyId, meal, onDone }: LogFoodFormProps) {
   const [recipeId, setRecipeId] = useState<string>(() => meal?.recipeId ?? "");
   const [servedAt, setServedAt] = useState(() => (meal ? nowAtMinute(new Date(meal.servedAt)) : nowAtMinute()));
   const [reactionNote, setReactionNote] = useState(() => meal?.reactionNote ?? "");
+  const [notes, setNotes] = useState(() => meal?.notes ?? "");
 
   const foods = foodsData?.foods ?? [];
   const favorites = favoritesData?.items ?? [];
@@ -130,6 +133,7 @@ export function LogFoodForm({ babyId, meal, onDone }: LogFoodFormProps) {
       recipeId: recipeId || null,
       servedAt: servedAt.toISOString(),
       reactionNote: reactionNote.trim() || null,
+      notes: notes.trim() || null,
     };
     const action = resolveMealSubmit(meal?.id, input);
     switch (action.kind) {
@@ -188,6 +192,16 @@ export function LogFoodForm({ babyId, meal, onDone }: LogFoodFormProps) {
           onChange={(e) => setReactionNote(e.target.value)}
           rows={2}
           placeholder="e.g. mild rash around mouth"
+        />
+      </Field>
+
+      <Field label="Notes (optional)" htmlFor="log-food-notes">
+        <Textarea
+          id="log-food-notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          placeholder="e.g. ate the whole thing"
         />
       </Field>
 

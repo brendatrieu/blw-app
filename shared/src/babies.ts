@@ -23,7 +23,7 @@ const FUTURE_SLACK_MS = 24 * 60 * 60 * 1000;
  * March, which the database then rejects — so the components are compared
  * against the date they produce.
  */
-function parseCalendarDate(value: string): number | null {
+export function parseCalendarDate(value: string): number | null {
   const [year, month, day] = value.split("-").map(Number);
   if (year === undefined || month === undefined || day === undefined) return null;
   const ms = Date.UTC(year, month - 1, day);

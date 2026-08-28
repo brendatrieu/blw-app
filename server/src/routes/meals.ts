@@ -15,7 +15,6 @@ import {
   updateMealInputSchema,
   type AllergenProgressItem,
   type AllergenProgressResponse,
-  type MealItem,
   type MealsResponse,
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
@@ -30,6 +29,7 @@ import {
   meals,
   recipes,
 } from "../db/schema.js";
+import { insertMealWithFoods, loadMeals, ownsBaby } from "../services/meals.js";
 
 const DEFAULT_LIMIT = 50;
 
@@ -46,81 +46,11 @@ function currentUserId(request: FastifyRequest): string {
   return id;
 }
 
-async function ownsBaby(db: Database, babyId: string, userId: string): Promise<boolean> {
-  const [row] = await db
-    .select({ id: babies.id })
-    .from(babies)
-    .where(and(eq(babies.id, babyId), eq(babies.userId, userId)))
-    .limit(1);
-  return Boolean(row);
-}
-
 /** Every meal id belonging to a baby this user owns — the ownership filter
  * for the by-id routes, which have no :babyId to check directly. */
 function ownedMealCondition(db: Database, mealId: string, userId: string) {
   const ownedBabyIds = db.select({ id: babies.id }).from(babies).where(eq(babies.userId, userId));
   return and(eq(meals.id, mealId), inArray(meals.babyId, ownedBabyIds));
-}
-
-/**
- * Hydrates meal rows into API items: one `meals` row plus its foods, in a
- * fixed order (foods by name) so the same meal always renders the same way.
- * Ownership is the caller's business — this only reads by id.
- */
-async function loadMeals(db: Database, mealIds: string[]): Promise<Map<string, MealItem>> {
-  if (mealIds.length === 0) return new Map();
-
-  const mealRows = await db
-    .select({
-      id: meals.id,
-      babyId: meals.babyId,
-      servedAt: meals.servedAt,
-      reactionNote: meals.reactionNote,
-      recipeId: meals.recipeId,
-      recipeTitle: recipes.title,
-    })
-    .from(meals)
-    .leftJoin(recipes, eq(meals.recipeId, recipes.id))
-    .where(inArray(meals.id, mealIds));
-
-  const foodRows = await db
-    .select({
-      mealId: mealFoods.mealId,
-      id: foods.id,
-      slug: foods.slug,
-      name: foods.name,
-      category: foods.category,
-    })
-    .from(mealFoods)
-    .innerJoin(foods, eq(mealFoods.foodId, foods.id))
-    .where(inArray(mealFoods.mealId, mealIds))
-    .orderBy(asc(foods.name));
-
-  const byMealId = new Map<string, MealItem>(
-    mealRows.map((row) => [
-      row.id,
-      {
-        id: row.id,
-        babyId: row.babyId,
-        servedAt: row.servedAt.toISOString(),
-        reactionNote: row.reactionNote,
-        recipeId: row.recipeId,
-        recipeTitle: row.recipeTitle ?? null,
-        foods: [],
-      },
-    ]),
-  );
-
-  for (const row of foodRows) {
-    byMealId.get(row.mealId)?.foods.push({
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
-      category: row.category,
-    });
-  }
-
-  return byMealId;
 }
 
 type Validated<T> = { ok: true; value: T } | { ok: false; details: unknown };
@@ -203,22 +133,18 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     const servedAt = body.data.servedAt ? new Date(body.data.servedAt) : new Date();
 
     // One transaction so a meal is all-or-nothing: either the meal and every
-    // one of its foods land, or nothing does.
-    const mealId = await db.transaction(async (tx) => {
-      const [meal] = await tx
-        .insert(meals)
-        .values({
-          babyId: params.data.babyId,
-          recipeId: body.data.recipeId,
-          servedAt,
-          reactionNote: body.data.reactionNote,
-        })
-        .returning();
-      if (!meal) throw new Error("Meal insert returned no row");
-
-      await tx.insert(mealFoods).values(children.value.map((foodId) => ({ mealId: meal.id, foodId })));
-      return meal.id;
-    });
+    // one of its foods land, or nothing does. Hand-logged meals never link to
+    // a pantry item — that link is what the serve endpoint alone creates.
+    const mealId = await db.transaction((tx) =>
+      insertMealWithFoods(tx, {
+        babyId: params.data.babyId,
+        recipeId: body.data.recipeId,
+        servedAt,
+        reactionNote: body.data.reactionNote,
+        notes: body.data.notes,
+        foods: children.value.map((foodId) => ({ foodId })),
+      }),
+    );
 
     const item = (await loadMeals(db, [mealId])).get(mealId);
     if (!item) throw new Error("Meal was inserted but could not be read back");
@@ -260,14 +186,32 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
       const columns: Partial<typeof meals.$inferInsert> = {};
       if (body.data.servedAt !== undefined) columns.servedAt = new Date(body.data.servedAt);
       if (body.data.reactionNote !== undefined) columns.reactionNote = body.data.reactionNote;
+      if (body.data.notes !== undefined) columns.notes = body.data.notes;
       if (body.data.recipeId !== undefined) columns.recipeId = body.data.recipeId;
       if (Object.keys(columns).length > 0) {
         await tx.update(meals).set(columns).where(eq(meals.id, existing.id));
       }
 
       if (foodIds) {
+        // Replacing the children wholesale would throw away each row's
+        // pantry provenance, so it is carried forward per food: a food that
+        // survives the edit keeps the pantry item it was served from, and a
+        // food swapped in during the edit was not served from anywhere and
+        // gets null. Read before the delete — the rows are gone after it.
+        const previous = await tx
+          .select({ foodId: mealFoods.foodId, pantryItemId: mealFoods.pantryItemId })
+          .from(mealFoods)
+          .where(eq(mealFoods.mealId, existing.id));
+        const pantryItemIdByFoodId = new Map(previous.map((row) => [row.foodId, row.pantryItemId]));
+
         await tx.delete(mealFoods).where(eq(mealFoods.mealId, existing.id));
-        await tx.insert(mealFoods).values(foodIds.map((foodId) => ({ mealId: existing.id, foodId })));
+        await tx.insert(mealFoods).values(
+          foodIds.map((foodId) => ({
+            mealId: existing.id,
+            foodId,
+            pantryItemId: pantryItemIdByFoodId.get(foodId) ?? null,
+          })),
+        );
       }
     });
 

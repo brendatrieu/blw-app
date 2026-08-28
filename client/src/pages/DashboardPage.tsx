@@ -5,6 +5,7 @@ import { useAllergenProgress } from "../features/tracking/hooks.js";
 import { ServeLogList } from "../features/tracking/components/ServeLogList.js";
 import { usePantryItems } from "../features/pantry/hooks.js";
 import { PantryItemCard } from "../features/pantry/components/PantryItemCard.js";
+import { PantryItemActionsMenu } from "../features/pantry/components/PantryItemActionsMenu.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { Card, CardLink } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
@@ -46,7 +47,7 @@ function AllergenProgressSummary({ babyId }: { babyId: string }) {
   );
 }
 
-function ExpiringSoon() {
+function ExpiringSoon({ babyId }: { babyId: string }) {
   const { data, isLoading } = usePantryItems("active");
   const topFive = (data?.items ?? []).slice(0, 5);
 
@@ -77,7 +78,12 @@ function ExpiringSoon() {
       {topFive.length > 0 && (
         <ul className="flex flex-col gap-2">
           {topFive.map((item) => (
-            <PantryItemCard key={item.id} item={item} busy />
+            <PantryItemCard
+              key={item.id}
+              item={item}
+              busy={false}
+              actions={<PantryItemActionsMenu item={item} babyId={babyId} />}
+            />
           ))}
         </ul>
       )}
@@ -135,7 +141,7 @@ export function DashboardPage() {
         </ButtonLink>
       </div>
 
-      <ExpiringSoon />
+      <ExpiringSoon babyId={activeBaby.id} />
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-[var(--color-text)]">Allergen progress</h2>

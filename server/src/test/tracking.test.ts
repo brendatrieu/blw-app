@@ -5,6 +5,7 @@ import type { AllergenProgressResponse, Baby, FavoritesResponse, MealItem, Meals
 import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
+import { fetchBabyProfileSummary } from "../ai/tools.js";
 
 const UNKNOWN_ID = "00000000-0000-4000-8000-000000000000";
 
@@ -133,8 +134,10 @@ describe("tracking routes", () => {
         recipeTitle: "Egg Toast Fingers",
         reactionNote: "mild rash",
       });
+      // A hand-logged meal is never linked to a pantry item: only
+      // POST /api/pantry/:id/serve sets pantryItemId.
       expect(created.foods).toEqual([
-        { id: fixtures.egg.id, slug: "egg", name: "Egg", category: "protein" },
+        { id: fixtures.egg.id, slug: "egg", name: "Egg", category: "protein", pantryItemId: null },
       ]);
 
       const listBody = await listMeals(user, babyId);
@@ -472,6 +475,107 @@ describe("tracking routes", () => {
         payload: { reactionNote: "hello" },
       });
       expect(response.statusCode).toBe(404);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // General notes. A meal now carries two independent free-text fields:
+  // `reactionNote` (a possible reaction — the ONLY field the AI pipeline
+  // reads as a reaction signal) and `notes` (anything else).
+  // -------------------------------------------------------------------------
+
+  describe("meal notes", () => {
+    it("round-trips notes alongside reactionNote and keeps the two independent", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      const created = await postMeal(user, babyId, {
+        foodIds: [fixtures.egg.id],
+        reactionNote: "  red cheeks  ",
+        notes: "  ate the whole thing  ",
+      });
+      expect(created.reactionNote).toBe("red cheeks");
+      expect(created.notes).toBe("ate the whole thing");
+      expect((await listMeals(user, babyId)).items[0]?.notes).toBe("ate the whole thing");
+
+      const patch = async (payload: Record<string, unknown>): Promise<MealItem> => {
+        const response = await app.inject({
+          method: "PATCH",
+          url: `/api/meals/${created.id}`,
+          headers: { cookie: user.cookie },
+          payload,
+        });
+        expect(response.statusCode).toBe(200);
+        return response.json<MealItem>();
+      };
+
+      // Clearing one leaves the other alone, in both directions.
+      const noteCleared = await patch({ notes: "" });
+      expect(noteCleared.notes).toBeNull();
+      expect(noteCleared.reactionNote).toBe("red cheeks");
+
+      const reactionCleared = await patch({ notes: "seconds please", reactionNote: null });
+      expect(reactionCleared.notes).toBe("seconds please");
+      expect(reactionCleared.reactionNote).toBeNull();
+
+      // An absent key leaves the column alone.
+      expect((await patch({ servedAt: new Date().toISOString() })).notes).toBe("seconds please");
+    });
+
+    it("defaults notes to null and rejects one over 500 characters", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      expect((await postMeal(user, babyId, { foodIds: [fixtures.egg.id] })).notes).toBeNull();
+
+      const tooLong = await app.inject({
+        method: "POST",
+        url: `/api/babies/${babyId}/meals`,
+        headers: { cookie: user.cookie },
+        payload: { foodIds: [fixtures.egg.id], notes: "x".repeat(501) },
+      });
+      expect(tooLong.statusCode).toBe(400);
+    });
+
+    // -----------------------------------------------------------------------
+    // The pin the C2 design hangs on: general notes are NOT a reaction
+    // signal. `fetchBabyProfileSummary` is what turns meals into
+    // `knownReactiveFoods`, which the chat system prompt and the recipe
+    // allergy cross-check both consume. If someone ever widens its filter to
+    // "any note", this fails.
+    // -----------------------------------------------------------------------
+    it("never flags a food as reactive because the meal carries general notes", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      const [account] = await db
+        .select({ id: schema.user.id })
+        .from(schema.user)
+        .where(eq(schema.user.email, user.email))
+        .limit(1);
+      const userId = account!.id;
+
+      const meal = await postMeal(user, babyId, {
+        foodIds: [fixtures.egg.id],
+        notes: "loved it, asked for more, no rash at all",
+      });
+
+      const withNotesOnly = await fetchBabyProfileSummary(db, userId, babyId);
+      expect(withNotesOnly?.foodsIntroducedCount).toBe(1);
+      expect(withNotesOnly?.knownReactiveFoods).toEqual([]);
+
+      // The control: the same meal with an actual reaction note DOES flag it,
+      // so the assertion above is about the field, not about an empty query.
+      const patched = await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${meal.id}`,
+        headers: { cookie: user.cookie },
+        payload: { reactionNote: "hives around the mouth" },
+      });
+      expect(patched.statusCode).toBe(200);
+      expect(patched.json<MealItem>().notes).toBe("loved it, asked for more, no rash at all");
+
+      const withReaction = await fetchBabyProfileSummary(db, userId, babyId);
+      expect(withReaction?.knownReactiveFoods).toEqual(["Egg"]);
     });
   });
 

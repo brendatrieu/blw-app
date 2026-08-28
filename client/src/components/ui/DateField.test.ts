@@ -1,5 +1,6 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { LOOP_REPEAT_COUNT } from "./DateTimeField.js";
 import {
@@ -7,10 +8,13 @@ import {
   clampFutureYmd,
   DateField,
   DateFieldPickerBody,
+  DEFAULT_ALLOW_FUTURE,
   daysInMonth,
   formatYmd,
   parseYmd,
+  resolveCommittedYmd,
   resolveYearsBack,
+  resolveYearsForward,
   type YmdParts,
 } from "./DateField.js";
 
@@ -122,6 +126,50 @@ describe("resolveYearsBack", () => {
   });
 });
 
+describe("resolveYearsForward", () => {
+  it("keeps the default when the preset year is within the window", () => {
+    expect(resolveYearsForward(1, 2027, 2026)).toBe(1);
+  });
+
+  it("extends the range to include a preset year further out than the default window", () => {
+    expect(resolveYearsForward(1, 2030, 2026)).toBe(4);
+  });
+
+  it("never shrinks below the requested default", () => {
+    expect(resolveYearsForward(1, 2026, 2026)).toBe(1);
+  });
+});
+
+describe("resolveCommittedYmd (allowFuture commit behavior)", () => {
+  it("clamps a future draft to today by default (allowFuture: false), matching clampFutureYmd", () => {
+    expect(resolveCommittedYmd("2030-01-01", false, NOW)).toBe("2026-08-26");
+  });
+
+  it("commits a future draft unclamped when allowFuture is true", () => {
+    expect(resolveCommittedYmd("2030-01-01", true, NOW)).toBe("2030-01-01");
+  });
+
+  it("commits a past draft unchanged whether or not allowFuture is set", () => {
+    expect(resolveCommittedYmd("2026-08-20", true, NOW)).toBe("2026-08-20");
+    expect(resolveCommittedYmd("2026-08-20", false, NOW)).toBe("2026-08-20");
+  });
+});
+
+describe("DateField's allowFuture default (item 107)", () => {
+  // DateField's own `allowFuture = DEFAULT_ALLOW_FUTURE` destructuring
+  // default is the ONLY place this value comes from — flipping the
+  // constant here fails this test directly, and flipping DateField's
+  // destructuring to stop reading it would leave that default undocumented
+  // and untied to `resolveCommittedYmd`'s behavior below.
+  it("defaults to false: future dates are refused unless a call site opts in with allowFuture", () => {
+    expect(DEFAULT_ALLOW_FUTURE).toBe(false);
+  });
+
+  it("wired through resolveCommittedYmd (what DateField's Save button actually calls): the default clamps a future draft to today, exactly like every past-only field", () => {
+    expect(resolveCommittedYmd("2030-01-01", DEFAULT_ALLOW_FUTURE, NOW)).toBe("2026-08-26");
+  });
+});
+
 describe("DateField (render)", () => {
   it("renders a closed button showing the formatted value, with aria-haspopup wired", () => {
     const html = renderToString(
@@ -220,6 +268,22 @@ describe("DateFieldPickerBody (render)", () => {
     expect((dayHtml.match(/>26</g) ?? []).length).toBe(LOOP_REPEAT_COUNT);
   });
 
+  it("extends the year wheel past the current year when yearsForward is set (allowFuture mode)", () => {
+    const html = renderToString(
+      createElement(DateFieldPickerBody, { draft, onDraftChange: () => {}, yearsBack: 6, yearsForward: 1, now: NOW }),
+    );
+    expect(html).toMatch(/aria-label="Year"[^>]*aria-valuemax="2027"/);
+    expect(html).toContain(">2027<");
+  });
+
+  it("defaults to no forward range (yearsForward omitted): the current year is the latest selectable one", () => {
+    const html = renderToString(
+      createElement(DateFieldPickerBody, { draft, onDraftChange: () => {}, yearsBack: 6, now: NOW }),
+    );
+    expect(html).toMatch(/aria-label="Year"[^>]*aria-valuemax="2026"/);
+    expect(html).not.toContain(">2027<");
+  });
+
   it("does NOT loop the year column — oldest year top, current year bottom, each row once (item 45/46)", () => {
     const html = renderToString(
       createElement(DateFieldPickerBody, { draft, onDraftChange: () => {}, yearsBack: 3, now: NOW }),
@@ -229,5 +293,13 @@ describe("DateFieldPickerBody (render)", () => {
     // current year (2026) last, each rendered exactly once (no loop copies).
     expect((yearHtml.match(/>2026</g) ?? []).length).toBe(1);
     expect(yearHtml.indexOf(">2023<")).toBeLessThan(yearHtml.indexOf(">2026<"));
+  });
+});
+
+describe("allowFuture default binding (item 108)", () => {
+  it("the component destructures allowFuture from DEFAULT_ALLOW_FUTURE — pinned at source level because the open picker (portal) cannot render in this node-env suite", () => {
+    const source = readFileSync(new URL("./DateField.tsx", import.meta.url), "utf8");
+    expect(source).toMatch(/allowFuture = DEFAULT_ALLOW_FUTURE,/);
+    expect(source).not.toMatch(/allowFuture = true,/);
   });
 });

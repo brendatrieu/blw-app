@@ -3,8 +3,9 @@ import type { PantryItem, PantryLocation } from "@blw/shared";
 import { useUpdatePantryItem } from "../hooks.js";
 import { LOCATIONS } from "../format.js";
 import { Field } from "../../../components/ui/Field.js";
-import { Input } from "../../../components/ui/Input.js";
+import { Input, Textarea } from "../../../components/ui/Input.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
+import { DateField } from "../../../components/ui/DateField.js";
 import { Button } from "../../../components/ui/Button.js";
 
 interface EditPantryItemFormProps {
@@ -23,6 +24,9 @@ export function EditPantryItemForm({ item, onDone }: EditPantryItemFormProps) {
   const [location, setLocation] = useState<PantryLocation>(item.location);
   const [preparedAt, setPreparedAt] = useState(() => nowAtMinute(new Date(item.preparedAt)));
   const [quantityNote, setQuantityNote] = useState(item.quantityNote ?? "");
+  const [servingsTotal, setServingsTotal] = useState(item.servingsTotal != null ? String(item.servingsTotal) : "");
+  const [bestBy, setBestBy] = useState(item.bestBy ?? "");
+  const [notes, setNotes] = useState(item.notes ?? "");
   const updateItem = useUpdatePantryItem();
 
   function handleSubmit(event: React.FormEvent) {
@@ -34,6 +38,9 @@ export function EditPantryItemForm({ item, onDone }: EditPantryItemFormProps) {
           location,
           preparedAt: preparedAt.toISOString(),
           quantityNote: quantityNote.trim() || null,
+          servingsTotal: servingsTotal.trim() ? Number(servingsTotal) : null,
+          bestBy: bestBy || null,
+          notes: notes.trim() || null,
         },
       },
       { onSuccess: onDone },
@@ -74,6 +81,33 @@ export function EditPantryItemForm({ item, onDone }: EditPantryItemFormProps) {
           value={quantityNote}
           onChange={(e) => setQuantityNote(e.target.value)}
           placeholder="e.g. 2 cubes left"
+        />
+      </Field>
+
+      <Field label="Total servings (optional)" htmlFor="pantry-edit-servings">
+        <Input
+          id="pantry-edit-servings"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={999}
+          value={servingsTotal}
+          onChange={(e) => setServingsTotal(e.target.value)}
+          placeholder="e.g. 6"
+        />
+      </Field>
+
+      <Field label="Best by (optional)" htmlFor="pantry-edit-best-by">
+        <DateField id="pantry-edit-best-by" value={bestBy} onChange={setBestBy} allowFuture title="Best by" />
+      </Field>
+
+      <Field label="Notes (optional)" htmlFor="pantry-edit-notes">
+        <Textarea
+          id="pantry-edit-notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          placeholder="e.g. from the batch we made Sunday"
         />
       </Field>
 

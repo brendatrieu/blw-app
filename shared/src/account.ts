@@ -17,7 +17,7 @@ import { z } from "zod";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 2;
+export const ACCOUNT_EXPORT_VERSION = 3;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -50,11 +50,13 @@ export const exportBabySchema = z.object({
 
 /** Food and recipe names are denormalised in so the file reads on its own.
  * v2 (meal model): one entry per meal, with its foods nested — where v1 had
- * one flat entry per food served. */
+ * one flat entry per food served. v3 adds `pantryItemId`: set when this food
+ * was served out of a pantry item, so the export can trace it back. */
 export const exportMealFoodSchema = z.object({
   id: z.string(),
   slug: z.string(),
   name: z.string(),
+  pantryItemId: z.string().nullable(),
 });
 
 export const exportMealSchema = z.object({
@@ -64,6 +66,8 @@ export const exportMealSchema = z.object({
   recipeTitle: z.string().nullable(),
   servedAt: z.string(),
   reactionNote: z.string().nullable(),
+  /** General, non-clinical note on the meal itself. Added in v3. */
+  notes: z.string().nullable(),
   createdAt: z.string(),
   foods: z.array(exportMealFoodSchema),
 });
@@ -78,6 +82,8 @@ export const exportFavoriteSchema = z.object({
 /**
  * Every pantry row the account has ever had, `active` and closed alike —
  * `status` plus `statusChangedAt` is the history, so nothing is filtered out.
+ * v3 adds the optional servings-tracking pair, the packaging `bestBy` date,
+ * and the free-form container `notes`.
  */
 export const exportPantryItemSchema = z.object({
   id: z.string(),
@@ -91,6 +97,10 @@ export const exportPantryItemSchema = z.object({
   status: z.string(),
   statusChangedAt: z.string(),
   quantityNote: z.string().nullable(),
+  servingsTotal: z.number().nullable(),
+  servingsLeft: z.number().nullable(),
+  bestBy: z.string().nullable(),
+  notes: z.string().nullable(),
 });
 
 export const exportSymptomCheckSchema = z.object({

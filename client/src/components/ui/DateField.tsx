@@ -57,6 +57,17 @@ export function clampFutureYmd(value: string, today: Date): string {
 }
 
 /**
+ * What "Save" commits for a drafted "YYYY-MM-DD": the draft as-is when
+ * `allowFuture` opts the field out of the future ceiling (e.g. a best-by
+ * date), otherwise clamped to `anchorNow` like every past-only field.
+ * Extracted as a pure function so the allowFuture/default split is
+ * unit-testable without a DOM environment.
+ */
+export function resolveCommittedYmd(drafted: string, allowFuture: boolean, anchorNow: Date): string {
+  return allowFuture ? drafted : clampFutureYmd(drafted, anchorNow);
+}
+
+/**
  * Extends the year wheel's back-range so a preset older than the default
  * window is never out of range, mirroring `resolveDaysBack` in
  * `DateTimeField`. Computed here so every caller gets it for free.
@@ -65,11 +76,25 @@ export function resolveYearsBack(yearsBack: number, presetYear: number, currentY
   return Math.max(yearsBack, currentYear - presetYear);
 }
 
+/**
+ * Forward counterpart of `resolveYearsBack`, for `allowFuture` fields (e.g.
+ * a pantry best-by date): extends the year wheel's forward range so a
+ * preset already beyond the default forward window (an already-far-future
+ * stored value) is never out of range. Never shrinks below the requested
+ * default.
+ */
+export function resolveYearsForward(yearsForward: number, presetYear: number, currentYear: number): number {
+  return Math.max(yearsForward, presetYear - currentYear);
+}
+
 export interface DateFieldPickerBodyProps {
   draft: YmdParts;
   onDraftChange: (next: YmdParts) => void;
   yearsBack: number;
   now: Date;
+  /** Years the wheel extends past the current year. Defaults to 0 (today is
+   * the latest selectable year), matching every existing (past-only) caller. */
+  yearsForward?: number;
 }
 
 /**
@@ -77,9 +102,9 @@ export interface DateFieldPickerBodyProps {
  * Exported like `WheelPickerBody` so the open-sheet markup can be rendered
  * and asserted on directly.
  */
-export function DateFieldPickerBody({ draft, onDraftChange, yearsBack, now }: DateFieldPickerBodyProps) {
+export function DateFieldPickerBody({ draft, onDraftChange, yearsBack, now, yearsForward = 0 }: DateFieldPickerBodyProps) {
   const currentYear = now.getFullYear();
-  const years = Array.from({ length: yearsBack + 1 }, (_, i) => currentYear - yearsBack + i);
+  const years = Array.from({ length: yearsBack + yearsForward + 1 }, (_, i) => currentYear - yearsBack + i);
   const yearItems = years.map((y) => ({ key: String(y), label: String(y) }));
   const dayItems = Array.from({ length: daysInMonth(draft.month, draft.year) }, (_, i) => ({
     key: String(i + 1),
@@ -144,6 +169,22 @@ export function DateFieldPickerBody({ draft, onDraftChange, yearsBack, now }: Da
   );
 }
 
+/** Default forward range for an `allowFuture` field (e.g. a best-by date):
+ * a year ahead covers the vast majority of real best-by dates while keeping
+ * the wheel short; a preset further out still extends it (see
+ * `resolveYearsForward`). */
+const DEFAULT_YEARS_FORWARD = 1;
+
+/**
+ * Default for the `allowFuture` prop: future dates are refused (committed
+ * drafts clamp to today) unless a call site opts out explicitly. Exported
+ * and referenced by name in `DateField`'s own destructuring (not
+ * re-literalled as `false` there) so this is the one place that default
+ * lives — flipping it here is what "the component's default" means, and
+ * `DateField (defaults)` below pins it against exactly that regression.
+ */
+export const DEFAULT_ALLOW_FUTURE = false;
+
 interface DateFieldProps {
   id?: string;
   /** "YYYY-MM-DD", or "" for unset — opens preset to today. */
@@ -154,13 +195,25 @@ interface DateFieldProps {
   title?: string;
   /** Injectable "now" for deterministic tests; defaults to the real current time. */
   now?: Date;
+  /**
+   * Opt-in: selectable future years/days, and "Save" commits the draft
+   * as-is instead of clamping it to today. Past dates remain selectable
+   * either way — this only lifts the future ceiling. Off by default, so
+   * every existing (past-only) call site is unaffected.
+   */
+  allowFuture?: boolean;
+  /** Years the wheel extends past the current year; only meaningful with
+   * `allowFuture`. Defaults to `DEFAULT_YEARS_FORWARD`. */
+  yearsForward?: number;
 }
 
 /**
  * Date-only sibling of `DateTimeField`: same button-opens-Sheet pattern and
  * styling, three wheel columns (month / day / year) instead of four. Reuses
  * `WheelColumn`/`WheelFrame` rather than forking the wheel mechanics. Future
- * dates can never be committed — "Save" clamps the draft to today.
+ * dates can never be committed by default — "Save" clamps the draft to
+ * today — unless `allowFuture` opts a field (e.g. a pantry best-by date)
+ * out of that clamp.
  */
 export function DateField({
   id,
@@ -170,6 +223,8 @@ export function DateField({
   yearsBack = DEFAULT_YEARS_BACK,
   title = "Date",
   now,
+  allowFuture = DEFAULT_ALLOW_FUTURE,
+  yearsForward = DEFAULT_YEARS_FORWARD,
 }: DateFieldProps) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
@@ -189,7 +244,7 @@ export function DateField({
   }
 
   function handleSave() {
-    onChange(clampFutureYmd(formatYmd(draft), anchorNow));
+    onChange(resolveCommittedYmd(formatYmd(draft), allowFuture, anchorNow));
     setOpen(false);
   }
 
@@ -200,6 +255,9 @@ export function DateField({
   const currentNow = open ? anchorNow : (now ?? new Date());
   const presetYear = parseYmd(value, currentNow).year;
   const effectiveYearsBack = resolveYearsBack(yearsBack, presetYear, currentNow.getFullYear());
+  const effectiveYearsForward = allowFuture
+    ? resolveYearsForward(yearsForward, presetYear, currentNow.getFullYear())
+    : 0;
 
   const displayParts = value ? parseYmd(value, currentNow) : null;
   const label = displayParts
@@ -234,7 +292,13 @@ export function DateField({
       </button>
 
       <Sheet open={open} onClose={handleCancel} title={title}>
-        <DateFieldPickerBody draft={draft} onDraftChange={setDraft} yearsBack={effectiveYearsBack} now={currentNow} />
+        <DateFieldPickerBody
+          draft={draft}
+          onDraftChange={setDraft}
+          yearsBack={effectiveYearsBack}
+          yearsForward={effectiveYearsForward}
+          now={currentNow}
+        />
         <PickerSheetFooter onCancel={handleCancel} onSave={handleSave} />
       </Sheet>
     </>
