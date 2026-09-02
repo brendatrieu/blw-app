@@ -1,14 +1,17 @@
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CreatePantryItemInput,
   MealsResponse,
   PantryItem,
   PantryResponse,
+  PantryStatus,
   PantryView,
   ServePantryItemInput,
   UpdatePantryItemInput,
 } from "@blw/shared";
 import { createPantryItem, fetchPantry, servePantryItem, updatePantryItem } from "./api.js";
+import { pantryItemTitle } from "./format.js";
 import { useCelebration } from "../../components/ui/Celebration.js";
 import { celebrateForNewMeal, snapshotMealCelebrationContext, trackingKeys } from "../tracking/hooks.js";
 
@@ -105,4 +108,68 @@ export function usePantryServe(babyId: string | undefined) {
       void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
     },
   });
+}
+
+const UNDO_WINDOW_MS = 6_000;
+
+export interface PantryStatusChange {
+  id: string;
+  title: string;
+  from: PantryStatus;
+  to: PantryStatus;
+}
+
+/**
+ * Banner copy for a just-announced status change — pure so the
+ * "Marked finished/discarded: <title>" wording is unit-testable without
+ * rendering anything.
+ */
+export function pantryStatusChangeLabel(change: PantryStatusChange): string {
+  const verb = change.to === "finished" ? "Marked finished" : "Marked discarded";
+  return `${verb}: ${change.title}`;
+}
+
+/**
+ * Shared status-change + 6s undo mechanism behind the pantry Remove/Restore
+ * actions (item 147) — originally PantryPage-only; PantryDetailPage now uses
+ * the exact same hook so the undo UX never forks between the two surfaces.
+ *
+ * `setStatus(item, status, announce)` mirrors `PantryPage`'s original
+ * behavior: `announce` decides whether the change gets an undo banner
+ * (Remove does, Restore doesn't, on both pages — undoing a Restore is just
+ * another Remove tap away, so it never needed one). `undo()` reverts the
+ * most recently announced change within the window; a change no longer
+ * "recent" (window elapsed) is simply not undoable, same as before.
+ */
+export function usePantryStatusChange() {
+  const [recentChange, setRecentChange] = useState<PantryStatusChange | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout>>();
+  const updateItem = useUpdatePantryItem();
+
+  useEffect(() => {
+    return () => clearTimeout(undoTimer.current);
+  }, []);
+
+  function setStatus(item: PantryItem, status: PantryStatus, announce: boolean) {
+    updateItem.mutate(
+      { id: item.id, input: { status } },
+      {
+        onSuccess: (updated) => {
+          if (!announce) return;
+          clearTimeout(undoTimer.current);
+          setRecentChange({ id: updated.id, title: pantryItemTitle(updated), from: item.status, to: status });
+          undoTimer.current = setTimeout(() => setRecentChange(null), UNDO_WINDOW_MS);
+        },
+      },
+    );
+  }
+
+  function undo() {
+    if (!recentChange) return;
+    updateItem.mutate({ id: recentChange.id, input: { status: recentChange.from } });
+    clearTimeout(undoTimer.current);
+    setRecentChange(null);
+  }
+
+  return { recentChange, setStatus, undo, isPending: updateItem.isPending };
 }

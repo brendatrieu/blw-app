@@ -10,8 +10,11 @@ const PADDING_CLASSES: Record<CardPadding, string> = {
 };
 
 const BASE = "rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-sm)]";
+// No hover border/shadow: whole-card hover reads as a special state nothing
+// else in the app has. The press-down scale stays — it is touch feedback,
+// not a hover affordance.
 const INTERACTIVE =
-  "transition-[transform,border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-spring)] hover:border-[var(--color-accent)] hover:shadow-[var(--shadow-md)] active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100";
+  "transition-transform duration-[var(--duration-fast)] ease-[var(--ease-spring)] active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100";
 
 interface CardProps extends HTMLAttributes<HTMLElement> {
   padding?: CardPadding;

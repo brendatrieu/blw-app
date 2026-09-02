@@ -142,6 +142,67 @@ describe("PantryItemCard (render)", () => {
   });
 });
 
+describe("PantryItemCard tap-through link (item 139)", () => {
+  it("wraps the info block in a Link to /pantry/:id by default", () => {
+    const html = renderCard(BASE_ITEM);
+    expect(html).toContain(`href="/pantry/${BASE_ITEM.id}"`);
+  });
+
+  it("keeps the kebab/actions slot outside the anchor (no nested-interactive markup)", () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const html = renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(
+          CelebrationProvider,
+          null,
+          createElement(
+            MemoryRouter,
+            null,
+            createElement(
+              "ul",
+              null,
+              createElement(PantryItemCard, {
+                item: BASE_ITEM,
+                busy: false,
+                actions: createElement("button", { type: "button" }, "Actions slot marker"),
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+    // The anchor's own markup ends before the actions slot content appears —
+    // a crude but effective check that the button isn't nested inside it.
+    const anchorClose = html.indexOf("</a>");
+    const actionsIndex = html.indexOf("Actions slot marker");
+    expect(anchorClose).toBeGreaterThan(-1);
+    expect(actionsIndex).toBeGreaterThan(anchorClose);
+  });
+
+  it("renders the info block as plain content (no anchor) when linkable is false", () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const html = renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(
+          CelebrationProvider,
+          null,
+          createElement(
+            MemoryRouter,
+            null,
+            createElement("ul", null, createElement(PantryItemCard, { item: BASE_ITEM, busy: false, linkable: false })),
+          ),
+        ),
+      ),
+    );
+    expect(html).not.toContain(`href="/pantry/${BASE_ITEM.id}"`);
+    expect(html).not.toContain("<a ");
+  });
+});
+
 describe("buildServeInput (item 108)", () => {
   it("passes babyId and servings through and trims both notes to null when blank", () => {
     expect(buildServeInput("baby-1", 3, "  ", "")).toEqual({

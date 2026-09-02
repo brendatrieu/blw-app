@@ -147,6 +147,11 @@ async function seedOneOfEverything(
     },
   ]);
 
+  // A parent's manual "established before we started using the app" mark.
+  // Non-empty on purpose: an export test where the array is [] either way
+  // cannot tell "covered" from "always empty".
+  await db.insert(schema.allergenOverrides).values({ babyId: baby!.id, allergenKey: "egg" });
+
   await db.insert(schema.favorites).values({ userId, recipeId: catalog.recipe.id });
 
   await db.insert(schema.symptomChecks).values({
@@ -181,8 +186,21 @@ async function seedOneOfEverything(
 
 /** Every table the account owns, counted for this user specifically. */
 async function ownedRowCounts(db: Database, seeded: SeededAccount) {
-  const [babies, favorites, pantry, threads, aiKeys, users, sessions, accounts, meals, mealFoods, symptomChecks, messages] =
-    await Promise.all([
+  const [
+    babies,
+    favorites,
+    pantry,
+    threads,
+    aiKeys,
+    users,
+    sessions,
+    accounts,
+    meals,
+    mealFoods,
+    symptomChecks,
+    messages,
+    overrides,
+  ] = await Promise.all([
       db.select().from(schema.babies).where(eq(schema.babies.userId, seeded.userId)),
       db.select().from(schema.favorites).where(eq(schema.favorites.userId, seeded.userId)),
       db.select().from(schema.pantryItems).where(eq(schema.pantryItems.userId, seeded.userId)),
@@ -202,6 +220,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
         .where(eq(schema.meals.babyId, seeded.babyId)),
       db.select().from(schema.symptomChecks).where(eq(schema.symptomChecks.babyId, seeded.babyId)),
       db.select().from(schema.chatMessages).where(eq(schema.chatMessages.threadId, seeded.threadId)),
+      db.select().from(schema.allergenOverrides).where(eq(schema.allergenOverrides.babyId, seeded.babyId)),
     ]);
 
   return {
@@ -212,6 +231,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     favorites: favorites.length,
     pantryItems: pantry.length,
     symptomChecks: symptomChecks.length,
+    allergenOverrides: overrides.length,
     chatThreads: threads.length,
     chatMessages: messages.length,
     userAiKeys: aiKeys.length,
@@ -228,6 +248,7 @@ const FULL_COUNTS = {
   favorites: 1,
   pantryItems: 2,
   symptomChecks: 1,
+  allergenOverrides: 1,
   chatThreads: 1,
   chatMessages: 2,
   userAiKeys: 1,
@@ -243,6 +264,7 @@ const EMPTY_COUNTS = {
   favorites: 0,
   pantryItems: 0,
   symptomChecks: 0,
+  allergenOverrides: 0,
   chatThreads: 0,
   chatMessages: 0,
   userAiKeys: 0,
@@ -305,6 +327,7 @@ describe("account export", () => {
     expect(Object.keys(bundle).sort()).toEqual(
       [
         "aiKey",
+        "allergenOverrides",
         "babies",
         "chatThreads",
         "exportVersion",
@@ -317,7 +340,7 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(3);
+    expect(bundle.exportVersion).toBe(4);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -333,6 +356,7 @@ describe("account export", () => {
     expect(bundle.pantryItems).toHaveLength(2);
     expect(bundle.pantryItems.map((item) => item.status).sort()).toEqual(["active", "finished"]);
     expect(bundle.symptomChecks).toHaveLength(1);
+    expect(bundle.allergenOverrides).toHaveLength(1);
     expect(bundle.chatThreads).toHaveLength(1);
     expect(bundle.chatThreads[0]?.messages).toHaveLength(2);
   });
@@ -388,6 +412,27 @@ describe("account export", () => {
       bestBy: null,
       notes: null,
     });
+  });
+
+  it("round-trips the allergen overrides added in v4", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/account/export",
+      headers: { cookie: user.cookie },
+    });
+    const bundle = accountExportSchema.parse(response.json());
+
+    expect(bundle.allergenOverrides).toHaveLength(1);
+    expect(bundle.allergenOverrides[0]).toMatchObject({
+      babyId: seeded.babyId,
+      allergenKey: "egg",
+    });
+    expect(bundle.allergenOverrides[0]?.createdAt).toBeTruthy();
+    // The status is the whole payload — an override carries no served date.
+    expect(Object.keys(bundle.allergenOverrides[0]!).sort()).toEqual(
+      ["allergenKey", "babyId", "createdAt"].sort(),
+    );
+
   });
 
   it("carries the AI key status but no key material anywhere in the bundle", async () => {
@@ -453,6 +498,9 @@ describe("account export", () => {
     expect(bundle.favorites).toHaveLength(0);
     expect(bundle.pantryItems).toHaveLength(0);
     expect(bundle.symptomChecks).toHaveLength(0);
+    // Not merely "empty because the array is always empty": the seeded
+    // account next door has one, so an unscoped query would surface it here.
+    expect(bundle.allergenOverrides).toHaveLength(0);
     expect(bundle.chatThreads).toHaveLength(0);
     expect(bundle.aiKey.configured).toBe(false);
 

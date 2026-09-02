@@ -67,6 +67,17 @@ export function fetchAllergenProgress(babyId: string): Promise<AllergenProgressR
   return apiGet<AllergenProgressResponse>(`/api/babies/${babyId}/allergen-progress`);
 }
 
+/** "Already established before the app" override — see `unionAllergenStatus`
+ * in shared/src/tracking.ts. Idempotent server-side (repeat PUTs 204 the same). */
+export function putAllergenOverride(babyId: string, allergenKey: string): Promise<void> {
+  return apiPut<void>(`/api/babies/${babyId}/allergens/${allergenKey}/established`);
+}
+
+/** Undo for `putAllergenOverride` — DELETE is idempotent too. */
+export function deleteAllergenOverride(babyId: string, allergenKey: string): Promise<void> {
+  return apiDelete<void>(`/api/babies/${babyId}/allergens/${allergenKey}/established`);
+}
+
 export function fetchFavorites(): Promise<FavoritesResponse> {
   return apiGet<FavoritesResponse>("/api/favorites");
 }

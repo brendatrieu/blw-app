@@ -10,11 +10,13 @@ import type {
 } from "@blw/shared";
 import {
   createMeal,
+  deleteAllergenOverride,
   deleteFavorite,
   deleteMeal,
   fetchAllergenProgress,
   fetchFavorites,
   fetchMeals,
+  putAllergenOverride,
   putFavorite,
   updateMeal,
   type MealsQuery,
@@ -42,6 +44,40 @@ export function useAllergenProgress(babyId: string | undefined) {
     queryFn: () => fetchAllergenProgress(babyId as string),
     enabled: Boolean(babyId),
     staleTime: 15_000,
+  });
+}
+
+/**
+ * PUT /api/babies/:babyId/allergens/:key/established — "we already
+ * established this before the app" override; see `unionAllergenStatus` in
+ * shared/src/tracking.ts for how it's unioned with the derived ladder.
+ */
+export function useMarkAllergenEstablished(babyId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (allergenSlug: string) => {
+      if (!babyId) throw new Error("useMarkAllergenEstablished called with no active baby");
+      return putAllergenOverride(babyId, allergenSlug);
+    },
+    onSettled: () => {
+      if (!babyId) return;
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
+    },
+  });
+}
+
+/** Undo for `useMarkAllergenEstablished` — DELETE is idempotent too. */
+export function useUndoAllergenEstablished(babyId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (allergenSlug: string) => {
+      if (!babyId) throw new Error("useUndoAllergenEstablished called with no active baby");
+      return deleteAllergenOverride(babyId, allergenSlug);
+    },
+    onSettled: () => {
+      if (!babyId) return;
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
+    },
   });
 }
 

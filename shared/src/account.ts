@@ -17,7 +17,7 @@ import { z } from "zod";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 3;
+export const ACCOUNT_EXPORT_VERSION = 4;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -103,6 +103,18 @@ export const exportPantryItemSchema = z.object({
   notes: z.string().nullable(),
 });
 
+/**
+ * A parent's "we established this one before we started using the app" mark
+ * (v4). Exported as the raw override row — `allergenKey` is the allergen
+ * slug, and there is deliberately no served date: an override asserts a
+ * status, never an exposure, so the meal log stays the only source of dates.
+ */
+export const exportAllergenOverrideSchema = z.object({
+  babyId: z.string(),
+  allergenKey: z.string(),
+  createdAt: z.string(),
+});
+
 export const exportSymptomCheckSchema = z.object({
   id: z.string(),
   babyId: z.string(),
@@ -150,6 +162,8 @@ export const accountExportSchema = z.object({
   meals: z.array(exportMealSchema),
   favorites: z.array(exportFavoriteSchema),
   pantryItems: z.array(exportPantryItemSchema),
+  /** v4. Per-baby manual allergen marks, ordered by `createdAt`. */
+  allergenOverrides: z.array(exportAllergenOverrideSchema),
   symptomChecks: z.array(exportSymptomCheckSchema),
   chatThreads: z.array(exportChatThreadSchema),
   aiKey: exportAiKeySchema,
@@ -162,6 +176,7 @@ export type ExportMeal = z.infer<typeof exportMealSchema>;
 export type ExportMealFood = z.infer<typeof exportMealFoodSchema>;
 export type ExportFavorite = z.infer<typeof exportFavoriteSchema>;
 export type ExportPantryItem = z.infer<typeof exportPantryItemSchema>;
+export type ExportAllergenOverride = z.infer<typeof exportAllergenOverrideSchema>;
 export type ExportSymptomCheck = z.infer<typeof exportSymptomCheckSchema>;
 export type ExportChatThread = z.infer<typeof exportChatThreadSchema>;
 export type ExportChatMessage = z.infer<typeof exportChatMessageSchema>;

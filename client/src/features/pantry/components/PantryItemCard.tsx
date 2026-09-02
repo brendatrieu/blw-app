@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import type { PantryItem } from "@blw/shared";
 import { Badge } from "../../catalog/components/Badge.js";
 import { getFoodEmoji } from "../../catalog/foodEmoji.js";
@@ -8,8 +9,9 @@ import { Button, ButtonLink } from "../../../components/ui/Button.js";
 import { Textarea } from "../../../components/ui/Input.js";
 
 /** Emoji for a pantry item: the food's own emoji when it was prepped from a
- * catalog food, otherwise a friendly stand-in for a recipe or free-form entry. */
-function pantryItemEmoji(item: PantryItem): string {
+ * catalog food, otherwise a friendly stand-in for a recipe or free-form entry.
+ * Exported so `PantryDetailPage` can reuse it for its own header. */
+export function pantryItemEmoji(item: PantryItem): string {
   if (item.foodSlug) return getFoodEmoji(item.foodSlug);
   if (item.recipeTitle) return "🍲";
   return "📝";
@@ -187,30 +189,51 @@ interface PantryItemCardProps {
    * `editHref`/`babyId` footer buttons below, so a caller can offer a
    * compact menu instead of (not in addition to) that full button row. */
   actions?: ReactNode;
+  /** False renders the info block as plain content instead of a Link to
+   * `/pantry/:id` — for `PantryDetailPage` itself, which must not link to
+   * itself. Defaults to true (Home and the Pantry list both tap through). */
+  linkable?: boolean;
 }
 
-export function PantryItemCard({ item, busy, onRemove, editHref, onRestore, babyId, actions }: PantryItemCardProps) {
+export function PantryItemCard({ item, busy, onRemove, editHref, onRestore, babyId, actions, linkable = true }: PantryItemCardProps) {
   const preparedLabel = new Date(item.preparedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const canServe = Boolean(babyId) && item.status === "active" && !isLabelOnly(item);
+
+  const info = (
+    <>
+      <span aria-hidden="true" className="text-xl leading-none">
+        {pantryItemEmoji(item)}
+      </span>
+      <div className="flex flex-col">
+        <span className="text-sm font-semibold text-[var(--color-text)]">{pantryItemTitle(item)}</span>
+        <span className="text-xs text-[var(--color-text-muted)]">
+          Prepared {preparedLabel}
+          {item.quantityNote ? ` · ${item.quantityNote}` : ""}
+          {item.servingsTotal != null && item.servingsLeft != null
+            ? ` · ${servingsLabel(item.servingsLeft, item.servingsTotal)}`
+            : ""}
+        </span>
+      </div>
+    </>
+  );
 
   return (
     <li className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2">
-          <span aria-hidden="true" className="text-xl leading-none">
-            {pantryItemEmoji(item)}
-          </span>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-[var(--color-text)]">{pantryItemTitle(item)}</span>
-            <span className="text-xs text-[var(--color-text-muted)]">
-              Prepared {preparedLabel}
-              {item.quantityNote ? ` · ${item.quantityNote}` : ""}
-              {item.servingsTotal != null && item.servingsLeft != null
-                ? ` · ${servingsLabel(item.servingsLeft, item.servingsTotal)}`
-                : ""}
-            </span>
-          </div>
-        </div>
+        {/* The kebab/actions slot beside this sits OUTSIDE the anchor, and so
+            do the Serve/Edit/Remove/Restore footer buttons below — only this
+            title/summary block is ever the link target, so nothing
+            interactive ends up nested inside it. */}
+        {linkable ? (
+          <Link
+            to={`/pantry/${item.id}`}
+            className="flex items-start gap-2 rounded-[var(--radius-sm)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+          >
+            {info}
+          </Link>
+        ) : (
+          <div className="flex items-start gap-2">{info}</div>
+        )}
         <div className="flex shrink-0 items-center gap-1">
           <Badge tone="neutral">{LOCATION_LABEL[item.location]}</Badge>
           {actions}

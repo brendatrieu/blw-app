@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import type { AllergenProgressResponse, Baby, FavoritesResponse, MealItem, MealsResponse } from "@blw/shared";
+import type {
+  AllergenProgressItem,
+  AllergenProgressResponse,
+  Baby,
+  FavoritesResponse,
+  MealItem,
+  MealsResponse,
+} from "@blw/shared";
 import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
@@ -116,6 +123,50 @@ describe("tracking routes", () => {
       headers: { cookie: user.cookie },
     });
     return response.json<MealsResponse>();
+  }
+
+  async function progressItems(user: TestUser, babyId: string): Promise<AllergenProgressItem[]> {
+    const response = await app.inject({
+      method: "GET",
+      url: `/api/babies/${babyId}/allergen-progress`,
+      headers: { cookie: user.cookie },
+    });
+    if (response.statusCode !== 200) {
+      throw new Error(`allergen-progress failed (${response.statusCode}): ${response.body}`);
+    }
+    return response.json<AllergenProgressResponse>().items;
+  }
+
+  /** The fixture allergen every override test drives. */
+  async function eggProgress(user: TestUser, babyId: string): Promise<AllergenProgressItem | undefined> {
+    return (await progressItems(user, babyId)).find((item) => item.allergenSlug === "egg");
+  }
+
+  function putOverride(user: TestUser, babyId: string, key: string) {
+    return app.inject({
+      method: "PUT",
+      url: `/api/babies/${babyId}/allergens/${key}/established`,
+      headers: { cookie: user.cookie },
+    });
+  }
+
+  function deleteOverride(user: TestUser, babyId: string, key: string) {
+    return app.inject({
+      method: "DELETE",
+      url: `/api/babies/${babyId}/allergens/${key}/established`,
+      headers: { cookie: user.cookie },
+    });
+  }
+
+  /** The `user.id` behind a session cookie, for the direct-call AI helpers. */
+  async function userIdFor(user: TestUser): Promise<string> {
+    const [account] = await db
+      .select({ id: schema.user.id })
+      .from(schema.user)
+      .where(eq(schema.user.email, user.email))
+      .limit(1);
+    if (!account) throw new Error(`no user row for ${user.email}`);
+    return account.id;
   }
 
   describe("meals", () => {
@@ -620,7 +671,7 @@ describe("tracking routes", () => {
       const eggThrice = progressThrice.json<AllergenProgressResponse>().items.find((i) => i.allergenSlug === "egg");
       expect(eggThrice).toMatchObject({ status: "established", exposures: 3 });
       expect(eggThrice?.firstAt).toBeTruthy();
-      expect(eggThrice?.lastAt).toBeTruthy();
+      expect(eggThrice?.lastServedAt).toBeTruthy();
     });
 
     it("drops the exposures a deleted meal contributed", async () => {
@@ -659,6 +710,220 @@ describe("tracking routes", () => {
       });
       const egg = progress.json<AllergenProgressResponse>().items.find((item) => item.allergenSlug === "egg");
       expect(egg).toMatchObject({ status: "not_started", exposures: 0 });
+    });
+
+    it("reports lastServedAt as the newest servedAt across the allergen's foods", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      // Nothing logged yet: every row, egg included, has no recency at all.
+      const before = await progressItems(user, babyId);
+      expect(before.every((item) => item.lastServedAt === null)).toBe(true);
+
+      // Deliberately posted oldest-last so the answer cannot come from
+      // insertion order — only from max(servedAt).
+      const newest = "2026-03-05T12:00:00.000Z";
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: "2026-03-01T08:00:00.000Z" });
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id, fixtures.banana.id], servedAt: newest });
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: "2026-03-03T09:00:00.000Z" });
+
+      const egg = await eggProgress(user, babyId);
+      expect(egg?.lastServedAt).toBe(newest);
+      expect(new Date(egg!.lastServedAt!).toISOString()).toBe(newest);
+
+      // A meal that carried no peanut food leaves peanut's recency untouched.
+      const peanut = (await progressItems(user, babyId)).find((item) => item.allergenSlug === "peanut");
+      expect(peanut?.lastServedAt).toBeNull();
+      expect(peanut).toMatchObject({ exposures: 0, status: "not_started" });
+    });
+
+    it("moves lastServedAt forward when a newer meal is logged", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: "2026-03-01T08:00:00.000Z" });
+      expect((await eggProgress(user, babyId))?.lastServedAt).toBe("2026-03-01T08:00:00.000Z");
+
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: "2026-03-04T18:30:00.000Z" });
+      expect((await eggProgress(user, babyId))?.lastServedAt).toBe("2026-03-04T18:30:00.000Z");
+    });
+
+    it("reports overridden: false on every derived row", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
+
+      const items = await progressItems(user, babyId);
+      expect(items.every((item) => item.overridden === false)).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // PUT/DELETE /api/babies/:babyId/allergens/:key/established
+  // -------------------------------------------------------------------------
+  describe("allergen overrides", () => {
+    it("marks an untouched allergen established, idempotently, without inventing exposures", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      const first = await putOverride(user, babyId, "egg");
+      expect(first.statusCode).toBe(204);
+      const second = await putOverride(user, babyId, "egg");
+      expect(second.statusCode).toBe(204);
+
+      // Idempotent at the row level too, not just in the status code.
+      expect(await db.select().from(schema.allergenOverrides)).toHaveLength(1);
+
+      const egg = await eggProgress(user, babyId);
+      expect(egg).toMatchObject({
+        status: "established",
+        overridden: true,
+        // Derived fields stay derived: an override is not an exposure.
+        exposures: 0,
+        firstAt: null,
+        // An override asserts a status, never a date: there is no serve
+        // behind it, so the recency fact stays honestly empty.
+        lastServedAt: null,
+      });
+
+      // Only the allergen named is touched.
+      const peanut = (await progressItems(user, babyId)).find((item) => item.allergenSlug === "peanut");
+      expect(peanut).toMatchObject({ status: "not_started", overridden: false, exposures: 0 });
+    });
+
+    it("promotes a started allergen without downgrading it, and DELETE restores the derived state", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
+
+      expect(await eggProgress(user, babyId)).toMatchObject({ status: "started", exposures: 1, overridden: false });
+
+      const derivedLastServedAt = (await eggProgress(user, babyId))?.lastServedAt;
+      expect(derivedLastServedAt).toBeTruthy();
+
+      expect((await putOverride(user, babyId, "egg")).statusCode).toBe(204);
+      expect(await eggProgress(user, babyId)).toMatchObject({ status: "established", exposures: 1, overridden: true });
+      // Promotion does not disturb the derived recency it sits on top of.
+      expect((await eggProgress(user, babyId))?.lastServedAt).toBe(derivedLastServedAt);
+
+      const del = await deleteOverride(user, babyId, "egg");
+      expect(del.statusCode).toBe(204);
+      // Back to exactly what the meal log alone says — no residue.
+      expect(await eggProgress(user, babyId)).toMatchObject({ status: "started", exposures: 1, overridden: false });
+      expect(await db.select().from(schema.allergenOverrides)).toHaveLength(0);
+    });
+
+    it("defers to derived data: a stray override on a derived-established row is not flagged", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id, fixtures.banana.id] });
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
+
+      await putOverride(user, babyId, "egg");
+
+      expect(await eggProgress(user, babyId)).toMatchObject({
+        status: "established",
+        exposures: 3,
+        overridden: false,
+      });
+
+      // Removing the override cannot take away what the meals prove.
+      expect((await deleteOverride(user, babyId, "egg")).statusCode).toBe(204);
+      expect(await eggProgress(user, babyId)).toMatchObject({
+        status: "established",
+        exposures: 3,
+        overridden: false,
+      });
+    });
+
+    it("DELETE is idempotent when no override was ever written", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      expect((await deleteOverride(user, babyId, "egg")).statusCode).toBe(204);
+      expect((await deleteOverride(user, babyId, "egg")).statusCode).toBe(204);
+      expect(await eggProgress(user, babyId)).toMatchObject({ status: "not_started", overridden: false });
+    });
+
+    it("400s an allergen key that is malformed or not in the catalog, on PUT and DELETE, writing nothing", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      // Well-formed slug, but no such allergen in the seeded catalog.
+      for (const key of ["sesame", "Egg", "not%20a%20slug", "-egg-"]) {
+        expect((await putOverride(user, babyId, key)).statusCode).toBe(400);
+        expect((await deleteOverride(user, babyId, key)).statusCode).toBe(400);
+      }
+
+      expect(await db.select().from(schema.allergenOverrides)).toHaveLength(0);
+    });
+
+    it("404s another account's baby (and an unknown one) without writing or deleting anything", async () => {
+      const owner = await signUpUser(app, "Owner");
+      const intruder = await signUpUser(app, "Intruder");
+      const babyId = await createBaby(app, owner);
+      await putOverride(owner, babyId, "egg");
+
+      expect((await putOverride(intruder, babyId, "peanut")).statusCode).toBe(404);
+      expect((await deleteOverride(intruder, babyId, "egg")).statusCode).toBe(404);
+      expect((await putOverride(owner, UNKNOWN_ID, "egg")).statusCode).toBe(404);
+      expect((await deleteOverride(owner, UNKNOWN_ID, "egg")).statusCode).toBe(404);
+      expect((await putOverride(owner, "not-a-uuid", "egg")).statusCode).toBe(404);
+
+      // The owner's override is untouched, and the intruder's own progress
+      // never saw it.
+      const rows = await db.select().from(schema.allergenOverrides);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ babyId, allergenKey: "egg" });
+      expect(await eggProgress(owner, babyId)).toMatchObject({ status: "established", overridden: true });
+    });
+
+    it("is scoped per baby: an override on one baby leaves the sibling derived", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user, "Robin");
+      const siblingId = await createBaby(app, user, "Sam");
+
+      await putOverride(user, babyId, "egg");
+
+      expect(await eggProgress(user, babyId)).toMatchObject({ status: "established", overridden: true });
+      expect(await eggProgress(user, siblingId)).toMatchObject({ status: "not_started", overridden: false });
+    });
+
+    it("goes away with the baby (ON DELETE CASCADE)", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      await putOverride(user, babyId, "egg");
+
+      const del = await app.inject({
+        method: "DELETE",
+        url: `/api/babies/${babyId}`,
+        headers: { cookie: user.cookie },
+      });
+      expect(del.statusCode).toBe(204);
+      expect(await db.select().from(schema.allergenOverrides)).toHaveLength(0);
+    });
+
+    it("feeds the same union into the AI baby-profile summary", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      const userId = await userIdFor(user);
+
+      expect((await fetchBabyProfileSummary(db, userId, babyId))?.establishedTop9Allergens).toEqual([]);
+
+      await putOverride(user, babyId, "peanut");
+      expect((await fetchBabyProfileSummary(db, userId, babyId))?.establishedTop9Allergens).toEqual(["peanut"]);
+
+      // Derived and overridden allergens land in one list, deduped, and an
+      // override on a derived-established allergen does not double it up.
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id] });
+      await putOverride(user, babyId, "egg");
+      expect((await fetchBabyProfileSummary(db, userId, babyId))?.establishedTop9Allergens).toEqual(["egg", "peanut"]);
+
+      await deleteOverride(user, babyId, "peanut");
+      expect((await fetchBabyProfileSummary(db, userId, babyId))?.establishedTop9Allergens).toEqual(["egg"]);
     });
   });
 

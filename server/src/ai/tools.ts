@@ -17,9 +17,10 @@
 // actually cares about. Flagged in the phase brief.
 import { and, asc, desc, eq, ilike, inArray, lte } from "drizzle-orm";
 import { betaTool } from "@anthropic-ai/sdk/helpers/beta/json-schema";
-import { ageInMonths, deriveAllergenStatus } from "@blw/shared";
+import { ageInMonths, unionAllergenStatus } from "@blw/shared";
 import type { Database } from "../db/index.js";
 import {
+  allergenOverrides,
   allergens,
   babies,
   foodAllergens,
@@ -88,9 +89,27 @@ export async function fetchBabyProfileSummary(
   for (const row of exposureRows) {
     exposureCountBySlug.set(row.allergenSlug, (exposureCountBySlug.get(row.allergenSlug) ?? 0) + 1);
   }
-  const establishedTop9Allergens = [...exposureCountBySlug.entries()]
-    .filter(([, count]) => deriveAllergenStatus(count) === "established")
-    .map(([slug]) => slug);
+
+  // Same union the progress route reports: an allergen a parent marked as
+  // established before they started logging counts as established here too,
+  // or the model would keep suggesting a "first try" for something the baby
+  // has eaten for months. Overrides are per-baby, and this baby is already
+  // proven to be the caller's by the lookup above.
+  const overrideRows = await db
+    .select({ allergenKey: allergenOverrides.allergenKey })
+    .from(allergenOverrides)
+    .where(eq(allergenOverrides.babyId, babyId));
+  const overriddenSlugs = new Set(overrideRows.map((row) => row.allergenKey));
+
+  const candidateSlugs = new Set([...exposureCountBySlug.keys(), ...overriddenSlugs]);
+  const establishedTop9Allergens = [...candidateSlugs]
+    .filter((slug) => {
+      const exposures = exposureCountBySlug.get(slug) ?? 0;
+      return unionAllergenStatus(exposures, overriddenSlugs.has(slug)).status === "established";
+    })
+    // Sorted so the same baby always produces the same summary string —
+    // the set's insertion order depends on row order otherwise.
+    .sort();
 
   return {
     ageMonths: ageInMonths(baby.birthDate),

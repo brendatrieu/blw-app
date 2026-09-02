@@ -180,21 +180,94 @@ export function deriveAllergenStatus(exposures: number): AllergenStatus {
   return "established";
 }
 
+/**
+ * The union of the derived ladder and the parent's manual overrides
+ * (PUT /api/babies/:babyId/allergens/:key/established), and the single place
+ * that precedence is spelled out — the progress route and the AI baby-profile
+ * summary both call this instead of re-implementing the rule.
+ *
+ * Rules, in order:
+ *  - Derived-established wins outright. An allergen the meal log already
+ *    proves established reads `established` with `overridden: false`, even
+ *    when a stray override row also exists — the flag answers "is this
+ *    status only true because a parent said so?", so real data always
+ *    un-flags it. (A client labelling "marked by you" therefore never
+ *    labels a row the log itself supports.)
+ *  - Otherwise an override promotes to `established` with `overridden: true`.
+ *  - Otherwise the derived status stands as-is.
+ *
+ * An override can only ever promote: `started` never falls back to
+ * `not_started`, and `established` is never downgraded, whatever the
+ * overrides table says. `exposures`/`firstAt`/`lastServedAt` stay purely
+ * derived — an override contributes a status, never a date.
+ */
+export function unionAllergenStatus(
+  exposures: number,
+  hasOverride: boolean,
+): { status: AllergenStatus; overridden: boolean } {
+  const derived = deriveAllergenStatus(exposures);
+  if (derived === "established") return { status: "established", overridden: false };
+  if (hasOverride) return { status: "established", overridden: true };
+  return { status: derived, overridden: false };
+}
+
 export const allergenProgressItemSchema = z.object({
   allergenSlug: z.string(),
   allergenName: z.string(),
   /** allergens.intro_guidance — included so the ladder tracker needs only
    * this one request, not a second round trip for guidance copy. */
   introGuidance: z.string(),
+  /** Always the DERIVED exposure count — an override never inflates it. */
   exposures: z.number().int().nonnegative(),
   firstAt: z.string().nullable(),
-  lastAt: z.string().nullable(),
+  /**
+   * The most recent `meals.servedAt` across every food carrying this allergen
+   * for this baby, ISO-8601, or null when the log holds no exposure at all.
+   * Purely derived, exactly like `exposures`/`firstAt`: a parent override
+   * establishes the allergen but carries no date, so an override-only row
+   * reads `lastServedAt: null` — which is what lets the client say "no serves
+   * logged yet" instead of inventing a recency it does not have.
+   */
+  lastServedAt: z.string().nullable(),
+  /** Derived status unioned with the parent's override — see `unionAllergenStatus`. */
   status: allergenStatusSchema,
+  /**
+   * True only when `status` is `established` BECAUSE of a parent override and
+   * the derived exposures alone would not have gotten there. Never true for a
+   * `started`/`not_started` row, and never true when the meal log already
+   * establishes the allergen. See `unionAllergenStatus`.
+   */
+  overridden: z.boolean(),
 });
 export type AllergenProgressItem = z.infer<typeof allergenProgressItemSchema>;
 
 export const allergenProgressResponseSchema = z.object({ items: z.array(allergenProgressItemSchema) });
 export type AllergenProgressResponse = z.infer<typeof allergenProgressResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// PUT/DELETE /api/babies/:babyId/allergens/:key/established
+// ---------------------------------------------------------------------------
+
+/**
+ * `:key` is an `allergens.slug`. The shape check here is cheap and only
+ * screens out things a slug can never be — the CANONICAL list is the seeded
+ * `allergens` table, and the route still looks the key up there before
+ * writing, so an unknown-but-well-formed key is a 400 too.
+ */
+export const allergenKeySchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z0-9]+(?:_[a-z0-9]+)*$/, "allergen key must be a lowercase slug");
+
+/**
+ * Only the `:key` half. `:babyId` is parsed separately with
+ * `babyIdRouteParamSchema` because the two halves fail differently: a
+ * malformed/foreign baby id is a 404 (it cannot name a row this caller owns),
+ * where a malformed or unknown allergen key is a 400.
+ */
+export const allergenKeyParamSchema = z.object({ key: allergenKeySchema });
+export type AllergenKeyParams = z.infer<typeof allergenKeyParamSchema>;
 
 // ---------------------------------------------------------------------------
 // PUT/DELETE /api/recipes/:id/favorite, GET /api/favorites

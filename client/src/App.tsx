@@ -8,6 +8,7 @@ import { LogFoodPage } from "./pages/LogFoodPage.js";
 import { PantryPage } from "./pages/PantryPage.js";
 import { PantryAddPage } from "./pages/PantryAddPage.js";
 import { PantryEditPage } from "./pages/PantryEditPage.js";
+import { PantryDetailPage } from "./pages/PantryDetailPage.js";
 import { FoodsPage } from "./pages/FoodsPage.js";
 import { FoodDetailPage } from "./pages/FoodDetailPage.js";
 import { RecipeDetailPage } from "./pages/RecipeDetailPage.js";
@@ -55,6 +56,7 @@ export function App() {
         <Route path="/pantry" element={<PantryPage />} />
         <Route path="/pantry/add" element={<PantryAddPage />} />
         <Route path="/pantry/:id/edit" element={<PantryEditPage />} />
+        <Route path="/pantry/:id" element={<PantryDetailPage />} />
         <Route path="/foods" element={<FoodsPage />} />
         <Route path="/foods/:slug" element={<FoodDetailPage />} />
         <Route path="/recipes/:id" element={<RecipeDetailPage />} />

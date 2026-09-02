@@ -1,17 +1,20 @@
-// Meal tracking: the per-baby completion log (create/list/edit/delete) plus
-// the allergen-ladder progress derived from it. A meal is one sitting with
-// one or more foods; `meal_foods` JOIN `meals` is the single exposure
-// surface every consumer reads. Every route sits behind requireAuth and
-// every baby/meal lookup is scoped to the caller's own rows — a miss (wrong
-// owner or unknown id) is 404, never 403.
+// Meal tracking: the per-baby completion log (create/list/edit/delete), the
+// allergen-ladder progress derived from it, and the parent's manual
+// "established before we started using the app" overrides on top. A meal is
+// one sitting with one or more foods; `meal_foods` JOIN `meals` is the single
+// exposure surface every consumer reads, and an override never touches it —
+// it only unions into the reported status (see `unionAllergenStatus`). Every
+// route sits behind requireAuth and every baby/meal lookup is scoped to the
+// caller's own rows — a miss (wrong owner or unknown id) is 404, never 403.
 import { and, asc, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
+  allergenKeyParamSchema,
   babyIdRouteParamSchema,
   createMealInputSchema,
-  deriveAllergenStatus,
   mealIdParamSchema,
   mealsQuerySchema,
+  unionAllergenStatus,
   updateMealInputSchema,
   type AllergenProgressItem,
   type AllergenProgressResponse,
@@ -21,6 +24,7 @@ import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
 import {
   allergenLadderSteps,
+  allergenOverrides,
   allergens,
   babies,
   foodAllergens,
@@ -69,6 +73,27 @@ async function validateFoodIds(db: Database, rawFoodIds: string[]): Promise<Vali
   }
 
   return { ok: true, value: foodIds };
+}
+
+/**
+ * Resolves `:key` against the CANONICAL allergen list — the seeded
+ * `allergens` table. Both a malformed slug and a well-formed one that names
+ * no allergen are 400s: neither can ever become a meaningful override, and
+ * the key is catalog content, not a per-user id, so saying "no such allergen"
+ * leaks nothing about anybody's data.
+ */
+async function validateAllergenKey(db: Database, rawKey: unknown): Promise<Validated<string>> {
+  const parsed = allergenKeyParamSchema.safeParse({ key: rawKey });
+  if (!parsed.success) return { ok: false, details: parsed.error.flatten() };
+
+  const [row] = await db
+    .select({ slug: allergens.slug })
+    .from(allergens)
+    .where(eq(allergens.slug, parsed.data.key))
+    .limit(1);
+  if (!row) return { ok: false, details: { key: "unknown allergen" } };
+
+  return { ok: true, value: row.slug };
 }
 
 /** A recipe id is attribution, but it still has to name a real recipe. */
@@ -276,20 +301,85 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
 
     const exposuresByAllergenId = new Map(exposureRows.map((r) => [r.allergenId, r]));
 
+    // Parent overrides, keyed by slug. Read alongside the derivation rather
+    // than folded into the exposure query on purpose: `exposures` stays a
+    // pure count of real meals, and the union happens in one shared function.
+    const overrideRows = await db
+      .select({ allergenKey: allergenOverrides.allergenKey })
+      .from(allergenOverrides)
+      .where(eq(allergenOverrides.babyId, params.data.babyId));
+    const overriddenSlugs = new Set(overrideRows.map((row) => row.allergenKey));
+
     const items: AllergenProgressItem[] = allergenRows.map((a) => {
       const exposure = exposuresByAllergenId.get(a.id);
       const exposures = exposure?.exposures ?? 0;
+      const { status, overridden } = unionAllergenStatus(exposures, overriddenSlugs.has(a.slug));
       return {
         allergenSlug: a.slug,
         allergenName: a.name,
         introGuidance: a.introGuidance,
         exposures,
         firstAt: exposure ? new Date(exposure.firstAt).toISOString() : null,
-        lastAt: exposure ? new Date(exposure.lastAt).toISOString() : null,
-        status: deriveAllergenStatus(exposures),
+        // Null means "nothing logged", including for a row an override alone
+        // established — see the schema's note on `lastServedAt`.
+        lastServedAt: exposure ? new Date(exposure.lastAt).toISOString() : null,
+        status,
+        overridden,
       };
     });
 
     return reply.send({ items } satisfies AllergenProgressResponse);
   });
+
+  // -----------------------------------------------------------------------
+  // PUT /api/babies/:babyId/allergens/:key/established
+  // -----------------------------------------------------------------------
+  // "We already established this one before we started using the app."
+  // Idempotent by the unique index: marking an already-marked allergen is a
+  // no-op 204, never a conflict. Nothing about the derived ladder is written
+  // or reset — the override is a separate row the progress route unions in.
+  app.put("/api/babies/:babyId/allergens/:key/established", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = babyIdRouteParamSchema.safeParse(request.params);
+    if (!params.success) return notFound(reply);
+    if (!(await ownsBaby(db, params.data.babyId, currentUserId(request)))) return notFound(reply);
+
+    const key = await validateAllergenKey(db, (request.params as { key?: unknown }).key);
+    if (!key.ok) return badRequest(reply, key.details);
+
+    await db
+      .insert(allergenOverrides)
+      .values({ babyId: params.data.babyId, allergenKey: key.value })
+      .onConflictDoNothing();
+
+    return reply.code(204).send();
+  });
+
+  // -----------------------------------------------------------------------
+  // DELETE /api/babies/:babyId/allergens/:key/established
+  // -----------------------------------------------------------------------
+  // Undo. Idempotent: deleting an override that was never there still 204s,
+  // and removing it only drops the manual promotion — whatever the meal log
+  // derives on its own comes straight back.
+  app.delete(
+    "/api/babies/:babyId/allergens/:key/established",
+    { preHandler: app.requireAuth },
+    async (request, reply) => {
+      const params = babyIdRouteParamSchema.safeParse(request.params);
+      if (!params.success) return notFound(reply);
+      if (!(await ownsBaby(db, params.data.babyId, currentUserId(request)))) return notFound(reply);
+
+      // Validated on DELETE too (rather than the favorites route's "a bad id
+      // could not have been favorited anyway, 204" shortcut): a typo'd key
+      // here means the client is confidently un-marking the wrong thing, and
+      // the allergen list is public catalog content, so a 400 tells it so.
+      const key = await validateAllergenKey(db, (request.params as { key?: unknown }).key);
+      if (!key.ok) return badRequest(reply, key.details);
+
+      await db
+        .delete(allergenOverrides)
+        .where(and(eq(allergenOverrides.babyId, params.data.babyId), eq(allergenOverrides.allergenKey, key.value)));
+
+      return reply.code(204).send();
+    },
+  );
 }

@@ -20,6 +20,7 @@ import {
 import { createPerUserRateLimit, perUserRateLimitHook } from "../ai/client.js";
 import type { Database } from "../db/index.js";
 import {
+  allergenOverrides,
   babies,
   chatMessages,
   chatThreads,
@@ -149,6 +150,20 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       if (existing) existing.push(entry);
       else foodsByMealId.set(row.mealId, [entry]);
     }
+
+    // Hangs off babies exactly like meals do, so it is scoped by the same
+    // owned-baby id list rather than by a join.
+    const allergenOverrideRows = babyIds.length
+      ? await db
+          .select({
+            babyId: allergenOverrides.babyId,
+            allergenKey: allergenOverrides.allergenKey,
+            createdAt: allergenOverrides.createdAt,
+          })
+          .from(allergenOverrides)
+          .where(inArray(allergenOverrides.babyId, babyIds))
+          .orderBy(asc(allergenOverrides.createdAt))
+      : [];
 
     const symptomCheckRows = babyIds.length
       ? await db
@@ -289,6 +304,11 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         bestBy: row.bestBy,
         notes: row.notes,
       })),
+      allergenOverrides: allergenOverrideRows.map((row) => ({
+        babyId: row.babyId,
+        allergenKey: row.allergenKey,
+        createdAt: row.createdAt.toISOString(),
+      })),
       symptomChecks: symptomCheckRows.map((row) => ({
         id: row.id,
         babyId: row.babyId,
@@ -418,6 +438,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       // owns hangs off `user` by an ON DELETE CASCADE chain, so this single
       // delete takes all of them atomically:
       //   user -> babies -> meals -> meal_foods, babies -> symptom_checks
+      //   user -> babies -> allergen_overrides
       //   user -> favorites, pantry_items, user_ai_keys
       //   user -> chat_threads -> chat_messages
       //   user -> session, account            (better-auth's own tables)

@@ -4,5 +4,9 @@
     "outDir": "dist",
     "rootDir": "src"
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Tests are run from source by vitest and have no business in the package
+  // consumers install: emitting them shipped .test.js/.d.ts artifacts into
+  // dist for no reader.
+  "exclude": ["src/**/*.test.ts"]
 }

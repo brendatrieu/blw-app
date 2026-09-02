@@ -1,55 +1,19 @@
-import { useEffect, useRef, useState } from "react";
-import type { PantryItem, PantryStatus, PantryView } from "@blw/shared";
-import { usePantryItems, useUpdatePantryItem } from "../features/pantry/hooks.js";
+import { useState } from "react";
+import type { PantryView } from "@blw/shared";
+import { usePantryItems, usePantryStatusChange } from "../features/pantry/hooks.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { PantryItemCard } from "../features/pantry/components/PantryItemCard.js";
-import { pantryItemTitle } from "../features/pantry/format.js";
+import { PantryStatusBanner } from "../features/pantry/components/PantryStatusBanner.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { SkeletonList } from "../components/ui/Skeleton.js";
 
-const UNDO_WINDOW_MS = 6_000;
-
-interface RecentChange {
-  id: string;
-  title: string;
-  from: PantryStatus;
-  to: PantryStatus;
-}
-
 export function PantryPage() {
   const [view, setView] = useState<PantryView>("active");
-  const [recentChange, setRecentChange] = useState<RecentChange | null>(null);
-  const undoTimer = useRef<ReturnType<typeof setTimeout>>();
-
   const { data, isLoading, isError } = usePantryItems(view);
-  const updateItem = useUpdatePantryItem();
+  const { recentChange, setStatus, undo, isPending } = usePantryStatusChange();
   const { activeBaby } = useActiveBaby();
-
-  useEffect(() => {
-    return () => clearTimeout(undoTimer.current);
-  }, []);
-
-  function announceChange(item: PantryItem, from: PantryStatus, to: PantryStatus) {
-    clearTimeout(undoTimer.current);
-    setRecentChange({ id: item.id, title: pantryItemTitle(item), from, to });
-    undoTimer.current = setTimeout(() => setRecentChange(null), UNDO_WINDOW_MS);
-  }
-
-  function setStatus(item: PantryItem, status: PantryStatus, announce: boolean) {
-    updateItem.mutate(
-      { id: item.id, input: { status } },
-      { onSuccess: (updated) => announce && announceChange(updated, item.status, status) },
-    );
-  }
-
-  function handleUndo() {
-    if (!recentChange) return;
-    updateItem.mutate({ id: recentChange.id, input: { status: recentChange.from } });
-    clearTimeout(undoTimer.current);
-    setRecentChange(null);
-  }
 
   const items = data?.items ?? [];
 
@@ -83,21 +47,7 @@ export function PantryPage() {
         ))}
       </div>
 
-      {recentChange && (
-        <div className="flex items-center justify-between gap-2 rounded-[var(--radius-md)] bg-[var(--color-callout-bg)] px-3 py-2 text-sm text-[var(--color-text)]">
-          <span>
-            {recentChange.to === "finished" ? "Marked finished: " : "Marked discarded: "}
-            {recentChange.title}
-          </span>
-          <button
-            type="button"
-            onClick={handleUndo}
-            className="font-semibold text-[var(--color-accent)] underline"
-          >
-            Undo
-          </button>
-        </div>
-      )}
+      {recentChange && <PantryStatusBanner change={recentChange} onUndo={undo} />}
 
       {isLoading && <SkeletonList count={4} />}
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load the pantry.</p>}
@@ -124,7 +74,7 @@ export function PantryPage() {
           <PantryItemCard
             key={item.id}
             item={item}
-            busy={updateItem.isPending}
+            busy={isPending}
             onRemove={item.status === "active" ? () => setStatus(item, "discarded", true) : undefined}
             editHref={item.status === "active" ? `/pantry/${item.id}/edit` : undefined}
             onRestore={item.status !== "active" ? () => setStatus(item, "active", false) : undefined}

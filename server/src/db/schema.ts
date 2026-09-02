@@ -345,6 +345,28 @@ export const mealFoods = pgTable(
   ],
 );
 
+// Parent-declared "this allergen was already established before we started
+// using the app". Purely ADDITIVE to the derived ladder: allergen progress is
+// still counted from `meal_foods` JOIN `meals`, and a row here can only ever
+// promote an allergen to "established" — it never blocks, downgrades or
+// rewrites the derived exposure count. `allergen_key` is `allergens.slug`
+// (validated against that table by the route) rather than a foreign key to
+// `allergens.id`, so an override survives a catalog reseed that hands the
+// same allergen a new uuid. UNIQUE(baby_id, allergen_key) is what makes the
+// PUT idempotent.
+export const allergenOverrides = pgTable(
+  "allergen_overrides",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    babyId: uuid("baby_id")
+      .notNull()
+      .references(() => babies.id, { onDelete: "cascade" }),
+    allergenKey: text("allergen_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("allergen_overrides_baby_key_idx").on(t.babyId, t.allergenKey)],
+);
+
 export const pantryLocationEnum = pgEnum("pantry_location", ["fridge", "freezer", "counter"]);
 export const pantryStatusEnum = pgEnum("pantry_status", ["active", "finished", "discarded"]);
 

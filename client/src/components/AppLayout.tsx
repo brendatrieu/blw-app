@@ -20,8 +20,11 @@ const ICON_PROPS: SVGProps<SVGSVGElement> = {
 
 function SunIcon() {
   return (
-    <svg {...ICON_PROPS} width={18} height={18}>
-      <circle cx="12" cy="12" r="4" />
+    // Filled golden sun — the one decorative color in the header, matching
+    // the emoji-colored icons used across the app. Fixed hexes (not tokens):
+    // gold reads on both grounds and the icon is aria-hidden decoration.
+    <svg {...ICON_PROPS} width={18} height={18} stroke="#c1912f">
+      <circle cx="12" cy="12" r="4" fill="#F9D779" />
       <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
     </svg>
   );
@@ -29,8 +32,8 @@ function SunIcon() {
 
 function MoonIcon() {
   return (
-    <svg {...ICON_PROPS} width={18} height={18}>
-      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+    <svg {...ICON_PROPS} width={18} height={18} stroke="#c1912f">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" fill="#F9D779" />
     </svg>
   );
 }

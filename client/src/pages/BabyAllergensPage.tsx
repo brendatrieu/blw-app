@@ -1,8 +1,10 @@
 import { useParams } from "react-router-dom";
 import type { AllergenProgressItem, AllergenStatus } from "@blw/shared";
 import { useBabies } from "../features/babies/hooks.js";
-import { useAllergenProgress } from "../features/tracking/hooks.js";
+import { useAllergenProgress, useMarkAllergenEstablished, useUndoAllergenEstablished } from "../features/tracking/hooks.js";
+import { resolveAllergenRowAction, resolveAllergenRecency } from "../features/tracking/allergenRow.js";
 import { Badge, type BadgeTone } from "../features/catalog/components/Badge.js";
+import { Button } from "../components/ui/Button.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { Card } from "../components/ui/Card.js";
@@ -42,7 +44,73 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-function AllergenRow({ item }: { item: AllergenProgressItem }) {
+interface MarkEstablishedActionProps {
+  babyId: string;
+  allergenSlug: string;
+}
+
+/**
+ * Single-tap backfill: writes the override immediately — the row's
+ * "Marked by you · Undo" affordance is the safety net (undo beats a
+ * confirm step). The explanatory copy lives once at the top of the page.
+ */
+function MarkEstablishedAction({ babyId, allergenSlug }: MarkEstablishedActionProps) {
+  const mark = useMarkAllergenEstablished(babyId);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Button
+        type="button"
+        size="sm"
+        variant="secondary"
+        disabled={mark.isPending}
+        onClick={() => mark.mutate(allergenSlug)}
+      >
+        {mark.isPending ? "Marking…" : "Mark as established"}
+      </Button>
+      {mark.isError && (
+        <p role="alert" className="text-xs text-[var(--color-danger)]">
+          Couldn't save that — try again.
+        </p>
+      )}
+    </div>
+  );
+}
+
+interface OverriddenHintProps {
+  babyId: string;
+  allergenSlug: string;
+}
+
+/**
+ * Muted "marked by you" hint + Undo for a row established only via a parent
+ * override. Never shown once the meal log itself establishes the allergen —
+ * the override un-flags itself the moment real exposures catch up (see
+ * `unionAllergenStatus` in shared/src/tracking.ts).
+ */
+function OverriddenHint({ babyId, allergenSlug }: OverriddenHintProps) {
+  const undo = useUndoAllergenEstablished(babyId);
+
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="text-[var(--color-text-muted)]">Marked by you</span>
+      <button
+        type="button"
+        disabled={undo.isPending}
+        onClick={() => undo.mutate(allergenSlug)}
+        className="font-semibold text-[var(--color-accent)] underline disabled:opacity-60"
+      >
+        {undo.isPending ? "Undoing…" : "Undo"}
+      </button>
+      {undo.isError && <span className="text-[var(--color-danger)]">Couldn't undo — try again.</span>}
+    </div>
+  );
+}
+
+function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: string | undefined }) {
+  const action = resolveAllergenRowAction(item);
+  const recency = resolveAllergenRecency(item);
+
   return (
     <Card as="li" padding="sm" className="flex flex-col gap-2">
       <div className="flex items-center gap-3">
@@ -58,9 +126,13 @@ function AllergenRow({ item }: { item: AllergenProgressItem }) {
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
         <span>{item.exposures === 1 ? "1 exposure" : `${item.exposures} exposures`}</span>
         <span>First: {formatDate(item.firstAt)}</span>
-        <span>Last: {formatDate(item.lastAt)}</span>
+        {recency.fact && <span>{recency.fact}</span>}
       </div>
       <p className="text-sm text-[var(--color-text)]">{item.introGuidance}</p>
+      {recency.hint && <p className="text-xs text-[var(--color-text-muted)]">{recency.hint}</p>}
+
+      {babyId && action === "mark" && <MarkEstablishedAction babyId={babyId} allergenSlug={item.allergenSlug} />}
+      {babyId && action === "undo" && <OverriddenHint babyId={babyId} allergenSlug={item.allergenSlug} />}
     </Card>
   );
 }
@@ -75,9 +147,15 @@ export function BabyAllergensPage() {
     <div className="flex flex-col gap-4 p-4">
       <BackButton fallback="/" />
       <PageHeader
-        title={`Allergen ladder${baby ? ` — ${baby.name}` : ""}`}
+        title="Allergen ladder"
         emoji="🪜"
-        description="Introduce one new allergen at a time, in the morning at home, and wait a few days before the next one."
+        description={
+          <>
+            Introduce one new allergen at a time, in the morning at home, and wait a few days before
+            the next one.
+            <span className="mt-1 block">Already established? Mark it so your progress reflects it.</span>
+          </>
+        }
       />
 
       {isLoading && <SkeletonList count={4} />}
@@ -86,7 +164,7 @@ export function BabyAllergensPage() {
       {data && (
         <ul className="flex flex-col gap-2">
           {data.items.map((item) => (
-            <AllergenRow key={item.allergenSlug} item={item} />
+            <AllergenRow key={item.allergenSlug} item={item} babyId={babyId} />
           ))}
         </ul>
       )}
