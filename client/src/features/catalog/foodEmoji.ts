@@ -16,7 +16,7 @@ const FOOD_EMOJI: Record<string, string> = {
   lentils: "🍲",
   chickpeas: "🫘",
   black_beans: "🫘",
-  tofu: "🧊",
+  tofu: "🍢",
   iron_fortified_oats: "🥣",
   spinach: "🥬",
   quinoa: "🌾",
