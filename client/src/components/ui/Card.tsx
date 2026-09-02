@@ -11,7 +11,7 @@ const PADDING_CLASSES: Record<CardPadding, string> = {
 
 const BASE = "rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-sm)]";
 const INTERACTIVE =
-  "transition-[transform,border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-spring)] hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-md)] active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100";
+  "transition-[transform,border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-spring)] hover:border-[var(--color-accent)] hover:shadow-[var(--shadow-md)] active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100";
 
 interface CardProps extends HTMLAttributes<HTMLElement> {
   padding?: CardPadding;

@@ -2,26 +2,50 @@
 @import "@fontsource-variable/nunito/wght.css";
 
 /*
- * Design tokens — "Sunny Sprout"
- * ===============================
+ * Design tokens — "Peach Terra Cotta"
+ * ====================================
  * Everything below is CSS custom properties, not a Tailwind @theme block —
  * the app already leans on `var(--color-x)` and `text-[var(--color-x)]`
- * throughout, so token *names* stay stable across the v1 -> v1.1 palette
- * swap and only the values (plus a handful of new tokens) change here.
+ * throughout, so token *names* stay stable across palette swaps and only
+ * the values (plus a handful of new tokens) change here.
  *
  * Light/dark theming:
  * - Default (no attribute on <html>): follows prefers-color-scheme.
  * - Manual override: `data-theme="light" | "dark"` set on <html> by the
  *   theme toggle, persisted to localStorage (see src/theme.ts).
  *
- * The dark palette's actual hex values are defined exactly once, as
+ * The dark palette's actual hex/rgba values are defined exactly once, as
  * private `--_dark-*` tokens on bare `:root` (so they exist unconditionally
  * and both the media-query path and the `[data-theme]` path can reference
  * the same source of truth via `var()` instead of repeating literals).
  *
- * Every text/background pairing used anywhere in the app is checked against
- * WCAG AA (4.5:1 for body text, 3:1 for large/UI text) in both themes — see
- * `client/scripts/check-contrast.mjs` (npm script `check:contrast`).
+ * Token roles (read this before touching a color):
+ * - --color-primary / -contrast / -hover / -active: the ONE CTA fill,
+ *   fixed peach in both modes with fixed pure-black text — every button,
+ *   solid badge, and "selected chip" fill in the app uses this, never a
+ *   per-action color.
+ * - --color-accent: the INTERACTIVE TEXT/BORDER color — links, the active
+ *   bottom-nav label, focus rings/focus-within borders, and small
+ *   confirmation markers (e.g. "Added to your pantry"). Terracotta in
+ *   light mode (peach itself reads too pale as body-size text on a light
+ *   ground), raw peach in dark mode.
+ * - --color-{primary,caution,success}-soft / -soft-text: translucent chip
+ *   tint + its matching deep/pastel text, for badges that carry a soft
+ *   semantic (brand/caution/success) rather than a solid CTA-style fill.
+ * - --color-neutral-soft / -soft-text: the gray (non-semantic) chip tint,
+ *   e.g. Fridge/Freezer/Counter location badges.
+ * - --color-danger / -contrast: danger is both a standalone text/icon
+ *   color (readable directly on page/elevated grounds) and, paired with
+ *   -contrast, a solid fill (readable text on that fill) — the two modes
+ *   need different contrast text (white on the light mode's dark red,
+ *   black on the dark mode's light salmon), which is why danger gets its
+ *   own contrast token instead of reusing --color-primary-contrast.
+ *
+ * Every text/background pairing used anywhere in the app — including the
+ * translucent chip tints composited over both grounds — is checked against
+ * WCAG AA (4.5:1 for body text, 3:1 for large/UI-only elements) in both
+ * themes by `client/src/styles/contrast.test.ts`, which runs as part of the
+ * normal `vitest run` suite.
  *
  * --color-bg (light) and --_dark-color-bg (dark) are duplicated as literal
  * hex outside this file, in `client/vite.config.ts` (manifest theme_color /
@@ -29,45 +53,56 @@
  * tags). Keep all three in sync by hand when either value changes here.
  */
 :root {
-  /* ---- Surfaces (warm cream) ---- */
-  --color-bg: #fff6ea;
-  --color-bg-elevated: #fffdf8;
-  --color-bg-inset: #f5eee2;
+  /* ---- Surfaces (warm paper) ---- */
+  --color-bg: #fdfaf6;
+  --color-bg-elevated: #ffffff;
+  --color-bg-inset: #f2ece0;
 
-  /* ---- Text (warm charcoal — warm-leaning but never brown) ---- */
-  --color-text: #3b3630;
-  --color-text-muted: #6e675e;
-  --color-border: #ece4d6;
+  /* ---- Text (warm charcoal) ---- */
+  --color-text: #282724;
+  --color-text-muted: #6b665e;
+  --color-border: #e8e2d8;
 
-  /* ---- Coral ramp ----
-     soft = pastel chip/pill backgrounds; mid = decorative/large accents
-     only (never text or a fill under body-size text); deep = the
-     accessible workhorse used for links, the primary button fill, and any
-     coral text-on-light. */
-  --color-coral-soft: #ffe3d6;
-  --color-coral-mid: #ff7a59;
-  --color-coral-deep: #b23a0a;
+  /* ---- Brand: the one CTA fill, fixed across both themes ---- */
+  --color-primary: #f2b693;
+  --color-primary-hover: #eca37b;
+  --color-primary-active: #e2905f;
+  --color-primary-contrast: #000000;
 
-  /* ---- Sunshine ---- */
-  --color-sunshine: #ffc94d;
-  --color-sunshine-soft: #fff0cc;
-  --color-sunshine-deep: #7a4e08;
+  /* ---- Interactive text/border accent (links, active nav, focus rings,
+     from-pantry markers, selected-state labels) — mode-dependent because
+     raw peach is too pale to read as body-size text on a light ground. ---- */
+  --color-accent: #a8501f;
 
-  /* ---- Leaf ---- */
-  --color-leaf: #4caf7d;
-  --color-leaf-soft: #d9f0e1;
-  --color-leaf-deep: #1f6b44;
+  /* ---- Semantic swatches — solid, used for confetti + tiny status dots,
+     never as a body-text color. ---- */
+  --color-caution: #f9d779;
+  --color-success: #a1cca6;
 
-  /* ---- Brand roles ---- */
-  --color-primary: var(--color-coral-deep);
-  --color-primary-contrast: #ffffff;
-  --color-primary-soft: var(--color-coral-soft);
-  --color-accent: var(--color-sunshine-deep);
-  --color-danger: #c23b22;
+  /* ---- Chip/badge tints — translucent brand/caution/success fills, each
+     paired with its own deep (light mode) / pastel (dark mode) text. ---- */
+  --color-primary-soft: rgba(242, 182, 147, 0.33);
+  --color-primary-soft-text: #7a4a1f;
+  --color-caution-soft: rgba(249, 215, 121, 0.33);
+  --color-caution-soft-text: #4a3a08;
+  --color-success-soft: rgba(161, 204, 166, 0.33);
+  --color-success-soft-text: #1e3b24;
 
-  --color-callout-bg: #fcebc9;
-  --color-callout-border: #e7b66b;
-  --color-callout-icon: #8a5a0a;
+  /* ---- Neutral chip tint — location badges (Fridge/Freezer/Counter) and
+     any other label that deliberately carries no semantic color. ---- */
+  --color-neutral-soft: rgba(107, 102, 94, 0.12);
+  --color-neutral-soft-text: #6b665e;
+
+  /* ---- Danger — functional only, kept legible as both plain text and a
+     solid fill (see the token-roles note above). ---- */
+  --color-danger: #b3261e;
+  --color-danger-contrast: #ffffff;
+  --color-danger-soft: rgba(179, 38, 30, 0.1);
+  --color-danger-soft-text: #b3261e;
+
+  --color-callout-bg: #fbf0ce;
+  --color-callout-border: #efd37a;
+  --color-callout-icon: #4a3a08;
 
   /* ---- Elevation — warm-tinted (cocoa-brown) instead of neutral black,
      so shadows read as part of the palette rather than generic UI murk. ---- */
@@ -111,32 +146,36 @@
   /* ---- Dark palette values (private) ----
      Defined unconditionally here so both the prefers-color-scheme path and
      the [data-theme="dark"] path below can assign the *same* literals via
-     var() instead of duplicating hex codes. */
-  --_dark-color-bg: #1a1815;
-  --_dark-color-bg-elevated: #26231e;
-  --_dark-color-bg-inset: #302c26;
-  --_dark-color-text: #f3efe8;
-  --_dark-color-text-muted: #b3ada3;
-  --_dark-color-border: #3b362f;
+     var() instead of duplicating hex/rgba codes. Tokens that are fixed
+     across themes (primary, primary-contrast, caution, success) are not
+     repeated here — both mode blocks below simply skip reassigning them. */
+  --_dark-color-bg: #121110;
+  --_dark-color-bg-elevated: #1c1a19;
+  --_dark-color-bg-inset: #221f1d;
+  --_dark-color-text: #f0eee9;
+  --_dark-color-text-muted: #ada7a0;
+  --_dark-color-border: #322e2c;
 
-  --_dark-coral-soft: #4a2c1e;
-  --_dark-coral-mid: #ff9b7d;
-  --_dark-coral-deep: #ff8e6e;
+  --_dark-accent: #f2b693;
 
-  --_dark-sunshine: #ffd97a;
-  --_dark-sunshine-soft: #4a3b12;
-  --_dark-sunshine-deep: #ffd97a;
+  --_dark-primary-soft: rgba(242, 182, 147, 0.13);
+  --_dark-primary-soft-text: #f2b693;
+  --_dark-caution-soft: rgba(249, 215, 121, 0.13);
+  --_dark-caution-soft-text: #f9d779;
+  --_dark-success-soft: rgba(161, 204, 166, 0.13);
+  --_dark-success-soft-text: #a1cca6;
 
-  --_dark-leaf: #6fcb9a;
-  --_dark-leaf-soft: #20361f;
-  --_dark-leaf-deep: #6fcb9a;
+  --_dark-neutral-soft: rgba(173, 167, 160, 0.16);
+  --_dark-neutral-soft-text: #ada7a0;
 
-  --_dark-primary-contrast: #2a1710;
-  --_dark-danger: #ff8a75;
+  --_dark-danger: #ff8a80;
+  --_dark-danger-soft: rgba(255, 138, 128, 0.14);
+  --_dark-danger-soft-text: #ff8a80;
+  --_dark-danger-contrast: #000000;
 
-  --_dark-callout-bg: #2e2412;
-  --_dark-callout-border: #6b4a22;
-  --_dark-callout-icon: #e3a855;
+  --_dark-callout-bg: #362c10;
+  --_dark-callout-border: #6b5a22;
+  --_dark-callout-icon: #f9d779;
 
   --_dark-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 1px rgb(0 0 0 / 0.24);
   --_dark-shadow-md: 0 8px 20px rgb(0 0 0 / 0.36), 0 2px 6px rgb(0 0 0 / 0.24);
@@ -153,23 +192,22 @@
     --color-text-muted: var(--_dark-color-text-muted);
     --color-border: var(--_dark-color-border);
 
-    --color-coral-soft: var(--_dark-coral-soft);
-    --color-coral-mid: var(--_dark-coral-mid);
-    --color-coral-deep: var(--_dark-coral-deep);
+    --color-accent: var(--_dark-accent);
 
-    --color-sunshine: var(--_dark-sunshine);
-    --color-sunshine-soft: var(--_dark-sunshine-soft);
-    --color-sunshine-deep: var(--_dark-sunshine-deep);
+    --color-primary-soft: var(--_dark-primary-soft);
+    --color-primary-soft-text: var(--_dark-primary-soft-text);
+    --color-caution-soft: var(--_dark-caution-soft);
+    --color-caution-soft-text: var(--_dark-caution-soft-text);
+    --color-success-soft: var(--_dark-success-soft);
+    --color-success-soft-text: var(--_dark-success-soft-text);
 
-    --color-leaf: var(--_dark-leaf);
-    --color-leaf-soft: var(--_dark-leaf-soft);
-    --color-leaf-deep: var(--_dark-leaf-deep);
+    --color-neutral-soft: var(--_dark-neutral-soft);
+    --color-neutral-soft-text: var(--_dark-neutral-soft-text);
 
-    --color-primary: var(--color-coral-deep);
-    --color-primary-contrast: var(--_dark-primary-contrast);
-    --color-primary-soft: var(--color-coral-soft);
-    --color-accent: var(--color-sunshine-deep);
     --color-danger: var(--_dark-danger);
+  --color-danger-soft: var(--_dark-danger-soft);
+  --color-danger-soft-text: var(--_dark-danger-soft-text);
+    --color-danger-contrast: var(--_dark-danger-contrast);
 
     --color-callout-bg: var(--_dark-callout-bg);
     --color-callout-border: var(--_dark-callout-border);
@@ -190,23 +228,22 @@
   --color-text-muted: var(--_dark-color-text-muted);
   --color-border: var(--_dark-color-border);
 
-  --color-coral-soft: var(--_dark-coral-soft);
-  --color-coral-mid: var(--_dark-coral-mid);
-  --color-coral-deep: var(--_dark-coral-deep);
+  --color-accent: var(--_dark-accent);
 
-  --color-sunshine: var(--_dark-sunshine);
-  --color-sunshine-soft: var(--_dark-sunshine-soft);
-  --color-sunshine-deep: var(--_dark-sunshine-deep);
+  --color-primary-soft: var(--_dark-primary-soft);
+  --color-primary-soft-text: var(--_dark-primary-soft-text);
+  --color-caution-soft: var(--_dark-caution-soft);
+  --color-caution-soft-text: var(--_dark-caution-soft-text);
+  --color-success-soft: var(--_dark-success-soft);
+  --color-success-soft-text: var(--_dark-success-soft-text);
 
-  --color-leaf: var(--_dark-leaf);
-  --color-leaf-soft: var(--_dark-leaf-soft);
-  --color-leaf-deep: var(--_dark-leaf-deep);
+  --color-neutral-soft: var(--_dark-neutral-soft);
+  --color-neutral-soft-text: var(--_dark-neutral-soft-text);
 
-  --color-primary: var(--color-coral-deep);
-  --color-primary-contrast: var(--_dark-primary-contrast);
-  --color-primary-soft: var(--color-coral-soft);
-  --color-accent: var(--color-sunshine-deep);
   --color-danger: var(--_dark-danger);
+  --color-danger-soft: var(--_dark-danger-soft);
+  --color-danger-soft-text: var(--_dark-danger-soft-text);
+  --color-danger-contrast: var(--_dark-danger-contrast);
 
   --color-callout-bg: var(--_dark-callout-bg);
   --color-callout-border: var(--_dark-callout-border);
@@ -264,7 +301,7 @@ body {
  * data-no-focus-ring and draw their own focus-within ring instead.
  * ---------------------------------------------------------------------- */
 :focus-visible:not([data-no-focus-ring]) {
-  outline: 2px solid var(--color-coral-deep);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   border-radius: 4px;
 }

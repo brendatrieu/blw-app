@@ -21,7 +21,7 @@ export function useCelebration(): CelebrationContextValue {
   return ctx;
 }
 
-const PARTICLE_COLORS = ["var(--color-coral-mid)", "var(--color-sunshine)", "var(--color-leaf)"];
+const PARTICLE_COLORS = ["var(--color-primary)", "var(--color-caution)", "var(--color-success)"];
 const PARTICLE_COUNT = 24;
 const TOAST_DURATION_MS = 2600;
 

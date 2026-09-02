@@ -1,16 +1,20 @@
 import type { ReactNode } from "react";
 
-export type BadgeTone = "primary" | "accent" | "neutral" | "danger" | "sunshine" | "leaf";
+export type BadgeTone = "primary" | "neutral" | "danger" | "dangerSoft" | "sunshine" | "leaf";
 
 const TONE_CLASSES: Record<BadgeTone, string> = {
+  // Solid CTA-style fill — the single "strong" badge look, shared with buttons.
   primary: "bg-[var(--color-primary)] text-[var(--color-primary-contrast)]",
-  accent: "bg-[var(--color-accent)] text-[var(--color-primary-contrast)]",
-  neutral: "bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)] border border-[var(--color-border)]",
-  danger: "bg-[var(--color-danger)] text-[var(--color-primary-contrast)]",
-  // Soft-tone chips (bg + matching deep text) rather than a solid fill —
-  // used where a badge should read as a gentle label, not an alert.
-  sunshine: "bg-[var(--color-sunshine-soft)] text-[var(--color-sunshine-deep)]",
-  leaf: "bg-[var(--color-leaf-soft)] text-[var(--color-leaf-deep)]",
+  danger: "bg-[var(--color-danger)] text-[var(--color-danger-contrast)]",
+  // Quiet danger STATUS (e.g. "Expired") — a chip, not an alert or a button.
+  dangerSoft: "bg-[var(--color-danger-soft)] text-[var(--color-danger-soft-text)]",
+  // Translucent tints (bg + matching deep/pastel text) — a gentle label
+  // rather than an alert. Prop names stay their old "sunshine"/"leaf"
+  // shorthand for caution/success even though the token values underneath
+  // are the new palette's.
+  neutral: "bg-[var(--color-neutral-soft)] text-[var(--color-neutral-soft-text)]",
+  sunshine: "bg-[var(--color-caution-soft)] text-[var(--color-caution-soft-text)]",
+  leaf: "bg-[var(--color-success-soft)] text-[var(--color-success-soft-text)]",
 };
 
 interface BadgeProps {

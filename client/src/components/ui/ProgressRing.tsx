@@ -11,7 +11,7 @@ interface ProgressRingProps {
   children?: React.ReactNode;
 }
 
-/** SVG progress ring — coral fill on a soft cream track. Used for allergen/progress summaries. */
+/** SVG progress ring — peach fill on a warm inset track. Used for allergen/progress summaries. */
 export function ProgressRing({ size = 96, value, strokeWidth = 10, label, children }: ProgressRingProps) {
   const clamped = Math.min(1, Math.max(0, value));
   const radius = (size - strokeWidth) / 2;

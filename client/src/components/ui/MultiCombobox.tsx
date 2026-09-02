@@ -191,7 +191,7 @@ export function MultiComboboxOptionList({
                     : ""
               }`}
             >
-              <span aria-hidden="true" className="w-4 shrink-0 text-center text-[var(--color-primary)]">
+              <span aria-hidden="true" className="w-4 shrink-0 text-center text-[var(--color-primary-soft-text)]">
                 {selected ? "✓" : ""}
               </span>
               {option.emoji ? <span aria-hidden="true">{option.emoji}</span> : null}
@@ -402,7 +402,7 @@ export function MultiCombobox({
             // action from being immediately undone by this handler.
             setOpen(true);
           }}
-          className={`flex min-h-11 w-full items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 transition-colors duration-[var(--duration-fast)] focus-within:border-[var(--color-primary)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-coral-deep)] ${
+          className={`flex min-h-11 w-full items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 transition-colors duration-[var(--duration-fast)] focus-within:border-[var(--color-accent)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-accent)] ${
             disabled ? "cursor-not-allowed opacity-60" : "cursor-text"
           }`}
         >
@@ -449,7 +449,7 @@ export function MultiCombobox({
           {value.length >= 1 && (
             <span
               id={countBadgeId}
-              className="pointer-events-none shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-primary-soft)] px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-primary)]"
+              className="pointer-events-none shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-primary-soft)] px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-primary-soft-text)]"
             >
               {value.length} selected
             </span>

@@ -103,7 +103,7 @@ export function MealCard({ meal, babyId, pendingDeleteId, onRequestDelete, onCan
             type="button"
             disabled={deleteMeal.isPending}
             onClick={() => deleteMeal.mutate(meal.id, { onSettled: onCancelDelete })}
-            className="rounded-[var(--radius-md)] bg-[var(--color-danger)] px-2 py-1 text-xs font-medium text-[var(--color-primary-contrast)] disabled:opacity-60"
+            className="rounded-[var(--radius-md)] bg-[var(--color-danger)] px-2 py-1 text-xs font-medium text-[var(--color-danger-contrast)] disabled:opacity-60"
           >
             {deleteMeal.isPending ? "Removing…" : "Yes, delete"}
           </button>

@@ -92,7 +92,7 @@ export function PantryPage() {
           <button
             type="button"
             onClick={handleUndo}
-            className="font-semibold text-[var(--color-primary)] underline"
+            className="font-semibold text-[var(--color-accent)] underline"
           >
             Undo
           </button>
@@ -125,8 +125,7 @@ export function PantryPage() {
             key={item.id}
             item={item}
             busy={updateItem.isPending}
-            onFinish={item.status === "active" ? () => setStatus(item, "finished", true) : undefined}
-            onDiscard={item.status === "active" ? () => setStatus(item, "discarded", true) : undefined}
+            onRemove={item.status === "active" ? () => setStatus(item, "discarded", true) : undefined}
             editHref={item.status === "active" ? `/pantry/${item.id}/edit` : undefined}
             onRestore={item.status !== "active" ? () => setStatus(item, "active", false) : undefined}
             babyId={activeBaby?.id}

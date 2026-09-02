@@ -53,7 +53,7 @@ function MarkAsServed({ food }: MarkAsServedProps) {
   if (!activeBaby) {
     return (
       <p className="text-xs text-[var(--color-text-muted)]">
-        <Link to="/settings" className="font-medium text-[var(--color-primary)] underline">
+        <Link to="/settings" className="font-medium text-[var(--color-accent)] underline">
           Add a baby
         </Link>{" "}
         to log this as served.
@@ -160,7 +160,7 @@ export function FoodDetailPage() {
       <div className="flex flex-col items-center gap-3 text-center">
         <span
           aria-hidden="true"
-          className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-coral-soft)] text-5xl leading-none"
+          className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-5xl leading-none"
         >
           {getFoodEmoji(food.slug, food.category)}
         </span>
@@ -217,7 +217,7 @@ export function FoodDetailPage() {
                     </span>
                     {pairing.food.name}
                   </span>
-                  <Badge tone="accent">Vit C {levelLabel(pairing.food.vitaminCLevel)}</Badge>
+                  <Badge tone="sunshine">Vit C {levelLabel(pairing.food.vitaminCLevel)}</Badge>
                 </div>
                 <p className="text-xs text-[var(--color-text-muted)]">{pairing.reason}</p>
               </CardLink>

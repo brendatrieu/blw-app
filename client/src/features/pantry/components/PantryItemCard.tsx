@@ -136,7 +136,7 @@ export function ServeControl({ item, babyId, startExpanded = false }: ServeContr
         <button
           type="button"
           onClick={() => setNotesOpen(true)}
-          className="self-start rounded px-1 py-1 text-xs font-medium text-[var(--color-primary)]"
+          className="self-start rounded px-1 py-1 text-xs font-medium text-[var(--color-accent)]"
         >
           + Add a note
         </button>
@@ -173,8 +173,9 @@ export function ServeControl({ item, babyId, startExpanded = false }: ServeContr
 interface PantryItemCardProps {
   item: PantryItem;
   busy: boolean;
-  onFinish?: () => void;
-  onDiscard?: () => void;
+  /** Single manual removal action — records "discarded" upstream; "finished"
+   * is only ever stamped automatically when tracked servings hit zero. */
+  onRemove?: () => void;
   /** Route to the full-screen edit page (e.g. `/pantry/${item.id}/edit`); omit to hide the Edit affordance. */
   editHref?: string;
   onRestore?: () => void;
@@ -182,13 +183,13 @@ interface PantryItemCardProps {
    * `ServeControl`); omit to hide it (e.g. no baby resolved yet). */
   babyId?: string;
   /** Extra controls rendered next to the location Badge (e.g. Home's
-   * three-dot Actions menu) — independent of the `onFinish`/`onDiscard`/
+   * three-dot Actions menu) — independent of the `onRemove`/
    * `editHref`/`babyId` footer buttons below, so a caller can offer a
    * compact menu instead of (not in addition to) that full button row. */
   actions?: ReactNode;
 }
 
-export function PantryItemCard({ item, busy, onFinish, onDiscard, editHref, onRestore, babyId, actions }: PantryItemCardProps) {
+export function PantryItemCard({ item, busy, onRemove, editHref, onRestore, babyId, actions }: PantryItemCardProps) {
   const preparedLabel = new Date(item.preparedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const canServe = Boolean(babyId) && item.status === "active" && !isLabelOnly(item);
 
@@ -221,7 +222,7 @@ export function PantryItemCard({ item, busy, onFinish, onDiscard, editHref, onRe
       {item.status === "active" && (
         <div className="flex items-center gap-2">
           {item.expired ? (
-            <Badge tone="danger">Expired — discard?</Badge>
+            <Badge tone="dangerSoft">Expired</Badge>
           ) : item.useSoon ? (
             <Badge tone="sunshine">⏰ Use soon</Badge>
           ) : null}
@@ -241,17 +242,12 @@ export function PantryItemCard({ item, busy, onFinish, onDiscard, editHref, onRe
         </Badge>
       )}
 
-      {(canServe || onFinish || onDiscard || editHref || onRestore) && (
+      {(canServe || onRemove || editHref || onRestore) && (
       <div className="flex flex-wrap gap-2 border-t border-[var(--color-border)] pt-2">
         {canServe && <ServeControl item={item} babyId={babyId!} />}
-        {onFinish && (
-          <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={onFinish}>
-            Mark finished
-          </Button>
-        )}
-        {onDiscard && (
-          <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={onDiscard}>
-            Mark discarded
+        {onRemove && (
+          <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={onRemove}>
+            Remove
           </Button>
         )}
         {editHref && (
@@ -266,7 +262,7 @@ export function PantryItemCard({ item, busy, onFinish, onDiscard, editHref, onRe
             variant="ghost"
             disabled={busy}
             onClick={onRestore}
-            className="text-[var(--color-primary)]"
+            className="text-[var(--color-accent)]"
           >
             Restore to active
           </Button>

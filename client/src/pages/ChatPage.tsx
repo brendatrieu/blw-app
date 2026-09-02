@@ -99,7 +99,7 @@ function ThreadList() {
               type="button"
               disabled={createThread.isPending}
               onClick={() => startThread(kind)}
-              className="flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 text-left transition-[transform,border-color] duration-[var(--duration-fast)] ease-[var(--ease-spring)] hover:border-[var(--color-primary)] active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 disabled:opacity-60"
+              className="flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 text-left transition-[transform,border-color] duration-[var(--duration-fast)] ease-[var(--ease-spring)] hover:border-[var(--color-accent)] active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 disabled:opacity-60"
             >
               <span aria-hidden="true" className="text-2xl leading-none">
                 {KIND_EMOJI[kind]}
@@ -216,7 +216,7 @@ function ThreadConversation({ threadId }: { threadId: string }) {
       <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4">
         <Link
           to="/chat"
-          className="text-sm font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline"
+          className="text-sm font-semibold text-[var(--color-accent)] underline-offset-2 hover:underline"
         >
           {"← Chats"}
         </Link>

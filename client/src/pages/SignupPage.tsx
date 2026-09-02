@@ -130,7 +130,7 @@ export function SignupPage() {
 
       <p className="text-center text-sm text-[var(--color-text-muted)]">
         Already have an account?{" "}
-        <Link to="/login" className="font-semibold text-[var(--color-primary)] underline">
+        <Link to="/login" className="font-semibold text-[var(--color-accent)] underline">
           Sign in
         </Link>
       </p>

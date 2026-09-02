@@ -38,7 +38,7 @@ function FilterChip({ active, label, onClick, className = "" }: FilterChipProps)
 /** Removable pill for an active allergen/iron/age filter, shown below the sticky bar. */
 function ActiveFilterPill({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex min-h-9 items-center gap-0.5 rounded-full border border-[var(--color-primary)] bg-[var(--color-primary-soft)] py-1 pr-1 pl-3 text-xs font-medium text-[var(--color-text)]">
+    <span className="inline-flex min-h-9 items-center gap-0.5 rounded-full border border-[var(--color-accent)] bg-[var(--color-primary-soft)] py-1 pr-1 pl-3 text-xs font-medium text-[var(--color-text)]">
       {label}
       <button
         type="button"
@@ -123,7 +123,7 @@ export function FoodsPage() {
             {activeExtraFilterCount > 0 && (
               <span
                 aria-hidden="true"
-                className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-danger)] px-1 text-[10px] font-bold text-[var(--color-primary-contrast)]"
+                className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-danger)] px-1 text-[10px] font-bold text-[var(--color-danger-contrast)]"
               >
                 {activeExtraFilterCount}
               </span>

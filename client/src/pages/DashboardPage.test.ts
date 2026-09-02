@@ -73,4 +73,36 @@ describe("DashboardPage", () => {
     expect(html).toContain('aria-label="Actions"');
     expect(html).toContain('aria-haspopup="menu"');
   });
+
+  it("titles the pantry section 'Pantry' with a See all link to /pantry, and no leftover greeting card", () => {
+    const baby: Baby = {
+      id: "baby-1",
+      name: "Baby",
+      birthDate: "2026-01-01",
+      notes: null,
+      archived: false,
+      archivedAt: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(babyKeys.list(false), [baby]);
+    queryClient.setQueryData(pantryKeys.list("active"), { items: [] });
+    queryClient.setQueryData(trackingKeys.allergenProgress(baby.id), { items: [] });
+    queryClient.setQueryData([...trackingKeys.meals(baby.id), { limit: 100 }], { items: [] });
+
+    const html = renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(MemoryRouter, null, createElement(DashboardPage, null)),
+      ),
+    );
+
+    expect(html).toContain(">Pantry<");
+    expect(html).toContain(">See all<");
+    expect(html).not.toContain("Expiring soon");
+    expect(html).not.toContain("See pantry");
+    expect(html).not.toContain("👋");
+    expect(html).not.toContain("months old");
+  });
 });

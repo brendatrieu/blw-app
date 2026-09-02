@@ -1,18 +1,52 @@
-import { useState } from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import type { SVGProps } from "react";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { ageInMonths } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { useSession } from "../lib/auth.js";
-import { createSignOutDeps, performSignOut } from "../lib/signout.js";
+import { isDaytimeHour, timeOfDayGreeting } from "../lib/greeting.js";
 import { BottomNav } from "./BottomNav.js";
 import { CelebrationProvider } from "./ui/Celebration.js";
 
-function timeOfDayGreeting(now: Date = new Date()): string {
-  const hour = now.getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+// Small hand-drawn icons matching BottomNav's idiom: 24 viewBox, 1.8 stroke,
+// rounded caps/joins, colored entirely via `currentColor`.
+const ICON_PROPS: SVGProps<SVGSVGElement> = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.8,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  "aria-hidden": true,
+};
+
+function SunIcon() {
+  return (
+    <svg {...ICON_PROPS} width={18} height={18}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg {...ICON_PROPS} width={18} height={18}>
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+    </svg>
+  );
+}
+
+/** Sun for daytime hours, moon for evening/night — same boundary as the greeting text. */
+function TimeOfDayIcon({ now = new Date() }: { now?: Date }) {
+  return isDaytimeHour(now.getHours()) ? <SunIcon /> : <MoonIcon />;
+}
+
+function GearIcon() {
+  return (
+    <svg {...ICON_PROPS} width={20} height={20}>
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
 }
 
 function BabySwitcher() {
@@ -23,7 +57,7 @@ function BabySwitcher() {
       <Link
         to="/settings"
         className="text-sm font-semibold underline underline-offset-2"
-        style={{ color: "var(--color-primary)" }}
+        style={{ color: "var(--color-accent)" }}
       >
         Add a baby
       </Link>
@@ -37,20 +71,26 @@ function BabySwitcher() {
   // with a friendly greeting above it.
   if (babies.length === 1) {
     return (
-      <div className="flex flex-col">
-        <span className="font-caption text-[var(--color-text-muted)]">{timeOfDayGreeting()}</span>
+      <div className="flex flex-col gap-2">
+        <span className="flex items-center gap-1.5 text-lg font-semibold text-[var(--color-text-muted)]">
+          <TimeOfDayIcon />
+          {timeOfDayGreeting()}
+        </span>
         <span className="font-display text-[var(--color-text)]">
           {activeBaby?.name}
-          {ageLabel ? <span className="ml-1.5 text-sm font-medium text-[var(--color-text-muted)]">{ageLabel}</span> : null}
+          {ageLabel ? <span className="ml-6 text-sm font-medium text-[var(--color-text-muted)]">{ageLabel}</span> : null}
         </span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="font-caption text-[var(--color-text-muted)]">{timeOfDayGreeting()}</span>
-      <label className="flex items-center gap-1.5">
+    <div className="flex flex-col gap-2">
+      <span className="flex items-center gap-1.5 text-lg font-semibold text-[var(--color-text-muted)]">
+        <TimeOfDayIcon />
+        {timeOfDayGreeting()}
+      </span>
+      <label className="flex items-center gap-6">
         <span className="sr-only">Active baby</span>
         <select
           className="font-display appearance-none border-0 bg-transparent p-0 text-[var(--color-text)] outline-none"
@@ -71,85 +111,17 @@ function BabySwitcher() {
   );
 }
 
-function UserMenu() {
-  const { data: session } = useSession();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
-
-  const label = session?.user.name || session?.user.email || "Account";
-
-  async function handleSignOut() {
-    setSigningOut(true);
-    await performSignOut(createSignOutDeps(queryClient));
-    setOpen(false);
-    setSigningOut(false);
-    void navigate("/login", { replace: true });
-  }
-
+// Replaces the old initial-circle avatar menu: sign-out now lives on the
+// Settings page itself, so the header just needs a direct link there.
+function SettingsLink() {
   return (
-    <div className="relative">
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => {
-          setOpen((value) => !value);
-        }}
-        className="flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-pill)] border text-sm font-semibold transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-primary)]"
-        style={{ borderColor: "var(--color-border)", color: "var(--color-text)", backgroundColor: "var(--color-bg-inset)" }}
-        title={label}
-      >
-        <span aria-hidden="true" className="text-base leading-none">
-          {(label || "?").trim().slice(0, 1).toUpperCase()}
-        </span>
-        <span className="sr-only">{label}</span>
-      </button>
-
-      {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-20 mt-2 flex w-48 flex-col rounded-[var(--radius-md)] border p-1"
-          style={{
-            backgroundColor: "var(--color-bg-elevated)",
-            borderColor: "var(--color-border)",
-            boxShadow: "var(--shadow-md)",
-          }}
-        >
-          <span
-            className="truncate px-2 py-1.5 text-xs"
-            style={{ color: "var(--color-text-muted)" }}
-            title={session?.user.email}
-          >
-            {session?.user.email}
-          </span>
-          <Link
-            to="/settings"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-            }}
-            className="flex min-h-11 items-center rounded-[var(--radius-md)] px-2 py-1.5 text-sm transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-bg-inset)]"
-            style={{ color: "var(--color-text)" }}
-          >
-            Settings
-          </Link>
-          <button
-            type="button"
-            role="menuitem"
-            disabled={signingOut}
-            onClick={() => {
-              void handleSignOut();
-            }}
-            className="flex min-h-11 items-center rounded-[var(--radius-md)] px-2 py-1.5 text-left text-sm transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-bg-inset)] disabled:opacity-60"
-            style={{ color: "var(--color-danger)" }}
-          >
-            {signingOut ? "Signing out…" : "Sign out"}
-          </button>
-        </div>
-      ) : null}
-    </div>
+    <Link
+      to="/settings"
+      aria-label="Settings"
+      className="flex min-h-11 min-w-11 items-center justify-center text-[var(--color-text-muted)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--color-accent)]"
+    >
+      <GearIcon />
+    </Link>
   );
 }
 
@@ -171,7 +143,7 @@ export function AppLayout() {
           }}
         >
           <BabySwitcher />
-          <UserMenu />
+          <SettingsLink />
         </header>
 
         <main className="scroll-momentum flex-1">

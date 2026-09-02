@@ -397,7 +397,7 @@ function AiSection() {
           href={ANTHROPIC_CONSOLE_URL}
           target="_blank"
           rel="noreferrer noopener"
-          className="font-medium text-[var(--color-primary)] underline underline-offset-2"
+          className="font-medium text-[var(--color-accent)] underline underline-offset-2"
         >
           Get a key from the Anthropic console
         </a>

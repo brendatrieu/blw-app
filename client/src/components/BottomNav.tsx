@@ -106,7 +106,7 @@ export function BottomNav() {
               </span>
               <span
                 className="font-caption"
-                style={{ color: isActive ? "var(--color-primary)" : "var(--color-text-muted)" }}
+                style={{ color: isActive ? "var(--color-accent)" : "var(--color-text-muted)" }}
               >
                 {label}
               </span>

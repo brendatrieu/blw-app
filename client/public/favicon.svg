@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="114" fill="#FF7A59"/>
+  <rect width="512" height="512" rx="114" fill="#F2B693"/>
   <g transform="translate(230,300) rotate(-20)">
-    <rect x="-16" y="-260" width="32" height="190" rx="16" fill="#FFFDF8"/>
-    <ellipse cx="0" cy="30" rx="92" ry="118" fill="#FFFDF8"/>
-    <circle cx="-30" cy="8" r="16" fill="#1F6B44"/>
-    <circle cx="8" cy="-10" r="17" fill="#1F6B44"/>
-    <circle cx="36" cy="20" r="15" fill="#1F6B44"/>
+    <rect x="-16" y="-260" width="32" height="190" rx="16" fill="#FFFFFF"/>
+    <ellipse cx="0" cy="30" rx="92" ry="118" fill="#FFFFFF"/>
+    <circle cx="-30" cy="8" r="16" fill="#1E3B24"/>
+    <circle cx="8" cy="-10" r="17" fill="#1E3B24"/>
+    <circle cx="36" cy="20" r="15" fill="#1E3B24"/>
   </g>
   <g transform="translate(372,146) rotate(35)">
-    <path d="M -55 0 Q -20 -35 55 0 Q -20 35 -55 0 Z" fill="#4CAF7D"/>
-    <line x1="-42" y1="0" x2="42" y2="0" stroke="#1F6B44" stroke-width="6" stroke-linecap="round"/>
+    <path d="M -55 0 Q -20 -35 55 0 Q -20 35 -55 0 Z" fill="#A1CCA6"/>
+    <line x1="-42" y1="0" x2="42" y2="0" stroke="#1E3B24" stroke-width="6" stroke-linecap="round"/>
   </g>
 </svg>

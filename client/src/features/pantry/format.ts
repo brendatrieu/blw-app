@@ -67,9 +67,9 @@ export function resolvePantryItemMenuActions(item: {
   status: PantryStatus;
   foodSlug: string | null;
   recipeTitle: string | null;
-}): { serve: boolean; edit: boolean; finish: boolean } {
+}): { serve: boolean; edit: boolean; remove: boolean } {
   const active = item.status === "active";
-  return { serve: active && !isLabelOnly(item), edit: active, finish: active };
+  return { serve: active && !isLabelOnly(item), edit: active, remove: active };
 }
 
 /** Human "use within …" text for an unexpired item, counting down to `expiresAt`. */

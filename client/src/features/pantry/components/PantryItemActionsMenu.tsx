@@ -16,7 +16,7 @@ export interface PantryItemActionsMenuProps {
 
 /**
  * Home's compact three-dot Actions menu for a pantry row: Serve / Edit /
- * Mark finished, none of which require leaving Home. Reuses
+ * Remove, none of which require leaving Home. Reuses
  * `ServeControl` verbatim (opened in a small `Sheet` rather than forked)
  * so Serve behaves identically to the Pantry page's own inline control —
  * same stepper, same notes, same success/error handling. Which actions
@@ -26,7 +26,7 @@ export interface PantryItemActionsMenuProps {
 export function PantryItemActionsMenu({ item, babyId }: PantryItemActionsMenuProps) {
   const [serveOpen, setServeOpen] = useState(false);
   const updateItem = useUpdatePantryItem();
-  const { serve, edit, finish } = resolvePantryItemMenuActions(item);
+  const { serve, edit, remove } = resolvePantryItemMenuActions(item);
 
   return (
     <>
@@ -48,15 +48,17 @@ export function PantryItemActionsMenu({ item, babyId }: PantryItemActionsMenuPro
                 Edit
               </MenuLinkItem>
             )}
-            {finish && (
+            {remove && (
               <MenuItem
                 disabled={updateItem.isPending}
                 onSelect={() => {
-                  updateItem.mutate({ id: item.id, input: { status: "finished" } });
+                  // Manual removal = discarded; "finished" is reserved for
+                  // automatic depletion when tracked servings reach zero.
+                  updateItem.mutate({ id: item.id, input: { status: "discarded" } });
                   close();
                 }}
               >
-                Mark finished
+                Remove
               </MenuItem>
             )}
           </>

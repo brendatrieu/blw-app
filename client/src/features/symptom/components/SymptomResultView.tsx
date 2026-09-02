@@ -88,7 +88,7 @@ export function SymptomResultView({ result, onReopenAlarm }: SymptomResultViewPr
             Adding your own Anthropic API key adds a written explanation on top of this list. The ranking above does not
             need one.
           </p>
-          <Link to="/settings" className="self-start text-xs font-medium text-[var(--color-primary)] underline">
+          <Link to="/settings" className="self-start text-xs font-medium text-[var(--color-accent)] underline">
             {result.reason === "no_ai_key" ? "Add an API key in Settings" : "Check your API key in Settings"}
           </Link>
         </div>

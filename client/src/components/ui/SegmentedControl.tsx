@@ -17,7 +17,7 @@ interface SegmentedControlProps<Value extends string> {
  * A chunky, rounded-segment picker for a small closed set of mutually
  * exclusive options (e.g. appearance mode). Renders as a `radiogroup` of
  * `radio` buttons rather than native radio inputs, so it can be styled as
- * one pill-shaped track with a solid coral fill on the selected segment.
+ * one pill-shaped track with a solid peach fill on the selected segment.
  */
 export function SegmentedControl<Value extends string>({
   options,

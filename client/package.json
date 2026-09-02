@@ -10,7 +10,7 @@
     "test": "vitest run",
     "preview": "vite preview",
     "clean": "rimraf dist",
-    "check:contrast": "node scripts/check-contrast.mjs"
+    "check:contrast": "vitest run src/styles/contrast.test.ts"
   },
   "dependencies": {
     "@blw/shared": "workspace:*",

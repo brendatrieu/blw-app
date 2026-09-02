@@ -59,7 +59,7 @@ function FavoriteHeart({ recipeId, title, minAgeMonths, ironFocus, allergens }: 
       // reduced-motion users via motion-reduce:transition-none.
       className={`inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3.5 py-1.5 text-sm font-medium transition-[transform,background-color,border-color,color] duration-[var(--duration-base)] ease-[var(--ease-spring)] motion-reduce:transition-none motion-reduce:scale-100 disabled:opacity-60 ${
         favorited
-          ? "scale-105 border-transparent bg-[var(--color-coral-soft)] text-[var(--color-coral-deep)]"
+          ? "scale-105 border-transparent bg-[var(--color-primary-soft)] text-[var(--color-primary-soft-text)]"
           : "scale-100 border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]"
       }`}
     >
@@ -85,7 +85,7 @@ function PrepThis({ recipeId }: PrepThisProps) {
   });
 
   if (prepped.isSuccess) {
-    return <p className="text-sm font-medium text-[var(--color-primary)]">Added to your pantry.</p>;
+    return <p className="text-sm font-medium text-[var(--color-accent)]">Added to your pantry.</p>;
   }
 
   if (!open) {
@@ -249,7 +249,7 @@ export function RecipeDetailPage() {
             <ol className="flex flex-col gap-1.5 text-sm text-[var(--color-text)]">
               {activeVariant.steps.map((step, i) => (
                 <li key={i} className="flex gap-2">
-                  <span className="font-medium text-[var(--color-primary)]">{i + 1}.</span>
+                  <span className="font-medium text-[var(--color-accent)]">{i + 1}.</span>
                   <span>{step}</span>
                 </li>
               ))}

@@ -1,14 +1,21 @@
 import type { ButtonHTMLAttributes } from "react";
 import { Link, type LinkProps } from "react-router-dom";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "tonal" | "ghost" | "danger";
 export type ButtonSize = "md" | "sm";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: "border border-transparent bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-sm)]",
+  primary:
+    "border border-transparent bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-sm)] hover:bg-[var(--color-primary-hover)] active:bg-[var(--color-primary-active)]",
   secondary: "border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]",
+  // A quieter CTA than `primary`: the same contrast-gated soft-tint tokens
+  // used for badges/chips, not a new color. Hover mixes in a touch of the
+  // solid `--color-primary` token to nudge the tint's alpha up slightly —
+  // both are existing tokens, no new hex introduced.
+  tonal:
+    "border border-transparent bg-[var(--color-primary-soft)] text-[var(--color-primary-soft-text)] hover:bg-[color-mix(in_srgb,var(--color-primary-soft),var(--color-primary)_15%)]",
   ghost: "border border-transparent bg-transparent text-[var(--color-text)] hover:bg-[var(--color-bg-inset)]",
-  danger: "border border-transparent bg-[var(--color-danger)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-sm)]",
+  danger: "border border-transparent bg-[var(--color-danger)] text-[var(--color-danger-contrast)] shadow-[var(--shadow-sm)]",
 };
 
 // `md` meets the 44px touch-target minimum; `sm` is a deliberate exception

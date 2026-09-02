@@ -7,8 +7,8 @@ interface FoodTileProps {
 }
 
 const IRON_DOT_CLASS: Record<FoodListItem["ironLevel"], string> = {
-  high: "bg-[var(--color-coral-deep)]",
-  moderate: "bg-[var(--color-sunshine)]",
+  high: "bg-[var(--color-accent)]",
+  moderate: "bg-[var(--color-caution)]",
   low: "border border-[var(--color-border)]",
 };
 

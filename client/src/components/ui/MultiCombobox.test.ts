@@ -254,7 +254,7 @@ describe("MultiCombobox (render)", () => {
     expect(html).toContain('data-no-focus-ring=""');
     expect(html).toContain("focus-within:outline-2");
     expect(html).toContain("focus-within:outline-offset-2");
-    expect(html).toContain("focus-within:outline-[var(--color-coral-deep)]");
+    expect(html).toContain("focus-within:outline-[var(--color-accent)]");
   });
 
   it("renders selected values as chips with their emoji and an accessible, tappable remove button", () => {

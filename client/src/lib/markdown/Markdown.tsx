@@ -30,7 +30,7 @@ const components: Components = {
   a: ({ node: _node, href, children, ...rest }) => {
     if (href?.startsWith("/")) {
       return (
-        <Link to={href} className="font-medium text-[var(--color-primary)] underline">
+        <Link to={href} className="font-medium text-[var(--color-accent)] underline">
           {children}
         </Link>
       );
@@ -40,7 +40,7 @@ const components: Components = {
         href={href}
         target="_blank"
         rel="noreferrer"
-        className="font-medium text-[var(--color-primary)] underline"
+        className="font-medium text-[var(--color-accent)] underline"
         {...rest}
       >
         {children}

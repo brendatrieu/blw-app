@@ -5,7 +5,7 @@ export function Select({ className = "", children, ...props }: SelectHTMLAttribu
   return (
     <div className="relative">
       <select
-        className={`min-h-11 w-full appearance-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-3 py-2 pr-9 text-sm text-[var(--color-text)] outline-none transition-colors duration-[var(--duration-fast)] focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+        className={`min-h-11 w-full appearance-none rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-3 py-2 pr-9 text-sm text-[var(--color-text)] outline-none transition-colors duration-[var(--duration-fast)] focus:border-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
         {...props}
       >
         {children}

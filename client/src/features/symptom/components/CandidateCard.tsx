@@ -13,7 +13,7 @@ const LIKELIHOOD_LABELS: Record<Likelihood, string> = {
  * danger red the emergency card owns.
  */
 const LIKELIHOOD_CLASS: Record<Likelihood, string> = {
-  high: "bg-[var(--color-accent)] text-[var(--color-primary-contrast)]",
+  high: "bg-[var(--color-primary-soft)] text-[var(--color-primary-soft-text)]",
   medium: "bg-[var(--color-callout-bg)] text-[var(--color-callout-icon)]",
   low: "bg-[var(--color-bg)] text-[var(--color-text-muted)]",
 };

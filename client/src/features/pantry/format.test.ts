@@ -74,25 +74,25 @@ describe("isLabelOnly", () => {
 });
 
 describe("resolvePantryItemMenuActions", () => {
-  it("offers Serve, Edit, and Mark finished for an active, food-sourced item", () => {
+  it("offers Serve, Edit, and Remove for an active, food-sourced item", () => {
     expect(resolvePantryItemMenuActions({ status: "active", foodSlug: "avocado", recipeTitle: null })).toEqual({
       serve: true,
       edit: true,
-      finish: true,
+      remove: true,
     });
   });
 
   it("offers Serve for an active, recipe-sourced item", () => {
     expect(
       resolvePantryItemMenuActions({ status: "active", foodSlug: null, recipeTitle: "Iron-Rich Purée" }),
-    ).toEqual({ serve: true, edit: true, finish: true });
+    ).toEqual({ serve: true, edit: true, remove: true });
   });
 
   it("withholds Serve for a label-only active item (nothing the serve endpoint could log)", () => {
     expect(resolvePantryItemMenuActions({ status: "active", foodSlug: null, recipeTitle: null })).toEqual({
       serve: false,
       edit: true,
-      finish: true,
+      remove: true,
     });
   });
 
@@ -100,7 +100,7 @@ describe("resolvePantryItemMenuActions", () => {
     expect(resolvePantryItemMenuActions({ status: "finished", foodSlug: "avocado", recipeTitle: null })).toEqual({
       serve: false,
       edit: false,
-      finish: false,
+      remove: false,
     });
   });
 
@@ -108,7 +108,7 @@ describe("resolvePantryItemMenuActions", () => {
     expect(resolvePantryItemMenuActions({ status: "discarded", foodSlug: "avocado", recipeTitle: null })).toEqual({
       serve: false,
       edit: false,
-      finish: false,
+      remove: false,
     });
   });
 });

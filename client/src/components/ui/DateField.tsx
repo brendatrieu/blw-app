@@ -277,7 +277,7 @@ export function DateField({
         onClick={handleOpen}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-3 py-2 text-left text-sm text-[var(--color-text)] outline-none transition-colors duration-[var(--duration-fast)] focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-3 py-2 text-left text-sm text-[var(--color-text)] outline-none transition-colors duration-[var(--duration-fast)] focus:border-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         <svg
           aria-hidden="true"
