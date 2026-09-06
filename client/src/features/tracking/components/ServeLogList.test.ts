@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { MealItem } from "@blw/shared";
 import { dayKey, dayLabel, timeLabel, MealCard, ServeLogList } from "./ServeLogList.js";
 
-function renderMealCard(meal: MealItem, pendingDeleteId: string | null = null) {
+function renderMealCard(meal: MealItem, pendingDeleteId: string | null = null, linkable?: boolean) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderToString(
     createElement(
@@ -23,6 +23,7 @@ function renderMealCard(meal: MealItem, pendingDeleteId: string | null = null) {
             pendingDeleteId,
             onRequestDelete: () => {},
             onCancelDelete: () => {},
+            ...(linkable === undefined ? {} : { linkable }),
           }),
         ]),
       ),
@@ -180,5 +181,41 @@ describe("MealCard (render)", () => {
     expect(html).not.toContain(">Edit<");
     expect(html).toContain("Remove this meal?");
     expect(html).toContain("Yes, delete");
+  });
+});
+
+describe("MealCard tap-through link (item 164)", () => {
+  const baseMeal: MealItem = {
+    id: "meal-1",
+    babyId: "baby-1",
+    servedAt: new Date(2026, 7, 26, 14, 5).toISOString(),
+    reactionNote: null,
+    notes: null,
+    recipeId: null,
+    recipeTitle: null,
+    foods: [{ id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", pantryItemId: null }],
+  };
+
+  it("wraps the info block in a Link to /meals/:id by default", () => {
+    const html = renderMealCard(baseMeal);
+    expect(html).toContain(`href="/log-meal?edit=${baseMeal.id}"`);
+  });
+
+  it("renders the info block as plain content when linkable is false (only the Edit button links)", () => {
+    // Row-tap and Edit share the same edit URL now, so the distinction is a
+    // COUNT: default = 2 anchors (info block + Edit), linkable=false = 1.
+    const editHref = new RegExp(`href="/log-meal\\?edit=${baseMeal.id}"`, "g");
+    expect((renderMealCard(baseMeal).match(editHref) ?? []).length).toBe(2);
+    expect((renderMealCard(baseMeal, null, false).match(editHref) ?? []).length).toBe(1);
+  });
+
+  it("keeps Edit/Delete outside the info anchor (no nested-interactive markup)", () => {
+    const html = renderMealCard(baseMeal);
+    const anchorClose = html.indexOf("</a>");
+    const editIndex = html.indexOf(">Edit<");
+    const deleteIndex = html.indexOf(">Delete<");
+    expect(anchorClose).toBeGreaterThan(-1);
+    expect(editIndex).toBeGreaterThan(anchorClose);
+    expect(deleteIndex).toBeGreaterThan(anchorClose);
   });
 });

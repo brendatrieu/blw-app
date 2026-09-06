@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { MealItem } from "@blw/shared";
+import type { CreatePantryItemInput, MealItem, PantryLocation } from "@blw/shared";
 import { useFoods, useRecipe } from "../../catalog/hooks.js";
 import { getFoodEmoji } from "../../catalog/foodEmoji.js";
 import { useCreateMeal, useFavorites, useUpdateMeal } from "../hooks.js";
 import { applyRecipeIngredients, recipeIngredientFoodIds } from "../recipeChips.js";
+import { useCreatePantryItem } from "../../pantry/hooks.js";
+import { LOCATIONS } from "../../pantry/format.js";
 import { Field } from "../../../components/ui/Field.js";
-import { Textarea } from "../../../components/ui/Input.js";
+import { Input, Textarea } from "../../../components/ui/Input.js";
 import { Select } from "../../../components/ui/Select.js";
+import { SegmentedControl } from "../../../components/ui/SegmentedControl.js";
+import { DateField } from "../../../components/ui/DateField.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
+import { Switch } from "../../../components/ui/Switch.js";
 import { MultiCombobox, type MultiComboboxOption } from "../../../components/ui/MultiCombobox.js";
 import { Button } from "../../../components/ui/Button.js";
 
@@ -39,12 +44,148 @@ export function resolveMealSubmit(mealId: string | undefined, input: MealSubmitI
   return mealId ? { kind: "update", id: mealId, input } : { kind: "create", input };
 }
 
+/**
+ * What the "+ Save leftovers to pantry" toggle should show, inferred from
+ * the meal being logged (item 152): a recipe wins outright when one is
+ * selected (its ingredients are the leftovers, even if the user has also
+ * tweaked the food chips); with no recipe, exactly one selected food is
+ * unambiguous; two or more (or zero, though the toggle is disabled at zero
+ * — see `LogFoodForm`) require the parent to pick which food the leftovers
+ * came from via a compact select.
+ */
+export type LeftoverSourceKind = { kind: "recipe" } | { kind: "food"; foodId: string } | { kind: "choose" };
+
+export function resolveLeftoverSource(recipeId: string | null, foodIds: string[]): LeftoverSourceKind {
+  if (recipeId) return { kind: "recipe" };
+  if (foodIds.length === 1) return { kind: "food", foodId: foodIds[0]! };
+  return { kind: "choose" };
+}
+
+/** The leftover source once fully resolved (a "choose" kind picks a concrete
+ * foodId before this point) — what `buildLeftoverPantryInput` actually needs. */
+export type ResolvedLeftoverSource = { kind: "recipe"; recipeId: string } | { kind: "food"; foodId: string };
+
+/**
+ * Builds the `createPantryItem` payload for a leftovers-from-this-meal save
+ * (item 153): recipe-sourced carries `recipeId`, food-sourced carries
+ * `foodIds: [foodId]` — never both. `notes`/`quantityNote` are deliberately
+ * omitted (not auto-copied from the meal) rather than sent as `null`/`""`,
+ * so the pantry item starts with none of its own. Pure so the exact payload
+ * shape — and the recipe/food branch split — is mutation-tested without a
+ * DOM environment.
+ */
+export function buildLeftoverPantryInput(
+  source: ResolvedLeftoverSource,
+  location: PantryLocation,
+  servingsTotal: string,
+  bestBy: string,
+  preparedAt: Date = nowAtMinute(),
+): CreatePantryItemInput {
+  const trimmedServings = servingsTotal.trim();
+  return {
+    ...(source.kind === "recipe" ? { recipeId: source.recipeId } : { foodIds: [source.foodId] }),
+    location,
+    preparedAt: preparedAt.toISOString(),
+    servingsTotal: trimmedServings ? Number(trimmedServings) : undefined,
+    bestBy: bestBy || undefined,
+  };
+}
+
+const LEFTOVER_LOCATION_OPTIONS = LOCATIONS.map((loc) => ({ value: loc.value, label: loc.label, icon: null }));
+
+export interface LeftoversFieldsProps {
+  source: LeftoverSourceKind;
+  /** The meal's currently selected foods, for the "choose" select — same
+   * emoji + name idiom as the recipe select and the food combobox's chips. */
+  selectedFoodOptions: MultiComboboxOption[];
+  chosenFoodId: string;
+  onChosenFoodIdChange: (foodId: string) => void;
+  location: PantryLocation;
+  onLocationChange: (location: PantryLocation) => void;
+  servingsTotal: string;
+  onServingsTotalChange: (value: string) => void;
+  bestBy: string;
+  onBestByChange: (value: string) => void;
+}
+
+/**
+ * The expanded controls behind "+ Save leftovers to pantry": a "Which
+ * food?" select (only when the source is ambiguous — see
+ * `resolveLeftoverSource`), the location segments, and the same optional
+ * servings/best-by fields `AddPantryItemForm` uses. Exported standalone so
+ * it can be render-tested directly (item 154) without needing DOM
+ * interaction to expand the toggle first.
+ */
+export function LeftoversFields({
+  source,
+  selectedFoodOptions,
+  chosenFoodId,
+  onChosenFoodIdChange,
+  location,
+  onLocationChange,
+  servingsTotal,
+  onServingsTotalChange,
+  bestBy,
+  onBestByChange,
+}: LeftoversFieldsProps) {
+  return (
+    <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+      {source.kind === "choose" && (
+        <Field label="Which food?" htmlFor="log-food-leftover-source">
+          <Select
+            id="log-food-leftover-source"
+            value={chosenFoodId}
+            onChange={(e) => onChosenFoodIdChange(e.target.value)}
+          >
+            {selectedFoodOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.emoji ? `${option.emoji} ` : ""}
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold text-[var(--color-text)]">Location</span>
+        <SegmentedControl
+          aria-label="Location"
+          value={location}
+          onChange={onLocationChange}
+          options={LEFTOVER_LOCATION_OPTIONS}
+        />
+      </div>
+
+      <Field label="Total servings (optional)" htmlFor="log-food-leftover-servings">
+        <Input
+          id="log-food-leftover-servings"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={999}
+          value={servingsTotal}
+          onChange={(e) => onServingsTotalChange(e.target.value)}
+          placeholder="e.g. 6"
+        />
+      </Field>
+
+      <Field label="Best by (optional)" htmlFor="log-food-leftover-best-by">
+        <DateField id="log-food-leftover-best-by" value={bestBy} onChange={onBestByChange} allowFuture title="Best by" />
+      </Field>
+    </div>
+  );
+}
+
 export interface LogFoodFormProps {
   babyId: string;
   /** Present in edit mode: prefills every field from this meal, and Save
    * issues a PATCH against it instead of creating a new one. */
   meal?: MealItem;
   onDone: () => void;
+  /** Create-mode prefill (e.g. "Log meal" from a food's detail page seeds
+   * that food); ignored when editing an existing meal. */
+  initialFoodIds?: string[];
 }
 
 /**
@@ -61,18 +202,51 @@ export interface LogFoodFormProps {
  * (fetched on selection via `useRecipe`, since the favorites list itself
  * carries no ingredients) supplies the ingredient list to turn into chips.
  */
-export function LogFoodForm({ babyId, meal, onDone }: LogFoodFormProps) {
+/**
+ * What a submit gesture may do once a create-mode save has progressed.
+ * Pure and exported so the no-double-meal guarantee is pinned by tests:
+ * after the meal has been created, NO submit path may ever return "create"
+ * again — only a pantry retry (when the leftovers half failed) or nothing.
+ * Consumed verbatim by handleSubmit AND handleRetryPantry; any inline
+ * branching around it re-opens the double-meal bug (implicit form
+ * submission via Enter reaches handleSubmit even while the submit button
+ * is unmounted).
+ */
+export function resolveSubmitAction(
+  mealSaved: boolean,
+  pantryFailurePending: boolean,
+): "create" | "retry-pantry" | "noop" {
+  if (!mealSaved) return "create";
+  return pantryFailurePending ? "retry-pantry" : "noop";
+}
+
+export function LogFoodForm({ babyId, meal, onDone, initialFoodIds }: LogFoodFormProps) {
   const { data: foodsData, isLoading: foodsLoading } = useFoods();
   const { data: favoritesData, isLoading: favoritesLoading } = useFavorites();
   const createMeal = useCreateMeal(babyId);
   const updateMeal = useUpdateMeal(babyId);
   const isEditing = Boolean(meal);
 
-  const [foodIds, setFoodIds] = useState<string[]>(() => meal?.foods.map((food) => food.id) ?? []);
+  const [foodIds, setFoodIds] = useState<string[]>(() => meal?.foods.map((food) => food.id) ?? initialFoodIds ?? []);
   const [recipeId, setRecipeId] = useState<string>(() => meal?.recipeId ?? "");
   const [servedAt, setServedAt] = useState(() => (meal ? nowAtMinute(new Date(meal.servedAt)) : nowAtMinute()));
   const [reactionNote, setReactionNote] = useState(() => meal?.reactionNote ?? "");
   const [notes, setNotes] = useState(() => meal?.notes ?? "");
+
+  // Leftovers-to-pantry (items 152-153) — create mode only; `isEditing` gates
+  // every bit of this out of edit-mode renders entirely.
+  const [leftoversOpen, setLeftoversOpen] = useState(false);
+  const [leftoverLocation, setLeftoverLocation] = useState<PantryLocation>("fridge");
+  const [leftoverServingsTotal, setLeftoverServingsTotal] = useState("");
+  const [leftoverBestBy, setLeftoverBestBy] = useState("");
+  const [chosenLeftoverFoodIdState, setChosenLeftoverFoodId] = useState("");
+  const [pantryFailure, setPantryFailure] = useState<CreatePantryItemInput | null>(null);
+  const createPantryItem = useCreatePantryItem();
+  // Belt-and-suspenders guard (the Retry button already only ever calls
+  // `savePantry`, never a meal mutation): once the meal itself has saved,
+  // nothing in this component may create a second one — Retry re-attempts
+  // the pantry item alone against the already-created meal.
+  const mealSavedRef = useRef(false);
 
   const foods = foodsData?.foods ?? [];
   const favorites = favoritesData?.items ?? [];
@@ -83,6 +257,17 @@ export function LogFoodForm({ babyId, meal, onDone }: LogFoodFormProps) {
     [foods],
   );
   const slugToFoodId = useMemo(() => new Map(foods.map((food) => [food.slug, food.id])), [foods]);
+
+  const leftoverSource = resolveLeftoverSource(recipeId || null, foodIds);
+  const selectedFoodOptions = useMemo(
+    () => foodOptions.filter((option) => foodIds.includes(option.value)),
+    [foodOptions, foodIds],
+  );
+  // The "choose" select's effective value: the user's own pick once made,
+  // else the first selected food (so the native <select> never opens on a
+  // blank/invalid value while still requiring a real user choice to submit
+  // anything other than that default).
+  const chosenLeftoverFoodId = chosenLeftoverFoodIdState || foodIds[0] || "";
 
   // Tracks which currently-selected foods came from the active recipe (so
   // clearing/switching removes exactly those, per `applyRecipeIngredients`)
@@ -125,8 +310,46 @@ export function LogFoodForm({ babyId, meal, onDone }: LogFoodFormProps) {
 
   const mutation = isEditing ? updateMeal : createMeal;
 
+  /** Resolves `leftoverSource`'s "choose" branch to a concrete food, using
+   * the select's effective value — the only place a `LeftoverSourceKind`
+   * becomes a `ResolvedLeftoverSource` ready for `buildLeftoverPantryInput`. */
+  function resolveFinalLeftoverSource(): ResolvedLeftoverSource | null {
+    if (leftoverSource.kind === "recipe") return recipeId ? { kind: "recipe", recipeId } : null;
+    if (leftoverSource.kind === "food") return { kind: "food", foodId: leftoverSource.foodId };
+    return chosenLeftoverFoodId ? { kind: "food", foodId: chosenLeftoverFoodId } : null;
+  }
+
+  /** Attempts the pantry half of a leftovers save; both success and Retry
+   * (item 153) funnel through here so they behave identically. Never touches
+   * the meal mutation — see `mealSavedRef`. */
+  function savePantry(input: CreatePantryItemInput) {
+    createPantryItem.mutate(input, {
+      onSuccess: () => {
+        setPantryFailure(null);
+        onDone();
+      },
+      onError: () => {
+        setPantryFailure(input);
+      },
+    });
+  }
+
+  function handleRetryPantry() {
+    if (resolveSubmitAction(mealSavedRef.current, pantryFailure !== null) !== "retry-pantry") return;
+    savePantry(pantryFailure!);
+  }
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    // Implicit submission (Enter in the food box) reaches here even while
+    // the failure banner has unmounted the submit button — route it through
+    // the same guarded decision as everything else.
+    const postSave = resolveSubmitAction(mealSavedRef.current, pantryFailure !== null);
+    if (postSave === "retry-pantry") {
+      savePantry(pantryFailure!);
+      return;
+    }
+    if (postSave === "noop") return;
     if (foodIds.length === 0) return;
     const input: MealSubmitInput = {
       foodIds,
@@ -140,9 +363,20 @@ export function LogFoodForm({ babyId, meal, onDone }: LogFoodFormProps) {
       case "update":
         updateMeal.mutate({ id: action.id, input: action.input }, { onSuccess: onDone });
         break;
-      case "create":
-        createMeal.mutate(action.input, { onSuccess: onDone });
+      case "create": {
+        const finalSource = leftoversOpen ? resolveFinalLeftoverSource() : null;
+        createMeal.mutate(action.input, {
+          onSuccess: () => {
+            mealSavedRef.current = true;
+            if (!finalSource) {
+              onDone();
+              return;
+            }
+            savePantry(buildLeftoverPantryInput(finalSource, leftoverLocation, leftoverServingsTotal, leftoverBestBy));
+          },
+        });
         break;
+      }
     }
   }
 
@@ -205,20 +439,70 @@ export function LogFoodForm({ babyId, meal, onDone }: LogFoodFormProps) {
         />
       </Field>
 
+      {!isEditing && !pantryFailure && (
+        <div className="flex flex-col gap-3">
+          {/* Borderless row + switch: a bordered container read as a tappable
+              card (user feedback), and a checkbox read as form data — a
+              switch says "on/off decision" without the card costume. */}
+          <div className="flex min-h-11 items-center justify-between gap-3">
+            <span id="log-food-leftovers-label" className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text)]">
+              <span aria-hidden="true" className="text-lg leading-none">🧺</span>
+              Save leftovers to pantry
+            </span>
+            <Switch
+              checked={leftoversOpen}
+              disabled={foodIds.length === 0}
+              onChange={setLeftoversOpen}
+              aria-label="Save leftovers to pantry"
+            />
+          </div>
+          {leftoversOpen && (
+            <LeftoversFields
+              source={leftoverSource}
+              selectedFoodOptions={selectedFoodOptions}
+              chosenFoodId={chosenLeftoverFoodId}
+              onChosenFoodIdChange={setChosenLeftoverFoodId}
+              location={leftoverLocation}
+              onLocationChange={setLeftoverLocation}
+              servingsTotal={leftoverServingsTotal}
+              onServingsTotalChange={setLeftoverServingsTotal}
+              bestBy={leftoverBestBy}
+              onBestByChange={setLeftoverBestBy}
+            />
+          )}
+        </div>
+      )}
+
       {mutation.isError && (
         <p role="alert" className="text-xs text-[var(--color-danger)]">
           Couldn't save that — try again.
         </p>
       )}
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={foodIds.length === 0 || mutation.isPending} className="flex-1">
-          {mutation.isPending ? "Saving…" : "Save"}
-        </Button>
-        <Button type="button" variant="secondary" onClick={onDone}>
-          Cancel
-        </Button>
-      </div>
+      {pantryFailure ? (
+        <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+          <p role="alert" className="text-sm font-medium text-[var(--color-danger)]">
+            Meal saved — couldn't save leftovers. Try again or dismiss.
+          </p>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" onClick={handleRetryPantry} disabled={createPantryItem.isPending}>
+              {createPantryItem.isPending ? "Retrying…" : "Retry"}
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={onDone}>
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <Button type="submit" disabled={foodIds.length === 0 || mutation.isPending} className="flex-1">
+            {mutation.isPending ? "Saving…" : "Save"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={onDone}>
+            Cancel
+          </Button>
+        </div>
+      )}
     </form>
   );
 }

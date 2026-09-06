@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { FoodDetail } from "@blw/shared";
 import { useFood } from "../features/catalog/hooks.js";
@@ -7,13 +6,10 @@ import { Badge } from "../features/catalog/components/Badge.js";
 import { levelLabel } from "../features/catalog/constants.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { useCreateMeal, useMeals } from "../features/tracking/hooks.js";
+import { useMeals } from "../features/tracking/hooks.js";
 import { BackButton } from "../components/ui/BackButton.js";
-import { Button } from "../components/ui/Button.js";
+import { ButtonLink } from "../components/ui/Button.js";
 import { CardLink } from "../components/ui/Card.js";
-import { Field } from "../components/ui/Field.js";
-import { Textarea } from "../components/ui/Input.js";
-import { DateField } from "../components/ui/DateField.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
 const PREP_STAGES = [
@@ -22,28 +18,20 @@ const PREP_STAGES = [
   { key: "prep12m" as const, label: "12+ months", tone: "primary" as const },
 ];
 
-/** `DateField` speaks local yyyy-mm-dd strings, not ISO instants. */
-function todayForDateInput(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
-
 interface MarkAsServedProps {
   food: FoodDetail;
 }
 
+/**
+ * "Log meal" entry point + served-count fact. The old inline mini-form
+ * (date-only, reaction-only) was a stripped duplicate of the real log flow;
+ * per user direction it now links to /log-meal?food=<id> so serving from a
+ * food page gets the FULL form — time, notes, reaction, and leftovers.
+ */
 function MarkAsServed({ food }: MarkAsServedProps) {
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
-  // 100 is the server's max page size (mealsQuerySchema) — "times served" is
-  // a best-effort count over the most recent meals, not an exact lifetime
-  // total. There's no server-side "times served" endpoint (the meal model
-  // moved off per-food serve-log rows), so it's derived here: one count per
-  // meal that includes this food, matching the old per-food-row granularity.
+  // 100 is the server's max page size — best-effort count over recent meals.
   const { data: recentMeals } = useMeals(activeBaby?.id, { limit: 100 });
-  const createMeal = useCreateMeal(activeBaby?.id);
-  const [open, setOpen] = useState(false);
-  const [servedDate, setServedDate] = useState(() => todayForDateInput());
-  const [reactionNote, setReactionNote] = useState("");
 
   const timesServed =
     recentMeals?.items.filter((meal) => meal.foods.some((mealFood) => mealFood.id === food.id)).length ?? null;
@@ -53,7 +41,7 @@ function MarkAsServed({ food }: MarkAsServedProps) {
   if (!activeBaby) {
     return (
       <p className="text-xs text-[var(--color-text-muted)]">
-        <Link to="/settings" className="font-medium text-[var(--color-accent)] underline">
+        <Link to="/settings" className="font-medium text-[var(--color-primary)] underline">
           Add a baby
         </Link>{" "}
         to log this as served.
@@ -61,68 +49,13 @@ function MarkAsServed({ food }: MarkAsServedProps) {
     );
   }
 
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    createMeal.mutate(
-      {
-        foodIds: [food.id],
-        servedAt: new Date(`${servedDate}T12:00:00`).toISOString(),
-        reactionNote: reactionNote.trim() || null,
-      },
-      {
-        onSuccess: () => {
-          setOpen(false);
-          setReactionNote("");
-        },
-      },
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        {!open && (
-          <Button type="button" onClick={() => setOpen(true)}>
-            Mark as served
-          </Button>
-        )}
-        {timesServed !== null && timesServed > 0 && (
-          <span className="text-xs text-[var(--color-text-muted)]">
-            Served {timesServed} {timesServed === 1 ? "time" : "times"} to {activeBaby.name}
-          </span>
-        )}
-      </div>
-
-      {open && (
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4"
-        >
-          <Field label="Date" htmlFor="food-served-date">
-            <DateField id="food-served-date" title="Date served" value={servedDate} onChange={setServedDate} />
-          </Field>
-          <Field label="Reaction note (optional)" htmlFor="food-reaction-note">
-            <Textarea
-              id="food-reaction-note"
-              value={reactionNote}
-              onChange={(e) => setReactionNote(e.target.value)}
-              rows={2}
-            />
-          </Field>
-          {createMeal.isError && (
-            <p role="alert" className="text-xs text-[var(--color-danger)]">
-              Couldn't save that — try again.
-            </p>
-          )}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={createMeal.isPending} className="flex-1">
-              {createMeal.isPending ? "Saving…" : "Confirm"}
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-          </div>
-        </form>
+    <div className="flex items-center gap-2">
+      <ButtonLink to={`/log-meal?food=${food.id}`}>Log meal</ButtonLink>
+      {timesServed !== null && timesServed > 0 && (
+        <span className="text-xs text-[var(--color-text-muted)]">
+          Served {timesServed} {timesServed === 1 ? "time" : "times"} to {activeBaby.name}
+        </span>
       )}
     </div>
   );

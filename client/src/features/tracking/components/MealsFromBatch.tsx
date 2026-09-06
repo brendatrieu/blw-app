@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useMeals } from "../hooks.js";
 import { mealsFromPantryItem } from "../mealsFromBatch.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
@@ -41,18 +42,23 @@ export function MealsFromBatch({ babyId, pantryItemId }: MealsFromBatchProps) {
       {!isLoading && meals.length > 0 && (
         <ul className="flex flex-col gap-1.5">
           {meals.map((meal) => (
-            <li
-              key={meal.id}
-              className="flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-[var(--color-bg-inset)] px-3 py-2"
-            >
-              <span className="text-sm font-medium text-[var(--color-text)]">{mealTimingLabel(meal.servedAt)}</span>
-              <span className="text-xs text-[var(--color-text-muted)]">
-                {meal.foods.map((food) => food.name).join(", ")}
-              </span>
-              {meal.notes && <span className="text-xs text-[var(--color-text-muted)]">{meal.notes}</span>}
-              {meal.reactionNote && (
-                <span className="text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</span>
-              )}
+            <li key={meal.id} className="rounded-[var(--radius-md)] bg-[var(--color-bg-inset)]">
+              {/* The whole row is the link target — no other interactive
+                  control lives in this row, so (unlike PantryItemCard/
+                  MealCard) nothing needs to stay outside it. */}
+              <Link
+                to={`/meals/${meal.id}`}
+                className="flex flex-col gap-0.5 rounded-[var(--radius-md)] px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+              >
+                <span className="text-sm font-medium text-[var(--color-text)]">{mealTimingLabel(meal.servedAt)}</span>
+                <span className="text-xs text-[var(--color-text-muted)]">
+                  {meal.foods.map((food) => food.name).join(", ")}
+                </span>
+                {meal.notes && <span className="text-xs text-[var(--color-text-muted)]">{meal.notes}</span>}
+                {meal.reactionNote && (
+                  <span className="text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</span>
+                )}
+              </Link>
             </li>
           ))}
         </ul>

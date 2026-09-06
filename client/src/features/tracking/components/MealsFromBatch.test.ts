@@ -1,5 +1,6 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
+import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { MealItem } from "@blw/shared";
@@ -30,7 +31,7 @@ function renderWithMeals(meals: MealItem[]) {
     createElement(
       QueryClientProvider,
       { client: queryClient },
-      createElement(MealsFromBatch, { babyId: BABY_ID, pantryItemId: PANTRY_ITEM_ID }),
+      createElement(MemoryRouter, null, createElement(MealsFromBatch, { babyId: BABY_ID, pantryItemId: PANTRY_ITEM_ID })),
     ),
   );
 }
@@ -53,5 +54,12 @@ describe("MealsFromBatch reactionNote (item 148)", () => {
     expect(html).toContain("Reaction: ");
     expect(html).toContain("mild rash");
     expect(html).not.toMatch(/Reaction:\s*ate the whole thing/);
+  });
+});
+
+describe("MealsFromBatch tap-through link (item 164)", () => {
+  it("links each row to /meals/:id", () => {
+    const html = renderWithMeals([meal({ id: "meal-7" })]);
+    expect(html).toContain('href="/meals/meal-7"');
   });
 });

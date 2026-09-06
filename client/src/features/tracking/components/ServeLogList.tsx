@@ -30,58 +30,99 @@ export function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
+export interface MealDeleteControlProps {
+  meal: MealItem;
+  babyId: string;
+  confirming: boolean;
+  onRequestDelete: () => void;
+  onCancelDelete: () => void;
+  /** Fired on a successful delete, in addition to the always-run
+   * `onCancelDelete` settle — `MealDetailPage` uses this to navigate away;
+   * the list (`MealCard`) leaves it unset since the row just disappears. */
+  onDeleted?: () => void;
+}
+
+/**
+ * The Delete → "Remove this meal?" confirm idiom, extracted so `MealCard`'s
+ * list row (one shared `pendingDeleteId` per list) and `MealDetailPage`'s
+ * standalone actions (its own local boolean) render the exact same markup
+ * instead of forking it. Only the `confirming` source and what happens after
+ * a successful delete differ between the two call sites.
+ */
+export function MealDeleteControl({ meal, babyId, confirming, onRequestDelete, onCancelDelete, onDeleted }: MealDeleteControlProps) {
+  const deleteMeal = useDeleteMeal(babyId);
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-2 border-t border-[var(--color-border)] pt-2">
+        <span className="text-xs text-[var(--color-text-muted)]">Remove this meal?</span>
+        <button
+          type="button"
+          disabled={deleteMeal.isPending}
+          onClick={() => deleteMeal.mutate(meal.id, { onSuccess: onDeleted, onSettled: onCancelDelete })}
+          className="rounded-[var(--radius-md)] bg-[var(--color-danger)] px-2 py-1 text-xs font-medium text-[var(--color-danger-contrast)] disabled:opacity-60"
+        >
+          {deleteMeal.isPending ? "Removing…" : "Yes, delete"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancelDelete}
+          className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-[var(--color-text)]"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onRequestDelete}
+      className="rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
+    >
+      Delete
+    </button>
+  );
+}
+
 export interface MealCardProps {
   meal: MealItem;
   babyId: string;
   pendingDeleteId: string | null;
   onRequestDelete: (id: string) => void;
   onCancelDelete: () => void;
+  /** False renders the info block as plain content instead of a Link to
+   * `/meals/:id` — for `MealDetailPage` itself, which must not link to
+   * itself. Defaults to true (Home's food log taps through). Mirrors
+   * `PantryItemCard`'s `linkable` prop precisely. */
+  linkable?: boolean;
 }
 
 /** One meal in the day-grouped history: food chips (or a recipe title plus
  * its chips), the served time, an optional reaction note, and Edit/Delete
  * affordances. Exported standalone-renderable per the app's convention for
  * card-shaped list items. */
-export function MealCard({ meal, babyId, pendingDeleteId, onRequestDelete, onCancelDelete }: MealCardProps) {
-  const deleteMeal = useDeleteMeal(babyId);
+export function MealCard({ meal, babyId, pendingDeleteId, onRequestDelete, onCancelDelete, linkable = true }: MealCardProps) {
   const confirming = pendingDeleteId === meal.id;
 
-  return (
-    <Card as="li" padding="sm" className="flex flex-col gap-2">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex flex-1 flex-wrap items-center gap-1.5">
-          {meal.foods.map((food) => (
-            <span
-              key={food.id}
-              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] px-2 py-1 text-sm text-[var(--color-text)]"
-            >
-              <span aria-hidden="true">{getFoodEmoji(food.slug, food.category)}</span>
-              {food.name}
-              {food.pantryItemId && (
-                <span aria-label="from pantry" title="From pantry" className="text-xs text-[var(--color-text-muted)]">
-                  🧺
-                </span>
-              )}
-            </span>
-          ))}
-        </div>
-        {!confirming && (
-          <div className="flex shrink-0 items-center gap-1">
-            <Link
-              to={`/log-meal?edit=${meal.id}`}
-              className="rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-            >
-              Edit
-            </Link>
-            <button
-              type="button"
-              onClick={() => onRequestDelete(meal.id)}
-              className="rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
-            >
-              Delete
-            </button>
-          </div>
-        )}
+  const info = (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {meal.foods.map((food) => (
+          <span
+            key={food.id}
+            className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] px-2 py-1 text-sm text-[var(--color-text)]"
+          >
+            <span aria-hidden="true">{getFoodEmoji(food.slug, food.category)}</span>
+            {food.name}
+            {food.pantryItemId && (
+              <span aria-label="from pantry" title="From pantry" className="text-xs text-[var(--color-text-muted)]">
+                🧺
+              </span>
+            )}
+          </span>
+        ))}
       </div>
 
       {meal.recipeTitle && (
@@ -95,26 +136,52 @@ export function MealCard({ meal, babyId, pendingDeleteId, onRequestDelete, onCan
       {meal.reactionNote && (
         <span className="text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</span>
       )}
+    </div>
+  );
+
+  return (
+    <Card as="li" padding="sm" className="flex flex-col gap-2">
+      <div className="flex items-start justify-between gap-2">
+        {/* Edit/Delete/confirm controls sit OUTSIDE this anchor — only the
+            info block above is ever the link target, so nothing interactive
+            ends up nested inside it (same rule `PantryItemCard` follows). */}
+        {linkable ? (
+          <Link
+            to={`/log-meal?edit=${meal.id}`}
+            className="flex flex-1 rounded-[var(--radius-sm)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+          >
+            {info}
+          </Link>
+        ) : (
+          <div className="flex flex-1">{info}</div>
+        )}
+        {!confirming && (
+          <div className="flex shrink-0 items-center gap-1">
+            <Link
+              to={`/log-meal?edit=${meal.id}`}
+              className="rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            >
+              Edit
+            </Link>
+            <MealDeleteControl
+              meal={meal}
+              babyId={babyId}
+              confirming={false}
+              onRequestDelete={() => onRequestDelete(meal.id)}
+              onCancelDelete={onCancelDelete}
+            />
+          </div>
+        )}
+      </div>
 
       {confirming && (
-        <div className="flex items-center gap-2 border-t border-[var(--color-border)] pt-2">
-          <span className="text-xs text-[var(--color-text-muted)]">Remove this meal?</span>
-          <button
-            type="button"
-            disabled={deleteMeal.isPending}
-            onClick={() => deleteMeal.mutate(meal.id, { onSettled: onCancelDelete })}
-            className="rounded-[var(--radius-md)] bg-[var(--color-danger)] px-2 py-1 text-xs font-medium text-[var(--color-danger-contrast)] disabled:opacity-60"
-          >
-            {deleteMeal.isPending ? "Removing…" : "Yes, delete"}
-          </button>
-          <button
-            type="button"
-            onClick={onCancelDelete}
-            className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-[var(--color-text)]"
-          >
-            Cancel
-          </button>
-        </div>
+        <MealDeleteControl
+          meal={meal}
+          babyId={babyId}
+          confirming
+          onRequestDelete={() => onRequestDelete(meal.id)}
+          onCancelDelete={onCancelDelete}
+        />
       )}
     </Card>
   );

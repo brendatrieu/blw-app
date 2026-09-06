@@ -49,6 +49,9 @@ export function resolveEditState(
 export function LogFoodPage() {
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
   const [searchParams] = useSearchParams();
+  // "Log meal" from a food detail page arrives as /log-meal?food=<id> — seed
+  // the picker with that food (create mode only; ignored while editing).
+  const prefillFoodId = searchParams.get("food");
   const editId = searchParams.get("edit");
   const isEditing = Boolean(editId);
   const goBack = useBackNavigate("/");
@@ -91,7 +94,12 @@ export function LogFoodPage() {
       )}
 
       {!babyLoading && activeBaby && !stillLoadingEditTarget && !editTargetMissing && (
-        <LogFoodForm babyId={activeBaby.id} meal={meal} onDone={goBack} />
+        <LogFoodForm
+          babyId={activeBaby.id}
+          meal={meal}
+          initialFoodIds={prefillFoodId ? [prefillFoodId] : undefined}
+          onDone={goBack}
+        />
       )}
     </div>
   );
