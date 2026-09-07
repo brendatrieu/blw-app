@@ -220,23 +220,23 @@ export function PantryItemCard({ item, busy, onRemove, editHref, onRestore, baby
   );
 
   return (
-    <li className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+    <li className="relative flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
       <div className="flex items-start justify-between gap-2">
-        {/* The kebab/actions slot beside this sits OUTSIDE the anchor, and so
-            do the Serve/Edit/Remove/Restore footer buttons below — only this
-            title/summary block is ever the link target, so nothing
-            interactive ends up nested inside it. */}
+        {/* Stretched link: the anchor's ::after overlay covers the whole card
+            so every edge is tappable, while the kebab/actions slot and the
+            Serve/Edit/Remove/Restore footer sit ABOVE it (relative z-10) as
+            siblings — nothing interactive is ever nested inside the anchor. */}
         {linkable ? (
           <Link
             to={`/pantry/${item.id}`}
-            className="flex items-start gap-2 rounded-[var(--radius-sm)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+            className="flex items-start gap-2 rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
           >
             {info}
           </Link>
         ) : (
           <div className="flex items-start gap-2">{info}</div>
         )}
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="relative z-10 flex shrink-0 items-center gap-1">
           <Badge tone="neutral">{LOCATION_LABEL[item.location]}</Badge>
           {actions}
         </div>
@@ -268,7 +268,7 @@ export function PantryItemCard({ item, busy, onRemove, editHref, onRestore, baby
       )}
 
       {(canServe || onRemove || editHref || onRestore) && (
-      <div className="flex flex-wrap gap-2 border-t border-[var(--color-border)] pt-2">
+      <div className="relative z-10 flex flex-wrap gap-2 border-t border-[var(--color-border)] pt-2">
         {canServe && <ServeControl item={item} babyId={babyId!} />}
         {onRemove && (
           <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={onRemove}>

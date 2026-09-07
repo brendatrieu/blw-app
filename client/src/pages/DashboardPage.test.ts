@@ -7,7 +7,8 @@ import type { Baby, PantryItem } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
 import { pantryKeys } from "../features/pantry/hooks.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
-import { DashboardPage } from "./DashboardPage.js";
+import { DashboardPage, HOME_PANTRY_LIMIT } from "./DashboardPage.js";
+import type { MealItem } from "@blw/shared";
 
 describe("DashboardPage", () => {
   it("renders without throwing (no active baby yet, in the loading/empty states)", () => {
@@ -104,5 +105,70 @@ describe("DashboardPage", () => {
     expect(html).not.toContain("See pantry");
     expect(html).not.toContain("👋");
     expect(html).not.toContain("months old");
+  });
+
+  it("caps Home at three pantry items and three meals, each section with a See all link", () => {
+    const baby: Baby = {
+      id: "baby-1",
+      name: "Baby",
+      birthDate: "2026-01-01",
+      notes: null,
+      archived: false,
+      archivedAt: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    const pantryItem = (i: number): PantryItem => ({
+      id: `pantry-${i}`,
+      label: null,
+      foodSlug: "avocado",
+      foodName: `Pantry food ${i}`,
+      recipeId: null,
+      recipeTitle: null,
+      preparedAt: "2026-08-20T10:00:00.000Z",
+      location: "fridge",
+      status: "active",
+      statusChangedAt: "2026-08-20T10:00:00.000Z",
+      expiresAt: "2099-08-23T10:00:00.000Z",
+      useSoon: false,
+      expired: false,
+      quantityNote: null,
+      servingsTotal: null,
+      servingsLeft: null,
+      bestBy: null,
+      notes: null,
+    });
+    const meal = (i: number): MealItem => ({
+      id: `meal-${i}`,
+      babyId: baby.id,
+      servedAt: new Date(2026, 7, 26 - i, 12, 0).toISOString(),
+      reactionNote: null,
+      notes: null,
+      recipeId: null,
+      recipeTitle: null,
+      foods: [{ id: `food-${i}`, slug: "avocado", name: `Meal food ${i}`, category: "fruit", pantryItemId: null }],
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(babyKeys.list(false), [baby]);
+    queryClient.setQueryData(pantryKeys.list("active"), { items: Array.from({ length: 5 }, (_, i) => pantryItem(i)) });
+    queryClient.setQueryData(trackingKeys.allergenProgress(baby.id), { items: [] });
+    queryClient.setQueryData([...trackingKeys.meals(baby.id), { limit: 100 }], {
+      items: Array.from({ length: 5 }, (_, i) => meal(i)),
+    });
+
+    const html = renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(MemoryRouter, null, createElement(DashboardPage, null)),
+      ),
+    );
+
+    expect(HOME_PANTRY_LIMIT).toBe(3);
+    expect((html.match(/href="\/pantry\/pantry-/g) ?? []).length).toBe(3);
+    expect(html).not.toContain("Pantry food 3");
+    expect((html.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(3);
+    expect(html).not.toContain("Meal food 3");
+    expect(html).toMatch(/<a [^>]*href="\/pantry"[^>]*>See all<\/a>/);
+    expect(html).toMatch(/<a [^>]*href="\/meals"[^>]*>See all<\/a>/);
   });
 });

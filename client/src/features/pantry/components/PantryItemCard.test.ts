@@ -179,6 +179,37 @@ describe("PantryItemCard tap-through link (item 139)", () => {
     const actionsIndex = html.indexOf("Actions slot marker");
     expect(anchorClose).toBeGreaterThan(-1);
     expect(actionsIndex).toBeGreaterThan(anchorClose);
+    expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
+  });
+
+  it("stretches the anchor over the whole card and floats the actions slot above it", () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const html = renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(
+          CelebrationProvider,
+          null,
+          createElement(
+            MemoryRouter,
+            null,
+            createElement(
+              "ul",
+              null,
+              createElement(PantryItemCard, {
+                item: BASE_ITEM,
+                busy: false,
+                actions: createElement("button", { type: "button" }, "Actions slot marker"),
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(html).toMatch(/<li class="relative /);
+    expect(html).toMatch(/<a [^>]*class="[^"]*after:absolute after:inset-0[^"]*"[^>]*href="\/pantry\//);
+    expect(html).toMatch(/<div class="relative z-10 [^"]*">(?:(?!<\/div>).)*Actions slot marker/s);
   });
 
   it("renders the info block as plain content (no anchor) when linkable is false", () => {

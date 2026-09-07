@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
-import { ServeLogList } from "../features/tracking/components/ServeLogList.js";
+import { HOME_MEAL_LIMIT, ServeLogList } from "../features/tracking/components/ServeLogList.js";
 import { usePantryItems } from "../features/pantry/hooks.js";
 import { PantryItemCard } from "../features/pantry/components/PantryItemCard.js";
 import { PantryItemActionsMenu } from "../features/pantry/components/PantryItemActionsMenu.js";
@@ -46,9 +46,12 @@ function AllergenProgressSummary({ babyId }: { babyId: string }) {
   );
 }
 
+/** The pantry items Home shows before "See all" takes over. */
+export const HOME_PANTRY_LIMIT = 3;
+
 function PantrySection({ babyId }: { babyId: string }) {
   const { data, isLoading } = usePantryItems("active");
-  const topFive = (data?.items ?? []).slice(0, 5);
+  const topThree = (data?.items ?? []).slice(0, HOME_PANTRY_LIMIT);
 
   return (
     <section className="flex flex-col gap-2">
@@ -61,7 +64,7 @@ function PantrySection({ babyId }: { babyId: string }) {
 
       {isLoading && <SkeletonList count={2} />}
 
-      {!isLoading && topFive.length === 0 && (
+      {!isLoading && topThree.length === 0 && (
         <EmptyState
           icon="🧺"
           title="Nothing in the pantry yet"
@@ -74,9 +77,9 @@ function PantrySection({ babyId }: { babyId: string }) {
         />
       )}
 
-      {topFive.length > 0 && (
+      {topThree.length > 0 && (
         <ul className="flex flex-col gap-2">
-          {topFive.map((item) => (
+          {topThree.map((item) => (
             <PantryItemCard
               key={item.id}
               item={item}
@@ -139,7 +142,7 @@ export function DashboardPage() {
         <AllergenProgressSummary babyId={activeBaby.id} />
       </section>
 
-      <ServeLogList babyId={activeBaby.id} />
+      <ServeLogList babyId={activeBaby.id} limit={HOME_MEAL_LIMIT} seeAllHref="/meals" />
     </div>
   );
 }

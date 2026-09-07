@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { MealItem } from "@blw/shared";
-import { dayKey, dayLabel, timeLabel, MealCard, ServeLogList } from "./ServeLogList.js";
+import { dayKey, dayLabel, timeLabel, limitMeals, HOME_MEAL_LIMIT, MealCard, ServeLogList } from "./ServeLogList.js";
 
 function renderMealCard(meal: MealItem, pendingDeleteId: string | null = null, linkable?: boolean) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -165,10 +165,15 @@ describe("MealCard (render)", () => {
     expect(html).not.toContain("ate the whole thing");
   });
 
-  it("links Edit to /log-meal?edit=<id>", () => {
+  it("makes the whole card the edit link — no separate Edit link", () => {
     const html = renderMealCard(baseMeal);
     expect(html).toContain(`href="/log-meal?edit=${baseMeal.id}"`);
-    expect(html).toContain(">Edit<");
+    expect(html).not.toContain(">Edit<");
+    // Stretched link: the anchor's overlay covers the card, the card is the
+    // positioning context, and the delete control floats above the overlay.
+    expect(html).toMatch(/<a [^>]*class="[^"]*after:absolute after:inset-0[^"]*"[^>]*href="\/log-meal\?edit=meal-1"/);
+    expect(html).toMatch(/<li [^>]*class="[^"]*\brelative\b/);
+    expect(html).toMatch(/<div class="relative z-10[^"]*"><button/);
   });
 
   it("shows a Delete button when not confirming a delete", () => {
@@ -201,21 +206,76 @@ describe("MealCard tap-through link (item 164)", () => {
     expect(html).toContain(`href="/log-meal?edit=${baseMeal.id}"`);
   });
 
-  it("renders the info block as plain content when linkable is false (only the Edit button links)", () => {
-    // Row-tap and Edit share the same edit URL now, so the distinction is a
-    // COUNT: default = 2 anchors (info block + Edit), linkable=false = 1.
+  it("renders the info block as plain content when linkable is false (no anchor at all)", () => {
     const editHref = new RegExp(`href="/log-meal\\?edit=${baseMeal.id}"`, "g");
-    expect((renderMealCard(baseMeal).match(editHref) ?? []).length).toBe(2);
-    expect((renderMealCard(baseMeal, null, false).match(editHref) ?? []).length).toBe(1);
+    expect((renderMealCard(baseMeal).match(editHref) ?? []).length).toBe(1);
+    expect((renderMealCard(baseMeal, null, false).match(editHref) ?? []).length).toBe(0);
   });
 
-  it("keeps Edit/Delete outside the info anchor (no nested-interactive markup)", () => {
+  it("keeps Delete outside the info anchor (no nested-interactive markup)", () => {
     const html = renderMealCard(baseMeal);
     const anchorClose = html.indexOf("</a>");
-    const editIndex = html.indexOf(">Edit<");
     const deleteIndex = html.indexOf(">Delete<");
     expect(anchorClose).toBeGreaterThan(-1);
-    expect(editIndex).toBeGreaterThan(anchorClose);
     expect(deleteIndex).toBeGreaterThan(anchorClose);
+    expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
+  });
+});
+
+describe("limitMeals + Home cap", () => {
+  const meals = ["a", "b", "c", "d", "e"];
+
+  it("keeps the first N (the API orders newest first) and leaves the array alone without a limit", () => {
+    expect(limitMeals(meals, 3)).toEqual(["a", "b", "c"]);
+    expect(limitMeals(meals, undefined)).toEqual(meals);
+    expect(limitMeals(meals, 0)).toEqual([]);
+    expect(limitMeals(meals, 10)).toEqual(meals);
+  });
+
+  it("Home shows three", () => {
+    expect(HOME_MEAL_LIMIT).toBe(3);
+  });
+
+  function mealAt(i: number): MealItem {
+    return {
+      id: `meal-${i}`,
+      babyId: "baby-1",
+      servedAt: new Date(2026, 7, 26 - i, 12, 0).toISOString(),
+      reactionNote: null,
+      notes: null,
+      recipeId: null,
+      recipeTitle: null,
+      foods: [{ id: `food-${i}`, slug: "avocado", name: `Food ${i}`, category: "fruit", pantryItemId: null }],
+    };
+  }
+
+  function renderList(limit: number | undefined, seeAllHref?: string) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(["meals", "baby-1", { limit: 100 }], { items: Array.from({ length: 5 }, (_, i) => mealAt(i)) });
+    return renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(
+          MemoryRouter,
+          null,
+          createElement(ServeLogList, { babyId: "baby-1", limit, ...(seeAllHref ? { seeAllHref } : {}) }),
+        ),
+      ),
+    );
+  }
+
+  it("with limit 3 and seeAllHref renders exactly three meals and a See all link", () => {
+    const html = renderList(3, "/meals");
+    expect((html.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(3);
+    expect(html).toContain("Food 0");
+    expect(html).not.toContain("Food 3");
+    expect(html).toMatch(/<a [^>]*href="\/meals"[^>]*>See all<\/a>/);
+  });
+
+  it("without a limit renders every meal and no See all link", () => {
+    const html = renderList(undefined);
+    expect((html.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(5);
+    expect(html).not.toContain(">See all<");
   });
 });

@@ -140,15 +140,17 @@ export function MealCard({ meal, babyId, pendingDeleteId, onRequestDelete, onCan
   );
 
   return (
-    <Card as="li" padding="sm" className="flex flex-col gap-2">
+    <Card as="li" padding="sm" className="relative flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
-        {/* Edit/Delete/confirm controls sit OUTSIDE this anchor — only the
-            info block above is ever the link target, so nothing interactive
-            ends up nested inside it (same rule `PantryItemCard` follows). */}
+        {/* Stretched link: the anchor's ::after overlay covers the whole card
+            so tapping anywhere opens the meal for editing (which is why there
+            is no separate Edit link). Delete/confirm controls sit ABOVE the
+            overlay (relative z-10) as siblings — nothing interactive is ever
+            nested inside the anchor (same rule `PantryItemCard` follows). */}
         {linkable ? (
           <Link
             to={`/log-meal?edit=${meal.id}`}
-            className="flex flex-1 rounded-[var(--radius-sm)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+            className="flex flex-1 rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
           >
             {info}
           </Link>
@@ -156,13 +158,7 @@ export function MealCard({ meal, babyId, pendingDeleteId, onRequestDelete, onCan
           <div className="flex flex-1">{info}</div>
         )}
         {!confirming && (
-          <div className="flex shrink-0 items-center gap-1">
-            <Link
-              to={`/log-meal?edit=${meal.id}`}
-              className="rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-            >
-              Edit
-            </Link>
+          <div className="relative z-10 flex shrink-0 items-center gap-1">
             <MealDeleteControl
               meal={meal}
               babyId={babyId}
@@ -175,13 +171,15 @@ export function MealCard({ meal, babyId, pendingDeleteId, onRequestDelete, onCan
       </div>
 
       {confirming && (
-        <MealDeleteControl
-          meal={meal}
-          babyId={babyId}
-          confirming
-          onRequestDelete={() => onRequestDelete(meal.id)}
-          onCancelDelete={onCancelDelete}
-        />
+        <div className="relative z-10">
+          <MealDeleteControl
+            meal={meal}
+            babyId={babyId}
+            confirming
+            onRequestDelete={() => onRequestDelete(meal.id)}
+            onCancelDelete={onCancelDelete}
+          />
+        </div>
       )}
     </Card>
   );
@@ -189,6 +187,20 @@ export function MealCard({ meal, babyId, pendingDeleteId, onRequestDelete, onCan
 
 export interface ServeLogListProps {
   babyId: string;
+  /** Show at most this many meals (newest first) — Home passes 3. */
+  limit?: number;
+  /** Where the header's "See all" link goes; omitted = no link (the full log page). */
+  seeAllHref?: string;
+  /** False when a page header already titles the list (the full log page). */
+  showHeading?: boolean;
+}
+
+/** The meals Home shows before "See all" takes over. */
+export const HOME_MEAL_LIMIT = 3;
+
+/** Newest-first slice used by the Home section; the API already orders by servedAt desc. */
+export function limitMeals<T>(items: readonly T[], limit: number | undefined): T[] {
+  return limit === undefined ? [...items] : items.slice(0, Math.max(0, limit));
 }
 
 /**
@@ -197,12 +209,12 @@ export interface ServeLogListProps {
  * (see LogFoodPage / LogFoodForm), which the per-meal Edit link also reopens
  * (as `/log-meal?edit=:id`) to edit that meal in place.
  */
-export function ServeLogList({ babyId }: ServeLogListProps) {
+export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true }: ServeLogListProps) {
   const { data, isLoading, isError } = useMeals(babyId, { limit: 100 });
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const groups = useMemo(() => {
-    const items = data?.items ?? [];
+    const items = limitMeals(data?.items ?? [], limit);
     const byDay = new Map<string, MealItem[]>();
     for (const item of items) {
       const key = dayKey(item.servedAt);
@@ -211,11 +223,20 @@ export function ServeLogList({ babyId }: ServeLogListProps) {
       else byDay.set(key, [item]);
     }
     return [...byDay.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1));
-  }, [data]);
+  }, [data, limit]);
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="text-sm font-semibold text-[var(--color-text)]">📖 Food log</h2>
+      {(showHeading || seeAllHref) && (
+        <div className="flex items-center justify-between">
+          {showHeading && <h2 className="text-sm font-semibold text-[var(--color-text)]">📖 Food log</h2>}
+          {seeAllHref && (
+            <Link to={seeAllHref} className="text-xs font-medium text-[var(--color-accent)] underline">
+              See all
+            </Link>
+          )}
+        </div>
+      )}
 
       {isLoading && <SkeletonList count={3} />}
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load the log.</p>}
