@@ -12,8 +12,13 @@ import {
   MultiComboboxOptionList,
   MultiComboboxPanel,
   optionId,
+  createOptionId,
+  resolveActiveDescendantId,
+  resolveCreateEnterAction,
   resolveEnterAction,
   resolveHighlight,
+  rowCount,
+  shouldShowCreateRow,
   toggleValue,
   type MultiComboboxOption,
 } from "./MultiCombobox.js";
@@ -499,5 +504,144 @@ describe("MultiComboboxOptionList (render)", () => {
     );
     expect(html).toContain("No veggies found");
     expect(html).not.toContain('role="option"');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The "add what you typed" row (item 180). Everything here is additive: the
+// combobox behaves exactly as before unless a caller passes `onCreate`.
+// ---------------------------------------------------------------------------
+
+describe("shouldShowCreateRow", () => {
+  it("shows only when a non-blank query matched nothing AND the caller opted in", () => {
+    expect(shouldShowCreateRow("kale", 0, true)).toBe(true);
+  });
+
+  it("never shows while any option still matches — creating a visible food is a trap", () => {
+    expect(shouldShowCreateRow("kale", 1, true)).toBe(false);
+  });
+
+  it("never shows on an empty or whitespace-only query (there'd be nothing to name it)", () => {
+    expect(shouldShowCreateRow("", 0, true)).toBe(false);
+    expect(shouldShowCreateRow("   ", 0, true)).toBe(false);
+  });
+
+  it("never shows for a caller that didn't opt in", () => {
+    expect(shouldShowCreateRow("kale", 0, false)).toBe(false);
+  });
+});
+
+describe("rowCount", () => {
+  it("counts the create row as a navigable row, so arrows can reach it", () => {
+    expect(rowCount(0, true)).toBe(1);
+    expect(rowCount(0, false)).toBe(0);
+    expect(rowCount(3, false)).toBe(3);
+  });
+});
+
+describe("resolveCreateEnterAction", () => {
+  it("closed: hands Enter back to the surrounding form, exactly like resolveEnterAction", () => {
+    expect(resolveCreateEnterAction(false, -1, 0, true)).toEqual({ prevent: false, toggleIndex: null, create: false });
+  });
+
+  it("open on the create row: prevents the surrounding form's submit and asks to create", () => {
+    // THE item 180 guarantee: pressing Enter here must never also log the
+    // meal / add the pantry item the picker is sitting inside.
+    expect(resolveCreateEnterAction(true, 0, 0, true)).toEqual({ prevent: true, toggleIndex: null, create: true });
+  });
+
+  it("open on a real option: toggles it and never creates, even with a create row configured", () => {
+    expect(resolveCreateEnterAction(true, 1, 3, true)).toEqual({ prevent: true, toggleIndex: 1, create: false });
+  });
+
+  it("open with no create row visible: identical to resolveEnterAction", () => {
+    for (const [highlighted, length] of [
+      [-1, 0],
+      [-1, 4],
+      [2, 4],
+      [4, 4],
+    ] as const) {
+      expect(resolveCreateEnterAction(true, highlighted, length, false)).toEqual({
+        ...resolveEnterAction(true, highlighted, length),
+        create: false,
+      });
+    }
+  });
+
+  it("open, create row configured but the highlight is nowhere: still prevents, still doesn't create", () => {
+    expect(resolveCreateEnterAction(true, -1, 0, true)).toEqual({ prevent: true, toggleIndex: null, create: false });
+  });
+});
+
+describe("resolveActiveDescendantId", () => {
+  it("points at the create row's own id when the highlight sits past the last option", () => {
+    expect(resolveActiveDescendantId([], 0, "veg-listbox", true)).toBe(createOptionId("veg-listbox"));
+  });
+
+  it("defers to getActiveDescendantId for every real option", () => {
+    expect(resolveActiveDescendantId(OPTIONS, 1, "veg-listbox", true)).toBe(optionId("veg-listbox", OPTIONS[1]!));
+    expect(resolveActiveDescendantId(OPTIONS, -1, "veg-listbox", true)).toBeUndefined();
+    expect(resolveActiveDescendantId([], 0, "veg-listbox", false)).toBeUndefined();
+  });
+});
+
+describe("MultiComboboxOptionList (create row)", () => {
+  const createRow = { label: "Add 'Kale chips' as a custom food", onSelect: () => {} };
+
+  it("replaces the empty message with the create row, as a real option row", () => {
+    const html = renderToString(
+      createElement(MultiComboboxOptionList, {
+        listboxId: "veg-listbox",
+        options: [],
+        selectedValues: [],
+        highlighted: 0,
+        emptyMessage: "No matches",
+        onHoverOption: () => {},
+        onToggleOption: () => {},
+        createRow,
+      }),
+    );
+    expect(html).not.toContain("No matches");
+    expect(html).toContain(`id="${createOptionId("veg-listbox")}"`);
+    expect((html.match(/role="option"/g) ?? []).length).toBe(1);
+    // An action, never a selected value.
+    expect(html).toContain('aria-selected="false"');
+    expect(html).toContain("Add &#x27;Kale chips&#x27; as a custom food");
+    // Highlighted at index 0 (= options.length) — same background treatment
+    // as any other highlighted row, and the same 44px row height.
+    expect(html).toContain("bg-[var(--color-bg-inset)]");
+    expect(html).toContain("min-h-11");
+  });
+
+  it("renders no create row when the caller passes none (the empty message stands)", () => {
+    const html = renderToString(
+      createElement(MultiComboboxOptionList, {
+        listboxId: "veg-listbox",
+        options: [],
+        selectedValues: [],
+        highlighted: -1,
+        emptyMessage: "No matches",
+        onHoverOption: () => {},
+        onToggleOption: () => {},
+      }),
+    );
+    expect(html).toContain("No matches");
+    expect(html).not.toContain(createOptionId("veg-listbox"));
+  });
+
+  it("sits after every matching option when one is somehow shown alongside them", () => {
+    const html = renderToString(
+      createElement(MultiComboboxOptionList, {
+        listboxId: "veg-listbox",
+        options: OPTIONS.slice(0, 2),
+        selectedValues: [],
+        highlighted: -1,
+        emptyMessage: "No matches",
+        onHoverOption: () => {},
+        onToggleOption: () => {},
+        createRow,
+      }),
+    );
+    expect(html.indexOf(createOptionId("veg-listbox"))).toBeGreaterThan(html.indexOf("Banana"));
   });
 });

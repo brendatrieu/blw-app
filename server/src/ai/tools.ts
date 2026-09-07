@@ -15,7 +15,7 @@
 // schema below is still a `.strict`-equivalent object (`additionalProperties:
 // false` + `required`), which is the wire-level guarantee the task brief
 // actually cares about. Flagged in the phase brief.
-import { and, asc, desc, eq, ilike, inArray, lte } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, lte, or } from "drizzle-orm";
 import { betaTool } from "@anthropic-ai/sdk/helpers/beta/json-schema";
 import { ageInMonths, unionAllergenStatus } from "@blw/shared";
 import type { Database } from "../db/index.js";
@@ -279,14 +279,27 @@ const FOOD_PREP_INPUT_SCHEMA = {
   additionalProperties: false,
 } as const;
 
-function buildFoodPrepGuidanceTool(db: Database) {
+function buildFoodPrepGuidanceTool(db: Database, userId: string) {
   return betaTool({
     name: "get_food_prep_guidance",
     description: "Get the choking-safe prep instructions for one catalog food at a given age stage.",
     inputSchema: FOOD_PREP_INPUT_SCHEMA,
     run: async ({ foodSlug, ageStage }) => {
-      const [food] = await db.select().from(foods).where(eq(foods.slug, foodSlug)).limit(1);
+      // Same visibility rule as GET /api/foods/:slug: the seeded catalog
+      // plus this user's own custom foods, never anybody else's.
+      const [food] = await db
+        .select()
+        .from(foods)
+        .where(and(eq(foods.slug, foodSlug), or(isNull(foods.ownerId), eq(foods.ownerId, userId))))
+        .limit(1);
       if (!food) return `No catalog food found with slug "${foodSlug}".`;
+
+      // A custom food has no curated guidance at all — the prep columns are
+      // empty placeholders, and inventing an answer from them would be worse
+      // than saying so.
+      if (food.ownerId !== null) {
+        return `"${food.name}" is a food this parent added themselves, so the catalog has no prep or choking guidance for it.`;
+      }
 
       const prep = ageStage === "6" ? food.prep6m : ageStage === "9" ? food.prep9m : food.prep12m;
       return JSON.stringify({
@@ -319,6 +332,6 @@ export function buildChatTools(db: Database, userId: string, babyId: string | nu
     get_baby_profile: buildBabyProfileTool(db, userId, babyId),
     get_pantry: buildPantryTool(db, userId),
     search_recipes: buildSearchRecipesTool(db),
-    get_food_prep_guidance: buildFoodPrepGuidanceTool(db),
+    get_food_prep_guidance: buildFoodPrepGuidanceTool(db, userId),
   };
 }

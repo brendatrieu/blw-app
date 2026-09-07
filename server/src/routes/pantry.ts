@@ -6,7 +6,7 @@
 // on every read from `preparedAt` + a storage window, so a location or
 // prepared-date edit "recomputes" automatically — there is nothing to
 // invalidate.
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   createPantryItemInputSchema,
@@ -70,6 +70,7 @@ const PANTRY_SELECTION = {
   foodId: pantryItems.foodId,
   foodSlug: foods.slug,
   foodName: foods.name,
+  foodEmoji: foods.emoji,
   foodStorageCategory: foods.storageCategory,
   recipeId: pantryItems.recipeId,
   recipeTitle: recipes.title,
@@ -92,6 +93,7 @@ type PantryRow = {
   foodId: string | null;
   foodSlug: string | null;
   foodName: string | null;
+  foodEmoji: string | null;
   foodStorageCategory: string | null;
   recipeId: string | null;
   recipeTitle: string | null;
@@ -170,6 +172,9 @@ async function hydratePantryItems(db: Database, rows: PantryRow[]): Promise<Pant
       label: row.label,
       foodSlug: row.foodSlug,
       foodName: row.foodName,
+      // Only ever set on a custom food; the client falls back to its own
+      // slug/category emoji table when it is null.
+      foodEmoji: row.foodEmoji,
       recipeId: row.recipeId,
       recipeTitle: row.recipeTitle,
       preparedAt: row.preparedAt.toISOString(),
@@ -251,7 +256,12 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
     const foodIds = body.data.foodIds ? [...new Set(body.data.foodIds)] : null;
 
     if (foodIds) {
-      const foodRows = await db.select({ id: foods.id }).from(foods).where(inArray(foods.id, foodIds));
+      // Visible to THIS user — the catalog plus their own custom foods.
+      // Another account's custom food reads as an unknown id.
+      const foodRows = await db
+        .select({ id: foods.id })
+        .from(foods)
+        .where(and(inArray(foods.id, foodIds), or(isNull(foods.ownerId), eq(foods.ownerId, currentUserId(request)))));
       const knownFoodIds = new Set(foodRows.map((f) => f.id));
       const unknownFoodIds = foodIds.filter((id) => !knownFoodIds.has(id));
       if (unknownFoodIds.length > 0) return badRequest(reply, { foodIds: "unknown food", unknownFoodIds });

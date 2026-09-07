@@ -128,14 +128,18 @@ export type UpdateMealInput = z.input<typeof updateMealInputSchema>;
 
 /**
  * A food as it appears inside a meal. `category` is carried so the client
- * can resolve its emoji (the emoji table is client-side, keyed by slug with
- * a category fallback); the server has no emoji column.
+ * can resolve its emoji from the client-side table (keyed by slug with a
+ * category fallback); `emoji` overrides that when a parent picked one on a
+ * custom food. Optional in the contract because it only exists for custom
+ * foods — a catalog food sends `null` and a cached older payload sends
+ * nothing at all, and both must keep parsing.
  */
 export const mealFoodSchema = z.object({
   id: z.string().uuid(),
   slug: z.string(),
   name: z.string(),
   category: foodCategorySchema,
+  emoji: z.string().nullable().optional(),
   /**
    * The pantry item this food was served from, or `null` for a meal logged
    * by hand. Only POST /api/pantry/:id/serve sets it — logging through

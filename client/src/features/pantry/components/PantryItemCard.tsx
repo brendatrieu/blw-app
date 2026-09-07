@@ -12,7 +12,9 @@ import { Textarea } from "../../../components/ui/Input.js";
  * catalog food, otherwise a friendly stand-in for a recipe or free-form entry.
  * Exported so `PantryDetailPage` can reuse it for its own header. */
 export function pantryItemEmoji(item: PantryItem): string {
-  if (item.foodSlug) return getFoodEmoji(item.foodSlug);
+  // Pantry rows carry no category — a custom food's own emoji, or the
+  // slug map, is all there is to go on.
+  if (item.foodSlug) return getFoodEmoji(item.foodSlug, null, item.foodEmoji);
   if (item.recipeTitle) return "🍲";
   return "📝";
 }

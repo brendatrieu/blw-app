@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CreatePantryItemInput, MealItem, PantryLocation } from "@blw/shared";
 import { useFoods, useRecipe } from "../../catalog/hooks.js";
-import { getFoodEmoji } from "../../catalog/foodEmoji.js";
+import { FoodPicker, foodPickerOption } from "../../catalog/components/FoodPicker.js";
 import { useCreateMeal, useFavorites, useUpdateMeal } from "../hooks.js";
 import { applyRecipeIngredients, recipeIngredientFoodIds } from "../recipeChips.js";
 import { useCreatePantryItem } from "../../pantry/hooks.js";
@@ -13,7 +13,7 @@ import { SegmentedControl } from "../../../components/ui/SegmentedControl.js";
 import { DateField } from "../../../components/ui/DateField.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
 import { Switch } from "../../../components/ui/Switch.js";
-import { MultiCombobox, type MultiComboboxOption } from "../../../components/ui/MultiCombobox.js";
+import { type MultiComboboxOption } from "../../../components/ui/MultiCombobox.js";
 import { Button } from "../../../components/ui/Button.js";
 
 /** The submit payload shape shared by both create and update — same fields
@@ -221,7 +221,11 @@ export function resolveSubmitAction(
 }
 
 export function LogFoodForm({ babyId, meal, onDone, initialFoodIds }: LogFoodFormProps) {
-  const { data: foodsData, isLoading: foodsLoading } = useFoods();
+  // `FoodPicker` owns the food combobox (and its own `useFoods()` — the same
+  // query key, so this shares one fetch with it). The list is still read here
+  // for the two things the picker doesn't own: mapping a recipe's ingredient
+  // slugs to food ids, and the leftovers "which food?" select's options.
+  const { data: foodsData } = useFoods();
   const { data: favoritesData, isLoading: favoritesLoading } = useFavorites();
   const createMeal = useCreateMeal(babyId);
   const updateMeal = useUpdateMeal(babyId);
@@ -252,10 +256,7 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds }: LogFoodFor
   const favorites = favoritesData?.items ?? [];
   const { data: recipeDetail } = useRecipe(recipeId || undefined);
 
-  const foodOptions: MultiComboboxOption[] = useMemo(
-    () => foods.map((food) => ({ value: food.id, label: food.name, emoji: getFoodEmoji(food.slug, food.category) })),
-    [foods],
-  );
+  const foodOptions: MultiComboboxOption[] = useMemo(() => foods.map(foodPickerOption), [foods]);
   const slugToFoodId = useMemo(() => new Map(foods.map((food) => [food.slug, food.id])), [foods]);
 
   const leftoverSource = resolveLeftoverSource(recipeId || null, foodIds);
@@ -383,14 +384,7 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds }: LogFoodFor
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <Field label="Food" htmlFor="log-food-food">
-        <MultiCombobox
-          id="log-food-food"
-          options={foodOptions}
-          value={foodIds}
-          onChange={setFoodIds}
-          disabled={foodsLoading}
-          placeholder={foodsLoading ? "Loading foods…" : "Search foods…"}
-        />
+        <FoodPicker id="log-food-food" value={foodIds} onChange={setFoodIds} />
       </Field>
 
       <Field label="Recipe (optional)" htmlFor="log-food-recipe">

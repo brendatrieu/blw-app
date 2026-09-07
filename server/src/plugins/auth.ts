@@ -13,6 +13,13 @@ declare module "fastify" {
     auth: Auth;
     /** Resolves the caller's session or rejects the request with 401. */
     requireAuth: preHandlerAsyncHookHandler;
+    /**
+     * Resolves the caller's session when there is one and continues either
+     * way, leaving `request.user` null for an anonymous caller. For routes
+     * that serve everybody but show a signed-in user more (the food catalog,
+     * which mixes in that user's own custom foods).
+     */
+    resolveOptionalUser: preHandlerAsyncHookHandler;
   }
 
   interface FastifyRequest {
@@ -71,6 +78,12 @@ export function registerAuth(app: FastifyInstance, { auth, env }: RegisterAuthOp
   };
 
   app.decorate("requireAuth", requireAuth);
+
+  const resolveOptionalUser: preHandlerAsyncHookHandler = async (request) => {
+    await resolveSession(request);
+  };
+
+  app.decorate("resolveOptionalUser", resolveOptionalUser);
 
   // ---------------------------------------------------------------------
   // better-auth HTTP handler

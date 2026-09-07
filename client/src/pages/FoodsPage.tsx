@@ -2,13 +2,20 @@ import { useMemo, useState } from "react";
 import type { FoodCategory, Level } from "@blw/shared";
 import { useFoods } from "../features/catalog/hooks.js";
 import { FoodTile } from "../features/catalog/components/FoodTile.js";
-import { ALLERGEN_SLUGS, AGE_THRESHOLDS, CATEGORIES, IRON_LEVELS, allergenLabel } from "../features/catalog/constants.js";
+import {
+  ALLERGEN_SLUGS,
+  AGE_THRESHOLDS,
+  CATEGORIES,
+  IRON_LEVELS,
+  addCustomFoodLabel,
+  allergenLabel,
+} from "../features/catalog/constants.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { SkeletonList } from "../components/ui/Skeleton.js";
 import { Input } from "../components/ui/Input.js";
 import { Sheet } from "../components/ui/Sheet.js";
-import { Button } from "../components/ui/Button.js";
+import { Button, ButtonLink } from "../components/ui/Button.js";
 
 interface FilterChipProps {
   active: boolean;
@@ -54,6 +61,33 @@ function ActiveFilterPill({ label, onRemove }: { label: string; onRemove: () => 
   );
 }
 
+/**
+ * What the grid shows when the filters match nothing. With a search term in
+ * play that's not a dead end — it's the strongest signal we ever get that a
+ * food the parent feeds is missing from the catalog — so the state offers to
+ * make it one, carrying the query over as `?name=` (item 179). Clearing a
+ * filter is the only useful advice when there's no query to add.
+ *
+ * Exported and prop-driven (rather than inlined into the page's JSX) so a
+ * render test can pin the with-query variant: `q` is page state, and these
+ * tests have no DOM to type into.
+ */
+export function NoFoodsEmptyState({ query }: { query: string }) {
+  const trimmed = query.trim();
+  if (trimmed.length === 0) {
+    return <EmptyState title="No foods match those filters" description="Try clearing a filter or two." />;
+  }
+  return (
+    <EmptyState
+      title="No foods match those filters"
+      description="Not in the catalog? Add it as your own — it'll show up everywhere a catalog food does."
+      action={
+        <ButtonLink to={`/foods/new?name=${encodeURIComponent(trimmed)}`}>{addCustomFoodLabel(trimmed)}</ButtonLink>
+      }
+    />
+  );
+}
+
 function FunnelIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -89,7 +123,16 @@ export function FoodsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <PageHeader title="Foods" emoji="🍎" description="Iron-rich foods first — filter by category, allergen, or age." />
+      <PageHeader
+        title="Foods"
+        emoji="🍎"
+        description="Iron-rich foods first — filter by category, allergen, or age."
+        action={
+          <ButtonLink to="/foods/new" size="sm">
+            Add food
+          </ButtonLink>
+        }
+      />
 
       <div
         className="sticky z-[5] -mx-4 flex flex-col gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-4 pt-1 pb-2"
@@ -147,9 +190,7 @@ export function FoodsPage() {
 
       {isLoading && <SkeletonList count={4} />}
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load foods. Try again.</p>}
-      {data && data.foods.length === 0 && (
-        <EmptyState title="No foods match those filters" description="Try clearing a filter or two." />
-      )}
+      {data && data.foods.length === 0 && <NoFoodsEmptyState query={q} />}
 
       {data && data.foods.length > 0 && (
         <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">

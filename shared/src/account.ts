@@ -17,7 +17,7 @@ import { z } from "zod";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 4;
+export const ACCOUNT_EXPORT_VERSION = 5;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -115,6 +115,22 @@ export const exportAllergenOverrideSchema = z.object({
   createdAt: z.string(),
 });
 
+/**
+ * A food the parent added themselves (v5). Only the fields they actually
+ * chose: the stored nutrition/prep columns on a custom row are neutral
+ * placeholders the app never shows, so exporting them would present made-up
+ * guidance as the parent's own data.
+ */
+export const exportCustomFoodSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  category: z.string(),
+  emoji: z.string().nullable(),
+  allergenSlugs: z.array(z.string()),
+  notes: z.string().nullable(),
+});
+
 export const exportSymptomCheckSchema = z.object({
   id: z.string(),
   babyId: z.string(),
@@ -164,6 +180,9 @@ export const accountExportSchema = z.object({
   pantryItems: z.array(exportPantryItemSchema),
   /** v4. Per-baby manual allergen marks, ordered by `createdAt`. */
   allergenOverrides: z.array(exportAllergenOverrideSchema),
+  /** v5. Foods this account added itself, ordered by name. The `foods` table
+   * carries no created-at column, so there is no date to export here. */
+  customFoods: z.array(exportCustomFoodSchema),
   symptomChecks: z.array(exportSymptomCheckSchema),
   chatThreads: z.array(exportChatThreadSchema),
   aiKey: exportAiKeySchema,
@@ -177,6 +196,7 @@ export type ExportMealFood = z.infer<typeof exportMealFoodSchema>;
 export type ExportFavorite = z.infer<typeof exportFavoriteSchema>;
 export type ExportPantryItem = z.infer<typeof exportPantryItemSchema>;
 export type ExportAllergenOverride = z.infer<typeof exportAllergenOverrideSchema>;
+export type ExportCustomFood = z.infer<typeof exportCustomFoodSchema>;
 export type ExportSymptomCheck = z.infer<typeof exportSymptomCheckSchema>;
 export type ExportChatThread = z.infer<typeof exportChatThreadSchema>;
 export type ExportChatMessage = z.infer<typeof exportChatMessageSchema>;

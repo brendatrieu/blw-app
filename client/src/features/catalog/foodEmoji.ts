@@ -70,10 +70,34 @@ const CATEGORY_FALLBACK_EMOJI: Record<FoodCategory, string> = {
 const DEFAULT_EMOJI = "🍽️";
 
 /**
- * The emoji to show for a food. Looks up the exact slug first, falls back
- * to the food's category, and finally to a generic plate.
+ * The emoji this app would suggest for a whole category — the default the
+ * custom-food form seeds its emoji field with, and the second-to-last
+ * fallback in `getFoodEmoji`. Exported so the form and the resolver can
+ * never drift apart on what "the fruit emoji" is.
  */
-export function getFoodEmoji(slug: string, category?: FoodCategory | null): string {
+export function getCategoryEmoji(category: FoodCategory): string {
+  return CATEGORY_FALLBACK_EMOJI[category];
+}
+
+/**
+ * The emoji to show for a food, in priority order (item 177):
+ *  1. `emoji` — the food's OWN emoji. Only custom foods ever carry one (a
+ *     parent picked it), and when they do it beats every guess below,
+ *     including a slug that happens to collide with a seeded one.
+ *  2. the curated per-slug map, for seeded catalog foods;
+ *  3. the food's category;
+ *  4. a generic plate.
+ *
+ * `emoji` is last in the parameter list, not first, so the pre-existing
+ * `getFoodEmoji(slug)` / `getFoodEmoji(slug, category)` calls (pairings,
+ * recipe ingredients — shapes that carry no emoji at all) keep compiling
+ * unchanged. Blank/whitespace-only and null are treated as "not set", so a
+ * cleared emoji field falls through to the map rather than rendering an
+ * empty span.
+ */
+export function getFoodEmoji(slug: string, category?: FoodCategory | null, emoji?: string | null): string {
+  const own = emoji?.trim();
+  if (own) return own;
   const bySlug = FOOD_EMOJI[slug];
   if (bySlug) return bySlug;
   if (category) return CATEGORY_FALLBACK_EMOJI[category];

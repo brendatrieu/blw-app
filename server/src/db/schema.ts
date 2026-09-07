@@ -154,8 +154,20 @@ export const foods = pgTable(
     storageCategory: text("storage_category")
       .notNull()
       .references(() => storageGuidelines.category),
+    // NULL for the seeded catalog (visible to everyone), set for a food a
+    // parent added for themselves — every read filters on
+    // `owner_id IS NULL OR owner_id = <caller>`. Cascades so deleting an
+    // account takes its own foods with it, exactly like its other rows.
+    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
+    // Parent-picked emoji on a custom food. Catalog rows leave it null and
+    // keep resolving their emoji from the client's slug/category table.
+    emoji: text("emoji"),
   },
-  (t) => [index("foods_iron_level_idx").on(t.ironLevel), index("foods_category_idx").on(t.category)],
+  (t) => [
+    index("foods_iron_level_idx").on(t.ironLevel),
+    index("foods_category_idx").on(t.category),
+    index("foods_owner_id_idx").on(t.ownerId),
+  ],
 );
 
 export const foodAllergens = pgTable(

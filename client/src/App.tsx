@@ -12,6 +12,8 @@ import { PantryDetailPage } from "./pages/PantryDetailPage.js";
 import { MealDetailPage } from "./pages/MealDetailPage.js";
 import { FoodsPage } from "./pages/FoodsPage.js";
 import { FoodDetailPage } from "./pages/FoodDetailPage.js";
+import { FoodCreatePage } from "./pages/FoodCreatePage.js";
+import { FoodEditPage } from "./pages/FoodEditPage.js";
 import { RecipeDetailPage } from "./pages/RecipeDetailPage.js";
 import { BabyAllergensPage } from "./pages/BabyAllergensPage.js";
 import { FavoritesPage } from "./pages/FavoritesPage.js";
@@ -60,6 +62,10 @@ export function App() {
         <Route path="/pantry/:id/edit" element={<PantryEditPage />} />
         <Route path="/pantry/:id" element={<PantryDetailPage />} />
         <Route path="/foods" element={<FoodsPage />} />
+        {/* Ahead of "/foods/:slug", exactly like "/pantry/add" sits ahead of
+            "/pantry/:id" — otherwise "new" is read as a slug. */}
+        <Route path="/foods/new" element={<FoodCreatePage />} />
+        <Route path="/foods/:slug/edit" element={<FoodEditPage />} />
         <Route path="/foods/:slug" element={<FoodDetailPage />} />
         <Route path="/recipes/:id" element={<RecipeDetailPage />} />
         <Route path="/log" element={<Navigate to="/" replace />} />

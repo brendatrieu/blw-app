@@ -1,14 +1,16 @@
-import { Link, useParams } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import type { FoodDetail } from "@blw/shared";
-import { useFood } from "../features/catalog/hooks.js";
+import { useDeleteCustomFood, useFood } from "../features/catalog/hooks.js";
+import { asCustomFoodConflict } from "../features/catalog/api.js";
 import { FoodBadges } from "../features/catalog/components/FoodBadges.js";
 import { Badge } from "../features/catalog/components/Badge.js";
-import { levelLabel } from "../features/catalog/constants.js";
+import { CUSTOM_FOOD_SOFT_NOTE, customFoodConflictMessage, levelLabel } from "../features/catalog/constants.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useMeals } from "../features/tracking/hooks.js";
 import { BackButton } from "../components/ui/BackButton.js";
-import { ButtonLink } from "../components/ui/Button.js";
+import { Button, ButtonLink } from "../components/ui/Button.js";
 import { CardLink } from "../components/ui/Card.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
@@ -61,6 +63,73 @@ function MarkAsServed({ food }: MarkAsServedProps) {
   );
 }
 
+interface CustomFoodActionsProps {
+  food: FoodDetail;
+}
+
+/**
+ * Edit + Delete for a food the parent owns (item 181). Delete is a two-step
+ * inline confirm — the same idiom the meal log's delete uses — rather than a
+ * dialog: it's a destructive action on a row, and a `window.confirm` would
+ * be the only native modal left in the app.
+ *
+ * The 409 case is the interesting one. A food still referenced by meals or
+ * pantry items can't be deleted (deleting it would strand those rows and the
+ * allergen exposures counted from them), and the server answers with the two
+ * counts so this can say exactly where to go clean up instead of a bare
+ * "couldn't delete".
+ *
+ * Exported so a render test can pin the confirm/Edit/Delete markup directly
+ * — the confirming state only exists after a click, and these tests have no
+ * DOM to click in.
+ */
+export function CustomFoodActions({ food }: CustomFoodActionsProps) {
+  const [confirming, setConfirming] = useState(false);
+  const navigate = useNavigate();
+  const deleteFood = useDeleteCustomFood();
+  const conflict = asCustomFoodConflict(deleteFood.error);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <ButtonLink to={`/foods/${food.slug}/edit`} variant="secondary" size="sm">
+          Edit
+        </ButtonLink>
+        {confirming ? (
+          <>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              disabled={deleteFood.isPending}
+              onClick={() =>
+                deleteFood.mutate(
+                  { id: food.id, slug: food.slug },
+                  { onSuccess: () => navigate("/foods", { replace: true }) },
+                )
+              }
+            >
+              {deleteFood.isPending ? "Deleting…" : "Delete for good"}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+              Keep
+            </Button>
+          </>
+        ) : (
+          <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)}>
+            Delete
+          </Button>
+        )}
+      </div>
+      {deleteFood.isError && (
+        <p role="alert" className="text-xs font-medium text-[var(--color-danger)]">
+          {conflict ? customFoodConflictMessage(conflict) : "Couldn't delete that — try again."}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function FoodDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: food, isLoading, isError } = useFood(slug);
@@ -95,7 +164,7 @@ export function FoodDetailPage() {
           aria-hidden="true"
           className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-5xl leading-none"
         >
-          {getFoodEmoji(food.slug, food.category)}
+          {getFoodEmoji(food.slug, food.category, food.emoji)}
         </span>
         <div className="flex flex-col items-center gap-2">
           <h1 className="font-display text-[var(--color-text)]">{food.name}</h1>
@@ -105,25 +174,38 @@ export function FoodDetailPage() {
 
       <MarkAsServed food={food} />
 
-      {food.chokingNotes && (
+      {food.isCustom && <CustomFoodActions food={food} />}
+
+      {food.isCustom && (
+        <p className="rounded-[var(--radius-lg)] bg-[var(--color-bg-inset)] p-4 text-sm text-[var(--color-text-muted)]">
+          {CUSTOM_FOOD_SOFT_NOTE}
+        </p>
+      )}
+
+      {!food.isCustom && food.chokingNotes && (
         <div className="flex flex-col gap-1 rounded-[var(--radius-lg)] border-2 border-[var(--color-danger)] bg-[var(--color-bg-elevated)] p-4">
           <p className="font-caption text-[var(--color-danger)]">⚠️ Choking notes</p>
           <p className="text-sm text-[var(--color-text)]">{food.chokingNotes}</p>
         </div>
       )}
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-h2 text-[var(--color-text)]">Prep by age</h2>
-        {PREP_STAGES.map((stage) => (
-          <div
-            key={stage.key}
-            className="flex flex-col gap-1.5 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3"
-          >
-            <Badge tone={stage.tone}>{stage.label}</Badge>
-            <p className="text-sm text-[var(--color-text)]">{food[stage.key]}</p>
-          </div>
-        ))}
-      </section>
+      {/* Prep by age and the choking block above are curated catalog content.
+          A custom food's columns hold empty strings and a placeholder "low"
+          — the soft note above says so plainly instead. */}
+      {!food.isCustom && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-h2 text-[var(--color-text)]">Prep by age</h2>
+          {PREP_STAGES.map((stage) => (
+            <div
+              key={stage.key}
+              className="flex flex-col gap-1.5 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3"
+            >
+              <Badge tone={stage.tone}>{stage.label}</Badge>
+              <p className="text-sm text-[var(--color-text)]">{food[stage.key]}</p>
+            </div>
+          ))}
+        </section>
+      )}
 
       {food.notes && (
         <section>

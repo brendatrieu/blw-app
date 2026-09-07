@@ -51,3 +51,35 @@ export function levelLabel(level: Level): string {
       return "Low";
   }
 }
+
+/**
+ * The one wording for "this search matched nothing — make it a food", shared
+ * by the Foods page's empty state (item 179) and the picker's trailing
+ * create row (item 180) so the two surfaces can never drift apart. The query
+ * is quoted, not truncated: it's the parent's own typing, and it's what the
+ * form gets prefilled with.
+ */
+export function addCustomFoodLabel(query: string): string {
+  return `Add '${query.trim()}' as a custom food`;
+}
+
+/**
+ * The soft note a custom food's page carries instead of the prep/choking
+ * sections a catalog food has (item 181). Wording is deliberate and fixed:
+ * it says the gap is expected ("added by you"), not a bug, and points at the
+ * pediatrician rather than pretending the app can fill it.
+ */
+export const CUSTOM_FOOD_SOFT_NOTE =
+  "Added by you — there's no curated prep or choking guidance for this food. Check serving safety with your pediatrician.";
+
+/**
+ * Why a custom food couldn't be deleted, from the server's 409 counts. Pure
+ * so the copy is pinned by a test — deleting a food that meals point at
+ * would leave those meals (and their allergen exposures) dangling, so the
+ * message has to name both places to go clean up.
+ */
+export function customFoodConflictMessage(conflict: { mealCount: number; pantryCount: number }): string {
+  const meals = `${conflict.mealCount} ${conflict.mealCount === 1 ? "meal" : "meals"}`;
+  const pantry = `${conflict.pantryCount} pantry ${conflict.pantryCount === 1 ? "item" : "items"}`;
+  return `Used in ${meals} and ${pantry} — remove those first.`;
+}

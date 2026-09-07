@@ -169,6 +169,14 @@ describe("catalog routes", () => {
     expect(body.recipes.map((r) => r.id)).toContain(fixtures.recipe.id);
   });
 
+  it("GET /api/foods/:slug reports a seeded food as catalog content, not custom", async () => {
+    const response = await app.inject({ method: "GET", url: "/api/foods/egg" });
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as FoodDetail;
+    expect(body.isCustom).toBe(false);
+    expect(body.emoji).toBeNull();
+  });
+
   it("GET /api/foods/:slug 404s for an unknown slug", async () => {
     const response = await app.inject({ method: "GET", url: "/api/foods/does-not-exist" });
     expect(response.statusCode).toBe(404);

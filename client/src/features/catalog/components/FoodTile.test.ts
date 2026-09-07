@@ -32,6 +32,36 @@ describe("FoodTile", () => {
     expect(html).not.toMatch(/h-2 w-2 rounded-full/);
   });
 
+  // Item 182: a food the parent added is labelled as theirs in the grid, so
+  // it never passes for curated catalog content.
+  it("labels a custom food with a neutral Custom badge, and a catalog food with none", () => {
+    const custom = renderToString(
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(FoodTile, { food: { ...mockFood(1), isCustom: true, emoji: "🍞" } }),
+      ),
+    );
+    expect(custom).toContain(">Custom<");
+    expect(custom).toContain("bg-[var(--color-neutral-soft)]");
+    // Item 177: its own emoji wins over the slug map / category fallback.
+    expect(custom).toContain("🍞");
+
+    const catalog = renderToString(createElement(MemoryRouter, null, createElement(FoodTile, { food: mockFood(1) })));
+    expect(catalog).not.toContain(">Custom<");
+  });
+
+  it("falls back to the category emoji for a custom food that has none", () => {
+    const html = renderToString(
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(FoodTile, { food: { ...mockFood(2), category: "grain", isCustom: true, emoji: null } }),
+      ),
+    );
+    expect(html).toContain("🌾");
+  });
+
   it("renders a 3-column grid of 40 tiles without throwing", () => {
     const foods = Array.from({ length: 40 }, (_, i) => mockFood(i));
     const html = renderToString(

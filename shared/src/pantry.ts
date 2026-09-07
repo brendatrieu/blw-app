@@ -179,6 +179,10 @@ export const pantryItemSchema = z.object({
   label: z.string().nullable(),
   foodSlug: z.string().nullable(),
   foodName: z.string().nullable(),
+  /** The food's own emoji when a parent picked one on a custom food; the
+   * client falls back to its slug/category map. Optional for the same reason
+   * as `MealFood.emoji` — only custom foods ever have one. */
+  foodEmoji: z.string().nullable().optional(),
   recipeId: z.string().uuid().nullable(),
   recipeTitle: z.string().nullable(),
   preparedAt: z.string(),

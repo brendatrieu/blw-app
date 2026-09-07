@@ -73,7 +73,7 @@ export function MealDetailPage() {
       <BackButton fallback="/" />
       <PageHeader
         title={mealTitle(meal)}
-        emoji={meal.recipeTitle ? "🍳" : getFoodEmoji(meal.foods[0]!.slug, meal.foods[0]!.category)}
+        emoji={meal.recipeTitle ? "🍳" : getFoodEmoji(meal.foods[0]!.slug, meal.foods[0]!.category, meal.foods[0]!.emoji)}
       />
 
       <Card padding="sm" className="flex flex-col gap-2">
@@ -85,7 +85,7 @@ export function MealDetailPage() {
               key={food.id}
               className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] px-2 py-1 text-sm text-[var(--color-text)]"
             >
-              <span aria-hidden="true">{getFoodEmoji(food.slug, food.category)}</span>
+              <span aria-hidden="true">{getFoodEmoji(food.slug, food.category, food.emoji)}</span>
               {food.name}
               {food.pantryItemId && (
                 <Link

@@ -1,14 +1,12 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { PantryLocation } from "@blw/shared";
-import { useFoods } from "../../catalog/hooks.js";
 import { useFavorites } from "../../tracking/hooks.js";
-import { getFoodEmoji } from "../../catalog/foodEmoji.js";
+import { FoodPicker } from "../../catalog/components/FoodPicker.js";
 import { useCreatePantryItem } from "../hooks.js";
 import { LOCATIONS } from "../format.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
 import { Select } from "../../../components/ui/Select.js";
-import { MultiCombobox, type MultiComboboxOption } from "../../../components/ui/MultiCombobox.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
 import { DateField } from "../../../components/ui/DateField.js";
 import { Button } from "../../../components/ui/Button.js";
@@ -44,20 +42,13 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
   const [bestBy, setBestBy] = useState("");
   const [notes, setNotes] = useState("");
 
-  const { data: foodsData, isLoading: foodsLoading } = useFoods();
   // There's no standalone "list recipes" endpoint, so favorited recipes —
   // the set a parent has already chosen to come back to — double as the
   // recipe picker's source list.
   const { data: favoritesData, isLoading: favoritesLoading } = useFavorites();
   const createItem = useCreatePantryItem();
 
-  const foods = foodsData?.foods ?? [];
   const favorites = favoritesData?.items ?? [];
-
-  const foodOptions: MultiComboboxOption[] = useMemo(
-    () => foods.map((food) => ({ value: food.id, label: food.name, emoji: getFoodEmoji(food.slug, food.category) })),
-    [foods],
-  );
 
   const canSubmit =
     source === "food" ? foodIds.length > 0 : source === "recipe" ? Boolean(recipeId) : label.trim().length > 0;
@@ -103,14 +94,7 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
 
       {source === "food" && (
         <Field label="Food" htmlFor="pantry-add-food">
-          <MultiCombobox
-            id="pantry-add-food"
-            options={foodOptions}
-            value={foodIds}
-            onChange={setFoodIds}
-            disabled={foodsLoading}
-            placeholder={foodsLoading ? "Loading foods…" : "Search foods…"}
-          />
+          <FoodPicker id="pantry-add-food" value={foodIds} onChange={setFoodIds} />
         </Field>
       )}
 

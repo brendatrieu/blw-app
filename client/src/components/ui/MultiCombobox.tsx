@@ -10,6 +10,15 @@ interface MultiComboboxProps {
   disabled?: boolean;
   id?: string;
   emptyMessage?: string;
+  /**
+   * Opt-in "create what you typed" affordance (item 180). When present, a
+   * query that matches nothing renders a trailing row instead of the plain
+   * `emptyMessage`; choosing it hands the trimmed query back. The combobox
+   * itself neither creates nor selects anything — the owner does both.
+   */
+  onCreate?: (query: string) => void;
+  /** Label for that row, given the trimmed query. */
+  createLabel?: (query: string) => string;
 }
 
 /** Case-insensitive substring match of `query` against each option's label. */
@@ -111,6 +120,52 @@ export function resolveEnterAction(
   return { prevent: true, toggleIndex: valid ? effectiveHighlighted : null };
 }
 
+/**
+ * Whether the trailing "create what you typed" row is showing. It replaces
+ * the empty message rather than sitting alongside matches: an option row
+ * offering to create a food the parent can already see would be a trap.
+ * Pure so the "only on a non-blank query with zero matches" rule is pinned
+ * by a test, not by reading JSX.
+ */
+export function shouldShowCreateRow(query: string, filteredLength: number, hasCreate: boolean): boolean {
+  return hasCreate && filteredLength === 0 && query.trim().length > 0;
+}
+
+/** Total navigable rows in the listbox — the create row, when shown, is the
+ * last one, so its index is exactly `filteredLength`. */
+export function rowCount(filteredLength: number, createRowVisible: boolean): number {
+  return filteredLength + (createRowVisible ? 1 : 0);
+}
+
+/**
+ * Enter's decision once a create row is in play, layered on `resolveEnterAction`
+ * so that function's contract (and its tests) stay exactly as they were:
+ * - Closed: still not our key — the surrounding form submits normally.
+ * - Open: `prevent` is ALWAYS true, so Enter on the create row (or on
+ *   anything else in an open listbox) can never fall through to the
+ *   surrounding form's submit. That's the item 180 guarantee: creating a
+ *   food from the log-meal picker must not also log the meal.
+ * - `create` is true only when the highlight is sitting on the create row
+ *   itself (index === filteredLength, i.e. past the last real option).
+ * Consumed verbatim by the keydown handler, like its base.
+ */
+export function resolveCreateEnterAction(
+  open: boolean,
+  effectiveHighlighted: number,
+  filteredLength: number,
+  createRowVisible: boolean,
+): { prevent: boolean; toggleIndex: number | null; create: boolean } {
+  const base = resolveEnterAction(open, effectiveHighlighted, filteredLength);
+  const create = open && createRowVisible && effectiveHighlighted === filteredLength;
+  return { ...base, create };
+}
+
+/** DOM id for the trailing create row (the one `optionId` can't name — it has
+ * no option object behind it). */
+export function createOptionId(listboxId: string): string {
+  return `${listboxId}-option-create`;
+}
+
 /** DOM id for one option's `<li role="option">`, derived from the listbox id + the option's value. */
 export function optionId(listboxId: string, option: MultiComboboxOption): string {
   return `${listboxId}-option-${option.value}`;
@@ -126,6 +181,22 @@ export function getActiveDescendantId(
   listboxId: string,
 ): string | undefined {
   return highlighted >= 0 && highlighted < filtered.length ? optionId(listboxId, filtered[highlighted]!) : undefined;
+}
+
+/**
+ * `getActiveDescendantId` widened by the create row: the row past the last
+ * option is the create row, and it has its own id. Kept as a separate,
+ * exported function rather than folded into the one above so the existing
+ * signature and its tests are untouched.
+ */
+export function resolveActiveDescendantId(
+  filtered: MultiComboboxOption[],
+  highlighted: number,
+  listboxId: string,
+  createRowVisible: boolean,
+): string | undefined {
+  if (createRowVisible && highlighted === filtered.length) return createOptionId(listboxId);
+  return getActiveDescendantId(filtered, highlighted, listboxId);
 }
 
 /**
@@ -145,6 +216,9 @@ interface MultiComboboxOptionListProps {
   emptyMessage: string;
   onHoverOption: (index: number) => void;
   onToggleOption: (value: string) => void;
+  /** The trailing "create what you typed" row, when one is showing — see
+   * `shouldShowCreateRow`. Its index is `options.length`. */
+  createRow?: { label: string; onSelect: () => void };
 }
 
 /**
@@ -161,6 +235,7 @@ export function MultiComboboxOptionList({
   emptyMessage,
   onHoverOption,
   onToggleOption,
+  createRow,
 }: MultiComboboxOptionListProps) {
   return (
     <ul
@@ -169,7 +244,7 @@ export function MultiComboboxOptionList({
       aria-multiselectable="true"
       className="max-h-60 overflow-y-auto py-1"
     >
-      {options.length === 0 ? (
+      {options.length === 0 && !createRow ? (
         <li className="px-3 py-2 text-sm text-[var(--color-text-muted)]">{emptyMessage}</li>
       ) : (
         options.map((option, index) => {
@@ -200,6 +275,30 @@ export function MultiComboboxOptionList({
           );
         })
       )}
+      {createRow ? (
+        // Same row anatomy as a real option (role, min height, ✓ column
+        // width) so keyboard navigation and hit targets don't change shape
+        // at the bottom of the list. `aria-selected={false}`: it's an action,
+        // never a selected value. mousedown is prevented for the same reason
+        // the option rows prevent it — the click must not blur the input
+        // before it lands.
+        <li
+          id={createOptionId(listboxId)}
+          role="option"
+          aria-selected={false}
+          onMouseEnter={() => onHoverOption(options.length)}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={createRow.onSelect}
+          className={`flex min-h-11 cursor-pointer items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--color-text)] ${
+            options.length === highlighted ? "bg-[var(--color-bg-inset)]" : ""
+          }`}
+        >
+          <span aria-hidden="true" className="w-4 shrink-0 text-center text-[var(--color-primary-soft-text)]">
+            +
+          </span>
+          <span className="flex-1">{createRow.label}</span>
+        </li>
+      ) : null}
     </ul>
   );
 }
@@ -304,6 +403,12 @@ export function MultiComboboxChevronButton({ open, disabled, onToggle }: MultiCo
   );
 }
 
+/** Fallback wording when a caller opts into `onCreate` without supplying
+ * `createLabel`. */
+function defaultCreateLabel(query: string): string {
+  return `Add '${query}'`;
+}
+
 /**
  * Searchable multi-select combobox: type to filter options, click (or Enter) to
  * toggle them, selected options render as removable chips. Reuses the token
@@ -317,6 +422,8 @@ export function MultiCombobox({
   disabled = false,
   id,
   emptyMessage = "No matches",
+  onCreate,
+  createLabel,
 }: MultiComboboxProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -337,9 +444,13 @@ export function MultiCombobox({
   // Derived, not stored: recomputed fresh every render from `highlighted` +
   // the current filtered list, so there's no effect that can race a handler
   // and clobber an index the handler just set (see `resolveHighlight`).
+  const createRowVisible = shouldShowCreateRow(query, filtered.length, Boolean(onCreate));
+  // The create row is navigable, so it counts as a row for highlight
+  // purposes — that's the ONLY thing `rows` is for.
+  const rows = rowCount(filtered.length, createRowVisible);
   const effectiveHighlighted = useMemo(
-    () => resolveHighlight(highlighted, filtered.length, open),
-    [highlighted, filtered.length, open],
+    () => resolveHighlight(highlighted, rows, open),
+    [highlighted, rows, open],
   );
 
   // Click-outside closes the dropdown.
@@ -359,24 +470,40 @@ export function MultiCombobox({
     onChange(toggleValue(value, optionValue));
   }
 
+  /** Hands the trimmed query to the owner and closes the menu, so whatever
+   * it opens (a sheet, a page) isn't fighting an open listbox for the
+   * screen. The query itself is left alone — the owner is about to use it. */
+  function startCreate() {
+    setOpen(false);
+    setHighlighted(-1);
+    onCreate?.(query.trim());
+  }
+
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setOpen(true);
-      setHighlighted(moveHighlight(effectiveHighlighted, 1, filtered.length));
+      setHighlighted(moveHighlight(effectiveHighlighted, 1, rows));
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       setOpen(true);
-      setHighlighted(moveHighlight(effectiveHighlighted, -1, filtered.length));
+      setHighlighted(moveHighlight(effectiveHighlighted, -1, rows));
     } else if (event.key === "Enter") {
-      // Verbatim pass-through of the pure decision: obey both fields, do
+      // Verbatim pass-through of the pure decision: obey all three fields, do
       // nothing else, so the cycle-1 "prevent only when highlighted >= 0"
-      // regression can't creep back in unnoticed.
-      const { prevent, toggleIndex } = resolveEnterAction(open, effectiveHighlighted, filtered.length);
+      // regression can't creep back in unnoticed — and so Enter on the
+      // create row never reaches the surrounding form's submit (item 180).
+      const { prevent, toggleIndex, create } = resolveCreateEnterAction(
+        open,
+        effectiveHighlighted,
+        filtered.length,
+        createRowVisible,
+      );
       if (prevent) event.preventDefault();
       if (toggleIndex !== null) {
         toggleOption(filtered[toggleIndex]!.value);
       }
+      if (create) startCreate();
     } else if (event.key === "Escape") {
       if (open) {
         event.preventDefault();
@@ -424,7 +551,7 @@ export function MultiCombobox({
             {...getInputAriaProps({
               open,
               listboxId,
-              activeDescendantId: getActiveDescendantId(filtered, effectiveHighlighted, listboxId),
+              activeDescendantId: resolveActiveDescendantId(filtered, effectiveHighlighted, listboxId, createRowVisible),
             })}
             {...(value.length >= 1 ? { "aria-describedby": countBadgeId } : {})}
             autoComplete="off"
@@ -483,6 +610,11 @@ export function MultiCombobox({
             emptyMessage={emptyMessage}
             onHoverOption={setHighlighted}
             onToggleOption={toggleOption}
+            createRow={
+              createRowVisible
+                ? { label: (createLabel ?? defaultCreateLabel)(query.trim()), onSelect: startCreate }
+                : undefined
+            }
             onDone={() => {
               // Close only — selection and query are left exactly as they are.
               setOpen(false);

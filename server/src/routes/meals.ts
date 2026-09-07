@@ -6,7 +6,7 @@
 // it only unions into the reported status (see `unionAllergenStatus`). Every
 // route sits behind requireAuth and every baby/meal lookup is scoped to the
 // caller's own rows — a miss (wrong owner or unknown id) is 404, never 403.
-import { and, asc, desc, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   allergenKeyParamSchema,
@@ -59,13 +59,22 @@ function ownedMealCondition(db: Database, mealId: string, userId: string) {
 
 type Validated<T> = { ok: true; value: T } | { ok: false; details: unknown };
 
-/** Deduped, existence-checked food ids — the same check POST and PATCH share. */
-async function validateFoodIds(db: Database, rawFoodIds: string[]): Promise<Validated<string[]>> {
+/**
+ * Deduped, existence-checked food ids — the same check POST and PATCH share.
+ * "Exists" means visible to THIS user: the seeded catalog plus their own
+ * custom foods. Another account's custom food reads as an unknown id, so it
+ * can never be logged into a meal (and the 400 says nothing about whether it
+ * exists elsewhere).
+ */
+async function validateFoodIds(db: Database, rawFoodIds: string[], userId: string): Promise<Validated<string[]>> {
   // Dedupe so the same food twice in one submission is one row, not a
   // unique-index violation.
   const foodIds = [...new Set(rawFoodIds)];
 
-  const foodRows = await db.select({ id: foods.id }).from(foods).where(inArray(foods.id, foodIds));
+  const foodRows = await db
+    .select({ id: foods.id })
+    .from(foods)
+    .where(and(inArray(foods.id, foodIds), or(isNull(foods.ownerId), eq(foods.ownerId, userId))));
   const known = new Set(foodRows.map((row) => row.id));
   const unknownFoodIds = foodIds.filter((id) => !known.has(id));
   if (unknownFoodIds.length > 0) {
@@ -147,7 +156,7 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     const body = createMealInputSchema.safeParse(request.body);
     if (!body.success) return badRequest(reply, body.error.flatten());
 
-    const children = await validateFoodIds(db, body.data.foodIds);
+    const children = await validateFoodIds(db, body.data.foodIds, currentUserId(request));
     if (!children.ok) return badRequest(reply, children.details);
 
     if (body.data.recipeId) {
@@ -195,7 +204,7 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
 
     let foodIds: string[] | null = null;
     if (body.data.foodIds) {
-      const children = await validateFoodIds(db, body.data.foodIds);
+      const children = await validateFoodIds(db, body.data.foodIds, currentUserId(request));
       if (!children.ok) return badRequest(reply, children.details);
       foodIds = children.value;
     }

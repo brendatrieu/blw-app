@@ -85,6 +85,8 @@ describe("LogFoodForm (render)", () => {
       chokingRisk: "moderate",
       minAgeMonths: 6,
       allergens: [],
+      isCustom: false,
+      emoji: null,
     };
     const food2: FoodListItem = {
       id: "food-2",
@@ -96,6 +98,8 @@ describe("LogFoodForm (render)", () => {
       chokingRisk: "moderate",
       minAgeMonths: 6,
       allergens: [],
+      isCustom: false,
+      emoji: null,
     };
     const favorite: FavoriteItem = {
       recipeId: "recipe-1",

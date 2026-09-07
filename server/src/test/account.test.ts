@@ -62,6 +62,12 @@ async function seedCatalog(db: Database) {
     ])
     .returning();
 
+  // Catalog allergens exist for the custom food's tags to point at.
+  const [peanut] = await db
+    .insert(schema.allergens)
+    .values({ slug: "peanut", name: "Peanut", introGuidance: "Thinned smooth peanut butter only." })
+    .returning();
+
   const [recipe] = await db
     .insert(schema.recipes)
     .values({
@@ -73,11 +79,12 @@ async function seedCatalog(db: Database) {
     })
     .returning();
 
-  return { food: food!, secondFood: secondFood!, recipe: recipe! };
+  return { food: food!, secondFood: secondFood!, recipe: recipe!, peanut: peanut! };
 }
 
 interface SeededAccount {
   userId: string;
+  customFoodId: string;
   babyId: string;
   threadId: string;
 }
@@ -154,6 +161,30 @@ async function seedOneOfEverything(
 
   await db.insert(schema.favorites).values({ userId, recipeId: catalog.recipe.id });
 
+  // A food this account added itself (v5). Owned rows, so the export has to
+  // carry them and the delete has to take them.
+  const [customFood] = await db
+    .insert(schema.foods)
+    .values({
+      slug: `satay-sauce-${userId.slice(0, 6)}`,
+      name: "Satay sauce",
+      category: "protein",
+      emoji: "🥜",
+      ironLevel: "low",
+      vitaminCLevel: "low",
+      chokingRisk: "low",
+      minAgeMonths: 6,
+      prep6m: "",
+      prep9m: "",
+      prep12m: "",
+      notes: "Half a spoon, thinned.",
+      storageCategory: "produce_cooked",
+      ownerId: userId,
+    })
+    .returning();
+
+  await db.insert(schema.foodAllergens).values({ foodId: customFood!.id, allergenId: catalog.peanut.id });
+
   await db.insert(schema.symptomChecks).values({
     babyId: baby!.id,
     survey: { symptoms: ["rash"], severity: "mild" },
@@ -181,7 +212,7 @@ async function seedOneOfEverything(
     lastValidatedAt: new Date("2026-03-01T07:00:00Z"),
   });
 
-  return { userId, babyId: baby!.id, threadId: thread!.id };
+  return { userId, babyId: baby!.id, threadId: thread!.id, customFoodId: customFood!.id };
 }
 
 /** Every table the account owns, counted for this user specifically. */
@@ -200,6 +231,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     symptomChecks,
     messages,
     overrides,
+    customFoods,
   ] = await Promise.all([
       db.select().from(schema.babies).where(eq(schema.babies.userId, seeded.userId)),
       db.select().from(schema.favorites).where(eq(schema.favorites.userId, seeded.userId)),
@@ -221,6 +253,9 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
       db.select().from(schema.symptomChecks).where(eq(schema.symptomChecks.babyId, seeded.babyId)),
       db.select().from(schema.chatMessages).where(eq(schema.chatMessages.threadId, seeded.threadId)),
       db.select().from(schema.allergenOverrides).where(eq(schema.allergenOverrides.babyId, seeded.babyId)),
+      // By id, not by owner: an implementation that merely NULLed owner_id
+      // (publishing a deleted user's foods to everyone) would also read 0.
+      db.select().from(schema.foods).where(eq(schema.foods.id, seeded.customFoodId)),
     ]);
 
   return {
@@ -232,6 +267,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     pantryItems: pantry.length,
     symptomChecks: symptomChecks.length,
     allergenOverrides: overrides.length,
+    customFoods: customFoods.length,
     chatThreads: threads.length,
     chatMessages: messages.length,
     userAiKeys: aiKeys.length,
@@ -249,6 +285,7 @@ const FULL_COUNTS = {
   pantryItems: 2,
   symptomChecks: 1,
   allergenOverrides: 1,
+  customFoods: 1,
   chatThreads: 1,
   chatMessages: 2,
   userAiKeys: 1,
@@ -265,6 +302,7 @@ const EMPTY_COUNTS = {
   pantryItems: 0,
   symptomChecks: 0,
   allergenOverrides: 0,
+  customFoods: 0,
   chatThreads: 0,
   chatMessages: 0,
   userAiKeys: 0,
@@ -330,6 +368,7 @@ describe("account export", () => {
         "allergenOverrides",
         "babies",
         "chatThreads",
+        "customFoods",
         "exportVersion",
         "exportedAt",
         "favorites",
@@ -340,7 +379,7 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(4);
+    expect(bundle.exportVersion).toBe(5);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -357,6 +396,7 @@ describe("account export", () => {
     expect(bundle.pantryItems.map((item) => item.status).sort()).toEqual(["active", "finished"]);
     expect(bundle.symptomChecks).toHaveLength(1);
     expect(bundle.allergenOverrides).toHaveLength(1);
+    expect(bundle.customFoods).toHaveLength(1);
     expect(bundle.chatThreads).toHaveLength(1);
     expect(bundle.chatThreads[0]?.messages).toHaveLength(2);
   });
@@ -433,6 +473,33 @@ describe("account export", () => {
       ["allergenKey", "babyId", "createdAt"].sort(),
     );
 
+  });
+
+  it("round-trips the custom foods added in v5", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/account/export",
+      headers: { cookie: user.cookie },
+    });
+    const bundle = accountExportSchema.parse(response.json());
+
+    expect(bundle.customFoods).toHaveLength(1);
+    expect(bundle.customFoods[0]).toMatchObject({
+      name: "Satay sauce",
+      category: "protein",
+      emoji: "🥜",
+      allergenSlugs: ["peanut"],
+      notes: "Half a spoon, thinned.",
+    });
+    expect(bundle.customFoods[0]?.slug).toMatch(/^satay-sauce-/);
+    // The parent's own answers only — the stored iron/prep/choking columns on
+    // a custom row are inert placeholders and have no business in an export.
+    expect(Object.keys(bundle.customFoods[0]!).sort()).toEqual(
+      ["allergenSlugs", "category", "emoji", "id", "name", "notes", "slug"].sort(),
+    );
+
+    // Seeded catalog foods are nobody's export.
+    expect(bundle.customFoods.map((food) => food.name)).not.toContain("Sweet potato");
   });
 
   it("carries the AI key status but no key material anywhere in the bundle", async () => {

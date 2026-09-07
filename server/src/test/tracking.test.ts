@@ -188,7 +188,9 @@ describe("tracking routes", () => {
       // A hand-logged meal is never linked to a pantry item: only
       // POST /api/pantry/:id/serve sets pantryItemId.
       expect(created.foods).toEqual([
-        { id: fixtures.egg.id, slug: "egg", name: "Egg", category: "protein", pantryItemId: null },
+        // `emoji` is null for every catalog food — only a parent-added food
+        // ever carries one.
+        { id: fixtures.egg.id, slug: "egg", name: "Egg", category: "protein", emoji: null, pantryItemId: null },
       ]);
 
       const listBody = await listMeals(user, babyId);

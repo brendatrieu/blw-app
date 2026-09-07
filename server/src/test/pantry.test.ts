@@ -682,6 +682,8 @@ describe("pantry routes", () => {
           slug: "banana",
           name: "Banana",
           category: "fruit",
+          // Null for a catalog food; only a parent-added food carries one.
+          emoji: null,
           pantryItemId: created.body.id,
         },
       ]);

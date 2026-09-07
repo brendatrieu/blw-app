@@ -98,6 +98,7 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
       slug: foods.slug,
       name: foods.name,
       category: foods.category,
+      emoji: foods.emoji,
       pantryItemId: mealFoods.pantryItemId,
     })
     .from(mealFoods)
@@ -127,6 +128,9 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
       slug: row.slug,
       name: row.name,
       category: row.category,
+      // Null for every catalog food; the client falls back to its own
+      // slug/category emoji table for those.
+      emoji: row.emoji,
       pantryItemId: row.pantryItemId,
     });
   }

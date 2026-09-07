@@ -114,7 +114,7 @@ export function MealCard({ meal, babyId, pendingDeleteId, onRequestDelete, onCan
             key={food.id}
             className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] px-2 py-1 text-sm text-[var(--color-text)]"
           >
-            <span aria-hidden="true">{getFoodEmoji(food.slug, food.category)}</span>
+            <span aria-hidden="true">{getFoodEmoji(food.slug, food.category, food.emoji)}</span>
             {food.name}
             {food.pantryItemId && (
               <span aria-label="from pantry" title="From pantry" className="text-xs text-[var(--color-text-muted)]">

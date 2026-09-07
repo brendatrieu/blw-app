@@ -43,6 +43,13 @@
       "when": 1788311357033,
       "tag": "0005_melted_echo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788815075564,
+      "tag": "0006_mighty_black_tarantula",
+      "breakpoints": true
     }
   ]
 }

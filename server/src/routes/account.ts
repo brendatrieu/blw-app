@@ -21,10 +21,12 @@ import { createPerUserRateLimit, perUserRateLimitHook } from "../ai/client.js";
 import type { Database } from "../db/index.js";
 import {
   allergenOverrides,
+  allergens,
   babies,
   chatMessages,
   chatThreads,
   favorites,
+  foodAllergens,
   foods,
   mealFoods,
   meals,
@@ -212,6 +214,44 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       // Every row, `active` and closed alike — status history is the point.
       .orderBy(asc(pantryItems.preparedAt));
 
+    // Foods this account added itself. Only the fields the parent chose:
+    // the curated columns on a custom row are inert placeholders the app
+    // never shows, so exporting them would dress made-up guidance up as
+    // their own data.
+    const customFoodRows = await db
+      .select({
+        id: foods.id,
+        slug: foods.slug,
+        name: foods.name,
+        category: foods.category,
+        emoji: foods.emoji,
+        notes: foods.notes,
+      })
+      .from(foods)
+      .where(eq(foods.ownerId, userId))
+      .orderBy(asc(foods.name));
+
+    const customFoodAllergenRows = customFoodRows.length
+      ? await db
+          .select({ foodId: foodAllergens.foodId, slug: allergens.slug })
+          .from(foodAllergens)
+          .innerJoin(allergens, eq(foodAllergens.allergenId, allergens.id))
+          .where(
+            inArray(
+              foodAllergens.foodId,
+              customFoodRows.map((row) => row.id),
+            ),
+          )
+          .orderBy(asc(allergens.slug))
+      : [];
+
+    const allergenSlugsByFoodId = new Map<string, string[]>();
+    for (const row of customFoodAllergenRows) {
+      const existing = allergenSlugsByFoodId.get(row.foodId);
+      if (existing) existing.push(row.slug);
+      else allergenSlugsByFoodId.set(row.foodId, [row.slug]);
+    }
+
     const threadRows = await db
       .select()
       .from(chatThreads)
@@ -308,6 +348,15 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         babyId: row.babyId,
         allergenKey: row.allergenKey,
         createdAt: row.createdAt.toISOString(),
+      })),
+      customFoods: customFoodRows.map((row) => ({
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        category: row.category,
+        emoji: row.emoji,
+        allergenSlugs: allergenSlugsByFoodId.get(row.id) ?? [],
+        notes: row.notes,
       })),
       symptomChecks: symptomCheckRows.map((row) => ({
         id: row.id,
@@ -434,17 +483,31 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         ];
       }
 
-      // One statement, therefore one transaction. Every table the account
-      // owns hangs off `user` by an ON DELETE CASCADE chain, so this single
-      // delete takes all of them atomically:
+      // Almost everything the account owns hangs off `user` by an ON DELETE
+      // CASCADE chain, so one delete takes it all:
       //   user -> babies -> meals -> meal_foods, babies -> symptom_checks
       //   user -> babies -> allergen_overrides
-      //   user -> favorites, pantry_items, user_ai_keys
+      //   user -> favorites, pantry_items, user_ai_keys, foods (custom only)
       //   user -> chat_threads -> chat_messages
       //   user -> session, account            (better-auth's own tables)
-      // Deleting rows that are already gone is a no-op, which is what makes
-      // a retried request safe.
-      await db.delete(user).where(eq(user.id, userId));
+      //
+      // The exception is the account's own custom foods. `meal_foods.food_id`
+      // and `pantry_items.food_id` deliberately do NOT cascade — eaten
+      // history must survive a food being tidied away — and Postgres checks
+      // those references while the cascade is still running, so a lone
+      // `delete(user)` trips the constraint even though every referencing row
+      // is on its way out in the same statement. Clearing them first, inside
+      // one transaction, keeps the whole wipe atomic. Only this user's rows
+      // can reference their own custom foods: nobody else can see one, let
+      // alone log or stock it.
+      await db.transaction(async (tx) => {
+        const ownFoodIds = tx.select({ id: foods.id }).from(foods).where(eq(foods.ownerId, userId));
+        await tx.delete(mealFoods).where(inArray(mealFoods.foodId, ownFoodIds));
+        await tx.delete(pantryItems).where(inArray(pantryItems.foodId, ownFoodIds));
+        // Deleting rows that are already gone is a no-op, which is what makes
+        // a retried request safe.
+        await tx.delete(user).where(eq(user.id, userId));
+      });
 
       if (clearedCookies.length > 0) {
         reply.header("set-cookie", clearedCookies);

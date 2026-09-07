@@ -41,6 +41,17 @@ export const foodListItemSchema = z.object({
   chokingRisk: levelSchema,
   minAgeMonths: z.number().int(),
   allergens: z.array(z.string()),
+  /**
+   * True for a food a parent added themselves (`foods.owner_id` set), false
+   * for seeded catalog content. Custom rows carry neutral placeholder levels
+   * and empty prep text because nobody wrote curated guidance for them — the
+   * client reads this flag to hide those fields rather than show a made-up
+   * "low choking risk".
+   */
+  isCustom: z.boolean(),
+  /** The parent's chosen emoji, or null — the client falls back to its own
+   * slug/category emoji map. */
+  emoji: z.string().nullable(),
 });
 export type FoodListItem = z.infer<typeof foodListItemSchema>;
 
@@ -82,6 +93,106 @@ export const foodDetailSchema = foodListItemSchema.extend({
   recipes: z.array(foodRecipeRefSchema),
 });
 export type FoodDetail = z.infer<typeof foodDetailSchema>;
+
+// ---------------------------------------------------------------------------
+// POST /api/foods, PATCH /api/foods/:id, DELETE /api/foods/:id
+//
+// Foods a parent adds for themselves. They live in the same table as the
+// seeded catalog (owner_id distinguishes them) and appear everywhere catalog
+// foods do, but they carry NO curated nutrition/prep/choking content: the
+// fields exist only because the columns are NOT NULL, and `isCustom` tells
+// the client not to render them.
+// ---------------------------------------------------------------------------
+
+export const foodIdParamSchema = z.object({ id: z.string().uuid() });
+
+export const CUSTOM_FOOD_NAME_MAX = 60;
+export const CUSTOM_FOOD_NOTES_MAX = 500;
+/** A checklist, not a taxonomy — the seeded list is 9 long. */
+export const CUSTOM_FOOD_ALLERGENS_MAX = 20;
+
+/**
+ * One emoji, not a label. Exactly one grapheme cluster — so a skin-toned or
+ * ZWJ-joined sequence still counts as one character — and it has to contain
+ * a pictographic codepoint, which keeps a stray letter or digit out of a
+ * field the UI renders at display size.
+ */
+export function isSingleEmoji(value: string): boolean {
+  if (value.length === 0 || value.length > 24) return false;
+  const segments = [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(value)];
+  return segments.length === 1 && /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(value);
+}
+
+/** `""` from an untouched emoji picker means "no emoji", not an empty string. */
+const customFoodEmoji = z
+  .string()
+  .trim()
+  .max(24)
+  .nullish()
+  .transform((value) => (value ? value : null))
+  .refine((value) => value === null || isSingleEmoji(value), {
+    message: "Emoji must be a single emoji character",
+  });
+
+const customFoodNotes = z
+  .string()
+  .trim()
+  .max(CUSTOM_FOOD_NOTES_MAX, `Notes must be ${CUSTOM_FOOD_NOTES_MAX} characters or fewer`)
+  .nullish()
+  .transform((value) => (value ? value : null));
+
+/**
+ * Slugs from the seeded `allergens` table. Validated against that table by
+ * the server rather than against a literal list here, so a catalog that
+ * gains an allergen does not need a shared-package release.
+ */
+const customFoodAllergenSlugs = z.array(z.string().min(1).max(40)).max(CUSTOM_FOOD_ALLERGENS_MAX);
+
+export const createCustomFoodSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(CUSTOM_FOOD_NAME_MAX, `Name must be ${CUSTOM_FOOD_NAME_MAX} characters or fewer`),
+  category: foodCategorySchema,
+  emoji: customFoodEmoji,
+  /** Absent means "the parent ticked nothing", which is a real answer. */
+  allergenSlugs: customFoodAllergenSlugs.default([]),
+  notes: customFoodNotes,
+});
+export type CreateCustomFoodInput = z.input<typeof createCustomFoodSchema>;
+
+/**
+ * A true partial update: an absent key leaves that column alone. `emoji` and
+ * `notes` still collapse `""`/null to null when they ARE sent, so the form
+ * can clear them. The slug is deliberately not editable — links and pantry
+ * rows already point at it.
+ */
+export const updateCustomFoodSchema = z
+  .object({
+    name: createCustomFoodSchema.shape.name.optional(),
+    category: foodCategorySchema.optional(),
+    emoji: customFoodEmoji.optional(),
+    /** Replaces the food's allergen set wholesale when present. */
+    allergenSlugs: customFoodAllergenSlugs.optional(),
+    notes: customFoodNotes.optional(),
+  })
+  .refine((value) => Object.values(value).some((field) => field !== undefined), {
+    message: "At least one field must be provided",
+  });
+export type UpdateCustomFoodInput = z.input<typeof updateCustomFoodSchema>;
+
+/**
+ * DELETE /api/foods/:id when the food is still referenced. The counts are
+ * what the UI needs to say "used in N meals and N pantry items" instead of a
+ * bare "can't delete this".
+ */
+export const customFoodConflictSchema = z.object({
+  error: z.literal("conflict"),
+  mealCount: z.number().int(),
+  pantryCount: z.number().int(),
+});
+export type CustomFoodConflict = z.infer<typeof customFoodConflictSchema>;
 
 // ---------------------------------------------------------------------------
 // GET /api/recipes/:id
