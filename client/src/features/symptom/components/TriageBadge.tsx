@@ -25,12 +25,13 @@ export function TriageBadge({ level }: { level: AlarmLevel }) {
     // Negative vertical margin (same idiom as Switch): the 24px mark adds
     // nothing to row height, so rows with and without a mark stay equal.
     // The disc is sized to the ⚠️ glyph's rendered height, so the 🩺
-    // inside it is drawn smaller to fit.
+    // inside it is drawn smaller to fit — Apple's emoji ink runs ~1.3× the
+    // font size, so 13px keeps it inside the 24px disc on iOS.
     <span className="-my-0.5 inline-flex shrink-0 items-center">
       <span
         aria-hidden="true"
         className={`flex h-6 w-6 items-center justify-center leading-none ${
-          NEEDS_DISC[level] ? "emoji-disc text-base" : "text-xl"
+          NEEDS_DISC[level] ? "emoji-disc text-[13px]" : "text-xl"
         }`}
         data-icon={level}
       >
