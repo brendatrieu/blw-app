@@ -110,6 +110,10 @@
   --shadow-md: 0 8px 20px rgb(58 51 44 / 0.12), 0 2px 6px rgb(58 51 44 / 0.08);
   --shadow-lg: 0 20px 40px rgb(58 51 44 / 0.18), 0 4px 10px rgb(58 51 44 / 0.1);
 
+  /* Disc behind emoji whose ink is near-black (e.g. 🩺). Fixed in both
+     modes: light enough to lift the glyph off the dark ground. */
+  --emoji-disc: #c9d3dd;
+
   /* ---- Shape ---- */
   --radius-md: 14px; /* controls: buttons, inputs, chips */
   --radius-lg: 20px; /* cards, sheets */
@@ -267,6 +271,22 @@ body {
   /* Keep the app's own scroll containers from ever chaining into the
      browser's native pull-to-refresh / overscroll-navigate gestures. */
   overscroll-behavior-y: none;
+}
+
+/* Form controls are never smaller than 16px: iOS Safari auto-zooms the
+   page whenever a focused input/select/textarea has smaller text, which
+   reads as the app randomly changing zoom. Deliberately unlayered so it
+   also wins over any leftover `text-sm` utility on a control. */
+input,
+select,
+textarea {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.emoji-disc {
+  background-color: var(--emoji-disc);
+  border-radius: var(--radius-pill);
 }
 
 /* ---- Type ramp utility classes — pair with the shorthand tokens above so

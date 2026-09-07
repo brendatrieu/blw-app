@@ -444,7 +444,7 @@ export function MultiCombobox({
               setHighlighted(-1);
             }}
             onKeyDown={handleKeyDown}
-            className="min-w-0 flex-1 border-none bg-transparent px-1 py-2 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] disabled:cursor-not-allowed"
+            className="min-w-0 flex-1 border-none bg-transparent px-1 py-2 text-base text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] disabled:cursor-not-allowed"
           />
           {value.length >= 1 && (
             <span

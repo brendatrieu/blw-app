@@ -149,7 +149,7 @@ export const SYMPTOM_CATALOG: readonly SymptomCatalogEntry[] = [
     soloTriage: null,
     timing: "delayed",
   },
-  { value: "diarrhea", label: "Diarrhoea", group: "tummy", soloTriage: null, timing: "delayed" },
+  { value: "diarrhea", label: "Diarrhea", group: "tummy", soloTriage: null, timing: "delayed" },
   { value: "blood_in_stool", label: "Blood or mucus in the nappy", group: "tummy", soloTriage: null, timing: "delayed" },
   {
     value: "pale_or_floppy",

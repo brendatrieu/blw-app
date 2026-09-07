@@ -104,7 +104,7 @@ export function SymptomCheckPage() {
       )}
 
       <PageHeader
-        title={`Symptom check — ${activeBaby.name}`}
+        title="Symptom check"
         description={`Tell us what you are seeing and we will line it up against everything ${activeBaby.name} has eaten in the last seven days.`}
       />
 

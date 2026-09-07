@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { alarmStyle } from "../alarmColors.js";
+import { TriageBadge, TriageLegend } from "./TriageBadge.js";
 import {
   BODY_AREA_LABELS,
   MEAL_TIMING_LABELS,
@@ -26,7 +26,7 @@ function toggle<T>(set: Set<T>, value: T): Set<T> {
 }
 
 const inputClass =
-  "rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]";
+  "rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-base text-[var(--color-text)]";
 
 interface SymptomSurveyFormProps {
   onSubmit: (survey: SymptomCheckRequest["survey"]) => void;
@@ -68,6 +68,11 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {/* Pulled up to sit closer to the page header (half the page gap) and
+          pushed down so the questionnaire reads as a distinct block. */}
+      <div className="-mt-3 mb-3">
+        <TriageLegend />
+      </div>
       <fieldset className="flex flex-col gap-4">
         <legend className="text-sm font-semibold text-[var(--color-text)]">What are you seeing?</legend>
         {groups.map(({ group, entries }) => (
@@ -87,14 +92,7 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
                     onChange={() => setSymptoms((current) => toggle(current, entry.value))}
                   />
                   <span className="flex-1">{entry.label}</span>
-                  {entry.soloTriage && (
-                    <span
-                      className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-                      style={alarmStyle(entry.soloTriage)}
-                    >
-                      {entry.soloTriage === "emergency" ? "999" : "Today"}
-                    </span>
-                  )}
+                  {entry.soloTriage && <TriageBadge level={entry.soloTriage} />}
                 </label>
               ))}
             </div>
