@@ -19,22 +19,17 @@ function mockFood(i: number) {
 }
 
 describe("FoodTile", () => {
-  it("renders a link, name, and an iron indicator with an accessible label", () => {
+  it("renders a link and the name, with no iron or allergen dots", () => {
     const html = renderToString(
       createElement(MemoryRouter, null, createElement(FoodTile, { food: mockFood(0) })),
     );
     expect(html).toContain("Mock Food 0");
     expect(html).toContain('href="/foods/mock-food-0"');
-    expect(html).toContain('aria-label="Iron: high"');
-    expect(html).toContain('aria-label="Contains allergen"');
-  });
-
-  it("omits the allergen dot for a food with no allergens", () => {
-    const html = renderToString(
-      createElement(MemoryRouter, null, createElement(FoodTile, { food: mockFood(1) })),
-    );
-    expect(html).not.toContain('aria-label="Contains allergen"');
-    expect(html).toContain('aria-label="Iron: moderate"');
+    // The grid used to carry unlabeled 8px iron/allergen dots that read as
+    // arbitrary shades; that information lives on the food page only.
+    expect(html).not.toContain("Iron:");
+    expect(html).not.toContain("Contains allergen");
+    expect(html).not.toMatch(/h-2 w-2 rounded-full/);
   });
 
   it("renders a 3-column grid of 40 tiles without throwing", () => {

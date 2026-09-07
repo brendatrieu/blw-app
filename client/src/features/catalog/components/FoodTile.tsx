@@ -3,19 +3,15 @@ import { Link } from "react-router-dom";
 import { getFoodEmoji } from "../foodEmoji.js";
 
 interface FoodTileProps {
-  food: Pick<FoodListItem, "slug" | "name" | "category" | "ironLevel" | "allergens">;
+  food: Pick<FoodListItem, "slug" | "name" | "category">;
 }
 
-const IRON_DOT_CLASS: Record<FoodListItem["ironLevel"], string> = {
-  high: "bg-[var(--color-accent)]",
-  moderate: "bg-[var(--color-caution)]",
-  low: "border border-[var(--color-border)]",
-};
-
-/** Tappable emoji tile for the foods grid — a compact alternative to the one-per-row card. */
+/**
+ * Tappable emoji tile for the foods grid — a compact alternative to the
+ * one-per-row card. Deliberately no iron/allergen dots: unlabeled 8px
+ * circles read as arbitrary shades; the food page carries the real badges.
+ */
 export function FoodTile({ food }: FoodTileProps) {
-  const hasAllergens = food.allergens.length > 0;
-
   return (
     <Link
       to={`/foods/${food.slug}`}
@@ -25,20 +21,6 @@ export function FoodTile({ food }: FoodTileProps) {
         {getFoodEmoji(food.slug, food.category)}
       </span>
       <span className="font-caption line-clamp-2 text-[var(--color-text)]">{food.name}</span>
-      <span className="flex items-center gap-1">
-        <span
-          role="img"
-          aria-label={`Iron: ${food.ironLevel}`}
-          className={`h-2 w-2 rounded-full ${IRON_DOT_CLASS[food.ironLevel]}`}
-        />
-        {hasAllergens && (
-          <span
-            role="img"
-            aria-label="Contains allergen"
-            className="h-2 w-2 rounded-full bg-[var(--color-danger)]"
-          />
-        )}
-      </span>
     </Link>
   );
 }
