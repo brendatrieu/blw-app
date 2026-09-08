@@ -232,12 +232,13 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
       reply.code(400);
       return { error: "invalid_query", details: parsed.error.flatten() };
     }
-    const { category, allergen, ironLevel, q, maxAgeMonths } = parsed.data;
+    const { category, allergen, ironLevel, vitaminCLevel, q, maxAgeMonths } = parsed.data;
 
     // Unconditional, and first: every other filter narrows what this allows.
     const conditions = [visibleFoodsCondition(request.user?.id ?? null)];
     if (category) conditions.push(eq(foods.category, category));
     if (ironLevel) conditions.push(eq(foods.ironLevel, ironLevel));
+    if (vitaminCLevel) conditions.push(eq(foods.vitaminCLevel, vitaminCLevel));
     if (maxAgeMonths !== undefined) conditions.push(lte(foods.minAgeMonths, maxAgeMonths));
     if (q) conditions.push(ilike(foods.name, `%${q}%`));
     if (allergen) {

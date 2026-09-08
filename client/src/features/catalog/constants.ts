@@ -19,6 +19,12 @@ export const IRON_LEVELS: { value: Level; label: string }[] = [
   { value: "low", label: "Low iron" },
 ];
 
+export const VITAMIN_C_LEVELS: { value: Level; label: string }[] = [
+  { value: "high", label: "High vitamin C" },
+  { value: "moderate", label: "Moderate vitamin C" },
+  { value: "low", label: "Low vitamin C" },
+];
+
 export const ALLERGEN_SLUGS: { value: string; label: string }[] = [
   { value: "milk", label: "Milk" },
   { value: "egg", label: "Egg" },

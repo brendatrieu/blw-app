@@ -160,6 +160,25 @@ describe("catalog routes", () => {
     expect(ironLevels[0]).toBe("high");
   });
 
+  it("GET /api/foods filters by vitaminCLevel — each level returns only matching foods", async () => {
+    const low = await app.inject({ method: "GET", url: "/api/foods?vitaminCLevel=low" });
+    expect((low.json() as FoodsResponse).foods.map((f) => f.slug).sort()).toEqual(["beef", "egg"]);
+
+    const moderate = await app.inject({ method: "GET", url: "/api/foods?vitaminCLevel=moderate" });
+    expect((moderate.json() as FoodsResponse).foods.map((f) => f.slug)).toEqual(["spinach"]);
+
+    const high = await app.inject({ method: "GET", url: "/api/foods?vitaminCLevel=high" });
+    expect((high.json() as FoodsResponse).foods.map((f) => f.slug)).toEqual(["orange"]);
+  });
+
+  it("GET /api/foods combines vitaminCLevel with ironLevel", async () => {
+    // beef and spinach both have ironLevel=high, but only beef has
+    // vitaminCLevel=low — the combination must narrow past either filter alone.
+    const response = await app.inject({ method: "GET", url: "/api/foods?ironLevel=high&vitaminCLevel=low" });
+    const body = response.json() as FoodsResponse;
+    expect(body.foods.map((f) => f.slug)).toEqual(["beef"]);
+  });
+
   it("GET /api/foods/:slug includes pairings", async () => {
     const response = await app.inject({ method: "GET", url: "/api/foods/spinach" });
     expect(response.statusCode).toBe(200);

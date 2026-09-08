@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { FoodCategory, Level } from "@blw/shared";
+import type { FoodCategory, FoodsQuery, Level } from "@blw/shared";
 import { useFoods } from "../features/catalog/hooks.js";
 import { FoodTile } from "../features/catalog/components/FoodTile.js";
 import { ActiveFilterPill, FilterChip, FunnelButton } from "../features/catalog/components/filters.js";
@@ -10,6 +10,7 @@ import {
   AGE_THRESHOLDS,
   CATEGORIES,
   IRON_LEVELS,
+  VITAMIN_C_LEVELS,
   addCustomFoodLabel,
   allergenLabel,
 } from "../features/catalog/constants.js";
@@ -48,6 +49,129 @@ export function NoFoodsEmptyState({ query }: { query: string }) {
   );
 }
 
+export interface ExtraFoodFilters {
+  allergen: string | undefined;
+  ironLevel: Level | undefined;
+  vitaminCLevel: Level | undefined;
+  maxAgeMonths: number | undefined;
+}
+
+export type ExtraFoodFilterKey = keyof ExtraFoodFilters;
+
+/** What "Clear all" applies — every funnel filter off. */
+export const EMPTY_EXTRA_FILTERS: ExtraFoodFilters = {
+  allergen: undefined,
+  ironLevel: undefined,
+  vitaminCLevel: undefined,
+  maxAgeMonths: undefined,
+};
+
+/** The request the grid makes: search + category + every funnel filter. */
+export function buildFoodsFilters(q: string, category: FoodCategory | undefined, extra: ExtraFoodFilters): FoodsQuery {
+  return {
+    q: q.trim() || undefined,
+    category,
+    allergen: extra.allergen,
+    ironLevel: extra.ironLevel,
+    vitaminCLevel: extra.vitaminCLevel,
+    maxAgeMonths: extra.maxAgeMonths,
+  };
+}
+
+/**
+ * The filters that live behind the funnel button, resolved to the pills the
+ * page shows — one entry per set filter, in display order. Pure, so the
+ * funnel count and the pill row can't disagree and both are testable
+ * without opening the (node-env-invisible) Sheet.
+ */
+export function activeExtraFilters(filters: ExtraFoodFilters): Array<{ key: ExtraFoodFilterKey; label: string }> {
+  const pills: Array<{ key: ExtraFoodFilterKey; label: string }> = [];
+  if (filters.allergen) pills.push({ key: "allergen", label: allergenLabel(filters.allergen) });
+  if (filters.ironLevel) {
+    pills.push({
+      key: "ironLevel",
+      label: IRON_LEVELS.find((l) => l.value === filters.ironLevel)?.label ?? filters.ironLevel,
+    });
+  }
+  if (filters.vitaminCLevel) {
+    pills.push({
+      key: "vitaminCLevel",
+      label: VITAMIN_C_LEVELS.find((l) => l.value === filters.vitaminCLevel)?.label ?? filters.vitaminCLevel,
+    });
+  }
+  if (filters.maxAgeMonths !== undefined) {
+    const ageLabel = AGE_THRESHOLDS.find((a) => a.value === filters.maxAgeMonths)?.label;
+    if (ageLabel) pills.push({ key: "maxAgeMonths", label: ageLabel });
+  }
+  return pills;
+}
+
+interface FoodFilterGroupsProps extends ExtraFoodFilters {
+  onChange: (next: ExtraFoodFilters) => void;
+}
+
+/** The Filters sheet's chip groups — exported so tests can render them open. */
+export function FoodFilterGroups({ onChange, ...filters }: FoodFilterGroupsProps) {
+  const set = (patch: Partial<ExtraFoodFilters>) => onChange({ ...filters, ...patch });
+  const levelGroup = (
+    label: string,
+    key: "ironLevel" | "vitaminCLevel",
+    options: { value: Level; label: string }[],
+  ) => (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-[var(--color-text-muted)]">{label}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt) => (
+          <FilterChip
+            key={opt.value}
+            label={opt.label}
+            active={opt.value === filters[key]}
+            onClick={() => set({ [key]: opt.value === filters[key] ? undefined : opt.value })}
+          />
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-[var(--color-text-muted)]">Allergen</span>
+        <div className="flex flex-wrap gap-1.5">
+          {ALLERGEN_SLUGS.map((opt) => (
+            <FilterChip
+              key={opt.value}
+              label={opt.label}
+              active={opt.value === filters.allergen}
+              onClick={() => set({ allergen: opt.value === filters.allergen ? undefined : opt.value })}
+            />
+          ))}
+        </div>
+      </div>
+
+      {levelGroup("Iron", "ironLevel", IRON_LEVELS)}
+      {levelGroup("Vitamin C", "vitaminCLevel", VITAMIN_C_LEVELS)}
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-[var(--color-text-muted)]">Age</span>
+        <div className="flex flex-wrap gap-1.5">
+          {AGE_THRESHOLDS.map((opt) => {
+            const active = filters.maxAgeMonths === opt.value;
+            return (
+              <FilterChip
+                key={opt.value}
+                label={opt.label}
+                active={active}
+                onClick={() => set({ maxAgeMonths: active ? undefined : opt.value })}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export type FoodsTab = "foods" | "recipes";
 
 /**
@@ -68,25 +192,27 @@ function FoodsSegment() {
   const [category, setCategory] = useState<FoodCategory | undefined>(undefined);
   const [allergen, setAllergen] = useState<string | undefined>(undefined);
   const [ironLevel, setIronLevel] = useState<Level | undefined>(undefined);
+  const [vitaminCLevel, setVitaminCLevel] = useState<Level | undefined>(undefined);
   const [maxAgeMonths, setMaxAgeMonths] = useState<number | undefined>(undefined);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const filters = useMemo(
-    () => ({
-      q: q.trim() || undefined,
-      category,
-      allergen,
-      ironLevel,
-      maxAgeMonths,
-    }),
-    [q, category, allergen, ironLevel, maxAgeMonths],
+  const extraFilters = useMemo<ExtraFoodFilters>(
+    () => ({ allergen, ironLevel, vitaminCLevel, maxAgeMonths }),
+    [allergen, ironLevel, vitaminCLevel, maxAgeMonths],
   );
+  const filters = useMemo(() => buildFoodsFilters(q, category, extraFilters), [q, category, extraFilters]);
 
   const { data, isLoading, isError } = useFoods(filters);
 
-  const activeExtraFilterCount = [allergen, ironLevel, maxAgeMonths].filter((v) => v !== undefined).length;
-
-  const ageLabel = AGE_THRESHOLDS.find((a) => a.value === maxAgeMonths)?.label;
+  const pills = activeExtraFilters(extraFilters);
+  const activeExtraFilterCount = pills.length;
+  function applyExtra(next: ExtraFoodFilters) {
+    setAllergen(next.allergen);
+    setIronLevel(next.ironLevel);
+    setVitaminCLevel(next.vitaminCLevel);
+    setMaxAgeMonths(next.maxAgeMonths);
+  }
+  const clearExtra = (key: ExtraFoodFilterKey) => applyExtra({ ...extraFilters, [key]: undefined });
 
   return (
     <>
@@ -116,16 +242,11 @@ function FoodsSegment() {
         </div>
       </div>
 
-      {activeExtraFilterCount > 0 && (
+      {pills.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {allergen && <ActiveFilterPill label={allergenLabel(allergen)} onRemove={() => setAllergen(undefined)} />}
-          {ironLevel && (
-            <ActiveFilterPill
-              label={IRON_LEVELS.find((l) => l.value === ironLevel)?.label ?? ironLevel}
-              onRemove={() => setIronLevel(undefined)}
-            />
-          )}
-          {ageLabel && <ActiveFilterPill label={ageLabel} onRemove={() => setMaxAgeMonths(undefined)} />}
+          {pills.map((pill) => (
+            <ActiveFilterPill key={pill.key} label={pill.label} onRemove={() => clearExtra(pill.key)} />
+          ))}
         </div>
       )}
 
@@ -143,61 +264,14 @@ function FoodsSegment() {
 
       <Sheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filters">
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-[var(--color-text-muted)]">Allergen</span>
-            <div className="flex flex-wrap gap-1.5">
-              {ALLERGEN_SLUGS.map((opt) => (
-                <FilterChip
-                  key={opt.value}
-                  label={opt.label}
-                  active={opt.value === allergen}
-                  onClick={() => setAllergen(opt.value === allergen ? undefined : opt.value)}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-[var(--color-text-muted)]">Iron</span>
-            <div className="flex flex-wrap gap-1.5">
-              {IRON_LEVELS.map((opt) => (
-                <FilterChip
-                  key={opt.value}
-                  label={opt.label}
-                  active={opt.value === ironLevel}
-                  onClick={() => setIronLevel(opt.value === ironLevel ? undefined : opt.value)}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-[var(--color-text-muted)]">Age</span>
-            <div className="flex flex-wrap gap-1.5">
-              {AGE_THRESHOLDS.map((opt) => {
-                const active = maxAgeMonths === opt.value;
-                return (
-                  <FilterChip
-                    key={opt.value}
-                    label={opt.label}
-                    active={active}
-                    onClick={() => setMaxAgeMonths(active ? undefined : opt.value)}
-                  />
-                );
-              })}
-            </div>
-          </div>
+          <FoodFilterGroups {...extraFilters} onChange={applyExtra} />
 
           <div className="flex gap-2">
             <Button
               type="button"
               variant="secondary"
               className="flex-1"
-              onClick={() => {
-                setAllergen(undefined);
-                setIronLevel(undefined);
-                setMaxAgeMonths(undefined);
-              }}
+              onClick={() => applyExtra(EMPTY_EXTRA_FILTERS)}
             >
               Clear all
             </Button>

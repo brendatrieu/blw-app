@@ -16,11 +16,17 @@ import {
 } from "@blw/shared";
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from "../../lib/api.js";
 
-function buildFoodsQueryString(filters: FoodsQuery): string {
+/**
+ * Every FoodsQuery key becomes a query param — this is an allow-list, so a
+ * new filter that isn't added here silently never reaches the server (the
+ * chip would show, the list wouldn't change). api.test.ts pins the full set.
+ */
+export function buildFoodsQueryString(filters: FoodsQuery): string {
   const params = new URLSearchParams();
   if (filters.category) params.set("category", filters.category);
   if (filters.allergen) params.set("allergen", filters.allergen);
   if (filters.ironLevel) params.set("ironLevel", filters.ironLevel);
+  if (filters.vitaminCLevel) params.set("vitaminCLevel", filters.vitaminCLevel);
   if (filters.q) params.set("q", filters.q);
   if (filters.maxAgeMonths !== undefined) params.set("maxAgeMonths", String(filters.maxAgeMonths));
   const qs = params.toString();

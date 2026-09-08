@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { addCustomFoodLabel } from "../features/catalog/constants.js";
-import { FoodsPage, NoFoodsEmptyState, resolveFoodsTab } from "./FoodsPage.js";
+import { FoodsPage, NoFoodsEmptyState, resolveFoodsTab, activeExtraFilters, buildFoodsFilters, EMPTY_EXTRA_FILTERS, FoodFilterGroups } from "./FoodsPage.js";
 
 /** React's SSR escaping — the create label contains apostrophes. */
 function escapeHtml(text: string): string {
@@ -27,9 +27,13 @@ describe("FoodsPage", () => {
     expect(html).toMatch(/class="[^"]*sticky[^"]*"/);
     expect(html).toContain('aria-label="Search foods"');
     expect(html).toContain('aria-label="Category"');
-    // Allergen/iron/age move into the Filters sheet, closed by default.
+    // Allergen/iron/vitamin C/age move into the Filters sheet, closed by default.
     expect(html).toContain("Filters");
     expect(html).not.toContain('aria-label="Allergen"');
+    // `Sheet` renders nothing while closed (see FoodPicker.test.ts), so the
+    // Vitamin C group — like Iron — never reaches this static render either;
+    // this only pins that it doesn't leak past the closed sheet.
+    expect(html).not.toContain("Vitamin C");
   });
 
   // Item 179: adding a food of your own is a first-class action on this page,
@@ -135,5 +139,76 @@ describe("NoFoodsEmptyState", () => {
     expect(html).toContain("Try clearing a filter or two.");
     expect(html).not.toContain("/foods/new?name=");
     expect(html).not.toContain("as a custom food");
+  });
+});
+
+describe("activeExtraFilters (funnel count + pill row share this)", () => {
+  it("yields one labelled pill per set filter, in display order, and nothing when none are set", () => {
+    expect(
+      activeExtraFilters({ allergen: undefined, ironLevel: undefined, vitaminCLevel: undefined, maxAgeMonths: undefined }),
+    ).toEqual([]);
+    const pills = activeExtraFilters({ allergen: "egg", ironLevel: "high", vitaminCLevel: "moderate", maxAgeMonths: 6 });
+    expect(pills.map((p) => p.key)).toEqual(["allergen", "ironLevel", "vitaminCLevel", "maxAgeMonths"]);
+    expect(pills.map((p) => p.label)).toEqual(["Egg", "High iron", "Moderate vitamin C", "6m+"]);
+  });
+
+  it("counts vitamin C on its own", () => {
+    const pills = activeExtraFilters({
+      allergen: undefined,
+      ironLevel: undefined,
+      vitaminCLevel: "low",
+      maxAgeMonths: undefined,
+    });
+    expect(pills).toEqual([{ key: "vitaminCLevel", label: "Low vitamin C" }]);
+  });
+});
+
+describe("FoodFilterGroups (the sheet's chip groups, rendered open)", () => {
+  it("renders a Vitamin C group right after Iron with its three chips, the chosen one pressed", () => {
+    const html = renderToString(
+      createElement(FoodFilterGroups, {
+        allergen: undefined,
+        ironLevel: undefined,
+        vitaminCLevel: "high",
+        maxAgeMonths: undefined,
+        onChange: () => {},
+      }),
+    );
+    const iron = html.indexOf(">Iron<");
+    const vitC = html.indexOf(">Vitamin C<");
+    const age = html.indexOf(">Age<");
+    expect(iron).toBeGreaterThan(-1);
+    expect(vitC).toBeGreaterThan(iron);
+    expect(age).toBeGreaterThan(vitC);
+    expect(html).toMatch(/aria-pressed="true"[^>]*>High vitamin C</);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>Moderate vitamin C</);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>Low vitamin C</);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>High iron</);
+  });
+});
+
+describe("buildFoodsFilters (what the grid actually requests)", () => {
+  it("passes every funnel filter through to the request, vitamin C included, and trims the search", () => {
+    const filters = buildFoodsFilters("  beef ", "protein", {
+      allergen: "egg",
+      ironLevel: "high",
+      vitaminCLevel: "low",
+      maxAgeMonths: 9,
+    });
+    expect(filters).toEqual({
+      q: "beef",
+      category: "protein",
+      allergen: "egg",
+      ironLevel: "high",
+      vitaminCLevel: "low",
+      maxAgeMonths: 9,
+    });
+    expect(buildFoodsFilters("   ", undefined, EMPTY_EXTRA_FILTERS).q).toBeUndefined();
+  });
+
+  it("Clear all's payload switches every funnel filter off", () => {
+    expect(Object.keys(EMPTY_EXTRA_FILTERS).sort()).toEqual(["allergen", "ironLevel", "maxAgeMonths", "vitaminCLevel"]);
+    expect(Object.values(EMPTY_EXTRA_FILTERS).every((v) => v === undefined)).toBe(true);
+    expect(activeExtraFilters(EMPTY_EXTRA_FILTERS)).toEqual([]);
   });
 });

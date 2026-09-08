@@ -23,6 +23,7 @@ export const foodsQuerySchema = z.object({
   category: foodCategorySchema.optional(),
   allergen: z.string().min(1).optional(),
   ironLevel: levelSchema.optional(),
+  vitaminCLevel: levelSchema.optional(),
   q: z.string().min(1).optional(),
   maxAgeMonths: z.coerce.number().int().nonnegative().optional(),
 });
