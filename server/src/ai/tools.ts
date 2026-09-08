@@ -15,7 +15,7 @@
 // schema below is still a `.strict`-equivalent object (`additionalProperties:
 // false` + `required`), which is the wire-level guarantee the task brief
 // actually cares about. Flagged in the phase brief.
-import { and, asc, desc, eq, ilike, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, isNull, lte, or } from "drizzle-orm";
 import { betaTool } from "@anthropic-ai/sdk/helpers/beta/json-schema";
 import { ageInMonths, unionAllergenStatus } from "@blw/shared";
 import type { Database } from "../db/index.js";
@@ -32,6 +32,7 @@ import {
   storageGuidelines,
 } from "../db/schema.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
+import { deriveIronFocus, loadRecipeNutrition, nutritionFor } from "../services/recipeNutrition.js";
 
 // ---------------------------------------------------------------------------
 // get_baby_profile
@@ -244,16 +245,29 @@ function buildSearchRecipesTool(db: Database, userId: string) {
       const trimmedQuery = query?.trim();
       if (trimmedQuery) conditions.push(ilike(recipes.title, `%${trimmedQuery}%`));
 
-      const rows = await db
+      // ironFocus is DERIVED (stored flag OR a high-iron ingredient), the
+      // same value the list, detail, and favorites routes report — so the
+      // assistant ranks a custom beef recipe as iron-rich too. Derivation
+      // needs the ingredient join, so rank in memory over a bounded
+      // candidate set rather than ordering by the raw column.
+      const candidates = await db
         .select({ id: recipes.id, title: recipes.title, minAgeMonths: recipes.minAgeMonths, ironFocus: recipes.ironFocus })
         .from(recipes)
         .where(and(...conditions))
-        .orderBy(desc(recipes.ironFocus), asc(recipes.title))
-        .limit(5);
+        .orderBy(asc(recipes.title))
+        .limit(50);
 
-      if (rows.length === 0) {
+      if (candidates.length === 0) {
         return "No recipes matched. You may propose an original recipe instead, following the ingredient-limit and safety rules.";
       }
+      const nutrition = await loadRecipeNutrition(
+        db,
+        candidates.map((row) => row.id),
+      );
+      const rows = candidates
+        .map((row) => ({ ...row, ironFocus: deriveIronFocus(row.ironFocus, nutritionFor(nutrition, row.id)) }))
+        .sort((a, b) => Number(b.ironFocus) - Number(a.ironFocus) || a.title.localeCompare(b.title))
+        .slice(0, 5);
       return JSON.stringify({ recipes: rows });
     },
   });

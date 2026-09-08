@@ -9,12 +9,14 @@
 // no owner, so it can never match the ownership filter and is reported as not
 // found like anybody else's.
 //
-// What a custom recipe does NOT get: an image, storage overrides, an
-// iron-focus claim, or the catalog's three age variants. Its steps live in
+// What a custom recipe does NOT get: an image, storage overrides, a CURATED
+// iron-focus claim, or the catalog's three age variants. (It can still read
+// back `ironFocus: true` — that flag is derived from the ingredients too; see
+// `services/recipeNutrition.ts`.) Its steps live in
 // exactly ONE `recipe_variants` row, filed at the stage its "suitable from"
 // age falls in, and `isCustom` tells the client to render them as a single
 // "Steps" section instead of age tabs.
-import { and, asc, eq, ilike, inArray, lte, notInArray, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, lte, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   ageStageForMonths,
@@ -34,6 +36,13 @@ import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
 import { visibleFoodsCondition } from "../services/foods.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
+import {
+  deriveIronFocus,
+  ironFocusFilter,
+  loadRecipeNutrition,
+  nutritionFor,
+  vitaminCHighFilter,
+} from "../services/recipeNutrition.js";
 import { buildCandidateSlug, isUniqueViolation, SLUG_ATTEMPTS } from "../services/slugs.js";
 import type { Transaction } from "../services/meals.js";
 import {
@@ -49,7 +58,10 @@ import {
 } from "../db/schema.js";
 
 /** Values a custom recipe puts in the catalog-only columns. Nobody wrote an
- * iron-focus assessment or storage overrides for a recipe a parent typed in,
+ * CURATED iron-focus assessment or storage overrides for a recipe a parent
+ * typed in — the stored flag stays false and the recipe earns its iron badge
+ * from its ingredients instead (see `services/recipeNutrition.ts`), so a
+ * custom beef stew is iron-rich without anybody claiming it here —
  * and `prep_minutes` is NOT NULL — 0 means "not stated" and the client hides
  * the prep line entirely rather than claiming "0 min". */
 const CUSTOM_RECIPE_DEFAULTS = {
@@ -195,12 +207,9 @@ async function loadRecipeDetail(db: Database, recipe: RecipeRow): Promise<Recipe
     .where(eq(recipeIngredients.recipeId, recipe.id));
   const allergenSlugs = [...new Set(derivedAllergenRows.map((a) => a.slug))];
 
-  const [highVitaminCRow] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(recipeIngredients)
-    .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
-    .where(and(eq(recipeIngredients.recipeId, recipe.id), eq(foods.vitaminCLevel, "high")));
-  const vitaminCHigh = (highVitaminCRow?.count ?? 0) > 0;
+  // Both nutrition badges come from the one shared derivation the list and
+  // the favorites route also use, so detail can never disagree with them.
+  const nutrition = nutritionFor(await loadRecipeNutrition(db, [recipe.id]), recipe.id);
 
   const detail: RecipeDetail = {
     id: recipe.id,
@@ -208,8 +217,8 @@ async function loadRecipeDetail(db: Database, recipe: RecipeRow): Promise<Recipe
     title: recipe.title,
     minAgeMonths: recipe.minAgeMonths,
     prepMinutes: recipe.prepMinutes,
-    ironFocus: recipe.ironFocus,
-    vitaminCHigh,
+    ironFocus: deriveIronFocus(recipe.ironFocus, nutrition),
+    vitaminCHigh: nutrition.vitaminCHigh,
     imageUrl: recipe.imageUrl,
     fridgeHoursOverride: recipe.fridgeHoursOverride,
     freezerDaysOverride: recipe.freezerDaysOverride,
@@ -263,20 +272,14 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     }
     if (q) conditions.push(ilike(recipes.title, `%${q}%`));
     if (maxAgeMonths !== undefined) conditions.push(lte(recipes.minAgeMonths, maxAgeMonths));
-    if (ironFocus !== undefined) conditions.push(eq(recipes.ironFocus, ironFocus));
-    if (vitaminCHigh !== undefined) {
-      // Derived exactly like `allergen` below: ingredients -> foods whose
-      // vitaminCLevel is "high". Custom foods always store "low", so a
-      // custom recipe only qualifies via a catalog ingredient.
-      const withHighVitaminC = db
-        .select({ recipeId: recipeIngredients.recipeId })
-        .from(recipeIngredients)
-        .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
-        .where(eq(foods.vitaminCLevel, "high"));
-      conditions.push(
-        vitaminCHigh ? inArray(recipes.id, withHighVitaminC) : notInArray(recipes.id, withHighVitaminC),
-      );
-    }
+    // Both nutrition filters match the DERIVED value the rows below carry,
+    // in SQL rather than in JS: `ironFocus` is stored-OR-ingredients and
+    // `vitaminCHigh` is ingredients only, but neither is a plain column, so
+    // both go through the shared subquery helpers. Filtering here (not after
+    // the fetch) keeps the answer correct if this list ever gains a LIMIT,
+    // and leaves the title-ascending order untouched.
+    if (ironFocus !== undefined) conditions.push(ironFocusFilter(db, ironFocus));
+    if (vitaminCHigh !== undefined) conditions.push(vitaminCHighFilter(db, vitaminCHigh));
     if (ingredientFoodId) {
       const withIngredient = db
         .select({ recipeId: recipeIngredients.recipeId })
@@ -330,15 +333,9 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
       allergensByRecipeId.set(row.recipeId, slugs);
     }
 
-    const highVitaminCRows =
-      recipeIds.length > 0
-        ? await db
-            .select({ recipeId: recipeIngredients.recipeId })
-            .from(recipeIngredients)
-            .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
-            .where(and(inArray(recipeIngredients.recipeId, recipeIds), eq(foods.vitaminCLevel, "high")))
-        : [];
-    const vitaminCHighRecipeIds = new Set(highVitaminCRows.map((row) => row.recipeId));
+    // One batched query for BOTH nutrition badges — the same helper the
+    // detail and favorites routes call, so the three can never drift.
+    const nutritionByRecipeId = await loadRecipeNutrition(db, recipeIds);
 
     const ingredientRows =
       recipeIds.length > 0
@@ -372,8 +369,8 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
       slug: r.slug,
       title: r.title,
       minAgeMonths: r.minAgeMonths,
-      ironFocus: r.ironFocus,
-      vitaminCHigh: vitaminCHighRecipeIds.has(r.id),
+      ironFocus: deriveIronFocus(r.ironFocus, nutritionFor(nutritionByRecipeId, r.id)),
+      vitaminCHigh: nutritionFor(nutritionByRecipeId, r.id).vitaminCHigh,
       allergens: allergensByRecipeId.get(r.id) ?? [],
       isCustom: r.ownerId !== null,
       isFavorite: favoritedIds.has(r.id),

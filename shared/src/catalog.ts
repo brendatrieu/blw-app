@@ -230,6 +230,9 @@ export const recipeDetailSchema = z.object({
   title: z.string(),
   minAgeMonths: z.number().int(),
   prepMinutes: z.number().int(),
+  /** Curated claim OR derivation: true when the catalog row stores
+   * `iron_focus`, or ANY ingredient food has `ironLevel: "high"`. A custom
+   * recipe built on beef is therefore iron-rich without storing anything. */
   ironFocus: z.boolean(),
   /** Derived from the ingredients' foods: true when at least one ingredient
    * food has `vitaminCLevel: "high"` — same derivation as `allergens`. */
@@ -245,7 +248,9 @@ export const recipeDetailSchema = z.object({
    * True for a recipe a parent wrote themselves (`recipes.owner_id` set).
    * A custom recipe carries exactly ONE variant — the client renders its
    * steps as a single "Steps" section rather than age tabs — and stores
-   * `prepMinutes: 0` / `ironFocus: false` when the parent said nothing.
+   * `prepMinutes: 0` / a stored `iron_focus` of false when the parent said
+   * nothing (the `ironFocus` FIELD above can still be true, off its
+   * ingredients).
    */
   isCustom: z.boolean(),
   /** The parent's own note on a custom recipe. Catalog rows are null. */
@@ -282,6 +287,9 @@ export const recipesQuerySchema = z.object({
   maxAgeMonths: z.coerce.number().int().nonnegative().optional(),
   /** Allergen slug, matched against the recipe's DERIVED allergen set. */
   allergen: z.string().min(1).optional(),
+  /** "true"/"false"/"1"/"0". Present is an exact filter on the recipe's
+   * DERIVED `ironFocus` (curated flag OR a high-iron ingredient), absent
+   * filters on nothing. */
   ironFocus: queryFlag.optional(),
   /** Same "true"/"false"/"1"/"0" flag semantics as `ironFocus`: present is an
    * exact filter on the recipe's derived `vitaminCHigh`, absent filters on
@@ -297,6 +305,7 @@ export const recipeListItemSchema = z.object({
   slug: z.string(),
   title: z.string(),
   minAgeMonths: z.number().int(),
+  /** Curated claim OR derivation — see `recipeDetailSchema.ironFocus`. */
   ironFocus: z.boolean(),
   /** Derived from the ingredients' foods, not stored on the recipe — same
    * derivation as `allergens`. */

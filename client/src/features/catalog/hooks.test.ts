@@ -205,6 +205,15 @@ describe("recipeListItemFromDetail", () => {
     });
   });
 
+  // Ledger 241/243: a custom recipe's `ironFocus` is derived from its
+  // ingredients server-side, so the detail payload can say true even though
+  // nobody curated it — the projection must carry that through rather than
+  // hard-coding "custom means no iron badge".
+  it("carries a custom recipe's DERIVED ironFocus and vitaminCHigh into the row", () => {
+    const row = recipeListItemFromDetail(recipeDetail({ ironFocus: true, vitaminCHigh: true }), false);
+    expect(row).toMatchObject({ isCustom: true, ironFocus: true, vitaminCHigh: true });
+  });
+
   it("never assumes favorited (a rename must not silently favorite a row)", () => {
     expect(recipeListItemFromDetail(recipeDetail(), false).isFavorite).toBe(false);
   });

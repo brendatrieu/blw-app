@@ -32,7 +32,7 @@ async function seedFixtures(db: Database) {
     notes: "Cooked produce.",
   });
 
-  const [banana, oats, broccoli] = await db
+  const [banana, oats, broccoli, beef, bellPepper] = await db
     .insert(schema.foods)
     .values([
       {
@@ -77,6 +77,36 @@ async function seedFixtures(db: Database) {
         prep12m: "florets",
         storageCategory: "produce_cooked",
       },
+      {
+        // Catalog food with a HIGH iron level — the ingredient that makes a
+        // custom recipe iron-rich without anybody curating it (items 241-242).
+        slug: "beef",
+        name: "Beef",
+        category: "protein",
+        ironLevel: "high",
+        vitaminCLevel: "low",
+        chokingRisk: "moderate",
+        minAgeMonths: 6,
+        prep6m: "strip",
+        prep9m: "mince",
+        prep12m: "cubes",
+        storageCategory: "produce_cooked",
+      },
+      {
+        // High vitamin C, low iron — the other half of the beef + pepper
+        // pairing item 242 names.
+        slug: "bell-pepper",
+        name: "Bell pepper",
+        category: "veg",
+        ironLevel: "low",
+        vitaminCLevel: "high",
+        chokingRisk: "low",
+        minAgeMonths: 6,
+        prep6m: "roast-strip",
+        prep9m: "roast-chop",
+        prep12m: "dice",
+        storageCategory: "produce_cooked",
+      },
     ])
     .returning();
 
@@ -109,7 +139,16 @@ async function seedFixtures(db: Database) {
     { recipeId: catalogRecipe!.id, ageStage: "12", textureNote: "Chunky", instructions: ["Chop it."] },
   ]);
 
-  return { banana: banana!, oats: oats!, broccoli: broccoli!, peanut: peanut!, egg: egg!, catalogRecipe: catalogRecipe! };
+  return {
+    banana: banana!,
+    oats: oats!,
+    broccoli: broccoli!,
+    beef: beef!,
+    bellPepper: bellPepper!,
+    peanut: peanut!,
+    egg: egg!,
+    catalogRecipe: catalogRecipe!,
+  };
 }
 
 describe("custom recipes", () => {
@@ -230,7 +269,8 @@ describe("custom recipes", () => {
         isCustom: true,
         notes: "Robin likes it cold.",
         extraIngredients: ["olive oil"],
-        // Nothing curated: no image, no storage overrides, no iron claim, and
+        // Nothing curated: no image, no storage overrides, no stored iron
+        // claim (banana + oats derive none either), and
         // prepMinutes 0 meaning "not stated" rather than "instant".
         prepMinutes: 0,
         ironFocus: false,
@@ -560,7 +600,9 @@ describe("custom recipes", () => {
       it("filters on vitaminCHigh alone, ironFocus alone, and both together (ANDed)", async () => {
         // Iron-focus, no high vitamin C (banana + oats).
         const catalogId = fixtures.catalogRecipe.id;
-        // High vitamin C, not iron-focus (custom recipes never claim iron focus).
+        // High vitamin C, not iron-focus: broccoli is ironLevel "low", and a
+        // custom recipe stores no curated iron claim (it CAN still derive one
+        // from a high-iron ingredient — see the "derived ironFocus" tests).
         const veggieMash = await createRecipe(
           owner,
           recipePayload({
@@ -579,6 +621,140 @@ describe("custom recipes", () => {
         const nonQualifying = (await listRecipes(owner, "?vitaminCHigh=false")).recipes.map((r) => r.id).sort();
         expect(nonQualifying).toEqual([catalogId, plainBanana.id].sort());
         expect(nonQualifying).not.toContain(veggieMash.id);
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // ironFocus derived from ingredients (ledger items 241-242).
+    //
+    // `ironFocus` is the ONE nutrition flag that is half curated: the answer
+    // everywhere is `recipes.iron_focus` OR "some ingredient food is
+    // high-iron". These pin both halves, on the list, the detail, the
+    // favorites list and the filter — and that the stored column is never
+    // written from the derivation.
+    // -----------------------------------------------------------------------
+    describe("derived ironFocus", () => {
+      /** Beef (high iron) + bell pepper (high vitamin C): both badges, from
+       * ingredients alone, on a recipe nobody curated. */
+      async function createBeefAndPepper(): Promise<RecipeDetail> {
+        return await createRecipe(
+          owner,
+          recipePayload({
+            title: "Beef and pepper strips",
+            ingredients: [
+              { foodId: fixtures.beef.id, quantityNote: "2 strips" },
+              { foodId: fixtures.bellPepper.id, quantityNote: "1/2" },
+            ],
+          }),
+        );
+      }
+
+      it("gives a custom beef + bell pepper recipe BOTH flags, on the list and the detail", async () => {
+        const created = await createBeefAndPepper();
+        // The create response is the detail payload, so this is the detail
+        // route's answer too.
+        expect(created.ironFocus).toBe(true);
+        expect(created.vitaminCHigh).toBe(true);
+
+        const detail = await app.inject({
+          method: "GET",
+          url: `/api/recipes/${created.id}`,
+          headers: { cookie: owner.cookie },
+        });
+        expect(detail.json<RecipeDetail>()).toMatchObject({ ironFocus: true, vitaminCHigh: true });
+
+        const listed = (await listRecipes(owner)).recipes.find((r) => r.id === created.id);
+        expect(listed).toMatchObject({ ironFocus: true, vitaminCHigh: true, isCustom: true });
+
+        // Derived, never stored: the column a curator would write stays false.
+        const [row] = await db
+          .select({ ironFocus: schema.recipes.ironFocus })
+          .from(schema.recipes)
+          .where(eq(schema.recipes.id, created.id));
+        expect(row?.ironFocus).toBe(false);
+      });
+
+      it("leaves a custom recipe with only low-iron ingredients at ironFocus false", async () => {
+        // Banana is ironLevel "low"; a custom food is always "low" too.
+        const plain = await createRecipe(owner, recipePayload({ title: "Plain banana" }));
+        expect(plain.ironFocus).toBe(false);
+        expect((await listRecipes(owner)).recipes.find((r) => r.id === plain.id)?.ironFocus).toBe(false);
+      });
+
+      it("keeps a curated ironFocus true even with no high-iron ingredient", async () => {
+        // The seeded recipe is banana (low) + oats (moderate) — nothing high —
+        // but the catalog says it is here for the iron, so it stays true.
+        const catalogId = fixtures.catalogRecipe.id;
+        expect((await listRecipes(owner)).recipes.find((r) => r.id === catalogId)?.ironFocus).toBe(true);
+
+        const detail = await app.inject({ method: "GET", url: `/api/recipes/${catalogId}` });
+        expect(detail.json<RecipeDetail>().ironFocus).toBe(true);
+      });
+
+      it("filters on the DERIVED value: true includes the derived case, false excludes it", async () => {
+        const beefPepper = await createBeefAndPepper();
+        const plain = await createRecipe(owner, recipePayload({ title: "Plain banana" }));
+        const catalogId = fixtures.catalogRecipe.id;
+
+        // true = curated OR derived, still ordered by title ascending.
+        const wanted = (await listRecipes(owner, "?ironFocus=true")).recipes;
+        expect(wanted.map((r) => r.id)).toEqual([fixtures.catalogRecipe.id, beefPepper.id]);
+        expect(wanted.map((r) => r.title)).toEqual(["Banana Porridge", "Beef and pepper strips"]);
+
+        // false = NEITHER curated nor derived.
+        const unwanted = (await listRecipes(owner, "?ironFocus=false")).recipes.map((r) => r.id);
+        expect(unwanted).toEqual([plain.id]);
+        expect(unwanted).not.toContain(beefPepper.id);
+        expect(unwanted).not.toContain(catalogId);
+      });
+
+      it("ANDs the two toggles against the derived values", async () => {
+        const beefPepper = await createBeefAndPepper();
+        // Iron only (curated, no high vitamin C) and vitamin C only.
+        const veggieMash = await createRecipe(
+          owner,
+          recipePayload({
+            title: "Broccoli mash",
+            ingredients: [{ foodId: fixtures.broccoli.id, quantityNote: "2 florets" }],
+          }),
+        );
+
+        expect((await listRecipes(owner, "?ironFocus=true&vitaminCHigh=true")).recipes.map((r) => r.id)).toEqual([
+          beefPepper.id,
+        ]);
+        expect((await listRecipes(owner, "?ironFocus=true&vitaminCHigh=false")).recipes.map((r) => r.id)).toEqual([
+          fixtures.catalogRecipe.id,
+        ]);
+        expect((await listRecipes(owner, "?ironFocus=false&vitaminCHigh=true")).recipes.map((r) => r.id)).toEqual([
+          veggieMash.id,
+        ]);
+      });
+
+      it("carries the derived ironFocus on GET /api/favorites", async () => {
+        const beefPepper = await createBeefAndPepper();
+        const plain = await createRecipe(owner, recipePayload({ title: "Plain banana" }));
+        for (const id of [beefPepper.id, plain.id, fixtures.catalogRecipe.id]) {
+          const response = await app.inject({
+            method: "PUT",
+            url: `/api/recipes/${id}/favorite`,
+            headers: { cookie: owner.cookie },
+          });
+          expect(response.statusCode).toBe(204);
+        }
+
+        const favorites = await app.inject({
+          method: "GET",
+          url: "/api/favorites",
+          headers: { cookie: owner.cookie },
+        });
+        const items = favorites.json<FavoritesResponse>().items;
+        expect(items.find((i) => i.recipeId === beefPepper.id)).toMatchObject({
+          ironFocus: true,
+          vitaminCHigh: true,
+        });
+        // Curated, no high-iron ingredient — still true.
+        expect(items.find((i) => i.recipeId === fixtures.catalogRecipe.id)?.ironFocus).toBe(true);
+        expect(items.find((i) => i.recipeId === plain.id)?.ironFocus).toBe(false);
       });
     });
   });
@@ -1030,6 +1206,34 @@ describe("custom recipes", () => {
       expect(String(theirResult)).not.toContain("Avocado toast fingers");
       expect(String(theirResult)).not.toContain(mine.id);
       expect(String(theirResult)).toContain("Banana Porridge");
+    });
+
+    it("ranks and flags a custom beef recipe as iron-focused from its ingredients (derived, like the routes)", async () => {
+      const ironRich = await createRecipe(
+        owner,
+        recipePayload({
+          title: "Beef and pepper mash",
+          ingredients: [
+            { foodId: fixtures.beef.id, quantityNote: "2 strips" },
+            { foodId: fixtures.bellPepper.id, quantityNote: "1/2" },
+          ],
+        }),
+      );
+      const lowIron = await createRecipe(owner, recipePayload({ title: "Zesty banana bites" }));
+
+      const tools = buildChatTools(db, await userId(owner), null);
+      const result = JSON.parse(String(await tools.search_recipes.run({ ageMonths: 12 }))) as {
+        recipes: Array<{ id: string; title: string; ironFocus: boolean }>;
+      };
+      const byId = new Map(result.recipes.map((r) => [r.id, r]));
+      expect(byId.get(ironRich.id)?.ironFocus).toBe(true);
+      // Iron-focused recipes rank first; the low-iron custom one may fall
+      // outside the top 5, but if present it must read false.
+      const firstNonIron = result.recipes.findIndex((r) => !r.ironFocus);
+      const lastIron = result.recipes.map((r) => r.ironFocus).lastIndexOf(true);
+      expect(firstNonIron === -1 || lastIron < firstNonIron).toBe(true);
+      const low = byId.get(lowIron.id);
+      if (low) expect(low.ironFocus).toBe(false);
     });
 
     it("lists a food's recipes per caller, custom ones included", async () => {

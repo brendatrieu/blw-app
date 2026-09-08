@@ -354,6 +354,8 @@ export const favoriteItemSchema = z.object({
   recipeId: z.string().uuid(),
   title: z.string(),
   minAgeMonths: z.number().int(),
+  /** Curated claim OR a high-iron ingredient, exactly as the recipes list
+   * and the recipe detail derive it. */
   ironFocus: z.boolean(),
   /** Derived the same way the recipes list derives it — see
    * `GET /api/favorites`. */

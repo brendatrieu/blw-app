@@ -86,6 +86,20 @@ describe("RecipeCard", () => {
     expect(neither).not.toContain(">Vit C<");
   });
 
+  // Ledger 241/243: `ironFocus` is now DERIVED server-side (curated flag OR a
+  // high-iron ingredient), so a CUSTOM recipe can arrive with both nutrition
+  // flags on. Nothing in the card had to change for that — this pins that it
+  // stays true, since "custom recipes are never iron-rich" was a fair reading
+  // of the old fixtures.
+  it("badges a custom row that carries both derived flags with Iron, Vit C AND Custom", () => {
+    const html = renderCard(
+      recipe({ id: "recipe-7", title: "Beef and pepper strips", isCustom: true, ironFocus: true, vitaminCHigh: true }),
+    );
+    expect(html).toContain(">Iron<");
+    expect(html).toContain(">Vit C<");
+    expect(html).toContain(">Custom<");
+  });
+
   // The Vit C badge must carry the SUNSHINE tone specifically — a tone swap
   // to "primary" (Iron's tone) reads fine by text alone, so this pins the
   // actual class the tone maps to.
