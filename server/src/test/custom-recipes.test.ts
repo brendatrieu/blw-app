@@ -274,6 +274,43 @@ describe("custom recipes", () => {
       expect(detail.json<RecipeDetail>()).toEqual(recipe);
     });
 
+    // Item 240 (user decision 2026-09-08): steps are OPTIONAL. A title plus
+    // one ingredient is a whole recipe — an empty list, a list of blanks, and
+    // an omitted key all save, and all read back identically.
+    it("creates a recipe with no steps at all, however the empty list is expressed", async () => {
+      const empty = await createRecipe(owner, recipePayload({ steps: [] }));
+      const blanks = await createRecipe(owner, recipePayload({ steps: ["  ", ""] }));
+      const { steps: _omitted, ...withoutSteps } = recipePayload();
+      const absent = await createRecipe(owner, withoutSteps);
+
+      for (const recipe of [empty, blanks, absent]) {
+        // The variant row is still written, so a custom recipe is ALWAYS
+        // exactly one variant — gaining or losing steps never changes that.
+        expect(recipe.variants).toEqual([{ ageStage: "6", textureNote: "", steps: [] }]);
+        expect(recipe.ingredients).toHaveLength(1);
+
+        const rows = await db
+          .select()
+          .from(schema.recipeVariants)
+          .where(eq(schema.recipeVariants.recipeId, recipe.id));
+        expect(rows).toHaveLength(1);
+
+        // And the detail route returns the same shape it just answered with.
+        const detail = await app.inject({
+          method: "GET",
+          url: `/api/recipes/${recipe.id}`,
+          headers: { cookie: owner.cookie },
+        });
+        expect(detail.statusCode).toBe(200);
+        expect(detail.json<RecipeDetail>()).toEqual(recipe);
+      }
+    });
+
+    it("drops blank steps rather than rejecting them, keeping the rest in order", async () => {
+      const recipe = await createRecipe(owner, recipePayload({ steps: ["  ", "Mash it.", "", "  Serve.  "] }));
+      expect(recipe.variants).toEqual([{ ageStage: "6", textureNote: "", steps: ["Mash it.", "Serve."] }]);
+    });
+
     it("derives the variant stage from the age, and honours a stated prep time", async () => {
       for (const [minAgeMonths, ageStage] of [
         [6, "6"],
@@ -307,14 +344,12 @@ describe("custom recipes", () => {
       expect(deduped.ingredients[0]?.quantityNote).toBe("1 ripe");
     });
 
-    it("400s an unusable title, age, ingredient list or step list", async () => {
+    it("400s an unusable title, age or ingredient list", async () => {
       const bodies = [
         recipePayload({ title: "   " }),
         recipePayload({ minAgeMonths: 3 }),
         recipePayload({ minAgeMonths: 48 }),
         recipePayload({ ingredients: [] }),
-        recipePayload({ steps: [] }),
-        recipePayload({ steps: ["  "] }),
         recipePayload({ ingredients: [{ foodId: "not-a-uuid" }] }),
       ];
       for (const payload of bodies) {
@@ -651,6 +686,46 @@ describe("custom recipes", () => {
       expect(rows).toHaveLength(1);
     });
 
+    // Item 240, the edit half: a parent can take every step back off a
+    // recipe they already saved, and put them back later.
+    it("clears the steps on request and accepts them again afterwards", async () => {
+      const recipe = await createRecipe(owner, recipePayload({ steps: ["Mash it.", "Serve."] }));
+
+      const cleared = await app.inject({
+        method: "PATCH",
+        url: `/api/recipes/${recipe.id}`,
+        headers: { cookie: owner.cookie },
+        payload: { steps: [] },
+      });
+      expect(cleared.statusCode).toBe(200);
+      expect(cleared.json<RecipeDetail>().variants).toEqual([{ ageStage: "6", textureNote: "", steps: [] }]);
+
+      // Blanks are dropped on a PATCH exactly as on a create — still no error.
+      const blanked = await app.inject({
+        method: "PATCH",
+        url: `/api/recipes/${recipe.id}`,
+        headers: { cookie: owner.cookie },
+        payload: { steps: ["   "] },
+      });
+      expect(blanked.statusCode).toBe(200);
+      expect(blanked.json<RecipeDetail>().variants).toEqual([{ ageStage: "6", textureNote: "", steps: [] }]);
+
+      const refilled = await app.inject({
+        method: "PATCH",
+        url: `/api/recipes/${recipe.id}`,
+        headers: { cookie: owner.cookie },
+        payload: { steps: ["Mash it."] },
+      });
+      expect(refilled.statusCode).toBe(200);
+      expect(refilled.json<RecipeDetail>().variants).toEqual([
+        { ageStage: "6", textureNote: "", steps: ["Mash it."] },
+      ]);
+
+      // One variant row throughout, never zero and never two.
+      const rows = await db.select().from(schema.recipeVariants).where(eq(schema.recipeVariants.recipeId, recipe.id));
+      expect(rows).toHaveLength(1);
+    });
+
     it("404s another user's recipe, a catalog recipe and an unknown id", async () => {
       const theirs = await createRecipe(intruder, recipePayload({ title: "Zucchini sticks" }));
 
@@ -788,6 +863,9 @@ describe("custom recipes", () => {
       // Still there — a refused delete changes nothing.
       expect(await db.select().from(schema.recipes).where(eq(schema.recipes.id, recipe.id))).toHaveLength(1);
     });
+
+    // Item 240, the edit half: a parent can take every step back off a
+    // recipe they already saved, and put them back later.
 
     it("404s another user's recipe, a catalog recipe and an unknown id", async () => {
       const theirs = await createRecipe(intruder, recipePayload({ title: "Zucchini sticks" }));

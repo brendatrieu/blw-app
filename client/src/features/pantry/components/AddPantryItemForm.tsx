@@ -10,8 +10,46 @@ import { Select } from "../../../components/ui/Select.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
 import { DateField } from "../../../components/ui/DateField.js";
 import { Button } from "../../../components/ui/Button.js";
+import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 
 type Source = "food" | "recipe" | "label";
+
+/** One key per source tab: only the visible tab's field can ever error. */
+export type AddPantryItemField = Source;
+export type AddPantryItemErrors = FormErrors<AddPantryItemField>;
+
+/** Visual field order — what a failed submit focuses first (item 235). */
+export const ADD_PANTRY_ITEM_FIELD_ORDER: readonly AddPantryItemField[] = ["food", "recipe", "label"];
+
+export interface AddPantryItemValues {
+  source: Source;
+  foodIds: string[];
+  recipeId: string;
+  label: string;
+}
+
+/**
+ * The add-to-pantry form's required-field rules (item 235). What is required
+ * depends on the source tab, and only the tab on screen is judged — a food id
+ * left over from a tab the parent has moved away from is not an error, and is
+ * not sent either. Location defaults to "fridge" and Prepared is seeded with
+ * the current minute, so neither can be empty.
+ *
+ * An empty object means valid — same reading as `validateCustomFood`.
+ */
+export function validateAddPantryItem(values: AddPantryItemValues): AddPantryItemErrors {
+  const errors: AddPantryItemErrors = {};
+  if (values.source === "food") {
+    if (values.foodIds.length === 0) errors.food = "Add at least one food";
+  } else if (values.source === "recipe") {
+    if (!values.recipeId) errors.recipe = "Recipe is required";
+  } else if (values.label.trim().length === 0) {
+    // The field asks "What is it?", so the answer is phrased as the ask
+    // rather than as "<Field> is required" (item 238).
+    errors.label = "Enter what it is";
+  }
+  return errors;
+}
 
 const SOURCE_TABS: { value: Source; label: string }[] = [
   { value: "food", label: "From a food" },
@@ -50,12 +88,19 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
 
   const favorites = favoritesData?.items ?? [];
 
-  const canSubmit =
-    source === "food" ? foodIds.length > 0 : source === "recipe" ? Boolean(recipeId) : label.trim().length > 0;
+  // Item 235: "Add to pantry" stays enabled, the missing answer shows under
+  // whichever source field is on screen, and a failed submit focuses it.
+  const { errors: shownErrors, attemptSubmit } = useSubmitValidation(
+    { source, foodIds, recipeId, label },
+    validateAddPantryItem,
+    ADD_PANTRY_ITEM_FIELD_ORDER,
+    { food: "pantry-add-food", recipe: "pantry-add-recipe", label: "pantry-add-label" },
+  );
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (createItem.isPending) return;
+    if (!attemptSubmit()) return;
     createItem.mutate(
       {
         foodIds: source === "food" ? foodIds : undefined,
@@ -73,7 +118,9 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    // `noValidate`: the required answer is reported inline by this form, not
+    // by the browser's native bubble (item 236).
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
       <div className="flex gap-1.5">
         {SOURCE_TABS.map((tab) => (
           <button
@@ -93,13 +140,13 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
       </div>
 
       {source === "food" && (
-        <Field label="Food" htmlFor="pantry-add-food">
+        <Field label="Food" htmlFor="pantry-add-food" error={shownErrors.food}>
           <FoodPicker id="pantry-add-food" value={foodIds} onChange={setFoodIds} />
         </Field>
       )}
 
       {source === "recipe" && (
-        <Field label="Recipe" htmlFor="pantry-add-recipe">
+        <Field label="Recipe" htmlFor="pantry-add-recipe" error={shownErrors.recipe}>
           {!favoritesLoading && favorites.length === 0 ? (
             <p className="text-xs text-[var(--color-text-muted)]">
               No favorited recipes yet — favorite one from its recipe page first.
@@ -120,7 +167,7 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
       )}
 
       {source === "label" && (
-        <Field label="What is it?" htmlFor="pantry-add-label">
+        <Field label="What is it?" htmlFor="pantry-add-label" error={shownErrors.label}>
           <Input
             id="pantry-add-label"
             type="text"
@@ -197,7 +244,7 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
       {createItem.isError && <p className="text-xs text-[var(--color-danger)]">Couldn't save that — try again.</p>}
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={!canSubmit || createItem.isPending} className="flex-1">
+        <Button type="submit" disabled={createItem.isPending} className="flex-1">
           {createItem.isPending ? "Adding…" : "Add to pantry"}
         </Button>
         <Button type="button" variant="secondary" onClick={onDone}>

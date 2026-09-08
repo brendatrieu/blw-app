@@ -18,6 +18,7 @@ import { Input, Textarea } from "../components/ui/Input.js";
 import { Sheet } from "../components/ui/Sheet.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { SegmentedControl, type SegmentedControlOption } from "../components/ui/SegmentedControl.js";
+import { useSubmitValidation, type FormErrors } from "../lib/forms.js";
 
 // A quiet, bordered "danger" affordance for small inline actions (remove
 // key, delete a baby, open the delete-account flow) — one step below the
@@ -39,32 +40,48 @@ export interface BabyFormValues {
   notes: string;
 }
 
-/**
- * The baby form's required-field validation, extracted so the submit guard
- * and the submit button's `disabled` computation can never drift apart —
- * both `AddBabySheet` and `BabyRow`'s edit form share this single source of
- * truth. Checked in field order: name, then birth date — mirroring the
- * native inputs' `required` attributes so the message and the disabled
- * state agree with constraint validation.
- */
-export function babyFormError(values: BabyFormValues): string | null {
-  if (values.name.trim().length === 0) return "Please enter a name.";
-  if (!values.birthDate) return "Please choose a birth date.";
-  return null;
+export type BabyField = "name" | "birthDate";
+export type BabyErrors = FormErrors<BabyField>;
+
+/** Visual field order — what a failed submit focuses first (item 235). */
+export const BABY_FIELD_ORDER: readonly BabyField[] = ["name", "birthDate"];
+
+/** The ids of one baby form's controls, for `useSubmitValidation`'s focus. */
+export function babyFieldIds(idPrefix: string): Record<BabyField, string> {
+  return { name: `${idPrefix}-name`, birthDate: `${idPrefix}-birthdate` };
 }
 
-function BabyFields({
+/**
+ * The baby form's required-field rules (item 235), shared by `AddBabySheet`
+ * and `BabyRow`'s edit form so the two can never drift apart. Per field, not
+ * one form-level sentence: each message sits under the control that caused
+ * it. Notes are optional and never error.
+ *
+ * An empty object means valid — same reading as `validateCustomFood`.
+ */
+export function validateBaby(values: BabyFormValues): BabyErrors {
+  const errors: BabyErrors = {};
+  if (values.name.trim().length === 0) errors.name = "Name is required";
+  if (!values.birthDate) errors.birthDate = "Birth date is required";
+  return errors;
+}
+
+/** Exported for render tests: the error slots below are the whole point
+ * of item 235 and are otherwise only reachable through a real submit. */
+export function BabyFields({
   values,
   onChange,
   idPrefix,
+  errors,
 }: {
   values: BabyFormValues;
   onChange: (values: BabyFormValues) => void;
   idPrefix: string;
+  errors: BabyErrors;
 }) {
   return (
     <>
-      <Field label="Nickname" htmlFor={`${idPrefix}-name`}>
+      <Field label="Nickname" htmlFor={`${idPrefix}-name`} error={errors.name}>
         <Input
           id={`${idPrefix}-name`}
           type="text"
@@ -77,7 +94,7 @@ function BabyFields({
         />
       </Field>
 
-      <Field label="Birth date" htmlFor={`${idPrefix}-birthdate`}>
+      <Field label="Birth date" htmlFor={`${idPrefix}-birthdate`} error={errors.birthDate}>
         {/* Deliberately the native calendar input, not the wheel picker: a
             birth date is a single known faraway date — the wheels are for
             recent-past log entries. */}
@@ -111,16 +128,20 @@ function BabyFields({
 function AddBabySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const createBaby = useCreateBaby();
   const [values, setValues] = useState<BabyFormValues>({ name: "", birthDate: "", notes: "" });
+  // Server failures only — the required fields answer for themselves inline.
   const [error, setError] = useState<string | null>(null);
+  const { errors, attemptSubmit } = useSubmitValidation(
+    values,
+    validateBaby,
+    BABY_FIELD_ORDER,
+    babyFieldIds("new-baby"),
+  );
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    const formError = babyFormError(values);
-    if (formError) {
-      setError(formError);
-      return;
-    }
+    if (createBaby.isPending) return;
+    if (!attemptSubmit()) return;
     createBaby.mutate(
       { name: values.name.trim(), birthDate: values.birthDate, notes: values.notes.trim() || null },
       {
@@ -137,15 +158,15 @@ function AddBabySheet({ open, onClose }: { open: boolean; onClose: () => void })
 
   return (
     <Sheet open={open} onClose={onClose} title="Add a baby 🍼">
-      <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
-        <BabyFields values={values} onChange={setValues} idPrefix="new-baby" />
+      <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
+        <BabyFields values={values} onChange={setValues} idPrefix="new-baby" errors={errors} />
         {error ? (
           <p role="alert" className="text-sm text-[var(--color-danger)]">
             {error}
           </p>
         ) : null}
         <div className="flex gap-2">
-          <Button type="submit" disabled={createBaby.isPending || babyFormError(values) !== null}>
+          <Button type="submit" disabled={createBaby.isPending}>
             {createBaby.isPending ? "Adding…" : "Add baby"}
           </Button>
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -168,7 +189,14 @@ function BabyRow({ baby }: { baby: Baby }) {
     birthDate: baby.birthDate,
     notes: baby.notes ?? "",
   });
+  // Server failures only — the required fields answer for themselves inline.
   const [error, setError] = useState<string | null>(null);
+  const { errors, attemptSubmit } = useSubmitValidation(
+    values,
+    validateBaby,
+    BABY_FIELD_ORDER,
+    babyFieldIds(`baby-${baby.id}`),
+  );
 
   function openEdit() {
     setValues({ name: baby.name, birthDate: baby.birthDate, notes: baby.notes ?? "" });
@@ -179,11 +207,8 @@ function BabyRow({ baby }: { baby: Baby }) {
   function handleSave(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    const formError = babyFormError(values);
-    if (formError) {
-      setError(formError);
-      return;
-    }
+    if (updateBaby.isPending) return;
+    if (!attemptSubmit()) return;
     updateBaby.mutate(
       {
         id: baby.id,
@@ -253,15 +278,15 @@ function BabyRow({ baby }: { baby: Baby }) {
       </Card>
 
       <Sheet open={editing} onClose={() => setEditing(false)} title={`Edit ${baby.name}`}>
-        <form className="flex flex-col gap-3" onSubmit={handleSave}>
-          <BabyFields values={values} onChange={setValues} idPrefix={`baby-${baby.id}`} />
+        <form className="flex flex-col gap-3" onSubmit={handleSave} noValidate>
+          <BabyFields values={values} onChange={setValues} idPrefix={`baby-${baby.id}`} errors={errors} />
           {error ? (
             <p role="alert" className="text-sm text-[var(--color-danger)]">
               {error}
             </p>
           ) : null}
           <div className="flex gap-2">
-            <Button type="submit" disabled={updateBaby.isPending || babyFormError(values) !== null}>
+            <Button type="submit" disabled={updateBaby.isPending}>
               {updateBaby.isPending ? "Saving…" : "Save"}
             </Button>
             <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
@@ -334,7 +359,27 @@ function formatValidatedAt(iso: string | null | undefined): string | null {
   return parsed.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-function AiSection() {
+export type AiKeyField = "apiKey";
+export type AiKeyErrors = FormErrors<AiKeyField>;
+
+/** Visual field order — what a failed submit focuses first (item 235). */
+export const AI_KEY_FIELD_ORDER: readonly AiKeyField[] = ["apiKey"];
+
+/**
+ * The AI key form's required-field rule (item 235). Deliberately only
+ * "is there a key at all": the shape of a key is Anthropic's business, and
+ * the server checks it for real before storing anything.
+ *
+ * An empty object means valid — same reading as `validateCustomFood`.
+ */
+export function validateAiKey(values: { apiKey: string }): AiKeyErrors {
+  const errors: AiKeyErrors = {};
+  if (values.apiKey.trim().length === 0) errors.apiKey = "API key is required";
+  return errors;
+}
+
+/** Exported for render tests — see `BabyFields`. */
+export function AiSection() {
   const status = useAiKeyStatus();
   const saveKey = useSaveAiKey();
   const removeKey = useDeleteAiKey();
@@ -346,10 +391,16 @@ function AiSection() {
   const configured = status.data?.configured === true;
   const validatedAt = formatValidatedAt(status.data?.lastValidatedAt);
 
+  const { errors, attemptSubmit } = useSubmitValidation({ apiKey }, validateAiKey, AI_KEY_FIELD_ORDER, {
+    apiKey: "anthropic-api-key",
+  });
+
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setSaved(false);
+    if (saveKey.isPending) return;
+    if (!attemptSubmit()) return;
     saveKey.mutate(apiKey.trim(), {
       onSuccess: () => {
         // Drop the plaintext from component state the moment it is stored.
@@ -427,10 +478,10 @@ function AiSection() {
       ) : null}
 
       <Card>
-        <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+        <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
           <h3 className="text-sm font-semibold text-[var(--color-text)]">{configured ? "Replace key" : "Add your key"}</h3>
 
-          <Field label="Anthropic API key" htmlFor="anthropic-api-key">
+          <Field label="Anthropic API key" htmlFor="anthropic-api-key" error={errors.apiKey}>
             <Input
               id="anthropic-api-key"
               type="password"
@@ -462,7 +513,7 @@ function AiSection() {
             </p>
           ) : null}
 
-          <Button type="submit" disabled={saveKey.isPending || apiKey.trim().length === 0} className="w-fit">
+          <Button type="submit" disabled={saveKey.isPending} className="w-fit">
             {saveKey.isPending ? "Checking key…" : "Save key"}
           </Button>
         </form>
@@ -566,7 +617,29 @@ function accountErrorMessage(code: string): string {
   }
 }
 
-function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
+export type DeleteAccountField = "phrase" | "password";
+export type DeleteAccountErrors = FormErrors<DeleteAccountField>;
+
+/** Visual field order — what a failed submit focuses first (item 235). */
+export const DELETE_ACCOUNT_FIELD_ORDER: readonly DeleteAccountField[] = ["phrase", "password"];
+
+/**
+ * The delete-account form's rules (item 235). The confirm button is enabled
+ * like every other submit in the app — the guard is that this helper has to
+ * pass before the mutation is reached, so a mistyped phrase gets a sentence
+ * saying so instead of a button that silently does nothing.
+ *
+ * An empty object means valid — same reading as `validateCustomFood`.
+ */
+export function validateDeleteAccount(values: { phrase: string; password: string }): DeleteAccountErrors {
+  const errors: DeleteAccountErrors = {};
+  if (values.phrase.trim() !== ACCOUNT_DELETE_CONFIRMATION) errors.phrase = "Type the confirmation phrase exactly";
+  if (values.password.length === 0) errors.password = "Password is required";
+  return errors;
+}
+
+/** Exported for render tests — see `BabyFields`. */
+export function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
   const deleteAccount = useDeleteAccount();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -575,12 +648,19 @@ function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const phraseMatches = phrase.trim() === ACCOUNT_DELETE_CONFIRMATION;
-  const canSubmit = phraseMatches && password.length > 0 && !deleteAccount.isPending;
+  const { errors, attemptSubmit } = useSubmitValidation(
+    { phrase, password },
+    validateDeleteAccount,
+    DELETE_ACCOUNT_FIELD_ORDER,
+    { phrase: "delete-confirm-phrase", password: "delete-confirm-password" },
+  );
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    if (deleteAccount.isPending) return;
+    // The account is only ever deleted once BOTH answers are right.
+    if (!attemptSubmit()) return;
     deleteAccount.mutate(password, {
       onSuccess: async () => {
         // The server already revoked the session and cleared the cookie;
@@ -609,7 +689,7 @@ function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
 
   return (
     <Card className="border-2 border-[var(--color-danger)]">
-      <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+      <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
         <h3 className="text-sm font-bold text-[var(--color-danger)]">Delete this account</h3>
 
         <p className="text-sm text-[var(--color-text)]">
@@ -623,7 +703,7 @@ function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
           JSON file.
         </p>
 
-        <Field label={confirmLabel} htmlFor="delete-confirm-phrase">
+        <Field label={confirmLabel} htmlFor="delete-confirm-phrase" error={errors.phrase}>
           <Input
             id="delete-confirm-phrase"
             type="text"
@@ -640,7 +720,7 @@ function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
           />
         </Field>
 
-        <Field label="Your password" htmlFor="delete-confirm-password">
+        <Field label="Your password" htmlFor="delete-confirm-password" error={errors.password}>
           <Input
             id="delete-confirm-password"
             type="password"
@@ -662,7 +742,7 @@ function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
         ) : null}
 
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" variant="danger" disabled={!canSubmit}>
+          <Button type="submit" variant="danger" disabled={deleteAccount.isPending}>
             {deleteAccount.isPending ? "Deleting…" : "Delete my account forever"}
           </Button>
           <Button type="button" variant="secondary" disabled={deleteAccount.isPending} onClick={onCancel}>

@@ -148,6 +148,11 @@ async function writeRecipeVariant(
     // parent's own steps make no such claim, so the note is empty and the
     // client renders one plain "Steps" section.
     textureNote: "",
+    // Steps are optional (item 240). The row is written EITHER WAY, with
+    // empty instructions when there are none, so a custom recipe always
+    // reads back as exactly one variant — the shape the detail page and
+    // the edit form both assume — and gaining or losing its steps never
+    // changes the number of variants.
     instructions: steps,
   });
 }

@@ -170,18 +170,28 @@ describe("CustomFoodForm (render)", () => {
     expect(html).toContain(">Cancel<");
   });
 
-  it("prefills the name from `initialName` and disables Save only once it's empty", () => {
+  it("prefills the name from `initialName`", () => {
     const filled = render(
       createElement(CustomFoodForm, { initialName: "Kale chips", onSaved: () => {}, onCancel: () => {} }),
     );
     expect(filled).toContain('value="Kale chips"');
-    expect(filled).toMatch(/<button[^>]*type="submit"[^>]*>Save</);
-    expect(filled).not.toMatch(/<button[^>]*type="submit"[^>]*disabled[^>]*>Save</);
+  });
 
+  // Item 235: Save stays enabled even with the required name empty — a tap
+  // must always produce feedback — and the form stays quiet until it happens.
+  it("leaves Save enabled on an empty form, and shows no error markup before a submit attempt", () => {
     const empty = render(createElement(CustomFoodForm, { onSaved: () => {}, onCancel: () => {} }));
-    expect(empty).toMatch(/<button[^>]*type="submit"[^>]*disabled[^>]*>Save</);
-    // …and stays quiet about it: no error shouted at an untouched form.
+    expect(empty).toMatch(/<button[^>]*type="submit"[^>]*>Save</);
+    expect(empty).not.toMatch(/<button[^>]*type="submit"[^>]*\sdisabled=""[^>]*>Save</);
+    expect(empty).not.toContain('role="alert"');
     expect(empty).not.toContain("Name is required");
+  });
+
+  // Item 236: native constraint bubbles would pre-empt the inline message.
+  it("opts out of native constraint validation", () => {
+    expect(render(createElement(CustomFoodForm, { onSaved: () => {}, onCancel: () => {} }))).toMatch(
+      /<form[^>]*novalidate/i,
+    );
   });
 
   it("seeds the emoji field from the category and offers every category option", () => {

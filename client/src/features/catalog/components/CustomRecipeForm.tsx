@@ -19,6 +19,7 @@ import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
 import { Select } from "../../../components/ui/Select.js";
 import { Button } from "../../../components/ui/Button.js";
+import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 
 /** The form's own state — everything a control can hold directly, converted
  * to the API's shape by `buildCustomRecipeInput`. */
@@ -37,9 +38,24 @@ export interface CustomRecipeValues {
   prepMinutes: string;
 }
 
-export type CustomRecipeErrors = Partial<
-  Record<"title" | "ingredients" | "extraIngredients" | "steps" | "notes" | "prepMinutes", string>
->;
+export type CustomRecipeField =
+  | "title"
+  | "ingredients"
+  | "extraIngredients"
+  | "steps"
+  | "notes"
+  | "prepMinutes";
+export type CustomRecipeErrors = FormErrors<CustomRecipeField>;
+
+/** Visual field order — what a failed submit focuses first (item 235). */
+export const CUSTOM_RECIPE_FIELD_ORDER: readonly CustomRecipeField[] = [
+  "title",
+  "ingredients",
+  "extraIngredients",
+  "steps",
+  "notes",
+  "prepMinutes",
+];
 
 export const DEFAULT_CUSTOM_RECIPE_AGE_MONTHS = 6;
 
@@ -70,9 +86,10 @@ export function validateCustomRecipe(values: CustomRecipeValues): CustomRecipeEr
     errors.extraIngredients = `Each one must be ${CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX} characters or fewer`;
   }
 
+  // Steps are OPTIONAL (item 240): a recipe can be a title plus a list of
+  // ingredients. Only the caps still apply.
   const steps = values.steps.map((step) => step.trim()).filter((step) => step.length > 0);
-  if (steps.length === 0) errors.steps = "Add at least one step";
-  else if (steps.length > CUSTOM_RECIPE_STEPS_MAX) {
+  if (steps.length > CUSTOM_RECIPE_STEPS_MAX) {
     errors.steps = `A recipe can have at most ${CUSTOM_RECIPE_STEPS_MAX} steps`;
   } else if (steps.some((step) => step.length > CUSTOM_RECIPE_STEP_MAX)) {
     errors.steps = `Each step must be ${CUSTOM_RECIPE_STEP_MAX} characters or fewer`;
@@ -276,17 +293,22 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved, 
   const updateRecipe = useUpdateCustomRecipe();
   const { data: foodsData } = useFoods();
 
-  const errors = validateCustomRecipe(values);
-  const isValid = Object.keys(errors).length === 0;
-  // Every error shows live EXCEPT the three that are true the instant the
-  // form opens — an empty required field under a disabled Save already says
-  // it without shouting at someone who hasn't typed yet.
-  const shownErrors: CustomRecipeErrors = {
-    ...errors,
-    ...(values.title.trim().length === 0 ? { title: undefined } : {}),
-    ...(values.foodIds.length === 0 ? { ingredients: undefined } : {}),
-    ...(values.steps.every((step) => step.trim().length === 0) ? { steps: undefined } : {}),
-  };
+  // Item 235: Save stays enabled, nothing is shown before the first submit
+  // attempt, and a failed attempt focuses the topmost broken field.
+  const { errors: shownErrors, attemptSubmit } = useSubmitValidation(
+    values,
+    validateCustomRecipe,
+    CUSTOM_RECIPE_FIELD_ORDER,
+    {
+      title: `${idPrefix}-title`,
+      // The MultiCombobox behind FoodPicker puts this id on its text input.
+      ingredients: `${idPrefix}-ingredients`,
+      extraIngredients: `${idPrefix}-extra`,
+      steps: `${idPrefix}-step-0`,
+      notes: `${idPrefix}-notes`,
+      prepMinutes: `${idPrefix}-prep`,
+    },
+  );
   const mutation = recipe ? updateRecipe : createRecipe;
 
   const foodsById = useMemo(
@@ -322,14 +344,18 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved, 
     // The food picker's "add a custom food" form renders in a portal, so its
     // submit would otherwise bubble through the REACT tree into this one.
     event.stopPropagation();
-    if (!isValid || mutation.isPending) return;
+    if (mutation.isPending) return;
+    if (!attemptSubmit()) return;
     const input = buildCustomRecipeInput(values);
     if (recipe) updateRecipe.mutate({ id: recipe.id, input }, { onSuccess: onSaved });
     else createRecipe.mutate(input, { onSuccess: onSaved });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    // `noValidate`: the app answers required fields itself (item 236) —
+    // native constraint bubbles are unreliable in a PWA and would pre-empt
+    // the inline messages and the focus below.
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
       <Field label="Title" htmlFor={`${idPrefix}-title`} error={shownErrors.title}>
         <Input
           id={`${idPrefix}-title`}
@@ -450,7 +476,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved, 
 
       <div className="flex flex-col gap-1.5">
         <span id={`${idPrefix}-steps-label`} className="text-sm font-semibold text-[var(--color-text)]">
-          Steps
+          Steps <span className="font-normal text-[var(--color-text-muted)]">(optional)</span>
         </span>
         <ol className="flex flex-col gap-2" aria-labelledby={`${idPrefix}-steps-label`}>
           {values.steps.map((step, index) => (
@@ -528,7 +554,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved, 
       )}
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={!isValid || mutation.isPending} className="flex-1">
+        <Button type="submit" disabled={mutation.isPending} className="flex-1">
           {mutation.isPending ? "Saving…" : "Save"}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>

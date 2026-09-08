@@ -17,6 +17,7 @@ import {
   type SymptomCheckRequest,
 } from "@blw/shared";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
+import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 
 function toggle<T>(set: Set<T>, value: T): Set<T> {
   const next = new Set(set);
@@ -27,6 +28,31 @@ function toggle<T>(set: Set<T>, value: T): Set<T> {
 
 const inputClass =
   "rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-base text-[var(--color-text)]";
+
+export type SymptomSurveyField = "symptoms";
+export type SymptomSurveyErrors = FormErrors<SymptomSurveyField>;
+
+/** Visual field order — what a failed submit focuses first (item 235). */
+export const SYMPTOM_SURVEY_FIELD_ORDER: readonly SymptomSurveyField[] = ["symptoms"];
+
+/** The id of one symptom checkbox — also what a failed submit focuses. */
+export function symptomCheckboxId(symptom: Symptom): string {
+  return `symptom-${symptom}`;
+}
+
+/**
+ * The survey's required-field rules (item 235). Only the symptom list is
+ * required: severity and meal timing are selects with a default, onset is
+ * seeded with the current minute, and body areas and notes are optional.
+ *
+ * Takes the symptoms as an array rather than the component's `Set` so it
+ * stays pure and trivially unit-testable. An empty object means valid.
+ */
+export function validateSymptomSurvey(values: { symptoms: Symptom[] }): SymptomSurveyErrors {
+  const errors: SymptomSurveyErrors = {};
+  if (values.symptoms.length === 0) errors.symptoms = "Add at least one symptom";
+  return errors;
+}
 
 interface SymptomSurveyFormProps {
   onSubmit: (survey: SymptomCheckRequest["survey"]) => void;
@@ -53,11 +79,22 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
     [],
   );
 
+  // Item 235: the submit stays enabled, "Add at least one symptom" shows
+  // beneath the checkbox list, and a failed submit focuses the first box.
+  const selectedSymptoms = [...symptoms];
+  const { errors: shownErrors, attemptSubmit } = useSubmitValidation(
+    { symptoms: selectedSymptoms },
+    validateSymptomSurvey,
+    SYMPTOM_SURVEY_FIELD_ORDER,
+    { symptoms: symptomCheckboxId(SYMPTOM_CATALOG[0]!.value) },
+  );
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (symptoms.size === 0) return;
+    if (isPending) return;
+    if (!attemptSubmit()) return;
     onSubmit({
-      symptoms: [...symptoms],
+      symptoms: selectedSymptoms,
       severity,
       onsetAt: onsetAt.toISOString(),
       mealTiming,
@@ -67,7 +104,9 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+    // `noValidate`: this survey answers its own required list inline, and its
+    // checkboxes carry no native constraint to fall back on anyway (item 236).
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
       {/* Pulled up to sit closer to the page header (half the page gap) and
           pushed down so the questionnaire reads as a distinct block. */}
       <div className="-mt-3 mb-3">
@@ -87,6 +126,7 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
                   className="flex items-center gap-2 rounded-lg bg-[var(--color-bg-elevated)] px-3 py-2 text-sm text-[var(--color-text)]"
                 >
                   <input
+                    id={symptomCheckboxId(entry.value)}
                     type="checkbox"
                     checked={symptoms.has(entry.value)}
                     onChange={() => setSymptoms((current) => toggle(current, entry.value))}
@@ -98,6 +138,12 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
             </div>
           </div>
         ))}
+        {/* Beneath the list, per the list-error half of item 235. */}
+        {shownErrors.symptoms ? (
+          <p role="alert" className="text-xs font-medium text-[var(--color-danger)]">
+            {shownErrors.symptoms}
+          </p>
+        ) : null}
       </fieldset>
 
       <label className="flex flex-col gap-1 text-sm">
@@ -178,11 +224,16 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
         <span className="self-end text-[11px] text-[var(--color-text-muted)]">{notes.length}/1000</span>
       </label>
 
-      {errorMessage && <p className="text-sm text-[var(--color-danger)]">{errorMessage}</p>}
+      {/* The server's own failure, not a required-field message. */}
+      {errorMessage && (
+        <p role="alert" className="text-sm text-[var(--color-danger)]">
+          {errorMessage}
+        </p>
+      )}
 
       <button
         type="submit"
-        disabled={symptoms.size === 0 || isPending}
+        disabled={isPending}
         className="rounded-lg bg-[var(--color-primary)] px-4 py-3 text-sm font-semibold text-[var(--color-primary-contrast)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isPending ? "Checking…" : "Check the last 7 days"}

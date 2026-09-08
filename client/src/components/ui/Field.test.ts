@@ -31,6 +31,54 @@ describe("Field (render)", () => {
     expect(html).toContain("Notes");
   });
 
+  // The error slot is the single rendering path every form's required-field
+  // message travels (item 235), so what it emits is pinned here rather than
+  // re-asserted in each form's own test.
+  it("renders a supplied error as an alert in danger text, under the control", () => {
+    const html = renderToString(
+      createElement(Field, {
+        label: "Title",
+        htmlFor: "x",
+        error: "Title is required",
+        children: createElement("input", { id: "x" }),
+      }),
+    );
+    expect(html).toMatch(/<p role="alert" class="[^"]*text-\[var\(--color-danger\)\][^"]*">Title is required<\/p>/);
+    // Under the control, not above it.
+    expect(html.indexOf('id="x"')).toBeLessThan(html.indexOf("Title is required"));
+  });
+
+  it("renders no alert markup at all when the error is absent — the pre-submit state", () => {
+    const html = renderToString(
+      createElement(Field, { label: "Title", htmlFor: "x", children: createElement("input", { id: "x" }) }),
+    );
+    expect(html).not.toContain('role="alert"');
+  });
+
+  it("lets an error replace the hint rather than stacking with it", () => {
+    const withHint = renderToString(
+      createElement(Field, {
+        label: "Password",
+        htmlFor: "x",
+        hint: "At least 8 characters.",
+        children: createElement("input", { id: "x" }),
+      }),
+    );
+    expect(withHint).toContain("At least 8 characters.");
+
+    const withError = renderToString(
+      createElement(Field, {
+        label: "Password",
+        htmlFor: "x",
+        hint: "At least 8 characters.",
+        error: "Password is required",
+        children: createElement("input", { id: "x" }),
+      }),
+    );
+    expect(withError).toContain("Password is required");
+    expect(withError).not.toContain("At least 8 characters.");
+  });
+
   it("leaves labels without the suffix untouched", () => {
     const html = renderToString(
       createElement(Field, { label: "Food", htmlFor: "x", children: createElement("input", { id: "x" }) }),

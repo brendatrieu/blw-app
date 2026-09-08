@@ -16,6 +16,7 @@ import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField
 import { Switch } from "../../../components/ui/Switch.js";
 import { type MultiComboboxOption } from "../../../components/ui/MultiCombobox.js";
 import { Button } from "../../../components/ui/Button.js";
+import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 
 /** The submit payload shape shared by both create and update — same fields
  * either way, so `resolveMealSubmit` differs only in which mutation (and id)
@@ -227,6 +228,26 @@ export function resolveSubmitAction(
   return pantryFailurePending ? "retry-pantry" : "noop";
 }
 
+export type LogFoodField = "foods";
+export type LogFoodErrors = FormErrors<LogFoodField>;
+
+/** Visual field order — what a failed submit focuses first (item 235). */
+export const LOG_FOOD_FIELD_ORDER: readonly LogFoodField[] = ["foods"];
+
+/**
+ * The log form's required-field rules (item 235). Only the food list is
+ * required: "When" is seeded with the current minute and can never be empty,
+ * the recipe is optional, and every leftovers control either defaults or is
+ * gated behind at least one food.
+ *
+ * An empty object means valid — same reading as `validateCustomFood`.
+ */
+export function validateLogFood(values: { foodIds: string[] }): LogFoodErrors {
+  const errors: LogFoodErrors = {};
+  if (values.foodIds.length === 0) errors.foods = "Add at least one food";
+  return errors;
+}
+
 export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecipeId }: LogFoodFormProps) {
   // `FoodPicker` owns the food combobox (and its own `useFoods()` — the same
   // query key, so this shares one fetch with it). The list is still read here
@@ -316,6 +337,15 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
 
   const mutation = isEditing ? updateMeal : createMeal;
 
+  // Item 235: Save stays enabled, "Add at least one food" appears under the
+  // food picker on a failed submit, and that submit focuses it.
+  const { errors: shownErrors, attemptSubmit } = useSubmitValidation(
+    { foodIds },
+    validateLogFood,
+    LOG_FOOD_FIELD_ORDER,
+    { foods: "log-food-food" },
+  );
+
   /** Resolves `leftoverSource`'s "choose" branch to a concrete food, using
    * the select's effective value — the only place a `LeftoverSourceKind`
    * becomes a `ResolvedLeftoverSource` ready for `buildLeftoverPantryInput`. */
@@ -356,7 +386,8 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
       return;
     }
     if (postSave === "noop") return;
-    if (foodIds.length === 0) return;
+    if (mutation.isPending) return;
+    if (!attemptSubmit()) return;
     const input: MealSubmitInput = {
       foodIds,
       recipeId: recipeId || null,
@@ -387,8 +418,9 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <Field label="Food" htmlFor="log-food-food">
+    // `noValidate`: this form answers its own required field inline (item 236).
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
+      <Field label="Food" htmlFor="log-food-food" error={shownErrors.foods}>
         <FoodPicker id="log-food-food" value={foodIds} onChange={setFoodIds} />
       </Field>
 
@@ -476,7 +508,7 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
         </div>
       ) : (
         <div className="flex gap-2">
-          <Button type="submit" disabled={foodIds.length === 0 || mutation.isPending} className="flex-1">
+          <Button type="submit" disabled={mutation.isPending} className="flex-1">
             {mutation.isPending ? "Saving…" : "Save"}
           </Button>
           <Button type="button" variant="secondary" onClick={onDone}>

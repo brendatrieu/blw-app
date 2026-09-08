@@ -34,6 +34,18 @@ function renderForm(item: PantryItem = ITEM) {
 }
 
 describe("EditPantryItemForm (render)", () => {
+  // Item 235 by construction: every field on this form is either seeded from
+  // the item (location, prepared) or optional, so there is nothing that can
+  // be missing — Save is enabled, and no error slot is ever filled. Pinned so
+  // a future required field on this form cannot arrive without validation.
+  it("has no required-field errors to show: Save is enabled and no alert markup renders", () => {
+    const html = renderForm();
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Save</);
+    expect(html).not.toMatch(/<button[^>]*type="submit"[^>]*\sdisabled=""[^>]*>Save</);
+    expect(html).not.toContain('role="alert"');
+    expect(html).not.toContain("is required");
+  });
+
   it("renders location segments, the Prepared field, and the quantity note prefilled from the item", () => {
     const html = renderForm();
     expect(html).toContain(">Location<");

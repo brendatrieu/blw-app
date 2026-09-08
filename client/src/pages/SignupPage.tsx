@@ -6,8 +6,40 @@ import { Button } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
 import { Field } from "../components/ui/Field.js";
 import { Input } from "../components/ui/Input.js";
+import { looksLikeEmail, useSubmitValidation, type FormErrors } from "../lib/forms.js";
 
 const MIN_PASSWORD_LENGTH = 8;
+
+export interface SignupValues {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export type SignupField = keyof SignupValues;
+export type SignupErrors = FormErrors<SignupField>;
+
+/** Visual field order — what a failed submit focuses first (item 235). */
+export const SIGNUP_FIELD_ORDER: readonly SignupField[] = ["name", "email", "password"];
+
+/**
+ * The sign-up form's required-field rules (item 235), including the password
+ * length the server enforces — previously the only thing checked here, and
+ * only as one form-level sentence.
+ *
+ * An empty object means valid — same reading as `validateCustomFood`.
+ */
+export function validateSignup(values: SignupValues): SignupErrors {
+  const errors: SignupErrors = {};
+  if (values.name.trim().length === 0) errors.name = "Name is required";
+  if (values.email.trim().length === 0) errors.email = "Email is required";
+  else if (!looksLikeEmail(values.email)) errors.email = "Enter a valid email";
+  if (values.password.length === 0) errors.password = "Password is required";
+  else if (values.password.length < MIN_PASSWORD_LENGTH) {
+    errors.password = `Enter a password of at least ${MIN_PASSWORD_LENGTH} characters`;
+  }
+  return errors;
+}
 
 export function SignupPage() {
   const navigate = useNavigate();
@@ -21,12 +53,17 @@ export function SignupPage() {
 
   const googleEnabled = authConfig.data?.googleEnabled ?? false;
 
+  const { errors, attemptSubmit } = useSubmitValidation({ name, email, password }, validateSignup, SIGNUP_FIELD_ORDER, {
+    name: "signup-name",
+    email: "signup-email",
+    password: "signup-password",
+  });
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
-      return;
-    }
+    if (submitting) return;
+    // No account is created until every field is answered.
+    if (!attemptSubmit()) return;
 
     setSubmitting(true);
     setError(null);
@@ -54,8 +91,9 @@ export function SignupPage() {
       </div>
 
       <Card padding="md" className="flex flex-col gap-4">
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          <Field label="Your name" htmlFor="signup-name">
+        {/* `noValidate`: the fields answer for themselves inline (item 236). */}
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
+          <Field label="Your name" htmlFor="signup-name" error={errors.name}>
             <Input
               id="signup-name"
               type="text"
@@ -70,7 +108,7 @@ export function SignupPage() {
             />
           </Field>
 
-          <Field label="Email" htmlFor="signup-email">
+          <Field label="Email" htmlFor="signup-email" error={errors.email}>
             <Input
               id="signup-email"
               type="email"
@@ -84,7 +122,12 @@ export function SignupPage() {
             />
           </Field>
 
-          <Field label="Password" htmlFor="signup-password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
+          <Field
+            label="Password"
+            htmlFor="signup-password"
+            error={errors.password}
+            hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+          >
             <Input
               id="signup-password"
               type="password"

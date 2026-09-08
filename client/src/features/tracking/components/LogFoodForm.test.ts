@@ -14,6 +14,7 @@ import {
   type MealSubmitInput,
   type ResolvedLeftoverSource,
   resolveSubmitAction,
+  validateLogFood,
 } from "./LogFoodForm.js";
 
 function renderWithProviders(element: ReactElement, queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
@@ -21,6 +22,21 @@ function renderWithProviders(element: ReactElement, queryClient = new QueryClien
     createElement(QueryClientProvider, { client: queryClient }, createElement(CelebrationProvider, null, element)),
   );
 }
+
+describe("validateLogFood", () => {
+  it("accepts a meal with at least one food", () => {
+    expect(validateLogFood({ foodIds: ["food-1"] })).toEqual({});
+  });
+
+  it("requires at least one food, phrased as a list error", () => {
+    expect(validateLogFood({ foodIds: [] }).foods).toBe("Add at least one food");
+  });
+
+  it("clears its own error as soon as a food is picked", () => {
+    expect(validateLogFood({ foodIds: [] }).foods).toBeDefined();
+    expect(validateLogFood({ foodIds: ["food-1"] }).foods).toBeUndefined();
+  });
+});
 
 describe("LogFoodForm (render)", () => {
   it("renders the same fields the quick-log form always has", () => {
@@ -33,9 +49,22 @@ describe("LogFoodForm (render)", () => {
     expect(html).toContain(">Cancel<");
   });
 
-  it("disables the submit (Save) button while zero foods are selected", () => {
+  // Item 235: Save stays enabled with zero foods selected — tapping it has
+  // to say "Add at least one food", which a disabled button cannot do — and
+  // the form says nothing before that tap.
+  it("leaves Save enabled with zero foods selected, and shows no error markup before a submit attempt", () => {
     const html = renderWithProviders(createElement(LogFoodForm, { babyId: "baby-1", onDone: () => {} }));
-    expect(html).toMatch(/<button[^>]*type="submit"[^>]*disabled[^>]*>Save</);
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Save</);
+    expect(html).not.toMatch(/<button[^>]*type="submit"[^>]*\sdisabled=""[^>]*>Save</);
+    expect(html).not.toContain('role="alert"');
+    expect(html).not.toContain("Add at least one food");
+  });
+
+  // Item 236: the inline message and the focus only run if the browser's own
+  // constraint validation is out of the way.
+  it("opts out of native constraint validation", () => {
+    const html = renderWithProviders(createElement(LogFoodForm, { babyId: "baby-1", onDone: () => {} }));
+    expect(html).toMatch(/<form[^>]*novalidate/i);
   });
 
   // Item 152/154: create mode always renders the collapsed "+ Save leftovers

@@ -28,11 +28,16 @@ describe("RecipeCreatePage", () => {
     expect(html).not.toMatch(/>Back</);
   });
 
-  it("renders the empty custom-recipe form, Save disabled until it's filled in", () => {
+  // Item 235: Save is enabled from the first render — an empty form's Save
+  // has to produce "Title is required", not silence.
+  it("renders the empty custom-recipe form with Save enabled and nothing shouted yet", () => {
     const html = render();
     expect(html).toContain('id="recipe-new-title"');
     expect(html).toContain(">Ingredients<");
-    expect(html).toContain(">Steps<");
-    expect(html).toMatch(/<button[^>]*type="submit"[^>]*disabled[^>]*>Save</);
+    // Steps are optional since item 240, and the label says so.
+    expect(html).toMatch(/Steps(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Save</);
+    expect(html).not.toMatch(/<button[^>]*type="submit"[^>]*\sdisabled=""[^>]*>Save</);
+    expect(html).not.toContain("Title is required");
   });
 });

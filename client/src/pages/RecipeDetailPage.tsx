@@ -225,6 +225,8 @@ export function RecipeDetailPage() {
   }
 
   const activeVariant = recipe.variants.find((v) => v.ageStage === activeStage) ?? recipe.variants[0];
+  /** A custom recipe's single set of steps — empty when the parent wrote none. */
+  const customSteps = recipe.variants[0]?.steps ?? [];
 
   return (
     <div className="flex flex-col gap-5 p-4">
@@ -304,19 +306,26 @@ export function RecipeDetailPage() {
         // A custom recipe carries exactly ONE variant (item 203): the parent
         // wrote one set of steps, so age tabs would be three tabs where two
         // are always empty. Its textureNote is "" and is skipped entirely.
-        <section className="flex flex-col gap-2">
-          <h2 className="font-h2 text-[var(--color-text)]">Steps</h2>
-          <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
-            <ol className="flex flex-col gap-1.5 text-sm text-[var(--color-text)]">
-              {(recipe.variants[0]?.steps ?? []).map((step, i) => (
-                <li key={i} className="flex gap-2">
-                  <span className="font-medium text-[var(--color-accent)]">{i + 1}.</span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
+        //
+        // Steps are optional (item 240), and the variant row exists either
+        // way — so the section is driven by whether there are any steps, not
+        // by whether there is a variant. No steps, no heading and no empty
+        // box: an ingredients-only recipe is a complete recipe.
+        customSteps.length > 0 ? (
+          <section className="flex flex-col gap-2">
+            <h2 className="font-h2 text-[var(--color-text)]">Steps</h2>
+            <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+              <ol className="flex flex-col gap-1.5 text-sm text-[var(--color-text)]">
+                {customSteps.map((step, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="font-medium text-[var(--color-accent)]">{i + 1}.</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </section>
+        ) : null
       ) : (
       <section className="flex flex-col gap-2">
         <div className="inline-flex w-fit gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] p-1">

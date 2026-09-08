@@ -142,6 +142,23 @@ describe("RecipeDetailPage (custom recipe)", () => {
     expect(html).not.toContain(">9mo<");
   });
 
+  // Item 240: steps are optional. A recipe saved with none keeps its single
+  // variant row (with empty steps) — the shape the server always returns —
+  // and the page shows no Steps heading and no empty box for it.
+  it("hides the Steps section entirely when the parent wrote none", () => {
+    const html = renderRecipe(
+      catalogRecipe({
+        ...CUSTOM_RECIPE,
+        variants: [{ ageStage: "6", textureNote: "", steps: [] }],
+      }),
+    );
+    expect(html).toContain(">Custom<");
+    expect(html).not.toContain(">Steps<");
+    // The rest of the recipe is untouched.
+    expect(html).toContain("Lentil mash");
+    expect(html).toContain("Freezes well in ice-cube trays");
+  });
+
   it("hides the prep badge when no prep time was given (0 is 'not stated', not 'instant')", () => {
     expect(renderRecipe(CUSTOM_RECIPE)).not.toContain("min prep");
     expect(renderRecipe(catalogRecipe({ isCustom: true, prepMinutes: 20 }))).toMatch(/>20(?:<!-- -->)? min prep</);

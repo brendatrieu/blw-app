@@ -86,8 +86,12 @@ describe("validateCustomRecipe", () => {
     expect(errors.ingredients).toContain("80 characters or fewer");
   });
 
-  it("requires at least one non-blank step (an empty step box is not a step)", () => {
-    expect(validateCustomRecipe(values({ steps: ["", "   "] })).steps).toBe("Add at least one step");
+  // Item 240 (user decision 2026-09-08): a recipe is a title plus at least
+  // one ingredient. Steps are optional, so an empty step list — and a form
+  // full of blank step boxes — is a complete, saveable recipe.
+  it("accepts a recipe with no steps at all", () => {
+    expect(validateCustomRecipe(values({ steps: [] }))).toEqual({});
+    expect(validateCustomRecipe(values({ steps: ["", "   "] }))).toEqual({});
   });
 
   it("caps a single step's length", () => {
@@ -359,7 +363,7 @@ describe("CustomRecipeForm (render)", () => {
     expect(html).toContain(">Title<");
     expect(html).toContain(">Suitable from<");
     expect(html).toContain(">Ingredients<");
-    expect(html).toContain(">Steps<");
+    expect(html).toContain("Steps");
     // Item 231 renamed this from "Anything else"; the optional-label style is
     // unchanged.
     expect(html).toMatch(/Additional ingredients(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
@@ -370,12 +374,29 @@ describe("CustomRecipeForm (render)", () => {
     expect(html).toContain(">Cancel<");
   });
 
-  it("disables Save on an empty form, and shouts no 'required' errors before anyone has typed", () => {
+  // Item 235: an empty form's Save is ENABLED — a tap has to produce a
+  // message, and a disabled button produces silence — but says nothing until
+  // that tap happens.
+  it("leaves Save enabled on an empty form, and shows no error markup before a submit attempt", () => {
     const html = renderForm();
-    expect(html).toMatch(/<button[^>]*type="submit"[^>]*disabled[^>]*>Save</);
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Save</);
+    expect(html).not.toMatch(/<button[^>]*type="submit"[^>]*\sdisabled=""[^>]*>Save</);
+    expect(html).not.toContain('role="alert"');
     expect(html).not.toContain("Title is required");
     expect(html).not.toContain("Add at least one ingredient");
-    expect(html).not.toContain("Add at least one step");
+  });
+
+  // Item 236: with Save enabled, a desktop browser would pop its own native
+  // bubble before `onSubmit` ever ran — which is exactly the feedback the
+  // ledger calls not sufficient. `noValidate` hands the decision to the form.
+  it("opts out of native constraint validation so the inline messages are what a parent sees", () => {
+    expect(renderForm()).toMatch(/<form[^>]*novalidate/i);
+  });
+
+  // Item 240 again, on the label this time: Steps reads as optional in the
+  // same de-emphasized style every other optional field uses.
+  it("labels Steps as optional", () => {
+    expect(renderForm()).toMatch(/Steps(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
   });
 
   it("renders steps as textareas — never a candidate for implicit submission", () => {

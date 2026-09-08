@@ -14,6 +14,7 @@ import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
 import { Select } from "../../../components/ui/Select.js";
 import { Button } from "../../../components/ui/Button.js";
+import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 
 /** The form's own state — every field a string/array the inputs can hold
  * directly, converted to the API's shape by `buildCustomFoodInput`. */
@@ -26,7 +27,11 @@ export interface CustomFoodValues {
   notes: string;
 }
 
-export type CustomFoodErrors = Partial<Record<"name" | "emoji" | "notes", string>>;
+export type CustomFoodField = "name" | "emoji" | "notes";
+export type CustomFoodErrors = FormErrors<CustomFoodField>;
+
+/** Visual field order — what a failed submit focuses first (item 235). */
+export const CUSTOM_FOOD_FIELD_ORDER: readonly CustomFoodField[] = ["name", "emoji", "notes"];
 
 export const DEFAULT_CUSTOM_FOOD_CATEGORY: FoodCategory = "fruit";
 
@@ -162,15 +167,14 @@ export function CustomFoodForm({ food, initialName = "", idPrefix = "custom-food
   const createFood = useCreateCustomFood();
   const updateFood = useUpdateCustomFood();
 
-  const errors = validateCustomFood(values);
-  const isValid = Object.keys(errors).length === 0;
-  // Every error shows live EXCEPT "name is required": that one is true the
-  // instant the form opens, and an empty required field under a disabled
-  // Save already says it without shouting at someone who hasn't typed yet.
-  const shownErrors: CustomFoodErrors = {
-    ...errors,
-    ...(values.name.trim().length === 0 ? { name: undefined } : {}),
-  };
+  // Item 235: Save stays enabled, nothing is shown before the first submit
+  // attempt, and a failed attempt focuses the topmost broken field.
+  const { errors: shownErrors, attemptSubmit } = useSubmitValidation(
+    values,
+    validateCustomFood,
+    CUSTOM_FOOD_FIELD_ORDER,
+    { name: `${idPrefix}-name`, emoji: `${idPrefix}-emoji`, notes: `${idPrefix}-notes` },
+  );
   const mutation = food ? updateFood : createFood;
 
   function setValue<K extends keyof CustomFoodValues>(key: K, value: CustomFoodValues[K]) {
@@ -202,14 +206,17 @@ export function CustomFoodForm({ food, initialName = "", idPrefix = "custom-food
     // form's `onSubmit` and save a meal. The portal hides the nesting from
     // the DOM; this stops it in React.
     event.stopPropagation();
-    if (!isValid || mutation.isPending) return;
+    if (mutation.isPending) return;
+    if (!attemptSubmit()) return;
     const input = buildCustomFoodInput(values);
     if (food) updateFood.mutate({ id: food.id, input }, { onSuccess: onSaved });
     else createFood.mutate(input, { onSuccess: onSaved });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    // `noValidate`: required fields are answered inline by this form, not by
+    // the browser's native bubble (item 236).
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
       <Field label="Name" htmlFor={`${idPrefix}-name`} error={shownErrors.name}>
         <Input
           id={`${idPrefix}-name`}
@@ -290,7 +297,7 @@ export function CustomFoodForm({ food, initialName = "", idPrefix = "custom-food
       )}
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={!isValid || mutation.isPending} className="flex-1">
+        <Button type="submit" disabled={mutation.isPending} className="flex-1">
           {mutation.isPending ? "Saving…" : "Save"}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel}>

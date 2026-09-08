@@ -371,10 +371,18 @@ const customRecipeExtraIngredients = z
   .array(z.string().trim().min(1).max(CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX))
   .max(CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX);
 
+/**
+ * A custom recipe's steps — OPTIONAL since item 240: plenty of real recipes
+ * are "these ingredients, mashed", and a parent should not have to invent a
+ * step to save one. An empty list is therefore a valid answer, and a blank
+ * entry is DROPPED rather than rejected (an empty step box means "I did not
+ * fill this in", not "the recipe has a blank step"). The cap is unchanged,
+ * and applies before the blanks are dropped.
+ */
 const customRecipeSteps = z
-  .array(z.string().trim().min(1, "A step cannot be empty").max(CUSTOM_RECIPE_STEP_MAX))
-  .min(1, "Add at least one step")
-  .max(CUSTOM_RECIPE_STEPS_MAX, `A recipe can have at most ${CUSTOM_RECIPE_STEPS_MAX} steps`);
+  .array(z.string().trim().max(CUSTOM_RECIPE_STEP_MAX))
+  .max(CUSTOM_RECIPE_STEPS_MAX, `A recipe can have at most ${CUSTOM_RECIPE_STEPS_MAX} steps`)
+  .transform((steps) => steps.filter((step) => step.length > 0));
 
 const customRecipeNotes = z
   .string()
@@ -395,7 +403,8 @@ export const createCustomRecipeSchema = z.object({
   ingredients: customRecipeIngredients,
   /** Free-text ingredients with no food row behind them ("olive oil"). */
   extraIngredients: customRecipeExtraIngredients.default([]),
-  steps: customRecipeSteps,
+  /** Optional since item 240 — an omitted list means "no steps". */
+  steps: customRecipeSteps.default([]),
   notes: customRecipeNotes,
   /** Omitted means "not stated"; stored as 0 and hidden by the client. */
   prepMinutes: z.number().int().min(0).max(CUSTOM_RECIPE_PREP_MINUTES_MAX).optional(),

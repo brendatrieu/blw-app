@@ -6,6 +6,33 @@ import { Button } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
 import { Field } from "../components/ui/Field.js";
 import { Input } from "../components/ui/Input.js";
+import { looksLikeEmail, useSubmitValidation, type FormErrors } from "../lib/forms.js";
+
+export interface LoginValues {
+  email: string;
+  password: string;
+}
+
+export type LoginField = keyof LoginValues;
+export type LoginErrors = FormErrors<LoginField>;
+
+/** Visual field order — what a failed submit focuses first (item 235). */
+export const LOGIN_FIELD_ORDER: readonly LoginField[] = ["email", "password"];
+
+/**
+ * The sign-in form's required-field rules (item 235). Native `required` is
+ * not enough on its own — a PWA shows nothing reliably (item 236) — so the
+ * form answers for itself, per field.
+ *
+ * An empty object means valid — same reading as `validateCustomFood`.
+ */
+export function validateLogin(values: LoginValues): LoginErrors {
+  const errors: LoginErrors = {};
+  if (values.email.trim().length === 0) errors.email = "Email is required";
+  else if (!looksLikeEmail(values.email)) errors.email = "Enter a valid email";
+  if (values.password.length === 0) errors.password = "Password is required";
+  return errors;
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -20,8 +47,16 @@ export function LoginPage() {
   const redirectTo = (location.state as { from?: string } | null)?.from ?? "/";
   const googleEnabled = authConfig.data?.googleEnabled ?? false;
 
+  const { errors, attemptSubmit } = useSubmitValidation({ email, password }, validateLogin, LOGIN_FIELD_ORDER, {
+    email: "login-email",
+    password: "login-password",
+  });
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (submitting) return;
+    // No network call at all until both fields are answered.
+    if (!attemptSubmit()) return;
     setSubmitting(true);
     setError(null);
 
@@ -46,8 +81,9 @@ export function LoginPage() {
       </div>
 
       <Card padding="md" className="flex flex-col gap-4">
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          <Field label="Email" htmlFor="login-email">
+        {/* `noValidate`: the fields answer for themselves inline (item 236). */}
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
+          <Field label="Email" htmlFor="login-email" error={errors.email}>
             <Input
               id="login-email"
               type="email"
@@ -61,7 +97,7 @@ export function LoginPage() {
             />
           </Field>
 
-          <Field label="Password" htmlFor="login-password">
+          <Field label="Password" htmlFor="login-password" error={errors.password}>
             <Input
               id="login-password"
               type="password"
