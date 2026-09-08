@@ -1,19 +1,30 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type {
   CreateCustomFoodInput,
+  CreateCustomRecipeInput,
   FoodDetail,
   FoodListItem,
   FoodsQuery,
   FoodsResponse,
+  RecipeDetail,
+  RecipeListItem,
+  RecipesResponse,
   UpdateCustomFoodInput,
+  UpdateCustomRecipeInput,
 } from "@blw/shared";
+import { trackingKeys } from "../tracking/hooks.js";
 import {
   createCustomFood,
+  createCustomRecipe,
   deleteCustomFood,
+  deleteCustomRecipe,
   fetchFood,
   fetchFoods,
   fetchRecipe,
+  fetchRecipes,
   updateCustomFood,
+  updateCustomRecipe,
+  type RecipeFilters,
 } from "./api.js";
 
 /**
@@ -31,6 +42,9 @@ export const catalogKeys = {
   foodsList: (filters: FoodsQuery) => ["foods", filters] as const,
   food: (slug: string | undefined) => ["food", slug] as const,
   recipe: (id: string | undefined) => ["recipe", id] as const,
+  /** Prefix covering every filter variant of the recipes list. */
+  recipes: ["recipes"] as const,
+  recipesList: (filters: RecipeFilters) => ["recipes", filters] as const,
 };
 
 export function useFoods(filters: FoodsQuery = {}) {
@@ -55,6 +69,20 @@ export function useRecipe(id: string | undefined) {
     queryKey: catalogKeys.recipe(id),
     queryFn: () => fetchRecipe(id as string),
     enabled: Boolean(id),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Every recipe the caller can see (catalog + their own), filtered server-side
+ * (item 205). `isFavorite` comes back per-caller, so this one query backs both
+ * the Recipes segment's Favorites scope and the log form's favorites-first
+ * picker without a second favorites fetch.
+ */
+export function useRecipes(filters: RecipeFilters = {}) {
+  return useQuery({
+    queryKey: catalogKeys.recipesList(filters),
+    queryFn: () => fetchRecipes(filters),
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -154,6 +182,145 @@ export function useDeleteCustomFood() {
     onSuccess: (_result, food) => removeCustomFoodFromCache(queryClient, food),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: catalogKeys.foods });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Custom recipes — cache surgery (ledger 211-212)
+//
+// Same shape as the custom-food helpers above, with one difference that
+// matters: the recipes list is FILTERED server-side (scope, age, allergen,
+// ingredient), so a newly created recipe can't just be pushed into every
+// cached variant — a recipe that doesn't match a filter would appear in a
+// list that promised to exclude it. Inserting is therefore limited to the
+// unfiltered variant (the one the picker and the default segment read);
+// filtered variants only get an in-place REPLACE of a row they already hold,
+// which is always correct, and the invalidation settles the rest.
+// ---------------------------------------------------------------------------
+
+/**
+ * The list row for a just-saved recipe. `isFavorite` isn't part of
+ * `RecipeDetail` (favoriting is a separate endpoint), so it's carried in
+ * from whatever the cache already knew — a rename must never silently
+ * un-favorite a row. Pure.
+ */
+export function recipeListItemFromDetail(recipe: RecipeDetail, isFavorite: boolean): RecipeListItem {
+  return {
+    id: recipe.id,
+    slug: recipe.slug,
+    title: recipe.title,
+    minAgeMonths: recipe.minAgeMonths,
+    ironFocus: recipe.ironFocus,
+    allergens: [...recipe.allergens],
+    isCustom: recipe.isCustom,
+    isFavorite,
+    ingredientNames: recipe.ingredients.map((ingredient) => ingredient.foodName),
+  };
+}
+
+/** True for the `{}`-ish filter variant every recipe belongs in — no query,
+ * no funnel filter, and either no scope or the default "all". */
+export function isUnfilteredRecipeVariant(filters: unknown): boolean {
+  if (typeof filters !== "object" || filters === null) return false;
+  return Object.entries(filters as Record<string, unknown>).every(
+    ([key, value]) => value === undefined || (key === "scope" && value === "all"),
+  );
+}
+
+/**
+ * The recipes list with `recipe` in it: an existing row of the same id is
+ * replaced where it stands (so an edit keeps its position), otherwise the
+ * recipe is inserted at its title-sorted spot — matching the server's
+ * `title asc` ordering — but ONLY when `allowInsert` says this variant may
+ * gain rows (see `isUnfilteredRecipeVariant`).
+ *
+ * Pure, and returns the SAME object when nothing changed.
+ */
+export function upsertRecipeInList(
+  data: RecipesResponse,
+  recipe: RecipeListItem,
+  allowInsert = true,
+): RecipesResponse {
+  const index = data.recipes.findIndex((candidate) => candidate.id === recipe.id);
+  if (index >= 0) {
+    const recipes = [...data.recipes];
+    recipes[index] = recipe;
+    return { ...data, recipes };
+  }
+  if (!allowInsert) return data;
+  const at = data.recipes.findIndex((candidate) => candidate.title.localeCompare(recipe.title) > 0);
+  const recipes = [...data.recipes];
+  recipes.splice(at === -1 ? recipes.length : at, 0, recipe);
+  return { ...data, recipes };
+}
+
+/** The recipes list without the recipe of that id (pure; see `upsertRecipeInList`). */
+export function removeRecipeFromList(data: RecipesResponse, recipeId: string): RecipesResponse {
+  if (!data.recipes.some((candidate) => candidate.id === recipeId)) return data;
+  return { ...data, recipes: data.recipes.filter((candidate) => candidate.id !== recipeId) };
+}
+
+/** Writes a just-created/just-updated custom recipe into the cached list
+ * variants that may hold it, plus its own detail entry, so `/recipes/:id`
+ * and the Recipes segment are both correct on the very next render. */
+export function writeCustomRecipeToCache(queryClient: QueryClient, recipe: RecipeDetail): void {
+  for (const [key, data] of queryClient.getQueriesData<RecipesResponse>({ queryKey: catalogKeys.recipes })) {
+    if (!data) continue;
+    const existing = data.recipes.find((candidate) => candidate.id === recipe.id);
+    const row = recipeListItemFromDetail(recipe, existing?.isFavorite ?? false);
+    queryClient.setQueryData(key, upsertRecipeInList(data, row, isUnfilteredRecipeVariant(key[1])));
+  }
+  queryClient.setQueryData(catalogKeys.recipe(recipe.id), recipe);
+}
+
+/** The delete-side mirror of `writeCustomRecipeToCache`. */
+export function removeCustomRecipeFromCache(queryClient: QueryClient, recipeId: string): void {
+  for (const [key, data] of queryClient.getQueriesData<RecipesResponse>({ queryKey: catalogKeys.recipes })) {
+    if (data) queryClient.setQueryData(key, removeRecipeFromList(data, recipeId));
+  }
+  queryClient.removeQueries({ queryKey: catalogKeys.recipe(recipeId) });
+}
+
+export function useCreateCustomRecipe() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateCustomRecipeInput) => createCustomRecipe(input),
+    onSuccess: (created) => writeCustomRecipeToCache(queryClient, created),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.recipes });
+    },
+  });
+}
+
+export function useUpdateCustomRecipe() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateCustomRecipeInput }) => updateCustomRecipe(id, input),
+    onSuccess: (updated) => writeCustomRecipeToCache(queryClient, updated),
+    onSettled: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.recipes });
+      if (updated) void queryClient.invalidateQueries({ queryKey: catalogKeys.recipe(updated.id) });
+      // A favorited recipe's title is denormalised into the favorites list.
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.favorites });
+    },
+  });
+}
+
+/**
+ * Deleting a custom recipe can legitimately fail with a 409 (meals or pantry
+ * items still point at it — see `asCustomRecipeConflict`), so the cache is
+ * only touched on success. The server drops the caller's favorite row along
+ * with the recipe, hence the favorites invalidation.
+ */
+export function useDeleteCustomRecipe() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (recipeId: string) => deleteCustomRecipe(recipeId),
+    onSuccess: (_result, recipeId) => removeCustomRecipeFromCache(queryClient, recipeId),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.recipes });
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.favorites });
     },
   });
 }

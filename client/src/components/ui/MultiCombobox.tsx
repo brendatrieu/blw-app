@@ -28,6 +28,21 @@ export function filterOptions(options: MultiComboboxOption[], query: string): Mu
   return options.filter((option) => option.label.toLowerCase().includes(q));
 }
 
+/**
+ * Drives this multi-select as a SINGLE-select (items 210, 213): the recipe
+ * picker and the "contains ingredient" filter both want exactly one value,
+ * and there's no second combobox in the app to build for them.
+ *
+ * `toggleValue` hands back `[]` when the current pick is toggled off, and
+ * `[current, next]` when a different row is chosen — so the last entry is
+ * always the new selection, and an empty array always means "cleared". Pure
+ * so that reading stays pinned by a test rather than by the caller's
+ * one-liner.
+ */
+export function resolveSingleSelection(next: string[]): string {
+  return next.length === 0 ? "" : next[next.length - 1]!;
+}
+
 /** Adds `value` to `selected` if absent, removes it if present (multi-select toggle). */
 export function toggleValue(selected: string[], value: string): string[] {
   return selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value];

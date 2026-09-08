@@ -50,6 +50,13 @@
       "when": 1788815075564,
       "tag": "0006_mighty_black_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788836527307,
+      "tag": "0007_chemical_obadiah_stane",
+      "breakpoints": true
     }
   ]
 }

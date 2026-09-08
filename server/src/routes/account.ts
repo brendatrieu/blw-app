@@ -6,7 +6,7 @@
 //   * deletion proves the person at the keyboard is the account holder
 //     *right now*, not merely that a stolen cookie is being replayed;
 //   * a failed proof changes nothing at all.
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, or } from "drizzle-orm";
 import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import {
@@ -16,6 +16,7 @@ import {
   deleteAccountInputSchema,
   type AccountExport,
   type ExportChatMessage,
+  type ExportCustomRecipe,
 } from "@blw/shared";
 import { createPerUserRateLimit, perUserRateLimitHook } from "../ai/client.js";
 import type { Database } from "../db/index.js";
@@ -31,6 +32,8 @@ import {
   mealFoods,
   meals,
   pantryItems,
+  recipeIngredients,
+  recipeVariants,
   recipes,
   session,
   symptomChecks,
@@ -252,6 +255,56 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       else allergenSlugsByFoodId.set(row.foodId, [row.slug]);
     }
 
+    // Recipes this account wrote itself. Same reasoning as the custom foods
+    // above: only the fields the parent actually chose. A custom recipe keeps
+    // its steps in one variant row, so there is one `steps` array here rather
+    // than the catalog's three age variants.
+    const customRecipeRows = await db
+      .select({
+        id: recipes.id,
+        slug: recipes.slug,
+        title: recipes.title,
+        minAgeMonths: recipes.minAgeMonths,
+        prepMinutes: recipes.prepMinutes,
+        notes: recipes.notes,
+        extraIngredients: recipes.extraIngredients,
+      })
+      .from(recipes)
+      .where(eq(recipes.ownerId, userId))
+      .orderBy(asc(recipes.title));
+
+    const customRecipeIds = customRecipeRows.map((row) => row.id);
+
+    const customRecipeIngredientRows = customRecipeIds.length
+      ? await db
+          .select({
+            recipeId: recipeIngredients.recipeId,
+            foodId: recipeIngredients.foodId,
+            foodName: foods.name,
+            quantityNote: recipeIngredients.quantityNote,
+          })
+          .from(recipeIngredients)
+          .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
+          .where(inArray(recipeIngredients.recipeId, customRecipeIds))
+          .orderBy(asc(foods.name))
+      : [];
+
+    const ingredientsByRecipeId = new Map<string, ExportCustomRecipe["ingredients"]>();
+    for (const row of customRecipeIngredientRows) {
+      const bucket = ingredientsByRecipeId.get(row.recipeId);
+      const ingredient = { foodId: row.foodId, foodName: row.foodName, quantityNote: row.quantityNote };
+      if (bucket) bucket.push(ingredient);
+      else ingredientsByRecipeId.set(row.recipeId, [ingredient]);
+    }
+
+    const customRecipeVariantRows = customRecipeIds.length
+      ? await db
+          .select({ recipeId: recipeVariants.recipeId, instructions: recipeVariants.instructions })
+          .from(recipeVariants)
+          .where(inArray(recipeVariants.recipeId, customRecipeIds))
+      : [];
+    const stepsByRecipeId = new Map(customRecipeVariantRows.map((row) => [row.recipeId, row.instructions]));
+
     const threadRows = await db
       .select()
       .from(chatThreads)
@@ -357,6 +410,17 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         emoji: row.emoji,
         allergenSlugs: allergenSlugsByFoodId.get(row.id) ?? [],
         notes: row.notes,
+      })),
+      customRecipes: customRecipeRows.map((row) => ({
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        minAgeMonths: row.minAgeMonths,
+        prepMinutes: row.prepMinutes,
+        notes: row.notes,
+        ingredients: ingredientsByRecipeId.get(row.id) ?? [],
+        extraIngredients: row.extraIngredients ?? [],
+        steps: stepsByRecipeId.get(row.id) ?? [],
       })),
       symptomChecks: symptomCheckRows.map((row) => ({
         id: row.id,
@@ -487,7 +551,8 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       // CASCADE chain, so one delete takes it all:
       //   user -> babies -> meals -> meal_foods, babies -> symptom_checks
       //   user -> babies -> allergen_overrides
-      //   user -> favorites, pantry_items, user_ai_keys, foods (custom only)
+      //   user -> favorites, pantry_items, user_ai_keys
+      //   user -> foods, recipes (custom only) -> recipe_ingredients/variants
       //   user -> chat_threads -> chat_messages
       //   user -> session, account            (better-auth's own tables)
       //
@@ -502,8 +567,22 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       // alone log or stock it.
       await db.transaction(async (tx) => {
         const ownFoodIds = tx.select({ id: foods.id }).from(foods).where(eq(foods.ownerId, userId));
+        const ownRecipeIds = tx.select({ id: recipes.id }).from(recipes).where(eq(recipes.ownerId, userId));
         await tx.delete(mealFoods).where(inArray(mealFoods.foodId, ownFoodIds));
-        await tx.delete(pantryItems).where(inArray(pantryItems.foodId, ownFoodIds));
+        // `recipe_ingredients.food_id` has no cascade for the same reason, and
+        // a parent's own recipe can be built out of their own foods, so its
+        // ingredient rows go first as well. (`recipe_variants` DOES cascade
+        // from the recipe, so the steps need no sweep of their own.)
+        await tx
+          .delete(recipeIngredients)
+          .where(
+            or(inArray(recipeIngredients.foodId, ownFoodIds), inArray(recipeIngredients.recipeId, ownRecipeIds)),
+          );
+        // `pantry_items.recipe_id` has no action at all, so a pantry row made
+        // from an own recipe would block the recipe's cascade the same way.
+        await tx
+          .delete(pantryItems)
+          .where(or(inArray(pantryItems.foodId, ownFoodIds), inArray(pantryItems.recipeId, ownRecipeIds)));
         // Deleting rows that are already gone is a no-op, which is what makes
         // a retried request safe.
         await tx.delete(user).where(eq(user.id, userId));

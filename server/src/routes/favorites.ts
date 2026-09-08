@@ -6,6 +6,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { favoriteRecipeIdParamSchema, type FavoriteItem, type FavoritesResponse } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
+import { visibleRecipesCondition } from "../services/recipes.js";
 import { allergens, foodAllergens, favorites, recipeIngredients, recipes } from "../db/schema.js";
 
 /** Every handler behind `requireAuth` has a user; this makes that explicit. */
@@ -25,7 +26,13 @@ export function registerFavoriteRoutes(app: FastifyInstance, db: Database): void
     const params = favoriteRecipeIdParamSchema.safeParse(request.params);
     if (!params.success) return notFound(reply);
 
-    const [recipe] = await db.select({ id: recipes.id }).from(recipes).where(eq(recipes.id, params.data.id)).limit(1);
+    // Scoped to what this caller can see: the catalog plus their own custom
+    // recipes. Another account's recipe is a 404, not a favoritable id.
+    const [recipe] = await db
+      .select({ id: recipes.id })
+      .from(recipes)
+      .where(and(eq(recipes.id, params.data.id), visibleRecipesCondition(currentUserId(request))))
+      .limit(1);
     if (!recipe) return notFound(reply);
 
     // Idempotent: favoriting an already-favorited recipe is a no-op, not a

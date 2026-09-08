@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { FoodListItem } from "@blw/shared";
 import { catalogKeys } from "../hooks.js";
 import { addCustomFoodLabel } from "../constants.js";
-import { FoodPicker, foodPickerOption } from "./FoodPicker.js";
+import { FoodPicker, SingleFoodPicker, foodPickerOption } from "./FoodPicker.js";
 
 function food(overrides: Partial<FoodListItem> = {}): FoodListItem {
   return {
@@ -103,5 +103,39 @@ describe("addCustomFoodLabel", () => {
   it("quotes the query as typed, trimmed", () => {
     expect(addCustomFoodLabel("Kale chips")).toBe("Add 'Kale chips' as a custom food");
     expect(addCustomFoodLabel("  Kale chips  ")).toBe("Add 'Kale chips' as a custom food");
+  });
+});
+
+function renderSingle(foods: FoodListItem[], value = "", placeholder?: string) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient.setQueryData(catalogKeys.foodsList({}), { foods });
+  return renderToString(
+    createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(SingleFoodPicker, { id: "recipes-ingredient", value, onChange: () => {}, placeholder }),
+    ),
+  );
+}
+
+describe("SingleFoodPicker (item 210's 'contains ingredient' filter)", () => {
+  it("holds at most one food, shown as its single chip", () => {
+    const html = renderSingle([food(), CUSTOM], CUSTOM.id);
+    expect(html).toContain(`aria-label="Remove ${CUSTOM.name}"`);
+    expect(html).not.toContain('aria-label="Remove Banana"');
+  });
+
+  it("holds nothing when no food is picked", () => {
+    expect(renderSingle([food()])).not.toMatch(/aria-label="Remove /);
+  });
+
+  // Filtering by a food that doesn't exist yet could only ever match nothing.
+  it("offers no 'add a custom food' row", () => {
+    expect(renderSingle([food()])).not.toContain("as a custom food");
+  });
+
+  it("takes a caller's placeholder, falling back to the picker's own", () => {
+    expect(renderSingle([food()], "", "Any food…")).toContain('placeholder="Any food…"');
+    expect(renderSingle([food()])).toContain('placeholder="Search foods…"');
   });
 });

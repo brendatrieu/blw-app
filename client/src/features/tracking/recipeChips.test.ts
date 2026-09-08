@@ -3,7 +3,14 @@ import type { RecipeIngredient } from "@blw/shared";
 import { applyRecipeIngredients, recipeIngredientFoodIds } from "./recipeChips.js";
 
 function ingredient(foodSlug: string): RecipeIngredient {
-  return { foodSlug, foodName: foodSlug, quantityNote: "" };
+  return {
+    foodId: `uuid-${foodSlug}`,
+    foodSlug,
+    foodName: foodSlug,
+    isCustom: false,
+    foodEmoji: null,
+    quantityNote: "",
+  };
 }
 
 describe("recipeIngredientFoodIds", () => {

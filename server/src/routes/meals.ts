@@ -24,6 +24,7 @@ import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
 import { allergenOverrides, allergens, babies, foods, mealFoods, meals, recipes } from "../db/schema.js";
 import { loadAllergenDetail, loadAllergenProgress } from "../services/allergens.js";
+import { visibleRecipesCondition } from "../services/recipes.js";
 import { insertMealWithFoods, loadMeals, ownsBaby } from "../services/meals.js";
 
 const DEFAULT_LIMIT = 50;
@@ -96,9 +97,17 @@ async function validateAllergenKey(db: Database, rawKey: unknown): Promise<Valid
   return { ok: true, value: row.slug };
 }
 
-/** A recipe id is attribution, but it still has to name a real recipe. */
-async function validateRecipeId(db: Database, recipeId: string): Promise<Validated<string>> {
-  const [recipe] = await db.select({ id: recipes.id }).from(recipes).where(eq(recipes.id, recipeId)).limit(1);
+/**
+ * A recipe id is attribution, but it still has to name a recipe this user can
+ * see: the catalog plus their own. Another account's custom recipe reads as
+ * an unknown id, exactly as its foods do in `validateFoodIds`.
+ */
+async function validateRecipeId(db: Database, recipeId: string, userId: string): Promise<Validated<string>> {
+  const [recipe] = await db
+    .select({ id: recipes.id })
+    .from(recipes)
+    .where(and(eq(recipes.id, recipeId), visibleRecipesCondition(userId)))
+    .limit(1);
   if (!recipe) return { ok: false, details: { recipeId: "unknown recipe" } };
   return { ok: true, value: recipeId };
 }
@@ -151,7 +160,7 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     if (!children.ok) return badRequest(reply, children.details);
 
     if (body.data.recipeId) {
-      const recipe = await validateRecipeId(db, body.data.recipeId);
+      const recipe = await validateRecipeId(db, body.data.recipeId, currentUserId(request));
       if (!recipe.ok) return badRequest(reply, recipe.details);
     }
 
@@ -201,7 +210,7 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     }
 
     if (body.data.recipeId) {
-      const recipe = await validateRecipeId(db, body.data.recipeId);
+      const recipe = await validateRecipeId(db, body.data.recipeId, currentUserId(request));
       if (!recipe.ok) return badRequest(reply, recipe.details);
     }
 

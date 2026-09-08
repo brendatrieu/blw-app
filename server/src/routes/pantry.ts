@@ -22,6 +22,7 @@ import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
 import { babies, foods, pantryItems, recipeIngredients, recipes, storageGuidelines } from "../db/schema.js";
 import { insertMealWithFoods, loadMeals, ownsBaby } from "../services/meals.js";
+import { visibleRecipesCondition } from "../services/recipes.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 const USE_SOON_THRESHOLD = 0.75;
@@ -267,7 +268,12 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
       if (unknownFoodIds.length > 0) return badRequest(reply, { foodIds: "unknown food", unknownFoodIds });
     }
     if (body.data.recipeId) {
-      const [recipe] = await db.select({ id: recipes.id }).from(recipes).where(eq(recipes.id, body.data.recipeId)).limit(1);
+      // Visible to THIS user — the catalog plus their own custom recipes.
+      const [recipe] = await db
+        .select({ id: recipes.id })
+        .from(recipes)
+        .where(and(eq(recipes.id, body.data.recipeId), visibleRecipesCondition(currentUserId(request))))
+        .limit(1);
       if (!recipe) return badRequest(reply, { recipeId: "unknown recipe" });
     }
 

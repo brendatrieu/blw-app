@@ -174,4 +174,24 @@ describe("customFoodConflictMessage", () => {
       "Used in 1 meal and 1 pantry item — remove those first.",
     );
   });
+
+  // Custom recipes can hold a custom food as an ingredient, so the server's
+  // 409 gained a third count — named only when there is one to name.
+  it("names the custom recipes the food is an ingredient of, when there are any", () => {
+    expect(customFoodConflictMessage({ mealCount: 2, pantryCount: 1, recipeCount: 3 })).toBe(
+      "Used in 2 meals, 1 pantry item and 3 recipes — remove those first.",
+    );
+    expect(customFoodConflictMessage({ mealCount: 0, pantryCount: 0, recipeCount: 1 })).toBe(
+      "Used in 0 meals, 0 pantry items and 1 recipe — remove those first.",
+    );
+  });
+
+  it("keeps the two-clause sentence when no recipe references it (or an older body omits the count)", () => {
+    expect(customFoodConflictMessage({ mealCount: 1, pantryCount: 0, recipeCount: 0 })).toBe(
+      "Used in 1 meal and 0 pantry items — remove those first.",
+    );
+    expect(customFoodConflictMessage({ mealCount: 1, pantryCount: 0 })).toBe(
+      "Used in 1 meal and 0 pantry items — remove those first.",
+    );
+  });
 });

@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { addCustomFoodLabel } from "../features/catalog/constants.js";
-import { FoodsPage, NoFoodsEmptyState } from "./FoodsPage.js";
+import { FoodsPage, NoFoodsEmptyState, resolveFoodsTab } from "./FoodsPage.js";
 
 /** React's SSR escaping — the create label contains apostrophes. */
 function escapeHtml(text: string): string {
@@ -45,6 +45,71 @@ describe("FoodsPage", () => {
     );
     expect(html).toContain('href="/foods/new"');
     expect(html).toContain(">Add food<");
+  });
+});
+
+/** The page at a given URL — `?tab=` is what picks the segment (item 209). */
+function renderAt(url: string): string {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return renderToString(
+    createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(MemoryRouter, { initialEntries: [url] }, createElement(FoodsPage, null)),
+    ),
+  );
+}
+
+describe("resolveFoodsTab", () => {
+  it("selects the Recipes segment for ?tab=recipes", () => {
+    expect(resolveFoodsTab("recipes")).toBe("recipes");
+  });
+
+  it("falls back to Foods for an absent, blank or unknown value", () => {
+    expect(resolveFoodsTab(null)).toBe("foods");
+    expect(resolveFoodsTab("")).toBe("foods");
+    expect(resolveFoodsTab("Recipes")).toBe("foods");
+    expect(resolveFoodsTab("nonsense")).toBe("foods");
+  });
+});
+
+describe("FoodsPage segments (item 209)", () => {
+  it("offers both segments as a radiogroup, with Foods selected by default", () => {
+    const html = renderAt("/foods");
+    expect(html).toContain('role="radiogroup"');
+    expect(html).toContain('aria-label="Catalog section"');
+    expect(html).toMatch(/<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>Foods</);
+    expect(html).toMatch(/<button[^>]*role="radio"[^>]*aria-checked="false"[^>]*>Recipes</);
+  });
+
+  it("renders ONLY the foods segment on the default tab", () => {
+    const html = renderAt("/foods");
+    expect(html).toContain('aria-label="Search foods"');
+    expect(html).not.toContain('aria-label="Search recipes"');
+    expect(html).not.toContain('href="/recipes/new"');
+  });
+
+  it("switches to the recipes segment — header, action and list — on ?tab=recipes", () => {
+    const html = renderAt("/foods?tab=recipes");
+    expect(html).toMatch(/<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>Recipes</);
+    expect(html).toContain("🍳");
+    expect(html).toContain('aria-label="Search recipes"');
+    expect(html).toContain('aria-label="Recipe scope"');
+    expect(html).toContain('href="/recipes/new"');
+    expect(html).toContain(">Add recipe<");
+    // The foods half is gone entirely, filter state and all.
+    expect(html).not.toContain('aria-label="Search foods"');
+    expect(html).not.toContain('aria-label="Category"');
+    expect(html).not.toContain('href="/foods/new"');
+  });
+
+  it("keeps the header title with its segment", () => {
+    expect(renderAt("/foods")).toMatch(/<h1[^>]*>.*Foods<\/h1>/s);
+    expect(renderAt("/foods?tab=recipes")).toMatch(/<h1[^>]*>.*Recipes<\/h1>/s);
+  });
+
+  it("treats an unknown tab value as the Foods segment", () => {
+    expect(renderAt("/foods?tab=sandwiches")).toContain('aria-label="Search foods"');
   });
 });
 

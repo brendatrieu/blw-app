@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { FoodCategory, Level } from "@blw/shared";
 import { useFoods } from "../features/catalog/hooks.js";
 import { FoodTile } from "../features/catalog/components/FoodTile.js";
+import { ActiveFilterPill, FilterChip, FunnelButton } from "../features/catalog/components/filters.js";
+import { RecipesSegment } from "../features/catalog/components/RecipesSegment.js";
 import {
   ALLERGEN_SLUGS,
   AGE_THRESHOLDS,
@@ -12,54 +15,11 @@ import {
 } from "../features/catalog/constants.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
+import { SegmentedControl } from "../components/ui/SegmentedControl.js";
 import { SkeletonList } from "../components/ui/Skeleton.js";
 import { Input } from "../components/ui/Input.js";
 import { Sheet } from "../components/ui/Sheet.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
-
-interface FilterChipProps {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-  className?: string;
-}
-
-/** Single-select-clears-on-reclick chip, matching the app's existing filter chip behavior. */
-function FilterChip({ active, label, onClick, className = "" }: FilterChipProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`inline-flex min-h-11 items-center justify-center rounded-full border px-2.5 py-1 text-center text-xs font-medium whitespace-nowrap transition-colors ${
-        active
-          ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
-          : "border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)]"
-      } ${className}`}
-    >
-      {label}
-    </button>
-  );
-}
-
-/** Removable pill for an active allergen/iron/age filter, shown below the sticky bar. */
-function ActiveFilterPill({ label, onRemove }: { label: string; onRemove: () => void }) {
-  return (
-    <span className="inline-flex min-h-9 items-center gap-0.5 rounded-full border border-[var(--color-accent)] bg-[var(--color-primary-soft)] py-1 pr-1 pl-3 text-xs font-medium text-[var(--color-text)]">
-      {label}
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={`Remove ${label} filter`}
-        className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] hover:bg-[var(--color-bg-elevated)]"
-      >
-        <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <path d="M6 6l12 12M18 6L6 18" />
-        </svg>
-      </button>
-    </span>
-  );
-}
 
 /**
  * What the grid shows when the filters match nothing. With a search term in
@@ -88,15 +48,22 @@ export function NoFoodsEmptyState({ query }: { query: string }) {
   );
 }
 
-function FunnelIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 5h16l-6 7.5V19l-4 2v-8.5L4 5z" />
-    </svg>
-  );
+export type FoodsTab = "foods" | "recipes";
+
+/**
+ * Which segment `?tab=` selects (item 209). The segment lives in the URL, not
+ * in component state, so a link can point at the recipe list, the browser's
+ * Back button steps between the two, and a reload keeps the one you were on.
+ * Anything other than "recipes" — absent, misspelled, hand-edited — is the
+ * Foods segment, which is the page's original behavior.
+ */
+export function resolveFoodsTab(param: string | null): FoodsTab {
+  return param === "recipes" ? "recipes" : "foods";
 }
 
-export function FoodsPage() {
+/** The foods grid, its sticky search/category bar, and its Filters sheet —
+ * unchanged from before the segment split, just no longer the whole page. */
+function FoodsSegment() {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<FoodCategory | undefined>(undefined);
   const [allergen, setAllergen] = useState<string | undefined>(undefined);
@@ -122,18 +89,7 @@ export function FoodsPage() {
   const ageLabel = AGE_THRESHOLDS.find((a) => a.value === maxAgeMonths)?.label;
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <PageHeader
-        title="Foods"
-        emoji="🍎"
-        description="Iron-rich foods first — filter by category, allergen, or age."
-        action={
-          <ButtonLink to="/foods/new" size="sm">
-            Add food
-          </ButtonLink>
-        }
-      />
-
+    <>
       <div
         className="sticky z-[5] -mx-4 flex flex-col gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-4 pt-1 pb-2"
         style={{ top: "var(--header-height)" }}
@@ -156,22 +112,7 @@ export function FoodsPage() {
               className="min-w-0 flex-1 overflow-hidden px-1 text-[10px] text-ellipsis"
             />
           ))}
-          <button
-            type="button"
-            onClick={() => setFiltersOpen(true)}
-            className="relative flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-xs font-medium text-[var(--color-text)]"
-          >
-            <FunnelIcon />
-            <span className="sr-only">Filters</span>
-            {activeExtraFilterCount > 0 && (
-              <span
-                aria-hidden="true"
-                className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-danger)] px-1 text-[10px] font-bold text-[var(--color-danger-contrast)]"
-              >
-                {activeExtraFilterCount}
-              </span>
-            )}
-          </button>
+          <FunnelButton onClick={() => setFiltersOpen(true)} activeCount={activeExtraFilterCount} />
         </div>
       </div>
 
@@ -266,6 +207,66 @@ export function FoodsPage() {
           </div>
         </div>
       </Sheet>
+    </>
+  );
+}
+
+const TAB_OPTIONS = [
+  { value: "foods" as const, label: "Foods", icon: null },
+  { value: "recipes" as const, label: "Recipes", icon: null },
+];
+
+/**
+ * `/foods` — the catalog, in two segments (item 209): the food grid this
+ * page has always been, and the recipe list that used to have no home at
+ * all (recipes were reachable only from a favorite or a dashboard card).
+ *
+ * The active segment is `?tab=`, pushed rather than replaced, so Back
+ * returns to the segment the parent was just on instead of leaving the page.
+ * Each segment keeps its own filter state in its own component, which is
+ * also what unmounts a segment's filters when you leave it.
+ */
+export function FoodsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = resolveFoodsTab(searchParams.get("tab"));
+
+  function selectTab(next: FoodsTab) {
+    if (next === tab) return;
+    const params = new URLSearchParams(searchParams);
+    if (next === "recipes") params.set("tab", "recipes");
+    else params.delete("tab");
+    setSearchParams(params);
+  }
+
+  return (
+    <div className="flex flex-col gap-4 p-4">
+      {tab === "recipes" ? (
+        <PageHeader
+          title="Recipes"
+          emoji="🍳"
+          description="Ours and yours — filter by age, allergen, or what's in them."
+          action={
+            <ButtonLink to="/recipes/new" size="sm">
+              Add recipe
+            </ButtonLink>
+          }
+        />
+      ) : (
+        <PageHeader
+          title="Foods"
+          emoji="🍎"
+          description="Iron-rich foods first — filter by category, allergen, or age."
+          action={
+            <ButtonLink to="/foods/new" size="sm">
+              Add food
+            </ButtonLink>
+          }
+        />
+      )}
+
+      <SegmentedControl aria-label="Catalog section" options={TAB_OPTIONS} value={tab} onChange={selectTab} />
+
+      {tab === "recipes" ? <RecipesSegment /> : <FoodsSegment />}
     </div>
   );
 }

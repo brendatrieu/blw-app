@@ -15,6 +15,7 @@ import { registerBabyRoutes } from "./routes/babies.js";
 import { registerMealRoutes } from "./routes/meals.js";
 import { registerFavoriteRoutes } from "./routes/favorites.js";
 import { registerPantryRoutes } from "./routes/pantry.js";
+import { registerRecipeRoutes } from "./routes/recipes.js";
 import { registerAiKeyRoutes } from "./routes/ai-keys.js";
 import { registerSymptomRoutes, type SymptomRoutesOptions } from "./routes/symptom.js";
 import { registerChatRoutes, type ChatRoutesOptions } from "./routes/chat.js";
@@ -76,7 +77,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     // after it.
     registerAiKeyRoutes(app, db, { env, verifyApiKey: options.verifyApiKey }); // BYO Anthropic key
 
-    registerCatalogRoutes(app, db); // catalog routes
+    registerCatalogRoutes(app, db); // foods catalog + custom foods
+    registerRecipeRoutes(app, db); // recipe catalog + custom recipes
     registerBabyRoutes(app, db); // baby profiles CRUD
     registerMealRoutes(app, db); // meals + allergen progress
     registerFavoriteRoutes(app, db); // recipe favorites

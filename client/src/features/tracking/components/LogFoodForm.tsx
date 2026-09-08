@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CreatePantryItemInput, MealItem, PantryLocation } from "@blw/shared";
 import { useFoods, useRecipe } from "../../catalog/hooks.js";
 import { FoodPicker, foodPickerOption } from "../../catalog/components/FoodPicker.js";
-import { useCreateMeal, useFavorites, useUpdateMeal } from "../hooks.js";
+import { RecipePicker } from "../../catalog/components/RecipePicker.js";
+import { useCreateMeal, useUpdateMeal } from "../hooks.js";
 import { applyRecipeIngredients, recipeIngredientFoodIds } from "../recipeChips.js";
 import { useCreatePantryItem } from "../../pantry/hooks.js";
 import { LOCATIONS } from "../../pantry/format.js";
@@ -186,6 +187,10 @@ export interface LogFoodFormProps {
   /** Create-mode prefill (e.g. "Log meal" from a food's detail page seeds
    * that food); ignored when editing an existing meal. */
   initialFoodIds?: string[];
+  /** Create-mode prefill for the recipe ("Log meal" from a recipe page, i.e.
+   * `/log-meal?recipe=<id>` — item 213); ignored when editing. Its
+   * ingredients fan out into food chips exactly as a hand-picked recipe's do. */
+  initialRecipeId?: string;
 }
 
 /**
@@ -196,11 +201,13 @@ export interface LogFoodFormProps {
  * which also supplies `meal` when the page was opened in edit mode
  * (`/log-meal?edit=:id`).
  *
- * There's no standalone "list recipes" endpoint (same gap the pantry "from a
- * recipe" picker works around — see AddPantryItemForm), so the recipe
- * `Select`'s options are the user's favorited recipes; `RecipeDetail`
- * (fetched on selection via `useRecipe`, since the favorites list itself
- * carries no ingredients) supplies the ingredient list to turn into chips.
+ * The recipe field is a searchable single-select over every recipe the
+ * parent can see — catalog and their own, favorites floated to the top
+ * (item 213). It replaced a `Select` of favorited recipes only, which was a
+ * workaround for there being no recipes endpoint and which quietly made a
+ * just-written custom recipe unloggable until it had been favorited.
+ * `RecipeDetail` (fetched on selection via `useRecipe`, since the list
+ * carries no quantities) still supplies the ingredients to turn into chips.
  */
 /**
  * What a submit gesture may do once a create-mode save has progressed.
@@ -220,19 +227,18 @@ export function resolveSubmitAction(
   return pantryFailurePending ? "retry-pantry" : "noop";
 }
 
-export function LogFoodForm({ babyId, meal, onDone, initialFoodIds }: LogFoodFormProps) {
+export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecipeId }: LogFoodFormProps) {
   // `FoodPicker` owns the food combobox (and its own `useFoods()` — the same
   // query key, so this shares one fetch with it). The list is still read here
   // for the two things the picker doesn't own: mapping a recipe's ingredient
   // slugs to food ids, and the leftovers "which food?" select's options.
   const { data: foodsData } = useFoods();
-  const { data: favoritesData, isLoading: favoritesLoading } = useFavorites();
   const createMeal = useCreateMeal(babyId);
   const updateMeal = useUpdateMeal(babyId);
   const isEditing = Boolean(meal);
 
   const [foodIds, setFoodIds] = useState<string[]>(() => meal?.foods.map((food) => food.id) ?? initialFoodIds ?? []);
-  const [recipeId, setRecipeId] = useState<string>(() => meal?.recipeId ?? "");
+  const [recipeId, setRecipeId] = useState<string>(() => meal?.recipeId ?? initialRecipeId ?? "");
   const [servedAt, setServedAt] = useState(() => (meal ? nowAtMinute(new Date(meal.servedAt)) : nowAtMinute()));
   const [reactionNote, setReactionNote] = useState(() => meal?.reactionNote ?? "");
   const [notes, setNotes] = useState(() => meal?.notes ?? "");
@@ -253,7 +259,6 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds }: LogFoodFor
   const mealSavedRef = useRef(false);
 
   const foods = foodsData?.foods ?? [];
-  const favorites = favoritesData?.items ?? [];
   const { data: recipeDetail } = useRecipe(recipeId || undefined);
 
   const foodOptions: MultiComboboxOption[] = useMemo(() => foods.map(foodPickerOption), [foods]);
@@ -388,25 +393,7 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds }: LogFoodFor
       </Field>
 
       <Field label="Recipe (optional)" htmlFor="log-food-recipe">
-        {!favoritesLoading && favorites.length === 0 ? (
-          <p className="text-xs text-[var(--color-text-muted)]">
-            No favorited recipes yet — favorite one from its recipe page to add it here.
-          </p>
-        ) : (
-          <Select
-            id="log-food-recipe"
-            value={recipeId}
-            onChange={(e) => handleRecipeChange(e.target.value)}
-            disabled={favoritesLoading}
-          >
-            <option value="">{favoritesLoading ? "Loading recipes…" : "None"}</option>
-            {favorites.map((recipe) => (
-              <option key={recipe.recipeId} value={recipe.recipeId}>
-                {recipe.title}
-              </option>
-            ))}
-          </Select>
-        )}
+        <RecipePicker id="log-food-recipe" value={recipeId} onChange={handleRecipeChange} />
       </Field>
 
       <Field label="When" htmlFor="log-food-when">

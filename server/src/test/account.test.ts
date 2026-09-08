@@ -85,6 +85,7 @@ async function seedCatalog(db: Database) {
 interface SeededAccount {
   userId: string;
   customFoodId: string;
+  customRecipeId: string;
   babyId: string;
   threadId: string;
 }
@@ -185,6 +186,34 @@ async function seedOneOfEverything(
 
   await db.insert(schema.foodAllergens).values({ foodId: customFood!.id, allergenId: catalog.peanut.id });
 
+  // A recipe this account wrote itself (v6), built on its own custom food so
+  // the delete sweep has to clear `recipe_ingredients` before either row can
+  // go. Steps live in one variant row, as every custom recipe's do.
+  const [customRecipe] = await db
+    .insert(schema.recipes)
+    .values({
+      slug: `satay-noodles-${userId.slice(0, 6)}`,
+      title: "Satay noodles",
+      minAgeMonths: 9,
+      prepMinutes: 15,
+      ironFocus: false,
+      extraIngredients: ["sesame oil"],
+      notes: "Robin likes it cold.",
+      ownerId: userId,
+    })
+    .returning();
+
+  await db.insert(schema.recipeIngredients).values([
+    { recipeId: customRecipe!.id, foodId: customFood!.id, quantityNote: "1 tbsp" },
+    { recipeId: customRecipe!.id, foodId: catalog.food.id, quantityNote: "" },
+  ]);
+  await db.insert(schema.recipeVariants).values({
+    recipeId: customRecipe!.id,
+    ageStage: "9",
+    textureNote: "",
+    instructions: ["Thin the sauce.", "Toss through the noodles."],
+  });
+
   await db.insert(schema.symptomChecks).values({
     babyId: baby!.id,
     survey: { symptoms: ["rash"], severity: "mild" },
@@ -212,7 +241,13 @@ async function seedOneOfEverything(
     lastValidatedAt: new Date("2026-03-01T07:00:00Z"),
   });
 
-  return { userId, babyId: baby!.id, threadId: thread!.id, customFoodId: customFood!.id };
+  return {
+    userId,
+    babyId: baby!.id,
+    threadId: thread!.id,
+    customFoodId: customFood!.id,
+    customRecipeId: customRecipe!.id,
+  };
 }
 
 /** Every table the account owns, counted for this user specifically. */
@@ -232,6 +267,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     messages,
     overrides,
     customFoods,
+    customRecipes,
   ] = await Promise.all([
       db.select().from(schema.babies).where(eq(schema.babies.userId, seeded.userId)),
       db.select().from(schema.favorites).where(eq(schema.favorites.userId, seeded.userId)),
@@ -256,6 +292,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
       // By id, not by owner: an implementation that merely NULLed owner_id
       // (publishing a deleted user's foods to everyone) would also read 0.
       db.select().from(schema.foods).where(eq(schema.foods.id, seeded.customFoodId)),
+      db.select().from(schema.recipes).where(eq(schema.recipes.id, seeded.customRecipeId)),
     ]);
 
   return {
@@ -268,6 +305,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     symptomChecks: symptomChecks.length,
     allergenOverrides: overrides.length,
     customFoods: customFoods.length,
+    customRecipes: customRecipes.length,
     chatThreads: threads.length,
     chatMessages: messages.length,
     userAiKeys: aiKeys.length,
@@ -286,6 +324,7 @@ const FULL_COUNTS = {
   symptomChecks: 1,
   allergenOverrides: 1,
   customFoods: 1,
+  customRecipes: 1,
   chatThreads: 1,
   chatMessages: 2,
   userAiKeys: 1,
@@ -303,6 +342,7 @@ const EMPTY_COUNTS = {
   symptomChecks: 0,
   allergenOverrides: 0,
   customFoods: 0,
+  customRecipes: 0,
   chatThreads: 0,
   chatMessages: 0,
   userAiKeys: 0,
@@ -369,6 +409,7 @@ describe("account export", () => {
         "babies",
         "chatThreads",
         "customFoods",
+        "customRecipes",
         "exportVersion",
         "exportedAt",
         "favorites",
@@ -379,7 +420,7 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(5);
+    expect(bundle.exportVersion).toBe(6);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -397,6 +438,7 @@ describe("account export", () => {
     expect(bundle.symptomChecks).toHaveLength(1);
     expect(bundle.allergenOverrides).toHaveLength(1);
     expect(bundle.customFoods).toHaveLength(1);
+    expect(bundle.customRecipes).toHaveLength(1);
     expect(bundle.chatThreads).toHaveLength(1);
     expect(bundle.chatThreads[0]?.messages).toHaveLength(2);
   });
@@ -500,6 +542,49 @@ describe("account export", () => {
 
     // Seeded catalog foods are nobody's export.
     expect(bundle.customFoods.map((food) => food.name)).not.toContain("Sweet potato");
+  });
+
+  it("round-trips the custom recipes added in v6", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/account/export",
+      headers: { cookie: user.cookie },
+    });
+    const bundle = accountExportSchema.parse(response.json());
+
+    expect(bundle.customRecipes).toHaveLength(1);
+    const recipe = bundle.customRecipes[0]!;
+    expect(recipe).toMatchObject({
+      title: "Satay noodles",
+      minAgeMonths: 9,
+      prepMinutes: 15,
+      notes: "Robin likes it cold.",
+      extraIngredients: ["sesame oil"],
+      steps: ["Thin the sauce.", "Toss through the noodles."],
+    });
+    expect(recipe.slug).toMatch(/^satay-noodles-/);
+    // Food names are denormalised in so the file reads on its own, and the
+    // parent's own custom food is one of them.
+    expect(recipe.ingredients.map((i) => i.foodName)).toEqual(["Satay sauce", "Sweet potato"]);
+    expect(recipe.ingredients[0]).toMatchObject({ foodId: seeded.customFoodId, quantityNote: "1 tbsp" });
+    // The parent's own answers only — no image, iron-focus flag or storage
+    // overrides, which a custom row never carries a real value for.
+    expect(Object.keys(recipe).sort()).toEqual(
+      [
+        "extraIngredients",
+        "id",
+        "ingredients",
+        "minAgeMonths",
+        "notes",
+        "prepMinutes",
+        "slug",
+        "steps",
+        "title",
+      ].sort(),
+    );
+
+    // Seeded catalog recipes are nobody's export.
+    expect(bundle.customRecipes.map((r) => r.title)).not.toContain("Sweet Potato Strips");
   });
 
   it("carries the AI key status but no key material anywhere in the bundle", async () => {

@@ -526,7 +526,7 @@ describe("custom foods", () => {
         headers: { cookie: owner.cookie },
       });
       expect(blocked.statusCode).toBe(409);
-      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 1, pantryCount: 1 });
+      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 1, pantryCount: 1, recipeCount: 0 });
 
       // Still there — a refused delete changes nothing.
       const stillThere = await app.inject({

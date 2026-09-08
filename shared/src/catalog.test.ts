@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCustomFoodSchema, isSingleEmoji, updateCustomFoodSchema } from "./catalog.js";
+import { createCustomFoodSchema, isSingleEmoji, updateCustomFoodSchema, ageStageForMonths } from "./catalog.js";
 
 describe("isSingleEmoji", () => {
   it("accepts one emoji, including multi-codepoint ones", () => {
@@ -57,5 +57,17 @@ describe("updateCustomFoodSchema", () => {
 
   it("rejects an empty patch", () => {
     expect(updateCustomFoodSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("ageStageForMonths", () => {
+  it("files a custom recipe's single variant at the 6 / 9 / 12 stage", () => {
+    expect(ageStageForMonths(6)).toBe("6");
+    expect(ageStageForMonths(8)).toBe("6");
+    expect(ageStageForMonths(9)).toBe("9");
+    expect(ageStageForMonths(10)).toBe("9");
+    expect(ageStageForMonths(11)).toBe("9");
+    expect(ageStageForMonths(12)).toBe("12");
+    expect(ageStageForMonths(36)).toBe("12");
   });
 });

@@ -1,5 +1,6 @@
-// Foods & recipes: the seeded reference catalog, plus the foods a parent
-// adds for themselves.
+// Foods: the seeded reference catalog, plus the foods a parent adds for
+// themselves. (Recipes, which follow the same owner_id pattern, live in
+// routes/recipes.ts.)
 //
 // Reads stay open to anonymous callers — the catalog is public content — but
 // they are no longer unscoped: `foods` now holds custom rows too (owner_id
@@ -10,7 +11,6 @@
 // The write routes (POST/PATCH/DELETE /api/foods) only ever touch custom
 // foods: a catalog row has no owner, so it can never match the ownership
 // filter and is reported as not found like anybody else's.
-import { randomBytes } from "node:crypto";
 import { and, asc, eq, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
@@ -18,21 +18,18 @@ import {
   foodDetailSchema,
   foodIdParamSchema,
   foodsQuerySchema,
-  recipeDetailSchema,
   updateCustomFoodSchema,
-  type AgeStage,
   type FoodDetail,
   type FoodListItem,
   type FoodPairing,
   type FoodRecipeRef,
   type FoodsResponse,
-  type RecipeDetail,
-  type RecipeIngredient,
-  type RecipeVariant,
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
 import { visibleFoodsCondition } from "../services/foods.js";
+import { visibleRecipesCondition } from "../services/recipes.js";
+import { buildCandidateSlug, isUniqueViolation, SLUG_ATTEMPTS } from "../services/slugs.js";
 import type { Transaction } from "../services/meals.js";
 import {
   allergens,
@@ -42,12 +39,9 @@ import {
   mealFoods,
   pantryItems,
   recipeIngredients,
-  recipeVariants,
   recipes,
   storageGuidelines,
 } from "../db/schema.js";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Explicit iron-level ordering (the pgEnum's declaration order happens to
 // match, but that isn't guaranteed by any driver — spell it out).
@@ -91,13 +85,6 @@ const DEFAULT_CUSTOM_STORAGE_GUIDELINE = {
   notes: "Cooked or softened food stores well chilled or frozen in an airtight container. Never refreeze after thawing.",
 };
 
-const SLUG_SUFFIX_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
-const SLUG_SUFFIX_LENGTH = 6;
-const SLUG_BASE_MAX = 48;
-/** Attempts before giving up on finding a free slug. Six base36 characters
- * make a collision vanishingly unlikely; this is the seatbelt, not the plan. */
-const SLUG_ATTEMPTS = 5;
-
 function badRequest(reply: FastifyReply, details: unknown): FastifyReply {
   return reply.code(400).send({ error: "invalid_request", details });
 }
@@ -109,45 +96,6 @@ function currentUserId(request: FastifyRequest): string {
     throw new Error("currentUserId called on an unauthenticated request");
   }
   return id;
-}
-
-/**
- * `Roasted Kūmara!` -> `roasted-kumara`. Diacritics are decomposed and their
- * marks dropped so an accented name keeps its letters instead of losing
- * them; a name written in a non-Latin script legitimately slugifies to the
- * empty string, and `buildCandidateSlug` falls back for it.
- */
-export function slugifyFoodName(name: string): string {
-  return name
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, SLUG_BASE_MAX)
-    .replace(/-+$/g, "");
-}
-
-/** Six random base36 characters, so two parents' "Banana bread" coexist. */
-function randomSlugSuffix(): string {
-  let suffix = "";
-  for (const byte of randomBytes(SLUG_SUFFIX_LENGTH)) {
-    suffix += SLUG_SUFFIX_ALPHABET[byte % SLUG_SUFFIX_ALPHABET.length];
-  }
-  return suffix;
-}
-
-/** `name-a1b2c3`. A name with nothing slugifiable falls back to `food-…`. */
-export function buildCandidateSlug(name: string): string {
-  const base = slugifyFoodName(name) || "food";
-  return `${base}-${randomSlugSuffix()}`;
-}
-
-/** Postgres' unique_violation, however the driver in use wraps it. */
-function isUniqueViolation(error: unknown): boolean {
-  const code = (error as { code?: unknown; cause?: { code?: unknown } })?.code ?? (error as { cause?: { code?: unknown } })?.cause?.code;
-  if (code === "23505") return true;
-  return error instanceof Error && /duplicate key value|unique constraint/i.test(error.message);
 }
 
 type Validated<T> = { ok: true; value: T } | { ok: false; details: unknown };
@@ -188,9 +136,11 @@ type FoodRow = typeof foods.$inferSelect;
 /**
  * The full detail payload for one already-authorised food row. Shared by GET
  * /api/foods/:slug and the two write routes, so a food reads back the same
- * way however the caller reached it.
+ * way however the caller reached it. `userId` scopes the "recipes with this
+ * food" list — it now spans custom recipes, and one parent's recipe must not
+ * surface on another's food page.
  */
-async function loadFoodDetail(db: Database, food: FoodRow): Promise<FoodDetail> {
+async function loadFoodDetail(db: Database, food: FoodRow, userId: string | null): Promise<FoodDetail> {
   const allergenRows = await db
     .select({ slug: allergens.slug })
     .from(foodAllergens)
@@ -227,11 +177,14 @@ async function loadFoodDetail(db: Database, food: FoodRow): Promise<FoodDetail> 
     ];
   });
 
+  // Catalog recipes plus this caller's own — never another parent's, which
+  // would otherwise leak a private recipe's title through a shared food.
   const recipeRows: FoodRecipeRef[] = await db
     .select({ id: recipes.id, title: recipes.title, minAgeMonths: recipes.minAgeMonths })
     .from(recipeIngredients)
     .innerJoin(recipes, eq(recipeIngredients.recipeId, recipes.id))
-    .where(eq(recipeIngredients.foodId, food.id));
+    .where(and(eq(recipeIngredients.foodId, food.id), visibleRecipesCondition(userId)))
+    .orderBy(asc(recipes.title));
 
   const detail: FoodDetail = {
     id: food.id,
@@ -356,7 +309,7 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
       return { error: "not_found" };
     }
 
-    return await loadFoodDetail(db, food);
+    return await loadFoodDetail(db, food, request.user?.id ?? null);
   });
 
   // ---------------------------------------------------------------------
@@ -386,7 +339,7 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
             .insert(foods)
             .values({
               ...CUSTOM_FOOD_PLACEHOLDERS,
-              slug: buildCandidateSlug(body.data.name),
+              slug: buildCandidateSlug(body.data.name, "food"),
               name: body.data.name,
               category: body.data.category,
               emoji: body.data.emoji,
@@ -407,7 +360,7 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
     if (!created) throw new Error("Could not find a free slug for the new custom food");
 
     reply.code(201);
-    return await loadFoodDetail(db, created);
+    return await loadFoodDetail(db, created, userId);
   });
 
   // ---------------------------------------------------------------------
@@ -453,7 +406,7 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
       return row;
     });
 
-    return await loadFoodDetail(db, updated);
+    return await loadFoodDetail(db, updated, userId);
   });
 
   // ---------------------------------------------------------------------
@@ -480,70 +433,22 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
       .select({ count: sql<number>`count(*)::int` })
       .from(pantryItems)
       .where(eq(pantryItems.foodId, existing.id));
+    // `recipe_ingredients.food_id` has no cascade either, and since custom
+    // recipes can be built out of custom foods, deleting the food underneath
+    // one would otherwise trip the foreign key mid-request.
+    const [recipeRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(recipeIngredients)
+      .where(eq(recipeIngredients.foodId, existing.id));
 
     const mealCount = mealRow?.count ?? 0;
     const pantryCount = pantryRow?.count ?? 0;
-    if (mealCount > 0 || pantryCount > 0) {
-      return reply.code(409).send({ error: "conflict", mealCount, pantryCount });
+    const recipeCount = recipeRow?.count ?? 0;
+    if (mealCount > 0 || pantryCount > 0 || recipeCount > 0) {
+      return reply.code(409).send({ error: "conflict", mealCount, pantryCount, recipeCount });
     }
 
     await db.delete(foods).where(and(eq(foods.id, existing.id), eq(foods.ownerId, userId)));
     return reply.code(204).send();
-  });
-
-  // ---------------------------------------------------------------------
-  // GET /api/recipes/:id
-  // ---------------------------------------------------------------------
-  app.get("/api/recipes/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
-    if (!UUID_RE.test(id)) {
-      reply.code(404);
-      return { error: "not_found" };
-    }
-
-    const [recipe] = await db.select().from(recipes).where(eq(recipes.id, id)).limit(1);
-    if (!recipe) {
-      reply.code(404);
-      return { error: "not_found" };
-    }
-
-    const ingredientRows: RecipeIngredient[] = await db
-      .select({ foodSlug: foods.slug, foodName: foods.name, quantityNote: recipeIngredients.quantityNote })
-      .from(recipeIngredients)
-      .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
-      .where(eq(recipeIngredients.recipeId, recipe.id));
-
-    const variantRows = await db.select().from(recipeVariants).where(eq(recipeVariants.recipeId, recipe.id));
-    const variantByStage = new Map(variantRows.map((v) => [v.ageStage, v]));
-    const variants: RecipeVariant[] = (["6", "9", "12"] as const satisfies readonly AgeStage[]).flatMap((stage) => {
-      const v = variantByStage.get(stage);
-      return v ? [{ ageStage: stage, textureNote: v.textureNote, steps: v.instructions }] : [];
-    });
-
-    const derivedAllergenRows = await db
-      .select({ slug: allergens.slug })
-      .from(recipeIngredients)
-      .innerJoin(foodAllergens, eq(recipeIngredients.foodId, foodAllergens.foodId))
-      .innerJoin(allergens, eq(foodAllergens.allergenId, allergens.id))
-      .where(eq(recipeIngredients.recipeId, recipe.id));
-    const allergenSlugs = [...new Set(derivedAllergenRows.map((a) => a.slug))];
-
-    const detail: RecipeDetail = {
-      id: recipe.id,
-      slug: recipe.slug,
-      title: recipe.title,
-      minAgeMonths: recipe.minAgeMonths,
-      prepMinutes: recipe.prepMinutes,
-      ironFocus: recipe.ironFocus,
-      imageUrl: recipe.imageUrl,
-      fridgeHoursOverride: recipe.fridgeHoursOverride,
-      freezerDaysOverride: recipe.freezerDaysOverride,
-      allergens: allergenSlugs,
-      ingredients: ingredientRows,
-      extraIngredients: recipe.extraIngredients ?? [],
-      variants,
-    };
-
-    return recipeDetailSchema.parse(detail);
   });
 }

@@ -31,6 +31,7 @@ import {
   recipes,
   storageGuidelines,
 } from "../db/schema.js";
+import { visibleRecipesCondition } from "../services/recipes.js";
 
 // ---------------------------------------------------------------------------
 // get_baby_profile
@@ -231,13 +232,15 @@ const SEARCH_RECIPES_INPUT_SCHEMA = {
   additionalProperties: false,
 } as const;
 
-function buildSearchRecipesTool(db: Database) {
+function buildSearchRecipesTool(db: Database, userId: string) {
   return betaTool({
     name: "search_recipes",
-    description: "Search the seeded recipe catalog, filtered by the baby's age in months. Returns at most 5 matches.",
+    description: "Search the recipe catalog, filtered by the baby's age in months. Returns at most 5 matches.",
     inputSchema: SEARCH_RECIPES_INPUT_SCHEMA,
     run: async ({ ageMonths, query }) => {
-      const conditions = [lte(recipes.minAgeMonths, ageMonths)];
+      // Scoped like every other recipe read: the seeded catalog plus this
+      // parent's own recipes, never another account's.
+      const conditions = [visibleRecipesCondition(userId), lte(recipes.minAgeMonths, ageMonths)];
       const trimmedQuery = query?.trim();
       if (trimmedQuery) conditions.push(ilike(recipes.title, `%${trimmedQuery}%`));
 
@@ -249,7 +252,7 @@ function buildSearchRecipesTool(db: Database) {
         .limit(5);
 
       if (rows.length === 0) {
-        return "No seed recipes matched. You may propose an original recipe instead, following the ingredient-limit and safety rules.";
+        return "No recipes matched. You may propose an original recipe instead, following the ingredient-limit and safety rules.";
       }
       return JSON.stringify({ recipes: rows });
     },
@@ -331,7 +334,7 @@ export function buildChatTools(db: Database, userId: string, babyId: string | nu
   return {
     get_baby_profile: buildBabyProfileTool(db, userId, babyId),
     get_pantry: buildPantryTool(db, userId),
-    search_recipes: buildSearchRecipesTool(db),
+    search_recipes: buildSearchRecipesTool(db, userId),
     get_food_prep_guidance: buildFoodPrepGuidanceTool(db, userId),
   };
 }

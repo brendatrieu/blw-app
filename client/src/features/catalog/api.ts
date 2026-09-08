@@ -1,12 +1,18 @@
 import {
   customFoodConflictSchema,
+  customRecipeConflictSchema,
   type CreateCustomFoodInput,
+  type CreateCustomRecipeInput,
   type CustomFoodConflict,
+  type CustomRecipeConflict,
   type FoodDetail,
   type FoodsQuery,
   type FoodsResponse,
   type RecipeDetail,
+  type RecipeScope,
+  type RecipesResponse,
   type UpdateCustomFoodInput,
+  type UpdateCustomRecipeInput,
 } from "@blw/shared";
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from "../../lib/api.js";
 
@@ -63,5 +69,76 @@ export function deleteCustomFood(id: string): Promise<void> {
 export function asCustomFoodConflict(error: unknown): CustomFoodConflict | null {
   if (!(error instanceof ApiError) || error.status !== 409) return null;
   const parsed = customFoodConflictSchema.safeParse(error.body);
+  return parsed.success ? parsed.data : null;
+}
+
+// ---------------------------------------------------------------------------
+// Recipes (ledger 205-206, 210). `GET /api/recipes` is the one list every
+// recipe surface reads: the Recipes segment of the Foods page and the log
+// form's recipe picker. It answers with the caller's own custom recipes
+// alongside the catalog, never anyone else's.
+// ---------------------------------------------------------------------------
+
+/**
+ * The filter state the Recipes segment holds, and the query key it caches
+ * under. Deliberately the client's own shape rather than shared's
+ * `RecipesQuery`: `scope` is optional here (absent = the server's "all"
+ * default) and `ironFocus` is a real boolean, because it's a toggle.
+ */
+export interface RecipeFilters {
+  q?: string;
+  scope?: RecipeScope;
+  maxAgeMonths?: number;
+  allergen?: string;
+  ironFocus?: boolean;
+  ingredientFoodId?: string;
+}
+
+/**
+ * The query string for a set of filters. Pure and exported for the same
+ * reason `buildCustomFoodInput` is: the ONE rule that's easy to get wrong —
+ * `ironFocus` is an exact match server-side, so an off toggle must OMIT the
+ * key rather than send `false` (which would hide every iron-focus recipe) —
+ * is pinned by a test instead of by reading the fetch call.
+ */
+export function buildRecipesQueryString(filters: RecipeFilters): string {
+  const params = new URLSearchParams();
+  const q = filters.q?.trim();
+  if (q) params.set("q", q);
+  if (filters.scope && filters.scope !== "all") params.set("scope", filters.scope);
+  if (filters.maxAgeMonths !== undefined) params.set("maxAgeMonths", String(filters.maxAgeMonths));
+  if (filters.allergen) params.set("allergen", filters.allergen);
+  if (filters.ironFocus) params.set("ironFocus", "true");
+  if (filters.ingredientFoodId) params.set("ingredientFoodId", filters.ingredientFoodId);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function fetchRecipes(filters: RecipeFilters): Promise<RecipesResponse> {
+  return apiGet<RecipesResponse>(`/api/recipes${buildRecipesQueryString(filters)}`);
+}
+
+export function createCustomRecipe(input: CreateCustomRecipeInput): Promise<RecipeDetail> {
+  return apiPost<RecipeDetail>("/api/recipes", input);
+}
+
+export function updateCustomRecipe(id: string, input: UpdateCustomRecipeInput): Promise<RecipeDetail> {
+  return apiPatch<RecipeDetail>(`/api/recipes/${encodeURIComponent(id)}`, input);
+}
+
+export function deleteCustomRecipe(id: string): Promise<void> {
+  return apiDelete<void>(`/api/recipes/${encodeURIComponent(id)}`);
+}
+
+/**
+ * The `{ error: "conflict", mealCount, pantryCount }` body behind a 409 from
+ * `deleteCustomRecipe`, or null for any other failure — the recipe-side twin
+ * of `asCustomFoodConflict`, and narrowed here for the same reason.
+ * Favorites are never a block: the server just deletes the caller's own
+ * favorite row along with the recipe.
+ */
+export function asCustomRecipeConflict(error: unknown): CustomRecipeConflict | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null;
+  const parsed = customRecipeConflictSchema.safeParse(error.body);
   return parsed.success ? parsed.data : null;
 }

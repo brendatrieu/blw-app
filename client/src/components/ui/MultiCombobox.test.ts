@@ -17,6 +17,7 @@ import {
   resolveCreateEnterAction,
   resolveEnterAction,
   resolveHighlight,
+  resolveSingleSelection,
   rowCount,
   shouldShowCreateRow,
   toggleValue,
@@ -643,5 +644,23 @@ describe("MultiComboboxOptionList (create row)", () => {
       }),
     );
     expect(html.indexOf(createOptionId("veg-listbox"))).toBeGreaterThan(html.indexOf("Banana"));
+  });
+});
+
+describe("resolveSingleSelection", () => {
+  // The single-select callers (the recipe picker, the "contains ingredient"
+  // filter) drive this multi-select through `toggleValue`, which hands back
+  // `[current, next]` for a new pick and `[]` for toggling the current one
+  // off — so "last wins" and "empty clears" is the whole rule.
+  it("takes the newly picked value when a second option is chosen", () => {
+    expect(resolveSingleSelection(["recipe-1", "recipe-2"])).toBe("recipe-2");
+  });
+
+  it("clears when the current pick was toggled off", () => {
+    expect(resolveSingleSelection([])).toBe("");
+  });
+
+  it("keeps a lone value as-is", () => {
+    expect(resolveSingleSelection(["recipe-1"])).toBe("recipe-1");
   });
 });

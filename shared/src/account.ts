@@ -17,7 +17,7 @@ import { z } from "zod";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 5;
+export const ACCOUNT_EXPORT_VERSION = 6;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -131,6 +131,27 @@ export const exportCustomFoodSchema = z.object({
   notes: z.string().nullable(),
 });
 
+/**
+ * A recipe the parent wrote themselves (v6). Like `exportCustomFoodSchema`,
+ * only the fields they actually chose: a custom recipe's image, iron-focus
+ * flag and storage overrides are inert defaults the app never shows, and its
+ * steps live in one variant row rather than the catalog's three.
+ */
+export const exportCustomRecipeSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  title: z.string(),
+  minAgeMonths: z.number(),
+  prepMinutes: z.number(),
+  notes: z.string().nullable(),
+  /** Food names denormalised in, so the file reads on its own. */
+  ingredients: z.array(
+    z.object({ foodId: z.string(), foodName: z.string(), quantityNote: z.string() }),
+  ),
+  extraIngredients: z.array(z.string()),
+  steps: z.array(z.string()),
+});
+
 export const exportSymptomCheckSchema = z.object({
   id: z.string(),
   babyId: z.string(),
@@ -183,6 +204,9 @@ export const accountExportSchema = z.object({
   /** v5. Foods this account added itself, ordered by name. The `foods` table
    * carries no created-at column, so there is no date to export here. */
   customFoods: z.array(exportCustomFoodSchema),
+  /** v6. Recipes this account wrote itself, ordered by title. Like `foods`,
+   * `recipes` carries no created-at column. */
+  customRecipes: z.array(exportCustomRecipeSchema),
   symptomChecks: z.array(exportSymptomCheckSchema),
   chatThreads: z.array(exportChatThreadSchema),
   aiKey: exportAiKeySchema,
@@ -197,6 +221,7 @@ export type ExportFavorite = z.infer<typeof exportFavoriteSchema>;
 export type ExportPantryItem = z.infer<typeof exportPantryItemSchema>;
 export type ExportAllergenOverride = z.infer<typeof exportAllergenOverrideSchema>;
 export type ExportCustomFood = z.infer<typeof exportCustomFoodSchema>;
+export type ExportCustomRecipe = z.infer<typeof exportCustomRecipeSchema>;
 export type ExportSymptomCheck = z.infer<typeof exportSymptomCheckSchema>;
 export type ExportChatThread = z.infer<typeof exportChatThreadSchema>;
 export type ExportChatMessage = z.infer<typeof exportChatMessageSchema>;

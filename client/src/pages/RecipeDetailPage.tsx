@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
-import type { AgeStage } from "@blw/shared";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import type { AgeStage, RecipeDetail } from "@blw/shared";
 import { ageInMonths } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { useRecipe } from "../features/catalog/hooks.js";
+import { useDeleteCustomRecipe, useRecipe } from "../features/catalog/hooks.js";
+import { asCustomRecipeConflict } from "../features/catalog/api.js";
 import { stageForAge } from "../features/catalog/stage.js";
 import { Badge } from "../features/catalog/components/Badge.js";
-import { allergenLabel } from "../features/catalog/constants.js";
+import { RECIPES_TAB_PATH, allergenLabel, customRecipeConflictMessage } from "../features/catalog/constants.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
 import { apiPost } from "../lib/api.js";
 import { BackButton } from "../components/ui/BackButton.js";
-import { Button } from "../components/ui/Button.js";
+import { Button, ButtonLink } from "../components/ui/Button.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
 const AGE_STAGES: { value: AgeStage; label: string }[] = [
@@ -124,6 +125,70 @@ function PrepThis({ recipeId }: PrepThisProps) {
   );
 }
 
+interface CustomRecipeActionsProps {
+  recipe: Pick<RecipeDetail, "id">;
+}
+
+/**
+ * Edit + Delete for a recipe the parent owns (item 212). Delete is the same
+ * two-step inline confirm the custom-food page uses — a destructive action
+ * on the thing you're looking at, not a native modal.
+ *
+ * The 409 is the case worth spelling out: a recipe still referenced by
+ * logged meals or pantry items can't be deleted (those rows would be left
+ * pointing at nothing), and the server sends both counts so this can name
+ * exactly where to go clean up. Favorites never block — the server drops
+ * the caller's own favorite row along with the recipe.
+ *
+ * Exported so a render test can pin the Edit/Delete markup directly: the
+ * confirming state only exists after a click, and these tests have no DOM.
+ */
+export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
+  const [confirming, setConfirming] = useState(false);
+  const navigate = useNavigate();
+  const deleteRecipe = useDeleteCustomRecipe();
+  const conflict = asCustomRecipeConflict(deleteRecipe.error);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <ButtonLink to={`/recipes/${recipe.id}/edit`} variant="secondary" size="sm">
+          Edit
+        </ButtonLink>
+        {confirming ? (
+          <>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              disabled={deleteRecipe.isPending}
+              onClick={() =>
+                deleteRecipe.mutate(recipe.id, {
+                  onSuccess: () => navigate(RECIPES_TAB_PATH, { replace: true }),
+                })
+              }
+            >
+              {deleteRecipe.isPending ? "Deleting…" : "Delete for good"}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+              Keep
+            </Button>
+          </>
+        ) : (
+          <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)}>
+            Delete
+          </Button>
+        )}
+      </div>
+      {deleteRecipe.isError && (
+        <p role="alert" className="text-xs font-medium text-[var(--color-danger)]">
+          {conflict ? customRecipeConflictMessage(conflict) : "Couldn't delete that — try again."}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: recipe, isLoading, isError } = useRecipe(id);
@@ -142,7 +207,7 @@ export function RecipeDetailPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-5 p-4">
-        <BackButton fallback="/foods" />
+        <BackButton fallback={RECIPES_TAB_PATH} />
         <Skeleton className="h-6 w-2/3" />
         <Skeleton className="h-24 w-full rounded-[var(--radius-lg)]" />
         <Skeleton className="h-40 w-full rounded-[var(--radius-lg)]" />
@@ -152,7 +217,7 @@ export function RecipeDetailPage() {
   if (isError || !recipe) {
     return (
       <div className="flex flex-col gap-3 p-4">
-        <BackButton fallback="/foods" />
+        <BackButton fallback={RECIPES_TAB_PATH} />
         <p className="text-sm text-[var(--color-danger)]">Couldn't find that recipe.</p>
       </div>
     );
@@ -162,7 +227,7 @@ export function RecipeDetailPage() {
 
   return (
     <div className="flex flex-col gap-5 p-4">
-      <BackButton fallback="/foods" />
+      <BackButton fallback={RECIPES_TAB_PATH} />
       <div className="flex flex-col gap-2">
         <div className="flex items-start justify-between gap-2">
           <h1 className="font-display text-[var(--color-text)]">{recipe.title}</h1>
@@ -175,9 +240,12 @@ export function RecipeDetailPage() {
           />
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge tone="neutral">{recipe.prepMinutes} min prep</Badge>
+          {/* 0 minutes isn't "instant", it's "the parent didn't say" — the
+              badge is dropped rather than claiming a prep time (item 212). */}
+          {recipe.prepMinutes > 0 && <Badge tone="neutral">{recipe.prepMinutes} min prep</Badge>}
           {recipe.ironFocus && <Badge tone="primary">Iron focus</Badge>}
           <Badge tone="neutral">{recipe.minAgeMonths}m+</Badge>
+          {recipe.isCustom && <Badge tone="neutral">Custom</Badge>}
           {recipe.allergens.map((slug) => (
             <Badge key={slug} tone="danger">
               {allergenLabel(slug)}
@@ -186,21 +254,33 @@ export function RecipeDetailPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <ButtonLink to={`/log-meal?recipe=${recipe.id}`}>Log meal</ButtonLink>
+      </div>
+
       <section className="flex flex-col gap-2">
         <h2 className="font-h2 text-[var(--color-text)]">Ingredients</h2>
         <ul className="flex flex-col gap-1.5">
+          {/* The whole row is the link to the food's page, so nothing inside
+              it may be interactive. A custom ingredient's own emoji wins over
+              the slug map (item 212); `quantityNote` is "" when the parent
+              gave no amount, so the dash is dropped with it. */}
           {recipe.ingredients.map((ingredient) => (
-            <li
-              key={ingredient.foodSlug}
-              className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text)]"
-            >
-              <span aria-hidden="true" className="text-lg leading-none">
-                {getFoodEmoji(ingredient.foodSlug)}
-              </span>
-              <span>
-                <span className="font-medium">{ingredient.foodName}</span>{" "}
-                <span className="text-[var(--color-text-muted)]">— {ingredient.quantityNote}</span>
-              </span>
+            <li key={ingredient.foodId}>
+              <Link
+                to={`/foods/${ingredient.foodSlug}`}
+                className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text)]"
+              >
+                <span aria-hidden="true" className="text-lg leading-none">
+                  {getFoodEmoji(ingredient.foodSlug, null, ingredient.foodEmoji)}
+                </span>
+                <span>
+                  <span className="font-medium">{ingredient.foodName}</span>
+                  {ingredient.quantityNote ? (
+                    <span className="text-[var(--color-text-muted)]"> — {ingredient.quantityNote}</span>
+                  ) : null}
+                </span>
+              </Link>
             </li>
           ))}
           {recipe.extraIngredients.map((extra) => (
@@ -217,6 +297,24 @@ export function RecipeDetailPage() {
         </ul>
       </section>
 
+      {recipe.isCustom ? (
+        // A custom recipe carries exactly ONE variant (item 203): the parent
+        // wrote one set of steps, so age tabs would be three tabs where two
+        // are always empty. Its textureNote is "" and is skipped entirely.
+        <section className="flex flex-col gap-2">
+          <h2 className="font-h2 text-[var(--color-text)]">Steps</h2>
+          <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+            <ol className="flex flex-col gap-1.5 text-sm text-[var(--color-text)]">
+              {(recipe.variants[0]?.steps ?? []).map((step, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="font-medium text-[var(--color-accent)]">{i + 1}.</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+      ) : (
       <section className="flex flex-col gap-2">
         <div className="inline-flex w-fit gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] p-1">
           {AGE_STAGES.map((stage) => {
@@ -257,8 +355,18 @@ export function RecipeDetailPage() {
           </div>
         )}
       </section>
+      )}
+
+      {recipe.notes && (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-h2 text-[var(--color-text)]">Notes</h2>
+          <p className="text-sm whitespace-pre-line text-[var(--color-text)]">{recipe.notes}</p>
+        </section>
+      )}
 
       <PrepThis recipeId={recipe.id} />
+
+      {recipe.isCustom && <CustomRecipeActions recipe={recipe} />}
     </div>
   );
 }

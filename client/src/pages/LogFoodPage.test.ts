@@ -3,9 +3,11 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { Baby, MealItem } from "@blw/shared";
+import type { Baby, MealItem, RecipeListItem } from "@blw/shared";
+import { CelebrationProvider } from "../components/ui/Celebration.js";
 import { babyKeys } from "../features/babies/api.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
+import { catalogKeys } from "../features/catalog/hooks.js";
 import { LogFoodPage, resolveEditState } from "./LogFoodPage.js";
 
 describe("LogFoodPage", () => {
@@ -58,6 +60,54 @@ describe("LogFoodPage", () => {
     expect(html.indexOf(">Back<")).toBeLessThan(html.indexOf("<h1"));
     expect(html).toContain("That meal is gone");
     expect(html).not.toMatch(/<textarea[^>]*id="log-food-note"/);
+  });
+});
+
+describe("LogFoodPage recipe prefill (item 213)", () => {
+  const baby: Baby = {
+    id: "baby-1",
+    name: "Baby",
+    birthDate: "2026-01-01",
+    notes: null,
+    archived: false,
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+  const recipe: RecipeListItem = {
+    id: "recipe-1",
+    slug: "iron-rich-puree",
+    title: "Iron-Rich Puree",
+    minAgeMonths: 6,
+    ironFocus: true,
+    allergens: [],
+    isCustom: true,
+    isFavorite: false,
+    ingredientNames: [],
+  };
+
+  function renderAt(url: string): string {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(babyKeys.list(false), [baby]);
+    queryClient.setQueryData(catalogKeys.recipesList({}), { recipes: [recipe] });
+    return renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(
+          CelebrationProvider,
+          null,
+          createElement(MemoryRouter, { initialEntries: [url] }, createElement(LogFoodPage, null)),
+        ),
+      ),
+    );
+  }
+
+  it("attaches the recipe named by ?recipe= to the form's picker", () => {
+    expect(renderAt("/log-meal?recipe=recipe-1")).toContain('aria-label="Remove Iron-Rich Puree"');
+  });
+
+  it("attaches nothing on a plain /log-meal", () => {
+    expect(renderAt("/log-meal")).not.toContain('aria-label="Remove Iron-Rich Puree"');
   });
 });
 

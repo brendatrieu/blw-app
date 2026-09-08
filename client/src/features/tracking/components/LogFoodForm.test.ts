@@ -2,9 +2,9 @@ import { createElement, type ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { FavoriteItem, FoodListItem, MealItem } from "@blw/shared";
+import type { FavoriteItem, FoodListItem, MealItem, RecipeListItem } from "@blw/shared";
 import { CelebrationProvider } from "../../../components/ui/Celebration.js";
-import { trackingKeys } from "../hooks.js";
+import { catalogKeys } from "../../catalog/hooks.js";
 import {
   buildLeftoverPantryInput,
   LeftoversFields,
@@ -124,7 +124,9 @@ describe("LogFoodForm (render)", () => {
 
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     queryClient.setQueryData(["foods", {}], { foods: [food1, food2] });
-    queryClient.setQueryData(trackingKeys.favorites, { items: [favorite] });
+    // Item 213: the picker's options come from the recipes list, not the
+    // favorites list, so that's what has to be seeded for the chip to resolve.
+    queryClient.setQueryData(catalogKeys.recipesList({}), { recipes: [recipeRow(favorite)] });
 
     const html = renderWithProviders(
       createElement(LogFoodForm, { babyId: "baby-1", meal, onDone: () => {} }),
@@ -137,9 +139,78 @@ describe("LogFoodForm (render)", () => {
     // Reaction note and general note both prefilled verbatim, into distinct fields.
     expect(html).toContain(meal.reactionNote as string);
     expect(html).toContain(meal.notes as string);
-    // Recipe select shows the meal's recipe as the chosen <option> (node-env
-    // SSR renders the matching option with a `selected` attribute).
-    expect(html).toMatch(new RegExp(`<option[^>]*value="${favorite.recipeId}"[^>]*selected[^>]*>${favorite.title}<`));
+    // The meal's recipe is the picker's one selected chip.
+    expect(html).toContain(`aria-label="Remove ${favorite.title}"`);
+  });
+});
+
+/** A recipes-list row standing in for a favorited recipe. */
+function recipeRow(favorite: FavoriteItem, overrides: Partial<RecipeListItem> = {}): RecipeListItem {
+  return {
+    id: favorite.recipeId,
+    slug: "iron-rich-puree",
+    title: favorite.title,
+    minAgeMonths: favorite.minAgeMonths,
+    ironFocus: favorite.ironFocus,
+    allergens: [...favorite.allergens],
+    isCustom: false,
+    isFavorite: true,
+    ingredientNames: [],
+    ...overrides,
+  };
+}
+
+describe("recipe prefill from /log-meal?recipe=<id> (item 213)", () => {
+  const favorite: FavoriteItem = {
+    recipeId: "recipe-1",
+    title: "Iron-Rich Purée",
+    minAgeMonths: 6,
+    ironFocus: true,
+    allergens: [],
+  };
+
+  function seededClient() {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(catalogKeys.recipesList({}), { recipes: [recipeRow(favorite)] });
+    return queryClient;
+  }
+
+  it("attaches the given recipe as the picker's selection", () => {
+    const html = renderWithProviders(
+      createElement(LogFoodForm, { babyId: "baby-1", initialRecipeId: favorite.recipeId, onDone: () => {} }),
+      seededClient(),
+    );
+    expect(html).toContain(`aria-label="Remove ${favorite.title}"`);
+  });
+
+  it("attaches nothing when no recipe was passed", () => {
+    const html = renderWithProviders(
+      createElement(LogFoodForm, { babyId: "baby-1", onDone: () => {} }),
+      seededClient(),
+    );
+    expect(html).not.toContain(`aria-label="Remove ${favorite.title}"`);
+  });
+
+  it("edit mode ignores initialRecipeId — the meal's own recipe wins", () => {
+    const other = recipeRow(favorite, { id: "recipe-2", title: "Lentil mash", isFavorite: false });
+    const queryClient = seededClient();
+    queryClient.setQueryData(catalogKeys.recipesList({}), { recipes: [recipeRow(favorite), other] });
+    const meal: MealItem = {
+      id: "meal-1",
+      babyId: "baby-1",
+      servedAt: new Date(2026, 7, 20, 8, 30).toISOString(),
+      reactionNote: null,
+      notes: null,
+      recipeId: favorite.recipeId,
+      recipeTitle: favorite.title,
+      foods: [],
+    };
+    const html = renderWithProviders(
+      createElement(LogFoodForm, { babyId: "baby-1", meal, initialRecipeId: other.id, onDone: () => {} }),
+      queryClient,
+    );
+    expect(html).toContain(`aria-label="Remove ${favorite.title}"`);
+    expect(html).not.toContain(`aria-label="Remove ${other.title}"`);
   });
 });
 

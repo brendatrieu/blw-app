@@ -191,6 +191,9 @@ export const customFoodConflictSchema = z.object({
   error: z.literal("conflict"),
   mealCount: z.number().int(),
   pantryCount: z.number().int(),
+  /** Custom recipes this food is an ingredient of. Optional so a body from
+   * before custom recipes still parses; the server always sends it. */
+  recipeCount: z.number().int().optional(),
 });
 export type CustomFoodConflict = z.infer<typeof customFoodConflictSchema>;
 
@@ -199,8 +202,16 @@ export type CustomFoodConflict = z.infer<typeof customFoodConflictSchema>;
 // ---------------------------------------------------------------------------
 
 export const recipeIngredientSchema = z.object({
+  /** The ingredient's food id, so a client logging this recipe can fan it out
+   * into meal foods without first mapping slugs through the foods list. */
+  foodId: z.string().uuid(),
   foodSlug: z.string(),
   foodName: z.string(),
+  /** True when the ingredient is a food this parent added themselves. */
+  isCustom: z.boolean(),
+  /** The parent's chosen emoji on a custom food, else null — catalog foods
+   * keep resolving their emoji from the client's slug/category map. */
+  foodEmoji: z.string().nullable(),
   quantityNote: z.string(),
 });
 export type RecipeIngredient = z.infer<typeof recipeIngredientSchema>;
@@ -226,5 +237,189 @@ export const recipeDetailSchema = z.object({
   ingredients: z.array(recipeIngredientSchema),
   extraIngredients: z.array(z.string()),
   variants: z.array(recipeVariantSchema),
+  /**
+   * True for a recipe a parent wrote themselves (`recipes.owner_id` set).
+   * A custom recipe carries exactly ONE variant — the client renders its
+   * steps as a single "Steps" section rather than age tabs — and stores
+   * `prepMinutes: 0` / `ironFocus: false` when the parent said nothing.
+   */
+  isCustom: z.boolean(),
+  /** The parent's own note on a custom recipe. Catalog rows are null. */
+  notes: z.string().nullable(),
 });
 export type RecipeDetail = z.infer<typeof recipeDetailSchema>;
+
+// ---------------------------------------------------------------------------
+// GET /api/recipes
+//
+// Catalog recipes plus the caller's own, never anybody else's. Allergens are
+// derived from the ingredients' foods (the same join the detail route and the
+// favorites list use), so a custom recipe built on a custom peanut food shows
+// "peanut" here too.
+// ---------------------------------------------------------------------------
+
+export const recipeScopeSchema = z.enum(["all", "favorites", "custom"]);
+export type RecipeScope = z.infer<typeof recipeScopeSchema>;
+
+/**
+ * A flag arriving as a query string. `"true"`/`"1"` is on, `"false"`/`"0"` is
+ * off — an ABSENT key means "don't filter on this at all", which is what a
+ * client whose toggle is off should send.
+ */
+const queryFlag = z
+  .union([z.boolean(), z.enum(["true", "false", "1", "0"])])
+  .transform((value) => value === true || value === "true" || value === "1");
+
+export const recipesQuerySchema = z.object({
+  /** Substring match on the title. */
+  q: z.string().min(1).optional(),
+  scope: recipeScopeSchema.default("all"),
+  /** Recipes suitable at or below this age, i.e. `minAgeMonths <= value`. */
+  maxAgeMonths: z.coerce.number().int().nonnegative().optional(),
+  /** Allergen slug, matched against the recipe's DERIVED allergen set. */
+  allergen: z.string().min(1).optional(),
+  ironFocus: queryFlag.optional(),
+  /** Recipes that use this food as an ingredient. */
+  ingredientFoodId: z.string().uuid().optional(),
+});
+export type RecipesQuery = z.infer<typeof recipesQuerySchema>;
+
+export const recipeListItemSchema = z.object({
+  id: z.string().uuid(),
+  slug: z.string(),
+  title: z.string(),
+  minAgeMonths: z.number().int(),
+  ironFocus: z.boolean(),
+  /** Derived from the ingredients' foods, not stored on the recipe. */
+  allergens: z.array(z.string()),
+  isCustom: z.boolean(),
+  /** Whether the CALLER has favorited it — this list is always per-user. */
+  isFavorite: z.boolean(),
+  /** Ingredient food names, alphabetical, for a subtitle line. */
+  ingredientNames: z.array(z.string()),
+});
+export type RecipeListItem = z.infer<typeof recipeListItemSchema>;
+
+export const recipesResponseSchema = z.object({ recipes: z.array(recipeListItemSchema) });
+export type RecipesResponse = z.infer<typeof recipesResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// POST /api/recipes, PATCH /api/recipes/:id, DELETE /api/recipes/:id
+//
+// Recipes a parent writes for themselves. Same table as the seeded catalog
+// (owner_id distinguishes them), but no curated content: no image, no storage
+// overrides, no iron-focus claim, and ONE set of steps rather than the
+// catalog's three age variants.
+// ---------------------------------------------------------------------------
+
+export const recipeIdParamSchema = z.object({ id: z.string().uuid() });
+
+export const CUSTOM_RECIPE_TITLE_MAX = 80;
+export const CUSTOM_RECIPE_MIN_AGE_MONTHS = 6;
+export const CUSTOM_RECIPE_MAX_AGE_MONTHS = 36;
+export const CUSTOM_RECIPE_INGREDIENTS_MAX = 30;
+export const CUSTOM_RECIPE_QUANTITY_NOTE_MAX = 80;
+export const CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX = 20;
+export const CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX = 60;
+export const CUSTOM_RECIPE_STEPS_MAX = 30;
+export const CUSTOM_RECIPE_STEP_MAX = 500;
+export const CUSTOM_RECIPE_NOTES_MAX = 500;
+export const CUSTOM_RECIPE_PREP_MINUTES_MAX = 600;
+
+/**
+ * Which single `recipe_variants` row a custom recipe's steps live in. The
+ * catalog carries all three stages; a parent writes one set of steps, so it
+ * is filed at the stage their "suitable from" age falls in.
+ */
+export function ageStageForMonths(minAgeMonths: number): AgeStage {
+  if (minAgeMonths >= 12) return "12";
+  if (minAgeMonths >= 9) return "9";
+  return "6";
+}
+
+/** `""` is a real answer here — "no quantity given", not a missing field. */
+const customRecipeQuantityNote = z
+  .string()
+  .trim()
+  .max(CUSTOM_RECIPE_QUANTITY_NOTE_MAX, `Quantity must be ${CUSTOM_RECIPE_QUANTITY_NOTE_MAX} characters or fewer`)
+  .nullish()
+  .transform((value) => value ?? "");
+
+export const customRecipeIngredientInputSchema = z.object({
+  foodId: z.string().uuid(),
+  quantityNote: customRecipeQuantityNote,
+});
+export type CustomRecipeIngredientInput = z.input<typeof customRecipeIngredientInputSchema>;
+
+const customRecipeIngredients = z
+  .array(customRecipeIngredientInputSchema)
+  .min(1, "Add at least one ingredient")
+  .max(CUSTOM_RECIPE_INGREDIENTS_MAX, `A recipe can have at most ${CUSTOM_RECIPE_INGREDIENTS_MAX} ingredients`);
+
+const customRecipeExtraIngredients = z
+  .array(z.string().trim().min(1).max(CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX))
+  .max(CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX);
+
+const customRecipeSteps = z
+  .array(z.string().trim().min(1, "A step cannot be empty").max(CUSTOM_RECIPE_STEP_MAX))
+  .min(1, "Add at least one step")
+  .max(CUSTOM_RECIPE_STEPS_MAX, `A recipe can have at most ${CUSTOM_RECIPE_STEPS_MAX} steps`);
+
+const customRecipeNotes = z
+  .string()
+  .trim()
+  .max(CUSTOM_RECIPE_NOTES_MAX, `Notes must be ${CUSTOM_RECIPE_NOTES_MAX} characters or fewer`)
+  .nullish()
+  .transform((value) => (value ? value : null));
+
+export const createCustomRecipeSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, "Title is required")
+    .max(CUSTOM_RECIPE_TITLE_MAX, `Title must be ${CUSTOM_RECIPE_TITLE_MAX} characters or fewer`),
+  minAgeMonths: z.number().int().min(CUSTOM_RECIPE_MIN_AGE_MONTHS).max(CUSTOM_RECIPE_MAX_AGE_MONTHS),
+  /** Every food id must be one the caller can see — the catalog or their own
+   * custom foods. Anything else is a 400, never a silent drop. */
+  ingredients: customRecipeIngredients,
+  /** Free-text ingredients with no food row behind them ("olive oil"). */
+  extraIngredients: customRecipeExtraIngredients.default([]),
+  steps: customRecipeSteps,
+  notes: customRecipeNotes,
+  /** Omitted means "not stated"; stored as 0 and hidden by the client. */
+  prepMinutes: z.number().int().min(0).max(CUSTOM_RECIPE_PREP_MINUTES_MAX).optional(),
+});
+export type CreateCustomRecipeInput = z.input<typeof createCustomRecipeSchema>;
+
+/**
+ * A true partial update: an absent key leaves that column alone. The three
+ * list fields REPLACE their set wholesale when present — there is no
+ * add-one/remove-one verb. The slug is not editable: links already point at
+ * it, exactly as with custom foods.
+ */
+export const updateCustomRecipeSchema = z
+  .object({
+    title: createCustomRecipeSchema.shape.title.optional(),
+    minAgeMonths: createCustomRecipeSchema.shape.minAgeMonths.optional(),
+    ingredients: customRecipeIngredients.optional(),
+    extraIngredients: customRecipeExtraIngredients.optional(),
+    steps: customRecipeSteps.optional(),
+    notes: customRecipeNotes.optional(),
+    prepMinutes: z.number().int().min(0).max(CUSTOM_RECIPE_PREP_MINUTES_MAX).optional(),
+  })
+  .refine((value) => Object.values(value).some((field) => field !== undefined), {
+    message: "At least one field must be provided",
+  });
+export type UpdateCustomRecipeInput = z.input<typeof updateCustomRecipeSchema>;
+
+/**
+ * DELETE /api/recipes/:id when the recipe is still referenced by logged meals
+ * or pantry items. Favorites are NOT a block — the caller's own favorite row
+ * is simply removed with the recipe.
+ */
+export const customRecipeConflictSchema = z.object({
+  error: z.literal("conflict"),
+  mealCount: z.number().int(),
+  pantryCount: z.number().int(),
+});
+export type CustomRecipeConflict = z.infer<typeof customRecipeConflictSchema>;

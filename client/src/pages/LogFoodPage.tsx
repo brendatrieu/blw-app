@@ -53,6 +53,10 @@ export function LogFoodPage() {
   // "Log meal" from a food detail page arrives as /log-meal?food=<id> — seed
   // the picker with that food (create mode only; ignored while editing).
   const prefillFoodId = searchParams.get("food");
+  // "Log meal" from a recipe page arrives as /log-meal?recipe=<id> — attach
+  // that recipe (and let its ingredients fan out into chips), create mode
+  // only, exactly as ?food= behaves.
+  const prefillRecipeId = searchParams.get("recipe");
   const editId = searchParams.get("edit");
   const isEditing = Boolean(editId);
   const goBack = useBackNavigate("/");
@@ -108,6 +112,7 @@ export function LogFoodPage() {
           babyId={activeBaby.id}
           meal={meal}
           initialFoodIds={prefillFoodId ? [prefillFoodId] : undefined}
+          initialRecipeId={prefillRecipeId ?? undefined}
           onDone={goBack}
         />
       )}

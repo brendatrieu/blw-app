@@ -221,23 +221,35 @@ export const allergenLadderSteps = pgTable("allergen_ladder_steps", {
 
 export const ageStageEnum = pgEnum("age_stage", ["6", "9", "12"]);
 
-export const recipes = pgTable("recipes", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  // Natural key seeds upsert on ("on conflict slug do update").
-  slug: text("slug").notNull().unique(),
-  title: text("title").notNull(),
-  minAgeMonths: integer("min_age_months").notNull(),
-  prepMinutes: integer("prep_minutes").notNull(),
-  ironFocus: boolean("iron_focus").notNull().default(false),
-  imageUrl: text("image_url"),
-  // Optional per-recipe overrides of the food-category storage guideline.
-  fridgeHoursOverride: integer("fridge_hours_override"),
-  freezerDaysOverride: integer("freezer_days_override"),
-  // Free-text ingredients not tied to a catalog food row (e.g. "olive oil"),
-  // from RecipeSeed.extraIngredients. Not itemized in the plan's Data model
-  // table list; added so seed content has a home without a join table.
-  extraIngredients: text("extra_ingredients").array(),
-});
+export const recipes = pgTable(
+  "recipes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Natural key seeds upsert on ("on conflict slug do update").
+    slug: text("slug").notNull().unique(),
+    title: text("title").notNull(),
+    minAgeMonths: integer("min_age_months").notNull(),
+    prepMinutes: integer("prep_minutes").notNull(),
+    ironFocus: boolean("iron_focus").notNull().default(false),
+    imageUrl: text("image_url"),
+    // Optional per-recipe overrides of the food-category storage guideline.
+    fridgeHoursOverride: integer("fridge_hours_override"),
+    freezerDaysOverride: integer("freezer_days_override"),
+    // Free-text ingredients not tied to a catalog food row (e.g. "olive oil"),
+    // from RecipeSeed.extraIngredients. Not itemized in the plan's Data model
+    // table list; added so seed content has a home without a join table.
+    extraIngredients: text("extra_ingredients").array(),
+    // NULL for the seeded catalog (everyone's), set for a recipe a parent
+    // wrote for themselves — every read filters on
+    // `owner_id IS NULL OR owner_id = <caller>`, exactly like `foods`.
+    // Cascades so deleting an account takes its own recipes with it.
+    ownerId: text("owner_id").references(() => user.id, { onDelete: "cascade" }),
+    // Free-text note on a custom recipe ("Robin likes it with yoghurt").
+    // Catalog rows leave it null.
+    notes: text("notes"),
+  },
+  (t) => [index("recipes_owner_id_idx").on(t.ownerId)],
+);
 
 export const recipeIngredients = pgTable(
   "recipe_ingredients",

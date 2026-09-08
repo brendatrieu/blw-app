@@ -4,7 +4,11 @@ import { addCustomFoodLabel } from "../constants.js";
 import { getFoodEmoji } from "../foodEmoji.js";
 import { useFoods } from "../hooks.js";
 import { CustomFoodForm } from "./CustomFoodForm.js";
-import { MultiCombobox, type MultiComboboxOption } from "../../../components/ui/MultiCombobox.js";
+import {
+  MultiCombobox,
+  resolveSingleSelection,
+  type MultiComboboxOption,
+} from "../../../components/ui/MultiCombobox.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
 
 /**
@@ -72,5 +76,36 @@ export function FoodPicker({ id, value, onChange }: FoodPickerProps) {
         />
       </Sheet>
     </>
+  );
+}
+
+interface SingleFoodPickerProps {
+  id: string;
+  /** "" = nothing picked. */
+  value: string;
+  onChange: (next: string) => void;
+  placeholder?: string;
+}
+
+/**
+ * The same searchable food list as `FoodPicker`, holding at most ONE food —
+ * the Recipes segment's "Contains ingredient" filter (item 210). There's no
+ * create row here on purpose: filtering by a food that doesn't exist yet
+ * could only ever match nothing.
+ */
+export function SingleFoodPicker({ id, value, onChange, placeholder }: SingleFoodPickerProps) {
+  const { data, isLoading } = useFoods();
+  const foods = data?.foods ?? [];
+  const options = useMemo(() => foods.map(foodPickerOption), [foods]);
+
+  return (
+    <MultiCombobox
+      id={id}
+      options={options}
+      value={value ? [value] : []}
+      onChange={(next) => onChange(resolveSingleSelection(next))}
+      disabled={isLoading}
+      placeholder={isLoading ? "Loading foods…" : (placeholder ?? "Search foods…")}
+    />
   );
 }
