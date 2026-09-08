@@ -1,12 +1,40 @@
-import { createElement } from "react";
+import { createElement, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { MealItem } from "@blw/shared";
-import { dayKey, dayLabel, timeLabel, limitMeals, HOME_MEAL_LIMIT, MealCard, ServeLogList } from "./ServeLogList.js";
+import type { MealFood, MealItem } from "@blw/shared";
+import {
+  dayKey,
+  dayLabel,
+  emojiCluster,
+  hasPantryFood,
+  HOME_MEAL_LIMIT,
+  limitMeals,
+  MealCard,
+  mealTitle,
+  ServeLogList,
+  servedLine,
+  timeLabel,
+} from "./ServeLogList.js";
 
-function renderMealCard(meal: MealItem, pendingDeleteId: string | null = null, linkable?: boolean) {
+function food(overrides: Partial<MealFood> = {}): MealFood {
+  return {
+    id: "food-1",
+    slug: "avocado",
+    name: "Avocado",
+    category: "fruit",
+    pantryItemId: null,
+    ...overrides,
+  };
+}
+
+function renderMealCard(
+  meal: MealItem,
+  pendingDeleteId: string | null = null,
+  linkable?: boolean,
+  actions?: ReactNode,
+) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderToString(
     createElement(
@@ -24,6 +52,7 @@ function renderMealCard(meal: MealItem, pendingDeleteId: string | null = null, l
             onRequestDelete: () => {},
             onCancelDelete: () => {},
             ...(linkable === undefined ? {} : { linkable }),
+            ...(actions === undefined ? {} : { actions }),
           }),
         ]),
       ),
@@ -73,6 +102,73 @@ describe("timeLabel", () => {
   });
 });
 
+describe("mealTitle (item 192)", () => {
+  it("comma-joins every food name", () => {
+    expect(mealTitle([food({ name: "Avocado" }), food({ id: "f2", name: "Chicken" })])).toBe("Avocado, Chicken");
+  });
+
+  it("is just the name for a single food", () => {
+    expect(mealTitle([food({ name: "Avocado" })])).toBe("Avocado");
+  });
+
+  it("is empty for no foods (defensive — the API always sends at least one)", () => {
+    expect(mealTitle([])).toBe("");
+  });
+});
+
+describe("emojiCluster (item 192)", () => {
+  it("returns one emoji per food with no overflow under the cap", () => {
+    const cluster = emojiCluster([food(), food({ id: "f2", slug: "chicken", category: "protein" })]);
+    expect(cluster.emojis).toHaveLength(2);
+    expect(cluster.overflow).toBe(0);
+    expect(cluster.emojis.every((emoji) => emoji.length > 0)).toBe(true);
+  });
+
+  it("caps at three and reports the rest as overflow", () => {
+    const foods = Array.from({ length: 5 }, (_, i) => food({ id: `f${i}` }));
+    const cluster = emojiCluster(foods);
+    expect(cluster.emojis).toHaveLength(3);
+    expect(cluster.overflow).toBe(2);
+  });
+
+  it("honors an explicit max", () => {
+    const foods = Array.from({ length: 4 }, (_, i) => food({ id: `f${i}` }));
+    expect(emojiCluster(foods, 1).emojis).toHaveLength(1);
+    expect(emojiCluster(foods, 1).overflow).toBe(3);
+    expect(emojiCluster(foods, 10).emojis).toHaveLength(4);
+    expect(emojiCluster(foods, 10).overflow).toBe(0);
+  });
+
+  it("prefers a custom food's own emoji", () => {
+    expect(emojiCluster([food({ slug: "made-up-thing", emoji: "🫐" })]).emojis).toEqual(["🫐"]);
+  });
+});
+
+describe("servedLine (item 192)", () => {
+  it("joins the day label and the time with a middot", () => {
+    const iso = new Date(2026, 7, 26, 14, 5).toISOString();
+    expect(servedLine(iso)).toBe(`${dayLabel(dayKey(iso))} · ${timeLabel(iso)}`);
+    expect(servedLine(iso)).toMatch(/·/);
+  });
+
+  it("says 'Today' for a meal served today", () => {
+    const now = new Date();
+    now.setHours(12, 0, 0, 0);
+    expect(servedLine(now.toISOString())).toMatch(/^Today · /);
+  });
+});
+
+describe("hasPantryFood (item 192)", () => {
+  it("is true when any food carries a pantryItemId", () => {
+    expect(hasPantryFood([food(), food({ id: "f2", pantryItemId: "pantry-1" })])).toBe(true);
+  });
+
+  it("is false when no food does", () => {
+    expect(hasPantryFood([food(), food({ id: "f2" })])).toBe(false);
+    expect(hasPantryFood([])).toBe(false);
+  });
+});
+
 describe("ServeLogList (render)", () => {
   it("renders the Food log heading (empty/loading branches need a live query client, out of reach here)", () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -83,45 +179,73 @@ describe("ServeLogList (render)", () => {
   });
 });
 
-describe("MealCard (render)", () => {
-  const baseMeal: MealItem = {
-    id: "meal-1",
-    babyId: "baby-1",
-    servedAt: new Date(2026, 7, 26, 14, 5).toISOString(),
-    reactionNote: null,
-    notes: null,
-    recipeId: null,
-    recipeTitle: null,
-    foods: [
-      { id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", pantryItemId: null },
-      { id: "food-2", slug: "chicken", name: "Chicken", category: "protein", pantryItemId: null },
-    ],
-  };
+const baseMeal: MealItem = {
+  id: "meal-1",
+  babyId: "baby-1",
+  servedAt: new Date(2026, 7, 26, 14, 5).toISOString(),
+  reactionNote: null,
+  notes: null,
+  recipeId: null,
+  recipeTitle: null,
+  foods: [
+    food({ id: "food-1", slug: "avocado", name: "Avocado", category: "fruit" }),
+    food({ id: "food-2", slug: "chicken", name: "Chicken", category: "protein" }),
+  ],
+};
 
-  it("renders each food's chip with its name and emoji", () => {
+describe("MealCard (render, pantry-card styling — item 192)", () => {
+  it("uses the same card chrome as PantryItemCard (relative li, rounded-lg, border, elevated bg, p-3)", () => {
     const html = renderMealCard(baseMeal);
-    expect(html).toContain("Avocado");
-    expect(html).toContain("Chicken");
-    // getFoodEmoji resolves a real emoji for both slugs; just assert an
-    // aria-hidden emoji span precedes each name rather than pin the glyph.
-    expect(html).toMatch(/<span aria-hidden="true">[^<]+<\/span>\s*Avocado/);
+    expect(html).toMatch(/<li class="relative [^"]*rounded-\[var\(--radius-lg\)\][^"]*"/);
+    expect(html).toMatch(/<li class="[^"]*border border-\[var\(--color-border\)\][^"]*"/);
+    expect(html).toMatch(/<li class="[^"]*bg-\[var\(--color-bg-elevated\)\][^"]*"/);
+    expect(html).toMatch(/<li class="[^"]*\bp-3\b/);
   });
 
-  it("shows a 'from pantry' marker on a food whose pantryItemId is set", () => {
+  it("titles the card with the food names joined by ', '", () => {
+    const html = renderMealCard(baseMeal);
+    expect(html).toContain("Avocado, Chicken");
+    // The old per-food chip markup is gone — one title line, not two pills.
+    expect(html).not.toContain("rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)]");
+  });
+
+  it("renders the leading emoji cluster as a single aria-hidden run", () => {
+    const html = renderMealCard(baseMeal);
+    const { emojis } = emojiCluster(baseMeal.foods);
+    expect(html).toMatch(new RegExp(`<span aria-hidden="true" class="[^"]*text-xl[^"]*">${emojis.join("")}`));
+  });
+
+  it("caps the cluster at three emoji and shows a +N overflow count", () => {
     const html = renderMealCard({
       ...baseMeal,
-      foods: [
-        { id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", pantryItemId: "pantry-1" },
-        { id: "food-2", slug: "chicken", name: "Chicken", category: "protein", pantryItemId: null },
-      ],
+      foods: Array.from({ length: 5 }, (_, i) => food({ id: `food-${i}`, name: `Food ${i}` })),
     });
-    expect(html).toContain('aria-label="from pantry"');
-    expect((html.match(/aria-label="from pantry"/g) ?? []).length).toBe(1);
+    expect(html).toMatch(/\+(?:<!-- -->)?2/);
   });
 
-  it("omits the 'from pantry' marker when no food has a pantryItemId", () => {
+  it("shows no overflow count when every food fits", () => {
+    expect(renderMealCard(baseMeal)).not.toMatch(/\+(?:<!-- -->)?\d/);
+  });
+
+  it("renders the muted day · time line that replaced the day headers", () => {
     const html = renderMealCard(baseMeal);
-    expect(html).not.toContain('aria-label="from pantry"');
+    expect(html).toContain(servedLine(baseMeal.servedAt));
+    expect(html).toMatch(/2:05\s?PM/);
+  });
+
+  it("shows the neutral 'From pantry' badge when any food came from the pantry", () => {
+    const html = renderMealCard({
+      ...baseMeal,
+      foods: [food({ id: "food-1", pantryItemId: "pantry-1" }), food({ id: "food-2", name: "Chicken" })],
+    });
+    expect(html).toMatch(/🧺 (?:<!-- -->)?From pantry/);
+    expect(html).toContain("bg-[var(--color-neutral-soft)]");
+    // One badge for the meal, not one marker per food.
+    expect((html.match(/From pantry/g) ?? []).length).toBe(1);
+  });
+
+  it("omits the 'From pantry' badge when no food has a pantryItemId", () => {
+    expect(renderMealCard(baseMeal)).not.toContain("From pantry");
   });
 
   it("shows the recipe title line when the meal has one", () => {
@@ -131,93 +255,101 @@ describe("MealCard (render)", () => {
   });
 
   it("omits the recipe title line when the meal has none", () => {
-    const html = renderMealCard(baseMeal);
-    expect(html).not.toContain("🍳");
+    expect(renderMealCard(baseMeal)).not.toContain("🍳");
   });
 
-  it("renders the served time label", () => {
-    const html = renderMealCard(baseMeal);
-    expect(html).toMatch(/2:05\s?PM/);
-  });
-
-  it("shows the reaction note when present", () => {
+  it("shows the reaction note in danger text when present", () => {
     const html = renderMealCard({ ...baseMeal, reactionNote: "mild rash around mouth" });
-    expect(html).toContain("Reaction: ");
     expect(html).toContain("mild rash around mouth");
+    expect(html).toMatch(/class="text-xs text-\[var\(--color-danger\)\]">Reaction: /);
   });
 
   it("omits the reaction note when absent", () => {
-    const html = renderMealCard(baseMeal);
-    expect(html).not.toContain("Reaction:");
+    expect(renderMealCard(baseMeal)).not.toContain("Reaction:");
   });
 
-  it("shows the general note as a plain line, distinct from the reaction note", () => {
+  it("shows the general note as a muted line, distinct from the reaction note", () => {
     const html = renderMealCard({ ...baseMeal, notes: "ate the whole thing", reactionNote: "mild rash" });
     expect(html).toContain("ate the whole thing");
     expect(html).toContain("Reaction: ");
     expect(html).toContain("mild rash");
-    // The general note text must not itself be prefixed "Reaction:".
-    expect(html).not.toMatch(/Reaction:\s*ate the whole thing/);
+    expect(html).not.toMatch(/Reaction:\s*(?:<!-- -->)?ate the whole thing/);
   });
 
   it("omits the general note line when absent", () => {
-    const html = renderMealCard(baseMeal);
-    expect(html).not.toContain("ate the whole thing");
-  });
-
-  it("makes the whole card the edit link — no separate Edit link", () => {
-    const html = renderMealCard(baseMeal);
-    expect(html).toContain(`href="/log-meal?edit=${baseMeal.id}"`);
-    expect(html).not.toContain(">Edit<");
-    // Stretched link: the anchor's overlay covers the card, the card is the
-    // positioning context, and the delete control floats above the overlay.
-    expect(html).toMatch(/<a [^>]*class="[^"]*after:absolute after:inset-0[^"]*"[^>]*href="\/log-meal\?edit=meal-1"/);
-    expect(html).toMatch(/<li [^>]*class="[^"]*\brelative\b/);
-    expect(html).toMatch(/<div class="relative z-10[^"]*"><button/);
-  });
-
-  it("shows a Delete button when not confirming a delete", () => {
-    const html = renderMealCard(baseMeal);
-    expect(html).toMatch(/<button[^>]*type="button"[^>]*>Delete<\/button>/);
-  });
-
-  it("hides Edit/Delete and shows the confirm row while a delete is pending for this meal", () => {
-    const html = renderMealCard(baseMeal, baseMeal.id);
-    expect(html).not.toContain(">Edit<");
-    expect(html).toContain("Remove this meal?");
-    expect(html).toContain("Yes, delete");
+    expect(renderMealCard(baseMeal)).not.toContain("ate the whole thing");
   });
 });
 
-describe("MealCard tap-through link (item 164)", () => {
-  const baseMeal: MealItem = {
-    id: "meal-1",
-    babyId: "baby-1",
-    servedAt: new Date(2026, 7, 26, 14, 5).toISOString(),
-    reactionNote: null,
-    notes: null,
-    recipeId: null,
-    recipeTitle: null,
-    foods: [{ id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", pantryItemId: null }],
-  };
+describe("MealCard actions slot (item 194)", () => {
+  it("renders the kebab Actions menu by default, with no standalone Delete button", () => {
+    const html = renderMealCard(baseMeal);
+    expect(html).toContain('aria-label="Actions"');
+    expect(html).toContain('aria-haspopup="menu"');
+    expect(html).not.toMatch(/<button[^>]*>Delete<\/button>/);
+  });
 
-  it("wraps the info block in a Link to /meals/:id by default", () => {
+  it("keeps the badge + kebab slot above the stretched overlay (relative z-10)", () => {
+    const html = renderMealCard(baseMeal);
+    expect(html).toMatch(/<div class="relative z-10 [^"]*">(?:(?!<\/div>).)*aria-label="Actions"/s);
+  });
+
+  it("renders nothing in the slot when actions is explicitly null (read-only card)", () => {
+    const html = renderMealCard(baseMeal, null, undefined, null);
+    expect(html).not.toContain('aria-label="Actions"');
+  });
+
+  it("renders a caller-supplied actions slot instead of the kebab", () => {
+    const html = renderMealCard(
+      baseMeal,
+      null,
+      undefined,
+      createElement("button", { type: "button" }, "Actions slot marker"),
+    );
+    expect(html).toContain("Actions slot marker");
+    expect(html).not.toContain('aria-label="Actions"');
+  });
+
+  it("shows the confirm row (and no kebab-triggered delete of its own) while a delete is pending for this meal", () => {
+    const html = renderMealCard(baseMeal, baseMeal.id);
+    expect(html).toContain("Remove this meal?");
+    expect(html).toContain("Yes, delete");
+    expect(html).toContain("Cancel");
+    // The confirm row rides above the stretched overlay like the kebab does.
+    expect(html).toMatch(/<div class="relative z-10">(?:(?!<\/div>).)*Remove this meal\?/s);
+  });
+
+  it("shows no confirm row when the pending id belongs to a different meal", () => {
+    expect(renderMealCard(baseMeal, "some-other-meal")).not.toContain("Remove this meal?");
+  });
+});
+
+describe("MealCard tap-through link (item 195)", () => {
+  it("makes the whole card the edit link — no separate Edit link in the card body", () => {
     const html = renderMealCard(baseMeal);
     expect(html).toContain(`href="/log-meal?edit=${baseMeal.id}"`);
+    expect(html).toMatch(/<a [^>]*class="[^"]*after:absolute after:inset-0[^"]*"[^>]*href="\/log-meal\?edit=meal-1"/);
+    expect(html).toMatch(/<li [^>]*class="[^"]*\brelative\b/);
   });
 
   it("renders the info block as plain content when linkable is false (no anchor at all)", () => {
     const editHref = new RegExp(`href="/log-meal\\?edit=${baseMeal.id}"`, "g");
     expect((renderMealCard(baseMeal).match(editHref) ?? []).length).toBe(1);
+    // linkable=false still leaves the closed kebab, which holds no href until opened.
     expect((renderMealCard(baseMeal, null, false).match(editHref) ?? []).length).toBe(0);
   });
 
-  it("keeps Delete outside the info anchor (no nested-interactive markup)", () => {
+  it("keeps the kebab outside the info anchor (no nested-interactive markup)", () => {
     const html = renderMealCard(baseMeal);
     const anchorClose = html.indexOf("</a>");
-    const deleteIndex = html.indexOf(">Delete<");
+    const kebabIndex = html.indexOf('aria-label="Actions"');
     expect(anchorClose).toBeGreaterThan(-1);
-    expect(deleteIndex).toBeGreaterThan(anchorClose);
+    expect(kebabIndex).toBeGreaterThan(anchorClose);
+    expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
+  });
+
+  it("keeps the confirm row's buttons outside the anchor too", () => {
+    const html = renderMealCard(baseMeal, baseMeal.id);
     expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
   });
 });
@@ -245,7 +377,7 @@ describe("limitMeals + Home cap", () => {
       notes: null,
       recipeId: null,
       recipeTitle: null,
-      foods: [{ id: `food-${i}`, slug: "avocado", name: `Food ${i}`, category: "fruit", pantryItemId: null }],
+      foods: [food({ id: `food-${i}`, name: `Food ${i}` })],
     };
   }
 
@@ -277,5 +409,14 @@ describe("limitMeals + Home cap", () => {
     const html = renderList(undefined);
     expect((html.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(5);
     expect(html).not.toContain(">See all<");
+  });
+
+  it("renders one flat newest-first <ul> with no day headers (item 193)", () => {
+    const html = renderList(undefined);
+    expect(html).not.toContain("<h3");
+    expect((html.match(/<ul\b/g) ?? []).length).toBe(1);
+    // Newest first: the meals arrive newest-first and the list preserves that.
+    expect(html.indexOf("Food 0")).toBeLessThan(html.indexOf("Food 1"));
+    expect(html.indexOf("Food 1")).toBeLessThan(html.indexOf("Food 4"));
   });
 });

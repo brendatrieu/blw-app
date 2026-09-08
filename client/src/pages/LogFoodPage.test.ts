@@ -20,6 +20,8 @@ describe("LogFoodPage", () => {
     );
     expect(html).toContain("Log meal");
     expect(html).toContain('aria-label="Close"');
+    // Create mode is modal-ish: the X only, no top-left Back (item 196).
+    expect(html).not.toMatch(/>Back</);
   });
 
   it("shows a 'meal is gone' EmptyState (not a blank create form) when ?edit=<id> can't be found, title still 'Edit meal'", () => {
@@ -49,6 +51,11 @@ describe("LogFoodPage", () => {
     );
 
     expect(html).toContain("Edit meal");
+    // Edit mode is a drill-in: BackButton above the title, no X (item 196).
+    expect(html).toMatch(/>Back</);
+    expect(html).not.toContain('aria-label="Close"');
+    // The Back control sits ABOVE the page header, as on the detail pages.
+    expect(html.indexOf(">Back<")).toBeLessThan(html.indexOf("<h1"));
     expect(html).toContain("That meal is gone");
     expect(html).not.toMatch(/<textarea[^>]*id="log-food-note"/);
   });

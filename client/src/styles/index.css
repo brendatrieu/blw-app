@@ -115,6 +115,7 @@
   --emoji-disc: #c9d3dd;
 
   /* ---- Shape ---- */
+  --radius-sm: 10px; /* focus rings on in-card anchors */
   --radius-md: 14px; /* controls: buttons, inputs, chips */
   --radius-lg: 20px; /* cards, sheets */
   --radius-pill: 999px;

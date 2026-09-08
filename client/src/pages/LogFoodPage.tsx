@@ -3,7 +3,7 @@ import type { MealItem } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useMeals } from "../features/tracking/hooks.js";
 import { LogFoodForm } from "../features/tracking/components/LogFoodForm.js";
-import { useBackNavigate } from "../components/ui/BackButton.js";
+import { BackButton, useBackNavigate } from "../components/ui/BackButton.js";
 import { CloseButton } from "../components/ui/CloseButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
@@ -13,8 +13,9 @@ import { Skeleton } from "../components/ui/Skeleton.js";
 /**
  * Full-screen page for both logging a new meal and editing an existing one
  * (opened as `/log-meal?edit=:id`, e.g. from ServeLogList's per-meal Edit
- * link). Closing (via the header X, Cancel, a successful save, or the
- * device/browser back gesture) all resolve through the same history-aware
+ * link). Leaving the page (via the create-mode header X, edit-mode's Back
+ * button, Cancel, a successful save, or the device/browser back gesture) all
+ * resolve through the same history-aware
  * `useBackNavigate` idiom `BackButton` uses elsewhere — pop back to wherever
  * the user came from, falling back to "/" for a direct/deep-linked visit
  * with no history to pop.
@@ -71,7 +72,16 @@ export function LogFoodPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <PageHeader title={isEditing ? "Edit meal" : "Log meal"} action={<CloseButton fallback="/" />} />
+      {/* Edit mode is reached by drilling into a meal, so it gets the same
+          top-left Back affordance every detail page has (above the title, as
+          PantryDetailPage places it). Creating a meal is a modal-ish task
+          with nothing to go "back" to, so it keeps the header X. Both routes
+          out still resolve through the same `useBackNavigate` idiom. */}
+      {isEditing && <BackButton fallback="/" />}
+      <PageHeader
+        title={isEditing ? "Edit meal" : "Log meal"}
+        {...(isEditing ? {} : { action: <CloseButton fallback="/" /> })}
+      />
 
       {(babyLoading || stillLoadingEditTarget) && <Skeleton className="h-40 w-full rounded-[var(--radius-lg)]" />}
 

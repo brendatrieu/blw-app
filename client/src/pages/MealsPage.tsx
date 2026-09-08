@@ -8,7 +8,7 @@ import { SkeletonList } from "../components/ui/Skeleton.js";
 
 /**
  * The full food log (/meals), reached from Home's "See all". Home shows only
- * the newest few meals; this page is the same day-grouped list with no cap.
+ * the newest few meals; this page is the same flat newest-first list, uncapped.
  */
 export function MealsPage() {
   const { activeBaby, isLoading } = useActiveBaby();

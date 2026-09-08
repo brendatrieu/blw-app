@@ -10,7 +10,7 @@ import {
 } from "../features/tracking/allergenRow.js";
 import { allergenEmoji } from "../features/tracking/allergenEmoji.js";
 import { MarkEstablishedAction, OverriddenHint } from "../features/tracking/components/AllergenActions.js";
-import { dayKey, dayLabel, timeLabel } from "../features/tracking/components/ServeLogList.js";
+import { servedLine } from "../features/tracking/components/ServeLogList.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { Badge } from "../components/ui/Badge.js";
 import { ButtonLink } from "../components/ui/Button.js";
@@ -54,7 +54,7 @@ function ExposureRow({ exposure }: { exposure: AllergenDetailExposure }) {
     <li>
       <CardLink to={`/log-meal?edit=${exposure.mealId}`} padding="sm" className="flex flex-col gap-1">
         <span className="text-sm font-semibold text-[var(--color-text)]">
-          {dayLabel(dayKey(exposure.servedAt))} · {timeLabel(exposure.servedAt)}
+          {servedLine(exposure.servedAt)}
         </span>
         <span className="text-xs text-[var(--color-text-muted)]">
           {exposure.foods.map((food) => (food.emoji ? `${food.emoji} ${food.name}` : food.name)).join(", ")}
