@@ -260,6 +260,7 @@ export interface FavoriteToggleTarget {
   title: string;
   minAgeMonths: number;
   ironFocus: boolean;
+  vitaminCHigh: boolean;
   allergens: string[];
 }
 
@@ -281,6 +282,7 @@ export function useToggleFavorite() {
           title: target.title,
           minAgeMonths: target.minAgeMonths,
           ironFocus: target.ironFocus,
+          vitaminCHigh: target.vitaminCHigh,
           allergens: target.allergens,
         };
         return { items: [added, ...items] };

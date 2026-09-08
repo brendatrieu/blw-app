@@ -17,6 +17,7 @@ function recipe(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
     minAgeMonths: 9,
     prepMinutes: 20,
     ironFocus: false,
+    vitaminCHigh: false,
     imageUrl: null,
     fridgeHoursOverride: null,
     freezerDaysOverride: null,

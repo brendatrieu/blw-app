@@ -7,7 +7,7 @@ import { favoriteRecipeIdParamSchema, type FavoriteItem, type FavoritesResponse 
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
-import { allergens, foodAllergens, favorites, recipeIngredients, recipes } from "../db/schema.js";
+import { allergens, foodAllergens, favorites, foods, recipeIngredients, recipes } from "../db/schema.js";
 
 /** Every handler behind `requireAuth` has a user; this makes that explicit. */
 function currentUserId(request: FastifyRequest): string {
@@ -99,11 +99,25 @@ export function registerFavoriteRoutes(app: FastifyInstance, db: Database): void
       allergensByRecipeId.set(row.recipeId, slugs);
     }
 
+    // vitaminCHigh is derived the same way the recipes list derives it (see
+    // GET /api/recipes): any ingredient whose food is vitaminCLevel "high",
+    // batch-fetched for every favorited recipe in one query.
+    const highVitaminCRows =
+      recipeIds.length > 0
+        ? await db
+            .select({ recipeId: recipeIngredients.recipeId })
+            .from(recipeIngredients)
+            .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
+            .where(and(inArray(recipeIngredients.recipeId, recipeIds), eq(foods.vitaminCLevel, "high")))
+        : [];
+    const vitaminCHighRecipeIds = new Set(highVitaminCRows.map((row) => row.recipeId));
+
     const items: FavoriteItem[] = rows.map((r) => ({
       recipeId: r.recipeId,
       title: r.title,
       minAgeMonths: r.minAgeMonths,
       ironFocus: r.ironFocus,
+      vitaminCHigh: vitaminCHighRecipeIds.has(r.recipeId),
       allergens: allergensByRecipeId.get(r.recipeId) ?? [],
     }));
 

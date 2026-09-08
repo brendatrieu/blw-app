@@ -35,10 +35,11 @@ interface FavoriteHeartProps {
   title: string;
   minAgeMonths: number;
   ironFocus: boolean;
+  vitaminCHigh: boolean;
   allergens: string[];
 }
 
-function FavoriteHeart({ recipeId, title, minAgeMonths, ironFocus, allergens }: FavoriteHeartProps) {
+function FavoriteHeart({ recipeId, title, minAgeMonths, ironFocus, vitaminCHigh, allergens }: FavoriteHeartProps) {
   const favorited = useIsFavorited(recipeId);
   const toggleFavorite = useToggleFavorite();
 
@@ -50,7 +51,7 @@ function FavoriteHeart({ recipeId, title, minAgeMonths, ironFocus, allergens }: 
       disabled={toggleFavorite.isPending}
       onClick={() =>
         toggleFavorite.mutate({
-          target: { recipeId, title, minAgeMonths, ironFocus, allergens },
+          target: { recipeId, title, minAgeMonths, ironFocus, vitaminCHigh, allergens },
           favorited,
         })
       }
@@ -236,6 +237,7 @@ export function RecipeDetailPage() {
             title={recipe.title}
             minAgeMonths={recipe.minAgeMonths}
             ironFocus={recipe.ironFocus}
+            vitaminCHigh={recipe.vitaminCHigh}
             allergens={recipe.allergens}
           />
         </div>
@@ -244,6 +246,7 @@ export function RecipeDetailPage() {
               badge is dropped rather than claiming a prep time (item 212). */}
           {recipe.prepMinutes > 0 && <Badge tone="neutral">{recipe.prepMinutes} min prep</Badge>}
           {recipe.ironFocus && <Badge tone="primary">Iron focus</Badge>}
+          {recipe.vitaminCHigh && <Badge tone="sunshine">Vit C</Badge>}
           <Badge tone="neutral">{recipe.minAgeMonths}m+</Badge>
           {recipe.isCustom && <Badge tone="neutral">Custom</Badge>}
           {recipe.allergens.map((slug) => (

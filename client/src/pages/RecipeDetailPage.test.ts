@@ -16,6 +16,7 @@ function catalogRecipe(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
     minAgeMonths: 6,
     prepMinutes: 15,
     ironFocus: true,
+    vitaminCHigh: false,
     imageUrl: null,
     fridgeHoursOverride: null,
     freezerDaysOverride: null,
@@ -94,6 +95,26 @@ describe("RecipeDetailPage (catalog recipe)", () => {
     expect(html).toContain("Smooth purée");
     expect(html).toMatch(/>15(?:<!-- -->)? min prep</);
     expect(html).toContain(">Iron focus<");
+  });
+
+  it("badges high vitamin C beside Iron focus, and neither when the recipe has neither", () => {
+    const both = renderRecipe(catalogRecipe({ ironFocus: true, vitaminCHigh: true }));
+    expect(both).toContain(">Iron focus<");
+    expect(both).toContain(">Vit C<");
+
+    const neither = renderRecipe(catalogRecipe({ ironFocus: false, vitaminCHigh: false }));
+    expect(neither).not.toContain(">Iron focus<");
+    expect(neither).not.toContain(">Vit C<");
+  });
+
+  // The Vit C badge must carry the SUNSHINE tone specifically — a tone swap
+  // to "primary" (Iron focus's tone) reads fine by text alone, so this pins
+  // the actual class the tone maps to.
+  it("gives the Vit C badge the sunshine tone's classes, not just its text", () => {
+    const html = renderRecipe(catalogRecipe({ vitaminCHigh: true }));
+    expect(html).toMatch(
+      /class="[^"]*bg-\[var\(--color-caution-soft\)\][^"]*text-\[var\(--color-caution-soft-text\)\][^"]*"[^>]*>Vit C</,
+    );
   });
 
   it("carries neither the Custom badge nor the owner's Edit/Delete controls", () => {

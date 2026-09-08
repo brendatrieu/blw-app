@@ -79,6 +79,7 @@ describe("LogFoodPage recipe prefill (item 213)", () => {
     title: "Iron-Rich Puree",
     minAgeMonths: 6,
     ironFocus: true,
+    vitaminCHigh: false,
     allergens: [],
     isCustom: true,
     isFavorite: false,

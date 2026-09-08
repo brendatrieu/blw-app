@@ -32,7 +32,7 @@ async function seedFixtures(db: Database) {
     notes: "Cooked produce.",
   });
 
-  const [banana, oats] = await db
+  const [banana, oats, broccoli] = await db
     .insert(schema.foods)
     .values([
       {
@@ -59,6 +59,22 @@ async function seedFixtures(db: Database) {
         prep6m: "porridge",
         prep9m: "porridge",
         prep12m: "porridge",
+        storageCategory: "produce_cooked",
+      },
+      {
+        // Catalog food with a high vitamin C level — the ingredient a custom
+        // recipe needs to qualify for `vitaminCHigh`, since a custom food
+        // always stores "low" (see `routes/catalog.ts` defaults).
+        slug: "broccoli",
+        name: "Broccoli",
+        category: "veg",
+        ironLevel: "low",
+        vitaminCLevel: "high",
+        chokingRisk: "low",
+        minAgeMonths: 6,
+        prep6m: "steam-mash",
+        prep9m: "steam-chop",
+        prep12m: "florets",
         storageCategory: "produce_cooked",
       },
     ])
@@ -93,7 +109,7 @@ async function seedFixtures(db: Database) {
     { recipeId: catalogRecipe!.id, ageStage: "12", textureNote: "Chunky", instructions: ["Chop it."] },
   ]);
 
-  return { banana: banana!, oats: oats!, peanut: peanut!, egg: egg!, catalogRecipe: catalogRecipe! };
+  return { banana: banana!, oats: oats!, broccoli: broccoli!, peanut: peanut!, egg: egg!, catalogRecipe: catalogRecipe! };
 }
 
 describe("custom recipes", () => {
@@ -476,6 +492,59 @@ describe("custom recipes", () => {
       });
       expect(response.statusCode).toBe(400);
       expect(response.json()).toMatchObject({ error: "invalid_query" });
+    });
+
+    // -----------------------------------------------------------------------
+    // vitaminCHigh filter (ledger 224-225): derived from ingredients' foods,
+    // exactly like ironFocus but ANDed with it rather than replacing it.
+    // -----------------------------------------------------------------------
+    describe("vitaminCHigh filter", () => {
+      it("derives vitaminCHigh from a high-vitamin-C catalog ingredient, even on a custom recipe", async () => {
+        const veggieMash = await createRecipe(
+          owner,
+          recipePayload({
+            title: "Broccoli mash",
+            ingredients: [{ foodId: fixtures.broccoli.id, quantityNote: "2 florets" }],
+          }),
+        );
+        expect(veggieMash.vitaminCHigh).toBe(true);
+
+        const list = await listRecipes(owner);
+        expect(list.recipes.find((r) => r.id === veggieMash.id)?.vitaminCHigh).toBe(true);
+        // The seeded catalog recipe (banana + oats, neither "high") does not.
+        expect(list.recipes.find((r) => r.id === fixtures.catalogRecipe.id)?.vitaminCHigh).toBe(false);
+
+        const detail = await app.inject({
+          method: "GET",
+          url: `/api/recipes/${veggieMash.id}`,
+          headers: { cookie: owner.cookie },
+        });
+        expect(detail.json<RecipeDetail>().vitaminCHigh).toBe(true);
+      });
+
+      it("filters on vitaminCHigh alone, ironFocus alone, and both together (ANDed)", async () => {
+        // Iron-focus, no high vitamin C (banana + oats).
+        const catalogId = fixtures.catalogRecipe.id;
+        // High vitamin C, not iron-focus (custom recipes never claim iron focus).
+        const veggieMash = await createRecipe(
+          owner,
+          recipePayload({
+            title: "Broccoli mash",
+            ingredients: [{ foodId: fixtures.broccoli.id, quantityNote: "2 florets" }],
+          }),
+        );
+        // Neither: plain banana.
+        const plainBanana = await createRecipe(owner, recipePayload({ title: "Plain banana" }));
+
+        expect((await listRecipes(owner, "?vitaminCHigh=true")).recipes.map((r) => r.id)).toEqual([veggieMash.id]);
+        expect((await listRecipes(owner, "?ironFocus=true")).recipes.map((r) => r.id)).toEqual([catalogId]);
+        // Both together: nothing here is both iron-focus AND high vitamin C.
+        expect((await listRecipes(owner, "?ironFocus=true&vitaminCHigh=true")).recipes).toEqual([]);
+        // "false" returns only non-qualifying recipes.
+        const nonQualifying = (await listRecipes(owner, "?vitaminCHigh=false")).recipes.map((r) => r.id).sort();
+        expect(nonQualifying).toEqual([catalogId, plainBanana.id].sort());
+        expect(nonQualifying).not.toContain(veggieMash.id);
+      });
     });
   });
 
@@ -931,6 +1000,8 @@ describe("custom recipes", () => {
         headers: { cookie: owner.cookie },
       });
       expect(favorites.json<FavoritesResponse>().items.map((i) => i.title)).toEqual(["Avocado toast fingers"]);
+      // Plain banana carries no high-vitamin-C ingredient.
+      expect(favorites.json<FavoritesResponse>().items[0]?.vitaminCHigh).toBe(false);
 
       const refused = await app.inject({
         method: "PUT",
@@ -939,6 +1010,36 @@ describe("custom recipes", () => {
       });
       expect(refused.statusCode).toBe(404);
       expect(await db.select().from(schema.favorites).where(eq(schema.favorites.recipeId, mine.id))).toHaveLength(1);
+    });
+
+    it("derives vitaminCHigh on GET /api/favorites the same way the recipes list does", async () => {
+      const veggieMash = await createRecipe(
+        owner,
+        recipePayload({
+          title: "Broccoli mash",
+          ingredients: [{ foodId: fixtures.broccoli.id, quantityNote: "2 florets" }],
+        }),
+      );
+      await app.inject({
+        method: "PUT",
+        url: `/api/recipes/${veggieMash.id}/favorite`,
+        headers: { cookie: owner.cookie },
+      });
+      await app.inject({
+        method: "PUT",
+        url: `/api/recipes/${fixtures.catalogRecipe.id}/favorite`,
+        headers: { cookie: owner.cookie },
+      });
+
+      const favorites = await app.inject({
+        method: "GET",
+        url: "/api/favorites",
+        headers: { cookie: owner.cookie },
+      });
+      const items = favorites.json<FavoritesResponse>().items;
+      expect(items.find((i) => i.recipeId === veggieMash.id)?.vitaminCHigh).toBe(true);
+      // The seeded catalog recipe (banana + oats, neither "high") does not.
+      expect(items.find((i) => i.recipeId === fixtures.catalogRecipe.id)?.vitaminCHigh).toBe(false);
     });
 
     it("blocks deleting a custom food that a custom recipe is built on", async () => {

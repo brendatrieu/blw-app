@@ -14,7 +14,7 @@
 // exactly ONE `recipe_variants` row, filed at the stage its "suitable from"
 // age falls in, and `isCustom` tells the client to render them as a single
 // "Steps" section instead of age tabs.
-import { and, asc, eq, ilike, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, lte, notInArray, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   ageStageForMonths,
@@ -190,6 +190,13 @@ async function loadRecipeDetail(db: Database, recipe: RecipeRow): Promise<Recipe
     .where(eq(recipeIngredients.recipeId, recipe.id));
   const allergenSlugs = [...new Set(derivedAllergenRows.map((a) => a.slug))];
 
+  const [highVitaminCRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(recipeIngredients)
+    .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
+    .where(and(eq(recipeIngredients.recipeId, recipe.id), eq(foods.vitaminCLevel, "high")));
+  const vitaminCHigh = (highVitaminCRow?.count ?? 0) > 0;
+
   const detail: RecipeDetail = {
     id: recipe.id,
     slug: recipe.slug,
@@ -197,6 +204,7 @@ async function loadRecipeDetail(db: Database, recipe: RecipeRow): Promise<Recipe
     minAgeMonths: recipe.minAgeMonths,
     prepMinutes: recipe.prepMinutes,
     ironFocus: recipe.ironFocus,
+    vitaminCHigh,
     imageUrl: recipe.imageUrl,
     fridgeHoursOverride: recipe.fridgeHoursOverride,
     freezerDaysOverride: recipe.freezerDaysOverride,
@@ -236,7 +244,7 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
       return { error: "invalid_query", details: parsed.error.flatten() };
     }
     const userId = currentUserId(request);
-    const { q, scope, maxAgeMonths, allergen, ironFocus, ingredientFoodId } = parsed.data;
+    const { q, scope, maxAgeMonths, allergen, ironFocus, vitaminCHigh, ingredientFoodId } = parsed.data;
 
     // Unconditional, and first: every other filter narrows what this allows.
     const conditions = [visibleRecipesCondition(userId)];
@@ -251,6 +259,19 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     if (q) conditions.push(ilike(recipes.title, `%${q}%`));
     if (maxAgeMonths !== undefined) conditions.push(lte(recipes.minAgeMonths, maxAgeMonths));
     if (ironFocus !== undefined) conditions.push(eq(recipes.ironFocus, ironFocus));
+    if (vitaminCHigh !== undefined) {
+      // Derived exactly like `allergen` below: ingredients -> foods whose
+      // vitaminCLevel is "high". Custom foods always store "low", so a
+      // custom recipe only qualifies via a catalog ingredient.
+      const withHighVitaminC = db
+        .select({ recipeId: recipeIngredients.recipeId })
+        .from(recipeIngredients)
+        .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
+        .where(eq(foods.vitaminCLevel, "high"));
+      conditions.push(
+        vitaminCHigh ? inArray(recipes.id, withHighVitaminC) : notInArray(recipes.id, withHighVitaminC),
+      );
+    }
     if (ingredientFoodId) {
       const withIngredient = db
         .select({ recipeId: recipeIngredients.recipeId })
@@ -304,6 +325,16 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
       allergensByRecipeId.set(row.recipeId, slugs);
     }
 
+    const highVitaminCRows =
+      recipeIds.length > 0
+        ? await db
+            .select({ recipeId: recipeIngredients.recipeId })
+            .from(recipeIngredients)
+            .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
+            .where(and(inArray(recipeIngredients.recipeId, recipeIds), eq(foods.vitaminCLevel, "high")))
+        : [];
+    const vitaminCHighRecipeIds = new Set(highVitaminCRows.map((row) => row.recipeId));
+
     const ingredientRows =
       recipeIds.length > 0
         ? await db
@@ -337,6 +368,7 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
       title: r.title,
       minAgeMonths: r.minAgeMonths,
       ironFocus: r.ironFocus,
+      vitaminCHigh: vitaminCHighRecipeIds.has(r.id),
       allergens: allergensByRecipeId.get(r.id) ?? [],
       isCustom: r.ownerId !== null,
       isFavorite: favoritedIds.has(r.id),

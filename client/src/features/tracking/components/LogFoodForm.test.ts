@@ -106,6 +106,7 @@ describe("LogFoodForm (render)", () => {
       title: "Iron-Rich Purée",
       minAgeMonths: 6,
       ironFocus: true,
+      vitaminCHigh: false,
       allergens: [],
     };
     const meal: MealItem = {
@@ -152,6 +153,7 @@ function recipeRow(favorite: FavoriteItem, overrides: Partial<RecipeListItem> = 
     title: favorite.title,
     minAgeMonths: favorite.minAgeMonths,
     ironFocus: favorite.ironFocus,
+    vitaminCHigh: false,
     allergens: [...favorite.allergens],
     isCustom: false,
     isFavorite: true,
@@ -166,6 +168,7 @@ describe("recipe prefill from /log-meal?recipe=<id> (item 213)", () => {
     title: "Iron-Rich Purée",
     minAgeMonths: 6,
     ironFocus: true,
+    vitaminCHigh: false,
     allergens: [],
   };
 

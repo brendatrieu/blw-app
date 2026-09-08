@@ -231,6 +231,9 @@ export const recipeDetailSchema = z.object({
   minAgeMonths: z.number().int(),
   prepMinutes: z.number().int(),
   ironFocus: z.boolean(),
+  /** Derived from the ingredients' foods: true when at least one ingredient
+   * food has `vitaminCLevel: "high"` — same derivation as `allergens`. */
+  vitaminCHigh: z.boolean(),
   imageUrl: z.string().nullable(),
   fridgeHoursOverride: z.number().int().nullable(),
   freezerDaysOverride: z.number().int().nullable(),
@@ -280,6 +283,10 @@ export const recipesQuerySchema = z.object({
   /** Allergen slug, matched against the recipe's DERIVED allergen set. */
   allergen: z.string().min(1).optional(),
   ironFocus: queryFlag.optional(),
+  /** Same "true"/"false"/"1"/"0" flag semantics as `ironFocus`: present is an
+   * exact filter on the recipe's derived `vitaminCHigh`, absent filters on
+   * nothing. */
+  vitaminCHigh: queryFlag.optional(),
   /** Recipes that use this food as an ingredient. */
   ingredientFoodId: z.string().uuid().optional(),
 });
@@ -291,6 +298,9 @@ export const recipeListItemSchema = z.object({
   title: z.string(),
   minAgeMonths: z.number().int(),
   ironFocus: z.boolean(),
+  /** Derived from the ingredients' foods, not stored on the recipe — same
+   * derivation as `allergens`. */
+  vitaminCHigh: z.boolean(),
   /** Derived from the ingredients' foods, not stored on the recipe. */
   allergens: z.array(z.string()),
   isCustom: z.boolean(),

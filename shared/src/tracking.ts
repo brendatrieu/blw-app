@@ -355,6 +355,9 @@ export const favoriteItemSchema = z.object({
   title: z.string(),
   minAgeMonths: z.number().int(),
   ironFocus: z.boolean(),
+  /** Derived the same way the recipes list derives it — see
+   * `GET /api/favorites`. */
+  vitaminCHigh: z.boolean(),
   allergens: z.array(z.string()),
 });
 export type FavoriteItem = z.infer<typeof favoriteItemSchema>;

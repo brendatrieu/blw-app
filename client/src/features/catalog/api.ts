@@ -97,15 +97,16 @@ export interface RecipeFilters {
   maxAgeMonths?: number;
   allergen?: string;
   ironFocus?: boolean;
+  vitaminCHigh?: boolean;
   ingredientFoodId?: string;
 }
 
 /**
  * The query string for a set of filters. Pure and exported for the same
  * reason `buildCustomFoodInput` is: the ONE rule that's easy to get wrong —
- * `ironFocus` is an exact match server-side, so an off toggle must OMIT the
- * key rather than send `false` (which would hide every iron-focus recipe) —
- * is pinned by a test instead of by reading the fetch call.
+ * `ironFocus` and `vitaminCHigh` are exact matches server-side, so an off
+ * toggle must OMIT the key rather than send `false` (which would hide every
+ * matching recipe) — is pinned by a test instead of by reading the fetch call.
  */
 export function buildRecipesQueryString(filters: RecipeFilters): string {
   const params = new URLSearchParams();
@@ -115,6 +116,7 @@ export function buildRecipesQueryString(filters: RecipeFilters): string {
   if (filters.maxAgeMonths !== undefined) params.set("maxAgeMonths", String(filters.maxAgeMonths));
   if (filters.allergen) params.set("allergen", filters.allergen);
   if (filters.ironFocus) params.set("ironFocus", "true");
+  if (filters.vitaminCHigh) params.set("vitaminCHigh", "true");
   if (filters.ingredientFoodId) params.set("ingredientFoodId", filters.ingredientFoodId);
   const qs = params.toString();
   return qs ? `?${qs}` : "";

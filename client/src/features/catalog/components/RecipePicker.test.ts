@@ -13,6 +13,7 @@ function recipe(overrides: Partial<RecipeListItem> = {}): RecipeListItem {
     title: "Banana porridge",
     minAgeMonths: 6,
     ironFocus: false,
+    vitaminCHigh: false,
     allergens: [],
     isCustom: false,
     isFavorite: false,

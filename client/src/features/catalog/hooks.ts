@@ -212,6 +212,7 @@ export function recipeListItemFromDetail(recipe: RecipeDetail, isFavorite: boole
     title: recipe.title,
     minAgeMonths: recipe.minAgeMonths,
     ironFocus: recipe.ironFocus,
+    vitaminCHigh: recipe.vitaminCHigh,
     allergens: [...recipe.allergens],
     isCustom: recipe.isCustom,
     isFavorite,
