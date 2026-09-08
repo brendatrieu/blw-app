@@ -164,12 +164,16 @@ const BASE_PAIRS: Pair[] = [
   { name: "body text on inset surface", fg: "color-text", bg: "color-bg-inset" },
   { name: "muted text on page", fg: "color-text-muted", bg: "color-bg" },
   { name: "muted text on elevated surface", fg: "color-text-muted", bg: "color-bg-elevated" },
+  // Inset surfaces (SegmentedControl track, Menu, EmptyState) carry muted text too.
+  { name: "muted text on inset surface", fg: "color-text-muted", bg: "color-bg-inset" },
 
   // CTA fill (Button/Badge/SegmentedControl/nav pill/Done bar) — fixed
-  // black-on-peach in both modes.
+  // black-on-sky-blue in both modes.
   { name: "primary-contrast on primary fill (CTA)", fg: "color-primary-contrast", bg: "color-primary" },
   { name: "primary-contrast on primary-hover fill", fg: "color-primary-contrast", bg: "color-primary-hover" },
   { name: "primary-contrast on primary-active fill", fg: "color-primary-contrast", bg: "color-primary-active" },
+  // The tonal Button (pantry CTA): the same black on a solid mint fill.
+  { name: "primary-contrast on success fill (tonal Button)", fg: "color-primary-contrast", bg: "color-success" },
 
   // Interactive text accent — links, active nav label, focus-adjacent text.
   { name: "accent link/text on page", fg: "color-accent", bg: "color-bg" },
@@ -252,6 +256,26 @@ describe("design token contrast (WCAG AA)", () => {
         expect(contrastRatio(fg, compositedTint)).toBeGreaterThanOrEqual(pair.min ?? 4.5);
       });
     }
+  }
+});
+
+describe("tonal Button hover (mint darkened with black)", () => {
+  // Button.tsx: hover:bg-[color-mix(in_srgb,var(--color-success),#000000_N%)]
+  // — not a token, so the pair list can't see it. Read N from the source so
+  // a heavier mix can't slip past this check.
+  const buttonSource = readFileSync(new URL("../components/ui/Button.tsx", import.meta.url), "utf8");
+  const mixMatch = buttonSource.match(/color-mix\(in_srgb,var\(--color-success\),#000000_(\d+)%\)/);
+  const mixPercent = Number(mixMatch?.[1]);
+  it("finds the tonal hover mix in Button.tsx", () => {
+    expect(Number.isFinite(mixPercent)).toBe(true);
+  });
+  for (const mode of ["light", "dark"] as const) {
+    it(`[${mode}] primary-contrast on the darkened mint hover >= 4.5:1`, () => {
+      const mint = parseColor(resolve("color-success", mode));
+      const hover = compositeOver({ r: 0, g: 0, b: 0, a: mixPercent / 100 }, mint);
+      const black = parseColor(resolve("color-primary-contrast", mode));
+      expect(contrastRatio(black, hover)).toBeGreaterThanOrEqual(4.5);
+    });
   }
 });
 

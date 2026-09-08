@@ -32,8 +32,8 @@ export default defineConfig({
         name: "blw-app",
         short_name: "blw-app",
         description: "A calm, offline-friendly companion for baby-led weaning — foods, recipes, pantry, and safety guidance.",
-        theme_color: "#fdfaf6",
-        background_color: "#fdfaf6",
+        theme_color: "#fbfaf8",
+        background_color: "#fbfaf8",
         display: "standalone",
         start_url: "/",
         icons: [

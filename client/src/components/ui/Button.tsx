@@ -8,12 +8,12 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
     "border border-transparent bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-sm)] hover:bg-[var(--color-primary-hover)] active:bg-[var(--color-primary-active)]",
   secondary: "border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]",
-  // A quieter CTA than `primary`: the same contrast-gated soft-tint tokens
-  // used for badges/chips, not a new color. Hover mixes in a touch of the
-  // solid `--color-primary` token to nudge the tint's alpha up slightly —
-  // both are existing tokens, no new hex introduced.
+  // A quieter CTA than `primary` (the pantry button): a solid fill of the
+  // mint `--color-success` swatch with the same fixed black the primary
+  // uses (`--color-primary-contrast`), so the contrast gate covers it.
+  // Hover darkens the mint by 8% — no new color token.
   tonal:
-    "border border-transparent bg-[var(--color-primary-soft)] text-[var(--color-primary-soft-text)] hover:bg-[color-mix(in_srgb,var(--color-primary-soft),var(--color-primary)_15%)]",
+    "border border-transparent bg-[var(--color-success)] text-[var(--color-primary-contrast)] hover:bg-[color-mix(in_srgb,var(--color-success),#000000_8%)]",
   ghost: "border border-transparent bg-transparent text-[var(--color-text)] hover:bg-[var(--color-bg-inset)]",
   danger: "border border-transparent bg-[var(--color-danger)] text-[var(--color-danger-contrast)] shadow-[var(--shadow-sm)]",
 };

@@ -2,7 +2,7 @@
 @import "@fontsource-variable/nunito/wght.css";
 
 /*
- * Design tokens — "Peach Terra Cotta"
+ * Design tokens — "Seaside" (sky-blue CTA, off-white / near-black-blue grounds)
  * ====================================
  * Everything below is CSS custom properties, not a Tailwind @theme block —
  * the app already leans on `var(--color-x)` and `text-[var(--color-x)]`
@@ -21,14 +21,15 @@
  *
  * Token roles (read this before touching a color):
  * - --color-primary / -contrast / -hover / -active: the ONE CTA fill,
- *   fixed peach in both modes with fixed pure-black text — every button,
+ *   fixed sky blue in both modes with fixed pure-black text — every button,
  *   solid badge, and "selected chip" fill in the app uses this, never a
- *   per-action color.
+ *   per-action color. (The `tonal` Button variant is the one sibling: a
+ *   solid mint --color-success fill with the same black text.)
  * - --color-accent: the INTERACTIVE TEXT/BORDER color — links, the active
  *   bottom-nav label, focus rings/focus-within borders, and small
- *   confirmation markers (e.g. "Added to your pantry"). Terracotta in
- *   light mode (peach itself reads too pale as body-size text on a light
- *   ground), raw peach in dark mode.
+ *   confirmation markers (e.g. "Added to your pantry"). Deep steel blue in
+ *   light mode (the sky blue itself reads too pale as body-size text on a
+ *   light ground), the sky blue itself in dark mode.
  * - --color-{primary,caution,success}-soft / -soft-text: translucent chip
  *   tint + its matching deep/pastel text, for badges that carry a soft
  *   semantic (brand/caution/success) rather than a solid CTA-style fill.
@@ -53,45 +54,45 @@
  * tags). Keep all three in sync by hand when either value changes here.
  */
 :root {
-  /* ---- Surfaces (warm paper) ---- */
-  --color-bg: #fdfaf6;
+  /* ---- Surfaces (neutral off-white, white cards) ---- */
+  --color-bg: #fbfaf8;
   --color-bg-elevated: #ffffff;
-  --color-bg-inset: #f2ece0;
+  --color-bg-inset: #f1efeb;
 
-  /* ---- Text (warm charcoal) ---- */
-  --color-text: #282724;
-  --color-text-muted: #6b665e;
-  --color-border: #e8e2d8;
+  /* ---- Text (deep navy — the hue the dark ground is built from) ---- */
+  --color-text: #1f2a36;
+  --color-text-muted: #5b6570;
+  --color-border: #e6e3df;
 
-  /* ---- Brand: the one CTA fill, fixed across both themes ---- */
-  --color-primary: #f2b693;
-  --color-primary-hover: #eca37b;
-  --color-primary-active: #e2905f;
+  /* ---- Brand: the one CTA fill, fixed across both themes (sky blue) ---- */
+  --color-primary: #b4d4e6;
+  --color-primary-hover: #a3c8de;
+  --color-primary-active: #8fbad4;
   --color-primary-contrast: #000000;
 
   /* ---- Interactive text/border accent (links, active nav, focus rings,
      from-pantry markers, selected-state labels) — mode-dependent because
-     raw peach is too pale to read as body-size text on a light ground. ---- */
-  --color-accent: #a8501f;
+     the sky blue is too pale to read as body-size text on a light ground. ---- */
+  --color-accent: #2f5f7c;
 
   /* ---- Semantic swatches — solid, used for confetti + tiny status dots,
      never as a body-text color. ---- */
-  --color-caution: #f9d779;
-  --color-success: #a1cca6;
+  --color-caution: #ffecc3; /* butter yellow */
+  --color-success: #cde9da; /* mint */
 
   /* ---- Chip/badge tints — translucent brand/caution/success fills, each
      paired with its own deep (light mode) / pastel (dark mode) text. ---- */
-  --color-primary-soft: rgba(242, 182, 147, 0.33);
-  --color-primary-soft-text: #7a4a1f;
-  --color-caution-soft: rgba(249, 215, 121, 0.33);
-  --color-caution-soft-text: #4a3a08;
-  --color-success-soft: rgba(161, 204, 166, 0.33);
-  --color-success-soft-text: #1e3b24;
+  --color-primary-soft: rgba(180, 212, 230, 0.5);
+  --color-primary-soft-text: #1c3e52;
+  --color-caution-soft: rgba(255, 236, 195, 0.9);
+  --color-caution-soft-text: #6b4f10;
+  --color-success-soft: rgba(205, 233, 218, 0.7);
+  --color-success-soft-text: #245743;
 
   /* ---- Neutral chip tint — location badges (Fridge/Freezer/Counter) and
      any other label that deliberately carries no semantic color. ---- */
-  --color-neutral-soft: rgba(107, 102, 94, 0.12);
-  --color-neutral-soft-text: #6b665e;
+  --color-neutral-soft: rgba(91, 101, 112, 0.12);
+  --color-neutral-soft-text: #5b6570;
 
   /* ---- Danger — functional only, kept legible as both plain text and a
      solid fill (see the token-roles note above). ---- */
@@ -100,15 +101,15 @@
   --color-danger-soft: rgba(179, 38, 30, 0.1);
   --color-danger-soft-text: #b3261e;
 
-  --color-callout-bg: #fbf0ce;
-  --color-callout-border: #efd37a;
-  --color-callout-icon: #4a3a08;
+  --color-callout-bg: #fff4dc;
+  --color-callout-border: #eedba3;
+  --color-callout-icon: #6b4f10;
 
-  /* ---- Elevation — warm-tinted (cocoa-brown) instead of neutral black,
-     so shadows read as part of the palette rather than generic UI murk. ---- */
-  --shadow-sm: 0 1px 2px rgb(58 51 44 / 0.08), 0 1px 1px rgb(58 51 44 / 0.06);
-  --shadow-md: 0 8px 20px rgb(58 51 44 / 0.12), 0 2px 6px rgb(58 51 44 / 0.08);
-  --shadow-lg: 0 20px 40px rgb(58 51 44 / 0.18), 0 4px 10px rgb(58 51 44 / 0.1);
+  /* ---- Elevation — navy-tinted instead of neutral black, so shadows read
+     as part of the palette rather than generic UI murk. ---- */
+  --shadow-sm: 0 1px 2px rgb(31 42 54 / 0.08), 0 1px 1px rgb(31 42 54 / 0.06);
+  --shadow-md: 0 8px 20px rgb(31 42 54 / 0.12), 0 2px 6px rgb(31 42 54 / 0.08);
+  --shadow-lg: 0 20px 40px rgb(31 42 54 / 0.18), 0 4px 10px rgb(31 42 54 / 0.1);
 
   /* Disc behind emoji whose ink is near-black (e.g. 🩺). Fixed in both
      modes: light enough to lift the glyph off the dark ground. */
@@ -154,33 +155,33 @@
      var() instead of duplicating hex/rgba codes. Tokens that are fixed
      across themes (primary, primary-contrast, caution, success) are not
      repeated here — both mode blocks below simply skip reassigning them. */
-  --_dark-color-bg: #121110;
-  --_dark-color-bg-elevated: #1c1a19;
-  --_dark-color-bg-inset: #221f1d;
-  --_dark-color-text: #f0eee9;
-  --_dark-color-text-muted: #ada7a0;
-  --_dark-color-border: #322e2c;
+  --_dark-color-bg: #0e1218; /* near-black blue */
+  --_dark-color-bg-elevated: #171d25;
+  --_dark-color-bg-inset: #232b35;
+  --_dark-color-text: #eef3f7;
+  --_dark-color-text-muted: #a3afba;
+  --_dark-color-border: #28313c;
 
-  --_dark-accent: #f2b693;
+  --_dark-accent: #b4d4e6;
 
-  --_dark-primary-soft: rgba(242, 182, 147, 0.13);
-  --_dark-primary-soft-text: #f2b693;
-  --_dark-caution-soft: rgba(249, 215, 121, 0.13);
-  --_dark-caution-soft-text: #f9d779;
-  --_dark-success-soft: rgba(161, 204, 166, 0.13);
-  --_dark-success-soft-text: #a1cca6;
+  --_dark-primary-soft: rgba(180, 212, 230, 0.18);
+  --_dark-primary-soft-text: #b4d4e6;
+  --_dark-caution-soft: rgba(255, 236, 195, 0.16);
+  --_dark-caution-soft-text: #ffecc3;
+  --_dark-success-soft: rgba(205, 233, 218, 0.18);
+  --_dark-success-soft-text: #cde9da;
 
-  --_dark-neutral-soft: rgba(173, 167, 160, 0.16);
-  --_dark-neutral-soft-text: #ada7a0;
+  --_dark-neutral-soft: rgba(163, 175, 186, 0.16);
+  --_dark-neutral-soft-text: #a3afba;
 
   --_dark-danger: #ff8a80;
   --_dark-danger-soft: rgba(255, 138, 128, 0.14);
   --_dark-danger-soft-text: #ff8a80;
   --_dark-danger-contrast: #000000;
 
-  --_dark-callout-bg: #362c10;
-  --_dark-callout-border: #6b5a22;
-  --_dark-callout-icon: #f9d779;
+  --_dark-callout-bg: #2f2a16;
+  --_dark-callout-border: #5e5122;
+  --_dark-callout-icon: #ffecc3;
 
   --_dark-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 1px rgb(0 0 0 / 0.24);
   --_dark-shadow-md: 0 8px 20px rgb(0 0 0 / 0.36), 0 2px 6px rgb(0 0 0 / 0.24);
