@@ -17,6 +17,7 @@ import { FoodCreatePage } from "./pages/FoodCreatePage.js";
 import { FoodEditPage } from "./pages/FoodEditPage.js";
 import { RecipeDetailPage } from "./pages/RecipeDetailPage.js";
 import { BabyAllergensPage } from "./pages/BabyAllergensPage.js";
+import { AllergenDetailPage } from "./pages/AllergenDetailPage.js";
 import { FavoritesPage } from "./pages/FavoritesPage.js";
 import { SafetyPage } from "./pages/SafetyPage.js";
 import { SafetyArticlePage } from "./pages/SafetyArticlePage.js";
@@ -72,6 +73,7 @@ export function App() {
         <Route path="/recipes/:id" element={<RecipeDetailPage />} />
         <Route path="/log" element={<Navigate to="/" replace />} />
         <Route path="/babies/:id/allergens" element={<BabyAllergensPage />} />
+        <Route path="/babies/:id/allergens/:slug" element={<AllergenDetailPage />} />
         <Route path="/favorites" element={<FavoritesPage />} />
         <Route path="/safety" element={<SafetyPage />} />
         <Route path="/safety/:slug" element={<SafetyArticlePage />} />

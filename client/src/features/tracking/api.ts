@@ -1,4 +1,5 @@
 import type {
+  AllergenDetail,
   AllergenProgressResponse,
   CreateMealInput,
   FavoritesResponse,
@@ -65,6 +66,15 @@ export function deleteMeal(id: string): Promise<void> {
 
 export function fetchAllergenProgress(babyId: string): Promise<AllergenProgressResponse> {
   return apiGet<AllergenProgressResponse>(`/api/babies/${babyId}/allergen-progress`);
+}
+
+/**
+ * The ladder row zoomed in: the same progress item plus the foods carrying
+ * this allergen and the meals that exposed this baby to it. Lives under the
+ * progress route's own path because it IS that route's row in detail.
+ */
+export function fetchAllergenDetail(babyId: string, allergenSlug: string): Promise<AllergenDetail> {
+  return apiGet<AllergenDetail>(`/api/babies/${babyId}/allergen-progress/${allergenSlug}`);
 }
 
 /** "Already established before the app" override — see `unionAllergenStatus`

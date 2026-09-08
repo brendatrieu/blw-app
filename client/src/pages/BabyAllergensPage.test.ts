@@ -106,3 +106,34 @@ describe("BabyAllergensPage recency fact + hint (items 143/144)", () => {
     expect(html).toContain("Consider serving again soon to maintain tolerance.");
   });
 });
+
+describe("BabyAllergensPage rows open the allergen detail page (item 188)", () => {
+  it("links each row's info block to /babies/:id/allergens/:slug", () => {
+    const html = renderWithItems([item({ allergenSlug: "peanut" }), item({ allergenSlug: "egg", allergenName: "Egg" })]);
+    expect(html).toContain(`href="/babies/${BABY_ID}/allergens/peanut"`);
+    expect(html).toContain(`href="/babies/${BABY_ID}/allergens/egg"`);
+    // One link per row — the row is the only navigation affordance it has.
+    expect((html.match(/href="\/babies\/[^"]+\/allergens\/[^"]+"/g) ?? []).length).toBe(2);
+  });
+
+  it("carries no chevron glyph, matching pantry rows (which open on tap without one)", () => {
+    const html = renderWithItems([item({})]);
+    expect(html).not.toContain('d="M9 6l6 6-6 6"');
+  });
+
+  it("keeps 'Mark as established' OUTSIDE the row anchor (no interactive element nested in a link)", () => {
+    const html = renderWithItems([item({ status: "not_started" })]);
+    const anchorClose = html.indexOf("</a>");
+    const markIndex = html.indexOf(">Mark as established<");
+    expect(anchorClose).toBeGreaterThan(-1);
+    expect(markIndex).toBeGreaterThan(anchorClose);
+    expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
+  });
+
+  it("keeps the override row's Undo OUTSIDE the row anchor too", () => {
+    const html = renderWithItems([item({ status: "established", overridden: true })]);
+    const anchorClose = html.indexOf("</a>");
+    expect(html.indexOf(">Undo<")).toBeGreaterThan(anchorClose);
+    expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
+  });
+});

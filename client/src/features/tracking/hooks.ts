@@ -13,6 +13,7 @@ import {
   deleteAllergenOverride,
   deleteFavorite,
   deleteMeal,
+  fetchAllergenDetail,
   fetchAllergenProgress,
   fetchFavorites,
   fetchMeals,
@@ -26,14 +27,40 @@ import { useCelebration, type CelebrationOptions } from "../../components/ui/Cel
 export const trackingKeys = {
   meals: (babyId: string) => ["meals", babyId] as const,
   allergenProgress: (babyId: string) => ["allergen-progress", babyId] as const,
+  /** Prefix covering every allergen's detail for one baby — invalidating it
+   * refreshes whichever detail page happens to be cached, without the caller
+   * knowing which slug that is. */
+  allergenDetails: (babyId: string) => ["allergen-detail", babyId] as const,
+  allergenDetail: (babyId: string, allergenSlug: string) => ["allergen-detail", babyId, allergenSlug] as const,
   favorites: ["favorites"] as const,
 };
+
+/** Every query that has to change when this baby's allergen picture does:
+ * the ladder AND any cached detail page for it. Used by the override
+ * mutations and by every meal mutation (a meal edit can move exposures). */
+/** Exported only so a test can pin that BOTH allergen surfaces are invalidated. */
+export function invalidateAllergenQueries(queryClient: QueryClient, babyId: string): void {
+  void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
+  void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenDetails(babyId) });
+}
 
 export function useMeals(babyId: string | undefined, query: MealsQuery = {}) {
   return useQuery({
     queryKey: [...trackingKeys.meals(babyId ?? ""), query],
     queryFn: () => fetchMeals(babyId as string, query),
     enabled: Boolean(babyId),
+    staleTime: 15_000,
+  });
+}
+
+/** One allergen's full story — progress row, the foods carrying it, and this
+ * baby's exposure history. Sits alongside `useAllergenProgress`; both are
+ * invalidated together by every mutation that can move either. */
+export function useAllergenDetail(babyId: string | undefined, allergenSlug: string | undefined) {
+  return useQuery({
+    queryKey: trackingKeys.allergenDetail(babyId ?? "", allergenSlug ?? ""),
+    queryFn: () => fetchAllergenDetail(babyId as string, allergenSlug as string),
+    enabled: Boolean(babyId && allergenSlug),
     staleTime: 15_000,
   });
 }
@@ -61,7 +88,7 @@ export function useMarkAllergenEstablished(babyId: string | undefined) {
     },
     onSettled: () => {
       if (!babyId) return;
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
+      invalidateAllergenQueries(queryClient, babyId);
     },
   });
 }
@@ -76,7 +103,7 @@ export function useUndoAllergenEstablished(babyId: string | undefined) {
     },
     onSettled: () => {
       if (!babyId) return;
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
+      invalidateAllergenQueries(queryClient, babyId);
     },
   });
 }
@@ -172,7 +199,7 @@ export function useCreateMeal(babyId: string | undefined) {
     onSettled: () => {
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
+      invalidateAllergenQueries(queryClient, babyId);
     },
   });
 }
@@ -197,7 +224,7 @@ export function useUpdateMeal(babyId: string | undefined) {
     onSettled: () => {
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
+      invalidateAllergenQueries(queryClient, babyId);
     },
   });
 }
@@ -223,7 +250,7 @@ export function useDeleteMeal(babyId: string | undefined) {
     onSettled: () => {
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
+      invalidateAllergenQueries(queryClient, babyId);
     },
   });
 }

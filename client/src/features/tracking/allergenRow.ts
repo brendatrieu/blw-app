@@ -1,4 +1,5 @@
-import type { AllergenProgressItem } from "@blw/shared";
+import type { AllergenProgressItem, AllergenStatus } from "@blw/shared";
+import type { BadgeTone } from "../../components/ui/Badge.js";
 
 export type AllergenRowAction = "mark" | "undo" | "none";
 
@@ -91,4 +92,24 @@ export function resolveAllergenRowAction(
     return item.overridden ? "undo" : "none";
   }
   return "mark";
+}
+
+/** Human label per ladder status, shared by the ladder row and the detail page header. */
+export const ALLERGEN_STATUS_LABEL: Record<AllergenStatus, string> = {
+  not_started: "Not started",
+  started: "Started",
+  established: "Established",
+};
+
+/** Badge tone per ladder status — no new colors, the kit's existing tones only. */
+export const ALLERGEN_STATUS_TONE: Record<AllergenStatus, BadgeTone> = {
+  not_started: "neutral",
+  started: "sunshine",
+  established: "leaf",
+};
+
+/** "Aug 20, 2026" for a nullable ISO instant; an em dash when there is none. */
+export function formatAllergenDate(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }

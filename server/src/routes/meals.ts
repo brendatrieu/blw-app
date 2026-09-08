@@ -6,33 +6,24 @@
 // it only unions into the reported status (see `unionAllergenStatus`). Every
 // route sits behind requireAuth and every baby/meal lookup is scoped to the
 // caller's own rows — a miss (wrong owner or unknown id) is 404, never 403.
-import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
+  allergenDetailParamsSchema,
   allergenKeyParamSchema,
   babyIdRouteParamSchema,
   createMealInputSchema,
   mealIdParamSchema,
   mealsQuerySchema,
-  unionAllergenStatus,
   updateMealInputSchema,
-  type AllergenProgressItem,
+  type AllergenDetail,
   type AllergenProgressResponse,
   type MealsResponse,
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
-import {
-  allergenLadderSteps,
-  allergenOverrides,
-  allergens,
-  babies,
-  foodAllergens,
-  foods,
-  mealFoods,
-  meals,
-  recipes,
-} from "../db/schema.js";
+import { allergenOverrides, allergens, babies, foods, mealFoods, meals, recipes } from "../db/schema.js";
+import { loadAllergenDetail, loadAllergenProgress } from "../services/allergens.js";
 import { insertMealWithFoods, loadMeals, ownsBaby } from "../services/meals.js";
 
 const DEFAULT_LIMIT = 50;
@@ -279,65 +270,34 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     if (!params.success) return notFound(reply);
     if (!(await ownsBaby(db, params.data.babyId, currentUserId(request)))) return notFound(reply);
 
-    // Every allergen, ordered by its ladder step (unstepped allergens sort
-    // last, alphabetically) so the response is already in the order the
-    // ladder tracker wants to render it.
-    const allergenRows = await db
-      .select({
-        id: allergens.id,
-        slug: allergens.slug,
-        name: allergens.name,
-        introGuidance: allergens.introGuidance,
-      })
-      .from(allergens)
-      .leftJoin(allergenLadderSteps, eq(allergenLadderSteps.allergenId, allergens.id))
-      .orderBy(asc(sql`coalesce(${allergenLadderSteps.step}, 999)`), asc(allergens.name));
-
-    // One exposure = one (meal, food) pair carrying the allergen, exactly
-    // the granularity the old one-row-per-food serve log counted.
-    const exposureRows = await db
-      .select({
-        allergenId: foodAllergens.allergenId,
-        exposures: sql<number>`count(*)::int`,
-        firstAt: sql<string>`min(${meals.servedAt})`,
-        lastAt: sql<string>`max(${meals.servedAt})`,
-      })
-      .from(mealFoods)
-      .innerJoin(meals, eq(mealFoods.mealId, meals.id))
-      .innerJoin(foodAllergens, eq(foodAllergens.foodId, mealFoods.foodId))
-      .where(eq(meals.babyId, params.data.babyId))
-      .groupBy(foodAllergens.allergenId);
-
-    const exposuresByAllergenId = new Map(exposureRows.map((r) => [r.allergenId, r]));
-
-    // Parent overrides, keyed by slug. Read alongside the derivation rather
-    // than folded into the exposure query on purpose: `exposures` stays a
-    // pure count of real meals, and the union happens in one shared function.
-    const overrideRows = await db
-      .select({ allergenKey: allergenOverrides.allergenKey })
-      .from(allergenOverrides)
-      .where(eq(allergenOverrides.babyId, params.data.babyId));
-    const overriddenSlugs = new Set(overrideRows.map((row) => row.allergenKey));
-
-    const items: AllergenProgressItem[] = allergenRows.map((a) => {
-      const exposure = exposuresByAllergenId.get(a.id);
-      const exposures = exposure?.exposures ?? 0;
-      const { status, overridden } = unionAllergenStatus(exposures, overriddenSlugs.has(a.slug));
-      return {
-        allergenSlug: a.slug,
-        allergenName: a.name,
-        introGuidance: a.introGuidance,
-        exposures,
-        firstAt: exposure ? new Date(exposure.firstAt).toISOString() : null,
-        // Null means "nothing logged", including for a row an override alone
-        // established — see the schema's note on `lastServedAt`.
-        lastServedAt: exposure ? new Date(exposure.lastAt).toISOString() : null,
-        status,
-        overridden,
-      };
-    });
+    // Derivation lives in one place — the detail route below reads the same
+    // helper, so a ladder row and the page it opens can never disagree.
+    const items = await loadAllergenProgress(db, params.data.babyId);
 
     return reply.send({ items } satisfies AllergenProgressResponse);
+  });
+
+  // -----------------------------------------------------------------------
+  // GET /api/babies/:babyId/allergen-progress/:slug
+  // -----------------------------------------------------------------------
+  // One ladder row plus the story behind it. Sits under the progress route's
+  // own prefix because it IS that route's row, zoomed in — `progress` comes
+  // out of the same helper, byte for byte.
+  //
+  // Both halves of the path fail as 404 here: a baby this caller does not
+  // own, and a slug that names no allergen. Unlike the override routes below
+  // (where a bad key is a 400 on a write), this is a page address, and both
+  // misses are the same dead end.
+  app.get("/api/babies/:babyId/allergen-progress/:slug", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = allergenDetailParamsSchema.safeParse(request.params);
+    if (!params.success) return notFound(reply);
+    const userId = currentUserId(request);
+    if (!(await ownsBaby(db, params.data.babyId, userId))) return notFound(reply);
+
+    const detail = await loadAllergenDetail(db, params.data.babyId, params.data.slug, userId);
+    if (!detail) return notFound(reply);
+
+    return reply.send(detail satisfies AllergenDetail);
   });
 
   // -----------------------------------------------------------------------

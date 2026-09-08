@@ -274,6 +274,77 @@ export const allergenKeyParamSchema = z.object({ key: allergenKeySchema });
 export type AllergenKeyParams = z.infer<typeof allergenKeyParamSchema>;
 
 // ---------------------------------------------------------------------------
+// GET /api/babies/:babyId/allergen-progress/:slug
+// ---------------------------------------------------------------------------
+
+/**
+ * Both halves of the detail route's path. `:babyId` still fails as a 404
+ * (a malformed id cannot name a row this caller owns) and so does an
+ * unknown `:slug` — unlike the override routes, where a bad key is a 400,
+ * this one is a page address: "no such allergen" and "not your baby" are the
+ * same dead end and answer the same way.
+ */
+export const allergenDetailParamsSchema = z.object({
+  babyId: z.string().uuid(),
+  slug: allergenKeySchema,
+});
+export type AllergenDetailParams = z.infer<typeof allergenDetailParamsSchema>;
+
+/**
+ * A food carrying this allergen: the seeded catalog plus the CALLER's own
+ * custom foods (another parent's custom foods are invisible here, exactly as
+ * they are everywhere else — see the catalog's visibility rule). `emoji` is
+ * the parent's pick on a custom food and null for catalog rows, which resolve
+ * theirs from the client's slug/category table.
+ */
+export const allergenDetailFoodSchema = z.object({
+  id: z.string().uuid(),
+  slug: z.string(),
+  name: z.string(),
+  category: foodCategorySchema,
+  emoji: z.string().nullable(),
+  isCustom: z.boolean(),
+});
+export type AllergenDetailFood = z.infer<typeof allergenDetailFoodSchema>;
+
+/**
+ * One meal that exposed this baby to the allergen. `foods` lists ONLY the
+ * allergen-carrying foods of that meal — the rest of the plate is not what
+ * this page is about — so it is a subset of the meal's real foods and always
+ * has at least one entry.
+ */
+export const allergenDetailExposureSchema = z.object({
+  mealId: z.string().uuid(),
+  servedAt: z.string(),
+  foods: z.array(
+    z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      emoji: z.string().nullable(),
+    }),
+  ),
+  /** `meals.reactionNote` under the name this page reads it by. */
+  reaction: z.string().nullable(),
+  notes: z.string().nullable(),
+});
+export type AllergenDetailExposure = z.infer<typeof allergenDetailExposureSchema>;
+
+/**
+ * `progress` is byte-for-byte the item the ladder route returns for this
+ * allergen — both come out of the same derivation helper, so the detail page
+ * can never disagree with the row that opened it. `exposures` is newest
+ * first and capped; an allergen established by a parent override alone has
+ * an empty list and a null `lastServedAt`, because an override carries a
+ * status and never a date.
+ */
+export const allergenDetailSchema = z.object({
+  progress: allergenProgressItemSchema,
+  foods: z.array(allergenDetailFoodSchema),
+  exposures: z.array(allergenDetailExposureSchema),
+});
+export type AllergenDetail = z.infer<typeof allergenDetailSchema>;
+
+// ---------------------------------------------------------------------------
 // PUT/DELETE /api/recipes/:id/favorite, GET /api/favorites
 // ---------------------------------------------------------------------------
 

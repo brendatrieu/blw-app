@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type {
+  AllergenDetail,
   AllergenProgressItem,
   AllergenProgressResponse,
   Baby,
@@ -926,6 +927,207 @@ describe("tracking routes", () => {
 
       await deleteOverride(user, babyId, "peanut");
       expect((await fetchBabyProfileSummary(db, userId, babyId))?.establishedTop9Allergens).toEqual(["egg"]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // GET /api/babies/:babyId/allergen-progress/:slug
+  // -------------------------------------------------------------------------
+  describe("allergen detail", () => {
+    function getDetail(user: TestUser, babyId: string, slug: string) {
+      return app.inject({
+        method: "GET",
+        url: `/api/babies/${babyId}/allergen-progress/${slug}`,
+        headers: { cookie: user.cookie },
+      });
+    }
+
+    async function detailBody(user: TestUser, babyId: string, slug: string): Promise<AllergenDetail> {
+      const response = await getDetail(user, babyId, slug);
+      if (response.statusCode !== 200) {
+        throw new Error(`allergen detail failed (${response.statusCode}): ${response.body}`);
+      }
+      return response.json<AllergenDetail>();
+    }
+
+    /** A custom food carrying the egg allergen, owned by `user`. */
+    async function createCustomEggFood(user: TestUser, name: string, emoji: string) {
+      const ownerId = await userIdFor(user);
+      const [food] = await db
+        .insert(schema.foods)
+        .values({
+          slug: `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${ownerId.slice(0, 6)}`,
+          name,
+          category: "protein",
+          emoji,
+          ironLevel: "low",
+          vitaminCLevel: "low",
+          chokingRisk: "low",
+          minAgeMonths: 6,
+          prep6m: "",
+          prep9m: "",
+          prep12m: "",
+          storageCategory: "produce_cooked",
+          ownerId,
+        })
+        .returning();
+      await db.insert(schema.foodAllergens).values({ foodId: food!.id, allergenId: fixtures.eggAllergen.id });
+      return food!;
+    }
+
+    it("404s a foreign baby, an unknown baby, and an unknown allergen slug", async () => {
+      const owner = await signUpUser(app, "Owner");
+      const intruder = await signUpUser(app, "Intruder");
+      const babyId = await createBaby(app, owner);
+
+      // Someone else's baby is a 404, not a 403 — the same answer an id that
+      // does not exist gets, so nothing leaks about whose it is.
+      expect((await getDetail(intruder, babyId, "egg")).statusCode).toBe(404);
+      expect((await getDetail(owner, UNKNOWN_ID, "egg")).statusCode).toBe(404);
+      expect((await getDetail(owner, "not-a-uuid", "egg")).statusCode).toBe(404);
+
+      // A well-formed slug naming no allergen, and a malformed one, are the
+      // same dead end on this read path.
+      const unknownSlug = await getDetail(owner, babyId, "kiwifruit");
+      expect(unknownSlug.statusCode).toBe(404);
+      expect(unknownSlug.json()).toEqual({ error: "not_found" });
+      expect((await getDetail(owner, babyId, "Egg")).statusCode).toBe(404);
+    });
+
+    it("carries exactly the progress item the ladder route reports", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: "2026-03-01T08:00:00.000Z" });
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: "2026-03-02T08:00:00.000Z" });
+
+      const ladderEgg = await eggProgress(user, babyId);
+      const detail = await detailBody(user, babyId, "egg");
+
+      // One derivation, two routes: the row and the page it opens can never
+      // disagree about status, counts, or dates.
+      expect(detail.progress).toEqual(ladderEgg);
+      expect(detail.progress).toMatchObject({ status: "started", exposures: 2, overridden: false });
+
+      // And an allergen with nothing logged still resolves, as a zero row.
+      const peanut = await detailBody(user, babyId, "peanut");
+      expect(peanut.progress).toEqual((await progressItems(user, babyId)).find((i) => i.allergenSlug === "peanut"));
+      expect(peanut).toMatchObject({ foods: [], exposures: [] });
+    });
+
+    it("lists the caller's custom foods alongside the catalog and hides another parent's", async () => {
+      const owner = await signUpUser(app, "Owner");
+      const other = await signUpUser(app, "Other");
+      const babyId = await createBaby(app, owner);
+
+      const mine = await createCustomEggFood(owner, "Nana's frittata", "🥘");
+      await createCustomEggFood(other, "Someone else's custard", "🍮");
+
+      const detail = await detailBody(owner, babyId, "egg");
+
+      expect(detail.foods.map((f) => f.name)).toEqual(["Egg", "Nana's frittata"]);
+      expect(detail.foods).toContainEqual({
+        id: mine.id,
+        slug: mine.slug,
+        name: "Nana's frittata",
+        category: "protein",
+        emoji: "🥘",
+        isCustom: true,
+      });
+      // The catalog row reads as catalog: no owner, no parent-picked emoji.
+      expect(detail.foods.find((f) => f.slug === "egg")).toMatchObject({ isCustom: false, emoji: null });
+      // Another account's custom food is simply absent, exactly as it is in
+      // the catalog list — no "hidden" marker, no id.
+      expect(detail.foods.some((f) => f.name === "Someone else's custard")).toBe(false);
+
+      // The banana carries no allergen at all, so it is on no allergen page.
+      expect(detail.foods.some((f) => f.slug === "banana")).toBe(false);
+    });
+
+    it("lists exposures newest first, listing only the allergen's foods of each meal", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      const custom = await createCustomEggFood(user, "Nana's frittata", "🥘");
+
+      const older = await postMeal(user, babyId, {
+        foodIds: [fixtures.egg.id, fixtures.banana.id],
+        servedAt: "2026-03-01T08:00:00.000Z",
+        reactionNote: "hives around the mouth",
+        notes: "half a portion",
+      });
+      const newer = await postMeal(user, babyId, {
+        foodIds: [fixtures.egg.id, custom.id],
+        servedAt: "2026-03-04T18:30:00.000Z",
+      });
+      // A meal with none of the allergen's foods is not an exposure.
+      await postMeal(user, babyId, { foodIds: [fixtures.banana.id], servedAt: "2026-03-06T09:00:00.000Z" });
+
+      const detail = await detailBody(user, babyId, "egg");
+
+      expect(detail.exposures.map((e) => e.mealId)).toEqual([newer.id, older.id]);
+      // Only the allergen-carrying foods of the meal: the banana served
+      // alongside is not what this page is about.
+      expect(detail.exposures[0]!.foods.map((f) => f.name)).toEqual(["Egg", "Nana's frittata"]);
+      expect(detail.exposures[0]!.foods).toContainEqual({ id: custom.id, name: "Nana's frittata", emoji: "🥘" });
+      expect(detail.exposures[1]).toMatchObject({
+        mealId: older.id,
+        servedAt: "2026-03-01T08:00:00.000Z",
+        reaction: "hives around the mouth",
+        notes: "half a portion",
+      });
+      expect(detail.exposures[1]!.foods.map((f) => f.name)).toEqual(["Egg"]);
+      // A meal without a reaction says so with null, not an empty string.
+      expect(detail.exposures[0]).toMatchObject({ reaction: null, notes: null });
+    });
+
+    it("caps the exposure history at the newest 50 meals", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      // Inserted straight into the tables (rather than 55 POSTs) purely for
+      // speed — the rows are the same ones the route would have written.
+      const dayMs = 24 * 60 * 60 * 1000;
+      const base = Date.parse("2026-01-01T12:00:00.000Z");
+      const mealRows = await db
+        .insert(schema.meals)
+        .values(Array.from({ length: 55 }, (_, i) => ({ babyId, servedAt: new Date(base + i * dayMs) })))
+        .returning();
+      await db
+        .insert(schema.mealFoods)
+        .values(mealRows.map((row) => ({ mealId: row.id, foodId: fixtures.egg.id })));
+
+      const detail = await detailBody(user, babyId, "egg");
+
+      // The cap trims the OLDEST five, never the newest.
+      expect(detail.exposures).toHaveLength(50);
+      expect(detail.exposures[0]!.servedAt).toBe(new Date(base + 54 * dayMs).toISOString());
+      expect(detail.exposures.at(-1)!.servedAt).toBe(new Date(base + 5 * dayMs).toISOString());
+
+      // The cap is a page of the history, not a recount: progress still
+      // reports every exposure there is.
+      expect(detail.progress).toMatchObject({ exposures: 55, status: "established" });
+      expect(detail.progress.firstAt).toBe(new Date(base).toISOString());
+    });
+
+    it("reads an override-only allergen as overridden, with no recency and no exposures", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      expect((await putOverride(user, babyId, "egg")).statusCode).toBe(204);
+
+      const detail = await detailBody(user, babyId, "egg");
+
+      expect(detail.progress).toMatchObject({
+        status: "established",
+        overridden: true,
+        exposures: 0,
+        firstAt: null,
+        // A parent override carries a status, never a date — so the page can
+        // say "no serves logged yet" instead of inventing a recency.
+        lastServedAt: null,
+      });
+      expect(detail.exposures).toEqual([]);
+      // The foods that carry the allergen are catalog content, so they are
+      // listed either way — the override says nothing about them.
+      expect(detail.foods.map((f) => f.slug)).toEqual(["egg"]);
     });
   });
 

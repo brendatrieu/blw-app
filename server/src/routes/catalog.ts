@@ -11,7 +11,7 @@
 // foods: a catalog row has no owner, so it can never match the ownership
 // filter and is reported as not found like anybody else's.
 import { randomBytes } from "node:crypto";
-import { and, asc, eq, ilike, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   createCustomFoodSchema,
@@ -32,6 +32,7 @@ import {
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
+import { visibleFoodsCondition } from "../services/foods.js";
 import type { Transaction } from "../services/meals.js";
 import {
   allergens,
@@ -108,16 +109,6 @@ function currentUserId(request: FastifyRequest): string {
     throw new Error("currentUserId called on an unauthenticated request");
   }
   return id;
-}
-
-/**
- * The one visibility rule, applied to every food read in this file: the
- * seeded catalog is everybody's, a custom food is its owner's alone.
- * Returned as a condition rather than applied inline so no read can forget
- * it by taking a different query shape.
- */
-function visibleFoodsCondition(userId: string | null): SQL | undefined {
-  return userId ? or(isNull(foods.ownerId), eq(foods.ownerId, userId)) : isNull(foods.ownerId);
 }
 
 /**
