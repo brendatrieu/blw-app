@@ -40,9 +40,11 @@ interface RecipePickerProps {
  * *favorited* recipes only, which quietly made a just-written custom recipe
  * unloggable until it had been favorited first.
  *
- * Single-select is `MultiCombobox` driven through `resolveSingleSelection`:
- * picking a second recipe replaces the first, and toggling the current one
- * off clears the field (the "None" option the old select needed).
+ * Single-select is `MultiCombobox` in `mode="single"`, driven through
+ * `resolveSingleSelection`: picking a second recipe replaces the first, and
+ * toggling the current one off clears the field (the "None" option the old
+ * select needed). Single mode is also what closes the menu on a pick (item
+ * 230) — there is no second recipe to type.
  */
 export function RecipePicker({ id, value, onChange }: RecipePickerProps) {
   const { data, isLoading } = useRecipes();
@@ -52,6 +54,7 @@ export function RecipePicker({ id, value, onChange }: RecipePickerProps) {
   return (
     <MultiCombobox
       id={id}
+      mode="single"
       options={options}
       value={value ? [value] : []}
       onChange={(next) => onChange(resolveSingleSelection(next))}

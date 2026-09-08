@@ -89,6 +89,26 @@ describe("FoodPicker (render)", () => {
     expect(html).toContain('aria-label="Remove Banana bread"');
   });
 
+  // Multi-select (item 230): choosing a food no longer closes the menu, so the
+  // ways OUT of it — the chevron in the field, and the panel's Done footer —
+  // have to stay. A server render can only produce the closed field, so the
+  // chevron is pinned here and Done is pinned on `MultiComboboxPanel` itself.
+  it("keeps the chevron toggle, the menu's in-field close affordance", () => {
+    const html = renderPicker([food(), CUSTOM]);
+    expect(html).toContain('aria-label="Show options"');
+  });
+
+  // Multi-select is also what keeps the menu open after a pick (item 230),
+  // and the count badge is the part of that mode a closed server render can
+  // see. This fails if the picker ever asks for single mode — or if
+  // `MultiCombobox`'s own default flips — which is exactly the change that
+  // would make the log-meal and pantry fields close after one food.
+  it("takes the multi-select mode: a selected food carries an 'N selected' count badge", () => {
+    const html = renderPicker([food(), CUSTOM], [CUSTOM.id]);
+    expect(html).toMatch(/log-food-food-count"[^>]*>1(?:<!--\s*-->)? selected</);
+    expect(html).toContain('aria-describedby="log-food-food-count"');
+  });
+
   it("keeps the create sheet closed until the create row is chosen", () => {
     // `Sheet` renders nothing while closed, so a static render is exactly the
     // "before anyone typed" state: no form, no dialog.
@@ -132,6 +152,24 @@ describe("SingleFoodPicker (item 210's 'contains ingredient' filter)", () => {
   // Filtering by a food that doesn't exist yet could only ever match nothing.
   it("offers no 'add a custom food' row", () => {
     expect(renderSingle([food()])).not.toContain("as a custom food");
+  });
+
+  // Same single-select close affordance as `RecipePicker` — this filter lives
+  // inside the Recipes sheet, which has its own Done, but the field must still
+  // offer its own way to dismiss a menu it opened.
+  it("keeps the chevron toggle as its own close affordance", () => {
+    expect(renderSingle([food()])).toContain('aria-label="Show options"');
+  });
+
+  // The "contains ingredient" filter holds ONE food, so it asks for
+  // `mode="single"` — the mode that closes the menu on a pick (item 230).
+  // The absent count badge is that mode as a closed render can see it: drop
+  // `mode="single"` and this field goes back to multi-select behaviour.
+  it("asks for single-select mode: no 'N selected' count badge beside its one chip", () => {
+    const html = renderSingle([food(), CUSTOM], CUSTOM.id);
+    expect(html).toContain(`aria-label="Remove ${CUSTOM.name}"`);
+    expect(html).not.toContain("selected</span>");
+    expect(html).not.toContain('aria-describedby="recipes-ingredient-count"');
   });
 
   it("takes a caller's placeholder, falling back to the picker's own", () => {

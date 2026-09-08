@@ -91,7 +91,8 @@ interface SingleFoodPickerProps {
  * The same searchable food list as `FoodPicker`, holding at most ONE food —
  * the Recipes segment's "Contains ingredient" filter (item 210). There's no
  * create row here on purpose: filtering by a food that doesn't exist yet
- * could only ever match nothing.
+ * could only ever match nothing. `mode="single"` so a pick fills the field and
+ * closes the menu, rather than staying open for a second food (item 230).
  */
 export function SingleFoodPicker({ id, value, onChange, placeholder }: SingleFoodPickerProps) {
   const { data, isLoading } = useFoods();
@@ -101,6 +102,7 @@ export function SingleFoodPicker({ id, value, onChange, placeholder }: SingleFoo
   return (
     <MultiCombobox
       id={id}
+      mode="single"
       options={options}
       value={value ? [value] : []}
       onChange={(next) => onChange(resolveSingleSelection(next))}

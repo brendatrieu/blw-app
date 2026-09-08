@@ -86,6 +86,26 @@ describe("RecipePicker (render)", () => {
     expect(html).toContain('placeholder="Search recipes…"');
   });
 
+  // Single-select (item 230): a pick closes the menu, so the chevron is how a
+  // reopened menu gets closed again without picking. Server-render can only
+  // ever produce the closed field, so this pins the affordance, not the state.
+  it("keeps the chevron toggle as its own close affordance", () => {
+    const html = renderPicker([recipe()]);
+    expect(html).toContain('aria-label="Show options"');
+  });
+
+  // The picker's `mode="single"` is what makes a pick close the menu (item
+  // 230). A closed server render can't show the menu closing, but it CAN show
+  // the multi-select count badge — which single mode doesn't render. So this
+  // is the assertion that fails the moment `mode="single"` is dropped and the
+  // recipe field silently goes back to behaving like a multi-select.
+  it("asks for single-select mode: one recipe, so no 'N selected' count badge", () => {
+    const html = renderPicker([recipe(), recipe({ id: "recipe-2", title: "Lentil mash" })], "recipe-2");
+    expect(html).toContain('aria-label="Remove Lentil mash"');
+    expect(html).not.toContain("selected</span>");
+    expect(html).not.toContain('aria-describedby="log-food-recipe-count"');
+  });
+
   it("disables itself while the list is still loading", () => {
     const html = renderPicker(undefined);
     expect(html).toMatch(/<input[^>]*disabled/);

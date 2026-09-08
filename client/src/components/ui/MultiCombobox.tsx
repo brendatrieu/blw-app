@@ -2,6 +2,24 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 
 export type MultiComboboxOption = { value: string; label: string; emoji?: string };
 
+/**
+ * How many values this combobox holds — the one thing that decides what
+ * happens *after* a selection (item 230). "multi" is the log-meal / pantry /
+ * recipe-ingredients field: a pick adds a chip and the menu stays open so the
+ * next food can be typed straight away. "single" is the recipe picker and the
+ * "contains ingredient" filter: a pick fills the field and the menu is done.
+ *
+ * Explicit rather than inferred from `value.length`: an empty multi-select and
+ * an empty single-select are the same array, and a mode that flips as chips
+ * come and go would be unreadable.
+ *
+ * Two things a static render can see differ by mode, so a caller's choice is
+ * pinned by its own render test rather than only by reading the JSX: the
+ * "N selected" count badge (multi only) and the listbox's
+ * `aria-multiselectable`.
+ */
+export type MultiComboboxMode = "multi" | "single";
+
 interface MultiComboboxProps {
   options: MultiComboboxOption[];
   value: string[];
@@ -19,6 +37,8 @@ interface MultiComboboxProps {
   onCreate?: (query: string) => void;
   /** Label for that row, given the trimmed query. */
   createLabel?: (query: string) => string;
+  /** See `MultiComboboxMode`. Defaults to "multi". */
+  mode?: MultiComboboxMode;
 }
 
 /** Case-insensitive substring match of `query` against each option's label. */
@@ -41,6 +61,36 @@ export function filterOptions(options: MultiComboboxOption[], query: string): Mu
  */
 export function resolveSingleSelection(next: string[]): string {
   return next.length === 0 ? "" : next[next.length - 1]!;
+}
+
+/**
+ * What happens after an option is chosen — the whole of item 230, as one pure
+ * decision consumed verbatim by both selection paths (the option row's click
+ * and the keydown handler's Enter branch), so the two can never drift apart
+ * again. Standard combobox conventions:
+ * - `clearQuery` is ALWAYS true. The typed search text has done its job the
+ *   moment a selection lands; leaving it behind meant the next food had to be
+ *   backspaced out first, which is the bug this replaces.
+ * - `close` only in "single" mode: one value, one pick, nothing left to do.
+ *   A multi-select keeps its menu open — it closes only via Done, Escape or a
+ *   tap outside.
+ * - `keepFocus` only in "multi" mode: the caret stays in the input so the next
+ *   food can be typed immediately (after a CLICK that means actively
+ *   refocusing the input, which the click's own mousedown guard kept from
+ *   moving in the first place; after Enter focus is already there).
+ *
+ * `via` deliberately does not change the answer — click and Enter select
+ * identically — but it is part of the signature so that stays a pinned
+ * promise rather than an accident of the call sites.
+ */
+export function resolveSelectOutcome(
+  mode: MultiComboboxMode,
+  via: "click" | "enter",
+): { clearQuery: boolean; close: boolean; keepFocus: boolean } {
+  // `via` is intentionally not read — see the note above; referencing it here
+  // keeps the pinned signature without tripping no-unused-vars.
+  void via;
+  return { clearQuery: true, close: mode === "single", keepFocus: mode === "multi" };
 }
 
 /** Adds `value` to `selected` if absent, removes it if present (multi-select toggle). */
@@ -77,6 +127,106 @@ export function resolveHighlight(current: number, filteredLength: number, open: 
   if (!open || filteredLength === 0) return -1;
   if (current >= 0 && current < filteredLength) return current;
   return 0;
+}
+
+/**
+ * `resolveHighlight` gated on the query, layered on top of it (so that
+ * function's contract and tests stay exactly as they are) — this is what the
+ * component actually renders with.
+ *
+ * The auto-land-on-the-first-row rule exists for ONE flow: type a query, then
+ * press Enter. It has no business firing on an unfiltered list, and after
+ * item 230 that distinction stopped being theoretical: a multi-select pick
+ * clears the query and keeps the menu open, so with a blank query still
+ * auto-highlighting row 0, a second Enter (the "confirm the food, then save
+ * the meal" reflex) selected the first food of the WHOLE list — a food nobody
+ * typed or looked at. Gating on a non-blank query makes that second Enter land
+ * on nothing, which is exactly what item 230 asks for ("Enter with nothing
+ * highlighted does nothing").
+ *
+ * An explicit index the user arrowed or hovered to is always honoured, blank
+ * query or not; only the *automatic* first-row highlight is withheld.
+ */
+export function resolveEffectiveHighlight(
+  current: number,
+  rows: number,
+  open: boolean,
+  query: string,
+): number {
+  if (query.trim().length > 0) return resolveHighlight(current, rows, open);
+  if (!open || rows === 0) return -1;
+  return current >= 0 && current < rows ? current : -1;
+}
+
+/**
+ * Everything the combobox owns about its own menu — the typed query, whether
+ * the listbox is showing, and the last index the user explicitly navigated to.
+ * One object rather than three `useState`s so every transition is a single
+ * `setUi(pureTransition(prev, …))`: a handler can't obey two thirds of a
+ * decision and quietly drop the rest, which is the failure mode item 230's
+ * first pass had (the outcome was decided purely, then applied by hand).
+ */
+export interface ComboboxUiState {
+  query: string;
+  open: boolean;
+  highlighted: number;
+}
+
+/** Menu shut, nothing typed, nothing highlighted — also the initial state. */
+export const CLOSED_COMBOBOX_UI: ComboboxUiState = { query: "", open: false, highlighted: -1 };
+
+/**
+ * Applies a `resolveSelectOutcome` decision to the menu state — the ONLY
+ * place item 230's post-selection behaviour is carried out, used by both
+ * selection routes (option click, Enter). Every field of the outcome is read
+ * here, so a mutation that ignores one is a failing test rather than a silent
+ * regression.
+ *
+ * `highlighted` is always reset: the list is about to change shape (the query
+ * usually just cleared), so a stale arrow/hover index would point at whatever
+ * has moved into that slot.
+ */
+export function applySelectOutcome(
+  state: ComboboxUiState,
+  outcome: { clearQuery: boolean; close: boolean },
+): ComboboxUiState {
+  return {
+    query: outcome.clearQuery ? "" : state.query,
+    open: outcome.close ? false : state.open,
+    highlighted: -1,
+  };
+}
+
+/** Focus/tap on the field: show the menu, touching nothing else. */
+export function applyOpen(state: ComboboxUiState): ComboboxUiState {
+  return { ...state, open: true };
+}
+
+/** Escape, Done, the chevron's collapse, a tap outside: hide the menu and
+ * drop the highlight. The query is deliberately kept — closing is not
+ * discarding what was typed. */
+export function applyClose(state: ComboboxUiState): ComboboxUiState {
+  return { ...state, open: false, highlighted: -1 };
+}
+
+/** A keystroke in the input: new query, menu open, explicit highlight cleared
+ * so `resolveEffectiveHighlight` re-lands on the first match of the NEW
+ * filtered list rather than keeping an index from before the narrowing. */
+export function applyQuery(state: ComboboxUiState, query: string): ComboboxUiState {
+  return { ...state, query, open: true, highlighted: -1 };
+}
+
+/** Hovering a row highlights it. */
+export function applyHighlight(state: ComboboxUiState, index: number): ComboboxUiState {
+  return { ...state, highlighted: index };
+}
+
+/** ArrowUp/ArrowDown: open the menu if it was shut and step the highlight,
+ * wrapping. Stepping starts from the *effective* highlight so the first arrow
+ * after a query lands where the user can see the highlight sitting. */
+export function applyArrow(state: ComboboxUiState, direction: 1 | -1, rows: number): ComboboxUiState {
+  const from = resolveEffectiveHighlight(state.highlighted, rows, state.open, state.query);
+  return { ...state, open: true, highlighted: moveHighlight(from, direction, rows) };
 }
 
 interface InputAriaProps {
@@ -230,10 +380,20 @@ interface MultiComboboxOptionListProps {
   highlighted: number;
   emptyMessage: string;
   onHoverOption: (index: number) => void;
-  onToggleOption: (value: string) => void;
+  /**
+   * Choosing a row. Takes the whole OPTION, not its value, on purpose: the
+   * bare "add/remove this value" toggle a chip's × uses takes a `string`, so
+   * wiring that one up here — the exact regression that put the typed query
+   * back after a click — is a type error rather than a silent behaviour
+   * change. Only `MultiCombobox`'s `commitSelection` fits this signature.
+   */
+  onSelectOption: (option: MultiComboboxOption) => void;
   /** The trailing "create what you typed" row, when one is showing — see
    * `shouldShowCreateRow`. Its index is `options.length`. */
   createRow?: { label: string; onSelect: () => void };
+  /** Mirrors the owner's `mode`: a single-select listbox must not claim to be
+   * multi-selectable. Defaults to true (the multi default). */
+  multiselectable?: boolean;
 }
 
 /**
@@ -249,14 +409,15 @@ export function MultiComboboxOptionList({
   highlighted,
   emptyMessage,
   onHoverOption,
-  onToggleOption,
+  onSelectOption,
   createRow,
+  multiselectable = true,
 }: MultiComboboxOptionListProps) {
   return (
     <ul
       id={listboxId}
       role="listbox"
-      aria-multiselectable="true"
+      aria-multiselectable={multiselectable}
       className="max-h-60 overflow-y-auto py-1"
     >
       {options.length === 0 && !createRow ? (
@@ -272,7 +433,7 @@ export function MultiComboboxOptionList({
               aria-selected={selected}
               onMouseEnter={() => onHoverOption(index)}
               onMouseDown={(event) => event.preventDefault()}
-              onClick={() => onToggleOption(option.value)}
+              onClick={() => onSelectOption(option)}
               className={`flex min-h-11 cursor-pointer items-center gap-2 px-3 py-2 text-sm text-[var(--color-text)] ${
                 index === highlighted
                   ? "bg-[var(--color-bg-inset)]"
@@ -418,6 +579,63 @@ export function MultiComboboxChevronButton({ open, disabled, onToggle }: MultiCo
   );
 }
 
+/**
+ * Everything a render and a keypress need, derived from the props + the menu
+ * state in one place. The component holds no derivation of its own: it reads
+ * these fields and nothing else, so the chain from "what is typed" to "what
+ * Enter does" is one pure function with one set of tests, rather than six
+ * call sites in a component that a DOM-less test can't drive.
+ *
+ * The `enter` field is the point of it. Enter's answer depends on the query
+ * (via the highlight), the filtered length and the create row all agreeing;
+ * computing it here means the keydown handler passes no arguments and so can
+ * pass none of them wrongly — including the blank-query case that used to
+ * make a second Enter select a food nobody typed.
+ */
+export function deriveComboboxView({
+  options,
+  value,
+  ui,
+  mode,
+  hasCreate,
+  listboxId,
+}: {
+  options: MultiComboboxOption[];
+  value: string[];
+  ui: ComboboxUiState;
+  mode: MultiComboboxMode;
+  hasCreate: boolean;
+  listboxId: string;
+}): {
+  filtered: MultiComboboxOption[];
+  createRowVisible: boolean;
+  rows: number;
+  highlighted: number;
+  showCountBadge: boolean;
+  activeDescendantId: string | undefined;
+  enter: { prevent: boolean; toggleIndex: number | null; create: boolean };
+} {
+  const filtered = filterOptions(options, ui.query);
+  const createRowVisible = shouldShowCreateRow(ui.query, filtered.length, hasCreate);
+  // The create row is navigable, so it counts as a row for highlight
+  // purposes — that's the ONLY thing `rows` is for.
+  const rows = rowCount(filtered.length, createRowVisible);
+  const highlighted = resolveEffectiveHighlight(ui.highlighted, rows, ui.open, ui.query);
+  return {
+    filtered,
+    createRowVisible,
+    rows,
+    highlighted,
+    // "2 selected" is a multi-select affordance: it exists so a long chip row
+    // can be counted at a glance. A single-select holds one value, shown as
+    // its one chip, so "1 selected" would be noise — which also makes each
+    // caller's `mode` a rendered fact a static render test can pin.
+    showCountBadge: mode === "multi" && value.length >= 1,
+    activeDescendantId: resolveActiveDescendantId(filtered, highlighted, listboxId, createRowVisible),
+    enter: resolveCreateEnterAction(ui.open, highlighted, filtered.length, createRowVisible),
+  };
+}
+
 /** Fallback wording when a caller opts into `onCreate` without supplying
  * `createLabel`. */
 function defaultCreateLabel(query: string): string {
@@ -428,6 +646,9 @@ function defaultCreateLabel(query: string): string {
  * Searchable multi-select combobox: type to filter options, click (or Enter) to
  * toggle them, selected options render as removable chips. Reuses the token
  * classes from `Input`/`Select` so it looks native in both themes.
+ *
+ * What happens after a pick is `mode`'s business, decided once in
+ * `resolveSelectOutcome` and obeyed by both selection routes — see there.
  */
 export function MultiCombobox({
   options,
@@ -439,33 +660,31 @@ export function MultiCombobox({
   emptyMessage = "No matches",
   onCreate,
   createLabel,
+  mode = "multi",
 }: MultiComboboxProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const listboxId = `${inputId}-listbox`;
   const countBadgeId = `${inputId}-count`;
 
-  const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
-  const [highlighted, setHighlighted] = useState(-1);
+  // One state object, moved only by the pure transitions above — see
+  // `ComboboxUiState`.
+  const [ui, setUi] = useState<ComboboxUiState>(CLOSED_COMBOBOX_UI);
+  const { query, open } = ui;
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const filtered = useMemo(() => filterOptions(options, query), [options, query]);
+  // Everything the render and the keyboard handler need, derived once, purely
+  // — the component itself never recomputes a filtered list, a row count, a
+  // highlight or an Enter decision. See `deriveComboboxView`.
+  const view = useMemo(
+    () => deriveComboboxView({ options, value, ui, mode, hasCreate: Boolean(onCreate), listboxId }),
+    [options, value, ui, mode, onCreate, listboxId],
+  );
+  const { filtered, createRowVisible, rows, highlighted: effectiveHighlighted, showCountBadge } = view;
   const selectedOptions = useMemo(
     () => value.map((v) => options.find((o) => o.value === v)).filter((o): o is MultiComboboxOption => Boolean(o)),
     [value, options],
-  );
-  // Derived, not stored: recomputed fresh every render from `highlighted` +
-  // the current filtered list, so there's no effect that can race a handler
-  // and clobber an index the handler just set (see `resolveHighlight`).
-  const createRowVisible = shouldShowCreateRow(query, filtered.length, Boolean(onCreate));
-  // The create row is navigable, so it counts as a row for highlight
-  // purposes — that's the ONLY thing `rows` is for.
-  const rows = rowCount(filtered.length, createRowVisible);
-  const effectiveHighlighted = useMemo(
-    () => resolveHighlight(highlighted, rows, open),
-    [highlighted, rows, open],
   );
 
   // Click-outside closes the dropdown.
@@ -473,57 +692,62 @@ export function MultiCombobox({
     if (!open) return;
     function handlePointerDown(event: MouseEvent) {
       if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-        setHighlighted(-1);
+        setUi(applyClose);
       }
     }
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [open]);
 
-  function toggleOption(optionValue: string) {
-    onChange(toggleValue(value, optionValue));
+  /**
+   * Choosing an option from the list, by click or by Enter — the single
+   * selection route, and the only caller of `applySelectOutcome`. The pure
+   * pair decides everything: `resolveSelectOutcome` what should happen,
+   * `applySelectOutcome` what the menu state becomes. Nothing is applied field
+   * by field here, so a handler can no longer obey part of the decision.
+   *
+   * Focus is the one effect that can't live in state: a click's mousedown was
+   * prevented so focus never left the input, and this refocus is the
+   * belt-and-braces that keeps typing going if the tap did steal it anyway.
+   */
+  function commitSelection(option: MultiComboboxOption, via: "click" | "enter") {
+    const outcome = resolveSelectOutcome(mode, via);
+    onChange(toggleValue(value, option.value));
+    setUi((prev) => applySelectOutcome(prev, outcome));
+    if (outcome.keepFocus && via === "click") inputRef.current?.focus();
   }
 
   /** Hands the trimmed query to the owner and closes the menu, so whatever
    * it opens (a sheet, a page) isn't fighting an open listbox for the
    * screen. The query itself is left alone — the owner is about to use it. */
   function startCreate() {
-    setOpen(false);
-    setHighlighted(-1);
+    setUi(applyClose);
     onCreate?.(query.trim());
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setOpen(true);
-      setHighlighted(moveHighlight(effectiveHighlighted, 1, rows));
+      setUi((prev) => applyArrow(prev, 1, rows));
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      setOpen(true);
-      setHighlighted(moveHighlight(effectiveHighlighted, -1, rows));
+      setUi((prev) => applyArrow(prev, -1, rows));
     } else if (event.key === "Enter") {
-      // Verbatim pass-through of the pure decision: obey all three fields, do
-      // nothing else, so the cycle-1 "prevent only when highlighted >= 0"
-      // regression can't creep back in unnoticed — and so Enter on the
-      // create row never reaches the surrounding form's submit (item 180).
-      const { prevent, toggleIndex, create } = resolveCreateEnterAction(
-        open,
-        effectiveHighlighted,
-        filtered.length,
-        createRowVisible,
-      );
+      // Verbatim pass-through of the pure decision `deriveComboboxView`
+      // already made: obey all three fields, do nothing else, so the cycle-1
+      // "prevent only when highlighted >= 0" regression can't creep back in
+      // unnoticed — and so Enter on the create row never reaches the
+      // surrounding form's submit (item 180).
+      const { prevent, toggleIndex, create } = view.enter;
       if (prevent) event.preventDefault();
       if (toggleIndex !== null) {
-        toggleOption(filtered[toggleIndex]!.value);
+        commitSelection(filtered[toggleIndex]!, "enter");
       }
       if (create) startCreate();
     } else if (event.key === "Escape") {
       if (open) {
         event.preventDefault();
-        setOpen(false);
-        setHighlighted(-1);
+        setUi(applyClose);
       }
     } else if (event.key === "Backspace" && query === "" && value.length > 0) {
       onChange(value.slice(0, -1));
@@ -542,7 +766,7 @@ export function MultiCombobox({
             // chevron-collapse a tap here would otherwise never reopen.
             // The chevron's own onClick stopPropagation keeps its close
             // action from being immediately undone by this handler.
-            setOpen(true);
+            setUi(applyOpen);
           }}
           className={`flex min-h-11 w-full items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 transition-colors duration-[var(--duration-fast)] focus-within:border-[var(--color-accent)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--color-accent)] ${
             disabled ? "cursor-not-allowed opacity-60" : "cursor-text"
@@ -563,32 +787,27 @@ export function MultiCombobox({
             ref={inputRef}
             id={inputId}
             type="text"
-            {...getInputAriaProps({
-              open,
-              listboxId,
-              activeDescendantId: resolveActiveDescendantId(filtered, effectiveHighlighted, listboxId, createRowVisible),
-            })}
-            {...(value.length >= 1 ? { "aria-describedby": countBadgeId } : {})}
+            {...getInputAriaProps({ open, listboxId, activeDescendantId: view.activeDescendantId })}
+            {...(showCountBadge ? { "aria-describedby": countBadgeId } : {})}
             autoComplete="off"
             data-no-focus-ring=""
             disabled={disabled}
             value={query}
             placeholder={selectedOptions.length === 0 ? placeholder : undefined}
-            onFocus={() => setOpen(true)}
+            onFocus={() => setUi(applyOpen)}
+            // `applyQuery` also clears any explicit arrow/hover highlight, so
+            // `resolveEffectiveHighlight` re-lands on the FIRST match of the
+            // new filtered list — otherwise a stale index from before the
+            // query changed could survive and Enter would toggle the wrong
+            // option (item 14).
             onChange={(event) => {
-              setQuery(event.target.value);
-              setOpen(true);
-              // Clear any explicit arrow/hover highlight on every keystroke so
-              // `resolveHighlight` re-lands the effective highlight on the
-              // FIRST filtered match — otherwise a stale index from before the
-              // query changed could survive and Enter would toggle the wrong
-              // option (item 14).
-              setHighlighted(-1);
+              const next = event.target.value;
+              setUi((prev) => applyQuery(prev, next));
             }}
             onKeyDown={handleKeyDown}
             className="min-w-0 flex-1 border-none bg-transparent px-1 py-2 text-base text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] disabled:cursor-not-allowed"
           />
-          {value.length >= 1 && (
+          {showCountBadge && (
             <span
               id={countBadgeId}
               className="pointer-events-none shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-primary-soft)] px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-primary-soft-text)]"
@@ -601,8 +820,7 @@ export function MultiCombobox({
             disabled={disabled}
             onToggle={() => {
               if (open) {
-                setOpen(false);
-                setHighlighted(-1);
+                setUi(applyClose);
                 // Release focus on collapse: the chevron's mousedown guard
                 // kept focus on the input, so without this blur a follow-up
                 // tap on the input would not refire onFocus and the menu
@@ -610,7 +828,7 @@ export function MultiCombobox({
                 inputRef.current?.blur();
               } else {
                 inputRef.current?.focus();
-                setOpen(true);
+                setUi(applyOpen);
               }
             }}
           />
@@ -623,18 +841,16 @@ export function MultiCombobox({
             selectedValues={value}
             highlighted={effectiveHighlighted}
             emptyMessage={emptyMessage}
-            onHoverOption={setHighlighted}
-            onToggleOption={toggleOption}
+            multiselectable={mode === "multi"}
+            onHoverOption={(index) => setUi((prev) => applyHighlight(prev, index))}
+            onSelectOption={(option) => commitSelection(option, "click")}
             createRow={
               createRowVisible
                 ? { label: (createLabel ?? defaultCreateLabel)(query.trim()), onSelect: startCreate }
                 : undefined
             }
-            onDone={() => {
-              // Close only — selection and query are left exactly as they are.
-              setOpen(false);
-              setHighlighted(-1);
-            }}
+            // Close only — selection and query are left exactly as they are.
+            onDone={() => setUi(applyClose)}
           />
         )}
       </div>
@@ -654,7 +870,13 @@ export function MultiCombobox({
                 disabled={disabled}
                 onClick={(event) => {
                   event.stopPropagation();
-                  toggleOption(option.value);
+                  // The bare selection change, with no menu/query side
+                  // effects: removing a chip is not "choosing an option", so
+                  // it must never clear the query or close the menu. Inline
+                  // rather than a shared `toggleOption` helper — a named one
+                  // was what the option row and the Enter branch got wired to
+                  // by mistake in the first place.
+                  onChange(toggleValue(value, option.value));
                 }}
                 className="group flex shrink-0 items-center justify-center rounded-full p-[10px] -m-[10px] disabled:cursor-not-allowed"
               >

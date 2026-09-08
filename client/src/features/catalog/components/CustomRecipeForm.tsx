@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {
   CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX,
   CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX,
@@ -169,6 +169,76 @@ export function resolveChipKey(key: string, draft: string): { prevent: boolean; 
   return { prevent: true, commit: trimmed.length > 0 ? trimmed : null };
 }
 
+/**
+ * What Enter should do inside a step textarea (item 231).
+ *
+ * A step is one instruction, not a paragraph, so plain Enter means "this step
+ * is done": `prevent` stops the newline the textarea would otherwise insert,
+ * and `commit` tells the handler to blur the field. The typed text is never
+ * touched — committing a step only ends editing it.
+ *
+ * Shift+Enter is the escape hatch for the rare multi-line step: neither
+ * prevented nor committed, so the browser inserts its newline as usual.
+ *
+ * Pure and consumed verbatim by the keydown handler, like `resolveChipKey`.
+ * Note that a textarea can never implicit-submit a form, so unlike the chip
+ * input there is no submit to guard against here — only the newline.
+ */
+export function resolveStepKey(key: string, shiftKey: boolean): { prevent: boolean; commit: boolean } {
+  if (key !== "Enter" || shiftKey) return { prevent: false, commit: false };
+  return { prevent: true, commit: true };
+}
+
+/**
+ * The step textarea's whole Enter wiring as one spreadable prop object, in the
+ * same spirit as `getInputAriaProps` in MultiCombobox: the JSX spreads this
+ * and sets none of it itself, so *removing* item 231's behaviour means
+ * removing the spread — and the spread carries a rendered attribute
+ * (`enterkeyhint`), which a static render test can see is gone.
+ *
+ * `enterKeyHint="done"` is not decoration: it is the same promise the handler
+ * keeps, made to the on-screen keyboard. A phone shows a "done" return key,
+ * and pressing it ends the step instead of opening a second line.
+ */
+export function getStepKeyProps(): {
+  enterKeyHint: "done";
+  onKeyDown: (event: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
+} {
+  return {
+    enterKeyHint: "done",
+    onKeyDown: (event) => {
+      // Verbatim pass-through of the pure decision.
+      const { prevent, commit } = resolveStepKey(event.key, event.shiftKey);
+      if (prevent) event.preventDefault();
+      if (commit) event.currentTarget.blur();
+    },
+  };
+}
+
+/**
+ * The extra-ingredient input's Enter wiring, spreadable for the same reason
+ * as `getStepKeyProps` — and carrying the same `enterkeyhint="done"`, since
+ * Enter here finishes a chip rather than saving the recipe (item 211).
+ */
+export function getChipKeyProps(
+  draft: string,
+  commitEntry: (entry: string) => void,
+): {
+  enterKeyHint: "done";
+  onKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => void;
+} {
+  return {
+    enterKeyHint: "done",
+    onKeyDown: (event) => {
+      // Verbatim pass-through of the pure decision — Enter here adds a chip
+      // and must NEVER save the recipe.
+      const { prevent, commit } = resolveChipKey(event.key, draft);
+      if (prevent) event.preventDefault();
+      if (commit) commitEntry(commit);
+    },
+  };
+}
+
 /** The extra-ingredient list with `entry` appended: trimmed, never blank,
  * never a duplicate (case-insensitive), never past the shared cap. Returns
  * the SAME array when the entry can't be added. */
@@ -326,7 +396,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved, 
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor={`${idPrefix}-extra`} className="text-sm font-semibold text-[var(--color-text)]">
-          Anything else{" "}
+          Additional ingredients{" "}
           <span className="font-normal text-[var(--color-text-muted)]">(optional)</span>
         </label>
         <p className="text-xs text-[var(--color-text-muted)]">
@@ -339,13 +409,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved, 
             maxLength={CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX}
             value={extraDraft}
             onChange={(e) => setExtraDraft(e.target.value)}
-            onKeyDown={(event) => {
-              // Verbatim pass-through of the pure decision — Enter here adds
-              // a chip and must NEVER save the recipe.
-              const { prevent, commit } = resolveChipKey(event.key, extraDraft);
-              if (prevent) event.preventDefault();
-              if (commit) commitExtra(commit);
-            }}
+            {...getChipKeyProps(extraDraft, commitExtra)}
             placeholder="e.g. olive oil"
           />
           <Button type="button" variant="secondary" onClick={() => commitExtra(extraDraft)}>
@@ -394,8 +458,10 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved, 
               <span aria-hidden="true" className="mt-2 text-sm font-medium text-[var(--color-accent)]">
                 {index + 1}.
               </span>
-              {/* A textarea, not an input: steps run long, and Enter inside
-                  one is a newline — it can never submit the form. */}
+              {/* A textarea, not an input: steps run long, and a textarea is
+                  never a candidate for implicit form submission, so Enter here
+                  can never save the recipe. Enter *commits* the step (item
+                  231) — Shift+Enter still inserts a newline. */}
               <Textarea
                 id={`${idPrefix}-step-${index}`}
                 aria-label={`Step ${index + 1}`}
@@ -403,6 +469,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved, 
                 maxLength={CUSTOM_RECIPE_STEP_MAX}
                 value={step}
                 onChange={(e) => setStep(index, e.target.value)}
+                {...getStepKeyProps()}
                 placeholder={index === 0 ? "e.g. Steam the sweet potato until soft" : "Next step"}
               />
               {values.steps.length > 1 && (

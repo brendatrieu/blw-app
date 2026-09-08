@@ -8,7 +8,10 @@ import {
   buildCustomRecipeInput,
   CustomRecipeForm,
   initialCustomRecipeValues,
+  getChipKeyProps,
+  getStepKeyProps,
   resolveChipKey,
+  resolveStepKey,
   validateCustomRecipe,
   type CustomRecipeValues,
 } from "./CustomRecipeForm.js";
@@ -192,6 +195,113 @@ describe("initialCustomRecipeValues", () => {
   });
 });
 
+describe("resolveStepKey (item 231: Enter finishes the step)", () => {
+  it("commits on a plain Enter, swallowing the newline the textarea would insert", () => {
+    expect(resolveStepKey("Enter", false)).toEqual({ prevent: true, commit: true });
+  });
+
+  it("lets Shift+Enter through untouched, so a long step can still be multi-line", () => {
+    expect(resolveStepKey("Enter", true)).toEqual({ prevent: false, commit: false });
+  });
+
+  it("is not interested in any other key, shifted or not", () => {
+    expect(resolveStepKey("a", false)).toEqual({ prevent: false, commit: false });
+    expect(resolveStepKey("Tab", true)).toEqual({ prevent: false, commit: false });
+    expect(resolveStepKey("Backspace", false)).toEqual({ prevent: false, commit: false });
+    expect(resolveStepKey("Escape", false)).toEqual({ prevent: false, commit: false });
+  });
+
+  // "Commit" here means "stop editing", nothing more: the handler blurs the
+  // textarea and the step's text is left exactly as typed. There is no branch
+  // that clears or trims it.
+  it("never asks for anything but prevent + commit", () => {
+    expect(Object.keys(resolveStepKey("Enter", false)).sort()).toEqual(["commit", "prevent"]);
+  });
+});
+
+describe("getStepKeyProps / getChipKeyProps (the wiring, not just the decision)", () => {
+  function stepEvent(key: string, shiftKey: boolean) {
+    let prevented = false;
+    let blurred = false;
+    return {
+      event: {
+        key,
+        shiftKey,
+        preventDefault: () => {
+          prevented = true;
+        },
+        currentTarget: {
+          blur: () => {
+            blurred = true;
+          },
+        },
+      },
+      wasPrevented: () => prevented,
+      wasBlurred: () => blurred,
+    };
+  }
+
+  it("step: Enter swallows the newline and ends editing the step", () => {
+    const { event, wasPrevented, wasBlurred } = stepEvent("Enter", false);
+    getStepKeyProps().onKeyDown(event as never);
+    expect(wasPrevented()).toBe(true);
+    expect(wasBlurred()).toBe(true);
+  });
+
+  it("step: Shift+Enter still inserts a newline, and other keys pass through", () => {
+    for (const key of [["Enter", true], ["a", false]] as const) {
+      const { event, wasPrevented, wasBlurred } = stepEvent(key[0], key[1]);
+      getStepKeyProps().onKeyDown(event as never);
+      expect(wasPrevented()).toBe(false);
+      expect(wasBlurred()).toBe(false);
+    }
+  });
+
+  it("step: promises the on-screen keyboard the same thing the handler does", () => {
+    expect(getStepKeyProps().enterKeyHint).toBe("done");
+  });
+
+  it("chip: Enter commits the trimmed draft and never falls through to submit", () => {
+    const added: string[] = [];
+    let prevented = false;
+    getChipKeyProps("  olive oil  ", (entry) => added.push(entry)).onKeyDown({
+      key: "Enter",
+      preventDefault: () => {
+        prevented = true;
+      },
+    } as never);
+    expect(added).toEqual(["olive oil"]);
+    expect(prevented).toBe(true);
+  });
+
+  it("chip: a blank draft still swallows Enter, but adds nothing", () => {
+    const added: string[] = [];
+    let prevented = false;
+    getChipKeyProps("   ", (entry) => added.push(entry)).onKeyDown({
+      key: "Enter",
+      preventDefault: () => {
+        prevented = true;
+      },
+    } as never);
+    expect(added).toEqual([]);
+    expect(prevented).toBe(true);
+  });
+
+  it("chip: leaves every other key alone", () => {
+    const added: string[] = [];
+    let prevented = false;
+    getChipKeyProps("olive", (entry) => added.push(entry)).onKeyDown({
+      key: "a",
+      preventDefault: () => {
+        prevented = true;
+      },
+    } as never);
+    expect(added).toEqual([]);
+    expect(prevented).toBe(false);
+    expect(getChipKeyProps("olive", () => {}).enterKeyHint).toBe("done");
+  });
+});
+
 describe("resolveChipKey (Enter never submits the recipe)", () => {
   it("swallows Enter and commits the trimmed draft", () => {
     expect(resolveChipKey("Enter", "  olive oil  ")).toEqual({ prevent: true, commit: "olive oil" });
@@ -250,7 +360,10 @@ describe("CustomRecipeForm (render)", () => {
     expect(html).toContain(">Suitable from<");
     expect(html).toContain(">Ingredients<");
     expect(html).toContain(">Steps<");
-    expect(html).toMatch(/Anything else(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
+    // Item 231 renamed this from "Anything else"; the optional-label style is
+    // unchanged.
+    expect(html).toMatch(/Additional ingredients(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
+    expect(html).not.toContain("Anything else");
     expect(html).toMatch(/Prep time(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
     expect(html).toMatch(/Notes(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
     expect(html).toContain(">Save<");
@@ -265,10 +378,29 @@ describe("CustomRecipeForm (render)", () => {
     expect(html).not.toContain("Add at least one step");
   });
 
-  it("renders steps as textareas — Enter inside one is a newline, never a submit", () => {
+  it("renders steps as textareas — never a candidate for implicit submission", () => {
     const html = renderForm();
+    // Still a <textarea>, so Enter can never save the recipe; what Enter does
+    // *inside* it is `resolveStepKey`'s contract, pinned above.
     expect(html).toMatch(/<textarea[^>]*aria-label="Step 1"/);
     expect(html).toContain(">Add step<");
+  });
+
+  // `getStepKeyProps` is the ONLY source of the step textarea's Enter
+  // wiring, and the JSX spreads it whole. Its `enterKeyHint` therefore
+  // renders exactly when the handler is attached — so this assertion is what
+  // fails if item 231's Enter-commits-the-step behaviour is unwired, not just
+  // if the pure helper is broken.
+  it("wires every step textarea to the Enter-commits handler, keyboard hint and all", () => {
+    const html = renderForm({ recipe: recipe() });
+    const steps = html.match(/<textarea[^>]*aria-label="Step \d+"[^>]*>/g) ?? [];
+    expect(steps.length).toBe(2);
+    for (const step of steps) expect(step).toContain('enterKeyHint="done"');
+  });
+
+  it("wires the extra-ingredient input to its own Enter-adds-a-chip handler", () => {
+    const html = renderForm();
+    expect(html).toMatch(/<input[^>]*id="custom-recipe-extra"[^>]*enterKeyHint="done"/);
   });
 
   it("starts with exactly one step box, and no way to remove the only one", () => {

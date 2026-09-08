@@ -2,6 +2,13 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
+  applyArrow,
+  applyClose,
+  applyHighlight,
+  applyOpen,
+  applyQuery,
+  applySelectOutcome,
+  CLOSED_COMBOBOX_UI,
   filterOptions,
   getActiveDescendantId,
   getChevronLabel,
@@ -13,14 +20,18 @@ import {
   MultiComboboxPanel,
   optionId,
   createOptionId,
+  deriveComboboxView,
   resolveActiveDescendantId,
   resolveCreateEnterAction,
+  resolveEffectiveHighlight,
   resolveEnterAction,
   resolveHighlight,
+  resolveSelectOutcome,
   resolveSingleSelection,
   rowCount,
   shouldShowCreateRow,
   toggleValue,
+  type ComboboxUiState,
   type MultiComboboxOption,
 } from "./MultiCombobox.js";
 
@@ -411,11 +422,14 @@ describe("MultiComboboxPanel (render)", () => {
         highlighted: -1,
         emptyMessage: "No matches",
         onHoverOption: () => {},
-        onToggleOption: () => {},
+        onSelectOption: () => {},
         onDone: () => {},
       }),
     );
     expect(html).toContain('role="listbox"');
+    // A multi-select's menu closes ONLY via Done, Escape or a tap outside
+    // (item 230) — selecting an option no longer closes it, so this footer is
+    // the pointer user's only close affordance and must stay rendered.
     // Done label, deliberately not "Save" (that's reserved for true commits
     // elsewhere in the app) — this button only closes the menu.
     expect(html).toContain(">Done<");
@@ -452,7 +466,7 @@ describe("MultiComboboxOptionList (render)", () => {
         highlighted: 1,
         emptyMessage: "No matches",
         onHoverOption: () => {},
-        onToggleOption: () => {},
+        onSelectOption: () => {},
       }),
     );
     expect(html).toContain('role="listbox"');
@@ -474,7 +488,7 @@ describe("MultiComboboxOptionList (render)", () => {
         highlighted: 1, // banana is highlighted, avocado (selected) is not
         emptyMessage: "No matches",
         onHoverOption: () => {},
-        onToggleOption: () => {},
+        onSelectOption: () => {},
       }),
     );
     const rows = html.split('role="option"').slice(1);
@@ -500,7 +514,7 @@ describe("MultiComboboxOptionList (render)", () => {
         highlighted: -1,
         emptyMessage: "No veggies found",
         onHoverOption: () => {},
-        onToggleOption: () => {},
+        onSelectOption: () => {},
       }),
     );
     expect(html).toContain("No veggies found");
@@ -598,7 +612,7 @@ describe("MultiComboboxOptionList (create row)", () => {
         highlighted: 0,
         emptyMessage: "No matches",
         onHoverOption: () => {},
-        onToggleOption: () => {},
+        onSelectOption: () => {},
         createRow,
       }),
     );
@@ -623,7 +637,7 @@ describe("MultiComboboxOptionList (create row)", () => {
         highlighted: -1,
         emptyMessage: "No matches",
         onHoverOption: () => {},
-        onToggleOption: () => {},
+        onSelectOption: () => {},
       }),
     );
     expect(html).toContain("No matches");
@@ -639,11 +653,41 @@ describe("MultiComboboxOptionList (create row)", () => {
         highlighted: -1,
         emptyMessage: "No matches",
         onHoverOption: () => {},
-        onToggleOption: () => {},
+        onSelectOption: () => {},
         createRow,
       }),
     );
     expect(html.indexOf(createOptionId("veg-listbox"))).toBeGreaterThan(html.indexOf("Banana"));
+  });
+});
+
+describe("resolveSelectOutcome (item 230)", () => {
+  // The typed query has done its job the moment a pick lands — in every mode,
+  // by either route. This is the half of the bug report that said the search
+  // text stayed behind after choosing a food.
+  it("always clears the typed query, in both modes and by both routes", () => {
+    for (const mode of ["multi", "single"] as const) {
+      for (const via of ["click", "enter"] as const) {
+        expect(resolveSelectOutcome(mode, via).clearQuery).toBe(true);
+      }
+    }
+  });
+
+  it("multi: keeps the menu open and focus in the input so the next food can be typed", () => {
+    expect(resolveSelectOutcome("multi", "click")).toEqual({ clearQuery: true, close: false, keepFocus: true });
+    expect(resolveSelectOutcome("multi", "enter")).toEqual({ clearQuery: true, close: false, keepFocus: true });
+  });
+
+  it("single: closes the menu — one value, one pick, nothing left to do", () => {
+    expect(resolveSelectOutcome("single", "click")).toEqual({ clearQuery: true, close: true, keepFocus: false });
+    expect(resolveSelectOutcome("single", "enter")).toEqual({ clearQuery: true, close: true, keepFocus: false });
+  });
+
+  // The withdrawn earlier idea was "Enter closes, click doesn't". Pinned so a
+  // future edit can't quietly reintroduce a split between the two routes.
+  it("answers identically for a click and for Enter", () => {
+    expect(resolveSelectOutcome("multi", "click")).toEqual(resolveSelectOutcome("multi", "enter"));
+    expect(resolveSelectOutcome("single", "click")).toEqual(resolveSelectOutcome("single", "enter"));
   });
 });
 
@@ -662,5 +706,281 @@ describe("resolveSingleSelection", () => {
 
   it("keeps a lone value as-is", () => {
     expect(resolveSingleSelection(["recipe-1"])).toBe("recipe-1");
+  });
+});
+
+describe("applySelectOutcome (item 230's decision, carried out)", () => {
+  const TYPED: ComboboxUiState = { query: "ban", open: true, highlighted: 2 };
+
+  // Every field of the outcome is obeyed here, so these four assertions are
+  // what stops a selection handler from applying two thirds of the decision.
+  it("clears the query when the outcome says to, and keeps it when it doesn't", () => {
+    expect(applySelectOutcome(TYPED, { clearQuery: true, close: false }).query).toBe("");
+    expect(applySelectOutcome(TYPED, { clearQuery: false, close: false }).query).toBe("ban");
+  });
+
+  it("closes the menu only when the outcome says to", () => {
+    expect(applySelectOutcome(TYPED, { clearQuery: true, close: true }).open).toBe(false);
+    expect(applySelectOutcome(TYPED, { clearQuery: true, close: false }).open).toBe(true);
+  });
+
+  it("always drops the explicit highlight — the list is about to change shape", () => {
+    expect(applySelectOutcome(TYPED, { clearQuery: true, close: false }).highlighted).toBe(-1);
+    expect(applySelectOutcome(TYPED, { clearQuery: false, close: true }).highlighted).toBe(-1);
+  });
+
+  it("never mutates the state it was given", () => {
+    const before = { ...TYPED };
+    applySelectOutcome(TYPED, { clearQuery: true, close: true });
+    expect(TYPED).toEqual(before);
+  });
+
+  // The two mode outcomes, end to end: this is the user-visible half of the
+  // bug report ("the typed text stays" / "the menu stays open").
+  it("multi: query cleared, menu still open for the next food", () => {
+    expect(applySelectOutcome(TYPED, resolveSelectOutcome("multi", "enter"))).toEqual({
+      query: "",
+      open: true,
+      highlighted: -1,
+    });
+    expect(applySelectOutcome(TYPED, resolveSelectOutcome("multi", "click"))).toEqual({
+      query: "",
+      open: true,
+      highlighted: -1,
+    });
+  });
+
+  it("single: query cleared and the menu closed", () => {
+    expect(applySelectOutcome(TYPED, resolveSelectOutcome("single", "enter"))).toEqual({
+      query: "",
+      open: false,
+      highlighted: -1,
+    });
+  });
+});
+
+describe("the other menu transitions", () => {
+  const OPEN_TYPED: ComboboxUiState = { query: "ban", open: true, highlighted: 1 };
+
+  it("starts closed, empty and unhighlighted", () => {
+    expect(CLOSED_COMBOBOX_UI).toEqual({ query: "", open: false, highlighted: -1 });
+  });
+
+  it("opens without touching the query or the highlight", () => {
+    expect(applyOpen({ query: "ban", open: false, highlighted: 1 })).toEqual(OPEN_TYPED);
+  });
+
+  // Closing is not discarding: Done / Escape / the chevron leave the typed
+  // text exactly where it was.
+  it("closes and drops the highlight, keeping the query", () => {
+    expect(applyClose(OPEN_TYPED)).toEqual({ query: "ban", open: false, highlighted: -1 });
+  });
+
+  it("typing opens the menu and clears any arrow/hover index (item 14)", () => {
+    expect(applyQuery(OPEN_TYPED, "car")).toEqual({ query: "car", open: true, highlighted: -1 });
+    expect(applyQuery(CLOSED_COMBOBOX_UI, "c")).toEqual({ query: "c", open: true, highlighted: -1 });
+  });
+
+  it("hovering a row highlights it", () => {
+    expect(applyHighlight(OPEN_TYPED, 2)).toEqual({ query: "ban", open: true, highlighted: 2 });
+  });
+
+  it("arrows step the highlight, wrapping, and open a closed menu", () => {
+    expect(applyArrow(OPEN_TYPED, 1, 3)).toEqual({ query: "ban", open: true, highlighted: 2 });
+    expect(applyArrow({ ...OPEN_TYPED, highlighted: 2 }, 1, 3).highlighted).toBe(0);
+    expect(applyArrow(CLOSED_COMBOBOX_UI, 1, 3)).toEqual({ query: "", open: true, highlighted: 0 });
+    expect(applyArrow(CLOSED_COMBOBOX_UI, -1, 3).highlighted).toBe(2);
+  });
+});
+
+describe("resolveEffectiveHighlight (the double-Enter guard)", () => {
+  it("auto-lands on the first row only while something has been typed", () => {
+    expect(resolveEffectiveHighlight(-1, 3, true, "ban")).toBe(0);
+    expect(resolveEffectiveHighlight(-1, 3, true, "")).toBe(-1);
+    expect(resolveEffectiveHighlight(-1, 3, true, "   ")).toBe(-1);
+  });
+
+  it("honours an index the user arrowed or hovered to, typed query or not", () => {
+    expect(resolveEffectiveHighlight(2, 3, true, "")).toBe(2);
+    expect(resolveEffectiveHighlight(2, 3, true, "ban")).toBe(2);
+  });
+
+  it("highlights nothing when closed, or when there are no rows", () => {
+    expect(resolveEffectiveHighlight(2, 3, false, "ban")).toBe(-1);
+    expect(resolveEffectiveHighlight(2, 3, false, "")).toBe(-1);
+    expect(resolveEffectiveHighlight(-1, 0, true, "zzz")).toBe(-1);
+    expect(resolveEffectiveHighlight(-1, 0, true, "")).toBe(-1);
+  });
+
+  it("drops a stale index that no longer points at a row", () => {
+    expect(resolveEffectiveHighlight(5, 3, true, "")).toBe(-1);
+    expect(resolveEffectiveHighlight(5, 3, true, "ban")).toBe(0);
+  });
+});
+
+// Replaying the keyboard path through the exported helpers, which is as close
+// to "press Enter twice" as a DOM-less render test gets: the second Enter must
+// add NOTHING. Before this guard it added the first food of the unfiltered
+// list — a food the parent never typed or looked at — because the multi
+// outcome cleared the query while leaving the menu open.
+describe("Enter twice in a row (item 230)", () => {
+  function pressEnter(state: ComboboxUiState, selected: string[]) {
+    const filtered = filterOptions(OPTIONS, state.query);
+    const createVisible = shouldShowCreateRow(state.query, filtered.length, false);
+    const highlight = resolveEffectiveHighlight(
+      state.highlighted,
+      rowCount(filtered.length, createVisible),
+      state.open,
+      state.query,
+    );
+    const { prevent, toggleIndex } = resolveCreateEnterAction(state.open, highlight, filtered.length, createVisible);
+    if (toggleIndex === null) return { state, selected, prevent, picked: null as string | null };
+    const picked = filtered[toggleIndex]!.value;
+    return {
+      state: applySelectOutcome(state, resolveSelectOutcome("multi", "enter")),
+      selected: toggleValue(selected, picked),
+      prevent,
+      picked,
+    };
+  }
+
+  it("adds the searched food, then does nothing at all on the second press", () => {
+    const first = pressEnter({ query: "ban", open: true, highlighted: -1 }, []);
+    expect(first.picked).toBe("banana");
+    expect(first.selected).toEqual(["banana"]);
+    expect(first.state).toEqual({ query: "", open: true, highlighted: -1 });
+
+    const second = pressEnter(first.state, first.selected);
+    expect(second.picked).toBeNull();
+    expect(second.selected).toEqual(["banana"]);
+    // Still swallowed, so the surrounding form is never submitted by it.
+    expect(second.prevent).toBe(true);
+    expect(second.state).toEqual(first.state);
+  });
+
+  it("still selects on the very first Enter after typing a fresh query", () => {
+    const first = pressEnter({ query: "ban", open: true, highlighted: -1 }, []);
+    const typedAgain = applyQuery(first.state, "avo");
+    expect(pressEnter(typedAgain, first.selected).selected).toEqual(["banana", "avocado"]);
+  });
+});
+
+describe("MultiCombobox mode is visible in a static render", () => {
+  function render(mode: "multi" | "single" | undefined) {
+    return renderToString(
+      createElement(MultiCombobox, {
+        id: "veg",
+        options: OPTIONS,
+        value: ["avocado"],
+        onChange: () => {},
+        ...(mode ? { mode } : {}),
+      }),
+    );
+  }
+
+  // "1 selected" next to a field that holds exactly one value is noise — and
+  // gating the badge on the mode is what lets each caller's `mode` be pinned
+  // by its own render test.
+  it("single: no count badge, and no aria-describedby pointing at one", () => {
+    const html = render("single");
+    expect(html).not.toContain("selected</span>");
+    expect(html).not.toContain('aria-describedby="veg-count"');
+    expect(html).toContain('aria-label="Remove Avocado"');
+  });
+
+  it("multi (and the default): the count badge is there", () => {
+    for (const html of [render("multi"), render(undefined)]) {
+      expect(html).toMatch(/veg-count"[^>]*>1(?:<!--\s*-->)? selected</);
+      expect(html).toContain('aria-describedby="veg-count"');
+    }
+  });
+
+  it("a single-select listbox does not claim to be multi-selectable", () => {
+    const list = (multiselectable: boolean | undefined) =>
+      renderToString(
+        createElement(MultiComboboxOptionList, {
+          listboxId: "veg-listbox",
+          options: OPTIONS,
+          selectedValues: [],
+          highlighted: -1,
+          emptyMessage: "No matches",
+          onHoverOption: () => {},
+          onSelectOption: () => {},
+          ...(multiselectable === undefined ? {} : { multiselectable }),
+        }),
+      );
+    expect(list(false)).toContain('aria-multiselectable="false"');
+    expect(list(true)).toContain('aria-multiselectable="true"');
+    expect(list(undefined)).toContain('aria-multiselectable="true"');
+  });
+});
+
+// The component reads these fields and derives nothing itself, so this is the
+// whole chain from "what is typed" to "what Enter does", pinned in one place.
+describe("deriveComboboxView", () => {
+  function view(ui: ComboboxUiState, extra: { hasCreate?: boolean; mode?: "multi" | "single"; value?: string[] } = {}) {
+    return deriveComboboxView({
+      options: OPTIONS,
+      value: extra.value ?? [],
+      ui,
+      mode: extra.mode ?? "multi",
+      hasCreate: extra.hasCreate ?? false,
+      listboxId: "veg-listbox",
+    });
+  }
+
+  it("filters by the query and counts the create row as a navigable row", () => {
+    expect(view({ query: "ban", open: true, highlighted: -1 }).filtered.map((o) => o.value)).toEqual(["banana"]);
+    expect(view({ query: "zzz", open: true, highlighted: -1 }, { hasCreate: true })).toMatchObject({
+      createRowVisible: true,
+      rows: 1,
+    });
+    expect(view({ query: "zzz", open: true, highlighted: -1 })).toMatchObject({ createRowVisible: false, rows: 0 });
+  });
+
+  it("Enter after typing selects the highlighted match", () => {
+    const typed = view({ query: "ban", open: true, highlighted: -1 });
+    expect(typed.highlighted).toBe(0);
+    expect(typed.enter).toEqual({ prevent: true, toggleIndex: 0, create: false });
+    expect(typed.filtered[typed.enter.toggleIndex!]!.value).toBe("banana");
+  });
+
+  // The state a multi-select is left in by `applySelectOutcome`: query
+  // cleared, menu open. A second Enter must select NOTHING — before this, it
+  // silently added the first food of the whole list.
+  it("Enter on an open menu with nothing typed selects nothing, and still swallows the key", () => {
+    const afterPick = view(applySelectOutcome({ query: "ban", open: true, highlighted: -1 }, resolveSelectOutcome("multi", "enter")));
+    expect(afterPick.filtered).toHaveLength(OPTIONS.length);
+    expect(afterPick.highlighted).toBe(-1);
+    expect(afterPick.enter).toEqual({ prevent: true, toggleIndex: null, create: false });
+    expect(afterPick.activeDescendantId).toBeUndefined();
+  });
+
+  it("Enter on a closed menu is not ours to handle — the form submits normally", () => {
+    expect(view({ query: "ban", open: false, highlighted: -1 }).enter).toEqual({
+      prevent: false,
+      toggleIndex: null,
+      create: false,
+    });
+  });
+
+  it("Enter on the create row creates instead of selecting", () => {
+    const creating = view({ query: "zzz", open: true, highlighted: -1 }, { hasCreate: true });
+    expect(creating.enter).toEqual({ prevent: true, toggleIndex: null, create: true });
+    expect(creating.activeDescendantId).toBe(createOptionId("veg-listbox"));
+  });
+
+  it("names the highlighted row for aria-activedescendant, and nothing while closed", () => {
+    expect(view({ query: "ban", open: true, highlighted: -1 }).activeDescendantId).toBe(
+      optionId("veg-listbox", { value: "banana", label: "Banana" }),
+    );
+    expect(view({ query: "ban", open: false, highlighted: 0 }).activeDescendantId).toBeUndefined();
+  });
+
+  it("shows the count badge for a non-empty multi-select only", () => {
+    const ui = { query: "", open: false, highlighted: -1 };
+    expect(view(ui, { value: ["banana"] }).showCountBadge).toBe(true);
+    expect(view(ui, { value: [] }).showCountBadge).toBe(false);
+    expect(view(ui, { value: ["banana"], mode: "single" }).showCountBadge).toBe(false);
   });
 });
