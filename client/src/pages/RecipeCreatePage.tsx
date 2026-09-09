@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { CustomRecipeForm } from "../features/catalog/components/CustomRecipeForm.js";
 import { RECIPES_TAB_PATH } from "../features/catalog/constants.js";
-import { useBackNavigate } from "../components/ui/BackButton.js";
 import { CloseButton } from "../components/ui/CloseButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 
@@ -17,7 +16,6 @@ import { PageHeader } from "../components/ui/PageHeader.js";
  * live — with `replace` keeping the spent form out of the back stack.
  */
 export function RecipeCreatePage() {
-  const goBack = useBackNavigate(RECIPES_TAB_PATH);
   const navigate = useNavigate();
 
   return (
@@ -26,12 +24,11 @@ export function RecipeCreatePage() {
         title="Add recipe"
         emoji="🍳"
         description="Whatever you actually cook — it logs and fans out like any recipe."
-        action={<CloseButton fallback={RECIPES_TAB_PATH} />}
+        leading={<CloseButton fallback={RECIPES_TAB_PATH} />}
       />
       <CustomRecipeForm
         idPrefix="recipe-new"
         onSaved={(recipe) => navigate(`/recipes/${recipe.id}`, { replace: true })}
-        onCancel={goBack}
       />
     </div>
   );

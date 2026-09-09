@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import type { AllergenDetail, AllergenDetailExposure, AllergenDetailFood } from "@blw/shared";
 import { useAllergenDetail } from "../features/tracking/hooks.js";
@@ -69,7 +70,15 @@ function ExposureRow({ exposure }: { exposure: AllergenDetailExposure }) {
   );
 }
 
-function AllergenDetailBody({ detail, babyId }: { detail: AllergenDetail; babyId: string }) {
+function AllergenDetailBody({
+  detail,
+  babyId,
+  leading,
+}: {
+  detail: AllergenDetail;
+  babyId: string;
+  leading: ReactNode;
+}) {
   const { progress, foods, exposures } = detail;
   const recency = resolveAllergenRecency(progress);
   const action = resolveAllergenRowAction(progress);
@@ -79,6 +88,7 @@ function AllergenDetailBody({ detail, babyId }: { detail: AllergenDetail; babyId
       <PageHeader
         title={progress.allergenName}
         emoji={allergenEmoji(progress.allergenSlug)}
+        leading={leading}
         action={<Badge tone={ALLERGEN_STATUS_TONE[progress.status]}>{ALLERGEN_STATUS_LABEL[progress.status]}</Badge>}
       />
 
@@ -181,8 +191,7 @@ export function AllergenDetailPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <BackButton fallback={ladderPath} />
-      <AllergenDetailBody detail={data} babyId={babyId} />
+      <AllergenDetailBody detail={data} babyId={babyId} leading={<BackButton fallback={ladderPath} />} />
     </div>
   );
 }

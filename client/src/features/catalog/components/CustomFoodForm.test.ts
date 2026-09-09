@@ -157,7 +157,7 @@ describe("initialCustomFoodValues", () => {
 
 describe("CustomFoodForm (render)", () => {
   it("renders name, category, emoji, the full allergen checklist and notes", () => {
-    const html = render(createElement(CustomFoodForm, { onSaved: () => {}, onCancel: () => {} }));
+    const html = render(createElement(CustomFoodForm, { onSaved: () => {} }));
     expect(html).toContain(">Name<");
     expect(html).toContain(">Category<");
     // Optional labels use Field's own de-emphasis convention.
@@ -167,12 +167,15 @@ describe("CustomFoodForm (render)", () => {
       expect(html).toContain(`>${allergen.label}<`);
     }
     expect(html).toContain(">Save<");
-    expect(html).toContain(">Cancel<");
+    // Item 257: Save is the only button — the page header's chevron/X (or
+    // the picker sheet's own close) is the way out, so no Cancel.
+    expect(html).not.toContain(">Cancel<");
+    expect((html.match(/type="submit"/g) ?? []).length).toBe(1);
   });
 
   it("prefills the name from `initialName`", () => {
     const filled = render(
-      createElement(CustomFoodForm, { initialName: "Kale chips", onSaved: () => {}, onCancel: () => {} }),
+      createElement(CustomFoodForm, { initialName: "Kale chips", onSaved: () => {} }),
     );
     expect(filled).toContain('value="Kale chips"');
   });
@@ -180,7 +183,7 @@ describe("CustomFoodForm (render)", () => {
   // Item 235: Save stays enabled even with the required name empty — a tap
   // must always produce feedback — and the form stays quiet until it happens.
   it("leaves Save enabled on an empty form, and shows no error markup before a submit attempt", () => {
-    const empty = render(createElement(CustomFoodForm, { onSaved: () => {}, onCancel: () => {} }));
+    const empty = render(createElement(CustomFoodForm, { onSaved: () => {} }));
     expect(empty).toMatch(/<button[^>]*type="submit"[^>]*>Save</);
     expect(empty).not.toMatch(/<button[^>]*type="submit"[^>]*\sdisabled=""[^>]*>Save</);
     expect(empty).not.toContain('role="alert"');
@@ -189,20 +192,20 @@ describe("CustomFoodForm (render)", () => {
 
   // Item 236: native constraint bubbles would pre-empt the inline message.
   it("opts out of native constraint validation", () => {
-    expect(render(createElement(CustomFoodForm, { onSaved: () => {}, onCancel: () => {} }))).toMatch(
+    expect(render(createElement(CustomFoodForm, { onSaved: () => {} }))).toMatch(
       /<form[^>]*novalidate/i,
     );
   });
 
   it("seeds the emoji field from the category and offers every category option", () => {
-    const html = render(createElement(CustomFoodForm, { onSaved: () => {}, onCancel: () => {} }));
+    const html = render(createElement(CustomFoodForm, { onSaved: () => {} }));
     expect(html).toContain(`value="${getCategoryEmoji("fruit")}"`);
     expect(html).toContain('<option value="protein">Protein</option>');
     expect(html).toContain('<option value="legume">Legume</option>');
   });
 
   it("renders allergen chips as a labelled group of pressed/unpressed toggles when editing", () => {
-    const html = render(createElement(CustomFoodForm, { food: customFood(), onSaved: () => {}, onCancel: () => {} }));
+    const html = render(createElement(CustomFoodForm, { food: customFood(), onSaved: () => {} }));
     expect(html).toContain('role="group"');
     // The food's own two allergens come back pressed, the rest don't.
     expect((html.match(/aria-pressed="true"/g) ?? []).length).toBe(2);
@@ -213,7 +216,7 @@ describe("CustomFoodForm (render)", () => {
 
   it("uses `idPrefix` so two instances on one page never share a control id", () => {
     const html = render(
-      createElement(CustomFoodForm, { idPrefix: "picker-custom", onSaved: () => {}, onCancel: () => {} }),
+      createElement(CustomFoodForm, { idPrefix: "picker-custom", onSaved: () => {} }),
     );
     expect(html).toContain('id="picker-custom-name"');
     expect(html).toContain('for="picker-custom-name"');

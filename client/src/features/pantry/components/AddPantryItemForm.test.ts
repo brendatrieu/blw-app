@@ -89,8 +89,12 @@ describe("AddPantryItemForm (render)", () => {
     expect(renderForm()).toMatch(/<form[^>]*novalidate/i);
   });
 
-  it("renders Cancel wired to onDone", () => {
+  // Item 257: the page's header X is the only way out; the form itself
+  // offers one button, the submit.
+  it("renders no Cancel — just the single submit button", () => {
     const html = renderForm();
-    expect(html).toContain(">Cancel<");
+    expect(html).not.toContain(">Cancel<");
+    expect(html).toContain(">Add to pantry<");
+    expect((html.match(/type="submit"/g) ?? []).length).toBe(1);
   });
 });

@@ -159,4 +159,14 @@ describe("DeleteAccountForm (render)", () => {
       /<form[^>]*novalidate/i,
     );
   });
+
+  // Item 257: this destructive confirm has no header chevron or sheet close
+  // of its own, so it keeps a dismiss — as an icon-only × named "Don't
+  // delete", not a "Cancel" text button competing with the red submit.
+  it("dismisses with an icon-only × instead of a Cancel button", () => {
+    const html = renderInProviders(createElement(DeleteAccountForm, { onCancel: () => {} }));
+    expect(html).not.toContain(">Cancel<");
+    expect(html).toContain("aria-label=\"Don&#x27;t delete\"");
+    expect(html).toMatch(/aria-label="Don&#x27;t delete"[^>]*class="[^"]*h-11 w-11/);
+  });
 });

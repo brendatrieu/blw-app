@@ -9,6 +9,7 @@ import { MessageBubble } from "../features/chat/components/MessageBubble.js";
 import { Composer } from "../features/chat/components/Composer.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
+import { KeepButton } from "../components/ui/KeepButton.js";
 import { Card, CardLink } from "../components/ui/Card.js";
 import { Badge } from "../components/ui/Badge.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
@@ -110,9 +111,7 @@ function ThreadList() {
               </span>
             </button>
           ))}
-          <Button variant="ghost" size="sm" className="w-fit" onClick={() => setPicking(false)}>
-            Cancel
-          </Button>
+          <KeepButton label="Not now" onClick={() => setPicking(false)} className="self-end" />
         </Card>
       )}
 

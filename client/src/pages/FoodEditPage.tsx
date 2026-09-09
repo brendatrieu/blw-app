@@ -23,8 +23,7 @@ export function FoodEditPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-4 p-4">
-        <BackButton fallback="/foods" />
-        <PageHeader title="Edit food" emoji="✏️" />
+        <PageHeader title="Edit food" emoji="✏️" leading={<BackButton fallback="/foods" />} />
         <Skeleton className="h-64 w-full rounded-[var(--radius-lg)]" />
       </div>
     );
@@ -39,13 +38,11 @@ export function FoodEditPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <BackButton fallback={`/foods/${food.slug}`} />
-      <PageHeader title="Edit food" emoji="✏️" />
+      <PageHeader title="Edit food" emoji="✏️" leading={<BackButton fallback={`/foods/${food.slug}`} />} />
       <CustomFoodForm
         idPrefix="food-edit"
         food={food}
         onSaved={(updated) => navigate(`/foods/${updated.slug}`, { replace: true })}
-        onCancel={() => navigate(`/foods/${food.slug}`)}
       />
     </div>
   );

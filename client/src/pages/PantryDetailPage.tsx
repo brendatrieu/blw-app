@@ -52,8 +52,11 @@ export function PantryDetailPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <BackButton fallback="/pantry" />
-      <PageHeader title={pantryItemTitle(item)} emoji={pantryItemEmoji(item)} />
+      <PageHeader
+        title={pantryItemTitle(item)}
+        emoji={pantryItemEmoji(item)}
+        leading={<BackButton fallback="/pantry" />}
+      />
 
       {recentChange && <PantryStatusBanner change={recentChange} onUndo={undo} />}
 

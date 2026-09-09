@@ -79,13 +79,14 @@ describe("resolvePantryItemMenuActions", () => {
       serve: true,
       edit: true,
       remove: true,
+      restore: false,
     });
   });
 
   it("offers Serve for an active, recipe-sourced item", () => {
     expect(
       resolvePantryItemMenuActions({ status: "active", foodSlug: null, recipeTitle: "Iron-Rich Purée" }),
-    ).toEqual({ serve: true, edit: true, remove: true });
+    ).toEqual({ serve: true, edit: true, remove: true, restore: false });
   });
 
   it("withholds Serve for a label-only active item (nothing the serve endpoint could log)", () => {
@@ -93,23 +94,36 @@ describe("resolvePantryItemMenuActions", () => {
       serve: false,
       edit: true,
       remove: true,
+      restore: false,
     });
   });
 
-  it("withholds every action for a finished item", () => {
+  // Item 264: the kebab is the only action surface a list card has now, so
+  // a finished/discarded item offers exactly one thing — Restore — instead
+  // of nothing at all.
+  it("offers only Restore for a finished item", () => {
     expect(resolvePantryItemMenuActions({ status: "finished", foodSlug: "avocado", recipeTitle: null })).toEqual({
       serve: false,
       edit: false,
       remove: false,
+      restore: true,
     });
   });
 
-  it("withholds every action for a discarded item", () => {
+  it("offers only Restore for a discarded item", () => {
     expect(resolvePantryItemMenuActions({ status: "discarded", foodSlug: "avocado", recipeTitle: null })).toEqual({
       serve: false,
       edit: false,
       remove: false,
+      restore: true,
     });
+  });
+
+  it("never offers Restore alongside Remove — they are exact complements", () => {
+    for (const status of ["active", "finished", "discarded"] as const) {
+      const actions = resolvePantryItemMenuActions({ status, foodSlug: "avocado", recipeTitle: null });
+      expect(actions.restore).toBe(!actions.remove);
+    }
   });
 });
 

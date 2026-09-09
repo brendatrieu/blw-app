@@ -495,26 +495,19 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
       {pantryFailure ? (
         <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
           <p role="alert" className="text-sm font-medium text-[var(--color-danger)]">
-            Meal saved — couldn't save leftovers. Try again or dismiss.
+            Meal saved — couldn't save leftovers. Try again, or close this page to skip it.
           </p>
-          <div className="flex gap-2">
-            <Button type="button" size="sm" onClick={handleRetryPantry} disabled={createPantryItem.isPending}>
-              {createPantryItem.isPending ? "Retrying…" : "Retry"}
-            </Button>
-            <Button type="button" size="sm" variant="secondary" onClick={onDone}>
-              Dismiss
-            </Button>
-          </div>
+          {/* Retry only (item 257): the meal itself is already saved, and the
+              header's X leaves without retrying. */}
+          <Button type="button" size="sm" onClick={handleRetryPantry} disabled={createPantryItem.isPending}>
+            {createPantryItem.isPending ? "Retrying…" : "Retry"}
+          </Button>
         </div>
       ) : (
-        <div className="flex gap-2">
-          <Button type="submit" disabled={mutation.isPending} className="flex-1">
-            {mutation.isPending ? "Saving…" : "Save"}
-          </Button>
-          <Button type="button" variant="secondary" onClick={onDone}>
-            Cancel
-          </Button>
-        </div>
+        // Save only (item 257): the page's header chevron/X is the way out.
+        <Button type="submit" disabled={mutation.isPending} className="w-full">
+          {mutation.isPending ? "Saving…" : "Save"}
+        </Button>
       )}
     </form>
   );

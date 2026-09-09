@@ -1,10 +1,9 @@
-import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { ChevronLeftGlyph, ICON_BUTTON_CLASSES, ICON_BUTTON_EDGE_INSET } from "./iconButton.js";
 
 interface BackButtonProps {
   /** Route to land on when there's no previous history entry to pop (e.g. a fresh deep link). */
   fallback: string;
-  children?: ReactNode;
   className?: string;
 }
 
@@ -34,30 +33,22 @@ export function useBackNavigate(fallback: string): () => void {
 /**
  * Back navigation for detail pages — the installed PWA has no browser chrome,
  * so every page that's reached by drilling in needs its own way out.
+ *
+ * Chevron-only (item 258): a 24px "‹" at the sun/moon icons' stroke weight
+ * in a 44px target, with the word "Back" kept for assistive tech as
+ * `sr-only` text rather than shown. It renders in `PageHeader`'s `leading`
+ * slot, on the same row as the h1 — never on a line of its own above it —
+ * so the title row is the one place a page's way out ever lives. There is no
+ * `children` label: a page that wants to name its destination says so in its
+ * own title, not in the chevron.
  */
-export function BackButton({ fallback, children = "Back", className = "" }: BackButtonProps) {
+export function BackButton({ fallback, className = "" }: BackButtonProps) {
   const handleClick = useBackNavigate(fallback);
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      className={`inline-flex min-h-11 w-fit items-center gap-1 rounded-[var(--radius-md)] px-2 -ml-2 text-sm font-medium text-[var(--color-text)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-bg-inset)] ${className}`}
-    >
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 24 24"
-        width="20"
-        height="20"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M15 18l-6-6 6-6" />
-      </svg>
-      {children}
+    <button type="button" onClick={handleClick} className={`${ICON_BUTTON_CLASSES} ${ICON_BUTTON_EDGE_INSET} ${className}`}>
+      <ChevronLeftGlyph />
+      <span className="sr-only">Back</span>
     </button>
   );
 }

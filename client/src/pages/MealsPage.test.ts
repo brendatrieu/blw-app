@@ -53,7 +53,9 @@ describe("MealsPage (/meals — Home's See all)", () => {
     const html = render(true);
     expect((html.match(/Food log/g) ?? []).length).toBe(1);
     expect(html).toContain("<h1");
-    expect(html).toMatch(/aria-label="Back"|>Back</);
+    // Item 258: the chevron is inline with the h1, sr-only labelled.
+    expect(html).toContain('<span class="sr-only">Back</span>');
+    expect(html.indexOf('<span class="sr-only">Back</span>')).toBeLessThan(html.indexOf("</h1>"));
     expect(html).toMatch(/<a [^>]*href="\/log-meal"[^>]*>(?:(?!<\/a>).)*Log meal/s);
   });
 

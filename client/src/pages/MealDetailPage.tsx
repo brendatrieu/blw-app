@@ -70,10 +70,10 @@ export function MealDetailPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <BackButton fallback="/" />
       <PageHeader
         title={mealTitle(meal)}
         emoji={meal.recipeTitle ? "🍳" : getFoodEmoji(meal.foods[0]!.slug, meal.foods[0]!.category, meal.foods[0]!.emoji)}
+        leading={<BackButton fallback="/" />}
       />
 
       <Card padding="sm" className="flex flex-col gap-2">

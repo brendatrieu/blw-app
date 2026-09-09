@@ -3,6 +3,7 @@ import type { PantryView } from "@blw/shared";
 import { usePantryItems, usePantryStatusChange } from "../features/pantry/hooks.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { PantryItemCard } from "../features/pantry/components/PantryItemCard.js";
+import { PantryItemActionsMenu } from "../features/pantry/components/PantryItemActionsMenu.js";
 import { PantryStatusBanner } from "../features/pantry/components/PantryStatusBanner.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { ButtonLink } from "../components/ui/Button.js";
@@ -70,15 +71,24 @@ export function PantryPage() {
       )}
 
       <ul className="flex flex-col gap-2">
+        {/* Item 264: the Pantry tab's cards carry the same kebab Home does
+            instead of their own Serve/Remove/Edit footer row — Remove and
+            Restore still run through `usePantryStatusChange` so the undo
+            banner above keeps working. */}
         {items.map((item) => (
           <PantryItemCard
             key={item.id}
             item={item}
             busy={isPending}
-            onRemove={item.status === "active" ? () => setStatus(item, "discarded", true) : undefined}
-            editHref={item.status === "active" ? `/pantry/${item.id}/edit` : undefined}
-            onRestore={item.status !== "active" ? () => setStatus(item, "active", false) : undefined}
-            babyId={activeBaby?.id}
+            actions={
+              <PantryItemActionsMenu
+                item={item}
+                babyId={activeBaby?.id}
+                busy={isPending}
+                onRemove={() => setStatus(item, "discarded", true)}
+                onRestore={() => setStatus(item, "active", false)}
+              />
+            }
           />
         ))}
       </ul>

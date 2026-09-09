@@ -540,29 +540,26 @@ export function WheelPickerBody({ draft, onDraftChange, dateOptions }: WheelPick
 }
 
 export interface PickerSheetFooterProps {
-  onCancel: () => void;
   onSave: () => void;
 }
 
 /**
- * The Cancel/Save button row shared by every wheel-picker Sheet (item 53).
- * Extracted so `DateTimeField` and `DateField` render byte-identical footer
+ * The commit row shared by every wheel-picker Sheet (item 53). Extracted so
+ * `DateTimeField` and `DateField` render byte-identical footer
  * markup/styling/handlers from one place instead of two copies that could
  * silently drift apart.
+ *
+ * Done ONLY (item 257): the sheet already discards the draft on Escape, an
+ * overlay tap, or the device back gesture, so a Cancel button beside Done
+ * was a fourth way to do what three gestures already did.
  */
-export function PickerSheetFooter({ onCancel, onSave }: PickerSheetFooterProps) {
+export function PickerSheetFooter({ onSave }: PickerSheetFooterProps) {
   return (
-    // Primary action first, Cancel second — same order as the app's page
-    // forms. "Done" (not "Save"): overlays close/commit with Done, only true
-    // form submits say Save.
-    <div className="flex gap-2">
-      <Button type="button" onClick={onSave} className="flex-1">
-        Done
-      </Button>
-      <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
-        Cancel
-      </Button>
-    </div>
+    // "Done" (not "Save"): overlays close/commit with Done, only true form
+    // submits say Save.
+    <Button type="button" onClick={onSave} className="w-full">
+      Done
+    </Button>
   );
 }
 
@@ -644,9 +641,9 @@ export function DateTimeField({ id, value, onChange, disabled = false, daysBack 
         <span className="flex-1">{formatDateTimeLabel(value, currentNow)}</span>
       </button>
 
-      <Sheet open={open} onClose={handleCancel} title="Time">
+      <Sheet open={open} onClose={handleCancel} title="Time" showClose>
         <WheelPickerBody draft={draft} onDraftChange={setDraft} dateOptions={dateOptions} />
-        <PickerSheetFooter onCancel={handleCancel} onSave={handleSave} />
+        <PickerSheetFooter onSave={handleSave} />
       </Sheet>
     </>
   );

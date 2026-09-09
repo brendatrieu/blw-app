@@ -243,14 +243,10 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
 
       {createItem.isError && <p className="text-xs text-[var(--color-danger)]">Couldn't save that — try again.</p>}
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={createItem.isPending} className="flex-1">
-          {createItem.isPending ? "Adding…" : "Add to pantry"}
-        </Button>
-        <Button type="button" variant="secondary" onClick={onDone}>
-          Cancel
-        </Button>
-      </div>
+      {/* Add only (item 257): the page's header X is the way out. */}
+      <Button type="submit" disabled={createItem.isPending} className="w-full">
+        {createItem.isPending ? "Adding…" : "Add to pantry"}
+      </Button>
     </form>
   );
 }

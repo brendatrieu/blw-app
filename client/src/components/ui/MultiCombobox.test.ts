@@ -413,6 +413,29 @@ describe("MultiComboboxPanel (render)", () => {
     { value: "banana", label: "Banana", emoji: "🍌" },
   ];
 
+  // Item 262 (cosmetic fixes landed ahead of the nav-chrome batch): the
+  // option list is inset from the panel's rounded, overflow-hidden edge so
+  // its scrollbar track isn't clipped at the corners, and it contains
+  // overscroll so flicking past the end doesn't scroll the page behind.
+  it("insets the scrolling option list and contains its overscroll", () => {
+    const html = renderToString(
+      createElement(MultiComboboxPanel, {
+        listboxId: "veg-listbox",
+        options: OPTIONS,
+        selectedValues: [],
+        highlighted: -1,
+        emptyMessage: "No matches",
+        onHoverOption: () => {},
+        onSelectOption: () => {},
+        onDone: () => {},
+      }),
+    );
+    // The classes are on the listbox <ul> itself — it IS the scroll box.
+    expect(html).toMatch(
+      /role="listbox"[^>]*class="mr-1 max-h-60 overflow-y-auto overscroll-contain py-1 scroll-thin"/,
+    );
+  });
+
   it("renders the listbox followed by a sticky Done footer button, both inside the panel", () => {
     const html = renderToString(
       createElement(MultiComboboxPanel, {

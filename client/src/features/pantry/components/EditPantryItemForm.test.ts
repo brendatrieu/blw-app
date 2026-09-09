@@ -59,10 +59,13 @@ describe("EditPantryItemForm (render)", () => {
     expect(html).toMatch(/aria-pressed="true"[^>]*>\s*Fridge/);
   });
 
-  it("renders Save (not Saving…) and Cancel while idle", () => {
+  // Item 257: Save alone — the page's header X is the way out.
+  it("renders Save (not Saving…) while idle, with no Cancel beside it", () => {
     const html = renderForm();
     expect(html).toContain(">Save<");
-    expect(html).toContain(">Cancel<");
+    expect(html).not.toContain(">Saving…<");
+    expect(html).not.toContain(">Cancel<");
+    expect((html.match(/type="submit"/g) ?? []).length).toBe(1);
   });
 
   it("renders the Total servings and Best by fields, unset for an untracked item", () => {

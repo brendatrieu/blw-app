@@ -62,7 +62,7 @@ export function FoodPicker({ id, value, onChange }: FoodPickerProps) {
         onCreate={setCreateQuery}
         createLabel={addCustomFoodLabel}
       />
-      <Sheet open={createQuery !== null} onClose={() => setCreateQuery(null)} title="Add a custom food">
+      <Sheet open={createQuery !== null} onClose={() => setCreateQuery(null)} title="Add a custom food" showClose>
         <CustomFoodForm
           idPrefix={`${id}-custom`}
           initialName={createQuery ?? ""}
@@ -72,7 +72,6 @@ export function FoodPicker({ id, value, onChange }: FoodPickerProps) {
             // must not put its id in the list twice.
             onChange(value.includes(food.id) ? value : [...value, food.id]);
           }}
-          onCancel={() => setCreateQuery(null)}
         />
       </Sheet>
     </>

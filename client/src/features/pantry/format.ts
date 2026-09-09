@@ -56,20 +56,25 @@ export function isLabelOnly(item: { foodSlug: string | null; recipeTitle: string
 }
 
 /**
- * Which actions the pantry item Actions menu (Home's three-dot menu) should
- * offer for a given item: Serve mirrors the same active/food-or-recipe gate
- * `PantryItemCard`'s inline Serve button uses (see `isLabelOnly`); Edit and
- * Mark finished are both only meaningful for an active item — a finished or
- * discarded item is edited/restored from the Pantry page's History view
- * instead. Pure so the menu's item list is unit-testable without rendering.
+ * Which actions the pantry item Actions menu — the three-dot kebab every
+ * list card now carries, on Home AND the Pantry tab (item 264) — should
+ * offer for a given item. Serve mirrors the active/food-or-recipe gate the
+ * Serve sheet uses (see `isLabelOnly`); Edit and Remove are only meaningful
+ * for an active item; Restore is the one action only a finished or
+ * discarded item has. Pure so the menu's item list is unit-testable without
+ * rendering.
  */
 export function resolvePantryItemMenuActions(item: {
   status: PantryStatus;
   foodSlug: string | null;
   recipeTitle: string | null;
-}): { serve: boolean; edit: boolean; remove: boolean } {
+}): { serve: boolean; edit: boolean; remove: boolean; restore: boolean } {
   const active = item.status === "active";
-  return { serve: active && !isLabelOnly(item), edit: active, remove: active };
+  // `restore` is the exact complement of `active`: a finished or discarded
+  // item can only be put back, and an active one has nothing to be put back
+  // from (item 264 — the kebab is now the ONLY action surface on a list
+  // card, so it has to carry History's "Restore to active" too).
+  return { serve: active && !isLabelOnly(item), edit: active, remove: active, restore: !active };
 }
 
 /** Human "use within …" text for an unexpired item, counting down to `expiresAt`. */

@@ -5,7 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { PantryItem } from "@blw/shared";
 import { CelebrationProvider } from "../../../components/ui/Celebration.js";
-import { PantryItemActionsMenu } from "./PantryItemActionsMenu.js";
+import {
+  PANTRY_MENU_ROW_LABEL,
+  pantryMenuRows,
+  PantryItemActionsMenu,
+  type PantryItemActionsMenuProps,
+} from "./PantryItemActionsMenu.js";
 
 const BASE_ITEM: PantryItem = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -28,7 +33,7 @@ const BASE_ITEM: PantryItem = {
   notes: null,
 };
 
-function renderMenu(item: PantryItem = BASE_ITEM) {
+function renderMenu(item: PantryItem = BASE_ITEM, props: Partial<PantryItemActionsMenuProps> = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderToString(
     createElement(
@@ -37,7 +42,11 @@ function renderMenu(item: PantryItem = BASE_ITEM) {
       createElement(
         CelebrationProvider,
         null,
-        createElement(MemoryRouter, null, createElement(PantryItemActionsMenu, { item, babyId: "baby-1" })),
+        createElement(
+          MemoryRouter,
+          null,
+          createElement(PantryItemActionsMenu, { item, babyId: "baby-1", ...props }),
+        ),
       ),
     ),
   );
@@ -62,5 +71,42 @@ describe("PantryItemActionsMenu (render)", () => {
   it("still renders a closed trigger for a finished item (every action withheld, menu itself still present)", () => {
     const html = renderMenu({ ...BASE_ITEM, status: "finished" });
     expect(html).toContain('aria-label="Actions"');
+  });
+});
+
+describe("pantryMenuRows (item 264 — the kebab is a list card's only action surface)", () => {
+  const labels = (rows: ReturnType<typeof pantryMenuRows>) => rows.map((row) => PANTRY_MENU_ROW_LABEL[row]);
+  const active = { status: "active" as const, foodSlug: "avocado", recipeTitle: null };
+
+  it("offers Serve, Edit and Remove for an active item, in that order", () => {
+    expect(labels(pantryMenuRows(active, { hasBaby: true, canRestore: true }))).toEqual([
+      "Serve",
+      "Edit",
+      "Remove",
+    ]);
+  });
+
+  it("withholds Serve when no baby has resolved yet — not the whole menu", () => {
+    expect(labels(pantryMenuRows(active, { hasBaby: false, canRestore: true }))).toEqual(["Edit", "Remove"]);
+  });
+
+  it("withholds Serve for a label-only item but keeps Edit and Remove", () => {
+    const labelOnly = { status: "active" as const, foodSlug: null, recipeTitle: null };
+    expect(labels(pantryMenuRows(labelOnly, { hasBaby: true, canRestore: true }))).toEqual(["Edit", "Remove"]);
+  });
+
+  it("offers Restore to active — and only that — for a finished item", () => {
+    const finished = { status: "finished" as const, foodSlug: "avocado", recipeTitle: null };
+    expect(labels(pantryMenuRows(finished, { hasBaby: true, canRestore: true }))).toEqual(["Restore to active"]);
+  });
+
+  it("offers Restore for a discarded item too", () => {
+    const discarded = { status: "discarded" as const, foodSlug: "avocado", recipeTitle: null };
+    expect(labels(pantryMenuRows(discarded, { hasBaby: true, canRestore: true }))).toEqual(["Restore to active"]);
+  });
+
+  it("shows no rows at all for a caller with no restore handler (Home) on a finished item", () => {
+    const finished = { status: "finished" as const, foodSlug: "avocado", recipeTitle: null };
+    expect(pantryMenuRows(finished, { hasBaby: true, canRestore: false })).toEqual([]);
   });
 });

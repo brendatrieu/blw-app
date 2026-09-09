@@ -96,7 +96,7 @@ function alertCount(html: string): number {
 
 describe("required-field errors reach their own field (item 237)", () => {
   it("CustomRecipeForm: title under the title input, ingredients under the picker", () => {
-    const html = render(createElement(CustomRecipeForm, { onSaved: () => {}, onCancel: () => {} }));
+    const html = render(createElement(CustomRecipeForm, { onSaved: () => {} }));
     expectErrorUnder(html, 'id="custom-recipe-title"', "Title is required", 'id="custom-recipe-age"');
     expectErrorUnder(html, 'id="custom-recipe-ingredients"', "Add at least one ingredient", 'id="custom-recipe-extra"');
     expect(alertCount(html)).toBe(2);
@@ -106,7 +106,7 @@ describe("required-field errors reach their own field (item 237)", () => {
   });
 
   it("CustomFoodForm: the name message under the name input", () => {
-    const html = render(createElement(CustomFoodForm, { onSaved: () => {}, onCancel: () => {} }));
+    const html = render(createElement(CustomFoodForm, { onSaved: () => {} }));
     expectErrorUnder(html, 'id="custom-food-name"', "Name is required", 'id="custom-food-category"');
     expect(alertCount(html)).toBe(1);
     expectSubmitEnabled(html);

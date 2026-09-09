@@ -462,14 +462,16 @@ describe("stepLoopIndex (item 52 — keyboard-repeat-safe loop stepping)", () =>
   });
 });
 
-describe("PickerSheetFooter (item 53 — shared Done/Cancel footer)", () => {
-  it("renders Done first then Cancel, matching the page forms' primary-first order", () => {
-    const html = renderToString(createElement(PickerSheetFooter, { onCancel: () => {}, onSave: () => {} }));
+describe("PickerSheetFooter (item 53 — shared commit footer)", () => {
+  // Item 257: Done ONLY. Escape, an overlay tap and the back gesture all
+  // already discard the draft, so the Cancel button was a fourth way to do
+  // what three gestures did — and it competed with the commit.
+  it("renders a single full-width Done button, with no Cancel and no Save", () => {
+    const html = renderToString(createElement(PickerSheetFooter, { onSave: () => {} }));
     expect(html).toContain(">Done<");
-    expect(html).toContain(">Cancel<");
+    expect(html).not.toContain(">Cancel<");
     expect(html).not.toContain(">Save<");
-    expect(html.indexOf(">Done<")).toBeLessThan(html.indexOf(">Cancel<"));
-    expect((html.match(/<button/g) ?? []).length).toBe(2);
+    expect((html.match(/<button/g) ?? []).length).toBe(1);
   });
 });
 

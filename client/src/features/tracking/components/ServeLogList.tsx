@@ -7,6 +7,7 @@ import { MealActionsMenu } from "./MealActionsMenu.js";
 import { Badge } from "../../catalog/components/Badge.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
+import { KeepButton } from "../../../components/ui/KeepButton.js";
 import { SkeletonList } from "../../../components/ui/Skeleton.js";
 
 /** yyyy-mm-dd in the viewer's local timezone. The log itself is no longer
@@ -112,13 +113,10 @@ export function MealDeleteControl({ meal, babyId, confirming, onRequestDelete, o
         >
           {deleteMeal.isPending ? "Removing…" : "Yes, delete"}
         </button>
-        <button
-          type="button"
-          onClick={onCancelDelete}
-          className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-[var(--color-text)]"
-        >
-          Cancel
-        </button>
+        {/* The one dismiss that survives item 257: a destructive confirm has
+            no other way out, so backing out stays reachable — as an icon-only
+            × rather than a text button competing with "Yes, delete". */}
+        <KeepButton onClick={onCancelDelete} disabled={deleteMeal.isPending} />
       </div>
     );
   }

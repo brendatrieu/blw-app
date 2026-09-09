@@ -46,7 +46,10 @@ describe("LogFoodForm (render)", () => {
     expect(html).toMatch(/Reaction note(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
     expect(html).toMatch(/Notes(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
     expect(html).toContain(">Save<");
-    expect(html).toContain(">Cancel<");
+    // Item 257: no Cancel — LogFoodPage's header chevron (edit) or X
+    // (create) is the way out.
+    expect(html).not.toContain(">Cancel<");
+    expect((html.match(/type="submit"/g) ?? []).length).toBe(1);
   });
 
   // Item 235: Save stays enabled with zero foods selected — tapping it has

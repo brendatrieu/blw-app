@@ -16,9 +16,11 @@ export function SafetyArticlePage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <BackButton fallback="/safety">Safety Library</BackButton>
-
-      <PageHeader title={article.title} description={article.summary} />
+      <PageHeader
+        title={article.title}
+        description={article.summary}
+        leading={<BackButton fallback="/safety" />}
+      />
 
       <Markdown content={article.body} />
     </div>

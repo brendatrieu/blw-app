@@ -13,6 +13,7 @@ import { useMeals } from "../features/tracking/hooks.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { CardLink } from "../components/ui/Card.js";
+import { DeleteConfirmActions } from "../components/ui/DeleteConfirmActions.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
 const PREP_STAGES = [
@@ -97,25 +98,18 @@ export function CustomFoodActions({ food }: CustomFoodActionsProps) {
           Edit
         </ButtonLink>
         {confirming ? (
-          <>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              disabled={deleteFood.isPending}
-              onClick={() =>
-                deleteFood.mutate(
-                  { id: food.id, slug: food.slug },
-                  { onSuccess: () => navigate("/foods", { replace: true }) },
-                )
-              }
-            >
-              {deleteFood.isPending ? "Deleting…" : "Delete for good"}
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
-              Keep
-            </Button>
-          </>
+          <DeleteConfirmActions
+            confirmLabel="Delete for good"
+            pendingLabel="Deleting…"
+            pending={deleteFood.isPending}
+            onConfirm={() =>
+              deleteFood.mutate(
+                { id: food.id, slug: food.slug },
+                { onSuccess: () => navigate("/foods", { replace: true }) },
+              )
+            }
+            onKeep={() => setConfirming(false)}
+          />
         ) : (
           <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)}>
             Delete

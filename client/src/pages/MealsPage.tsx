@@ -16,7 +16,7 @@ export function MealsPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-4 p-4">
-        <BackButton fallback="/" />
+        <PageHeader title="Food log" emoji="📖" leading={<BackButton fallback="/" />} />
         <SkeletonList count={3} />
       </div>
     );
@@ -25,7 +25,7 @@ export function MealsPage() {
   if (!activeBaby) {
     return (
       <div className="flex flex-col gap-4 p-4">
-        <BackButton fallback="/" />
+        <PageHeader title="Food log" emoji="📖" leading={<BackButton fallback="/" />} />
         <EmptyState
           icon="👋"
           title="Welcome"
@@ -38,8 +38,16 @@ export function MealsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <BackButton fallback="/" />
-      <PageHeader title="Food log" emoji="📖" action={<ButtonLink to="/log-meal" size="sm">Log meal</ButtonLink>} />
+      <PageHeader
+        title="Food log"
+        emoji="📖"
+        leading={<BackButton fallback="/" />}
+        action={
+          <ButtonLink to="/log-meal" size="sm">
+            Log meal
+          </ButtonLink>
+        }
+      />
       <ServeLogList babyId={activeBaby.id} showHeading={false} />
     </div>
   );

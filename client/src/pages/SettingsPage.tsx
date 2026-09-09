@@ -14,6 +14,7 @@ import { PageHeader } from "../components/ui/PageHeader.js";
 import { Card } from "../components/ui/Card.js";
 import { Button } from "../components/ui/Button.js";
 import { Field } from "../components/ui/Field.js";
+import { KeepButton } from "../components/ui/KeepButton.js";
 import { Input, Textarea } from "../components/ui/Input.js";
 import { Sheet } from "../components/ui/Sheet.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
@@ -157,7 +158,7 @@ function AddBabySheet({ open, onClose }: { open: boolean; onClose: () => void })
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title="Add a baby 🍼">
+    <Sheet open={open} onClose={onClose} title="Add a baby 🍼" showClose>
       <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
         <BabyFields values={values} onChange={setValues} idPrefix="new-baby" errors={errors} />
         {error ? (
@@ -165,14 +166,11 @@ function AddBabySheet({ open, onClose }: { open: boolean; onClose: () => void })
             {error}
           </p>
         ) : null}
-        <div className="flex gap-2">
-          <Button type="submit" disabled={createBaby.isPending}>
-            {createBaby.isPending ? "Adding…" : "Add baby"}
-          </Button>
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-        </div>
+        {/* Item 257: the sheet's header X (and an overlay tap) is the way
+            out — no Cancel beside the commit. */}
+        <Button type="submit" disabled={createBaby.isPending} className="w-full">
+          {createBaby.isPending ? "Adding…" : "Add baby"}
+        </Button>
       </form>
     </Sheet>
   );
@@ -277,7 +275,7 @@ function BabyRow({ baby }: { baby: Baby }) {
         </div>
       </Card>
 
-      <Sheet open={editing} onClose={() => setEditing(false)} title={`Edit ${baby.name}`}>
+      <Sheet open={editing} onClose={() => setEditing(false)} title={`Edit ${baby.name}`} showClose>
         <form className="flex flex-col gap-3" onSubmit={handleSave} noValidate>
           <BabyFields values={values} onChange={setValues} idPrefix={`baby-${baby.id}`} errors={errors} />
           {error ? (
@@ -285,14 +283,10 @@ function BabyRow({ baby }: { baby: Baby }) {
               {error}
             </p>
           ) : null}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={updateBaby.isPending}>
-              {updateBaby.isPending ? "Saving…" : "Save"}
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
-              Cancel
-            </Button>
-          </div>
+          {/* Item 257 — see `AddBabySheet`. */}
+          <Button type="submit" disabled={updateBaby.isPending} className="w-full">
+            {updateBaby.isPending ? "Saving…" : "Save"}
+          </Button>
         </form>
       </Sheet>
     </>
@@ -741,13 +735,13 @@ export function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
           </p>
         ) : null}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button type="submit" variant="danger" disabled={deleteAccount.isPending}>
             {deleteAccount.isPending ? "Deleting…" : "Delete my account forever"}
           </Button>
-          <Button type="button" variant="secondary" disabled={deleteAccount.isPending} onClick={onCancel}>
-            Cancel
-          </Button>
+          {/* Icon-only dismiss (item 257): the only way out of a destructive
+              confirm that has no header chevron of its own. */}
+          <KeepButton onClick={onCancel} disabled={deleteAccount.isPending} label="Don't delete" />
         </div>
       </form>
     </Card>

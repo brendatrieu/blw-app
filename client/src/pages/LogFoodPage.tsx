@@ -5,7 +5,7 @@ import { useMeals } from "../features/tracking/hooks.js";
 import { LogFoodForm } from "../features/tracking/components/LogFoodForm.js";
 import { BackButton, useBackNavigate } from "../components/ui/BackButton.js";
 import { CloseButton } from "../components/ui/CloseButton.js";
-import { PageHeader } from "../components/ui/PageHeader.js";
+import { PageHeader, resolveHeaderAffordance, type HeaderAffordance } from "../components/ui/PageHeader.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
@@ -13,8 +13,8 @@ import { Skeleton } from "../components/ui/Skeleton.js";
 /**
  * Full-screen page for both logging a new meal and editing an existing one
  * (opened as `/log-meal?edit=:id`, e.g. from ServeLogList's per-meal Edit
- * link). Leaving the page (via the create-mode header X, edit-mode's Back
- * button, Cancel, a successful save, or the device/browser back gesture) all
+ * link). Leaving the page (via the create-mode header X, edit-mode's back
+ * chevron, a successful save, or the device/browser back gesture) all
  * resolve through the same history-aware
  * `useBackNavigate` idiom `BackButton` uses elsewhere — pop back to wherever
  * the user came from, falling back to "/" for a direct/deep-linked visit
@@ -28,6 +28,17 @@ import { Skeleton } from "../components/ui/Skeleton.js";
  * rather than falling through to a blank create form under an Edit title.
  */
 export type EditLoadState = "loading" | "found" | "missing";
+
+/**
+ * Which header affordance this page shows (item 258/259). Edit mode is
+ * reached by drilling into a meal, so it gets the back chevron; creating a
+ * meal is a task opened from anywhere, with nothing to go "back" to, so it
+ * gets the X. Never both — the type makes that unrepresentable, and the
+ * page reads the answer from here instead of re-deciding inline.
+ */
+export function resolveLogHeaderAffordance(isEditing: boolean): HeaderAffordance {
+  return resolveHeaderAffordance({ drilledInto: isEditing, openedAsTask: !isEditing });
+}
 
 /**
  * Pure classification of the edit-target lookup, independent of *why* it's
@@ -76,15 +87,19 @@ export function LogFoodPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      {/* Edit mode is reached by drilling into a meal, so it gets the same
-          top-left Back affordance every detail page has (above the title, as
-          PantryDetailPage places it). Creating a meal is a modal-ish task
-          with nothing to go "back" to, so it keeps the header X. Both routes
-          out still resolve through the same `useBackNavigate` idiom. */}
-      {isEditing && <BackButton fallback="/" />}
+      {/* One leading affordance, inline with the title, chosen by
+          `resolveLogHeaderAffordance`: a chevron when editing (a drill-in), an
+          X when creating (a task). Both resolve through the same
+          `useBackNavigate` idiom. */}
       <PageHeader
         title={isEditing ? "Edit meal" : "Log meal"}
-        {...(isEditing ? {} : { action: <CloseButton fallback="/" /> })}
+        leading={
+          resolveLogHeaderAffordance(isEditing) === "back" ? (
+            <BackButton fallback="/" />
+          ) : (
+            <CloseButton fallback="/" />
+          )
+        }
       />
 
       {(babyLoading || stillLoadingEditTarget) && <Skeleton className="h-40 w-full rounded-[var(--radius-lg)]" />}

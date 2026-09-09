@@ -74,10 +74,10 @@ export function BabyAllergensPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <BackButton fallback="/" />
       <PageHeader
         title="Allergen ladder"
         emoji="🪜"
+        leading={<BackButton fallback="/" />}
         description={
           <>
             Introduce one new allergen at a time, in the morning at home, and wait a few days before

@@ -16,14 +16,19 @@ function render(entry: string) {
 }
 
 describe("FoodCreatePage", () => {
-  it("renders the full-screen add-food page with back navigation and the form", () => {
+  it("renders the full-screen add-food page with an inline back chevron and the form", () => {
     const html = render("/foods/new");
-    expect(html).toContain(">Back<");
+    // Item 258: chevron-only, inside the header row, before the h1 — the
+    // word "Back" survives only as sr-only text.
+    expect(html).toContain('<span class="sr-only">Back</span>');
+    expect(html).toContain('d="M15 18l-6-6 6-6"');
+    expect(html.indexOf('<span class="sr-only">Back</span>')).toBeLessThan(html.indexOf("</h1>"));
     expect(html).toContain("Add food");
     expect(html).toContain(">Name<");
     expect(html).toContain(">Category<");
     expect(html).toContain(">Save<");
-    expect(html).toContain(">Cancel<");
+    // Item 257: no Cancel anywhere on the page.
+    expect(html).not.toContain(">Cancel<");
   });
 
   it("prefills the name from ?name=, the way the no-results empty state links here", () => {

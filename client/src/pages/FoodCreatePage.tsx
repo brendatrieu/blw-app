@@ -23,17 +23,16 @@ export function FoodCreatePage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <BackButton fallback="/foods" />
       <PageHeader
         title="Add food"
         emoji="🥣"
         description="Anything you make or buy that isn't in the catalog."
+        leading={<BackButton fallback="/foods" />}
       />
       <CustomFoodForm
         idPrefix="food-new"
         initialName={searchParams.get("name") ?? ""}
         onSaved={(food) => navigate(`/foods/${food.slug}`, { replace: true })}
-        onCancel={() => navigate("/foods")}
       />
     </div>
   );

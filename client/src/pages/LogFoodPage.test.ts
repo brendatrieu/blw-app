@@ -22,8 +22,10 @@ describe("LogFoodPage", () => {
     );
     expect(html).toContain("Log meal");
     expect(html).toContain('aria-label="Close"');
-    // Create mode is modal-ish: the X only, no top-left Back (item 196).
-    expect(html).not.toMatch(/>Back</);
+    // Create mode is a task: the X only, never a chevron too (items 196/258).
+    expect(html).not.toContain('<span class="sr-only">Back</span>');
+    // The X sits in the header's LEFT leading slot, before the title.
+    expect(html.indexOf('aria-label="Close"')).toBeLessThan(html.indexOf("</h1>"));
   });
 
   it("shows a 'meal is gone' EmptyState (not a blank create form) when ?edit=<id> can't be found, title still 'Edit meal'", () => {
@@ -53,11 +55,12 @@ describe("LogFoodPage", () => {
     );
 
     expect(html).toContain("Edit meal");
-    // Edit mode is a drill-in: BackButton above the title, no X (item 196).
-    expect(html).toMatch(/>Back</);
+    // Edit mode is a drill-in: the chevron, no X (items 196/258).
+    expect(html).toContain('<span class="sr-only">Back</span>');
     expect(html).not.toContain('aria-label="Close"');
-    // The Back control sits ABOVE the page header, as on the detail pages.
-    expect(html.indexOf(">Back<")).toBeLessThan(html.indexOf("<h1"));
+    // Item 258: INLINE with the title now — inside the header row, before
+    // the h1 closes, not on a line above it.
+    expect(html.indexOf('<span class="sr-only">Back</span>')).toBeLessThan(html.indexOf("</h1>"));
     expect(html).toContain("That meal is gone");
     expect(html).not.toMatch(/<textarea[^>]*id="log-food-note"/);
   });

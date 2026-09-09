@@ -25,7 +25,10 @@ describe("RecipeCreatePage", () => {
     const html = render();
     expect(html).toContain("Add recipe");
     expect(html).toContain('aria-label="Close"');
-    expect(html).not.toMatch(/>Back</);
+    // Item 258: a page shows the X or the chevron, never both.
+    expect(html).not.toContain('<span class="sr-only">Back</span>');
+    // …and the X sits in the header's LEFT leading slot, before the title.
+    expect(html.indexOf('aria-label="Close"')).toBeLessThan(html.indexOf("</h1>"));
   });
 
   // Item 235: Save is enabled from the first render — an empty form's Save

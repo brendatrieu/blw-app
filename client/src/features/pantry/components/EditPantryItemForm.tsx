@@ -113,14 +113,10 @@ export function EditPantryItemForm({ item, onDone }: EditPantryItemFormProps) {
 
       {updateItem.isError && <p className="text-xs text-[var(--color-danger)]">Couldn't save that — try again.</p>}
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={updateItem.isPending} className="flex-1">
-          {updateItem.isPending ? "Saving…" : "Save"}
-        </Button>
-        <Button type="button" variant="secondary" onClick={onDone}>
-          Cancel
-        </Button>
-      </div>
+      {/* Save only (item 257): the page's header X is the way out. */}
+      <Button type="submit" disabled={updateItem.isPending} className="w-full">
+        {updateItem.isPending ? "Saving…" : "Save"}
+      </Button>
     </form>
   );
 }

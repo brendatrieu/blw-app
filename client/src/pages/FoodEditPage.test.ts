@@ -68,7 +68,7 @@ describe("FoodEditPage", () => {
   });
 
   it("backs out to the food's own page, not the grid", () => {
-    expect(render(food())).toContain(">Back<");
+    expect(render(food())).toContain('<span class="sr-only">Back</span>');
     expect(render(food())).toContain('id="food-edit-name"');
   });
 

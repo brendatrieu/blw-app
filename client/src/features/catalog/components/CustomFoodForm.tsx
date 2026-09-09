@@ -149,7 +149,6 @@ export interface CustomFoodFormProps {
   /** Distinguishes this form's control ids from any other on the page. */
   idPrefix?: string;
   onSaved: (food: FoodDetail) => void;
-  onCancel: () => void;
 }
 
 /**
@@ -162,7 +161,7 @@ export interface CustomFoodFormProps {
  * top-9 allergen checklist (required by product decision to be *asked*, not
  * to be non-empty: "nothing on this list" is a real answer), and free notes.
  */
-export function CustomFoodForm({ food, initialName = "", idPrefix = "custom-food", onSaved, onCancel }: CustomFoodFormProps) {
+export function CustomFoodForm({ food, initialName = "", idPrefix = "custom-food", onSaved }: CustomFoodFormProps) {
   const [values, setValues] = useState<CustomFoodValues>(() => initialCustomFoodValues(food, initialName));
   const createFood = useCreateCustomFood();
   const updateFood = useUpdateCustomFood();
@@ -296,14 +295,12 @@ export function CustomFoodForm({ food, initialName = "", idPrefix = "custom-food
         </p>
       )}
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={mutation.isPending} className="flex-1">
-          {mutation.isPending ? "Saving…" : "Save"}
-        </Button>
-        <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
+      {/* Save only (item 257): the page header's chevron/X and the picker
+          sheet's own close are the way out — a Cancel button beside Save
+          just competed with it. */}
+      <Button type="submit" disabled={mutation.isPending} className="w-full">
+        {mutation.isPending ? "Saving…" : "Save"}
+      </Button>
     </form>
   );
 }

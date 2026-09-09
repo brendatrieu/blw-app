@@ -4,22 +4,34 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BackButton } from "./BackButton.js";
 
-describe("BackButton", () => {
-  it("renders a button with the default 'Back' label and a chevron icon", () => {
-    const html = renderToString(
+describe("BackButton (item 258 — chevron only)", () => {
+  function render() {
+    return renderToString(
       createElement(MemoryRouter, null, createElement(BackButton, { fallback: "/foods" })),
     );
-    expect(html).toContain("Back");
-    expect(html).toContain("<svg");
+  }
+
+  it("renders a 24px chevron glyph at the header icons' 1.8 stroke weight", () => {
+    const html = render();
     expect(html).toContain("<button");
+    expect(html).toContain('d="M15 18l-6-6 6-6"');
+    expect(html).toContain('width="24"');
+    expect(html).toContain('stroke-width="1.8"');
+    // Decorative: the accessible name comes from the sr-only text below.
+    expect(html).toContain('aria-hidden="true"');
   });
 
-  it("renders custom label children instead of the default", () => {
-    const html = renderToString(
-      createElement(MemoryRouter, null, createElement(BackButton, { fallback: "/safety" }, "Safety Library")),
-    );
-    expect(html).toContain("Safety Library");
-    expect(html).not.toContain(">Back<");
+  it("keeps 'Back' for assistive tech only — no visible label", () => {
+    const html = render();
+    expect(html).toContain('<span class="sr-only">Back</span>');
+    const visibleText = html.replace(/<span class="sr-only">[^<]*<\/span>/g, "").replace(/<[^>]+>/g, "").trim();
+    expect(visibleText).toBe("");
+  });
+
+  it("meets the 44px tap-target rule with no stray text padding", () => {
+    const html = render();
+    expect(html).toMatch(/class="[^"]*\bh-11\b/);
+    expect(html).toMatch(/class="[^"]*\bw-11\b/);
   });
 });
 

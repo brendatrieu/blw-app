@@ -14,7 +14,7 @@ export function PantryAddPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <PageHeader title="Add pantry item" emoji="🧺" action={<CloseButton fallback="/pantry" />} />
+      <PageHeader title="Add pantry item" emoji="🧺" leading={<CloseButton fallback="/pantry" />} />
       <AddPantryItemForm onDone={goBack} />
     </div>
   );

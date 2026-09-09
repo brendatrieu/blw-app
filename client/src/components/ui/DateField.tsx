@@ -291,7 +291,7 @@ export function DateField({
         <span className={`flex-1 ${value ? "" : "text-[var(--color-text-muted)]"}`}>{label}</span>
       </button>
 
-      <Sheet open={open} onClose={handleCancel} title={title}>
+      <Sheet open={open} onClose={handleCancel} title={title} showClose>
         <DateFieldPickerBody
           draft={draft}
           onDraftChange={setDraft}
@@ -299,7 +299,7 @@ export function DateField({
           yearsForward={effectiveYearsForward}
           now={currentNow}
         />
-        <PickerSheetFooter onCancel={handleCancel} onSave={handleSave} />
+        <PickerSheetFooter onSave={handleSave} />
       </Sheet>
     </>
   );

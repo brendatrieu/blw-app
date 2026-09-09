@@ -110,7 +110,7 @@ function renderWithError() {
 describe("AllergenDetailPage states (item 189)", () => {
   it("renders skeletons and a way back while the query is still pending", () => {
     const html = renderAtRoute(newClient());
-    expect(html).toContain("Back");
+    expect(html).toContain('<span class="sr-only">Back</span>');
     expect(html).toContain('aria-label="Loading"');
     expect(html).not.toContain("Egg");
     expect(html).not.toMatch(NOT_FOUND_COPY);
@@ -119,7 +119,7 @@ describe("AllergenDetailPage states (item 189)", () => {
   it("renders 'Couldn't find that allergen.' with a BackButton for an unknown slug (404)", () => {
     const html = renderWithError();
     expect(html).toMatch(NOT_FOUND_COPY);
-    expect(html).toContain("Back");
+    expect(html).toContain('<span class="sr-only">Back</span>');
     expect(html).not.toMatch(/Meals with /);
   });
 });

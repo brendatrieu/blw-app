@@ -272,7 +272,6 @@ export interface CustomRecipeFormProps {
   /** Distinguishes this form's control ids from any other on the page. */
   idPrefix?: string;
   onSaved: (recipe: RecipeDetail) => void;
-  onCancel: () => void;
 }
 
 /**
@@ -286,7 +285,7 @@ export interface CustomRecipeFormProps {
  * pinch of cinnamon — goes in the free-text list instead, exactly as the
  * catalog's own recipes carry extras.
  */
-export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved, onCancel }: CustomRecipeFormProps) {
+export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }: CustomRecipeFormProps) {
   const [values, setValues] = useState<CustomRecipeValues>(() => initialCustomRecipeValues(recipe));
   const [extraDraft, setExtraDraft] = useState("");
   const createRecipe = useCreateCustomRecipe();
@@ -553,14 +552,10 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved, 
         </p>
       )}
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={mutation.isPending} className="flex-1">
-          {mutation.isPending ? "Saving…" : "Save"}
-        </Button>
-        <Button type="button" variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
+      {/* Save only (item 257) — see `CustomFoodForm`. */}
+      <Button type="submit" disabled={mutation.isPending} className="w-full">
+        {mutation.isPending ? "Saving…" : "Save"}
+      </Button>
     </form>
   );
 }

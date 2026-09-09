@@ -24,8 +24,7 @@ export function RecipeEditPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-4 p-4">
-        <BackButton fallback={RECIPES_TAB_PATH} />
-        <PageHeader title="Edit recipe" emoji="✏️" />
+        <PageHeader title="Edit recipe" emoji="✏️" leading={<BackButton fallback={RECIPES_TAB_PATH} />} />
         <Skeleton className="h-64 w-full rounded-[var(--radius-lg)]" />
       </div>
     );
@@ -40,13 +39,11 @@ export function RecipeEditPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <BackButton fallback={`/recipes/${recipe.id}`} />
-      <PageHeader title="Edit recipe" emoji="✏️" />
+      <PageHeader title="Edit recipe" emoji="✏️" leading={<BackButton fallback={`/recipes/${recipe.id}`} />} />
       <CustomRecipeForm
         idPrefix="recipe-edit"
         recipe={recipe}
         onSaved={(updated) => navigate(`/recipes/${updated.id}`, { replace: true })}
-        onCancel={() => navigate(`/recipes/${recipe.id}`)}
       />
     </div>
   );

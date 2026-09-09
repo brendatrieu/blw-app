@@ -314,7 +314,10 @@ describe("MealCard actions slot (item 194)", () => {
     const html = renderMealCard(baseMeal, baseMeal.id);
     expect(html).toContain("Remove this meal?");
     expect(html).toContain("Yes, delete");
-    expect(html).toContain("Cancel");
+    // Item 257: the destructive confirm keeps a dismiss, but as an
+    // icon-only × with an accessible name — never a "Cancel" text button.
+    expect(html).not.toContain(">Cancel<");
+    expect(html).toContain('aria-label="Keep it"');
     // The confirm row rides above the stretched overlay like the kebab does.
     expect(html).toMatch(/<div class="relative z-10">(?:(?!<\/div>).)*Remove this meal\?/s);
   });

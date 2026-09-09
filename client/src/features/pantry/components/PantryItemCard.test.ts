@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { PantryItem } from "@blw/shared";
 import { CelebrationProvider } from "../../../components/ui/Celebration.js";
-import { buildServeInput, PantryItemCard, ServeControl } from "./PantryItemCard.js";
+import { PantryItemCard } from "./PantryItemCard.js";
 
 const BASE_ITEM: PantryItem = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -31,9 +31,9 @@ const BASE_ITEM: PantryItem = {
 interface RenderOptions {
   babyId?: string;
   editHref?: string;
-  onFinish?: () => void;
-  onDiscard?: () => void;
+  onRemove?: () => void;
   onRestore?: () => void;
+  linkable?: boolean;
 }
 
 function renderCard(item: PantryItem, options: RenderOptions = {}) {
@@ -234,51 +234,32 @@ describe("PantryItemCard tap-through link (item 139)", () => {
   });
 });
 
-describe("buildServeInput (item 108)", () => {
-  it("passes babyId and servings through and trims both notes to null when blank", () => {
-    expect(buildServeInput("baby-1", 3, "  ", "")).toEqual({
-      babyId: "baby-1",
-      servings: 3,
-      reactionNote: null,
-      notes: null,
-    });
-  });
-
-  it("keeps trimmed note text", () => {
-    expect(buildServeInput("baby-1", 1, " mild rash ", " froze the rest ")).toEqual({
-      babyId: "baby-1",
-      servings: 1,
-      reactionNote: "mild rash",
-      notes: "froze the rest",
-    });
-  });
-});
-
-describe("ServeControl startExpanded (kebab-menu path)", () => {
-  function renderServe(startExpanded?: boolean) {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    return renderToString(
-      createElement(
-        QueryClientProvider,
-        { client: queryClient },
-        createElement(
-          CelebrationProvider,
-          null,
-          createElement(MemoryRouter, null, createElement(ServeControl, { item: BASE_ITEM, babyId: "baby-1", startExpanded })),
-        ),
-      ),
-    );
-  }
-
-  it("renders the stepper immediately with no inner Serve button when startExpanded", () => {
-    const html = renderServe(true);
-    expect(html).toContain(">Confirm<");
+describe("PantryItemCard action row (items 262/264)", () => {
+  it("renders no footer row at all for a list card (kebab-only, item 264)", () => {
+    const html = renderCard(BASE_ITEM, {});
     expect(html).not.toContain(">Serve<");
+    expect(html).not.toContain(">Remove<");
+    expect(html).not.toContain(">Edit<");
+    expect(html).not.toContain("border-t border-[var(--color-border)] pt-2");
   });
 
-  it("still starts collapsed by default (Pantry page path)", () => {
-    const html = renderServe();
+  it("still renders the full-size action row for the detail page's own props", () => {
+    const html = renderCard(BASE_ITEM, {
+      babyId: "baby-1",
+      editHref: `/pantry/${BASE_ITEM.id}/edit`,
+      onRemove: () => {},
+    });
     expect(html).toContain(">Serve<");
-    expect(html).not.toContain(">Confirm<");
+    expect(html).toContain(">Remove<");
+    expect(html).toContain(">Edit<");
+    // Item 262: items-start so a wrapped row keeps each button's own height
+    // instead of stretching them to the tallest.
+    expect(html).toMatch(/class="relative z-10 flex flex-wrap items-start gap-2 border-t /);
+  });
+
+  it("offers Restore (and nothing else) on a finished item's detail row", () => {
+    const html = renderCard({ ...BASE_ITEM, status: "finished" }, { onRestore: () => {} });
+    expect(html).toContain("Restore to active");
+    expect(html).not.toContain(">Serve<");
   });
 });

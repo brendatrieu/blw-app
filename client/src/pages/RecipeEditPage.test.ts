@@ -76,7 +76,7 @@ describe("RecipeEditPage", () => {
   });
 
   it("backs out to the recipe's own page", () => {
-    expect(render(recipe())).toContain(">Back<");
+    expect(render(recipe())).toContain('<span class="sr-only">Back</span>');
     expect(render(recipe())).toContain('id="recipe-edit-title"');
   });
 

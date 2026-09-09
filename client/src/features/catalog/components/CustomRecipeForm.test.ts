@@ -352,7 +352,7 @@ function renderForm(props: Record<string, unknown> = {}) {
     createElement(
       QueryClientProvider,
       { client: queryClient },
-      createElement(CustomRecipeForm, { onSaved: () => {}, onCancel: () => {}, ...props } as never),
+      createElement(CustomRecipeForm, { onSaved: () => {}, ...props } as never),
     ),
   );
 }
@@ -371,7 +371,10 @@ describe("CustomRecipeForm (render)", () => {
     expect(html).toMatch(/Prep time(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
     expect(html).toMatch(/Notes(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
     expect(html).toContain(">Save<");
-    expect(html).toContain(">Cancel<");
+    // Item 257: no Cancel beside Save — the page header's chevron/X is the
+    // way out, and exactly one submit button remains.
+    expect(html).not.toContain(">Cancel<");
+    expect((html.match(/type="submit"/g) ?? []).length).toBe(1);
   });
 
   // Item 235: an empty form's Save is ENABLED — a tap has to produce a

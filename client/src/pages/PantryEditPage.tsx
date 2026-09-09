@@ -24,7 +24,7 @@ export function PantryEditPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-4 p-4">
-        <PageHeader title="Edit item" emoji="✏️" action={<CloseButton fallback="/pantry" />} />
+        <PageHeader title="Edit item" emoji="✏️" leading={<CloseButton fallback="/pantry" />} />
         <Skeleton className="h-40 w-full rounded-[var(--radius-lg)]" />
       </div>
     );
@@ -36,7 +36,7 @@ export function PantryEditPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <PageHeader title="Edit item" emoji="✏️" action={<CloseButton fallback="/pantry" />} />
+      <PageHeader title="Edit item" emoji="✏️" leading={<CloseButton fallback="/pantry" />} />
       <EditPantryItemForm item={item} onDone={goBack} />
     </div>
   );

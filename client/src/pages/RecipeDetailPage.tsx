@@ -15,7 +15,9 @@ import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js
 import { apiPost } from "../lib/api.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
+import { DeleteConfirmActions } from "../components/ui/DeleteConfirmActions.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
+import { KeepButton } from "../components/ui/KeepButton.js";
 
 const AGE_STAGES: { value: AgeStage; label: string }[] = [
   { value: "6", label: "6mo" },
@@ -114,13 +116,7 @@ function PrepThis({ recipeId }: PrepThisProps) {
             {prepped.isPending ? "Saving…" : loc.label}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="min-h-9 rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-medium text-[var(--color-text-muted)]"
-        >
-          Cancel
-        </button>
+        <KeepButton label="Not now" onClick={() => setOpen(false)} />
       </div>
       {prepped.isError && <p className="text-xs text-[var(--color-danger)]">Couldn't save that — try again.</p>}
     </div>
@@ -158,24 +154,17 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
           Edit
         </ButtonLink>
         {confirming ? (
-          <>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              disabled={deleteRecipe.isPending}
-              onClick={() =>
-                deleteRecipe.mutate(recipe.id, {
-                  onSuccess: () => navigate(RECIPES_TAB_PATH, { replace: true }),
-                })
-              }
-            >
-              {deleteRecipe.isPending ? "Deleting…" : "Delete for good"}
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
-              Keep
-            </Button>
-          </>
+          <DeleteConfirmActions
+            confirmLabel="Delete for good"
+            pendingLabel="Deleting…"
+            pending={deleteRecipe.isPending}
+            onConfirm={() =>
+              deleteRecipe.mutate(recipe.id, {
+                onSuccess: () => navigate(RECIPES_TAB_PATH, { replace: true }),
+              })
+            }
+            onKeep={() => setConfirming(false)}
+          />
         ) : (
           <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)}>
             Delete
@@ -240,10 +229,14 @@ export function RecipeDetailPage() {
 
   return (
     <div className="flex flex-col gap-5 p-4">
-      <BackButton fallback={RECIPES_TAB_PATH} />
       <div className="flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-2">
-          <h1 className="font-display text-[var(--color-text)]">{recipe.title}</h1>
+        {/* The chevron shares the title's row (item 258) — the recipe has no
+            PageHeader of its own, so this row IS the header. */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1">
+            <BackButton fallback={RECIPES_TAB_PATH} />
+            <h1 className="font-display min-w-0 text-[var(--color-text)]">{recipe.title}</h1>
+          </div>
           <FavoriteHeart
             recipeId={recipe.id}
             title={recipe.title}
