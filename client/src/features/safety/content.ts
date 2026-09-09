@@ -1,4 +1,4 @@
-// The 8 safety MDX articles live in `content/safety/` at the repo root (the
+// The safety MDX articles (9 as of 2026-09) live in `content/safety/` at the repo root (the
 // single source of truth — also compiled into the AI system prompt at build
 // time, per the plan). We glob them in as raw strings so they land inside the
 // JS chunks and precache for full offline reading; no network fetch, and no

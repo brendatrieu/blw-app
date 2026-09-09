@@ -14,10 +14,11 @@ const EXPECTED_SLUGS = [
   "iron-and-nutrition-basics",
   "storage-and-reheating",
   "infant-first-aid-reference",
+  "tummy-changes-starting-solids",
 ];
 
 describe("safety article manifest", () => {
-  it("loads exactly the 8 expected articles", () => {
+  it("loads exactly the 9 expected articles", () => {
     expect(safetyArticles.map((article) => article.slug).sort()).toEqual([...EXPECTED_SLUGS].sort());
   });
 
