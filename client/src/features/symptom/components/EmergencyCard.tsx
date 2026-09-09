@@ -24,7 +24,7 @@ export function EmergencyCard({ level, reasons, steps, disclaimer, onDismiss }: 
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="symptom-alert-heading"
-      className="scroll-momentum fixed inset-0 z-50 overflow-y-auto"
+      className="scroll-momentum fixed inset-0 z-50 overflow-y-auto scroll-thin"
       style={{ backgroundColor: palette.background, color: palette.text }}
     >
       <div className="mx-auto flex min-h-full max-w-lg flex-col gap-5 p-5">

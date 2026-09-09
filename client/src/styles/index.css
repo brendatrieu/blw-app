@@ -315,6 +315,26 @@ textarea {
   overscroll-behavior-y: contain;
 }
 
+/* Thin, trackless scrollbar for in-app scroll areas (pickers, sheets, the
+   chat thread): a slim thumb in the muted text color at ~45% so it reads as
+   "there's more" without a white rail. Touch browsers overlay and auto-hide
+   it anyway; this tames desktop and the PWA. */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-text-muted) 45%, transparent) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--color-text-muted) 45%, transparent);
+  border-radius: var(--radius-pill);
+}
+
 /* -------------------------------------------------------------------------
  * Focus visibility — everywhere, for free. One rule instead of a className
  * on every interactive element across the app. Being unlayered, it also

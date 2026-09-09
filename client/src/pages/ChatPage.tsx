@@ -223,7 +223,7 @@ function ThreadConversation({ threadId }: { threadId: string }) {
         {thread && <Badge tone={KIND_BADGE_TONE[thread.kind]}>{KIND_LABEL[thread.kind]}</Badge>}
       </div>
 
-      <div className="scroll-momentum flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <div className="scroll-momentum flex flex-1 flex-col gap-3 overflow-y-auto p-4 scroll-thin">
         {disclaimer && <p className="text-center text-xs text-[var(--color-text-muted)]">{disclaimer}</p>}
 
         {isLoadingHistory && <SkeletonList count={3} />}

@@ -404,7 +404,7 @@ export function WheelColumn({
       {...(valueText !== undefined ? { "aria-valuetext": valueText } : {})}
       onScroll={handleScroll}
       onKeyDown={handleKeyDown}
-      className={`snap-y snap-mandatory overflow-y-auto outline-none scroll-momentum [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+      className={`snap-y snap-mandatory overflow-y-auto outline-none scroll-momentum [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className} scroll-thin`}
       style={{ height: WHEEL_VISIBLE_HEIGHT, paddingTop: WHEEL_PADDING, paddingBottom: WHEEL_PADDING }}
     >
       {Array.from({ length: rowCount }, (_, row) => {
