@@ -196,6 +196,178 @@ describe("single-food basic recipes", () => {
     expect(bad).toEqual([]);
   });
 
+  /**
+   * Ledger item 266. Runs over the seeded catalog, which is BOTH recipe files
+   * (recipes.ts exports the curated 15 followed by the 40 basics), so a step
+   * added to either file is covered.
+   */
+  const COOKING_VERB = /\b(?:roast|bake|steam|boil|simmer|saut[eé]|fry|poach|scramble|toast|cook)\b/i;
+  /** °F / °C, or a stovetop heat setting ("medium heat", "medium-low heat", "low heat"). */
+  const TEMPERATURE = /\d\s*°\s*[FC]|\b(?:high|medium|low)(?:-(?:high|medium|low))?\s+heat\b/i;
+  /** A clock time ("10-12 minutes", "30 seconds", "2-3 hours") or a "until …" doneness cue. */
+  const TIME = /\b\d+(?:\s*[-–]\s*\d+)?\s*(?:second|minute|hour)s?\b|\buntil\b/i;
+
+  /** Every seeded catalog variant, with its recipe slug and stage. */
+  async function catalogVariants() {
+    const recipeRows = await catalogRecipes();
+    const byId = new Map(recipeRows.map((r) => [r.id, r]));
+    const variantRows = await db
+      .select({
+        recipeId: schema.recipeVariants.recipeId,
+        ageStage: schema.recipeVariants.ageStage,
+        textureNote: schema.recipeVariants.textureNote,
+        instructions: schema.recipeVariants.instructions,
+      })
+      .from(schema.recipeVariants);
+    return variantRows.flatMap((v) => {
+      const recipe = byId.get(v.recipeId);
+      return recipe ? [{ ...v, slug: recipe.slug, foodSlugs: recipe.foodSlugs }] : [];
+    });
+  }
+
+  it("gives every cooking step a temperature or a time", async () => {
+    const variants = await catalogVariants();
+    // 55 recipes: the curated 15 (3 stages each) plus 40 basics (39 x 3 + shrimp's 2).
+    expect(new Set(variants.map((v) => v.slug)).size).toBe(55);
+
+    const cookingSteps = variants.flatMap((v) =>
+      v.instructions
+        .map((step, index) => ({ slug: v.slug, stage: v.ageStage, index, step }))
+        .filter((s) => COOKING_VERB.test(s.step)),
+    );
+    // Guard the guard: if a refactor stopped matching cooking verbs entirely,
+    // the filter below would pass vacuously.
+    expect(cookingSteps.length).toBeGreaterThan(100);
+
+    const undated = cookingSteps.filter((s) => !TEMPERATURE.test(s.step) && !TIME.test(s.step));
+    expect(undated).toEqual([]);
+  });
+
+  it("gives every oven step a temperature in both °F and °C", async () => {
+    const variants = await catalogVariants();
+    const ovenSteps = variants.flatMap((v) =>
+      v.instructions
+        .map((step, index) => ({ slug: v.slug, stage: v.ageStage, index, step }))
+        .filter((s) => /\b(?:bake|roast)\b/i.test(s.step)),
+    );
+    expect(ovenSteps.length).toBeGreaterThan(10);
+
+    // The OVEN temperature must sit in the bake/roast clause itself (no
+    // period or semicolon between) and be an oven figure (300–499°F) — an
+    // internal-temperature cue like "until it reads 165°F (74°C)" elsewhere
+    // in the sentence must not satisfy this.
+    const OVEN_TEMP_IN_CLAUSE =
+      /\b(?:bake|roast)\b[^.;]*?\b[34]\d{2}\s*°F\s*\(\s*\d{3}\s*°C\s*\)|\b[34]\d{2}\s*°F\s*\(\s*\d{3}\s*°C\s*\)[^.;]*?\b(?:bake|roast)\b/i;
+    const missingUnits = ovenSteps.filter((s) => !OVEN_TEMP_IN_CLAUSE.test(s.step));
+    expect(missingUnits).toEqual([]);
+  });
+
+  it("adds no cooking step to a food that is served raw", async () => {
+    // Every basic whose food's prep text never cooks it. A regression that
+    // sneaks "bake the banana" in would otherwise pass every other guard.
+    const RAW_SERVED = [
+      "simple-sardines",
+      "simple-strawberry",
+      "simple-orange",
+      "simple-kiwi",
+      "simple-mango",
+      "simple-yogurt",
+      "simple-cheese",
+      "simple-avocado",
+      "simple-banana",
+      "simple-blueberry",
+      "simple-watermelon",
+    ];
+    const variants = await catalogVariants();
+    const offenders = variants
+      .filter((v) => RAW_SERVED.includes(v.slug))
+      .flatMap((v) =>
+        v.instructions
+          .map((step, index) => ({ slug: v.slug, stage: v.ageStage, index, step }))
+          .filter((s) => COOKING_VERB.test(s.step)),
+      );
+    expect(variants.filter((v) => RAW_SERVED.includes(v.slug)).length).toBeGreaterThanOrEqual(RAW_SERVED.length);
+    expect(offenders).toEqual([]);
+  });
+
+  it("cites the safe minimum internal temperature in every meat, fish, and egg basic", async () => {
+    // USDA/FSIS + FDA figures, recorded in .workflow/scratch/recipe-detail/sources.md.
+    const required: [string, RegExp][] = [
+      ["simple-beef", /160°F \(71°C\)/],
+      ["simple-chicken-thigh", /165°F \(74°C\)/],
+      ["simple-salmon", /145°F \(63°C\)/],
+      ["simple-shrimp", /145°F \(63°C\)/],
+      ["simple-egg", /yolk and (?:the )?white are firm/i],
+    ];
+    const variants = await catalogVariants();
+
+    const missing = required.flatMap(([slug, pattern]) => {
+      const stages = variants.filter((v) => v.slug === slug);
+      if (stages.length === 0) return [{ slug, problem: "no variants seeded" }];
+      return stages
+        .filter((v) => !v.instructions.some((step) => pattern.test(step)))
+        .map((v) => ({ slug, problem: `stage ${v.ageStage} never cites ${String(pattern)}` }));
+    });
+    expect(missing).toEqual([]);
+  });
+
+  /**
+   * Ledger item 267's prep guard: a basic recipe's texture note may not drift
+   * from the shape its food's own prep text prescribes for that stage. Only
+   * enforced where the prep text actually names a shape — tahini and the nut
+   * butters describe a consistency ("runny", "thin layer"), not a cut.
+   */
+  const SHAPE_WORDS = [
+    "strip",
+    "stick",
+    "mash",
+    "pea-sized",
+    "shred",
+    "dice",
+    "wedge",
+    "spear",
+    "puree",
+    "finger",
+    "bite",
+  ];
+
+  it("keeps every basic texture note on the shape words its food's prep text uses", async () => {
+    const foodRows = await db
+      .select({
+        slug: schema.foods.slug,
+        prep6m: schema.foods.prep6m,
+        prep9m: schema.foods.prep9m,
+        prep12m: schema.foods.prep12m,
+      })
+      .from(schema.foods)
+      .where(isNull(schema.foods.ownerId));
+    const prepByFood = new Map(
+      foodRows.map((f) => [f.slug, { "6": f.prep6m, "9": f.prep9m, "12": f.prep12m }]),
+    );
+
+    const basics = (await catalogVariants()).filter((v) => v.slug.startsWith("simple-"));
+    expect(basics.length).toBeGreaterThan(100);
+
+    let checked = 0;
+    const drifted = basics.flatMap((v) => {
+      const foodSlug = v.foodSlugs[0];
+      const prep = foodSlug === undefined ? undefined : prepByFood.get(foodSlug);
+      const prepText = prep?.[v.ageStage as "6" | "9" | "12"];
+      if (prepText === undefined) return [{ slug: v.slug, problem: "no prep text for stage" }];
+
+      const wanted = SHAPE_WORDS.filter((w) => prepText.toLowerCase().includes(w));
+      if (wanted.length === 0) return []; // prep text names no shape — nothing to share
+      checked += 1;
+      const note = v.textureNote.toLowerCase();
+      if (wanted.some((w) => note.includes(w))) return [];
+      return [{ slug: v.slug, problem: `stage ${v.ageStage} shares none of ${wanted.join("/")}` }];
+    });
+
+    expect(drifted).toEqual([]);
+    // Most basics DO name a shape; if this collapsed the test would be hollow.
+    expect(checked).toBeGreaterThan(80);
+  });
+
   it("leaves the 15 curated recipes in place, un-duplicated, after re-seeding", async () => {
     const recipes = await catalogRecipes();
     const slugs = recipes.map((r) => r.slug);
