@@ -418,7 +418,10 @@ export function MultiComboboxOptionList({
       id={listboxId}
       role="listbox"
       aria-multiselectable={multiselectable}
-      className="max-h-60 overflow-y-auto py-1"
+      // `mr-1` insets the scrollbar from the panel's rounded, overflow-hidden
+      // edge so its track isn't clipped at the corners; `overscroll-contain`
+      // keeps a flick at the end of the list from scrolling the page.
+      className="mr-1 max-h-60 overflow-y-auto overscroll-contain py-1"
     >
       {options.length === 0 && !createRow ? (
         <li className="px-3 py-2 text-sm text-[var(--color-text-muted)]">{emptyMessage}</li>

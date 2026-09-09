@@ -85,7 +85,10 @@ export function ServeControl({ item, babyId, startExpanded = false }: ServeContr
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    // basis-full: the confirming control takes its own row so the sibling
+    // Remove/Edit buttons wrap beneath it at their normal size instead of
+    // being squeezed beside a growing block.
+    <div className="flex basis-full flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1.5" role="group" aria-label="Servings">
           <button
@@ -268,7 +271,9 @@ export function PantryItemCard({ item, busy, onRemove, editHref, onRestore, baby
       )}
 
       {(canServe || onRemove || editHref || onRestore) && (
-      <div className="relative z-10 flex flex-wrap gap-2 border-t border-[var(--color-border)] pt-2">
+      // items-start: the Serve control grows when confirming (stepper, note);
+      // Remove/Edit must keep their own height rather than stretch with it.
+      <div className="relative z-10 flex flex-wrap items-start gap-2 border-t border-[var(--color-border)] pt-2">
         {canServe && <ServeControl item={item} babyId={babyId!} />}
         {onRemove && (
           <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={onRemove}>
