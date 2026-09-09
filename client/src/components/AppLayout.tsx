@@ -1,5 +1,5 @@
-import type { SVGProps } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { useEffect, useRef, type SVGProps } from "react";
+import { Link, Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { ageInMonths } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { isDaytimeHour, timeOfDayGreeting } from "../lib/greeting.js";
@@ -128,8 +128,28 @@ function SettingsLink() {
   );
 }
 
+/**
+ * Whether a route change should start at the top of the page. Forward
+ * navigation (tapping into an article, a food, a recipe) should — the page
+ * scrolls the window, so a tap deep in a list would otherwise land the new
+ * page already scrolled down. Back/forward (POP) keeps the browser's own
+ * restored position so returning to a list lands where the user left it.
+ */
+export function shouldScrollToTop(navigationType: "PUSH" | "POP" | "REPLACE"): boolean {
+  return navigationType !== "POP";
+}
+
 export function AppLayout() {
   const location = useLocation();
+  const navigationType = useNavigationType();
+  // Read through a ref so the effect keys on the PATH alone — a ?tab=
+  // change on the same page keeps its scroll position.
+  const navigationTypeRef = useRef(navigationType);
+  navigationTypeRef.current = navigationType;
+
+  useEffect(() => {
+    if (shouldScrollToTop(navigationTypeRef.current)) window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   return (
     <CelebrationProvider>

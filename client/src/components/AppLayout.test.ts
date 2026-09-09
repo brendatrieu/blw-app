@@ -5,7 +5,7 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { Baby } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
-import { AppLayout } from "./AppLayout.js";
+import { AppLayout, shouldScrollToTop } from "./AppLayout.js";
 
 function renderLayout(queryClient: QueryClient) {
   return renderToString(
@@ -50,5 +50,13 @@ describe("AppLayout header", () => {
 
     expect(html).toContain("Remy");
     expect(/Good morning|Good afternoon|Good evening/.test(html)).toBe(true);
+  });
+});
+
+describe("shouldScrollToTop", () => {
+  it("scrolls to the top on forward navigation but keeps the restored position on back/forward", () => {
+    expect(shouldScrollToTop("PUSH")).toBe(true);
+    expect(shouldScrollToTop("REPLACE")).toBe(true);
+    expect(shouldScrollToTop("POP")).toBe(false);
   });
 });
