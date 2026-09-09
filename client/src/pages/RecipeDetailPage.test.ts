@@ -129,6 +129,39 @@ describe("RecipeDetailPage (catalog recipe)", () => {
     expect(html).toContain(`href="/log-meal?recipe=${catalogRecipe().id}"`);
     expect(html).toContain(">Log meal<");
   });
+
+  // A recipe need not carry all three stages: shrimp is held to 9 months on
+  // the allergen ladder (item 253), so `simple-shrimp` has no 6-month
+  // variant. The page used to open on "6" regardless — highlighting a
+  // DISABLED 6mo tab above the 9-month prep, i.e. labelling shellfish as
+  // 6-month food. The highlighted tab must name the prep shown below it.
+  it("opens a 9-month-only recipe on its earliest real stage, not a disabled 6mo tab", () => {
+    const html = renderRecipe(
+      catalogRecipe({
+        slug: "simple-shrimp",
+        title: "Simple shrimp",
+        minAgeMonths: 9,
+        allergens: ["shellfish"],
+        variants: [
+          { ageStage: "9", textureNote: "Finely chopped", steps: ["Cook through", "Chop small"] },
+          { ageStage: "12", textureNote: "Bite-size pieces", steps: ["Cook through", "Cut bite-size"] },
+        ],
+      }),
+    );
+    const tab = (label: string) => html.match(new RegExp(`<button[^>]*>${label}</button>`))?.[0] ?? "";
+    const ACTIVE = "bg-[var(--color-primary)]";
+
+    // `disabled=""` is the attribute; `disabled:` prefixes in the class list
+    // are Tailwind variants and say nothing about the button's state.
+    expect(tab("6mo")).toContain('disabled=""');
+    expect(tab("6mo")).not.toContain(ACTIVE);
+    expect(tab("9mo")).toContain(ACTIVE);
+    expect(tab("9mo")).not.toContain('disabled=""');
+    // ...and the panel below is the 9-month one it now points at.
+    expect(html).toContain("Finely chopped");
+    expect(html).toContain("Chop small");
+    expect(html).not.toContain("Bite-size pieces");
+  });
 });
 
 describe("RecipeDetailPage (custom recipe)", () => {
@@ -232,5 +265,34 @@ describe("customRecipeConflictMessage", () => {
     expect(customRecipeConflictMessage({ mealCount: 0, pantryCount: 4 })).toBe(
       "Used in 0 meals and 4 pantry items — remove those first.",
     );
+  });
+});
+
+// Item 255: the same derived marker as the recipe rows, on the page header.
+describe("RecipeDetailPage — Basic badge", () => {
+  it("badges a single-ingredient recipe Basic", () => {
+    // The default catalog fixture is built on one food.
+    expect(renderRecipe(catalogRecipe())).toContain(">Basic<");
+  });
+
+  it("drops the badge once a recipe has a second ingredient", () => {
+    const twoFoods = catalogRecipe({
+      ingredients: [
+        ...catalogRecipe().ingredients,
+        {
+          foodId: "food-9",
+          foodSlug: "broccoli",
+          foodName: "Broccoli",
+          isCustom: false,
+          foodEmoji: null,
+          quantityNote: "2 florets",
+        },
+      ],
+    });
+    expect(renderRecipe(twoFoods)).not.toContain(">Basic<");
+  });
+
+  it("gives the badge the neutral tone", () => {
+    expect(renderRecipe(catalogRecipe())).toMatch(/class="[^"]*color-neutral-soft[^"]*"[^>]*>Basic</);
   });
 });

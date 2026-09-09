@@ -7,6 +7,7 @@ import { FoodBadges } from "../features/catalog/components/FoodBadges.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { CUSTOM_FOOD_SOFT_NOTE, customFoodConflictMessage, levelLabel } from "../features/catalog/constants.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
+import { BASIC_RECIPE_LABEL, isBasicRecipe, sortBasicRecipesFirst } from "../features/catalog/basicRecipe.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useMeals } from "../features/tracking/hooks.js";
 import { BackButton } from "../components/ui/BackButton.js";
@@ -217,13 +218,15 @@ export function FoodDetailPage() {
       {food.pairings.length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="font-h2 text-[var(--color-text)]">Vitamin-C pairings</h2>
-          <div className="scroll-momentum flex gap-2 overflow-x-auto pb-1">
+          {/* Stacked, not a side-scroller: a pairing's reason is a sentence
+              and needs the full width to wrap (user: "this should wrap"). */}
+          <div className="flex flex-col gap-2">
             {food.pairings.map((pairing) => (
               <CardLink
                 key={pairing.food.slug}
                 to={`/foods/${pairing.food.slug}`}
                 padding="sm"
-                className="flex min-w-[11rem] flex-shrink-0 flex-col gap-1"
+                className="flex flex-col gap-1"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1.5 text-sm font-medium text-[var(--color-text)]">
@@ -245,10 +248,16 @@ export function FoodDetailPage() {
         <section className="flex flex-col gap-2">
           <h2 className="font-h2 text-[var(--color-text)]">Recipes with {food.name.toLowerCase()}</h2>
           <div className="flex flex-col gap-2">
-            {food.recipes.map((recipe) => (
+            {/* Single-ingredient "Simple <food>" basics lead the list — the
+                plainest way to serve this food should be the first thing a
+                parent sees here (item 255). */}
+            {sortBasicRecipesFirst(food.recipes).map((recipe) => (
               <CardLink key={recipe.id} to={`/recipes/${recipe.id}`} padding="sm" className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium text-[var(--color-text)]">{recipe.title}</span>
-                <Badge tone="neutral">{recipe.minAgeMonths}m+</Badge>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  {isBasicRecipe(recipe.ingredientCount) && <Badge tone="neutral">{BASIC_RECIPE_LABEL}</Badge>}
+                  <Badge tone="neutral">{recipe.minAgeMonths}m+</Badge>
+                </span>
               </CardLink>
             ))}
           </div>

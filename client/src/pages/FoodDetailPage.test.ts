@@ -195,3 +195,36 @@ describe("customFoodConflictMessage", () => {
     );
   });
 });
+
+// Item 255: "Recipes with <food>" leads with the single-food basic and marks
+// it, so the plainest way to serve this food is the first thing offered.
+describe("FoodDetailPage — Recipes with <food> (item 255)", () => {
+  const WITH_RECIPES = catalogFood({
+    recipes: [
+      { id: "r-stew", title: "Salmon & pea stew", minAgeMonths: 6, ingredientCount: 3 },
+      { id: "r-simple", title: "Simple salmon", minAgeMonths: 6, ingredientCount: 1 },
+    ],
+  });
+
+  it("lists the single-ingredient recipe first, ahead of the multi-ingredient one", () => {
+    const html = renderFood(WITH_RECIPES);
+    // SSR splits the interpolation with a comment node.
+    expect(html).toMatch(/Recipes with (?:<!-- -->)?salmon/);
+    expect(html.indexOf("Simple salmon")).toBeLessThan(html.indexOf("Salmon &amp; pea stew"));
+  });
+
+  it("badges only the single-ingredient card Basic", () => {
+    const html = renderFood(WITH_RECIPES);
+    expect(html).toContain(">Basic<");
+    // One card, one badge.
+    expect(html.split(">Basic<")).toHaveLength(2);
+  });
+
+  it("badges nothing when the count is absent (an older API body)", () => {
+    const html = renderFood(
+      catalogFood({ recipes: [{ id: "r-old", title: "Salmon oat patties", minAgeMonths: 6 }] }),
+    );
+    expect(html).toContain("Salmon oat patties");
+    expect(html).not.toContain(">Basic<");
+  });
+});

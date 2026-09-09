@@ -179,8 +179,21 @@ async function loadFoodDetail(db: Database, food: FoodRow, userId: string | null
 
   // Catalog recipes plus this caller's own — never another parent's, which
   // would otherwise leak a private recipe's title through a shared food.
+  // `ingredientCount` is the recipe's TOTAL ingredient count (a correlated
+  // subquery, not the joined row), so the client can mark a single-ingredient
+  // "Simple <food>" basic without another round trip and without a stored
+  // flag.
   const recipeRows: FoodRecipeRef[] = await db
-    .select({ id: recipes.id, title: recipes.title, minAgeMonths: recipes.minAgeMonths })
+    .select({
+      id: recipes.id,
+      title: recipes.title,
+      minAgeMonths: recipes.minAgeMonths,
+      ingredientCount: sql<number>`(
+        select count(*)::int
+        from ${recipeIngredients} as all_ingredients
+        where all_ingredients.recipe_id = ${recipes.id}
+      )`,
+    })
     .from(recipeIngredients)
     .innerJoin(recipes, eq(recipeIngredients.recipeId, recipes.id))
     .where(and(eq(recipeIngredients.foodId, food.id), visibleRecipesCondition(userId)))

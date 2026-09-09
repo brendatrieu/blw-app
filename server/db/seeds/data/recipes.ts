@@ -1,10 +1,11 @@
+import { basicRecipes } from './basicRecipes'
 import type { RecipeSeed } from './types'
 
 // 15 starter recipes, each with 6/9/12-month variants. No added salt or sugar anywhere, and no
 // honey at any age (baked or otherwise). foodSlug references resolve against foods.ts;
 // extraIngredients cover pantry staples (oils, spices, chia, lemon) not tracked in the food
 // catalog.
-export const recipes: RecipeSeed[] = [
+const curatedRecipes: RecipeSeed[] = [
   {
     slug: 'beef-sweet-potato-strips',
     title: 'Beef & Sweet Potato Strips',
@@ -649,3 +650,9 @@ export const recipes: RecipeSeed[] = [
     },
   },
 ]
+
+// The seeded catalog: the 15 curated multi-ingredient recipes FIRST, in their
+// original order, then the 40 single-food "Simple <food>" basics. Order matters
+// only for readability of a fresh seed — every row upserts by slug — but keeping
+// the curated block first means the existing 15 are untouched by the addition.
+export const recipes: RecipeSeed[] = [...curatedRecipes, ...basicRecipes]

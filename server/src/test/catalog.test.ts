@@ -188,6 +188,15 @@ describe("catalog routes", () => {
     expect(body.recipes.map((r) => r.id)).toContain(fixtures.recipe.id);
   });
 
+  // The client derives its "Basic" marker from this count, so it must be the
+  // recipe's TOTAL ingredient count — not 1 for the joined food (item 255).
+  it("GET /api/foods/:slug reports each recipe's total ingredient count", async () => {
+    const response = await app.inject({ method: "GET", url: "/api/foods/spinach" });
+    const body = response.json() as FoodDetail;
+    const ref = body.recipes.find((r) => r.id === fixtures.recipe.id);
+    expect(ref?.ingredientCount).toBe(2);
+  });
+
   it("GET /api/foods/:slug reports a seeded food as catalog content, not custom", async () => {
     const response = await app.inject({ method: "GET", url: "/api/foods/egg" });
     expect(response.statusCode).toBe(200);

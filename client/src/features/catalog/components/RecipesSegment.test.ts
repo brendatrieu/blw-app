@@ -321,3 +321,26 @@ describe("EMPTY_RECIPE_FILTERS (what Clear all applies)", () => {
     expect(activeRecipeFilters(EMPTY_RECIPE_FILTERS)).toEqual([]);
   });
 });
+
+// Item 255: the single-food "Simple <food>" basics are marked on the row.
+// The card derives it from the ingredient names it already renders — there is
+// no stored flag and no extra field.
+describe("RecipeCard — Basic badge", () => {
+  it("badges a one-ingredient recipe Basic", () => {
+    const html = renderCard(recipe({ title: "Simple carrot", ingredientNames: ["Carrot"] }));
+    expect(html).toContain(">Basic<");
+  });
+
+  it("leaves a multi-ingredient recipe unbadged", () => {
+    expect(renderCard(recipe({ ingredientNames: ["Banana", "Oats"] }))).not.toContain(">Basic<");
+  });
+
+  it("leaves a recipe with no listed ingredients unbadged", () => {
+    expect(renderCard(recipe({ ingredientNames: [] }))).not.toContain(">Basic<");
+  });
+
+  it("gives the badge the neutral tone, not a nutrition or alert tone", () => {
+    const html = renderCard(recipe({ ingredientNames: ["Carrot"] }));
+    expect(html).toMatch(/class="[^"]*color-neutral-soft[^"]*"[^>]*>Basic</);
+  });
+});

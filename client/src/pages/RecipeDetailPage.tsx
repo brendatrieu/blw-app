@@ -6,7 +6,8 @@ import { ageInMonths } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useDeleteCustomRecipe, useRecipe } from "../features/catalog/hooks.js";
 import { asCustomRecipeConflict } from "../features/catalog/api.js";
-import { stageForAge } from "../features/catalog/stage.js";
+import { clampStageToAvailable, stageForAge } from "../features/catalog/stage.js";
+import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../features/catalog/basicRecipe.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { RECIPES_TAB_PATH, allergenLabel, customRecipeConflictMessage } from "../features/catalog/constants.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
@@ -224,7 +225,16 @@ export function RecipeDetailPage() {
     );
   }
 
-  const activeVariant = recipe.variants.find((v) => v.ageStage === activeStage) ?? recipe.variants[0];
+  // The stage the parent (or their baby's age) asked for is a REQUEST — a
+  // recipe need not carry all three. Shrimp starts at 9 months (item 253), so
+  // "6" here resolves to "9", and the tab strip highlights whatever this
+  // resolves to rather than the raw request: the highlighted tab and the prep
+  // below it must always name the same stage.
+  const resolvedStage = clampStageToAvailable(
+    activeStage,
+    recipe.variants.map((v) => v.ageStage),
+  );
+  const activeVariant = recipe.variants.find((v) => v.ageStage === resolvedStage) ?? recipe.variants[0];
   /** A custom recipe's single set of steps — empty when the parent wrote none. */
   const customSteps = recipe.variants[0]?.steps ?? [];
 
@@ -250,6 +260,8 @@ export function RecipeDetailPage() {
           {recipe.ironFocus && <Badge tone="primary">Iron focus</Badge>}
           {recipe.vitaminCHigh && <Badge tone="sunshine">Vit C</Badge>}
           <Badge tone="neutral">{recipe.minAgeMonths}m+</Badge>
+          {/* Derived from the ingredient list, not stored (item 255). */}
+          {isBasicRecipe(recipe.ingredients.length) && <Badge tone="neutral">{BASIC_RECIPE_LABEL}</Badge>}
           {recipe.isCustom && <Badge tone="neutral">Custom</Badge>}
           {recipe.allergens.map((slug) => (
             <Badge key={slug} tone="danger">
@@ -331,7 +343,7 @@ export function RecipeDetailPage() {
         <div className="inline-flex w-fit gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] p-1">
           {AGE_STAGES.map((stage) => {
             const available = recipe.variants.some((v) => v.ageStage === stage.value);
-            const active = stage.value === activeStage;
+            const active = stage.value === resolvedStage;
             return (
               <button
                 key={stage.value}

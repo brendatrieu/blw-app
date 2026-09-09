@@ -3,6 +3,7 @@ import type { RecipeListItem, RecipeScope } from "@blw/shared";
 import type { RecipeFilters } from "../api.js";
 import { AGE_THRESHOLDS, ALLERGEN_SLUGS, RECIPE_SCOPES, allergenLabel } from "../constants.js";
 import { useFoods, useRecipes } from "../hooks.js";
+import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../basicRecipe.js";
 import { ActiveFilterPill, FilterChip, FunnelButton } from "./filters.js";
 import { SingleFoodPicker } from "./FoodPicker.js";
 import { Badge } from "./Badge.js";
@@ -38,6 +39,8 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
       )}
       <div className="flex flex-wrap items-center gap-1.5">
         <Badge tone="neutral">{recipe.minAgeMonths}m+</Badge>
+        {/* Derived, not stored: one ingredient IS the recipe (item 255). */}
+        {isBasicRecipe(recipe.ingredientNames.length) && <Badge tone="neutral">{BASIC_RECIPE_LABEL}</Badge>}
         {recipe.ironFocus && <Badge tone="primary">Iron</Badge>}
         {recipe.vitaminCHigh && <Badge tone="sunshine">Vit C</Badge>}
         {recipe.isCustom && <Badge tone="neutral">Custom</Badge>}

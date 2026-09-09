@@ -80,6 +80,11 @@ export const foodRecipeRefSchema = z.object({
   id: z.string(),
   title: z.string(),
   minAgeMonths: z.number().int(),
+  /** How many ingredient foods the recipe has in total (not just this one).
+   * The client derives the "Basic" single-ingredient marker from it, so no
+   * flag is stored anywhere. Optional so a body from before the basics
+   * shipped still parses; the server always sends it. */
+  ingredientCount: z.number().int().nonnegative().optional(),
 });
 export type FoodRecipeRef = z.infer<typeof foodRecipeRefSchema>;
 

@@ -211,12 +211,21 @@ export async function runSeeds(db: Database): Promise<void> {
     const variantRows = recipeSeeds.flatMap((r) => {
       const recipeId = recipeIdBySlug.get(r.slug);
       if (!recipeId) return [];
-      return (["6", "9", "12"] as const).map((stage) => ({
-        recipeId,
-        ageStage: stage,
-        textureNote: r.variants[stage].textureNote,
-        instructions: r.variants[stage].steps,
-      }));
+      // A stage below the recipe's own minAgeMonths is simply absent from the
+      // seed (the shrimp basics carry 9 and 12 only), so skip it rather than
+      // inventing a row for it.
+      return (["6", "9", "12"] as const).flatMap((stage) => {
+        const variant = r.variants[stage];
+        if (!variant) return [];
+        return [
+          {
+            recipeId,
+            ageStage: stage,
+            textureNote: variant.textureNote,
+            instructions: variant.steps,
+          },
+        ];
+      });
     });
     if (variantRows.length > 0) {
       await db
