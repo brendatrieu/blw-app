@@ -32,7 +32,7 @@ const curatedRecipes: RecipeSeed[] = [
           'Finger-length, soft strips baby can hold in a fist with some poking out the top; beef cooked well-done and shredded fine, sweet potato steamed until it mashes easily between two fingers.',
         steps: [
           'Peel and cube the sweet potato, then steam or boil it for 12-15 minutes, until a fork slides through with no resistance and a cube mashes easily between two fingers.',
-          'Season the beef with a pinch of cumin if using (no added salt), then pan-fry it over medium heat for 4-5 minutes a side, or bake it at 350°F (180°C) for 20-25 minutes, until well-done at 160°F (71°C) with no pink left.',
+          'Season the beef with a pinch of cumin if using (no added salt), then pan-fry a thin steak over medium heat for 4-5 minutes a side, or shape ground beef into a thin patty and bake it at 350°F (180°C) for 20-25 minutes, until well-done at 160°F (71°C) with no pink left.',
           'Once cool enough to handle, mince or finely shred the beef so no tough or stringy pieces remain, and mash the sweet potato with a drizzle of olive oil.',
           'Cut the sweet potato into finger-length wedges and serve alongside a small pile of minced beef moistened with a little olive oil or cooking liquid so it is not dry.',
           'Sit with baby throughout the meal and supervise closely.',
