@@ -3,9 +3,7 @@ import { Link } from "react-router-dom";
 import type { PantryItem } from "@blw/shared";
 import { Badge } from "../../catalog/components/Badge.js";
 import { getFoodEmoji } from "../../catalog/foodEmoji.js";
-import { bestByLabel, countdownLabel, isLabelOnly, LOCATION_LABEL, pantryItemTitle, servingsLabel } from "../format.js";
-import { Button, ButtonLink } from "../../../components/ui/Button.js";
-import { ServeAction } from "./ServeSheet.js";
+import { bestByLabel, countdownLabel, LOCATION_LABEL, pantryItemTitle, servingsLabel } from "../format.js";
 
 /** Emoji for a pantry item: the food's own emoji when it was prepped from a
  * catalog food, otherwise a friendly stand-in for a recipe or free-form entry.
@@ -20,21 +18,12 @@ export function pantryItemEmoji(item: PantryItem): string {
 
 interface PantryItemCardProps {
   item: PantryItem;
+  /** Kept for callers' symmetry with the kebab; the card itself renders no
+   * button that could be disabled by it. */
   busy: boolean;
-  /** Single manual removal action — records "discarded" upstream; "finished"
-   * is only ever stamped automatically when tracked servings hit zero. */
-  onRemove?: () => void;
-  /** Route to the full-screen edit page (e.g. `/pantry/${item.id}/edit`); omit to hide the Edit affordance. */
-  editHref?: string;
-  onRestore?: () => void;
-  /** The baby to serve as — required to show the Serve action (see
-   * `ServeControl`); omit to hide it (e.g. no baby resolved yet). */
-  babyId?: string;
-  /** Extra controls rendered next to the location Badge — the three-dot
-   * Actions menu every LIST card now uses (item 264). Independent of the
-   * `onRemove`/`editHref`/`babyId` footer buttons below, so a caller offers
-   * a compact menu instead of (not in addition to) that full button row;
-   * only `PantryDetailPage` still passes the footer props. */
+  /** Right-hand slot beside the location Badge — the three-dot Actions menu
+   * every list AND the detail page pass (item 264). There is no footer
+   * button row any more. */
   actions?: ReactNode;
   /** False renders the info block as plain content instead of a Link to
    * `/pantry/:id` — for `PantryDetailPage` itself, which must not link to
@@ -42,9 +31,8 @@ interface PantryItemCardProps {
   linkable?: boolean;
 }
 
-export function PantryItemCard({ item, busy, onRemove, editHref, onRestore, babyId, actions, linkable = true }: PantryItemCardProps) {
+export function PantryItemCard({ item, actions, linkable = true }: PantryItemCardProps) {
   const preparedLabel = new Date(item.preparedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  const canServe = Boolean(babyId) && item.status === "active" && !isLabelOnly(item);
 
   const info = (
     <>
@@ -112,38 +100,6 @@ export function PantryItemCard({ item, busy, onRemove, editHref, onRestore, baby
         </Badge>
       )}
 
-      {/* The full-size action row is now `PantryDetailPage`'s alone (item
-          264): list cards on Home AND the Pantry tab pass `actions` (the
-          kebab) and none of these props, so this block doesn't render for
-          them. items-start keeps each button at its own height when the row
-          wraps. */}
-      {(canServe || onRemove || editHref || onRestore) && (
-      <div className="relative z-10 flex flex-wrap items-start gap-2 border-t border-[var(--color-border)] pt-2">
-        {canServe && <ServeAction item={item} babyId={babyId!} />}
-        {onRemove && (
-          <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={onRemove}>
-            Remove
-          </Button>
-        )}
-        {editHref && (
-          <ButtonLink to={editHref} size="sm" variant="secondary">
-            Edit
-          </ButtonLink>
-        )}
-        {onRestore && (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            disabled={busy}
-            onClick={onRestore}
-            className="text-[var(--color-accent)]"
-          >
-            Restore to active
-          </Button>
-        )}
-      </div>
-      )}
     </li>
   );
 }

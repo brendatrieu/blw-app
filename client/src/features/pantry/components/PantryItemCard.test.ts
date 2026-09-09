@@ -1,4 +1,4 @@
-import { createElement } from "react";
+import { createElement, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -29,11 +29,8 @@ const BASE_ITEM: PantryItem = {
 };
 
 interface RenderOptions {
-  babyId?: string;
-  editHref?: string;
-  onRemove?: () => void;
-  onRestore?: () => void;
   linkable?: boolean;
+  actions?: ReactNode;
 }
 
 function renderCard(item: PantryItem, options: RenderOptions = {}) {
@@ -80,26 +77,8 @@ describe("PantryItemCard (render)", () => {
     expect(html).toContain("Best by Sat, Aug 29");
   });
 
-  it("shows the Serve action when a babyId is given for an active, food-sourced item", () => {
-    const html = renderCard(BASE_ITEM, { babyId: "baby-1" });
-    expect(html).toMatch(/>Serve</);
-  });
-
-  it("hides the Serve action when no babyId is given", () => {
-    const html = renderCard(BASE_ITEM);
-    expect(html).not.toMatch(/>Serve</);
-  });
-
   it("hides the Serve action for a label-only item (nothing the serve endpoint could log)", () => {
-    const html = renderCard(
-      { ...BASE_ITEM, foodSlug: null, foodName: null, label: "Leftover soup" },
-      { babyId: "baby-1" },
-    );
-    expect(html).not.toMatch(/>Serve</);
-  });
-
-  it("hides the Serve action for a non-active item even with a babyId", () => {
-    const html = renderCard({ ...BASE_ITEM, status: "finished" }, { babyId: "baby-1" });
+    const html = renderCard({ ...BASE_ITEM, foodSlug: null, foodName: null, label: "Leftover soup" }, {});
     expect(html).not.toMatch(/>Serve</);
   });
 
@@ -243,23 +222,14 @@ describe("PantryItemCard action row (items 262/264)", () => {
     expect(html).not.toContain("border-t border-[var(--color-border)] pt-2");
   });
 
-  it("still renders the full-size action row for the detail page's own props", () => {
-    const html = renderCard(BASE_ITEM, {
-      babyId: "baby-1",
-      editHref: `/pantry/${BASE_ITEM.id}/edit`,
-      onRemove: () => {},
-    });
-    expect(html).toContain(">Serve<");
-    expect(html).toContain(">Remove<");
-    expect(html).toContain(">Edit<");
-    // Item 262: items-start so a wrapped row keeps each button's own height
-    // instead of stretching them to the tallest.
-    expect(html).toMatch(/class="relative z-10 flex flex-wrap items-start gap-2 border-t /);
+  it("has no footer path left at all — the detail page passes the kebab like every list (item 264)", () => {
+    const html = renderCard(BASE_ITEM, { actions: createElement("button", { type: "button" }, "Kebab marker") });
+    expect(html).toContain("Kebab marker");
+    expect(html).not.toContain("border-t border-[var(--color-border)] pt-2");
+    expect(html).not.toContain(">Serve<");
+    expect(html).not.toContain(">Remove<");
+    expect(html).not.toContain(">Edit<");
+    expect(html).not.toContain("Restore to active");
   });
 
-  it("offers Restore (and nothing else) on a finished item's detail row", () => {
-    const html = renderCard({ ...BASE_ITEM, status: "finished" }, { onRestore: () => {} });
-    expect(html).toContain("Restore to active");
-    expect(html).not.toContain(">Serve<");
-  });
 });

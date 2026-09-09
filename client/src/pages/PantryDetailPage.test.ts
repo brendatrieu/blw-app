@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { PantryItem } from "@blw/shared";
 import { pantryKeys } from "../features/pantry/hooks.js";
 import { PantryDetailPage } from "./PantryDetailPage.js";
+import { pantryMenuRows } from "../features/pantry/components/PantryItemActionsMenu.js";
 
 // `PantryDetailPage` reads `:id` via `useParams`, which only resolves inside
 // a matching `<Route>` — a bare `MemoryRouter` (fine for PantryEditPage's
@@ -76,8 +77,12 @@ describe("PantryDetailPage", () => {
       createElement(QueryClientProvider, { client: queryClient }, renderAtPantryDetailRoute(finished.id)),
     );
 
-    expect(html).toContain("Restore to active");
+    // The detail card carries the same kebab as every list; its rows only
+    // render open, so pin the trigger here and the row set via the pure resolver.
+    expect(html).toContain('aria-label="Actions"');
     expect(html).not.toContain(">Edit<");
     expect(html).not.toContain(">Remove<");
+    expect(html).not.toContain("Restore to active");
+    expect(pantryMenuRows(finished, { hasBaby: true, canRestore: true })).toEqual(["restore"]);
   });
 });

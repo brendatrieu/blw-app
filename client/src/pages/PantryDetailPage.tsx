@@ -2,6 +2,7 @@ import { Navigate, useParams } from "react-router-dom";
 import { usePantryItems, usePantryStatusChange } from "../features/pantry/hooks.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { PantryItemCard, pantryItemEmoji } from "../features/pantry/components/PantryItemCard.js";
+import { PantryItemActionsMenu } from "../features/pantry/components/PantryItemActionsMenu.js";
 import { PantryStatusBanner } from "../features/pantry/components/PantryStatusBanner.js";
 import { pantryItemTitle } from "../features/pantry/format.js";
 import { MealsFromBatch } from "../features/tracking/components/MealsFromBatch.js";
@@ -61,14 +62,22 @@ export function PantryDetailPage() {
       {recentChange && <PantryStatusBanner change={recentChange} onUndo={undo} />}
 
       <ul className="flex flex-col gap-2">
+        {/* Same kebab as Home and the Pantry tab (user: cards carry the
+            kebab everywhere); Remove/Restore run through the undoable
+            status setter so the banner above still works here. */}
         <PantryItemCard
           item={item}
           busy={isPending}
           linkable={false}
-          onRemove={item.status === "active" ? () => setStatus(item, "discarded", true) : undefined}
-          editHref={item.status === "active" ? `/pantry/${item.id}/edit` : undefined}
-          onRestore={item.status !== "active" ? () => setStatus(item, "active", false) : undefined}
-          babyId={activeBaby?.id}
+          actions={
+            <PantryItemActionsMenu
+              item={item}
+              babyId={activeBaby?.id}
+              busy={isPending}
+              onRemove={() => setStatus(item, "discarded", true)}
+              onRestore={() => setStatus(item, "active", false)}
+            />
+          }
         />
       </ul>
 
