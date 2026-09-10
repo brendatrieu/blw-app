@@ -642,6 +642,8 @@ export function DateTimeField({ id, value, onChange, disabled = false, daysBack 
   // otherwise recombine against the NEW today and land a day late.
   const [anchorNow, setAnchorNow] = useState<Date>(() => now ?? new Date());
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   function handleOpen() {
     if (disabled) return;
     const openedAt = now ?? new Date();
@@ -650,8 +652,6 @@ export function DateTimeField({ id, value, onChange, disabled = false, daysBack 
     setSaveError(null);
     setOpen(true);
   }
-
-  const [saveError, setSaveError] = useState<string | null>(null);
 
   function handleSave() {
     // Compared against a minute-truncated "now" so a minute-aligned draft
