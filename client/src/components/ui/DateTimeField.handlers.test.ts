@@ -48,18 +48,38 @@ import {
   type SplitDateTime,
 } from "./DateTimeField.js";
 
+/** The shape of a rendered element as the harness reads it — typed props,
+ * no `any`, so lint and typecheck cover the harness too. */
+type Rendered = {
+  type: unknown;
+  props: {
+    children?: unknown;
+    open?: boolean;
+    error?: string | null;
+    className?: string;
+    onClick?: () => void;
+    onSave?: () => void;
+    onDraftChange?: (draft: SplitDateTime) => void;
+    onIndexChange?: (index: number) => void;
+  };
+};
+
+
 const NOW = new Date(2026, 8, 8, 14, 5, 42, 500); // 2:05:42.5 PM
 
 function renderField(props: Record<string, unknown>) {
   h.store.i = 0;
   h.store.r = 0;
-  const tree = (DateTimeField as unknown as (p: unknown) => any)(props);
-  const kids = tree.props.children as any[];
+  const tree = (DateTimeField as unknown as (p: unknown) => Rendered)(props);
+  const kids = tree.props.children as Rendered[];
+  const button = kids[0];
   const sheet = kids[1];
-  const [body, footer] = sheet.props.children as any[];
+  if (!button || !sheet) throw new Error("DateTimeField should render its trigger button and its Sheet");
+  const [body, footer] = sheet.props.children as Rendered[];
+  if (!body || !footer) throw new Error("the Sheet should render the wheel body and the footer");
   expect(body.type).toBe(WheelPickerBody);
   expect(footer.type).toBe(PickerSheetFooter);
-  return { button: kids[0], sheet, body, footer };
+  return { button, sheet, body, footer };
 }
 
 describe("item 269 — handleSave on a future draft", () => {
@@ -68,14 +88,14 @@ describe("item 269 — handleSave on a future draft", () => {
     const onChange = vi.fn();
     const props = { value: new Date(2026, 8, 8, 13, 0), onChange, now: NOW };
     let v = renderField(props);
-    v.button.props.onClick(); // open
+    v.button.props.onClick?.(); // open
     v = renderField(props);
     expect(v.sheet.props.open).toBe(true);
 
     const future: SplitDateTime = { dayIndex: 0, hour12: 2, minute: 6, meridiem: "PM" }; // 14:06 > 14:05
-    v.body.props.onDraftChange(future);
+    v.body.props.onDraftChange?.(future);
     v = renderField(props);
-    v.footer.props.onSave();
+    v.footer.props.onSave?.();
     v = renderField(props);
     expect(onChange).not.toHaveBeenCalled();
     expect(v.sheet.props.open).toBe(true);
@@ -83,25 +103,25 @@ describe("item 269 — handleSave on a future draft", () => {
 
     // clears on draft change
     const valid: SplitDateTime = { dayIndex: 0, hour12: 2, minute: 5, meridiem: "PM" };
-    v.body.props.onDraftChange(valid);
+    v.body.props.onDraftChange?.(valid);
     v = renderField(props);
     expect(v.footer.props.error).toBeNull();
 
     // equal-to-now-at-minute commits exactly the combined date (no clamp to seconds)
-    v.footer.props.onSave();
+    v.footer.props.onSave?.();
     v = renderField(props);
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange.mock.calls[0][0]).toEqual(new Date(2026, 8, 8, 14, 5, 0, 0));
+    expect(onChange.mock.calls[0]?.[0]).toEqual(new Date(2026, 8, 8, 14, 5, 0, 0));
     expect(v.sheet.props.open).toBe(false);
 
     // past draft commits exactly, no clamp
-    v.button.props.onClick();
+    v.button.props.onClick?.();
     v = renderField(props);
     const past: SplitDateTime = { dayIndex: 3, hour12: 9, minute: 17, meridiem: "AM" };
-    v.body.props.onDraftChange(past);
+    v.body.props.onDraftChange?.(past);
     v = renderField(props);
-    v.footer.props.onSave();
-    expect(onChange.mock.calls[1][0]).toEqual(combineDateTime(past, NOW));
+    v.footer.props.onSave?.();
+    expect(onChange.mock.calls[1]?.[0]).toEqual(combineDateTime(past, NOW));
     expect(combineDateTime(past, NOW)).toEqual(new Date(2026, 8, 5, 9, 17, 0, 0));
   });
 
@@ -110,14 +130,14 @@ describe("item 269 — handleSave on a future draft", () => {
     const onChange = vi.fn();
     const props = { value: new Date(2026, 8, 8, 13, 0), onChange, now: NOW };
     let v = renderField(props);
-    v.button.props.onClick();
+    v.button.props.onClick?.();
     v = renderField(props);
-    v.body.props.onDraftChange({ dayIndex: 0, hour12: 11, minute: 59, meridiem: "PM" });
+    v.body.props.onDraftChange?.({ dayIndex: 0, hour12: 11, minute: 59, meridiem: "PM" });
     v = renderField(props);
-    v.footer.props.onSave();
+    v.footer.props.onSave?.();
     v = renderField(props);
     expect(v.footer.props.error).toBe(FUTURE_TIME_ERROR);
-    v.button.props.onClick(); // reopen
+    v.button.props.onClick?.(); // reopen
     v = renderField(props);
     expect(v.footer.props.error).toBeNull();
     expect(onChange).not.toHaveBeenCalled();
@@ -127,7 +147,7 @@ describe("item 269 — handleSave on a future draft", () => {
     h.reset();
     const props = { value: NOW, onChange: vi.fn(), now: NOW, disabled: true };
     let v = renderField(props);
-    v.button.props.onClick();
+    v.button.props.onClick?.();
     v = renderField(props);
     expect(v.sheet.props.open).toBe(false);
   });
@@ -137,7 +157,7 @@ describe("item 270 — wheel row taps", () => {
   function renderColumn(props: Record<string, unknown>) {
     h.store.i = 0;
     h.store.r = 0;
-    return (WheelColumn as unknown as (p: unknown) => any)(props);
+    return (WheelColumn as unknown as (p: unknown) => Rendered)(props);
   }
 
   it("loop column: tapping a row lands on that absolute row and its true index", () => {
@@ -146,15 +166,15 @@ describe("item 270 — wheel row taps", () => {
     const items = Array.from({ length: 12 }, (_, i) => ({ key: String(i), label: String(i + 1) }));
     const props = { ariaLabel: "Hour", items, index: 0, onIndexChange, valueNow: 1, valueMin: 1, valueMax: 12, loop: true };
     renderColumn(props);
-    const scrolls: any[] = [];
-    h.store.refs[0]!.current = { scrollTo: (o: unknown) => scrolls.push(o) };
+    const scrolls: { top: number; behavior?: string }[] = [];
+    h.store.refs[0]!.current = { scrollTo: (o: { top: number; behavior?: string }) => scrolls.push(o) };
     const tree = renderColumn(props);
-    const rows = tree.props.children as any[];
+    const rows = tree.props.children as Rendered[];
     expect(rows.length).toBe(60);
     expect(tree.props.className).not.toContain("scroll-thin");
     // every row is tappable
     expect(rows.every((r) => typeof r.props.onClick === "function")).toBe(true);
-    rows[38]!.props.onClick();
+    rows[38]!.props.onClick?.();
     expect(onIndexChange).toHaveBeenCalledWith(2); // 38 % 12
     expect(scrolls.at(-1)).toEqual({ top: 38 * WHEEL_ROW_HEIGHT, behavior: "smooth" });
     expect(h.store.refs[2]!.current).toBe(38); // absoluteRowRef = tapped copy, not middle (26)
@@ -166,12 +186,12 @@ describe("item 270 — wheel row taps", () => {
     const items = Array.from({ length: 6 }, (_, i) => ({ key: String(i), label: String(i) }));
     const props = { ariaLabel: "Date", items, index: 0, onIndexChange, valueNow: 0, valueMin: 0, valueMax: 5 };
     renderColumn(props);
-    const scrolls: any[] = [];
-    h.store.refs[0]!.current = { scrollTo: (o: unknown) => scrolls.push(o) };
+    const scrolls: { top: number; behavior?: string }[] = [];
+    h.store.refs[0]!.current = { scrollTo: (o: { top: number; behavior?: string }) => scrolls.push(o) };
     const tree = renderColumn(props);
-    const rows = tree.props.children as any[];
+    const rows = tree.props.children as Rendered[];
     expect(rows.length).toBe(6);
-    rows[4]!.props.onClick();
+    rows[4]!.props.onClick?.();
     expect(onIndexChange).toHaveBeenCalledWith(4);
     expect(scrolls.at(-1)).toEqual({ top: 4 * WHEEL_ROW_HEIGHT, behavior: "smooth" });
   });
