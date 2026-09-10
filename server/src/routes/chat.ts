@@ -38,7 +38,7 @@ const DISCLAIMER_TEXT =
 
 const TOOL_STATUS_LABELS: Record<string, string> = {
   get_baby_profile: "Checking your baby's profile…",
-  get_pantry: "Checking your pantry…",
+  get_fridge: "Checking your fridge…",
   search_recipes: "Looking for recipes…",
   get_food_prep_guidance: "Checking prep guidance…",
 };
@@ -297,7 +297,7 @@ export function registerChatRoutes(app: FastifyInstance, db: Database, options: 
       const tools = buildChatTools(db, userId, thread.babyId);
       const toolSet =
         thread.kind === "recipe"
-          ? [tools.get_baby_profile, tools.get_pantry, tools.search_recipes, tools.get_food_prep_guidance]
+          ? [tools.get_baby_profile, tools.get_fridge, tools.search_recipes, tools.get_food_prep_guidance]
           : [tools.get_baby_profile];
       const systemPrompt = thread.kind === "recipe" ? RECIPE_CHAT_SYSTEM_PROMPT : BLW_CHAT_SYSTEM_PROMPT;
 

@@ -13,7 +13,7 @@ import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 /** Header title for a meal: its recipe title when logged from one, otherwise
  * a comma-joined summary of the foods served — the same "best available
- * name" idiom `pantryItemTitle` uses for a pantry item. Exported so the
+ * name" idiom `fridgeItemTitle` uses for a fridge item. Exported so the
  * title text is pinnable without a DOM render. */
 export function mealTitle(meal: MealItem): string {
   return meal.recipeTitle ?? meal.foods.map((food) => food.name).join(", ");
@@ -33,7 +33,7 @@ function servedAtLabel(iso: string): string {
  * Full-screen detail view for a single meal, reached by tapping a `MealCard`
  * on Home's food log or a `MealsFromBatch` row (see each component's
  * `linkable`/link). There's no single-meal fetch endpoint, so — like
- * `PantryDetailPage` — the meal is located by id within the same best-effort
+ * `FridgeDetailPage` — the meal is located by id within the same best-effort
  * recent-meals window (`useMeals`, last 100) the rest of the app already
  * uses. An id not found there redirects home instead of rendering a dead
  * page.
@@ -41,8 +41,8 @@ function servedAtLabel(iso: string): string {
  * The body mirrors `MealCard`'s content (food chips, recipe title, reaction
  * note, general notes) but stands alone under this page's own title instead
  * of inside a list row, and adds one thing the list doesn't show per food:
- * a 🧺 link back to the pantry batch it was served from, when it has one —
- * making the pantry ⇄ meal traceback navigable in both directions.
+ * a 🧊 link back to the fridge batch it was served from, when it has one —
+ * making the fridge ⇄ meal traceback navigable in both directions.
  */
 export function MealDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -87,14 +87,14 @@ export function MealDetailPage() {
             >
               <span aria-hidden="true">{getFoodEmoji(food.slug, food.category, food.emoji)}</span>
               {food.name}
-              {food.pantryItemId && (
+              {food.fridgeItemId && (
                 <Link
-                  to={`/pantry/${food.pantryItemId}`}
-                  aria-label={`View the pantry batch this ${food.name} was served from`}
-                  title="From pantry"
+                  to={`/fridge/${food.fridgeItemId}`}
+                  aria-label={`View the fridge batch this ${food.name} was served from`}
+                  title="From fridge"
                   className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                 >
-                  🧺
+                  🧊
                 </Link>
               )}
             </span>

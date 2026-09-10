@@ -64,6 +64,13 @@
       "when": 1789005758862,
       "tag": "0008_petite_frightful_four",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789010586459,
+      "tag": "0009_fridge_rename",
+      "breakpoints": true
     }
   ]
 }

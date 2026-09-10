@@ -3,11 +3,11 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { PantryItem } from "@blw/shared";
+import type { FridgeItem } from "@blw/shared";
 import { CelebrationProvider } from "../../../components/ui/Celebration.js";
-import { PantryItemCard } from "./PantryItemCard.js";
+import { FridgeItemCard } from "./FridgeItemCard.js";
 
-const BASE_ITEM: PantryItem = {
+const BASE_ITEM: FridgeItem = {
   id: "11111111-1111-1111-1111-111111111111",
   label: null,
   foodSlug: "avocado",
@@ -33,7 +33,7 @@ interface RenderOptions {
   actions?: ReactNode;
 }
 
-function renderCard(item: PantryItem, options: RenderOptions = {}) {
+function renderCard(item: FridgeItem, options: RenderOptions = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderToString(
     createElement(
@@ -45,14 +45,14 @@ function renderCard(item: PantryItem, options: RenderOptions = {}) {
         createElement(
           MemoryRouter,
           null,
-          createElement("ul", null, createElement(PantryItemCard, { item, busy: false, ...options })),
+          createElement("ul", null, createElement(FridgeItemCard, { item, busy: false, ...options })),
         ),
       ),
     ),
   );
 }
 
-describe("PantryItemCard (render)", () => {
+describe("FridgeItemCard (render)", () => {
   it("shows the derived use-within countdown when untracked and no best-by is set", () => {
     const html = renderCard({ ...BASE_ITEM, expiresAt: new Date(Date.now() + 30 * 60 * 60 * 1000).toISOString() });
     expect(html).not.toContain("servings left");
@@ -107,7 +107,7 @@ describe("PantryItemCard (render)", () => {
             createElement(
               "ul",
               null,
-              createElement(PantryItemCard, {
+              createElement(FridgeItemCard, {
                 item: BASE_ITEM,
                 busy: false,
                 actions: createElement("button", { type: "button" }, "Actions slot marker"),
@@ -121,10 +121,10 @@ describe("PantryItemCard (render)", () => {
   });
 });
 
-describe("PantryItemCard tap-through link (item 139)", () => {
-  it("wraps the info block in a Link to /pantry/:id by default", () => {
+describe("FridgeItemCard tap-through link (item 139)", () => {
+  it("wraps the info block in a Link to /fridge/:id by default", () => {
     const html = renderCard(BASE_ITEM);
-    expect(html).toContain(`href="/pantry/${BASE_ITEM.id}"`);
+    expect(html).toContain(`href="/fridge/${BASE_ITEM.id}"`);
   });
 
   it("keeps the kebab/actions slot outside the anchor (no nested-interactive markup)", () => {
@@ -142,7 +142,7 @@ describe("PantryItemCard tap-through link (item 139)", () => {
             createElement(
               "ul",
               null,
-              createElement(PantryItemCard, {
+              createElement(FridgeItemCard, {
                 item: BASE_ITEM,
                 busy: false,
                 actions: createElement("button", { type: "button" }, "Actions slot marker"),
@@ -176,7 +176,7 @@ describe("PantryItemCard tap-through link (item 139)", () => {
             createElement(
               "ul",
               null,
-              createElement(PantryItemCard, {
+              createElement(FridgeItemCard, {
                 item: BASE_ITEM,
                 busy: false,
                 actions: createElement("button", { type: "button" }, "Actions slot marker"),
@@ -187,7 +187,7 @@ describe("PantryItemCard tap-through link (item 139)", () => {
       ),
     );
     expect(html).toMatch(/<li class="relative /);
-    expect(html).toMatch(/<a [^>]*class="[^"]*after:absolute after:inset-0[^"]*"[^>]*href="\/pantry\//);
+    expect(html).toMatch(/<a [^>]*class="[^"]*after:absolute after:inset-0[^"]*"[^>]*href="\/fridge\//);
     expect(html).toMatch(/<div class="relative z-10 [^"]*">(?:(?!<\/div>).)*Actions slot marker/s);
   });
 
@@ -203,17 +203,17 @@ describe("PantryItemCard tap-through link (item 139)", () => {
           createElement(
             MemoryRouter,
             null,
-            createElement("ul", null, createElement(PantryItemCard, { item: BASE_ITEM, busy: false, linkable: false })),
+            createElement("ul", null, createElement(FridgeItemCard, { item: BASE_ITEM, busy: false, linkable: false })),
           ),
         ),
       ),
     );
-    expect(html).not.toContain(`href="/pantry/${BASE_ITEM.id}"`);
+    expect(html).not.toContain(`href="/fridge/${BASE_ITEM.id}"`);
     expect(html).not.toContain("<a ");
   });
 });
 
-describe("PantryItemCard action row (items 262/264)", () => {
+describe("FridgeItemCard action row (items 262/264)", () => {
   it("renders no footer row at all for a list card (kebab-only, item 264)", () => {
     const html = renderCard(BASE_ITEM, {});
     expect(html).not.toContain(">Serve<");

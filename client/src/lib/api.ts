@@ -7,8 +7,8 @@ export class ApiError extends Error {
   /**
    * The parsed JSON error body, when there was one (`undefined` for an empty
    * or non-JSON response). Some errors carry more than a message — the
-   * custom-food DELETE conflict answers `{ error, mealCount, pantryCount }`
-   * and the UI has to say "used in N meals and N pantry items" — and
+   * custom-food DELETE conflict answers `{ error, mealCount, fridgeCount }`
+   * and the UI has to say "used in N meals and N fridge items" — and
    * `message` alone throws those counts away.
    */
   readonly body: unknown;

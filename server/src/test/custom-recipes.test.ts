@@ -7,7 +7,7 @@ import type {
   FavoritesResponse,
   FoodDetail,
   MealItem,
-  PantryItem,
+  FridgeItem,
   RecipeDetail,
   RecipesResponse,
 } from "@blw/shared";
@@ -1159,7 +1159,7 @@ describe("custom recipes", () => {
       expect(favorites.json<FavoritesResponse>().items).toEqual([]);
     });
 
-    it("409s with the reference counts while a meal or pantry item still uses it", async () => {
+    it("409s with the reference counts while a meal or fridge item still uses it", async () => {
       const recipe = await createRecipe(owner, recipePayload());
       const babyId = await createBaby(owner);
 
@@ -1171,13 +1171,13 @@ describe("custom recipes", () => {
       });
       expect(meal.statusCode).toBe(201);
 
-      const pantry = await app.inject({
+      const fridge = await app.inject({
         method: "POST",
-        url: "/api/pantry",
+        url: "/api/fridge",
         headers: { cookie: owner.cookie },
         payload: { recipeId: recipe.id, location: "fridge" },
       });
-      expect(pantry.statusCode).toBe(201);
+      expect(fridge.statusCode).toBe(201);
 
       const blocked = await app.inject({
         method: "DELETE",
@@ -1185,7 +1185,7 @@ describe("custom recipes", () => {
         headers: { cookie: owner.cookie },
       });
       expect(blocked.statusCode).toBe(409);
-      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 1, pantryCount: 1 });
+      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 1, fridgeCount: 1 });
 
       // Still there — a refused delete changes nothing.
       expect(await db.select().from(schema.recipes).where(eq(schema.recipes.id, recipe.id))).toHaveLength(1);
@@ -1256,7 +1256,7 @@ describe("custom recipes", () => {
       expect(patched.statusCode).toBe(400);
     });
 
-    it("stocks and serves a custom recipe from the pantry, fanning out to its ingredient foods", async () => {
+    it("stocks and serves a custom recipe from the fridge, fanning out to its ingredient foods", async () => {
       const mine = await createRecipe(
         owner,
         recipePayload({
@@ -1270,17 +1270,17 @@ describe("custom recipes", () => {
 
       const stocked = await app.inject({
         method: "POST",
-        url: "/api/pantry",
+        url: "/api/fridge",
         headers: { cookie: owner.cookie },
         payload: { recipeId: mine.id, location: "freezer" },
       });
       expect(stocked.statusCode).toBe(201);
-      const item = stocked.json<PantryItem[]>()[0]!;
+      const item = stocked.json<FridgeItem[]>()[0]!;
       expect(item.recipeTitle).toBe("Banana oat fingers");
 
       const served = await app.inject({
         method: "POST",
-        url: `/api/pantry/${item.id}/serve`,
+        url: `/api/fridge/${item.id}/serve`,
         headers: { cookie: owner.cookie },
         payload: { babyId },
       });
@@ -1291,7 +1291,7 @@ describe("custom recipes", () => {
       // Another account cannot stock it in the first place.
       const refused = await app.inject({
         method: "POST",
-        url: "/api/pantry",
+        url: "/api/fridge",
         headers: { cookie: intruder.cookie },
         payload: { recipeId: mine.id, location: "freezer" },
       });
@@ -1505,7 +1505,7 @@ describe("custom recipes", () => {
         headers: { cookie: owner.cookie },
       });
       expect(blocked.statusCode).toBe(409);
-      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 0, pantryCount: 0, recipeCount: 1 });
+      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 0, fridgeCount: 0, recipeCount: 1 });
     });
   });
 });

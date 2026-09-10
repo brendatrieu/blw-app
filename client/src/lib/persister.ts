@@ -5,7 +5,7 @@ const IDB_KEY = "blw.reactQueryCache";
 
 /**
  * Async storage persister backed by IndexedDB (via idb-keyval) instead of
- * localStorage — the cached query data (foods, recipes, pantry, etc.) can
+ * localStorage — the cached query data (foods, recipes, fridge, etc.) can
  * exceed localStorage's ~5MB synchronous quota and would otherwise block the
  * main thread on every write.
  */

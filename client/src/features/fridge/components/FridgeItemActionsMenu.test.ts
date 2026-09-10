@@ -3,16 +3,16 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { PantryItem } from "@blw/shared";
+import type { FridgeItem } from "@blw/shared";
 import { CelebrationProvider } from "../../../components/ui/Celebration.js";
 import {
-  PANTRY_MENU_ROW_LABEL,
-  pantryMenuRows,
-  PantryItemActionsMenu,
-  type PantryItemActionsMenuProps,
-} from "./PantryItemActionsMenu.js";
+  FRIDGE_MENU_ROW_LABEL,
+  fridgeMenuRows,
+  FridgeItemActionsMenu,
+  type FridgeItemActionsMenuProps,
+} from "./FridgeItemActionsMenu.js";
 
-const BASE_ITEM: PantryItem = {
+const BASE_ITEM: FridgeItem = {
   id: "11111111-1111-1111-1111-111111111111",
   label: null,
   foodSlug: "avocado",
@@ -33,7 +33,7 @@ const BASE_ITEM: PantryItem = {
   notes: null,
 };
 
-function renderMenu(item: PantryItem = BASE_ITEM, props: Partial<PantryItemActionsMenuProps> = {}) {
+function renderMenu(item: FridgeItem = BASE_ITEM, props: Partial<FridgeItemActionsMenuProps> = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderToString(
     createElement(
@@ -45,14 +45,14 @@ function renderMenu(item: PantryItem = BASE_ITEM, props: Partial<PantryItemActio
         createElement(
           MemoryRouter,
           null,
-          createElement(PantryItemActionsMenu, { item, babyId: "baby-1", ...props }),
+          createElement(FridgeItemActionsMenu, { item, babyId: "baby-1", ...props }),
         ),
       ),
     ),
   );
 }
 
-describe("PantryItemActionsMenu (render)", () => {
+describe("FridgeItemActionsMenu (render)", () => {
   it("renders a closed Actions trigger with menu ARIA wiring", () => {
     const html = renderMenu();
     expect(html).toContain('aria-label="Actions"');
@@ -74,12 +74,12 @@ describe("PantryItemActionsMenu (render)", () => {
   });
 });
 
-describe("pantryMenuRows (item 264 — the kebab is a list card's only action surface)", () => {
-  const labels = (rows: ReturnType<typeof pantryMenuRows>) => rows.map((row) => PANTRY_MENU_ROW_LABEL[row]);
+describe("fridgeMenuRows (item 264 — the kebab is a list card's only action surface)", () => {
+  const labels = (rows: ReturnType<typeof fridgeMenuRows>) => rows.map((row) => FRIDGE_MENU_ROW_LABEL[row]);
   const active = { status: "active" as const, foodSlug: "avocado", recipeTitle: null };
 
   it("offers Serve, Edit and Remove for an active item, in that order", () => {
-    expect(labels(pantryMenuRows(active, { hasBaby: true, canRestore: true }))).toEqual([
+    expect(labels(fridgeMenuRows(active, { hasBaby: true, canRestore: true }))).toEqual([
       "Serve",
       "Edit",
       "Remove",
@@ -87,26 +87,26 @@ describe("pantryMenuRows (item 264 — the kebab is a list card's only action su
   });
 
   it("withholds Serve when no baby has resolved yet — not the whole menu", () => {
-    expect(labels(pantryMenuRows(active, { hasBaby: false, canRestore: true }))).toEqual(["Edit", "Remove"]);
+    expect(labels(fridgeMenuRows(active, { hasBaby: false, canRestore: true }))).toEqual(["Edit", "Remove"]);
   });
 
   it("withholds Serve for a label-only item but keeps Edit and Remove", () => {
     const labelOnly = { status: "active" as const, foodSlug: null, recipeTitle: null };
-    expect(labels(pantryMenuRows(labelOnly, { hasBaby: true, canRestore: true }))).toEqual(["Edit", "Remove"]);
+    expect(labels(fridgeMenuRows(labelOnly, { hasBaby: true, canRestore: true }))).toEqual(["Edit", "Remove"]);
   });
 
   it("offers Restore to active — and only that — for a finished item", () => {
     const finished = { status: "finished" as const, foodSlug: "avocado", recipeTitle: null };
-    expect(labels(pantryMenuRows(finished, { hasBaby: true, canRestore: true }))).toEqual(["Restore to active"]);
+    expect(labels(fridgeMenuRows(finished, { hasBaby: true, canRestore: true }))).toEqual(["Restore to active"]);
   });
 
   it("offers Restore for a discarded item too", () => {
     const discarded = { status: "discarded" as const, foodSlug: "avocado", recipeTitle: null };
-    expect(labels(pantryMenuRows(discarded, { hasBaby: true, canRestore: true }))).toEqual(["Restore to active"]);
+    expect(labels(fridgeMenuRows(discarded, { hasBaby: true, canRestore: true }))).toEqual(["Restore to active"]);
   });
 
   it("shows no rows at all for a caller with no restore handler (Home) on a finished item", () => {
     const finished = { status: "finished" as const, foodSlug: "avocado", recipeTitle: null };
-    expect(pantryMenuRows(finished, { hasBaby: true, canRestore: false })).toEqual([]);
+    expect(fridgeMenuRows(finished, { hasBaby: true, canRestore: false })).toEqual([]);
   });
 });

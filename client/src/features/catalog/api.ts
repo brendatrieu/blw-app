@@ -66,7 +66,7 @@ export function deleteCustomFood(id: string): Promise<void> {
 }
 
 /**
- * The `{ error: "conflict", mealCount, pantryCount }` body behind a 409 from
+ * The `{ error: "conflict", mealCount, fridgeCount }` body behind a 409 from
  * `deleteCustomFood`, or null for any other failure. Pure and exported so
  * the food page's inline "used in N meals…" message is unit-testable without
  * a network layer: it takes the thrown value as `unknown` (that's what a
@@ -143,7 +143,7 @@ export function deleteCustomRecipe(id: string): Promise<void> {
 }
 
 /**
- * The `{ error: "conflict", mealCount, pantryCount }` body behind a 409 from
+ * The `{ error: "conflict", mealCount, fridgeCount }` body behind a 409 from
  * `deleteCustomRecipe`, or null for any other failure — the recipe-side twin
  * of `asCustomFoodConflict`, and narrowed here for the same reason.
  * Favorites are never a block: the server just deletes the caller's own

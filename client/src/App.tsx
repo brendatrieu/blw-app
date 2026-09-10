@@ -1,14 +1,14 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout.js";
 import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { SignupPage } from "./pages/SignupPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
 import { LogFoodPage } from "./pages/LogFoodPage.js";
-import { PantryPage } from "./pages/PantryPage.js";
-import { PantryAddPage } from "./pages/PantryAddPage.js";
-import { PantryEditPage } from "./pages/PantryEditPage.js";
-import { PantryDetailPage } from "./pages/PantryDetailPage.js";
+import { FridgePage } from "./pages/FridgePage.js";
+import { FridgeAddPage } from "./pages/FridgeAddPage.js";
+import { FridgeEditPage } from "./pages/FridgeEditPage.js";
+import { FridgeDetailPage } from "./pages/FridgeDetailPage.js";
 import { MealDetailPage } from "./pages/MealDetailPage.js";
 import { MealsPage } from "./pages/MealsPage.js";
 import { FoodsRoute } from "./pages/FoodsPage.js";
@@ -29,6 +29,22 @@ import { ChatPage } from "./pages/ChatPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { MorePage } from "./pages/MorePage.js";
 import { NotFoundPage } from "./pages/NotFoundPage.js";
+
+/**
+ * Item 287: the Pantry tab became the Fridge tab, so every old `/pantry*` URL
+ * — a bookmark, the installed PWA's saved start URL, a back-button entry —
+ * is rewritten to its `/fridge` twin instead of hitting Not found. Only the
+ * prefix changes, so `/pantry/abc/edit` still lands on the edit page, and the
+ * query/hash ride along. This is the ONE place the old word survives in
+ * client code, and it has to: the redirect is what makes those URLs work.
+ */
+export function legacyFridgePath(location: { pathname: string; search: string; hash: string }): string {
+  return `${location.pathname.replace(/^\/pantry(?=$|\/)/, "/fridge")}${location.search}${location.hash}`;
+}
+
+function LegacyPantryRedirect() {
+  return <Navigate to={legacyFridgePath(useLocation())} replace />;
+}
 
 export function App() {
   return (
@@ -63,13 +79,15 @@ export function App() {
         <Route path="/log-meal" element={<LogFoodPage />} />
         <Route path="/meals" element={<MealsPage />} />
         <Route path="/meals/:id" element={<MealDetailPage />} />
-        <Route path="/pantry" element={<PantryPage />} />
-        <Route path="/pantry/add" element={<PantryAddPage />} />
-        <Route path="/pantry/:id/edit" element={<PantryEditPage />} />
-        <Route path="/pantry/:id" element={<PantryDetailPage />} />
+        <Route path="/fridge" element={<FridgePage />} />
+        <Route path="/fridge/add" element={<FridgeAddPage />} />
+        <Route path="/fridge/:id/edit" element={<FridgeEditPage />} />
+        <Route path="/fridge/:id" element={<FridgeDetailPage />} />
+        {/* Splat matches "/pantry" itself as well as anything under it. */}
+        <Route path="/pantry/*" element={<LegacyPantryRedirect />} />
         <Route path="/foods" element={<FoodsRoute />} />
-        {/* Ahead of "/foods/:slug", exactly like "/pantry/add" sits ahead of
-            "/pantry/:id" — otherwise "new" is read as a slug. */}
+        {/* Ahead of "/foods/:slug", exactly like "/fridge/add" sits ahead of
+            "/fridge/:id" — otherwise "new" is read as a slug. */}
         <Route path="/foods/new" element={<FoodCreatePage />} />
         <Route path="/foods/:slug/edit" element={<FoodEditPage />} />
         <Route path="/foods/:slug" element={<FoodDetailPage />} />

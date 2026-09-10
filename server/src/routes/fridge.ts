@@ -1,4 +1,4 @@
-// Home pantry tracking: what's been prepared, where it's stored, and when it
+// Home fridge tracking: what's been prepared, where it's stored, and when it
 // expires. Every item is scoped to the caller (user_id) — a miss (wrong
 // owner or unknown id) is 404, never 403.
 //
@@ -9,18 +9,18 @@
 import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
-  createPantryItemInputSchema,
-  pantryItemIdParamSchema,
-  pantryQuerySchema,
-  servePantryItemInputSchema,
-  updatePantryItemInputSchema,
-  type PantryItem,
-  type PantryResponse,
-  type ServePantryItemResponse,
+  createFridgeItemInputSchema,
+  fridgeItemIdParamSchema,
+  fridgeQuerySchema,
+  serveFridgeItemInputSchema,
+  updateFridgeItemInputSchema,
+  type FridgeItem,
+  type FridgeResponse,
+  type ServeFridgeItemResponse,
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
-import { babies, foods, pantryItems, recipeIngredients, recipes, storageGuidelines } from "../db/schema.js";
+import { babies, foods, fridgeItems, recipeIngredients, recipes, storageGuidelines } from "../db/schema.js";
 import { insertMealWithFoods, loadMeals, ownsBaby } from "../services/meals.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 
@@ -65,30 +65,30 @@ function currentUserId(request: FastifyRequest): string {
   return id;
 }
 
-const PANTRY_SELECTION = {
-  id: pantryItems.id,
-  label: pantryItems.label,
-  foodId: pantryItems.foodId,
+const FRIDGE_SELECTION = {
+  id: fridgeItems.id,
+  label: fridgeItems.label,
+  foodId: fridgeItems.foodId,
   foodSlug: foods.slug,
   foodName: foods.name,
   foodEmoji: foods.emoji,
   foodStorageCategory: foods.storageCategory,
-  recipeId: pantryItems.recipeId,
+  recipeId: fridgeItems.recipeId,
   recipeTitle: recipes.title,
   recipeFridgeOverride: recipes.fridgeHoursOverride,
   recipeFreezerOverride: recipes.freezerDaysOverride,
-  preparedAt: pantryItems.preparedAt,
-  location: pantryItems.location,
-  status: pantryItems.status,
-  statusChangedAt: pantryItems.statusChangedAt,
-  quantityNote: pantryItems.quantityNote,
-  servingsTotal: pantryItems.servingsTotal,
-  servingsLeft: pantryItems.servingsLeft,
-  bestBy: pantryItems.bestBy,
-  notes: pantryItems.notes,
+  preparedAt: fridgeItems.preparedAt,
+  location: fridgeItems.location,
+  status: fridgeItems.status,
+  statusChangedAt: fridgeItems.statusChangedAt,
+  quantityNote: fridgeItems.quantityNote,
+  servingsTotal: fridgeItems.servingsTotal,
+  servingsLeft: fridgeItems.servingsLeft,
+  bestBy: fridgeItems.bestBy,
+  notes: fridgeItems.notes,
 } as const;
 
-type PantryRow = {
+type FridgeRow = {
   id: string;
   label: string | null;
   foodId: string | null;
@@ -118,7 +118,7 @@ type PantryRow = {
  * category via their first ingredient, and the `storage_guidelines` rows
  * themselves) so a list of N items costs at most two extra queries, not N.
  */
-async function hydratePantryItems(db: Database, rows: PantryRow[]): Promise<PantryItem[]> {
+async function hydrateFridgeItems(db: Database, rows: FridgeRow[]): Promise<FridgeItem[]> {
   // Rows with no direct food link but a recipe need that recipe's first
   // ingredient's food category. "First" has no explicit ordering column in
   // recipe_ingredients, so this orders by the join row's id for a
@@ -139,7 +139,7 @@ async function hydratePantryItems(db: Database, rows: PantryRow[]): Promise<Pant
     }
   }
 
-  const categoryFor = (row: PantryRow): string | undefined =>
+  const categoryFor = (row: FridgeRow): string | undefined =>
     row.foodStorageCategory ?? (row.recipeId ? categoryByRecipeId.get(row.recipeId) : undefined);
 
   const categories = [...new Set(rows.map(categoryFor).filter((c): c is string => Boolean(c)))];
@@ -168,7 +168,7 @@ async function hydratePantryItems(db: Database, rows: PantryRow[]): Promise<Pant
     const expired = now > expiresAtMs;
     const useSoon = !expired && now >= useSoonThresholdMs;
 
-    const item: PantryItem = {
+    const item: FridgeItem = {
       id: row.id,
       label: row.label,
       foodSlug: row.foodSlug,
@@ -198,41 +198,41 @@ async function hydratePantryItems(db: Database, rows: PantryRow[]): Promise<Pant
 }
 
 /** One item, joined and hydrated the same way the list route does it. */
-async function loadPantryItem(db: Database, id: string): Promise<PantryItem> {
+async function loadFridgeItem(db: Database, id: string): Promise<FridgeItem> {
   const rows = await db
-    .select(PANTRY_SELECTION)
-    .from(pantryItems)
-    .leftJoin(foods, eq(pantryItems.foodId, foods.id))
-    .leftJoin(recipes, eq(pantryItems.recipeId, recipes.id))
-    .where(eq(pantryItems.id, id))
+    .select(FRIDGE_SELECTION)
+    .from(fridgeItems)
+    .leftJoin(foods, eq(fridgeItems.foodId, foods.id))
+    .leftJoin(recipes, eq(fridgeItems.recipeId, recipes.id))
+    .where(eq(fridgeItems.id, id))
     .limit(1);
 
-  const [item] = await hydratePantryItems(db, rows);
+  const [item] = await hydrateFridgeItems(db, rows);
   if (!item) {
-    throw new Error("Hydration of a just-written pantry item produced no item");
+    throw new Error("Hydration of a just-written fridge item produced no item");
   }
   return item;
 }
 
-export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
+export function registerFridgeRoutes(app: FastifyInstance, db: Database): void {
   // -----------------------------------------------------------------------
-  // GET /api/pantry
+  // GET /api/fridge
   // -----------------------------------------------------------------------
-  app.get("/api/pantry", { preHandler: app.requireAuth }, async (request, reply) => {
-    const query = pantryQuerySchema.safeParse(request.query);
+  app.get("/api/fridge", { preHandler: app.requireAuth }, async (request, reply) => {
+    const query = fridgeQuerySchema.safeParse(request.query);
     if (!query.success) return badRequest(reply, query.error.flatten());
 
     const statusFilter =
-      query.data.view === "active" ? eq(pantryItems.status, "active") : inArray(pantryItems.status, ["finished", "discarded"]);
+      query.data.view === "active" ? eq(fridgeItems.status, "active") : inArray(fridgeItems.status, ["finished", "discarded"]);
 
     const rows = await db
-      .select(PANTRY_SELECTION)
-      .from(pantryItems)
-      .leftJoin(foods, eq(pantryItems.foodId, foods.id))
-      .leftJoin(recipes, eq(pantryItems.recipeId, recipes.id))
-      .where(and(eq(pantryItems.userId, currentUserId(request)), statusFilter));
+      .select(FRIDGE_SELECTION)
+      .from(fridgeItems)
+      .leftJoin(foods, eq(fridgeItems.foodId, foods.id))
+      .leftJoin(recipes, eq(fridgeItems.recipeId, recipes.id))
+      .where(and(eq(fridgeItems.userId, currentUserId(request)), statusFilter));
 
-    const items = await hydratePantryItems(db, rows);
+    const items = await hydrateFridgeItems(db, rows);
 
     // Neither sort key is a DB column (expiresAt is derived), so ordering
     // happens in memory after hydration.
@@ -242,18 +242,18 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
         : new Date(b.statusChangedAt).getTime() - new Date(a.statusChangedAt).getTime(),
     );
 
-    return reply.send({ items } satisfies PantryResponse);
+    return reply.send({ items } satisfies FridgeResponse);
   });
 
   // -----------------------------------------------------------------------
-  // POST /api/pantry
+  // POST /api/fridge
   // -----------------------------------------------------------------------
-  app.post("/api/pantry", { preHandler: app.requireAuth }, async (request, reply) => {
-    const body = createPantryItemInputSchema.safeParse(request.body);
+  app.post("/api/fridge", { preHandler: app.requireAuth }, async (request, reply) => {
+    const body = createFridgeItemInputSchema.safeParse(request.body);
     if (!body.success) return badRequest(reply, body.error.flatten());
 
     // Dedupe so the same food twice in one submission produces one row, not
-    // a duplicate pantry item.
+    // a duplicate fridge item.
     const foodIds = body.data.foodIds ? [...new Set(body.data.foodIds)] : null;
 
     if (foodIds) {
@@ -281,11 +281,11 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
     const preparedAt = body.data.preparedAt ? new Date(body.data.preparedAt) : new Date();
 
     // One transaction so a batch is all-or-nothing: either every food gets a
-    // pantry row, or none do. A non-food (recipe- or label-sourced) item is
+    // fridge row, or none do. A non-food (recipe- or label-sourced) item is
     // still exactly one row.
     const insertedIds = await db.transaction(async (tx) => {
       const rows = await tx
-        .insert(pantryItems)
+        .insert(fridgeItems)
         .values(
           (foodIds ?? [null]).map((foodId) => ({
             userId,
@@ -308,17 +308,17 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
     });
 
     const rows = await db
-      .select(PANTRY_SELECTION)
-      .from(pantryItems)
-      .leftJoin(foods, eq(pantryItems.foodId, foods.id))
-      .leftJoin(recipes, eq(pantryItems.recipeId, recipes.id))
-      .where(inArray(pantryItems.id, insertedIds));
+      .select(FRIDGE_SELECTION)
+      .from(fridgeItems)
+      .leftJoin(foods, eq(fridgeItems.foodId, foods.id))
+      .leftJoin(recipes, eq(fridgeItems.recipeId, recipes.id))
+      .where(inArray(fridgeItems.id, insertedIds));
 
-    const itemById = new Map((await hydratePantryItems(db, rows)).map((item) => [item.id, item]));
+    const itemById = new Map((await hydrateFridgeItems(db, rows)).map((item) => [item.id, item]));
     const items = insertedIds.map((id) => {
       const item = itemById.get(id);
       if (!item) {
-        throw new Error("Hydration of a just-inserted pantry item produced no item");
+        throw new Error("Hydration of a just-inserted fridge item produced no item");
       }
       return item;
     });
@@ -326,25 +326,25 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
   });
 
   // -----------------------------------------------------------------------
-  // PATCH /api/pantry/:id
+  // PATCH /api/fridge/:id
   // -----------------------------------------------------------------------
-  app.patch("/api/pantry/:id", { preHandler: app.requireAuth }, async (request, reply) => {
-    const params = pantryItemIdParamSchema.safeParse(request.params);
+  app.patch("/api/fridge/:id", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = fridgeItemIdParamSchema.safeParse(request.params);
     if (!params.success) return notFound(reply);
 
-    const body = updatePantryItemInputSchema.safeParse(request.body);
+    const body = updateFridgeItemInputSchema.safeParse(request.body);
     if (!body.success) return badRequest(reply, body.error.flatten());
 
     // Servings edits are relative to what the row already holds (a new total
     // re-clamps the existing remainder), so the current row is read first.
     const [existing] = await db
-      .select({ servingsTotal: pantryItems.servingsTotal, servingsLeft: pantryItems.servingsLeft })
-      .from(pantryItems)
-      .where(and(eq(pantryItems.id, params.data.id), eq(pantryItems.userId, currentUserId(request))))
+      .select({ servingsTotal: fridgeItems.servingsTotal, servingsLeft: fridgeItems.servingsLeft })
+      .from(fridgeItems)
+      .where(and(eq(fridgeItems.id, params.data.id), eq(fridgeItems.userId, currentUserId(request))))
       .limit(1);
     if (!existing) return notFound(reply);
 
-    const patch: Partial<typeof pantryItems.$inferInsert> = {};
+    const patch: Partial<typeof fridgeItems.$inferInsert> = {};
     if (body.data.location !== undefined) patch.location = body.data.location;
     if (body.data.preparedAt !== undefined) patch.preparedAt = new Date(body.data.preparedAt);
     if (body.data.quantityNote !== undefined) patch.quantityNote = body.data.quantityNote;
@@ -379,21 +379,21 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
     }
 
     const updated = await db
-      .update(pantryItems)
+      .update(fridgeItems)
       .set(patch)
-      .where(and(eq(pantryItems.id, params.data.id), eq(pantryItems.userId, currentUserId(request))))
+      .where(and(eq(fridgeItems.id, params.data.id), eq(fridgeItems.userId, currentUserId(request))))
       .returning();
 
     const row = updated[0];
     if (!row) return notFound(reply);
 
-    return reply.send(await loadPantryItem(db, row.id));
+    return reply.send(await loadFridgeItem(db, row.id));
   });
 
   // -----------------------------------------------------------------------
-  // POST /api/pantry/:id/serve
+  // POST /api/fridge/:id/serve
   //
-  // The one explicit bridge between the pantry and the meal log: it writes a
+  // The one explicit bridge between the fridge and the meal log: it writes a
   // meal whose every food row points back at this container, and takes the
   // servings it used out of the container. Logging a meal any other way
   // never decrements anything.
@@ -401,24 +401,24 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
   // Only an `active` item with something left in it can be served; anything
   // else is a 409 and leaves every row untouched.
   // -----------------------------------------------------------------------
-  app.post("/api/pantry/:id/serve", { preHandler: app.requireAuth }, async (request, reply) => {
-    const params = pantryItemIdParamSchema.safeParse(request.params);
+  app.post("/api/fridge/:id/serve", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = fridgeItemIdParamSchema.safeParse(request.params);
     if (!params.success) return notFound(reply);
 
-    const body = servePantryItemInputSchema.safeParse(request.body ?? {});
+    const body = serveFridgeItemInputSchema.safeParse(request.body ?? {});
     if (!body.success) return badRequest(reply, body.error.flatten());
 
     const userId = currentUserId(request);
 
     // Only the things that decide WHAT gets logged are read up front (a
-    // pantry item's food/recipe can never be edited). Everything the serve
+    // fridge item's food/recipe can never be edited). Everything the serve
     // is allowed to depend on — status, and how many servings are left — is
     // read and written inside the transaction below, so nothing computed out
     // here from a stale snapshot can reach the decrement.
     const [item] = await db
-      .select({ id: pantryItems.id, foodId: pantryItems.foodId, recipeId: pantryItems.recipeId })
-      .from(pantryItems)
-      .where(and(eq(pantryItems.id, params.data.id), eq(pantryItems.userId, userId)))
+      .select({ id: fridgeItems.id, foodId: fridgeItems.foodId, recipeId: fridgeItems.recipeId })
+      .from(fridgeItems)
+      .where(and(eq(fridgeItems.id, params.data.id), eq(fridgeItems.userId, userId)))
       .limit(1);
     if (!item) return notFound(reply);
 
@@ -466,7 +466,7 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
       }
     } else {
       return badRequest(reply, {
-        id: "a label-only pantry item has no food to log — add a food or a recipe to serve it",
+        id: "a label-only fridge item has no food to log — add a food or a recipe to serve it",
       });
     }
 
@@ -480,12 +480,12 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
       mealId = await db.transaction(async (tx) => {
         const id = await insertMealWithFoods(tx, {
           babyId,
-          // Attribution follows the pantry item, food-sourced or not.
+          // Attribution follows the fridge item, food-sourced or not.
           recipeId: item.recipeId,
           servedAt,
           reactionNote: body.data.reactionNote,
           notes: body.data.notes,
-          foods: foodIds.map((foodId) => ({ foodId, pantryItemId: item.id })),
+          foods: foodIds.map((foodId) => ({ foodId, fridgeItemId: item.id })),
         });
 
         // The claim: ONE guarded, self-referential UPDATE that is both the
@@ -504,19 +504,19 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
         //   servings_total is null            → untracked items pass, decrementing nothing
         //   or servings_left > 0              → a tracked item must have something left
         const [claimed] = await tx
-          .update(pantryItems)
+          .update(fridgeItems)
           .set({
             servingsLeft: sql`case
-              when ${pantryItems.servingsTotal} is null then ${pantryItems.servingsLeft}
-              else greatest(${pantryItems.servingsLeft} - ${servings}, 0)
+              when ${fridgeItems.servingsTotal} is null then ${fridgeItems.servingsLeft}
+              else greatest(${fridgeItems.servingsLeft} - ${servings}, 0)
             end`,
           })
           .where(
             and(
-              eq(pantryItems.id, item.id),
-              eq(pantryItems.userId, userId),
-              eq(pantryItems.status, "active"),
-              sql`(${pantryItems.servingsTotal} is null or ${pantryItems.servingsLeft} > 0)`,
+              eq(fridgeItems.id, item.id),
+              eq(fridgeItems.userId, userId),
+              eq(fridgeItems.status, "active"),
+              sql`(${fridgeItems.servingsTotal} is null or ${fridgeItems.servingsLeft} > 0)`,
             ),
           )
           .returning();
@@ -526,17 +526,17 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
           // silently overwritten on the way out. Re-read (inside the same
           // transaction) only to say WHY.
           const [current] = await tx
-            .select({ status: pantryItems.status })
-            .from(pantryItems)
-            .where(and(eq(pantryItems.id, item.id), eq(pantryItems.userId, userId)))
+            .select({ status: fridgeItems.status })
+            .from(fridgeItems)
+            .where(and(eq(fridgeItems.id, item.id), eq(fridgeItems.userId, userId)))
             .limit(1);
           if (!current) throw new ServeAborted({ code: 404 });
           throw new ServeAborted({
             code: 409,
             message:
               current.status === "active"
-                ? "This pantry item has no servings left — mark it finished or edit its servings first."
-                : `This pantry item is ${current.status} and cannot be served. Move it back to the pantry first.`,
+                ? "This fridge item has no servings left — mark it finished or edit its servings first."
+                : `This fridge item is ${current.status} and cannot be served. Move it back to the fridge first.`,
           });
         }
 
@@ -547,9 +547,9 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
         // remaining count.
         if (claimed.servingsTotal !== null && claimed.servingsLeft === 0) {
           await tx
-            .update(pantryItems)
+            .update(fridgeItems)
             .set({ status: "finished", statusChangedAt: new Date() })
-            .where(eq(pantryItems.id, item.id));
+            .where(eq(fridgeItems.id, item.id));
         }
 
         return id;
@@ -566,10 +566,10 @@ export function registerPantryRoutes(app: FastifyInstance, db: Database): void {
     const meal = (await loadMeals(db, [mealId])).get(mealId);
     if (!meal) throw new Error("Served meal was inserted but could not be read back");
 
-    return reply.code(201).send({ meal, item: await loadPantryItem(db, item.id) } satisfies ServePantryItemResponse);
+    return reply.code(201).send({ meal, item: await loadFridgeItem(db, item.id) } satisfies ServeFridgeItemResponse);
   });
 }
 
 /** Exported for the test suite to assert against without duplicating the
  * fallback numbers. */
-export const PANTRY_FALLBACK_WINDOW = FALLBACK_WINDOW;
+export const FRIDGE_FALLBACK_WINDOW = FALLBACK_WINDOW;

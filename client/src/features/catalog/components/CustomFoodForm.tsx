@@ -67,7 +67,7 @@ export function validateCustomFood(values: CustomFoodValues): CustomFoodErrors {
  * collapses blank emoji/notes to `null` (the server's own "" → null rule) so
  * clearing a field on an edit actually clears the column rather than storing
  * an empty string. Pure so the exact payload is testable without a network
- * layer, in the same spirit as `buildLeftoverPantryInput`.
+ * layer, in the same spirit as `buildLeftoverFridgeInput`.
  */
 export function buildCustomFoodInput(values: CustomFoodValues): CreateCustomFoodInput {
   const emoji = values.emoji.trim();
@@ -201,7 +201,7 @@ export function CustomFoodForm({ food, initialName = "", idPrefix = "custom-food
     event.preventDefault();
     // React events propagate through the *React* tree, not the DOM tree, so
     // when this form renders inside the picker's `Sheet` (a portal) its
-    // submit would otherwise bubble into the surrounding log-meal / pantry
+    // submit would otherwise bubble into the surrounding log-meal / fridge
     // form's `onSubmit` and save a meal. The portal hides the nesting from
     // the DOM; this stops it in React.
     event.stopPropagation();

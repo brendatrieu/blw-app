@@ -102,7 +102,7 @@ export const verification = pgTable(
 // ---------------------------------------------------------------------------
 // Catalog: allergens, foods, food<->allergen links, iron/vitamin-C
 // pairings, the top-9 allergen introduction ladder, and storage-guideline
-// categories that drive pantry expiry math. Read-only, seeded content.
+// categories that drive fridge expiry math. Read-only, seeded content.
 // ---------------------------------------------------------------------------
 
 export const levelEnum = pgEnum("level", ["high", "moderate", "low"]);
@@ -288,7 +288,7 @@ export const recipeVariants = pgTable(
 // Per-user / per-baby tracking data. Everything here sits in the
 // ON DELETE CASCADE chain rooted at `user`, so account deletion is one
 // transaction (babies -> meals -> meal_foods, babies -> symptom_checks;
-// user -> favorites/pantry_items/chat_threads directly).
+// user -> favorites/fridge_items/chat_threads directly).
 // ---------------------------------------------------------------------------
 
 export const babies = pgTable(
@@ -362,10 +362,10 @@ export const mealFoods = pgTable(
       .notNull()
       .references(() => foods.id),
     // Provenance: set only when this food row was created by serving a
-    // pantry item (POST /api/pantry/:id/serve). ON DELETE SET NULL so
-    // deleting the pantry item never removes eaten-food history — the meal
+    // fridge item (POST /api/fridge/:id/serve). ON DELETE SET NULL so
+    // deleting the fridge item never removes eaten-food history — the meal
     // simply loses its link back to the container it came from.
-    pantryItemId: uuid("pantry_item_id").references(() => pantryItems.id, { onDelete: "set null" }),
+    fridgeItemId: uuid("fridge_item_id").references(() => fridgeItems.id, { onDelete: "set null" }),
   },
   (t) => [
     uniqueIndex("meal_foods_meal_food_idx").on(t.mealId, t.foodId),
@@ -395,11 +395,11 @@ export const allergenOverrides = pgTable(
   (t) => [uniqueIndex("allergen_overrides_baby_key_idx").on(t.babyId, t.allergenKey)],
 );
 
-export const pantryLocationEnum = pgEnum("pantry_location", ["fridge", "freezer", "counter"]);
-export const pantryStatusEnum = pgEnum("pantry_status", ["active", "finished", "discarded"]);
+export const fridgeLocationEnum = pgEnum("fridge_location", ["fridge", "freezer", "counter"]);
+export const fridgeStatusEnum = pgEnum("fridge_status", ["active", "finished", "discarded"]);
 
-export const pantryItems = pgTable(
-  "pantry_items",
+export const fridgeItems = pgTable(
+  "fridge_items",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: text("user_id")
@@ -409,8 +409,8 @@ export const pantryItems = pgTable(
     recipeId: uuid("recipe_id").references(() => recipes.id),
     label: text("label"),
     preparedAt: timestamp("prepared_at", { withTimezone: true }).notNull(),
-    location: pantryLocationEnum("location").notNull(),
-    status: pantryStatusEnum("status").notNull().default("active"),
+    location: fridgeLocationEnum("location").notNull(),
+    status: fridgeStatusEnum("status").notNull().default("active"),
     statusChangedAt: timestamp("status_changed_at", { withTimezone: true }).notNull().defaultNow(),
     quantityNote: text("quantity_note"),
     // Optional servings tracking. Both columns are null together (tracking
@@ -428,8 +428,8 @@ export const pantryItems = pgTable(
     notes: text("notes"),
   },
   (t) => [
-    index("pantry_items_user_id_idx").on(t.userId),
-    index("pantry_items_active_idx")
+    index("fridge_items_user_id_idx").on(t.userId),
+    index("fridge_items_active_idx")
       .on(t.userId, t.status)
       .where(sql`${t.status} = 'active'`),
   ],

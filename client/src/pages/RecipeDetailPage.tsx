@@ -25,9 +25,9 @@ const AGE_STAGES: { value: AgeStage; label: string }[] = [
   { value: "12", label: "12mo" },
 ];
 
-type PantryLocation = "fridge" | "freezer" | "counter";
+type FridgeLocation = "fridge" | "freezer" | "counter";
 
-const PANTRY_LOCATIONS: { value: PantryLocation; label: string }[] = [
+const FRIDGE_LOCATIONS: { value: FridgeLocation; label: string }[] = [
   { value: "fridge", label: "Fridge" },
   { value: "freezer", label: "Freezer" },
   { value: "counter", label: "Counter" },
@@ -92,14 +92,14 @@ interface PrepThisProps {
 function PrepThis({ recipeId }: PrepThisProps) {
   const [open, setOpen] = useState(false);
   const prepped = useMutation({
-    mutationFn: (location: PantryLocation) =>
-      // The pantry endpoint ships from a parallel-phase agent; this route
+    mutationFn: (location: FridgeLocation) =>
+      // The fridge endpoint ships from a parallel-phase agent; this route
       // isn't owned here, only the request against its documented contract.
-      apiPost<unknown>("/api/pantry", { recipeId, location, preparedAt: new Date().toISOString() }),
+      apiPost<unknown>("/api/fridge", { recipeId, location, preparedAt: new Date().toISOString() }),
   });
 
   if (prepped.isSuccess) {
-    return <p className="text-sm font-medium text-[var(--color-accent)]">Added to your pantry.</p>;
+    return <p className="text-sm font-medium text-[var(--color-accent)]">Added to your fridge.</p>;
   }
 
   if (!open) {
@@ -114,7 +114,7 @@ function PrepThis({ recipeId }: PrepThisProps) {
     <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
       <p className="text-xs font-medium text-[var(--color-text-muted)]">Where's it stored?</p>
       <div className="flex flex-wrap gap-1.5">
-        {PANTRY_LOCATIONS.map((loc) => (
+        {FRIDGE_LOCATIONS.map((loc) => (
           <button
             key={loc.value}
             type="button"
@@ -142,7 +142,7 @@ interface CustomRecipeActionsProps {
  * on the thing you're looking at, not a native modal.
  *
  * The 409 is the case worth spelling out: a recipe still referenced by
- * logged meals or pantry items can't be deleted (those rows would be left
+ * logged meals or fridge items can't be deleted (those rows would be left
  * pointing at nothing), and the server sends both counts so this can name
  * exactly where to go clean up. Favorites never block — the server drops
  * the caller's own favorite row along with the recipe.

@@ -19,7 +19,7 @@ const MAX_MESSAGE_LENGTH = 2000;
 
 const KIND_LABEL: Record<ChatKind, string> = { recipe: "Recipe helper", blw: "BLW questions" };
 const KIND_DESCRIPTION: Record<ChatKind, string> = {
-  recipe: "Find and adapt recipes using your pantry and your baby's profile.",
+  recipe: "Find and adapt recipes using your fridge and your baby's profile.",
   blw: "Ask anything about baby-led weaning, answered from our safety library.",
 };
 const KIND_EMOJI: Record<ChatKind, string> = { recipe: "🍳", blw: "🌱" };

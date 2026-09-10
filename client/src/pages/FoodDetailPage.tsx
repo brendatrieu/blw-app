@@ -76,7 +76,7 @@ interface CustomFoodActionsProps {
  * be the only native modal left in the app.
  *
  * The 409 case is the interesting one. A food still referenced by meals or
- * pantry items can't be deleted (deleting it would strand those rows and the
+ * fridge items can't be deleted (deleting it would strand those rows and the
  * allergen exposures counted from them), and the server answers with the two
  * counts so this can say exactly where to go clean up instead of a bare
  * "couldn't delete".

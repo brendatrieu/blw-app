@@ -14,7 +14,7 @@ import { registerCatalogRoutes } from "./routes/catalog.js";
 import { registerBabyRoutes } from "./routes/babies.js";
 import { registerMealRoutes } from "./routes/meals.js";
 import { registerFavoriteRoutes } from "./routes/favorites.js";
-import { registerPantryRoutes } from "./routes/pantry.js";
+import { registerFridgeRoutes } from "./routes/fridge.js";
 import { registerRecipeRoutes } from "./routes/recipes.js";
 import { registerAiKeyRoutes } from "./routes/ai-keys.js";
 import { registerSymptomRoutes, type SymptomRoutesOptions } from "./routes/symptom.js";
@@ -82,7 +82,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     registerBabyRoutes(app, db); // baby profiles CRUD
     registerMealRoutes(app, db); // meals + allergen progress
     registerFavoriteRoutes(app, db); // recipe favorites
-    registerPantryRoutes(app, db); // pantry items + expiry tracking
+    registerFridgeRoutes(app, db); // fridge items + expiry tracking
     registerSymptomRoutes(app, db, options.symptom); // triage + symptom checker
     registerChatRoutes(app, db, options.chat); // recipe assistant + ask-anything BLW chat
     registerAccountRoutes(app, db); // data export + account deletion

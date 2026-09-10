@@ -4,7 +4,7 @@ export type MultiComboboxOption = { value: string; label: string; emoji?: string
 
 /**
  * How many values this combobox holds — the one thing that decides what
- * happens *after* a selection (item 230). "multi" is the log-meal / pantry /
+ * happens *after* a selection (item 230). "multi" is the log-meal / fridge /
  * recipe-ingredients field: a pick adds a chip and the menu stays open so the
  * next food can be typed straight away. "single" is the recipe picker and the
  * "contains ingredient" filter: a pick fills the field and the menu is done.

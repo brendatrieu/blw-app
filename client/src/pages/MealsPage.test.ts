@@ -27,7 +27,7 @@ function meal(i: number): MealItem {
     notes: null,
     recipeId: null,
     recipeTitle: null,
-    foods: [{ id: `food-${i}`, slug: "avocado", name: `Meal food ${i}`, category: "fruit", pantryItemId: null }],
+    foods: [{ id: `food-${i}`, slug: "avocado", name: `Meal food ${i}`, category: "fruit", fridgeItemId: null }],
   };
 }
 

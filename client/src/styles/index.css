@@ -27,7 +27,7 @@
  *   solid mint --color-success fill with the same black text.)
  * - --color-accent: the INTERACTIVE TEXT/BORDER color — links, the active
  *   bottom-nav label, focus rings/focus-within borders, and small
- *   confirmation markers (e.g. "Added to your pantry"). Deep steel blue in
+ *   confirmation markers (e.g. "Added to your fridge"). Deep steel blue in
  *   light mode (the sky blue itself reads too pale as body-size text on a
  *   light ground), the sky blue itself in dark mode.
  * - --color-{primary,caution,success}-soft / -soft-text: translucent chip
@@ -71,7 +71,7 @@
   --color-primary-contrast: #000000;
 
   /* ---- Interactive text/border accent (links, active nav, focus rings,
-     from-pantry markers, selected-state labels) — mode-dependent because
+     from-fridge markers, selected-state labels) — mode-dependent because
      the sky blue is too pale to read as body-size text on a light ground. ---- */
   --color-accent: #2f5f7c;
 

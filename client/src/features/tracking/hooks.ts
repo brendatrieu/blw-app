@@ -133,7 +133,7 @@ export interface MealCelebrationContext {
  * already existed, and each allergen's status — so `celebrateForNewMeal` can
  * later diff a fresh fetch against it and fire at most one celebration.
  * Shared by every mutation that produces a brand-new meal (ordinary logging
- * via `useCreateMeal`, and pantry's `usePantryServe`) so they fire the exact
+ * via `useCreateMeal`, and fridge's `useFridgeServe`) so they fire the exact
  * same celebration logic instead of each duplicating it.
  */
 export function snapshotMealCelebrationContext(

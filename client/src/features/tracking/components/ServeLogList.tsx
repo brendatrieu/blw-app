@@ -50,7 +50,7 @@ export interface EmojiCluster {
   overflow: number;
 }
 
-/** The leading emoji stack, the meal-row answer to `pantryItemEmoji`: at most
+/** The leading emoji stack, the meal-row answer to `fridgeItemEmoji`: at most
  * `max` food emoji, plus a "+N" count for the rest so a big meal stays one
  * compact glyph run instead of wrapping the row. */
 export function emojiCluster(foods: readonly MealFood[], max = 3): EmojiCluster {
@@ -67,11 +67,11 @@ export function servedLine(servedAt: string): string {
   return `${dayLabel(dayKey(servedAt))} · ${timeLabel(servedAt)}`;
 }
 
-/** Whether any food in the meal came from a pantry batch — drives the
- * "🧺 From pantry" badge (one per card, not one per food: the card's job is
- * to say the meal touched the pantry, the detail page names which batch). */
-export function hasPantryFood(foods: readonly MealFood[]): boolean {
-  return foods.some((food) => Boolean(food.pantryItemId));
+/** Whether any food in the meal came from a fridge batch — drives the
+ * "🧊 From fridge" badge (one per card, not one per food: the card's job is
+ * to say the meal touched the fridge, the detail page names which batch). */
+export function hasFridgeFood(foods: readonly MealFood[]): boolean {
+  return foods.some((food) => Boolean(food.fridgeItemId));
 }
 
 export interface MealDeleteControlProps {
@@ -141,17 +141,17 @@ export interface MealCardProps {
   /** False renders the info block as plain content instead of a Link to
    * `/log-meal?edit=:id` — for a page that must not link to itself.
    * Defaults to true (the food log taps through). Mirrors
-   * `PantryItemCard`'s `linkable` prop precisely. */
+   * `FridgeItemCard`'s `linkable` prop precisely. */
   linkable?: boolean;
-  /** Controls rendered next to the "From pantry" badge. Defaults to the
+  /** Controls rendered next to the "From fridge" badge. Defaults to the
    * kebab `MealActionsMenu` (Edit / Delete); pass `null` for a read-only
-   * card with no actions at all. Mirrors `PantryItemCard`'s `actions` slot. */
+   * card with no actions at all. Mirrors `FridgeItemCard`'s `actions` slot. */
   actions?: ReactNode;
 }
 
 /**
- * One meal in the food log, styled after `PantryItemCard`: an emoji cluster
- * and the food names on the left, the "From pantry" badge plus the kebab on
+ * One meal in the food log, styled after `FridgeItemCard`: an emoji cluster
+ * and the food names on the left, the "From fridge" badge plus the kebab on
  * the right, and a muted "Today · 2:05 PM" line where the list used to have
  * day headers. Exported standalone-renderable per the app's convention for
  * card-shaped list items.
@@ -200,7 +200,7 @@ export function MealCard({
             so tapping anywhere opens the meal for editing (which is why there
             is no separate Edit link). The kebab and the confirm row sit ABOVE
             the overlay (relative z-10) as siblings — nothing interactive is
-            ever nested inside the anchor (same rule `PantryItemCard` follows). */}
+            ever nested inside the anchor (same rule `FridgeItemCard` follows). */}
         {linkable ? (
           <Link
             to={`/log-meal?edit=${meal.id}`}
@@ -212,7 +212,7 @@ export function MealCard({
           <div className="flex items-start gap-2">{info}</div>
         )}
         <div className="relative z-10 flex shrink-0 items-center gap-1">
-          {hasPantryFood(meal.foods) && <Badge tone="neutral">🧺 From pantry</Badge>}
+          {hasFridgeFood(meal.foods) && <Badge tone="neutral">🧊 From fridge</Badge>}
           {actionsSlot}
         </div>
       </div>

@@ -186,12 +186,12 @@ describe("tracking routes", () => {
         recipeTitle: "Egg Toast Fingers",
         reactionNote: "mild rash",
       });
-      // A hand-logged meal is never linked to a pantry item: only
-      // POST /api/pantry/:id/serve sets pantryItemId.
+      // A hand-logged meal is never linked to a fridge item: only
+      // POST /api/fridge/:id/serve sets fridgeItemId.
       expect(created.foods).toEqual([
         // `emoji` is null for every catalog food — only a parent-added food
         // ever carries one.
-        { id: fixtures.egg.id, slug: "egg", name: "Egg", category: "protein", emoji: null, pantryItemId: null },
+        { id: fixtures.egg.id, slug: "egg", name: "Egg", category: "protein", emoji: null, fridgeItemId: null },
       ]);
 
       const listBody = await listMeals(user, babyId);

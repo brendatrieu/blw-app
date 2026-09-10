@@ -23,9 +23,9 @@ export function isCatalogRoute({ url, sameOrigin }: RouteMatcherArgs): boolean {
   return sameOrigin && /^\/api\/(foods|recipes)(\/|$|\?)/.test(url.pathname);
 }
 
-/** NetworkFirst user-owned reads: /api/babies, /api/pantry, /api/favorites. */
+/** NetworkFirst user-owned reads: /api/babies, /api/fridge, /api/favorites. */
 export function isUserDataRoute({ url, sameOrigin }: RouteMatcherArgs): boolean {
-  return sameOrigin && /^\/api\/(babies|pantry|favorites)(\/|$|\?)/.test(url.pathname);
+  return sameOrigin && /^\/api\/(babies|fridge|favorites)(\/|$|\?)/.test(url.pathname);
 }
 
 /** NetworkOnly, never cached: /api/auth, /api/ai, /api/account. */

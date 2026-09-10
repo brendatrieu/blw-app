@@ -29,7 +29,7 @@ import {
 
 /**
  * The catalog's query keys, previously inline string literals. Collected
- * here (mirroring `pantryKeys` / `trackingKeys`) because the custom-food
+ * here (mirroring `fridgeKeys` / `trackingKeys`) because the custom-food
  * mutations now have to reach into these caches by prefix — `["foods"]`
  * matches every filter variant at once, including the `["foods", {}]` the
  * food picker's unfiltered `useFoods()` uses. The shapes are byte-identical
@@ -171,8 +171,8 @@ export function useUpdateCustomFood() {
 
 /**
  * Deleting a custom food can legitimately fail with a 409 (it's still
- * referenced by meals or pantry items — see `asCustomFoodConflict`), so the
- * cache is only touched on success. Meals and pantry aren't invalidated:
+ * referenced by meals or fridge items — see `asCustomFoodConflict`), so the
+ * cache is only touched on success. Meals and fridge aren't invalidated:
  * a food that could be deleted was, by definition, in neither.
  */
 export function useDeleteCustomFood() {
@@ -310,7 +310,7 @@ export function useUpdateCustomRecipe() {
 }
 
 /**
- * Deleting a custom recipe can legitimately fail with a 409 (meals or pantry
+ * Deleting a custom recipe can legitimately fail with a 409 (meals or fridge
  * items still point at it — see `asCustomRecipeConflict`), so the cache is
  * only touched on success. The server drops the caller's favorite row along
  * with the recipe, hence the favorites invalidation.

@@ -1,19 +1,19 @@
 import { useState } from "react";
-import type { PantryView } from "@blw/shared";
-import { usePantryItems, usePantryStatusChange } from "../features/pantry/hooks.js";
+import type { FridgeView } from "@blw/shared";
+import { useFridgeItems, useFridgeStatusChange } from "../features/fridge/hooks.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { PantryItemCard } from "../features/pantry/components/PantryItemCard.js";
-import { PantryItemActionsMenu } from "../features/pantry/components/PantryItemActionsMenu.js";
-import { PantryStatusBanner } from "../features/pantry/components/PantryStatusBanner.js";
+import { FridgeItemCard } from "../features/fridge/components/FridgeItemCard.js";
+import { FridgeItemActionsMenu } from "../features/fridge/components/FridgeItemActionsMenu.js";
+import { FridgeStatusBanner } from "../features/fridge/components/FridgeStatusBanner.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { SkeletonList } from "../components/ui/Skeleton.js";
 
-export function PantryPage() {
-  const [view, setView] = useState<PantryView>("active");
-  const { data, isLoading, isError } = usePantryItems(view);
-  const { recentChange, setStatus, undo, isPending } = usePantryStatusChange();
+export function FridgePage() {
+  const [view, setView] = useState<FridgeView>("active");
+  const { data, isLoading, isError } = useFridgeItems(view);
+  const { recentChange, setStatus, undo, isPending } = useFridgeStatusChange();
   const { activeBaby } = useActiveBaby();
 
   const items = data?.items ?? [];
@@ -21,10 +21,10 @@ export function PantryPage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <PageHeader
-        title="Pantry"
-        emoji="🧺"
+        title="Fridge"
+        emoji="🧊"
         action={
-          <ButtonLink to="/pantry/add" size="sm">
+          <ButtonLink to="/fridge/add" size="sm">
             + Add item
           </ButtonLink>
         }
@@ -48,21 +48,21 @@ export function PantryPage() {
         ))}
       </div>
 
-      {recentChange && <PantryStatusBanner change={recentChange} onUndo={undo} />}
+      {recentChange && <FridgeStatusBanner change={recentChange} onUndo={undo} />}
 
       {isLoading && <SkeletonList count={4} />}
-      {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load the pantry.</p>}
+      {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load the fridge.</p>}
 
       {!isLoading && !isError && items.length === 0 && (
         <EmptyState
           icon="🥣"
-          title={view === "active" ? "Nothing in the pantry yet" : "Nothing finished or discarded yet"}
+          title={view === "active" ? "Nothing in the fridge yet" : "Nothing finished or discarded yet"}
           description={
             view === "active" ? "Add what you prepped so you don't lose track of it." : undefined
           }
           action={
             view === "active" ? (
-              <ButtonLink to="/pantry/add" size="sm" variant="secondary">
+              <ButtonLink to="/fridge/add" size="sm" variant="secondary">
                 + Add item
               </ButtonLink>
             ) : undefined
@@ -71,17 +71,17 @@ export function PantryPage() {
       )}
 
       <ul className="flex flex-col gap-2">
-        {/* Item 264: the Pantry tab's cards carry the same kebab Home does
+        {/* Item 264: the Fridge tab's cards carry the same kebab Home does
             instead of their own Serve/Remove/Edit footer row — Remove and
-            Restore still run through `usePantryStatusChange` so the undo
+            Restore still run through `useFridgeStatusChange` so the undo
             banner above keeps working. */}
         {items.map((item) => (
-          <PantryItemCard
+          <FridgeItemCard
             key={item.id}
             item={item}
             busy={isPending}
             actions={
-              <PantryItemActionsMenu
+              <FridgeItemActionsMenu
                 item={item}
                 babyId={activeBaby?.id}
                 busy={isPending}

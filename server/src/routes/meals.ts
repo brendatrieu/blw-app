@@ -168,7 +168,7 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
 
     // One transaction so a meal is all-or-nothing: either the meal and every
     // one of its foods land, or nothing does. Hand-logged meals never link to
-    // a pantry item — that link is what the serve endpoint alone creates.
+    // a fridge item — that link is what the serve endpoint alone creates.
     const mealId = await db.transaction((tx) =>
       insertMealWithFoods(tx, {
         babyId: params.data.babyId,
@@ -228,22 +228,22 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
 
       if (foodIds) {
         // Replacing the children wholesale would throw away each row's
-        // pantry provenance, so it is carried forward per food: a food that
-        // survives the edit keeps the pantry item it was served from, and a
+        // fridge provenance, so it is carried forward per food: a food that
+        // survives the edit keeps the fridge item it was served from, and a
         // food swapped in during the edit was not served from anywhere and
         // gets null. Read before the delete — the rows are gone after it.
         const previous = await tx
-          .select({ foodId: mealFoods.foodId, pantryItemId: mealFoods.pantryItemId })
+          .select({ foodId: mealFoods.foodId, fridgeItemId: mealFoods.fridgeItemId })
           .from(mealFoods)
           .where(eq(mealFoods.mealId, existing.id));
-        const pantryItemIdByFoodId = new Map(previous.map((row) => [row.foodId, row.pantryItemId]));
+        const fridgeItemIdByFoodId = new Map(previous.map((row) => [row.foodId, row.fridgeItemId]));
 
         await tx.delete(mealFoods).where(eq(mealFoods.mealId, existing.id));
         await tx.insert(mealFoods).values(
           foodIds.map((foodId) => ({
             mealId: existing.id,
             foodId,
-            pantryItemId: pantryItemIdByFoodId.get(foodId) ?? null,
+            fridgeItemId: fridgeItemIdByFoodId.get(foodId) ?? null,
           })),
         );
       }

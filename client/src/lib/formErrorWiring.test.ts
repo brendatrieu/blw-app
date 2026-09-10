@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { CustomRecipeForm } from "../features/catalog/components/CustomRecipeForm.js";
 import { CustomFoodForm } from "../features/catalog/components/CustomFoodForm.js";
 import { LogFoodForm } from "../features/tracking/components/LogFoodForm.js";
-import { AddPantryItemForm } from "../features/pantry/components/AddPantryItemForm.js";
+import { AddFridgeItemForm } from "../features/fridge/components/AddFridgeItemForm.js";
 import { SymptomSurveyForm } from "../features/symptom/components/SymptomSurveyForm.js";
 import { CelebrationProvider } from "../components/ui/Celebration.js";
 import { LoginPage } from "../pages/LoginPage.js";
@@ -119,9 +119,9 @@ describe("required-field errors reach their own field (item 237)", () => {
     expectSubmitEnabled(html);
   });
 
-  it("AddPantryItemForm: the visible tab's message only", () => {
-    const html = render(createElement(AddPantryItemForm, { onDone: () => {} }));
-    expectErrorUnder(html, 'id="pantry-add-food"', "Add at least one food");
+  it("AddFridgeItemForm: the visible tab's message only", () => {
+    const html = render(createElement(AddFridgeItemForm, { onDone: () => {} }));
+    expectErrorUnder(html, 'id="fridge-add-food"', "Add at least one food");
     expect(alertCount(html)).toBe(1);
     // The recipe and free-form tabs are not on screen — judging them would
     // shout about fields the parent cannot even see.

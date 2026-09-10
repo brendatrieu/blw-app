@@ -60,8 +60,8 @@ describe("isUserDataRoute", () => {
     expect(isUserDataRoute(args(`${ORIGIN}/api/babies`))).toBe(true);
   });
 
-  it("matches /api/pantry", () => {
-    expect(isUserDataRoute(args(`${ORIGIN}/api/pantry`))).toBe(true);
+  it("matches /api/fridge", () => {
+    expect(isUserDataRoute(args(`${ORIGIN}/api/fridge`))).toBe(true);
   });
 
   it("matches /api/favorites", () => {

@@ -27,12 +27,16 @@ function HomeIcon() {
   );
 }
 
-function BasketIcon() {
+/** A simple fridge outline (item 286) — the Fridge tab's glyph, replacing the
+ * basket the tab used to carry: one rounded body, the divider under the
+ * freezer compartment, and a short handle either side of it, drawn in the
+ * same 24-box outline weight as its neighbours. */
+function FridgeIcon() {
   return (
     <svg {...ICON_PROPS}>
-      <path d="M8.3 10a3.7 3.7 0 0 1 7.4 0" />
-      <path d="M5 10h14l-1.3 8.2a2 2 0 0 1-2 1.7H8.3a2 2 0 0 1-2-1.7L5 10Z" />
-      <path d="M10 13.2v4M14 13.2v4" />
+      <rect x="5.5" y="3.2" width="13" height="17.6" rx="2.6" />
+      <path d="M5.5 9.6h13" />
+      <path d="M15.3 6v2M15.3 11.9v3" />
     </svg>
   );
 }
@@ -97,7 +101,7 @@ interface Tab {
 
 const tabs: Tab[] = [
   { to: "/", label: "Home", Icon: HomeIcon },
-  { to: "/pantry", label: "Pantry", Icon: BasketIcon },
+  { to: "/fridge", label: "Fridge", Icon: FridgeIcon },
   { to: "/foods", label: "Foods", Icon: AppleIcon },
   { to: "/recipes", label: "Recipes", Icon: PotIcon },
   { to: "/more", label: "More", Icon: DotsIcon },
@@ -113,7 +117,7 @@ const tabs: Tab[] = [
 export function resolveActiveTab(pathname: string): string | null {
   if (pathname === "/") return "/";
   if (isMoreTabPath(pathname)) return "/more";
-  for (const base of ["/pantry", "/foods", "/recipes"]) if (isWithin(pathname, base)) return base;
+  for (const base of ["/fridge", "/foods", "/recipes"]) if (isWithin(pathname, base)) return base;
   return null;
 }
 

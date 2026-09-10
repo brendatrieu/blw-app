@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * The two AI chat surfaces: a recipe assistant (tool-backed, can search the
- * seed catalog and check the household's pantry/baby profile) and an
+ * seed catalog and check the household's fridge/baby profile) and an
  * ask-anything BLW chat (answers only from the safety library corpus).
  * Shared between server/src/routes/chat.ts and the client's features/chat/**
  * query + streaming layer.
@@ -111,7 +111,7 @@ export interface ChatTriageData {
 }
 
 /** A tool call started — a short human-readable status line ("Checking
- * your pantry…") to show while the model waits on it. */
+ * your fridge…") to show while the model waits on it. */
 export interface ChatToolStatusData {
   label: string;
 }

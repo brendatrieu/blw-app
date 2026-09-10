@@ -2,9 +2,9 @@ import { Link } from "react-router-dom";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
 import { HOME_MEAL_LIMIT, ServeLogList } from "../features/tracking/components/ServeLogList.js";
-import { usePantryItems } from "../features/pantry/hooks.js";
-import { PantryItemCard } from "../features/pantry/components/PantryItemCard.js";
-import { PantryItemActionsMenu } from "../features/pantry/components/PantryItemActionsMenu.js";
+import { useFridgeItems } from "../features/fridge/hooks.js";
+import { FridgeItemCard } from "../features/fridge/components/FridgeItemCard.js";
+import { FridgeItemActionsMenu } from "../features/fridge/components/FridgeItemActionsMenu.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { CardLink } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
@@ -46,18 +46,18 @@ function AllergenProgressSummary({ babyId }: { babyId: string }) {
   );
 }
 
-/** The pantry items Home shows before "See all" takes over. */
-export const HOME_PANTRY_LIMIT = 3;
+/** The fridge items Home shows before "See all" takes over. */
+export const HOME_FRIDGE_LIMIT = 3;
 
-function PantrySection({ babyId }: { babyId: string }) {
-  const { data, isLoading } = usePantryItems("active");
-  const topThree = (data?.items ?? []).slice(0, HOME_PANTRY_LIMIT);
+function FridgeSection({ babyId }: { babyId: string }) {
+  const { data, isLoading } = useFridgeItems("active");
+  const topThree = (data?.items ?? []).slice(0, HOME_FRIDGE_LIMIT);
 
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[var(--color-text)]">Pantry</h2>
-        <Link to="/pantry" className="text-xs font-medium text-[var(--color-accent)] underline">
+        <h2 className="text-sm font-semibold text-[var(--color-text)]">Fridge</h2>
+        <Link to="/fridge" className="text-xs font-medium text-[var(--color-accent)] underline">
           See all
         </Link>
       </div>
@@ -66,11 +66,11 @@ function PantrySection({ babyId }: { babyId: string }) {
 
       {!isLoading && topThree.length === 0 && (
         <EmptyState
-          icon="🧺"
-          title="Nothing in the pantry yet"
+          icon="🧊"
+          title="Nothing in the fridge yet"
           description="Log what you've prepped so nothing gets forgotten in the fridge."
           action={
-            <ButtonLink to="/pantry/add" size="sm" variant="secondary">
+            <ButtonLink to="/fridge/add" size="sm" variant="secondary">
               Add what you prepped
             </ButtonLink>
           }
@@ -80,11 +80,11 @@ function PantrySection({ babyId }: { babyId: string }) {
       {topThree.length > 0 && (
         <ul className="flex flex-col gap-2">
           {topThree.map((item) => (
-            <PantryItemCard
+            <FridgeItemCard
               key={item.id}
               item={item}
               busy={false}
-              actions={<PantryItemActionsMenu item={item} babyId={babyId} />}
+              actions={<FridgeItemActionsMenu item={item} babyId={babyId} />}
             />
           ))}
         </ul>
@@ -114,7 +114,7 @@ export function DashboardPage() {
         <EmptyState
           icon="👋"
           title="Welcome"
-          description="Add a baby profile to start tracking foods, pantry items, and allergens."
+          description="Add a baby profile to start tracking foods, fridge items, and allergens."
           action={<ButtonLink to="/settings">Add a baby</ButtonLink>}
         />
       </div>
@@ -130,12 +130,12 @@ export function DashboardPage() {
         <ButtonLink to="/log-meal" className="flex-1">
           🍽️ Log meal
         </ButtonLink>
-        <ButtonLink to="/pantry/add" variant="tonal" className="flex-1">
-          🧺 Add pantry item
+        <ButtonLink to="/fridge/add" variant="tonal" className="flex-1">
+          🧊 Add to fridge
         </ButtonLink>
       </div>
 
-      <PantrySection babyId={activeBaby.id} />
+      <FridgeSection babyId={activeBaby.id} />
 
       <section className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-[var(--color-text)]">Allergen progress</h2>

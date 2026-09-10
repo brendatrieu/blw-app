@@ -12,7 +12,7 @@ import {
 import { Sheet } from "../../../components/ui/Sheet.js";
 
 /**
- * One food as the picker shows it: the id is what meals and pantry items are
+ * One food as the picker shows it: the id is what meals and fridge items are
  * saved against, and the emoji is the food's own when it has one (item 177).
  * Exported so the callers that still need the same option shape for their
  * OTHER controls (LogFoodForm's "which food did the leftovers come from?"
@@ -34,7 +34,7 @@ interface FoodPickerProps {
  * hatch that a search matching nothing offers.
  *
  * Creating from here deliberately never navigates. The surrounding form (log
- * a meal, add a pantry item) can be half-filled with a time, notes and other
+ * a meal, add a fridge item) can be half-filled with a time, notes and other
  * foods; sending someone to `/foods/new` and back would cost all of it. So
  * the form opens in a `Sheet` over the page, and on save `useCreateCustomFood`
  * has already written the new food into the foods cache — which is what

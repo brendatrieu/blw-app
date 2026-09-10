@@ -7,8 +7,8 @@ import type {
   FoodDetail,
   FoodsResponse,
   MealItem,
-  PantryItem,
-  PantryResponse,
+  FridgeItem,
+  FridgeResponse,
 } from "@blw/shared";
 import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
 import type { Database } from "../db/index.js";
@@ -323,43 +323,43 @@ describe("custom foods", () => {
       expect(meal.statusCode).toBe(400);
       expect(meal.json<{ details: { unknownFoodIds: string[] } }>().details.unknownFoodIds).toEqual([mine.id]);
 
-      const pantry = await app.inject({
+      const fridge = await app.inject({
         method: "POST",
-        url: "/api/pantry",
+        url: "/api/fridge",
         headers: { cookie: intruder.cookie },
         payload: { foodIds: [mine.id], location: "fridge" },
       });
-      expect(pantry.statusCode).toBe(400);
+      expect(fridge.statusCode).toBe(400);
 
       // The owner can do both with the same food.
       const myBabyId = await createBaby(owner);
       expect((await postMeal(owner, myBabyId, [mine.id])).statusCode).toBe(201);
-      const myPantry = await app.inject({
+      const myFridge = await app.inject({
         method: "POST",
-        url: "/api/pantry",
+        url: "/api/fridge",
         headers: { cookie: owner.cookie },
         payload: { foodIds: [mine.id], location: "fridge" },
       });
-      expect(myPantry.statusCode).toBe(201);
+      expect(myFridge.statusCode).toBe(201);
     });
 
-    it("carries a custom food's emoji into meal and pantry rows", async () => {
+    it("carries a custom food's emoji into meal and fridge rows", async () => {
       const mine = await createFood(owner, { name: "Papa's lentil stew", category: "legume", emoji: "🍲" });
       const babyId = await createBaby(owner);
 
       const meal = await postMeal(owner, babyId, [mine.id]);
       expect(meal.json<MealItem>().foods[0]?.emoji).toBe("🍲");
 
-      const pantry = await app.inject({
+      const fridge = await app.inject({
         method: "POST",
-        url: "/api/pantry",
+        url: "/api/fridge",
         headers: { cookie: owner.cookie },
         payload: { foodIds: [mine.id], location: "fridge" },
       });
-      expect(pantry.json<PantryItem[]>()[0]?.foodEmoji).toBe("🍲");
+      expect(fridge.json<FridgeItem[]>()[0]?.foodEmoji).toBe("🍲");
 
-      const list = await app.inject({ method: "GET", url: "/api/pantry?view=active", headers: { cookie: owner.cookie } });
-      expect(list.json<PantryResponse>().items[0]?.foodEmoji).toBe("🍲");
+      const list = await app.inject({ method: "GET", url: "/api/fridge?view=active", headers: { cookie: owner.cookie } });
+      expect(list.json<FridgeResponse>().items[0]?.foodEmoji).toBe("🍲");
     });
   });
 
@@ -510,13 +510,13 @@ describe("custom foods", () => {
       expect(links).toHaveLength(0);
     });
 
-    it("409s with the reference counts while a meal or pantry item still uses it", async () => {
+    it("409s with the reference counts while a meal or fridge item still uses it", async () => {
       const mine = await createFood(owner, { name: "Banana bread", category: "grain" });
       const babyId = await createBaby(owner);
       await postMeal(owner, babyId, [mine.id]);
       await app.inject({
         method: "POST",
-        url: "/api/pantry",
+        url: "/api/fridge",
         headers: { cookie: owner.cookie },
         payload: { foodIds: [mine.id], location: "fridge" },
       });
@@ -527,7 +527,7 @@ describe("custom foods", () => {
         headers: { cookie: owner.cookie },
       });
       expect(blocked.statusCode).toBe(409);
-      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 1, pantryCount: 1, recipeCount: 0 });
+      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 1, fridgeCount: 1, recipeCount: 0 });
 
       // Still there — a refused delete changes nothing.
       const stillThere = await app.inject({
@@ -642,13 +642,13 @@ describe("custom foods", () => {
     const mine = await createFood(owner, { name: "Banana bread", category: "grain", allergenSlugs: ["peanut"] });
     const theirs = await createFood(intruder, { name: "Papa's lentil stew", category: "legume" });
 
-    // Referenced by a meal and a pantry item, the two FKs that do NOT
+    // Referenced by a meal and a fridge item, the two FKs that do NOT
     // cascade from foods — the account delete has to take those with it.
     const babyId = await createBaby(owner);
     await postMeal(owner, babyId, [mine.id]);
     await app.inject({
       method: "POST",
-      url: "/api/pantry",
+      url: "/api/fridge",
       headers: { cookie: owner.cookie },
       payload: { foodIds: [mine.id], location: "fridge" },
     });

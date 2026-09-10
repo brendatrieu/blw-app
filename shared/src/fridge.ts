@@ -3,33 +3,33 @@ import { parseCalendarDate } from "./babies.js";
 import { mealItemSchema, optionalNotes, optionalReactionNote, patchNotes, servedAtSchema } from "./tracking.js";
 
 /**
- * Home pantry tracking: what's been prepared, where it's stored, and when it
- * expires. Shared between server/src/routes/pantry.ts and the client's
- * features/pantry/** query layer.
+ * Home fridge tracking: what's been prepared, where it's stored, and when it
+ * expires. Shared between server/src/routes/fridge.ts and the client's
+ * features/fridge/** query layer.
  */
 
-export const pantryLocationSchema = z.enum(["fridge", "freezer", "counter"]);
-export type PantryLocation = z.infer<typeof pantryLocationSchema>;
+export const fridgeLocationSchema = z.enum(["fridge", "freezer", "counter"]);
+export type FridgeLocation = z.infer<typeof fridgeLocationSchema>;
 
-export const pantryStatusSchema = z.enum(["active", "finished", "discarded"]);
-export type PantryStatus = z.infer<typeof pantryStatusSchema>;
+export const fridgeStatusSchema = z.enum(["active", "finished", "discarded"]);
+export type FridgeStatus = z.infer<typeof fridgeStatusSchema>;
 
 // ---------------------------------------------------------------------------
-// GET /api/pantry
+// GET /api/fridge
 // ---------------------------------------------------------------------------
 
-export const pantryViewSchema = z.enum(["active", "history"]);
-export type PantryView = z.infer<typeof pantryViewSchema>;
+export const fridgeViewSchema = z.enum(["active", "history"]);
+export type FridgeView = z.infer<typeof fridgeViewSchema>;
 
-export const pantryQuerySchema = z.object({
-  view: pantryViewSchema.optional().default("active"),
+export const fridgeQuerySchema = z.object({
+  view: fridgeViewSchema.optional().default("active"),
 });
-export type PantryQuery = z.infer<typeof pantryQuerySchema>;
+export type FridgeQuery = z.infer<typeof fridgeQuerySchema>;
 
-export const pantryItemIdParamSchema = z.object({ id: z.string().uuid() });
+export const fridgeItemIdParamSchema = z.object({ id: z.string().uuid() });
 
 // ---------------------------------------------------------------------------
-// POST /api/pantry, PATCH /api/pantry/:id
+// POST /api/fridge, PATCH /api/fridge/:id
 // ---------------------------------------------------------------------------
 
 /** One day of slack: mirrors servedAt/birthDate — a parent east of UTC can
@@ -116,7 +116,7 @@ export const bestBySchema = z.string().trim().transform((value, ctx): string | n
   return new Date(value).toISOString().slice(0, 10);
 });
 
-export const createPantryItemInputSchema = z
+export const createFridgeItemInputSchema = z
   .object({
     foodIds: z
       .array(z.string().uuid())
@@ -132,7 +132,7 @@ export const createPantryItemInputSchema = z
     label: optionalLabel,
     /** Defaults to now on the server when omitted. */
     preparedAt: preparedAtSchema.optional(),
-    location: pantryLocationSchema,
+    location: fridgeLocationSchema,
     quantityNote: optionalQuantityNote,
     /** Turns servings tracking on; `servingsLeft` starts equal to it. */
     servingsTotal: servingsTotalSchema.nullish().transform((value) => value ?? null),
@@ -144,15 +144,15 @@ export const createPantryItemInputSchema = z
     message: "At least one of foodIds, recipeId, or label is required",
     path: ["foodIds"],
   });
-export type CreatePantryItemInput = z.input<typeof createPantryItemInputSchema>;
+export type CreateFridgeItemInput = z.input<typeof createFridgeItemInputSchema>;
 
-export const updatePantryItemInputSchema = z
+export const updateFridgeItemInputSchema = z
   .object({
-    location: pantryLocationSchema.optional(),
+    location: fridgeLocationSchema.optional(),
     preparedAt: preparedAtSchema.optional(),
     quantityNote: optionalQuantityNote.optional(),
     /** Setting `"active"` on a finished/discarded row undoes the change. */
-    status: pantryStatusSchema.optional(),
+    status: fridgeStatusSchema.optional(),
     /**
      * `null` turns servings tracking off, clearing `servingsLeft` with it.
      * A number turns it on (or resizes it); `servingsLeft` is then clamped
@@ -168,13 +168,13 @@ export const updatePantryItemInputSchema = z
   .refine((value) => Object.values(value).some((field) => field !== undefined), {
     message: "At least one field must be provided",
   });
-export type UpdatePantryItemInput = z.input<typeof updatePantryItemInputSchema>;
+export type UpdateFridgeItemInput = z.input<typeof updateFridgeItemInputSchema>;
 
 // ---------------------------------------------------------------------------
 // Response shape
 // ---------------------------------------------------------------------------
 
-export const pantryItemSchema = z.object({
+export const fridgeItemSchema = z.object({
   id: z.string().uuid(),
   label: z.string().nullable(),
   foodSlug: z.string().nullable(),
@@ -186,8 +186,8 @@ export const pantryItemSchema = z.object({
   recipeId: z.string().uuid().nullable(),
   recipeTitle: z.string().nullable(),
   preparedAt: z.string(),
-  location: pantryLocationSchema,
-  status: pantryStatusSchema,
+  location: fridgeLocationSchema,
+  status: fridgeStatusSchema,
   statusChangedAt: z.string(),
   expiresAt: z.string(),
   useSoon: z.boolean(),
@@ -202,22 +202,22 @@ export const pantryItemSchema = z.object({
   /** Free-form note about the container, or null. */
   notes: z.string().nullable(),
 });
-export type PantryItem = z.infer<typeof pantryItemSchema>;
+export type FridgeItem = z.infer<typeof fridgeItemSchema>;
 
-export const pantryResponseSchema = z.object({ items: z.array(pantryItemSchema) });
-export type PantryResponse = z.infer<typeof pantryResponseSchema>;
+export const fridgeResponseSchema = z.object({ items: z.array(fridgeItemSchema) });
+export type FridgeResponse = z.infer<typeof fridgeResponseSchema>;
 
 // ---------------------------------------------------------------------------
-// POST /api/pantry/:id/serve
+// POST /api/fridge/:id/serve
 // ---------------------------------------------------------------------------
 
 /**
- * Serving a pantry item is the ONE explicit link between the pantry and the
- * meal log: it writes a meal (with `pantryItemId` on every food row) and,
+ * Serving a fridge item is the ONE explicit link between the fridge and the
+ * meal log: it writes a meal (with `fridgeItemId` on every food row) and,
  * when the item tracks servings, takes that many out of it. Logging a meal
- * the ordinary way never touches the pantry.
+ * the ordinary way never touches the fridge.
  */
-export const servePantryItemInputSchema = z.object({
+export const serveFridgeItemInputSchema = z.object({
   /**
    * Which baby ate it. Optional only for the single-baby case: omitted, the
    * server uses the account's one active baby and 400s when the account has
@@ -235,15 +235,15 @@ export const servePantryItemInputSchema = z.object({
   /** Defaults to now on the server when omitted. */
   servedAt: servedAtSchema.optional(),
   reactionNote: optionalReactionNote,
-  /** General note on the MEAL this serve creates — not on the pantry item.
+  /** General note on the MEAL this serve creates — not on the fridge item.
    * Never read as a reaction signal; see `optionalNotes`. */
   notes: optionalNotes,
 });
-export type ServePantryItemInput = z.input<typeof servePantryItemInputSchema>;
+export type ServeFridgeItemInput = z.input<typeof serveFridgeItemInputSchema>;
 
-/** The meal that was created, plus the pantry item as it now stands. */
-export const servePantryItemResponseSchema = z.object({
+/** The meal that was created, plus the fridge item as it now stands. */
+export const serveFridgeItemResponseSchema = z.object({
   meal: mealItemSchema,
-  item: pantryItemSchema,
+  item: fridgeItemSchema,
 });
-export type ServePantryItemResponse = z.infer<typeof servePantryItemResponseSchema>;
+export type ServeFridgeItemResponse = z.infer<typeof serveFridgeItemResponseSchema>;

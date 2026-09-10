@@ -266,20 +266,20 @@ describe("CustomRecipeActions", () => {
 
 describe("customRecipeConflictMessage", () => {
   it("names both places the recipe is still referenced (the 409 body's counts)", () => {
-    expect(customRecipeConflictMessage({ mealCount: 3, pantryCount: 2 })).toBe(
-      "Used in 3 meals and 2 pantry items — remove those first.",
+    expect(customRecipeConflictMessage({ mealCount: 3, fridgeCount: 2 })).toBe(
+      "Used in 3 meals and 2 fridge items — remove those first.",
     );
   });
 
   it("uses the singular at exactly one", () => {
-    expect(customRecipeConflictMessage({ mealCount: 1, pantryCount: 1 })).toBe(
-      "Used in 1 meal and 1 pantry item — remove those first.",
+    expect(customRecipeConflictMessage({ mealCount: 1, fridgeCount: 1 })).toBe(
+      "Used in 1 meal and 1 fridge item — remove those first.",
     );
   });
 
   it("still names a zero count rather than dropping the clause", () => {
-    expect(customRecipeConflictMessage({ mealCount: 0, pantryCount: 4 })).toBe(
-      "Used in 0 meals and 4 pantry items — remove those first.",
+    expect(customRecipeConflictMessage({ mealCount: 0, fridgeCount: 4 })).toBe(
+      "Used in 0 meals and 4 fridge items — remove those first.",
     );
   });
 });

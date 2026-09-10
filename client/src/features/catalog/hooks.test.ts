@@ -133,8 +133,8 @@ describe("removeCustomFoodFromCache", () => {
 
 describe("asCustomFoodConflict", () => {
   it("reads the counts out of a 409 body", () => {
-    const error = new ApiError(409, "conflict", { error: "conflict", mealCount: 3, pantryCount: 1 });
-    expect(asCustomFoodConflict(error)).toEqual({ error: "conflict", mealCount: 3, pantryCount: 1 });
+    const error = new ApiError(409, "conflict", { error: "conflict", mealCount: 3, fridgeCount: 1 });
+    expect(asCustomFoodConflict(error)).toEqual({ error: "conflict", mealCount: 3, fridgeCount: 1 });
   });
 
   it("is null for every other failure — a 500, a 404, a plain Error, or a 409 with no counts", () => {
@@ -388,8 +388,8 @@ describe("buildRecipesQueryString", () => {
 
 describe("asCustomRecipeConflict", () => {
   it("reads the counts out of a 409 body", () => {
-    const error = new ApiError(409, "conflict", { error: "conflict", mealCount: 2, pantryCount: 0 });
-    expect(asCustomRecipeConflict(error)).toEqual({ error: "conflict", mealCount: 2, pantryCount: 0 });
+    const error = new ApiError(409, "conflict", { error: "conflict", mealCount: 2, fridgeCount: 0 });
+    expect(asCustomRecipeConflict(error)).toEqual({ error: "conflict", mealCount: 2, fridgeCount: 0 });
   });
 
   it("is null for every other failure", () => {

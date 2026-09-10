@@ -20,7 +20,7 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
   const action = resolveAllergenRowAction(item);
   const recency = resolveAllergenRecency(item);
 
-  // Info-region pattern (ServeLogList / PantryItemCard): everything that
+  // Info-region pattern (ServeLogList / FridgeItemCard): everything that
   // describes the allergen is one anchor to its detail page, and the
   // Mark/Undo controls are SIBLINGS outside it — so the row stays a
   // single-tap open while marking stays a single tap too, with zero
@@ -36,7 +36,7 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
         </span>
         <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">{item.allergenName}</span>
         <Badge tone={ALLERGEN_STATUS_TONE[item.status]}>{ALLERGEN_STATUS_LABEL[item.status]}</Badge>
-        {/* No chevron: pantry rows open on tap without one, and the two
+        {/* No chevron: fridge rows open on tap without one, and the two
             lists should read alike. */}
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">

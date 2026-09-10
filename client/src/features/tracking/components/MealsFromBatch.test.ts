@@ -8,7 +8,7 @@ import { trackingKeys } from "../hooks.js";
 import { MealsFromBatch } from "./MealsFromBatch.js";
 
 const BABY_ID = "baby-1";
-const PANTRY_ITEM_ID = "pantry-1";
+const FRIDGE_ITEM_ID = "fridge-1";
 
 function meal(overrides: Partial<MealItem>): MealItem {
   return {
@@ -19,7 +19,7 @@ function meal(overrides: Partial<MealItem>): MealItem {
     notes: null,
     recipeId: null,
     recipeTitle: null,
-    foods: [{ id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", pantryItemId: PANTRY_ITEM_ID }],
+    foods: [{ id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", fridgeItemId: FRIDGE_ITEM_ID }],
     ...overrides,
   };
 }
@@ -31,7 +31,7 @@ function renderWithMeals(meals: MealItem[]) {
     createElement(
       QueryClientProvider,
       { client: queryClient },
-      createElement(MemoryRouter, null, createElement(MealsFromBatch, { babyId: BABY_ID, pantryItemId: PANTRY_ITEM_ID })),
+      createElement(MemoryRouter, null, createElement(MealsFromBatch, { babyId: BABY_ID, fridgeItemId: FRIDGE_ITEM_ID })),
     ),
   );
 }

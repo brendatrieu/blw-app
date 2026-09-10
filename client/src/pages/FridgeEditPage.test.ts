@@ -3,11 +3,11 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import { PantryEditPage } from "./PantryEditPage.js";
+import { FridgeEditPage } from "./FridgeEditPage.js";
 
-describe("PantryEditPage", () => {
-  it("renders the loading state (header, Close control, skeleton) without throwing while the pantry list is still loading", () => {
-    // A fresh QueryClient has no cached data yet, so usePantryItems("active")
+describe("FridgeEditPage", () => {
+  it("renders the loading state (header, Close control, skeleton) without throwing while the fridge list is still loading", () => {
+    // A fresh QueryClient has no cached data yet, so useFridgeItems("active")
     // is still pending at render time — this is the only branch reachable
     // synchronously via renderToString (the not-found redirect and the
     // loaded form both depend on the query settling, which needs a real DOM
@@ -17,10 +17,10 @@ describe("PantryEditPage", () => {
       createElement(
         QueryClientProvider,
         { client: queryClient },
-        createElement(MemoryRouter, { initialEntries: ["/pantry/some-id/edit"] }, createElement(PantryEditPage, null)),
+        createElement(MemoryRouter, { initialEntries: ["/fridge/some-id/edit"] }, createElement(FridgeEditPage, null)),
       ),
     );
-    expect(html).toContain("Edit item");
+    expect(html).toContain("Edit fridge item");
     expect(html).toContain('aria-label="Close"');
   });
 });

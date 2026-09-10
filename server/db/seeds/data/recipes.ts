@@ -3,7 +3,7 @@ import type { RecipeSeed } from './types'
 
 // 15 starter recipes, each with 6/9/12-month variants. No added salt or sugar anywhere, and no
 // honey at any age (baked or otherwise). foodSlug references resolve against foods.ts;
-// extraIngredients cover pantry staples (oils, spices, chia, lemon) not tracked in the food
+// extraIngredients cover cupboard staples (oils, spices, chia, lemon) not tracked in the food
 // catalog.
 //
 // Cook detail (ledger item 265): every cooking step names the method, a temperature (ovens in °F

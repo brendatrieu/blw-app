@@ -677,7 +677,7 @@ export function DateTimeField({ id, value, onChange, disabled = false, daysBack 
 
   const currentNow = open ? anchorNow : (now ?? new Date());
   // `value` may predate the default window (e.g. editing a long-stored
-  // pantry item) — extend the range rather than opening to a preset the
+  // fridge item) — extend the range rather than opening to a preset the
   // wheel can't actually show.
   const effectiveDaysBack = resolveDaysBack(daysBack, value, currentNow);
   const dateOptions = buildDateOptions(currentNow, effectiveDaysBack);

@@ -52,7 +52,7 @@ import {
   foodAllergens,
   foods,
   meals,
-  pantryItems,
+  fridgeItems,
   recipeIngredients,
   recipeVariants,
   recipes,
@@ -473,7 +473,7 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     if (ingredients && !ingredients.ok) return badRequest(reply, ingredients.details);
 
     // The slug is deliberately absent: renaming a recipe must not break the
-    // links, pantry rows and logged meals already pointing at it.
+    // links, fridge rows and logged meals already pointing at it.
     const columns = {
       ...(body.data.title !== undefined ? { title: body.data.title } : {}),
       ...(body.data.minAgeMonths !== undefined ? { minAgeMonths: body.data.minAgeMonths } : {}),
@@ -528,7 +528,7 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     const existing = await loadOwnedRecipe(db, params.data.id, userId);
     if (!existing) return notFound(reply);
 
-    // A logged meal keeps its recipe attribution and a pantry container keeps
+    // A logged meal keeps its recipe attribution and a fridge container keeps
     // knowing what it was made from, so neither reference cascades — a
     // referenced recipe is a 409 the parent can act on, with the counts the
     // UI needs to say what is in the way. Favorites are NOT in this list:
@@ -538,15 +538,15 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
       .select({ count: sql<number>`count(*)::int` })
       .from(meals)
       .where(eq(meals.recipeId, existing.id));
-    const [pantryRow] = await db
+    const [fridgeRow] = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(pantryItems)
-      .where(eq(pantryItems.recipeId, existing.id));
+      .from(fridgeItems)
+      .where(eq(fridgeItems.recipeId, existing.id));
 
     const mealCount = mealRow?.count ?? 0;
-    const pantryCount = pantryRow?.count ?? 0;
-    if (mealCount > 0 || pantryCount > 0) {
-      return reply.code(409).send({ error: "conflict", mealCount, pantryCount });
+    const fridgeCount = fridgeRow?.count ?? 0;
+    if (mealCount > 0 || fridgeCount > 0) {
+      return reply.code(409).send({ error: "conflict", mealCount, fridgeCount });
     }
 
     await db.transaction(async (tx) => {

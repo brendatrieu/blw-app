@@ -4,22 +4,22 @@ import {
   clampServings,
   countdownLabel,
   isLabelOnly,
-  pantryItemTitle,
-  resolvePantryItemMenuActions,
+  fridgeItemTitle,
+  resolveFridgeItemMenuActions,
   servingsLabel,
 } from "./format.js";
 
-describe("pantryItemTitle", () => {
+describe("fridgeItemTitle", () => {
   it("prefers the label when set", () => {
-    expect(pantryItemTitle({ label: "Leftover soup", foodName: "Avocado", recipeTitle: "Purée" })).toBe(
+    expect(fridgeItemTitle({ label: "Leftover soup", foodName: "Avocado", recipeTitle: "Purée" })).toBe(
       "Leftover soup",
     );
   });
 
   it("falls back to the recipe title, then the food name, then a generic label", () => {
-    expect(pantryItemTitle({ label: null, foodName: "Avocado", recipeTitle: "Purée" })).toBe("Purée");
-    expect(pantryItemTitle({ label: null, foodName: "Avocado", recipeTitle: null })).toBe("Avocado");
-    expect(pantryItemTitle({ label: null, foodName: null, recipeTitle: null })).toBe("Prepared food");
+    expect(fridgeItemTitle({ label: null, foodName: "Avocado", recipeTitle: "Purée" })).toBe("Purée");
+    expect(fridgeItemTitle({ label: null, foodName: "Avocado", recipeTitle: null })).toBe("Avocado");
+    expect(fridgeItemTitle({ label: null, foodName: null, recipeTitle: null })).toBe("Prepared food");
   });
 });
 
@@ -73,9 +73,9 @@ describe("isLabelOnly", () => {
   });
 });
 
-describe("resolvePantryItemMenuActions", () => {
+describe("resolveFridgeItemMenuActions", () => {
   it("offers Serve, Edit, and Remove for an active, food-sourced item", () => {
-    expect(resolvePantryItemMenuActions({ status: "active", foodSlug: "avocado", recipeTitle: null })).toEqual({
+    expect(resolveFridgeItemMenuActions({ status: "active", foodSlug: "avocado", recipeTitle: null })).toEqual({
       serve: true,
       edit: true,
       remove: true,
@@ -85,12 +85,12 @@ describe("resolvePantryItemMenuActions", () => {
 
   it("offers Serve for an active, recipe-sourced item", () => {
     expect(
-      resolvePantryItemMenuActions({ status: "active", foodSlug: null, recipeTitle: "Iron-Rich Purée" }),
+      resolveFridgeItemMenuActions({ status: "active", foodSlug: null, recipeTitle: "Iron-Rich Purée" }),
     ).toEqual({ serve: true, edit: true, remove: true, restore: false });
   });
 
   it("withholds Serve for a label-only active item (nothing the serve endpoint could log)", () => {
-    expect(resolvePantryItemMenuActions({ status: "active", foodSlug: null, recipeTitle: null })).toEqual({
+    expect(resolveFridgeItemMenuActions({ status: "active", foodSlug: null, recipeTitle: null })).toEqual({
       serve: false,
       edit: true,
       remove: true,
@@ -102,7 +102,7 @@ describe("resolvePantryItemMenuActions", () => {
   // a finished/discarded item offers exactly one thing — Restore — instead
   // of nothing at all.
   it("offers only Restore for a finished item", () => {
-    expect(resolvePantryItemMenuActions({ status: "finished", foodSlug: "avocado", recipeTitle: null })).toEqual({
+    expect(resolveFridgeItemMenuActions({ status: "finished", foodSlug: "avocado", recipeTitle: null })).toEqual({
       serve: false,
       edit: false,
       remove: false,
@@ -111,7 +111,7 @@ describe("resolvePantryItemMenuActions", () => {
   });
 
   it("offers only Restore for a discarded item", () => {
-    expect(resolvePantryItemMenuActions({ status: "discarded", foodSlug: "avocado", recipeTitle: null })).toEqual({
+    expect(resolveFridgeItemMenuActions({ status: "discarded", foodSlug: "avocado", recipeTitle: null })).toEqual({
       serve: false,
       edit: false,
       remove: false,
@@ -121,7 +121,7 @@ describe("resolvePantryItemMenuActions", () => {
 
   it("never offers Restore alongside Remove — they are exact complements", () => {
     for (const status of ["active", "finished", "discarded"] as const) {
-      const actions = resolvePantryItemMenuActions({ status, foodSlug: "avocado", recipeTitle: null });
+      const actions = resolveFridgeItemMenuActions({ status, foodSlug: "avocado", recipeTitle: null });
       expect(actions.restore).toBe(!actions.remove);
     }
   });

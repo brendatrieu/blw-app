@@ -1,11 +1,11 @@
 // Meal writing and reading, shared by the two routes that create meals:
 // POST /api/babies/:babyId/meals (a meal logged by hand) and
-// POST /api/pantry/:id/serve (a meal logged by serving a pantry item, which
+// POST /api/fridge/:id/serve (a meal logged by serving a fridge item, which
 // additionally links every food row back to the container it came from).
 //
 // Keeping both flows on one insert helper is what guarantees a served meal
 // is byte-for-byte the same kind of row as a hand-logged one — the only
-// difference is `meal_foods.pantry_item_id`.
+// difference is `meal_foods.fridge_item_id`.
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { MealItem } from "@blw/shared";
 import type { Database } from "../db/index.js";
@@ -18,11 +18,11 @@ import { babies, foods, mealFoods, meals, recipes } from "../db/schema.js";
  */
 export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
-/** One food of a new meal, optionally carrying its pantry provenance. */
+/** One food of a new meal, optionally carrying its fridge provenance. */
 export interface MealFoodInsert {
   foodId: string;
-  /** Set only by the pantry serve flow. */
-  pantryItemId?: string | null;
+  /** Set only by the fridge serve flow. */
+  fridgeItemId?: string | null;
 }
 
 export interface MealInsert {
@@ -62,7 +62,7 @@ export async function insertMealWithFoods(tx: Transaction, input: MealInsert): P
     input.foods.map((food) => ({
       mealId: meal.id,
       foodId: food.foodId,
-      pantryItemId: food.pantryItemId ?? null,
+      fridgeItemId: food.fridgeItemId ?? null,
     })),
   );
 
@@ -99,7 +99,7 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
       name: foods.name,
       category: foods.category,
       emoji: foods.emoji,
-      pantryItemId: mealFoods.pantryItemId,
+      fridgeItemId: mealFoods.fridgeItemId,
     })
     .from(mealFoods)
     .innerJoin(foods, eq(mealFoods.foodId, foods.id))
@@ -131,7 +131,7 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
       // Null for every catalog food; the client falls back to its own
       // slug/category emoji table for those.
       emoji: row.emoji,
-      pantryItemId: row.pantryItemId,
+      fridgeItemId: row.fridgeItemId,
     });
   }
 

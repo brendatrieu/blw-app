@@ -1,38 +1,38 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
-  CreatePantryItemInput,
+  CreateFridgeItemInput,
   MealsResponse,
-  PantryItem,
-  PantryResponse,
-  PantryStatus,
-  PantryView,
-  ServePantryItemInput,
-  UpdatePantryItemInput,
+  FridgeItem,
+  FridgeResponse,
+  FridgeStatus,
+  FridgeView,
+  ServeFridgeItemInput,
+  UpdateFridgeItemInput,
 } from "@blw/shared";
-import { createPantryItem, fetchPantry, servePantryItem, updatePantryItem } from "./api.js";
-import { pantryItemTitle } from "./format.js";
+import { createFridgeItem, fetchFridge, serveFridgeItem, updateFridgeItem } from "./api.js";
+import { fridgeItemTitle } from "./format.js";
 import { useCelebration } from "../../components/ui/Celebration.js";
 import { celebrateForNewMeal, snapshotMealCelebrationContext, trackingKeys } from "../tracking/hooks.js";
 
-export const pantryKeys = {
-  list: (view: PantryView) => ["pantry", view] as const,
+export const fridgeKeys = {
+  list: (view: FridgeView) => ["fridge", view] as const,
 };
 
-export function usePantryItems(view: PantryView) {
+export function useFridgeItems(view: FridgeView) {
   return useQuery({
-    queryKey: pantryKeys.list(view),
-    queryFn: () => fetchPantry(view),
+    queryKey: fridgeKeys.list(view),
+    queryFn: () => fetchFridge(view),
     staleTime: 15_000,
   });
 }
 
-export function useCreatePantryItem() {
+export function useCreateFridgeItem() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreatePantryItemInput) => createPantryItem(input),
+    mutationFn: (input: CreateFridgeItemInput) => createFridgeItem(input),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["pantry"] });
+      void queryClient.invalidateQueries({ queryKey: ["fridge"] });
     },
   });
 }
@@ -43,13 +43,13 @@ export function useCreatePantryItem() {
  * snapshotted up front and rolled back together on failure rather than
  * patched view-by-view.
  */
-export function useUpdatePantryItem() {
+export function useUpdateFridgeItem() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdatePantryItemInput }) => updatePantryItem(id, input),
+    mutationFn: ({ id, input }: { id: string; input: UpdateFridgeItemInput }) => updateFridgeItem(id, input),
     onMutate: async ({ id }) => {
-      await queryClient.cancelQueries({ queryKey: ["pantry"] });
-      const snapshots = queryClient.getQueriesData<PantryResponse>({ queryKey: ["pantry"] });
+      await queryClient.cancelQueries({ queryKey: ["fridge"] });
+      const snapshots = queryClient.getQueriesData<FridgeResponse>({ queryKey: ["fridge"] });
       return { snapshots, id };
     },
     onError: (_error, _variables, context) => {
@@ -57,11 +57,11 @@ export function useUpdatePantryItem() {
         queryClient.setQueryData(key, data);
       });
     },
-    onSuccess: (updated: PantryItem) => {
+    onSuccess: (updated: FridgeItem) => {
       // Drop the item from every cached view, then let the settled
       // invalidation below re-fetch it into whichever view it now belongs
       // in — cheaper than reasoning about active/history membership here.
-      const snapshots = queryClient.getQueriesData<PantryResponse>({ queryKey: ["pantry"] });
+      const snapshots = queryClient.getQueriesData<FridgeResponse>({ queryKey: ["fridge"] });
       for (const [key, data] of snapshots) {
         if (!data) continue;
         queryClient.setQueryData(key, {
@@ -70,28 +70,28 @@ export function useUpdatePantryItem() {
       }
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["pantry"] });
+      void queryClient.invalidateQueries({ queryKey: ["fridge"] });
     },
   });
 }
 
 /**
- * Serving a pantry item creates a meal in the same stroke, so it drives the
+ * Serving a fridge item creates a meal in the same stroke, so it drives the
  * exact same celebration moments as logging one directly — see
  * `celebrateForNewMeal` in the tracking feature, which this mirrors rather
  * than duplicates (never both this AND `useCreateMeal` firing for the same
  * action; a serve never goes through `useCreateMeal`).
  *
- * Both segments of the pantry cache are invalidated on settle: a tracked
+ * Both segments of the fridge cache are invalidated on settle: a tracked
  * item that hits 0 servings flips to "finished" server-side and disappears
  * from Active into History in the same response, so both views need a
  * refetch regardless of which one the card was rendered in.
  */
-export function usePantryServe(babyId: string | undefined) {
+export function useFridgeServe(babyId: string | undefined) {
   const queryClient = useQueryClient();
   const { celebrate } = useCelebration();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: ServePantryItemInput }) => servePantryItem(id, input),
+    mutationFn: ({ id, input }: { id: string; input: ServeFridgeItemInput }) => serveFridgeItem(id, input),
     onMutate: () => snapshotMealCelebrationContext(queryClient, babyId),
     onSuccess: ({ meal }, _variables, context) => {
       if (!babyId) return;
@@ -102,7 +102,7 @@ export function usePantryServe(babyId: string | undefined) {
       celebrateForNewMeal(babyId, context, celebrate);
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["pantry"] });
+      void queryClient.invalidateQueries({ queryKey: ["fridge"] });
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
       void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
@@ -112,11 +112,11 @@ export function usePantryServe(babyId: string | undefined) {
 
 const UNDO_WINDOW_MS = 6_000;
 
-export interface PantryStatusChange {
+export interface FridgeStatusChange {
   id: string;
   title: string;
-  from: PantryStatus;
-  to: PantryStatus;
+  from: FridgeStatus;
+  to: FridgeStatus;
 }
 
 /**
@@ -124,40 +124,40 @@ export interface PantryStatusChange {
  * "Marked finished/discarded: <title>" wording is unit-testable without
  * rendering anything.
  */
-export function pantryStatusChangeLabel(change: PantryStatusChange): string {
+export function fridgeStatusChangeLabel(change: FridgeStatusChange): string {
   const verb = change.to === "finished" ? "Marked finished" : "Marked discarded";
   return `${verb}: ${change.title}`;
 }
 
 /**
- * Shared status-change + 6s undo mechanism behind the pantry Remove/Restore
- * actions (item 147) — originally PantryPage-only; PantryDetailPage now uses
+ * Shared status-change + 6s undo mechanism behind the fridge Remove/Restore
+ * actions (item 147) — originally FridgePage-only; FridgeDetailPage now uses
  * the exact same hook so the undo UX never forks between the two surfaces.
  *
- * `setStatus(item, status, announce)` mirrors `PantryPage`'s original
+ * `setStatus(item, status, announce)` mirrors `FridgePage`'s original
  * behavior: `announce` decides whether the change gets an undo banner
  * (Remove does, Restore doesn't, on both pages — undoing a Restore is just
  * another Remove tap away, so it never needed one). `undo()` reverts the
  * most recently announced change within the window; a change no longer
  * "recent" (window elapsed) is simply not undoable, same as before.
  */
-export function usePantryStatusChange() {
-  const [recentChange, setRecentChange] = useState<PantryStatusChange | null>(null);
+export function useFridgeStatusChange() {
+  const [recentChange, setRecentChange] = useState<FridgeStatusChange | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout>>();
-  const updateItem = useUpdatePantryItem();
+  const updateItem = useUpdateFridgeItem();
 
   useEffect(() => {
     return () => clearTimeout(undoTimer.current);
   }, []);
 
-  function setStatus(item: PantryItem, status: PantryStatus, announce: boolean) {
+  function setStatus(item: FridgeItem, status: FridgeStatus, announce: boolean) {
     updateItem.mutate(
       { id: item.id, input: { status } },
       {
         onSuccess: (updated) => {
           if (!announce) return;
           clearTimeout(undoTimer.current);
-          setRecentChange({ id: updated.id, title: pantryItemTitle(updated), from: item.status, to: status });
+          setRecentChange({ id: updated.id, title: fridgeItemTitle(updated), from: item.status, to: status });
           undoTimer.current = setTimeout(() => setRecentChange(null), UNDO_WINDOW_MS);
         },
       },

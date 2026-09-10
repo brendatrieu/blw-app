@@ -1,16 +1,16 @@
 import { useState } from "react";
-import type { PantryItem } from "@blw/shared";
+import type { FridgeItem } from "@blw/shared";
 import { Menu, MenuItem, MenuLinkItem } from "../../../components/ui/Menu.js";
-import { useUpdatePantryItem } from "../hooks.js";
-import { resolvePantryItemMenuActions } from "../format.js";
+import { useUpdateFridgeItem } from "../hooks.js";
+import { resolveFridgeItemMenuActions } from "../format.js";
 import { ServeSheet } from "./ServeSheet.js";
 
 /** The rows this menu can show, in the order it shows them. */
-export type PantryMenuRow = "serve" | "edit" | "remove" | "restore";
+export type FridgeMenuRow = "serve" | "edit" | "remove" | "restore";
 
 /** The single source of truth for each row's visible label — exported so a
  * test names the rows the way a user reads them, not by internal key. */
-export const PANTRY_MENU_ROW_LABEL: Record<PantryMenuRow, string> = {
+export const FRIDGE_MENU_ROW_LABEL: Record<FridgeMenuRow, string> = {
   serve: "Serve",
   edit: "Edit",
   remove: "Remove",
@@ -22,15 +22,15 @@ export const PANTRY_MENU_ROW_LABEL: Record<PantryMenuRow, string> = {
  * ("finished/discarded cards keep Restore to active in the kebab", "Serve is
  * withheld, not the whole menu") is one testable list rather than a chain of
  * `&&`s buried in JSX. The item's own gating comes from
- * `resolvePantryItemMenuActions`; the two CALLER facts — is there a baby to
+ * `resolveFridgeItemMenuActions`; the two CALLER facts — is there a baby to
  * serve as, does this caller handle restoring — come in as flags.
  */
-export function pantryMenuRows(
-  item: Pick<PantryItem, "status" | "foodSlug" | "recipeTitle">,
+export function fridgeMenuRows(
+  item: Pick<FridgeItem, "status" | "foodSlug" | "recipeTitle">,
   { hasBaby, canRestore }: { hasBaby: boolean; canRestore: boolean },
-): PantryMenuRow[] {
-  const actions = resolvePantryItemMenuActions(item);
-  const rows: PantryMenuRow[] = [];
+): FridgeMenuRow[] {
+  const actions = resolveFridgeItemMenuActions(item);
+  const rows: FridgeMenuRow[] = [];
   if (actions.serve && hasBaby) rows.push("serve");
   if (actions.edit) rows.push("edit");
   if (actions.remove) rows.push("remove");
@@ -38,40 +38,40 @@ export function pantryMenuRows(
   return rows;
 }
 
-export interface PantryItemActionsMenuProps {
-  item: PantryItem;
+export interface FridgeItemActionsMenuProps {
+  item: FridgeItem;
   /** The baby to serve as. Optional because a list can render before a baby
    * resolves (and History rows never serve at all) — Serve is simply
-   * withheld until there's one, exactly as `PantryItemCard` gates it. */
+   * withheld until there's one, exactly as `FridgeItemCard` gates it. */
   babyId?: string;
-  /** Overrides the menu's own discard mutation — `PantryPage` passes its
-   * undoable `usePantryStatusChange` setter so removing from the Pantry tab
+  /** Overrides the menu's own discard mutation — `FridgePage` passes its
+   * undoable `useFridgeStatusChange` setter so removing from the Fridge tab
    * still raises the undo banner. Omitted on Home, which has no banner. */
   onRemove?: () => void;
   /** Restoring a finished/discarded item to active. Only offered when the
-   * caller supplies it (the Pantry tab's History view). */
+   * caller supplies it (the Fridge tab's History view). */
   onRestore?: () => void;
   /** A status mutation is already in flight upstream. */
   busy?: boolean;
 }
 
 /**
- * The compact three-dot Actions menu a pantry row carries — on Home and,
- * since item 264, on the Pantry tab too, replacing that page's
+ * The compact three-dot Actions menu a fridge row carries — on Home and,
+ * since item 264, on the Fridge tab too, replacing that page's
  * Serve/Remove/Edit/Restore footer row so both lists offer one identical
  * action surface. Serve opens the shared `ServeSheet` (item 263); Edit
  * navigates; Remove and Restore are status changes, run by the caller's
- * handler when it has one (so `PantryPage` keeps its undo banner) and by
+ * handler when it has one (so `FridgePage` keeps its undo banner) and by
  * this menu's own mutation otherwise.
  *
  * Which actions are offered is delegated entirely to
- * `resolvePantryItemMenuActions` so the gating logic (active/label-only)
+ * `resolveFridgeItemMenuActions` so the gating logic (active/label-only)
  * has one home, unit-tested there.
  */
-export function PantryItemActionsMenu({ item, babyId, onRemove, onRestore, busy = false }: PantryItemActionsMenuProps) {
+export function FridgeItemActionsMenu({ item, babyId, onRemove, onRestore, busy = false }: FridgeItemActionsMenuProps) {
   const [serveOpen, setServeOpen] = useState(false);
-  const updateItem = useUpdatePantryItem();
-  const rows = pantryMenuRows(item, { hasBaby: Boolean(babyId), canRestore: Boolean(onRestore) });
+  const updateItem = useUpdateFridgeItem();
+  const rows = fridgeMenuRows(item, { hasBaby: Boolean(babyId), canRestore: Boolean(onRestore) });
   const pending = busy || updateItem.isPending;
 
   return (
@@ -86,12 +86,12 @@ export function PantryItemActionsMenu({ item, babyId, onRemove, onRestore, busy 
                   close();
                 }}
               >
-                {PANTRY_MENU_ROW_LABEL.serve}
+                {FRIDGE_MENU_ROW_LABEL.serve}
               </MenuItem>
             )}
             {rows.includes("edit") && (
-              <MenuLinkItem to={`/pantry/${item.id}/edit`} onSelect={close}>
-                {PANTRY_MENU_ROW_LABEL.edit}
+              <MenuLinkItem to={`/fridge/${item.id}/edit`} onSelect={close}>
+                {FRIDGE_MENU_ROW_LABEL.edit}
               </MenuLinkItem>
             )}
             {rows.includes("remove") && (
@@ -105,7 +105,7 @@ export function PantryItemActionsMenu({ item, babyId, onRemove, onRestore, busy 
                   close();
                 }}
               >
-                {PANTRY_MENU_ROW_LABEL.remove}
+                {FRIDGE_MENU_ROW_LABEL.remove}
               </MenuItem>
             )}
             {rows.includes("restore") && (
@@ -116,7 +116,7 @@ export function PantryItemActionsMenu({ item, babyId, onRemove, onRestore, busy 
                   close();
                 }}
               >
-                {PANTRY_MENU_ROW_LABEL.restore}
+                {FRIDGE_MENU_ROW_LABEL.restore}
               </MenuItem>
             )}
           </>

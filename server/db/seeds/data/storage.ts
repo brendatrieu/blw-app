@@ -74,7 +74,7 @@ export const storageGuidelines: StorageGuidelineSeed[] = [
     freezerDays: null,
     roomTempHours: 2,
     notes:
-      'Once thinned with water, breast milk, or formula for serving, treat nut and seed butters like a fresh prepared food rather than a shelf-stable pantry item. Freezing is not recommended once thinned. Re-stir before each serving and never serve thick or straight from the jar.',
+      'Once thinned with water, breast milk, or formula for serving, treat nut and seed butters like a fresh prepared food rather than a shelf-stable cupboard item. Freezing is not recommended once thinned. Re-stir before each serving and never serve thick or straight from the jar.',
   },
   {
     category: 'bread_pasta_grain_baked',

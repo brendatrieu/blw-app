@@ -31,7 +31,7 @@ export default defineConfig({
       manifest: {
         name: "blw-app",
         short_name: "blw-app",
-        description: "A calm, offline-friendly companion for baby-led weaning — foods, recipes, pantry, and safety guidance.",
+        description: "A calm, offline-friendly companion for baby-led weaning — foods, recipes, fridge, and safety guidance.",
         theme_color: "#fbfaf8",
         background_color: "#fbfaf8",
         display: "standalone",

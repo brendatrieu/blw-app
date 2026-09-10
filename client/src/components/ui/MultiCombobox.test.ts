@@ -584,7 +584,7 @@ describe("resolveCreateEnterAction", () => {
 
   it("open on the create row: prevents the surrounding form's submit and asks to create", () => {
     // THE item 180 guarantee: pressing Enter here must never also log the
-    // meal / add the pantry item the picker is sitting inside.
+    // meal / add the fridge item the picker is sitting inside.
     expect(resolveCreateEnterAction(true, 0, 0, true)).toEqual({ prevent: true, toggleIndex: null, create: true });
   });
 

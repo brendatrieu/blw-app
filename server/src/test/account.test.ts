@@ -17,7 +17,7 @@ const FAKE_KEY = "sk-ant-api03-EXPORTKEYEXPORTKEYEXPORTKEYEXPORT-zQ4t";
 const SECRET = "test-key-encryption-secret-0123456789-abcdef";
 
 /**
- * Minimal catalog: meals, favorites and pantry items all reference
+ * Minimal catalog: meals, favorites and fridge items all reference
  * `foods`/`recipes`, so the export's name-denormalising joins need real rows
  * behind them.
  */
@@ -111,10 +111,10 @@ async function seedOneOfEverything(
     .values({ userId, name: "Robin", birthDate: "2025-01-15", notes: "Loves squash" })
     .returning();
 
-  // Two pantry rows: one live, one closed. The closed row is the "history"
+  // Two fridge rows: one live, one closed. The closed row is the "history"
   // half — an export that only carried active items would silently drop it.
-  const [activePantryItem] = await db
-    .insert(schema.pantryItems)
+  const [activeFridgeItem] = await db
+    .insert(schema.fridgeItems)
     .values([
       {
         userId,
@@ -141,8 +141,8 @@ async function seedOneOfEverything(
 
   // One meal with two foods: enough for the export's nesting and for the
   // delete sweep to prove `meal_foods` goes with its parent. Served from the
-  // active pantry item and carrying a meal note, so the export round-trips
-  // both `pantryItemId` and both notes fields with real, non-null values.
+  // active fridge item and carrying a meal note, so the export round-trips
+  // both `fridgeItemId` and both notes fields with real, non-null values.
   await insertMeals(db, [
     {
       babyId: baby!.id,
@@ -151,7 +151,7 @@ async function seedOneOfEverything(
       servedAt: new Date("2026-03-01T09:00:00Z"),
       reactionNote: "Happy",
       notes: "Ate it all.",
-      pantryItemId: activePantryItem!.id,
+      fridgeItemId: activeFridgeItem!.id,
     },
   ]);
 
@@ -255,7 +255,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
   const [
     babies,
     favorites,
-    pantry,
+    fridge,
     threads,
     aiKeys,
     users,
@@ -271,7 +271,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
   ] = await Promise.all([
       db.select().from(schema.babies).where(eq(schema.babies.userId, seeded.userId)),
       db.select().from(schema.favorites).where(eq(schema.favorites.userId, seeded.userId)),
-      db.select().from(schema.pantryItems).where(eq(schema.pantryItems.userId, seeded.userId)),
+      db.select().from(schema.fridgeItems).where(eq(schema.fridgeItems.userId, seeded.userId)),
       db.select().from(schema.chatThreads).where(eq(schema.chatThreads.userId, seeded.userId)),
       db.select().from(schema.userAiKeys).where(eq(schema.userAiKeys.userId, seeded.userId)),
       db.select().from(schema.user).where(eq(schema.user.id, seeded.userId)),
@@ -301,7 +301,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     meals: meals.length,
     mealFoods: mealFoods.length,
     favorites: favorites.length,
-    pantryItems: pantry.length,
+    fridgeItems: fridge.length,
     symptomChecks: symptomChecks.length,
     allergenOverrides: overrides.length,
     customFoods: customFoods.length,
@@ -320,7 +320,7 @@ const FULL_COUNTS = {
   meals: 1,
   mealFoods: 2,
   favorites: 1,
-  pantryItems: 2,
+  fridgeItems: 2,
   symptomChecks: 1,
   allergenOverrides: 1,
   customFoods: 1,
@@ -338,7 +338,7 @@ const EMPTY_COUNTS = {
   meals: 0,
   mealFoods: 0,
   favorites: 0,
-  pantryItems: 0,
+  fridgeItems: 0,
   symptomChecks: 0,
   allergenOverrides: 0,
   customFoods: 0,
@@ -413,14 +413,14 @@ describe("account export", () => {
         "exportVersion",
         "exportedAt",
         "favorites",
-        "pantryItems",
+        "fridgeItems",
         "profile",
         "meals",
         "symptomChecks",
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(6);
+    expect(bundle.exportVersion).toBe(7);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -432,9 +432,9 @@ describe("account export", () => {
 
     expect(bundle.meals).toHaveLength(1);
     expect(bundle.favorites).toHaveLength(1);
-    // Closed pantry rows are history, not noise — both must be present.
-    expect(bundle.pantryItems).toHaveLength(2);
-    expect(bundle.pantryItems.map((item) => item.status).sort()).toEqual(["active", "finished"]);
+    // Closed fridge rows are history, not noise — both must be present.
+    expect(bundle.fridgeItems).toHaveLength(2);
+    expect(bundle.fridgeItems.map((item) => item.status).sort()).toEqual(["active", "finished"]);
     expect(bundle.symptomChecks).toHaveLength(1);
     expect(bundle.allergenOverrides).toHaveLength(1);
     expect(bundle.customFoods).toHaveLength(1);
@@ -456,13 +456,13 @@ describe("account export", () => {
     expect(bundle.meals[0]?.recipeTitle).toBe("Sweet Potato Strips");
     expect(bundle.favorites[0]?.recipeTitle).toBe("Sweet Potato Strips");
 
-    const active = bundle.pantryItems.find((item) => item.status === "active");
-    const finished = bundle.pantryItems.find((item) => item.status === "finished");
+    const active = bundle.fridgeItems.find((item) => item.status === "active");
+    const finished = bundle.fridgeItems.find((item) => item.status === "finished");
     expect(active?.foodName).toBe("Sweet potato");
     expect(finished?.recipeTitle).toBe("Sweet Potato Strips");
   });
 
-  it("carries meal notes, pantry provenance, and the servings/bestBy/notes fields added in v3", async () => {
+  it("carries meal notes, fridge provenance, and the servings/bestBy/notes fields added in v3", async () => {
     const response = await app.inject({
       method: "GET",
       url: "/api/account/export",
@@ -473,22 +473,22 @@ describe("account export", () => {
     // The meal's own note (distinct from reactionNote) round-trips.
     expect(bundle.meals[0]?.notes).toBe("Ate it all.");
 
-    // Both foods in this meal were served out of the same pantry item; the
+    // Both foods in this meal were served out of the same fridge item; the
     // nested meal-food entries must carry that provenance through, non-null.
     const servedSweetPotato = bundle.meals[0]?.foods.find((food) => food.slug === "sweet-potato");
-    const activePantryItem = bundle.pantryItems.find((item) => item.status === "active");
-    expect(servedSweetPotato?.pantryItemId).toBe(activePantryItem?.id);
-    expect(servedSweetPotato?.pantryItemId).not.toBeNull();
+    const activeFridgeItem = bundle.fridgeItems.find((item) => item.status === "active");
+    expect(servedSweetPotato?.fridgeItemId).toBe(activeFridgeItem?.id);
+    expect(servedSweetPotato?.fridgeItemId).not.toBeNull();
 
-    expect(activePantryItem).toMatchObject({
+    expect(activeFridgeItem).toMatchObject({
       servingsTotal: 4,
       servingsLeft: 3,
       bestBy: "2026-03-10",
       notes: "Steamed extra soft.",
     });
 
-    const finishedPantryItem = bundle.pantryItems.find((item) => item.status === "finished");
-    expect(finishedPantryItem).toMatchObject({
+    const finishedFridgeItem = bundle.fridgeItems.find((item) => item.status === "finished");
+    expect(finishedFridgeItem).toMatchObject({
       servingsTotal: null,
       servingsLeft: null,
       bestBy: null,
@@ -648,7 +648,7 @@ describe("account export", () => {
     expect(bundle.babies).toHaveLength(0);
     expect(bundle.meals).toHaveLength(0);
     expect(bundle.favorites).toHaveLength(0);
-    expect(bundle.pantryItems).toHaveLength(0);
+    expect(bundle.fridgeItems).toHaveLength(0);
     expect(bundle.symptomChecks).toHaveLength(0);
     // Not merely "empty because the array is always empty": the seeded
     // account next door has one, so an unscoped query would surface it here.

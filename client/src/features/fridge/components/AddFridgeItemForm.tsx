@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { PantryLocation } from "@blw/shared";
+import type { FridgeLocation } from "@blw/shared";
 import { useFavorites } from "../../tracking/hooks.js";
 import { FoodPicker } from "../../catalog/components/FoodPicker.js";
-import { useCreatePantryItem } from "../hooks.js";
+import { useCreateFridgeItem } from "../hooks.js";
 import { LOCATIONS } from "../format.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
@@ -15,13 +15,13 @@ import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 type Source = "food" | "recipe" | "label";
 
 /** One key per source tab: only the visible tab's field can ever error. */
-export type AddPantryItemField = Source;
-export type AddPantryItemErrors = FormErrors<AddPantryItemField>;
+export type AddFridgeItemField = Source;
+export type AddFridgeItemErrors = FormErrors<AddFridgeItemField>;
 
 /** Visual field order — what a failed submit focuses first (item 235). */
-export const ADD_PANTRY_ITEM_FIELD_ORDER: readonly AddPantryItemField[] = ["food", "recipe", "label"];
+export const ADD_FRIDGE_ITEM_FIELD_ORDER: readonly AddFridgeItemField[] = ["food", "recipe", "label"];
 
-export interface AddPantryItemValues {
+export interface AddFridgeItemValues {
   source: Source;
   foodIds: string[];
   recipeId: string;
@@ -29,7 +29,7 @@ export interface AddPantryItemValues {
 }
 
 /**
- * The add-to-pantry form's required-field rules (item 235). What is required
+ * The add-to-fridge form's required-field rules (item 235). What is required
  * depends on the source tab, and only the tab on screen is judged — a food id
  * left over from a tab the parent has moved away from is not an error, and is
  * not sent either. Location defaults to "fridge" and Prepared is seeded with
@@ -37,8 +37,8 @@ export interface AddPantryItemValues {
  *
  * An empty object means valid — same reading as `validateCustomFood`.
  */
-export function validateAddPantryItem(values: AddPantryItemValues): AddPantryItemErrors {
-  const errors: AddPantryItemErrors = {};
+export function validateAddFridgeItem(values: AddFridgeItemValues): AddFridgeItemErrors {
+  const errors: AddFridgeItemErrors = {};
   if (values.source === "food") {
     if (values.foodIds.length === 0) errors.food = "Add at least one food";
   } else if (values.source === "recipe") {
@@ -57,23 +57,23 @@ const SOURCE_TABS: { value: Source; label: string }[] = [
   { value: "label", label: "Free-form" },
 ];
 
-interface AddPantryItemFormProps {
+interface AddFridgeItemFormProps {
   onDone: () => void;
 }
 
 /**
- * The pantry "add" form, byte-compatible with the one that used to live in
- * the inline AddPantryItemSheet: same source tabs, food combobox, recipe
+ * The fridge "add" form, byte-compatible with the one that used to live in
+ * the inline AddFridgeItemSheet: same source tabs, food combobox, recipe
  * select, location segments, wheel "Prepared" field, and quantity note.
- * Now rendered full-screen by PantryAddPage, which supplies `onDone` for
+ * Now rendered full-screen by FridgeAddPage, which supplies `onDone` for
  * both a successful save and Cancel.
  */
-export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
+export function AddFridgeItemForm({ onDone }: AddFridgeItemFormProps) {
   const [source, setSource] = useState<Source>("food");
   const [foodIds, setFoodIds] = useState<string[]>([]);
   const [recipeId, setRecipeId] = useState("");
   const [label, setLabel] = useState("");
-  const [location, setLocation] = useState<PantryLocation>("fridge");
+  const [location, setLocation] = useState<FridgeLocation>("fridge");
   const [preparedAt, setPreparedAt] = useState(() => nowAtMinute());
   const [quantityNote, setQuantityNote] = useState("");
   const [servingsTotal, setServingsTotal] = useState("");
@@ -84,17 +84,17 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
   // the set a parent has already chosen to come back to — double as the
   // recipe picker's source list.
   const { data: favoritesData, isLoading: favoritesLoading } = useFavorites();
-  const createItem = useCreatePantryItem();
+  const createItem = useCreateFridgeItem();
 
   const favorites = favoritesData?.items ?? [];
 
-  // Item 235: "Add to pantry" stays enabled, the missing answer shows under
+  // Item 235: "Add to fridge" stays enabled, the missing answer shows under
   // whichever source field is on screen, and a failed submit focuses it.
   const { errors: shownErrors, attemptSubmit } = useSubmitValidation(
     { source, foodIds, recipeId, label },
-    validateAddPantryItem,
-    ADD_PANTRY_ITEM_FIELD_ORDER,
-    { food: "pantry-add-food", recipe: "pantry-add-recipe", label: "pantry-add-label" },
+    validateAddFridgeItem,
+    ADD_FRIDGE_ITEM_FIELD_ORDER,
+    { food: "fridge-add-food", recipe: "fridge-add-recipe", label: "fridge-add-label" },
   );
 
   function handleSubmit(event: React.FormEvent) {
@@ -140,19 +140,19 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
       </div>
 
       {source === "food" && (
-        <Field label="Food" htmlFor="pantry-add-food" error={shownErrors.food}>
-          <FoodPicker id="pantry-add-food" value={foodIds} onChange={setFoodIds} />
+        <Field label="Food" htmlFor="fridge-add-food" error={shownErrors.food}>
+          <FoodPicker id="fridge-add-food" value={foodIds} onChange={setFoodIds} />
         </Field>
       )}
 
       {source === "recipe" && (
-        <Field label="Recipe" htmlFor="pantry-add-recipe" error={shownErrors.recipe}>
+        <Field label="Recipe" htmlFor="fridge-add-recipe" error={shownErrors.recipe}>
           {!favoritesLoading && favorites.length === 0 ? (
             <p className="text-xs text-[var(--color-text-muted)]">
               No favorited recipes yet — favorite one from its recipe page first.
             </p>
           ) : (
-            <Select id="pantry-add-recipe" required value={recipeId} onChange={(e) => setRecipeId(e.target.value)}>
+            <Select id="fridge-add-recipe" required value={recipeId} onChange={(e) => setRecipeId(e.target.value)}>
               <option value="" disabled>
                 {favoritesLoading ? "Loading recipes…" : "Select a recipe"}
               </option>
@@ -167,9 +167,9 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
       )}
 
       {source === "label" && (
-        <Field label="What is it?" htmlFor="pantry-add-label" error={shownErrors.label}>
+        <Field label="What is it?" htmlFor="fridge-add-label" error={shownErrors.label}>
           <Input
-            id="pantry-add-label"
+            id="fridge-add-label"
             type="text"
             required
             value={label}
@@ -200,13 +200,13 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
         </div>
       </label>
 
-      <Field label="Prepared" htmlFor="pantry-add-prepared">
-        <DateTimeField id="pantry-add-prepared" value={preparedAt} onChange={setPreparedAt} />
+      <Field label="Prepared" htmlFor="fridge-add-prepared">
+        <DateTimeField id="fridge-add-prepared" value={preparedAt} onChange={setPreparedAt} />
       </Field>
 
-      <Field label="Quantity note (optional)" htmlFor="pantry-add-note">
+      <Field label="Quantity note (optional)" htmlFor="fridge-add-note">
         <Input
-          id="pantry-add-note"
+          id="fridge-add-note"
           type="text"
           value={quantityNote}
           onChange={(e) => setQuantityNote(e.target.value)}
@@ -214,9 +214,9 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
         />
       </Field>
 
-      <Field label="Total servings (optional)" htmlFor="pantry-add-servings">
+      <Field label="Total servings (optional)" htmlFor="fridge-add-servings">
         <Input
-          id="pantry-add-servings"
+          id="fridge-add-servings"
           type="number"
           inputMode="numeric"
           min={1}
@@ -227,13 +227,13 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
         />
       </Field>
 
-      <Field label="Best by (optional)" htmlFor="pantry-add-best-by">
-        <DateField id="pantry-add-best-by" value={bestBy} onChange={setBestBy} allowFuture title="Best by" />
+      <Field label="Best by (optional)" htmlFor="fridge-add-best-by">
+        <DateField id="fridge-add-best-by" value={bestBy} onChange={setBestBy} allowFuture title="Best by" />
       </Field>
 
-      <Field label="Notes (optional)" htmlFor="pantry-add-notes">
+      <Field label="Notes (optional)" htmlFor="fridge-add-notes">
         <Textarea
-          id="pantry-add-notes"
+          id="fridge-add-notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
@@ -245,7 +245,7 @@ export function AddPantryItemForm({ onDone }: AddPantryItemFormProps) {
 
       {/* Add only (item 257): the page's header X is the way out. */}
       <Button type="submit" disabled={createItem.isPending} className="w-full">
-        {createItem.isPending ? "Adding…" : "Add to pantry"}
+        {createItem.isPending ? "Adding…" : "Add to fridge"}
       </Button>
     </form>
   );

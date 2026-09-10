@@ -10,7 +10,7 @@ export interface MealActionsMenuProps {
 
 /**
  * The food log card's compact three-dot Actions menu: Edit / Delete, mirroring
- * `PantryItemActionsMenu`'s shape so a meal row and a pantry row offer their
+ * `FridgeItemActionsMenu`'s shape so a meal row and a fridge row offer their
  * actions the same way. Edit is a real `MenuLinkItem` (so modifier-click works
  * like any other in-app link); Delete only *asks* — it hands the request back
  * to `MealCard`, which owns the confirm row and the delete mutation via
