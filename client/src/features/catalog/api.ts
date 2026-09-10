@@ -27,6 +27,7 @@ export function buildFoodsQueryString(filters: FoodsQuery): string {
   if (filters.allergen) params.set("allergen", filters.allergen);
   if (filters.ironLevel) params.set("ironLevel", filters.ironLevel);
   if (filters.vitaminCLevel) params.set("vitaminCLevel", filters.vitaminCLevel);
+  if (filters.fiberLevel) params.set("fiberLevel", filters.fiberLevel);
   if (filters.q) params.set("q", filters.q);
   if (filters.maxAgeMonths !== undefined) params.set("maxAgeMonths", String(filters.maxAgeMonths));
   const qs = params.toString();
@@ -98,15 +99,17 @@ export interface RecipeFilters {
   allergen?: string;
   ironFocus?: boolean;
   vitaminCHigh?: boolean;
+  fiberHigh?: boolean;
   ingredientFoodId?: string;
 }
 
 /**
  * The query string for a set of filters. Pure and exported for the same
  * reason `buildCustomFoodInput` is: the ONE rule that's easy to get wrong —
- * `ironFocus` and `vitaminCHigh` are exact matches server-side, so an off
- * toggle must OMIT the key rather than send `false` (which would hide every
- * matching recipe) — is pinned by a test instead of by reading the fetch call.
+ * `ironFocus`, `vitaminCHigh` and `fiberHigh` are exact matches server-side,
+ * so an off toggle must OMIT the key rather than send `false` (which would
+ * hide every matching recipe) — is pinned by a test instead of by reading the
+ * fetch call.
  */
 export function buildRecipesQueryString(filters: RecipeFilters): string {
   const params = new URLSearchParams();
@@ -117,6 +120,7 @@ export function buildRecipesQueryString(filters: RecipeFilters): string {
   if (filters.allergen) params.set("allergen", filters.allergen);
   if (filters.ironFocus) params.set("ironFocus", "true");
   if (filters.vitaminCHigh) params.set("vitaminCHigh", "true");
+  if (filters.fiberHigh) params.set("fiberHigh", "true");
   if (filters.ingredientFoodId) params.set("ingredientFoodId", filters.ingredientFoodId);
   const qs = params.toString();
   return qs ? `?${qs}` : "";

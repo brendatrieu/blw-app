@@ -24,6 +24,7 @@ export const foodsQuerySchema = z.object({
   allergen: z.string().min(1).optional(),
   ironLevel: levelSchema.optional(),
   vitaminCLevel: levelSchema.optional(),
+  fiberLevel: levelSchema.optional(),
   q: z.string().min(1).optional(),
   maxAgeMonths: z.coerce.number().int().nonnegative().optional(),
 });
@@ -39,6 +40,7 @@ export const foodListItemSchema = z.object({
   category: foodCategorySchema,
   ironLevel: levelSchema,
   vitaminCLevel: levelSchema,
+  fiberLevel: levelSchema,
   chokingRisk: levelSchema,
   minAgeMonths: z.number().int(),
   allergens: z.array(z.string()),
@@ -242,6 +244,9 @@ export const recipeDetailSchema = z.object({
   /** Derived from the ingredients' foods: true when at least one ingredient
    * food has `vitaminCLevel: "high"` — same derivation as `allergens`. */
   vitaminCHigh: z.boolean(),
+  /** Derived from the ingredients' foods: true when at least one ingredient
+   * food has `fiberLevel: "high"` — the same derivation as `vitaminCHigh`. */
+  fiberHigh: z.boolean(),
   imageUrl: z.string().nullable(),
   fridgeHoursOverride: z.number().int().nullable(),
   freezerDaysOverride: z.number().int().nullable(),
@@ -300,6 +305,9 @@ export const recipesQuerySchema = z.object({
    * exact filter on the recipe's derived `vitaminCHigh`, absent filters on
    * nothing. */
   vitaminCHigh: queryFlag.optional(),
+  /** Same flag semantics again: present is an exact filter on the recipe's
+   * derived `fiberHigh`, absent filters on nothing. */
+  fiberHigh: queryFlag.optional(),
   /** Recipes that use this food as an ingredient. */
   ingredientFoodId: z.string().uuid().optional(),
 });
@@ -315,6 +323,9 @@ export const recipeListItemSchema = z.object({
   /** Derived from the ingredients' foods, not stored on the recipe — same
    * derivation as `allergens`. */
   vitaminCHigh: z.boolean(),
+  /** Derived from the ingredients' foods, not stored on the recipe — the
+   * vitamin C twin. */
+  fiberHigh: z.boolean(),
   /** Derived from the ingredients' foods, not stored on the recipe. */
   allergens: z.array(z.string()),
   isCustom: z.boolean(),

@@ -83,6 +83,7 @@ describe("LogFoodPage recipe prefill (item 213)", () => {
     minAgeMonths: 6,
     ironFocus: true,
     vitaminCHigh: false,
+    fiberHigh: false,
     allergens: [],
     isCustom: true,
     isFavorite: false,

@@ -9,6 +9,7 @@ describe("buildFoodsQueryString", () => {
       allergen: "egg",
       ironLevel: "high",
       vitaminCLevel: "moderate",
+      fiberLevel: "low",
       q: "beef",
       maxAgeMonths: 9,
     };
@@ -35,6 +36,7 @@ describe("buildRecipesQueryString", () => {
       allergen: "egg",
       ironFocus: true,
       vitaminCHigh: true,
+      fiberHigh: true,
       ingredientFoodId: "11111111-1111-4111-8111-111111111111",
     };
     const params = new URLSearchParams(buildRecipesQueryString(full).slice(1));

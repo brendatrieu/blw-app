@@ -1,0 +1,1 @@
+ALTER TABLE "foods" ADD COLUMN "fiber_level" "level" DEFAULT 'low' NOT NULL;

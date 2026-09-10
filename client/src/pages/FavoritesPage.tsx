@@ -23,6 +23,7 @@ function FavoriteCard({ item }: { item: FavoriteItem }) {
       <div className="flex flex-wrap items-center gap-1.5">
         {item.ironFocus && <Badge tone="primary">Iron focus</Badge>}
         {item.vitaminCHigh && <Badge tone="sunshine">Vit C</Badge>}
+        {item.fiberHigh && <Badge tone="leaf">Fiber</Badge>}
         {item.allergens.map((slug) => (
           <Badge key={slug} tone="danger">
             {allergenLabel(slug)}

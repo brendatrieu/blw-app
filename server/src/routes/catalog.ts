@@ -49,7 +49,7 @@ const IRON_LEVEL_ORDER = sql`case ${foods.ironLevel} when 'high' then 0 when 'mo
 
 /**
  * What a custom food puts in the curated columns. Nobody wrote iron,
- * vitamin-C, choking or prep guidance for a food a parent typed in, and
+ * vitamin-C, fiber, choking or prep guidance for a food a parent typed in, and
  * those columns are NOT NULL — so the row carries deliberately inert values
  * and the API's `isCustom: true` tells the client to render none of them.
  * `low` throughout rather than `moderate`: an invented level must not read
@@ -58,6 +58,7 @@ const IRON_LEVEL_ORDER = sql`case ${foods.ironLevel} when 'high' then 0 when 'mo
 const CUSTOM_FOOD_PLACEHOLDERS = {
   ironLevel: "low",
   vitaminCLevel: "low",
+  fiberLevel: "low",
   chokingRisk: "low",
   minAgeMonths: 6,
   prep6m: "",
@@ -206,6 +207,7 @@ async function loadFoodDetail(db: Database, food: FoodRow, userId: string | null
     category: food.category,
     ironLevel: food.ironLevel,
     vitaminCLevel: food.vitaminCLevel,
+    fiberLevel: food.fiberLevel,
     chokingRisk: food.chokingRisk,
     minAgeMonths: food.minAgeMonths,
     allergens: allergenRows.map((a) => a.slug),
@@ -245,13 +247,14 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
       reply.code(400);
       return { error: "invalid_query", details: parsed.error.flatten() };
     }
-    const { category, allergen, ironLevel, vitaminCLevel, q, maxAgeMonths } = parsed.data;
+    const { category, allergen, ironLevel, vitaminCLevel, fiberLevel, q, maxAgeMonths } = parsed.data;
 
     // Unconditional, and first: every other filter narrows what this allows.
     const conditions = [visibleFoodsCondition(request.user?.id ?? null)];
     if (category) conditions.push(eq(foods.category, category));
     if (ironLevel) conditions.push(eq(foods.ironLevel, ironLevel));
     if (vitaminCLevel) conditions.push(eq(foods.vitaminCLevel, vitaminCLevel));
+    if (fiberLevel) conditions.push(eq(foods.fiberLevel, fiberLevel));
     if (maxAgeMonths !== undefined) conditions.push(lte(foods.minAgeMonths, maxAgeMonths));
     if (q) conditions.push(ilike(foods.name, `%${q}%`));
     if (allergen) {
@@ -297,6 +300,7 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
       category: f.category,
       ironLevel: f.ironLevel,
       vitaminCLevel: f.vitaminCLevel,
+      fiberLevel: f.fiberLevel,
       chokingRisk: f.chokingRisk,
       minAgeMonths: f.minAgeMonths,
       allergens: allergensByFoodId.get(f.id) ?? [],

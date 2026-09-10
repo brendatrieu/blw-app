@@ -57,6 +57,13 @@
       "when": 1788836527307,
       "tag": "0007_chemical_obadiah_stane",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789005758862,
+      "tag": "0008_petite_frightful_four",
+      "breakpoints": true
     }
   ]
 }

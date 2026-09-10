@@ -32,7 +32,7 @@ async function seedFixtures(db: Database) {
     notes: "Cooked produce.",
   });
 
-  const [banana, oats, broccoli, beef, bellPepper] = await db
+  const [banana, oats, broccoli, beef, bellPepper, pear] = await db
     .insert(schema.foods)
     .values([
       {
@@ -41,6 +41,7 @@ async function seedFixtures(db: Database) {
         category: "fruit",
         ironLevel: "low",
         vitaminCLevel: "moderate",
+        fiberLevel: "moderate",
         chokingRisk: "low",
         minAgeMonths: 6,
         prep6m: "strip",
@@ -54,6 +55,7 @@ async function seedFixtures(db: Database) {
         category: "grain",
         ironLevel: "moderate",
         vitaminCLevel: "low",
+        fiberLevel: "moderate",
         chokingRisk: "low",
         minAgeMonths: 6,
         prep6m: "porridge",
@@ -70,6 +72,7 @@ async function seedFixtures(db: Database) {
         category: "veg",
         ironLevel: "low",
         vitaminCLevel: "high",
+        fiberLevel: "high",
         chokingRisk: "low",
         minAgeMonths: 6,
         prep6m: "steam-mash",
@@ -85,6 +88,7 @@ async function seedFixtures(db: Database) {
         category: "protein",
         ironLevel: "high",
         vitaminCLevel: "low",
+        fiberLevel: "low",
         chokingRisk: "moderate",
         minAgeMonths: 6,
         prep6m: "strip",
@@ -100,10 +104,29 @@ async function seedFixtures(db: Database) {
         category: "veg",
         ironLevel: "low",
         vitaminCLevel: "high",
+        fiberLevel: "low",
         chokingRisk: "low",
         minAgeMonths: 6,
         prep6m: "roast-strip",
         prep9m: "roast-chop",
+        prep12m: "dice",
+        storageCategory: "produce_cooked",
+      },
+      {
+        // HIGH fiber and nothing else — the ingredient that isolates
+        // `fiberHigh` from the other two flags (items 276-278). Broccoli is
+        // high fiber too, but it is also high vitamin C, so it cannot tell a
+        // fiber filter apart from a vitamin C one.
+        slug: "pear",
+        name: "Pear",
+        category: "fruit",
+        ironLevel: "low",
+        vitaminCLevel: "low",
+        fiberLevel: "high",
+        chokingRisk: "low",
+        minAgeMonths: 6,
+        prep6m: "ripe-wedge",
+        prep9m: "dice",
         prep12m: "dice",
         storageCategory: "produce_cooked",
       },
@@ -145,6 +168,7 @@ async function seedFixtures(db: Database) {
     broccoli: broccoli!,
     beef: beef!,
     bellPepper: bellPepper!,
+    pear: pear!,
     peanut: peanut!,
     egg: egg!,
     catalogRecipe: catalogRecipe!,
@@ -621,6 +645,133 @@ describe("custom recipes", () => {
         const nonQualifying = (await listRecipes(owner, "?vitaminCHigh=false")).recipes.map((r) => r.id).sort();
         expect(nonQualifying).toEqual([catalogId, plainBanana.id].sort());
         expect(nonQualifying).not.toContain(veggieMash.id);
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // fiberHigh filter (ledger items 276-278). Purely derived from the
+    // ingredients' foods, exactly like vitaminCHigh, and ANDed with the other
+    // two rather than replacing either.
+    // -----------------------------------------------------------------------
+    describe("fiberHigh filter", () => {
+      /** Pear is high fiber and nothing else — a custom recipe built on it
+       * qualifies for `fiberHigh` alone, since a custom FOOD always stores
+       * "low" (see `routes/catalog.ts` placeholders). */
+      async function createPearMash(): Promise<RecipeDetail> {
+        return await createRecipe(
+          owner,
+          recipePayload({
+            title: "Pear mash",
+            ingredients: [{ foodId: fixtures.pear.id, quantityNote: "1 ripe" }],
+          }),
+        );
+      }
+
+      /** Beef (high iron) + bell pepper (high vitamin C) + pear (high fiber):
+       * all three flags, from ingredients alone, on a recipe nobody curated. */
+      async function createAllThree(): Promise<RecipeDetail> {
+        return await createRecipe(
+          owner,
+          recipePayload({
+            title: "Beef, pepper and pear",
+            ingredients: [
+              { foodId: fixtures.beef.id, quantityNote: "2 strips" },
+              { foodId: fixtures.bellPepper.id, quantityNote: "1/2" },
+              { foodId: fixtures.pear.id, quantityNote: "1 wedge" },
+            ],
+          }),
+        );
+      }
+
+      it("derives fiberHigh from a high-fiber catalog ingredient, even on a custom recipe", async () => {
+        const pearMash = await createPearMash();
+        // The create response IS the detail payload.
+        expect(pearMash.fiberHigh).toBe(true);
+        // Fiber only: pear is low iron and low vitamin C.
+        expect(pearMash.ironFocus).toBe(false);
+        expect(pearMash.vitaminCHigh).toBe(false);
+
+        const list = await listRecipes(owner);
+        expect(list.recipes.find((r) => r.id === pearMash.id)?.fiberHigh).toBe(true);
+        // The seeded catalog recipe (banana + oats, both "moderate") does not.
+        expect(list.recipes.find((r) => r.id === fixtures.catalogRecipe.id)?.fiberHigh).toBe(false);
+
+        const detail = await app.inject({
+          method: "GET",
+          url: `/api/recipes/${pearMash.id}`,
+          headers: { cookie: owner.cookie },
+        });
+        expect(detail.json<RecipeDetail>().fiberHigh).toBe(true);
+
+        // Derived, never stored: nothing on the recipe row records it.
+        const [row] = await db
+          .select({ ironFocus: schema.recipes.ironFocus })
+          .from(schema.recipes)
+          .where(eq(schema.recipes.id, pearMash.id));
+        expect(row?.ironFocus).toBe(false);
+      });
+
+      it("filters on fiberHigh alone, with ironFocus, with vitaminCHigh, and all three together", async () => {
+        const pearMash = await createPearMash();
+        const allThree = await createAllThree();
+        const plainBanana = await createRecipe(owner, recipePayload({ title: "Plain banana" }));
+        const catalogId = fixtures.catalogRecipe.id;
+
+        // Alone: both fiber recipes, still title-ascending.
+        expect((await listRecipes(owner, "?fiberHigh=true")).recipes.map((r) => r.title)).toEqual([
+          "Beef, pepper and pear",
+          "Pear mash",
+        ]);
+
+        // With iron: only the beef one derives ironFocus.
+        expect((await listRecipes(owner, "?fiberHigh=true&ironFocus=true")).recipes.map((r) => r.id)).toEqual([
+          allThree.id,
+        ]);
+        // With vitamin C: only the bell-pepper one.
+        expect((await listRecipes(owner, "?fiberHigh=true&vitaminCHigh=true")).recipes.map((r) => r.id)).toEqual([
+          allThree.id,
+        ]);
+        // All three at once.
+        expect(
+          (await listRecipes(owner, "?ironFocus=true&vitaminCHigh=true&fiberHigh=true")).recipes.map((r) => r.id),
+        ).toEqual([allThree.id]);
+        // High fiber but explicitly NOT iron-focused: the pear mash.
+        expect((await listRecipes(owner, "?fiberHigh=true&ironFocus=false")).recipes.map((r) => r.id)).toEqual([
+          pearMash.id,
+        ]);
+
+        // "false" returns only non-qualifying recipes.
+        const nonQualifying = (await listRecipes(owner, "?fiberHigh=false")).recipes.map((r) => r.id).sort();
+        expect(nonQualifying).toEqual([catalogId, plainBanana.id].sort());
+        expect(nonQualifying).not.toContain(pearMash.id);
+        expect(nonQualifying).not.toContain(allThree.id);
+      });
+
+      it("carries fiberHigh on GET /api/favorites", async () => {
+        const pearMash = await createPearMash();
+        const plainBanana = await createRecipe(owner, recipePayload({ title: "Plain banana" }));
+        for (const id of [pearMash.id, plainBanana.id, fixtures.catalogRecipe.id]) {
+          const response = await app.inject({
+            method: "PUT",
+            url: `/api/recipes/${id}/favorite`,
+            headers: { cookie: owner.cookie },
+          });
+          expect(response.statusCode).toBe(204);
+        }
+
+        const favorites = await app.inject({
+          method: "GET",
+          url: "/api/favorites",
+          headers: { cookie: owner.cookie },
+        });
+        const items = favorites.json<FavoritesResponse>().items;
+        expect(items.find((i) => i.recipeId === pearMash.id)).toMatchObject({
+          fiberHigh: true,
+          ironFocus: false,
+          vitaminCHigh: false,
+        });
+        expect(items.find((i) => i.recipeId === plainBanana.id)?.fiberHigh).toBe(false);
+        expect(items.find((i) => i.recipeId === fixtures.catalogRecipe.id)?.fiberHigh).toBe(false);
       });
     });
 
@@ -1234,6 +1385,26 @@ describe("custom recipes", () => {
       expect(firstNonIron === -1 || lastIron < firstNonIron).toBe(true);
       const low = byId.get(lowIron.id);
       if (low) expect(low.ironFocus).toBe(false);
+    });
+
+    it("reports the derived fiberHigh on each search_recipes row", async () => {
+      const pearMash = await createRecipe(
+        owner,
+        recipePayload({
+          title: "Pear mash",
+          ingredients: [{ foodId: fixtures.pear.id, quantityNote: "1 ripe" }],
+        }),
+      );
+
+      const tools = buildChatTools(db, await userId(owner), null);
+      const result = JSON.parse(String(await tools.search_recipes.run({ ageMonths: 12 }))) as {
+        recipes: Array<{ id: string; title: string; ironFocus: boolean; fiberHigh: boolean }>;
+      };
+      const byId = new Map(result.recipes.map((r) => [r.id, r]));
+      expect(byId.get(pearMash.id)?.fiberHigh).toBe(true);
+      // Banana + oats are both "moderate" fiber — the catalog recipe is false,
+      // the same answer the list and detail routes give.
+      expect(byId.get(fixtures.catalogRecipe.id)?.fiberHigh).toBe(false);
     });
 
     it("lists a food's recipes per caller, custom ones included", async () => {

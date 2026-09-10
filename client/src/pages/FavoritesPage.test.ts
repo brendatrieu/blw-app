@@ -14,6 +14,7 @@ function favorite(overrides: Partial<FavoriteItem> = {}): FavoriteItem {
     minAgeMonths: 6,
     ironFocus: false,
     vitaminCHigh: false,
+    fiberHigh: false,
     allergens: [],
     ...overrides,
   };
@@ -49,6 +50,21 @@ describe("FavoritesPage", () => {
     const html = renderPage([favorite({ vitaminCHigh: true })]);
     expect(html).toMatch(
       /class="[^"]*bg-\[var\(--color-caution-soft\)\][^"]*text-\[var\(--color-caution-soft-text\)\][^"]*"[^>]*>Vit C</,
+    );
+  });
+
+  // Item 279: the third derived nutrition flag, badged "Fiber" on the row.
+  it("badges high fiber after vitamin C, and only when the flag is on", () => {
+    const on = renderPage([favorite({ ironFocus: true, vitaminCHigh: true, fiberHigh: true })]);
+    expect(on).toContain(">Fiber<");
+    expect(on.indexOf(">Fiber<")).toBeGreaterThan(on.indexOf(">Vit C<"));
+    expect(renderPage([favorite({ fiberHigh: false })])).not.toContain(">Fiber<");
+  });
+
+  it("gives the Fiber badge the success tone's classes, not just its text", () => {
+    const html = renderPage([favorite({ fiberHigh: true })]);
+    expect(html).toMatch(
+      /class="[^"]*bg-\[var\(--color-success-soft\)\][^"]*text-\[var\(--color-success-soft-text\)\][^"]*"[^>]*>Fiber</,
     );
   });
 

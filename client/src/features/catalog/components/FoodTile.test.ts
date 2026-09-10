@@ -30,6 +30,10 @@ describe("FoodTile", () => {
     expect(html).not.toContain("Iron:");
     expect(html).not.toContain("Contains allergen");
     expect(html).not.toMatch(/h-2 w-2 rounded-full/);
+    // Item 279: the "High fiber" badge is a food-PAGE badge too. The tile's
+    // props don't even name `fiberLevel` (typecheck rejects passing one), so
+    // this only pins that nothing fiber-ish reaches the grid.
+    expect(html.toLowerCase()).not.toContain("fiber");
   });
 
   // Item 182: a food the parent added is labelled as theirs in the grid, so

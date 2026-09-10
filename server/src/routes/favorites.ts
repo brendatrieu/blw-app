@@ -100,11 +100,11 @@ export function registerFavoriteRoutes(app: FastifyInstance, db: Database): void
       allergensByRecipeId.set(row.recipeId, slugs);
     }
 
-    // Both nutrition badges come from the ONE shared derivation the recipes
+    // Every nutrition badge comes from the ONE shared derivation the recipes
     // list and the recipe detail also use (see services/recipeNutrition.ts),
     // batch-fetched for every favorited recipe in a single query:
-    // `vitaminCHigh` is purely the ingredients, `ironFocus` is the curated
-    // column OR a high-iron ingredient.
+    // `vitaminCHigh` and `fiberHigh` are purely the ingredients, `ironFocus`
+    // is the curated column OR a high-iron ingredient.
     const nutritionByRecipeId = await loadRecipeNutrition(db, recipeIds);
 
     const items: FavoriteItem[] = rows.map((r) => ({
@@ -113,6 +113,7 @@ export function registerFavoriteRoutes(app: FastifyInstance, db: Database): void
       minAgeMonths: r.minAgeMonths,
       ironFocus: deriveIronFocus(r.ironFocus, nutritionFor(nutritionByRecipeId, r.recipeId)),
       vitaminCHigh: nutritionFor(nutritionByRecipeId, r.recipeId).vitaminCHigh,
+      fiberHigh: nutritionFor(nutritionByRecipeId, r.recipeId).fiberHigh,
       allergens: allergensByRecipeId.get(r.recipeId) ?? [],
     }));
 

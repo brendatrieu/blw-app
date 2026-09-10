@@ -1,11 +1,13 @@
 // The one place a recipe's nutrition badges are derived from its ingredients.
 //
-// Both `ironFocus` and `vitaminCHigh` answer the same question of the same
-// join — "does any ingredient food carry level 'high'?" — so they live in one
-// helper rather than as two hand-copied queries per route. They used to be
-// copied: the recipes list, the recipe detail and the favorites list each
-// spelled the vitamin C derivation out again, which is exactly how iron and
-// vitamin C would have drifted apart the first time one of them changed.
+// `ironFocus`, `vitaminCHigh` and `fiberHigh` all answer the same question of
+// the same join — "does any ingredient food carry level 'high'?" — so they
+// live in one helper rather than as three hand-copied queries per route. They
+// used to be copied: the recipes list, the recipe detail and the favorites
+// list each spelled the vitamin C derivation out again, which is exactly how
+// iron and vitamin C would have drifted apart the first time one of them
+// changed. Fiber was added as a third flag on that one query rather than a
+// second round trip.
 //
 // `ironFocus` is not purely derived, though: `recipes.iron_focus` is a
 // CURATED claim on the seeded catalog ("this recipe is here for the iron"),
@@ -26,16 +28,22 @@ export interface RecipeNutritionFlags {
   ironHigh: boolean;
   /** At least one ingredient food has `vitaminCLevel: "high"`. */
   vitaminCHigh: boolean;
+  /** At least one ingredient food has `fiberLevel: "high"`. */
+  fiberHigh: boolean;
 }
 
 /** A recipe with no ingredients (or no ingredient row in the batch) is not
- * missing data — it simply qualifies for neither badge. */
-export const NO_RECIPE_NUTRITION: RecipeNutritionFlags = { ironHigh: false, vitaminCHigh: false };
+ * missing data — it simply qualifies for none of the badges. */
+export const NO_RECIPE_NUTRITION: RecipeNutritionFlags = {
+  ironHigh: false,
+  vitaminCHigh: false,
+  fiberHigh: false,
+};
 
 /**
- * Both flags for many recipes in ONE query — `bool_or` over the
+ * All three flags for many recipes in ONE query — `bool_or` over the
  * ingredients -> foods join, grouped by recipe. Recipes with no high-level
- * ingredient still come back (as false/false); recipes with no ingredients at
+ * ingredient still come back (all false); recipes with no ingredients at
  * all are simply absent from the map, so read it through `nutritionFor`.
  *
  * An empty `recipeIds` short-circuits: `inArray` with an empty list is not
@@ -52,6 +60,7 @@ export async function loadRecipeNutrition(
       recipeId: recipeIngredients.recipeId,
       ironHigh: sql<boolean>`bool_or(${foods.ironLevel} = 'high')`,
       vitaminCHigh: sql<boolean>`bool_or(${foods.vitaminCLevel} = 'high')`,
+      fiberHigh: sql<boolean>`bool_or(${foods.fiberLevel} = 'high')`,
     })
     .from(recipeIngredients)
     .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
@@ -59,11 +68,18 @@ export async function loadRecipeNutrition(
     .groupBy(recipeIngredients.recipeId);
 
   return new Map(
-    rows.map((row) => [row.recipeId, { ironHigh: row.ironHigh === true, vitaminCHigh: row.vitaminCHigh === true }]),
+    rows.map((row) => [
+      row.recipeId,
+      {
+        ironHigh: row.ironHigh === true,
+        vitaminCHigh: row.vitaminCHigh === true,
+        fiberHigh: row.fiberHigh === true,
+      },
+    ]),
   );
 }
 
-/** Map lookup that treats "no ingredients" as "neither badge". */
+/** Map lookup that treats "no ingredients" as "no badges". */
 export function nutritionFor(byRecipeId: Map<string, RecipeNutritionFlags>, recipeId: string): RecipeNutritionFlags {
   return byRecipeId.get(recipeId) ?? NO_RECIPE_NUTRITION;
 }
@@ -75,8 +91,11 @@ export function deriveIronFocus(storedIronFocus: boolean, flags: RecipeNutrition
 }
 
 /** Recipe ids with at least one ingredient food at the given level — the
- * subquery both filters below are built on. */
-function recipeIdsWithHighLevel(db: Database, column: typeof foods.ironLevel | typeof foods.vitaminCLevel) {
+ * subquery all three filters below are built on. */
+function recipeIdsWithHighLevel(
+  db: Database,
+  column: typeof foods.ironLevel | typeof foods.vitaminCLevel | typeof foods.fiberLevel,
+) {
   return db
     .select({ recipeId: recipeIngredients.recipeId })
     .from(recipeIngredients)
@@ -108,4 +127,12 @@ export function ironFocusFilter(db: Database, wanted: boolean): SQL {
 export function vitaminCHighFilter(db: Database, wanted: boolean): SQL {
   const withHighVitaminC = recipeIdsWithHighLevel(db, foods.vitaminCLevel);
   return wanted ? inArray(recipes.id, withHighVitaminC) : notInArray(recipes.id, withHighVitaminC);
+}
+
+/** The fiber twin of `vitaminCHighFilter`. Also purely derived — nothing is
+ * stored on the recipe — so it is the same in/not-in on the same join, read
+ * off `foods.fiber_level` instead. */
+export function fiberHighFilter(db: Database, wanted: boolean): SQL {
+  const withHighFiber = recipeIdsWithHighLevel(db, foods.fiberLevel);
+  return wanted ? inArray(recipes.id, withHighFiber) : notInArray(recipes.id, withHighFiber);
 }

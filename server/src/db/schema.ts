@@ -142,6 +142,10 @@ export const foods = pgTable(
     category: foodCategoryEnum("category").notNull(),
     ironLevel: levelEnum("iron_level").notNull(),
     vitaminCLevel: levelEnum("vitamin_c_level").notNull(),
+    // Added after the catalog had rows, so unlike its iron/vitamin-C siblings
+    // it carries a DEFAULT: `low` is what migration 0008 backfills existing
+    // foods with, and what a custom food keeps (see CUSTOM_FOOD_PLACEHOLDERS).
+    fiberLevel: levelEnum("fiber_level").notNull().default("low"),
     chokingRisk: levelEnum("choking_risk").notNull(),
     minAgeMonths: integer("min_age_months").notNull(),
     prep6m: text("prep_6m").notNull(),

@@ -246,7 +246,8 @@ function buildSearchRecipesTool(db: Database, userId: string) {
       if (trimmedQuery) conditions.push(ilike(recipes.title, `%${trimmedQuery}%`));
 
       // ironFocus is DERIVED (stored flag OR a high-iron ingredient), the
-      // same value the list, detail, and favorites routes report — so the
+      // same value the list, detail, and favorites routes report (and so is
+      // the fiberHigh added to each row below) — so the
       // assistant ranks a custom beef recipe as iron-rich too. Derivation
       // needs the ingredient join, so rank in memory over a bounded
       // candidate set rather than ordering by the raw column.
@@ -264,8 +265,17 @@ function buildSearchRecipesTool(db: Database, userId: string) {
         db,
         candidates.map((row) => row.id),
       );
+      // `fiberHigh` rides along on the same batch — a parent asking about
+      // constipation gets to see which matches are high-fiber without the
+      // assistant guessing from the title. It never reorders the list;
+      // iron-first ranking is unchanged.
       const rows = candidates
-        .map((row) => ({ ...row, ironFocus: deriveIronFocus(row.ironFocus, nutritionFor(nutrition, row.id)) }))
+        .map((row) => ({
+          ...row,
+          ironFocus: deriveIronFocus(row.ironFocus, nutritionFor(nutrition, row.id)),
+          fiberHigh: nutritionFor(nutrition, row.id).fiberHigh,
+          vitaminCHigh: nutritionFor(nutrition, row.id).vitaminCHigh,
+        }))
         .sort((a, b) => Number(b.ironFocus) - Number(a.ironFocus) || a.title.localeCompare(b.title))
         .slice(0, 5);
       return JSON.stringify({ recipes: rows });

@@ -22,6 +22,7 @@ function catalogFood(overrides: Partial<FoodDetail> = {}): FoodDetail {
     category: "protein",
     ironLevel: "high",
     vitaminCLevel: "low",
+    fiberLevel: "low",
     chokingRisk: "moderate",
     minAgeMonths: 6,
     allergens: ["fish"],
@@ -48,6 +49,7 @@ const CUSTOM_FOOD = catalogFood({
   // in the NOT NULL columns, empty prep text.
   ironLevel: "low",
   vitaminCLevel: "low",
+  fiberLevel: "low",
   chokingRisk: "low",
   allergens: ["wheat", "egg"],
   isCustom: true,
@@ -89,6 +91,14 @@ describe("FoodDetailPage — catalog food (unchanged)", () => {
     expect(html).toMatch(/Iron(?:<!-- -->)?\s*(?:<!-- -->)?High/);
   });
 
+  // Item 279: the "High fiber" badge lives on the food PAGE only — the grid
+  // tiles stay badge-free (see FoodTile.test.ts).
+  it("badges a high-fiber catalog food, and says nothing at a lower level", () => {
+    expect(renderFood(catalogFood({ fiberLevel: "high" }))).toContain(">High fiber<");
+    expect(renderFood(catalogFood({ fiberLevel: "moderate" }))).not.toContain("High fiber");
+    expect(renderFood(catalogFood({ fiberLevel: "low" }))).not.toContain("High fiber");
+  });
+
   it("offers no Custom badge, no soft note, and no Edit/Delete — nobody owns it", () => {
     const html = renderFood(catalogFood());
     expect(html).not.toContain(">Custom<");
@@ -99,11 +109,12 @@ describe("FoodDetailPage — catalog food (unchanged)", () => {
 });
 
 describe("FoodDetailPage — custom food (item 181)", () => {
-  it("badges it Custom and drops the iron / vitamin-C badges", () => {
+  it("badges it Custom and drops the iron / vitamin-C / fiber badges", () => {
     const html = renderFood(CUSTOM_FOOD);
     expect(html).toContain(">Custom<");
     expect(html).not.toContain("Iron ");
     expect(html).not.toContain("Vit C ");
+    expect(html).not.toContain("High fiber");
     // The parent's own allergen ticks stay — they're what allergen tracking counts.
     expect(html).toContain(">Wheat<");
     expect(html).toContain(">Egg<");

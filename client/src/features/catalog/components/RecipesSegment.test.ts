@@ -23,6 +23,7 @@ function recipe(overrides: Partial<RecipeListItem> = {}): RecipeListItem {
     minAgeMonths: 6,
     ironFocus: false,
     vitaminCHigh: false,
+    fiberHigh: false,
     allergens: [],
     isCustom: false,
     isFavorite: false,
@@ -74,6 +75,7 @@ describe("RecipeCard", () => {
     expect(html).not.toContain(">Iron<");
     expect(html).not.toContain(">Custom<");
     expect(html).not.toContain(">Vit C<");
+    expect(html).not.toContain(">Fiber<");
   });
 
   it("badges high vitamin C beside iron, and a row with both carries both", () => {
@@ -107,6 +109,22 @@ describe("RecipeCard", () => {
     const html = renderCard(recipe({ vitaminCHigh: true }));
     expect(html).toMatch(
       /class="[^"]*bg-\[var\(--color-caution-soft\)\][^"]*text-\[var\(--color-caution-soft-text\)\][^"]*"[^>]*>Vit C</,
+    );
+  });
+
+  // Item 279: fiber is the third derived nutrition flag, badged "Fiber" on
+  // the row and only when the server says the recipe is high in it.
+  it("badges high fiber after vitamin C, and only when the flag is on", () => {
+    const on = renderCard(recipe({ ironFocus: true, vitaminCHigh: true, fiberHigh: true }));
+    expect(on).toContain(">Fiber<");
+    expect(on.indexOf(">Fiber<")).toBeGreaterThan(on.indexOf(">Vit C<"));
+    expect(renderCard(recipe({ fiberHigh: false }))).not.toContain(">Fiber<");
+  });
+
+  it("gives the Fiber badge the success tone's classes, not just its text", () => {
+    const html = renderCard(recipe({ fiberHigh: true }));
+    expect(html).toMatch(
+      /class="[^"]*bg-\[var\(--color-success-soft\)\][^"]*text-\[var\(--color-success-soft-text\)\][^"]*"[^>]*>Fiber</,
     );
   });
 
@@ -189,10 +207,11 @@ describe("buildRecipesFilters (what the list actually requests)", () => {
     allergen: "egg",
     ironFocus: true,
     vitaminCHigh: true,
+    fiberHigh: true,
     ingredientFoodId: "food-1",
   };
 
-  it("forwards every filter, iron focus and high vitamin C independently, and trims the search", () => {
+  it("forwards every filter, iron focus, high vitamin C and high fiber independently, and trims the search", () => {
     expect(buildRecipesFilters(everything)).toEqual({
       q: "mash",
       scope: "custom",
@@ -200,13 +219,17 @@ describe("buildRecipesFilters (what the list actually requests)", () => {
       allergen: "egg",
       ironFocus: true,
       vitaminCHigh: true,
+      fiberHigh: true,
       ingredientFoodId: "food-1",
     });
-    // Each toggle on its own — neither implies the other.
+    // Each toggle on its own — none implies another.
     expect(buildRecipesFilters({ ...everything, ironFocus: false }).ironFocus).toBeUndefined();
     expect(buildRecipesFilters({ ...everything, ironFocus: false }).vitaminCHigh).toBe(true);
     expect(buildRecipesFilters({ ...everything, vitaminCHigh: false }).vitaminCHigh).toBeUndefined();
     expect(buildRecipesFilters({ ...everything, vitaminCHigh: false }).ironFocus).toBe(true);
+    expect(buildRecipesFilters({ ...everything, fiberHigh: false }).fiberHigh).toBeUndefined();
+    expect(buildRecipesFilters({ ...everything, fiberHigh: false }).vitaminCHigh).toBe(true);
+    expect(buildRecipesFilters({ ...everything, vitaminCHigh: false }).fiberHigh).toBe(true);
   });
 
   it("omits off toggles and blank text so the server applies no exact-match filter", () => {
@@ -217,9 +240,10 @@ describe("buildRecipesFilters (what the list actually requests)", () => {
       allergen: undefined,
       ironFocus: false,
       vitaminCHigh: false,
+      fiberHigh: false,
       ingredientFoodId: "",
     });
-    expect(off).toEqual({ q: undefined, scope: "all", maxAgeMonths: undefined, allergen: undefined, ironFocus: undefined, vitaminCHigh: undefined, ingredientFoodId: undefined });
+    expect(off).toEqual({ q: undefined, scope: "all", maxAgeMonths: undefined, allergen: undefined, ironFocus: undefined, vitaminCHigh: undefined, fiberHigh: undefined, ingredientFoodId: undefined });
   });
 });
 
@@ -227,14 +251,21 @@ describe("activeRecipeFilters (funnel count + pill row share this)", () => {
   it("yields one labelled pill per set filter, in display order, and nothing when none are set", () => {
     expect(activeRecipeFilters(EMPTY_RECIPE_FILTERS)).toEqual([]);
     const pills = activeRecipeFilters(
-      { maxAgeMonths: 9, allergen: "egg", ironFocus: true, vitaminCHigh: true, ingredientFoodId: "food-1" },
+      { maxAgeMonths: 9, allergen: "egg", ironFocus: true, vitaminCHigh: true, fiberHigh: true, ingredientFoodId: "food-1" },
       "Broccoli",
     );
-    expect(pills.map((p) => p.key)).toEqual(["maxAgeMonths", "allergen", "ironFocus", "vitaminCHigh", "ingredientFoodId"]);
-    expect(pills.map((p) => p.label)).toEqual(["9m+", "Egg", "Iron focus", "High vitamin C", "Broccoli"]);
+    expect(pills.map((p) => p.key)).toEqual([
+      "maxAgeMonths",
+      "allergen",
+      "ironFocus",
+      "vitaminCHigh",
+      "fiberHigh",
+      "ingredientFoodId",
+    ]);
+    expect(pills.map((p) => p.label)).toEqual(["9m+", "Egg", "Iron focus", "High vitamin C", "High fiber", "Broccoli"]);
   });
 
-  it("counts iron focus and high vitamin C independently — a row can carry either, neither, or both", () => {
+  it("counts the three nutrition toggles independently — a row can carry any, none, or all", () => {
     expect(
       activeRecipeFilters({ ...EMPTY_RECIPE_FILTERS, ironFocus: true }),
     ).toEqual([{ key: "ironFocus", label: "Iron focus" }]);
@@ -242,10 +273,14 @@ describe("activeRecipeFilters (funnel count + pill row share this)", () => {
       activeRecipeFilters({ ...EMPTY_RECIPE_FILTERS, vitaminCHigh: true }),
     ).toEqual([{ key: "vitaminCHigh", label: "High vitamin C" }]);
     expect(
-      activeRecipeFilters({ ...EMPTY_RECIPE_FILTERS, ironFocus: true, vitaminCHigh: true }),
+      activeRecipeFilters({ ...EMPTY_RECIPE_FILTERS, fiberHigh: true }),
+    ).toEqual([{ key: "fiberHigh", label: "High fiber" }]);
+    expect(
+      activeRecipeFilters({ ...EMPTY_RECIPE_FILTERS, ironFocus: true, vitaminCHigh: true, fiberHigh: true }),
     ).toEqual([
       { key: "ironFocus", label: "Iron focus" },
       { key: "vitaminCHigh", label: "High vitamin C" },
+      { key: "fiberHigh", label: "High fiber" },
     ]);
   });
 
@@ -269,23 +304,40 @@ function renderFilterGroups(props: Omit<Parameters<typeof RecipeFilterGroups>[0]
 }
 
 describe("RecipeFilterGroups (the sheet's chip groups, rendered open)", () => {
-  it("renders a Nutrition group holding both toggles, with vitamin C pressed beside iron focus", () => {
+  it("renders a Nutrition group holding all three toggles, with vitamin C pressed beside iron focus and high fiber", () => {
     const html = renderFilterGroups({
       maxAgeMonths: undefined,
       allergen: undefined,
       ironFocus: false,
       vitaminCHigh: true,
+      fiberHigh: false,
       ingredientFoodId: "",
     });
     const nutrition = html.indexOf(">Nutrition<");
     expect(nutrition).toBeGreaterThan(-1);
     expect(html).toMatch(/aria-pressed="false"[^>]*>Iron focus</);
     expect(html).toMatch(/aria-pressed="true"[^>]*>High vitamin C</);
-    // Both toggles live in the same group, after the heading.
+    expect(html).toMatch(/aria-pressed="false"[^>]*>High fiber</);
+    // All three toggles live in the same group, after the heading, fiber last.
     const ironFocusIdx = html.indexOf(">Iron focus<");
     const vitCIdx = html.indexOf(">High vitamin C<");
+    const fiberIdx = html.indexOf(">High fiber<");
     expect(ironFocusIdx).toBeGreaterThan(nutrition);
     expect(vitCIdx).toBeGreaterThan(ironFocusIdx);
+    expect(fiberIdx).toBeGreaterThan(vitCIdx);
+  });
+
+  it("presses the High fiber chip when the filter is on", () => {
+    const html = renderFilterGroups({
+      maxAgeMonths: undefined,
+      allergen: undefined,
+      ironFocus: false,
+      vitaminCHigh: false,
+      fiberHigh: true,
+      ingredientFoodId: "",
+    });
+    expect(html).toMatch(/aria-pressed="true"[^>]*>High fiber</);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>High vitamin C</);
   });
 
   it("renders the age, allergen and ingredient-picker groups too", () => {
@@ -294,6 +346,7 @@ describe("RecipeFilterGroups (the sheet's chip groups, rendered open)", () => {
       allergen: "egg",
       ironFocus: false,
       vitaminCHigh: false,
+      fiberHigh: false,
       ingredientFoodId: "",
     });
     expect(html).toContain(">Age<");
@@ -308,6 +361,7 @@ describe("EMPTY_RECIPE_FILTERS (what Clear all applies)", () => {
   it("has every key off", () => {
     expect(Object.keys(EMPTY_RECIPE_FILTERS).sort()).toEqual([
       "allergen",
+      "fiberHigh",
       "ingredientFoodId",
       "ironFocus",
       "maxAgeMonths",
@@ -317,6 +371,7 @@ describe("EMPTY_RECIPE_FILTERS (what Clear all applies)", () => {
     expect(EMPTY_RECIPE_FILTERS.allergen).toBeUndefined();
     expect(EMPTY_RECIPE_FILTERS.ironFocus).toBe(false);
     expect(EMPTY_RECIPE_FILTERS.vitaminCHigh).toBe(false);
+    expect(EMPTY_RECIPE_FILTERS.fiberHigh).toBe(false);
     expect(EMPTY_RECIPE_FILTERS.ingredientFoodId).toBe("");
     expect(activeRecipeFilters(EMPTY_RECIPE_FILTERS)).toEqual([]);
   });

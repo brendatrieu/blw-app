@@ -15,6 +15,7 @@ function food(overrides: Partial<FoodListItem> = {}): FoodListItem {
     category: "fruit",
     ironLevel: "low",
     vitaminCLevel: "moderate",
+    fiberLevel: "low",
     chokingRisk: "moderate",
     minAgeMonths: 6,
     allergens: [],

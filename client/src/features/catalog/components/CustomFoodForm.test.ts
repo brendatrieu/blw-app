@@ -26,6 +26,7 @@ function customFood(overrides: Partial<FoodDetail> = {}): FoodDetail {
     category: "grain",
     ironLevel: "low",
     vitaminCLevel: "low",
+    fiberLevel: "low",
     chokingRisk: "low",
     minAgeMonths: 6,
     allergens: ["wheat", "egg"],

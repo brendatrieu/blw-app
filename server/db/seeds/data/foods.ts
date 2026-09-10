@@ -13,6 +13,7 @@ export const foods: FoodSeed[] = [
     category: 'protein',
     ironLevel: 'high',
     vitaminCLevel: 'low',
+    fiberLevel: 'low',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -32,6 +33,7 @@ export const foods: FoodSeed[] = [
     category: 'protein',
     ironLevel: 'moderate',
     vitaminCLevel: 'low',
+    fiberLevel: 'low',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -51,6 +53,7 @@ export const foods: FoodSeed[] = [
     category: 'protein',
     ironLevel: 'moderate',
     vitaminCLevel: 'low',
+    fiberLevel: 'low',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -70,6 +73,7 @@ export const foods: FoodSeed[] = [
     category: 'protein',
     ironLevel: 'high',
     vitaminCLevel: 'low',
+    fiberLevel: 'low',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -89,6 +93,7 @@ export const foods: FoodSeed[] = [
     category: 'protein',
     ironLevel: 'moderate',
     vitaminCLevel: 'low',
+    fiberLevel: 'low',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -107,6 +112,7 @@ export const foods: FoodSeed[] = [
     category: 'legume',
     ironLevel: 'high',
     vitaminCLevel: 'low',
+    fiberLevel: 'high',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -125,6 +131,7 @@ export const foods: FoodSeed[] = [
     category: 'legume',
     ironLevel: 'moderate',
     vitaminCLevel: 'low',
+    fiberLevel: 'high',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -144,6 +151,7 @@ export const foods: FoodSeed[] = [
     category: 'legume',
     ironLevel: 'moderate',
     vitaminCLevel: 'low',
+    fiberLevel: 'high',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -163,6 +171,7 @@ export const foods: FoodSeed[] = [
     category: 'protein',
     ironLevel: 'high',
     vitaminCLevel: 'low',
+    fiberLevel: 'moderate',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -182,6 +191,7 @@ export const foods: FoodSeed[] = [
     category: 'grain',
     ironLevel: 'high',
     vitaminCLevel: 'low',
+    fiberLevel: 'moderate',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -200,6 +210,7 @@ export const foods: FoodSeed[] = [
     category: 'veg',
     ironLevel: 'high',
     vitaminCLevel: 'moderate',
+    fiberLevel: 'moderate',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -219,6 +230,7 @@ export const foods: FoodSeed[] = [
     category: 'grain',
     ironLevel: 'moderate',
     vitaminCLevel: 'low',
+    fiberLevel: 'moderate',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -240,6 +252,7 @@ export const foods: FoodSeed[] = [
     category: 'veg',
     ironLevel: 'low',
     vitaminCLevel: 'high',
+    fiberLevel: 'high',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -259,6 +272,7 @@ export const foods: FoodSeed[] = [
     category: 'veg',
     ironLevel: 'low',
     vitaminCLevel: 'high',
+    fiberLevel: 'low',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -278,6 +292,7 @@ export const foods: FoodSeed[] = [
     category: 'fruit',
     ironLevel: 'low',
     vitaminCLevel: 'high',
+    fiberLevel: 'moderate',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -297,6 +312,7 @@ export const foods: FoodSeed[] = [
     category: 'fruit',
     ironLevel: 'low',
     vitaminCLevel: 'high',
+    fiberLevel: 'moderate',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -316,6 +332,7 @@ export const foods: FoodSeed[] = [
     category: 'fruit',
     ironLevel: 'low',
     vitaminCLevel: 'high',
+    fiberLevel: 'high',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -334,6 +351,7 @@ export const foods: FoodSeed[] = [
     category: 'fruit',
     ironLevel: 'low',
     vitaminCLevel: 'moderate',
+    fiberLevel: 'moderate',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -353,6 +371,7 @@ export const foods: FoodSeed[] = [
     category: 'veg',
     ironLevel: 'low',
     vitaminCLevel: 'moderate',
+    fiberLevel: 'low',
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
@@ -372,6 +391,7 @@ export const foods: FoodSeed[] = [
     category: 'veg',
     ironLevel: 'low',
     vitaminCLevel: 'moderate',
+    fiberLevel: 'high',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -390,6 +410,7 @@ export const foods: FoodSeed[] = [
     category: 'veg',
     ironLevel: 'low',
     vitaminCLevel: 'moderate',
+    fiberLevel: 'high',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -410,6 +431,7 @@ export const foods: FoodSeed[] = [
     category: 'protein',
     ironLevel: 'moderate',
     vitaminCLevel: 'low',
+    fiberLevel: 'high',
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
@@ -429,6 +451,7 @@ export const foods: FoodSeed[] = [
     category: 'protein',
     ironLevel: 'moderate',
     vitaminCLevel: 'low',
+    fiberLevel: 'high',
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
@@ -448,6 +471,7 @@ export const foods: FoodSeed[] = [
     category: 'protein',
     ironLevel: 'high',
     vitaminCLevel: 'low',
+    fiberLevel: 'high',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -467,6 +491,7 @@ export const foods: FoodSeed[] = [
     category: 'dairy',
     ironLevel: 'low',
     vitaminCLevel: 'low',
+    fiberLevel: 'low',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -485,6 +510,7 @@ export const foods: FoodSeed[] = [
     category: 'dairy',
     ironLevel: 'low',
     vitaminCLevel: 'low',
+    fiberLevel: 'low',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -504,6 +530,7 @@ export const foods: FoodSeed[] = [
     category: 'grain',
     ironLevel: 'low',
     vitaminCLevel: 'low',
+    fiberLevel: 'high',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -523,6 +550,7 @@ export const foods: FoodSeed[] = [
     category: 'grain',
     ironLevel: 'low',
     vitaminCLevel: 'low',
+    fiberLevel: 'moderate',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -541,6 +569,7 @@ export const foods: FoodSeed[] = [
     category: 'protein',
     ironLevel: 'low',
     vitaminCLevel: 'low',
+    fiberLevel: 'low',
     chokingRisk: 'moderate',
     minAgeMonths: 9,
     prep6m:
@@ -562,6 +591,7 @@ export const foods: FoodSeed[] = [
     category: 'fruit',
     ironLevel: 'low',
     vitaminCLevel: 'moderate',
+    fiberLevel: 'high',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -580,6 +610,7 @@ export const foods: FoodSeed[] = [
     category: 'fruit',
     ironLevel: 'low',
     vitaminCLevel: 'low',
+    fiberLevel: 'moderate',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -598,6 +629,7 @@ export const foods: FoodSeed[] = [
     category: 'fruit',
     ironLevel: 'low',
     vitaminCLevel: 'moderate',
+    fiberLevel: 'moderate',
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
@@ -616,6 +648,7 @@ export const foods: FoodSeed[] = [
     category: 'fruit',
     ironLevel: 'low',
     vitaminCLevel: 'moderate',
+    fiberLevel: 'high',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -634,6 +667,7 @@ export const foods: FoodSeed[] = [
     category: 'fruit',
     ironLevel: 'low',
     vitaminCLevel: 'moderate',
+    fiberLevel: 'moderate',
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
@@ -652,6 +686,7 @@ export const foods: FoodSeed[] = [
     category: 'veg',
     ironLevel: 'low',
     vitaminCLevel: 'low',
+    fiberLevel: 'high',
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
@@ -670,6 +705,7 @@ export const foods: FoodSeed[] = [
     category: 'veg',
     ironLevel: 'low',
     vitaminCLevel: 'moderate',
+    fiberLevel: 'low',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -687,6 +723,7 @@ export const foods: FoodSeed[] = [
     category: 'veg',
     ironLevel: 'low',
     vitaminCLevel: 'moderate',
+    fiberLevel: 'high',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -705,6 +742,7 @@ export const foods: FoodSeed[] = [
     category: 'veg',
     ironLevel: 'moderate',
     vitaminCLevel: 'high',
+    fiberLevel: 'high',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
@@ -724,6 +762,7 @@ export const foods: FoodSeed[] = [
     category: 'grain',
     ironLevel: 'low',
     vitaminCLevel: 'low',
+    fiberLevel: 'low',
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
@@ -742,6 +781,7 @@ export const foods: FoodSeed[] = [
     category: 'fruit',
     ironLevel: 'low',
     vitaminCLevel: 'moderate',
+    fiberLevel: 'low',
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:

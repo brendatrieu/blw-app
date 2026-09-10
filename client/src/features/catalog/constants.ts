@@ -25,6 +25,12 @@ export const VITAMIN_C_LEVELS: { value: Level; label: string }[] = [
   { value: "low", label: "Low vitamin C" },
 ];
 
+export const FIBER_LEVELS: { value: Level; label: string }[] = [
+  { value: "high", label: "High fiber" },
+  { value: "moderate", label: "Moderate fiber" },
+  { value: "low", label: "Low fiber" },
+];
+
 export const ALLERGEN_SLUGS: { value: string; label: string }[] = [
   { value: "milk", label: "Milk" },
   { value: "egg", label: "Egg" },

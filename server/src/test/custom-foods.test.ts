@@ -169,6 +169,7 @@ describe("custom foods", () => {
         // Placeholders, never shown: the client reads isCustom and hides them.
         ironLevel: "low",
         vitaminCLevel: "low",
+        fiberLevel: "low",
         chokingRisk: "low",
         minAgeMonths: 6,
         prep6m: "",

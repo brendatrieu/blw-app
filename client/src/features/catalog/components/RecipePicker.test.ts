@@ -14,6 +14,7 @@ function recipe(overrides: Partial<RecipeListItem> = {}): RecipeListItem {
     minAgeMonths: 6,
     ironFocus: false,
     vitaminCHigh: false,
+    fiberHigh: false,
     allergens: [],
     isCustom: false,
     isFavorite: false,

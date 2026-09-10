@@ -43,6 +43,7 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
         {isBasicRecipe(recipe.ingredientNames.length) && <Badge tone="neutral">{BASIC_RECIPE_LABEL}</Badge>}
         {recipe.ironFocus && <Badge tone="primary">Iron</Badge>}
         {recipe.vitaminCHigh && <Badge tone="sunshine">Vit C</Badge>}
+        {recipe.fiberHigh && <Badge tone="leaf">Fiber</Badge>}
         {recipe.isCustom && <Badge tone="neutral">Custom</Badge>}
         {recipe.allergens.map((slug) => (
           <Badge key={slug} tone="danger">
@@ -81,6 +82,7 @@ export interface ExtraRecipeFilters {
   allergen: string | undefined;
   ironFocus: boolean;
   vitaminCHigh: boolean;
+  fiberHigh: boolean;
   ingredientFoodId: string;
 }
 
@@ -94,6 +96,7 @@ export const EMPTY_RECIPE_FILTERS: ExtraRecipeFilters = {
   allergen: undefined,
   ironFocus: false,
   vitaminCHigh: false,
+  fiberHigh: false,
   ingredientFoodId: "",
 };
 
@@ -105,8 +108,8 @@ interface RecipesFilterState extends ExtraRecipeFilters {
 
 /**
  * The segment's control state -> the request filters `useRecipes` sends.
- * Pure and exported so the one rule that's easy to drop — `ironFocus` and
- * `vitaminCHigh` are both exact-match toggles, so "off" must OMIT the key
+ * Pure and exported so the one rule that's easy to drop — `ironFocus`,
+ * `vitaminCHigh` and `fiberHigh` are all exact-match toggles, so "off" must OMIT the key
  * rather than send `false` (see `buildRecipesQueryString`) — is pinned by a
  * test instead of by reading this component.
  */
@@ -118,6 +121,7 @@ export function buildRecipesFilters(state: RecipesFilterState): RecipeFilters {
     allergen: state.allergen,
     ironFocus: state.ironFocus || undefined,
     vitaminCHigh: state.vitaminCHigh || undefined,
+    fiberHigh: state.fiberHigh || undefined,
     ingredientFoodId: state.ingredientFoodId || undefined,
   };
 }
@@ -125,7 +129,7 @@ export function buildRecipesFilters(state: RecipesFilterState): RecipeFilters {
 /**
  * The filters that live behind the funnel button, resolved to the pills the
  * page shows — one entry per set filter, in display order (age, allergen,
- * iron focus, high vitamin C, ingredient). Pure, so the funnel count and the
+ * iron focus, high vitamin C, high fiber, ingredient). Pure, so the funnel count and the
  * pill row can't disagree and both are testable without opening the
  * (node-env-invisible) Sheet. `ingredientName` is the only piece that isn't
  * static — it's the picked food's name, resolved by the caller — so it's a
@@ -143,6 +147,7 @@ export function activeRecipeFilters(
   if (filters.allergen) pills.push({ key: "allergen", label: allergenLabel(filters.allergen) });
   if (filters.ironFocus) pills.push({ key: "ironFocus", label: "Iron focus" });
   if (filters.vitaminCHigh) pills.push({ key: "vitaminCHigh", label: "High vitamin C" });
+  if (filters.fiberHigh) pills.push({ key: "fiberHigh", label: "High fiber" });
   if (filters.ingredientFoodId) {
     pills.push({ key: "ingredientFoodId", label: ingredientName ?? "Ingredient" });
   }
@@ -153,8 +158,8 @@ interface RecipeFilterGroupsProps extends ExtraRecipeFilters {
   onChange: (next: ExtraRecipeFilters) => void;
 }
 
-/** The Filters sheet's chip groups, incl. the iron/vitamin C toggles under
- * "Nutrition" — exported so tests can render them open. */
+/** The Filters sheet's chip groups, incl. the iron/vitamin C/fiber toggles
+ * under "Nutrition" — exported so tests can render them open. */
 export function RecipeFilterGroups({ onChange, ...filters }: RecipeFilterGroupsProps) {
   const set = (patch: Partial<ExtraRecipeFilters>) => onChange({ ...filters, ...patch });
 
@@ -204,6 +209,11 @@ export function RecipeFilterGroups({ onChange, ...filters }: RecipeFilterGroupsP
             active={filters.vitaminCHigh}
             onClick={() => set({ vitaminCHigh: !filters.vitaminCHigh })}
           />
+          <FilterChip
+            label="High fiber"
+            active={filters.fiberHigh}
+            onClick={() => set({ fiberHigh: !filters.fiberHigh })}
+          />
         </div>
       </div>
 
@@ -225,7 +235,7 @@ export function RecipeFilterGroups({ onChange, ...filters }: RecipeFilterGroupsP
 /**
  * The Recipes half of the Foods page (item 210): search, the All ·
  * Favorites · Custom scope chips, and a funnel sheet for age, allergen,
- * iron focus, high vitamin C and "contains ingredient". Every filter is
+ * iron focus, high vitamin C, high fiber and "contains ingredient". Every filter is
  * applied server-side by `GET /api/recipes`, so this component holds only
  * the filter state and the query key built from it.
  */

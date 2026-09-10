@@ -360,6 +360,8 @@ export const favoriteItemSchema = z.object({
   /** Derived the same way the recipes list derives it — see
    * `GET /api/favorites`. */
   vitaminCHigh: z.boolean(),
+  /** Derived the same way the recipes list derives it. */
+  fiberHigh: z.boolean(),
   allergens: z.array(z.string()),
 });
 export type FavoriteItem = z.infer<typeof favoriteItemSchema>;

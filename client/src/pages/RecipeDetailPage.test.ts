@@ -17,6 +17,7 @@ function catalogRecipe(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
     prepMinutes: 15,
     ironFocus: true,
     vitaminCHigh: false,
+    fiberHigh: false,
     imageUrl: null,
     fridgeHoursOverride: null,
     freezerDaysOverride: null,
@@ -114,6 +115,21 @@ describe("RecipeDetailPage (catalog recipe)", () => {
     const html = renderRecipe(catalogRecipe({ vitaminCHigh: true }));
     expect(html).toMatch(
       /class="[^"]*bg-\[var\(--color-caution-soft\)\][^"]*text-\[var\(--color-caution-soft-text\)\][^"]*"[^>]*>Vit C</,
+    );
+  });
+
+  // Item 279: the third derived nutrition flag, badged "Fiber" in the header.
+  it("badges high fiber after Vit C in the header, and only when the flag is on", () => {
+    const on = renderRecipe(catalogRecipe({ ironFocus: true, vitaminCHigh: true, fiberHigh: true }));
+    expect(on).toContain(">Fiber<");
+    expect(on.indexOf(">Fiber<")).toBeGreaterThan(on.indexOf(">Vit C<"));
+    expect(renderRecipe(catalogRecipe({ fiberHigh: false }))).not.toContain(">Fiber<");
+  });
+
+  it("gives the Fiber badge the success tone's classes, not just its text", () => {
+    const html = renderRecipe(catalogRecipe({ fiberHigh: true }));
+    expect(html).toMatch(
+      /class="[^"]*bg-\[var\(--color-success-soft\)\][^"]*text-\[var\(--color-success-soft-text\)\][^"]*"[^>]*>Fiber</,
     );
   });
 

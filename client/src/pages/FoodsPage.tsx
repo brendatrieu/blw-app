@@ -10,6 +10,7 @@ import {
   CATEGORIES,
   IRON_LEVELS,
   VITAMIN_C_LEVELS,
+  FIBER_LEVELS,
   RECIPES_TAB_PATH,
   addCustomFoodLabel,
   allergenLabel,
@@ -52,6 +53,7 @@ export interface ExtraFoodFilters {
   allergen: string | undefined;
   ironLevel: Level | undefined;
   vitaminCLevel: Level | undefined;
+  fiberLevel: Level | undefined;
   maxAgeMonths: number | undefined;
 }
 
@@ -62,8 +64,42 @@ export const EMPTY_EXTRA_FILTERS: ExtraFoodFilters = {
   allergen: undefined,
   ironLevel: undefined,
   vitaminCLevel: undefined,
+  fiberLevel: undefined,
   maxAgeMonths: undefined,
 };
+
+const LEVEL_VALUES = ["high", "moderate", "low"] as const;
+
+/** A `?…Level=` param narrowed to a `Level`, or undefined for anything else
+ * (absent, blank, "HIGH", a typo) — a bad value is ignored, never rendered
+ * as a chip that matches nothing. */
+function levelParam(raw: string | null): Level | undefined {
+  return LEVEL_VALUES.find((level) => level === raw);
+}
+
+/**
+ * The funnel state a link into this page asks for (item 280): the tummy
+ * article's constipation section points at `/foods?fiberLevel=high`, and
+ * `?ironLevel=`, `?vitaminCLevel=` and `?allergen=` work the same way so a
+ * link can preset any of the level filters rather than only the one that
+ * happened to need it first.
+ *
+ * Pure, and total: anything unrecognised (a bad level, an allergen slug the
+ * chips don't have) falls back to that filter being off, so a hand-edited URL
+ * lands on the plain catalog rather than an empty grid nobody can explain.
+ * `maxAgeMonths` deliberately isn't read — the age chips are a browsing aid,
+ * and no link in the app or the corpus asks for one.
+ */
+export function initialExtraFiltersFromSearch(params: URLSearchParams): ExtraFoodFilters {
+  const allergen = params.get("allergen");
+  return {
+    ...EMPTY_EXTRA_FILTERS,
+    allergen: ALLERGEN_SLUGS.some((a) => a.value === allergen) ? (allergen ?? undefined) : undefined,
+    ironLevel: levelParam(params.get("ironLevel")),
+    vitaminCLevel: levelParam(params.get("vitaminCLevel")),
+    fiberLevel: levelParam(params.get("fiberLevel")),
+  };
+}
 
 /** The request the grid makes: search + category + every funnel filter. */
 export function buildFoodsFilters(q: string, category: FoodCategory | undefined, extra: ExtraFoodFilters): FoodsQuery {
@@ -73,6 +109,7 @@ export function buildFoodsFilters(q: string, category: FoodCategory | undefined,
     allergen: extra.allergen,
     ironLevel: extra.ironLevel,
     vitaminCLevel: extra.vitaminCLevel,
+    fiberLevel: extra.fiberLevel,
     maxAgeMonths: extra.maxAgeMonths,
   };
 }
@@ -98,6 +135,12 @@ export function activeExtraFilters(filters: ExtraFoodFilters): Array<{ key: Extr
       label: VITAMIN_C_LEVELS.find((l) => l.value === filters.vitaminCLevel)?.label ?? filters.vitaminCLevel,
     });
   }
+  if (filters.fiberLevel) {
+    pills.push({
+      key: "fiberLevel",
+      label: FIBER_LEVELS.find((l) => l.value === filters.fiberLevel)?.label ?? filters.fiberLevel,
+    });
+  }
   if (filters.maxAgeMonths !== undefined) {
     const ageLabel = AGE_THRESHOLDS.find((a) => a.value === filters.maxAgeMonths)?.label;
     if (ageLabel) pills.push({ key: "maxAgeMonths", label: ageLabel });
@@ -114,7 +157,7 @@ export function FoodFilterGroups({ onChange, ...filters }: FoodFilterGroupsProps
   const set = (patch: Partial<ExtraFoodFilters>) => onChange({ ...filters, ...patch });
   const levelGroup = (
     label: string,
-    key: "ironLevel" | "vitaminCLevel",
+    key: "ironLevel" | "vitaminCLevel" | "fiberLevel",
     options: { value: Level; label: string }[],
   ) => (
     <div className="flex flex-col gap-1.5">
@@ -150,6 +193,7 @@ export function FoodFilterGroups({ onChange, ...filters }: FoodFilterGroupsProps
 
       {levelGroup("Iron", "ironLevel", IRON_LEVELS)}
       {levelGroup("Vitamin C", "vitaminCLevel", VITAMIN_C_LEVELS)}
+      {levelGroup("Fiber", "fiberLevel", FIBER_LEVELS)}
 
       <div className="flex flex-col gap-1.5">
         <span className="text-xs font-medium text-[var(--color-text-muted)]">Age</span>
@@ -178,17 +222,23 @@ export function FoodFilterGroups({ onChange, ...filters }: FoodFilterGroupsProps
  * so this page is the catalog alone again.
  */
 export function FoodsPage() {
+  const [searchParams] = useSearchParams();
+  // Read ONCE, on the first render (item 280): the funnel is state the parent
+  // then edits, so a later `?fiberLevel=` change would fight their taps. The
+  // lazy initializers make that literal — after mount the URL is ignored.
+  const [initial] = useState(() => initialExtraFiltersFromSearch(searchParams));
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<FoodCategory | undefined>(undefined);
-  const [allergen, setAllergen] = useState<string | undefined>(undefined);
-  const [ironLevel, setIronLevel] = useState<Level | undefined>(undefined);
-  const [vitaminCLevel, setVitaminCLevel] = useState<Level | undefined>(undefined);
-  const [maxAgeMonths, setMaxAgeMonths] = useState<number | undefined>(undefined);
+  const [allergen, setAllergen] = useState<string | undefined>(initial.allergen);
+  const [ironLevel, setIronLevel] = useState<Level | undefined>(initial.ironLevel);
+  const [vitaminCLevel, setVitaminCLevel] = useState<Level | undefined>(initial.vitaminCLevel);
+  const [fiberLevel, setFiberLevel] = useState<Level | undefined>(initial.fiberLevel);
+  const [maxAgeMonths, setMaxAgeMonths] = useState<number | undefined>(initial.maxAgeMonths);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const extraFilters = useMemo<ExtraFoodFilters>(
-    () => ({ allergen, ironLevel, vitaminCLevel, maxAgeMonths }),
-    [allergen, ironLevel, vitaminCLevel, maxAgeMonths],
+    () => ({ allergen, ironLevel, vitaminCLevel, fiberLevel, maxAgeMonths }),
+    [allergen, ironLevel, vitaminCLevel, fiberLevel, maxAgeMonths],
   );
   const filters = useMemo(() => buildFoodsFilters(q, category, extraFilters), [q, category, extraFilters]);
 
@@ -200,6 +250,7 @@ export function FoodsPage() {
     setAllergen(next.allergen);
     setIronLevel(next.ironLevel);
     setVitaminCLevel(next.vitaminCLevel);
+    setFiberLevel(next.fiberLevel);
     setMaxAgeMonths(next.maxAgeMonths);
   }
   const clearExtra = (key: ExtraFoodFilterKey) => applyExtra({ ...extraFilters, [key]: undefined });

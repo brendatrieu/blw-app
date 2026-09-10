@@ -40,6 +40,7 @@ async function seedFixtures(db: Database) {
         category: "protein",
         ironLevel: "moderate",
         vitaminCLevel: "low",
+        fiberLevel: "low",
         chokingRisk: "low",
         minAgeMonths: 6,
         prep6m: "mash",
@@ -53,6 +54,11 @@ async function seedFixtures(db: Database) {
         category: "veg",
         ironLevel: "high",
         vitaminCLevel: "moderate",
+        // The one high-fiber fixture food. Levels here are chosen to give
+        // each filter a distinct partition of the four foods, not to
+        // reproduce USDA numbers (see .workflow/scratch/fiber/sources.md for
+        // the real per-food values the SEED uses).
+        fiberLevel: "high",
         chokingRisk: "low",
         minAgeMonths: 6,
         prep6m: "puree",
@@ -66,6 +72,7 @@ async function seedFixtures(db: Database) {
         category: "fruit",
         ironLevel: "low",
         vitaminCLevel: "high",
+        fiberLevel: "moderate",
         chokingRisk: "moderate",
         minAgeMonths: 9,
         prep6m: "segment",
@@ -79,6 +86,7 @@ async function seedFixtures(db: Database) {
         category: "protein",
         ironLevel: "high",
         vitaminCLevel: "low",
+        fiberLevel: "low",
         chokingRisk: "moderate",
         minAgeMonths: 6,
         prep6m: "strip",
@@ -177,6 +185,59 @@ describe("catalog routes", () => {
     const response = await app.inject({ method: "GET", url: "/api/foods?ironLevel=high&vitaminCLevel=low" });
     const body = response.json() as FoodsResponse;
     expect(body.foods.map((f) => f.slug)).toEqual(["beef"]);
+  });
+
+  // -------------------------------------------------------------------------
+  // fiberLevel (ledger items 276-278) — the vitamin C twin: a plain column on
+  // foods, filtered the same way and composing with every other filter.
+  // -------------------------------------------------------------------------
+
+  it("GET /api/foods filters by fiberLevel — each level returns only matching foods", async () => {
+    const low = await app.inject({ method: "GET", url: "/api/foods?fiberLevel=low" });
+    expect((low.json() as FoodsResponse).foods.map((f) => f.slug).sort()).toEqual(["beef", "egg"]);
+
+    const moderate = await app.inject({ method: "GET", url: "/api/foods?fiberLevel=moderate" });
+    expect((moderate.json() as FoodsResponse).foods.map((f) => f.slug)).toEqual(["orange"]);
+
+    const high = await app.inject({ method: "GET", url: "/api/foods?fiberLevel=high" });
+    expect((high.json() as FoodsResponse).foods.map((f) => f.slug)).toEqual(["spinach"]);
+  });
+
+  it("GET /api/foods composes fiberLevel with ironLevel and vitaminCLevel", async () => {
+    // spinach and beef are both ironLevel=high; only spinach is fiberLevel=high.
+    const withIron = await app.inject({ method: "GET", url: "/api/foods?ironLevel=high&fiberLevel=high" });
+    expect((withIron.json() as FoodsResponse).foods.map((f) => f.slug)).toEqual(["spinach"]);
+
+    // ANDed with vitamin C too: spinach is vitaminCLevel=moderate, so asking
+    // for high vitamin C alongside high fiber matches nothing.
+    const withVitaminC = await app.inject({
+      method: "GET",
+      url: "/api/foods?fiberLevel=high&vitaminCLevel=high",
+    });
+    expect((withVitaminC.json() as FoodsResponse).foods).toEqual([]);
+
+    // All three at once, satisfiable: spinach is high iron, moderate vitamin
+    // C, high fiber.
+    const allThree = await app.inject({
+      method: "GET",
+      url: "/api/foods?ironLevel=high&vitaminCLevel=moderate&fiberLevel=high",
+    });
+    expect((allThree.json() as FoodsResponse).foods.map((f) => f.slug)).toEqual(["spinach"]);
+  });
+
+  it("GET /api/foods rejects an unknown fiberLevel", async () => {
+    const response = await app.inject({ method: "GET", url: "/api/foods?fiberLevel=enormous" });
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ error: "invalid_query" });
+  });
+
+  it("carries fiberLevel on both the list row and the detail body", async () => {
+    const list = await app.inject({ method: "GET", url: "/api/foods" });
+    const listed = (list.json() as FoodsResponse).foods.find((f) => f.slug === "spinach");
+    expect(listed?.fiberLevel).toBe("high");
+
+    const detail = await app.inject({ method: "GET", url: "/api/foods/spinach" });
+    expect((detail.json() as FoodDetail).fiberLevel).toBe("high");
   });
 
   it("GET /api/foods/:slug includes pairings", async () => {

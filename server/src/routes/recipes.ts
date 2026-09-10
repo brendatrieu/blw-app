@@ -41,6 +41,7 @@ import {
   ironFocusFilter,
   loadRecipeNutrition,
   nutritionFor,
+  fiberHighFilter,
   vitaminCHighFilter,
 } from "../services/recipeNutrition.js";
 import { buildCandidateSlug, isUniqueViolation, SLUG_ATTEMPTS } from "../services/slugs.js";
@@ -207,7 +208,7 @@ async function loadRecipeDetail(db: Database, recipe: RecipeRow): Promise<Recipe
     .where(eq(recipeIngredients.recipeId, recipe.id));
   const allergenSlugs = [...new Set(derivedAllergenRows.map((a) => a.slug))];
 
-  // Both nutrition badges come from the one shared derivation the list and
+  // Every nutrition badge comes from the one shared derivation the list and
   // the favorites route also use, so detail can never disagree with them.
   const nutrition = nutritionFor(await loadRecipeNutrition(db, [recipe.id]), recipe.id);
 
@@ -219,6 +220,7 @@ async function loadRecipeDetail(db: Database, recipe: RecipeRow): Promise<Recipe
     prepMinutes: recipe.prepMinutes,
     ironFocus: deriveIronFocus(recipe.ironFocus, nutrition),
     vitaminCHigh: nutrition.vitaminCHigh,
+    fiberHigh: nutrition.fiberHigh,
     imageUrl: recipe.imageUrl,
     fridgeHoursOverride: recipe.fridgeHoursOverride,
     freezerDaysOverride: recipe.freezerDaysOverride,
@@ -258,7 +260,7 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
       return { error: "invalid_query", details: parsed.error.flatten() };
     }
     const userId = currentUserId(request);
-    const { q, scope, maxAgeMonths, allergen, ironFocus, vitaminCHigh, ingredientFoodId } = parsed.data;
+    const { q, scope, maxAgeMonths, allergen, ironFocus, vitaminCHigh, fiberHigh, ingredientFoodId } = parsed.data;
 
     // Unconditional, and first: every other filter narrows what this allows.
     const conditions = [visibleRecipesCondition(userId)];
@@ -272,14 +274,16 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     }
     if (q) conditions.push(ilike(recipes.title, `%${q}%`));
     if (maxAgeMonths !== undefined) conditions.push(lte(recipes.minAgeMonths, maxAgeMonths));
-    // Both nutrition filters match the DERIVED value the rows below carry,
-    // in SQL rather than in JS: `ironFocus` is stored-OR-ingredients and
-    // `vitaminCHigh` is ingredients only, but neither is a plain column, so
-    // both go through the shared subquery helpers. Filtering here (not after
-    // the fetch) keeps the answer correct if this list ever gains a LIMIT,
-    // and leaves the title-ascending order untouched.
+    // Every nutrition filter matches the DERIVED value the rows below carry,
+    // in SQL rather than in JS: `ironFocus` is stored-OR-ingredients while
+    // `vitaminCHigh` and `fiberHigh` are ingredients only, but none is a
+    // plain column, so all three go through the shared subquery helpers.
+    // Filtering here (not after the fetch) keeps the answer correct if this
+    // list ever gains a LIMIT, and leaves the title-ascending order
+    // untouched. They compose: passing all three ANDs them.
     if (ironFocus !== undefined) conditions.push(ironFocusFilter(db, ironFocus));
     if (vitaminCHigh !== undefined) conditions.push(vitaminCHighFilter(db, vitaminCHigh));
+    if (fiberHigh !== undefined) conditions.push(fiberHighFilter(db, fiberHigh));
     if (ingredientFoodId) {
       const withIngredient = db
         .select({ recipeId: recipeIngredients.recipeId })
@@ -371,6 +375,7 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
       minAgeMonths: r.minAgeMonths,
       ironFocus: deriveIronFocus(r.ironFocus, nutritionFor(nutritionByRecipeId, r.id)),
       vitaminCHigh: nutritionFor(nutritionByRecipeId, r.id).vitaminCHigh,
+      fiberHigh: nutritionFor(nutritionByRecipeId, r.id).fiberHigh,
       allergens: allergensByRecipeId.get(r.id) ?? [],
       isCustom: r.ownerId !== null,
       isFavorite: favoritedIds.has(r.id),
