@@ -3,8 +3,17 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import { addCustomFoodLabel } from "../features/catalog/constants.js";
-import { FoodsPage, NoFoodsEmptyState, resolveFoodsTab, activeExtraFilters, buildFoodsFilters, EMPTY_EXTRA_FILTERS, FoodFilterGroups } from "./FoodsPage.js";
+import { RECIPES_TAB_PATH, addCustomFoodLabel } from "../features/catalog/constants.js";
+import {
+  FoodsPage,
+  FoodsRoute,
+  NoFoodsEmptyState,
+  legacyRecipesTabRedirect,
+  activeExtraFilters,
+  buildFoodsFilters,
+  EMPTY_EXTRA_FILTERS,
+  FoodFilterGroups,
+} from "./FoodsPage.js";
 
 /** React's SSR escaping — the create label contains apostrophes. */
 function escapeHtml(text: string): string {
@@ -50,70 +59,67 @@ describe("FoodsPage", () => {
     expect(html).toContain('href="/foods/new"');
     expect(html).toContain(">Add food<");
   });
+
+  // Item 273: recipes moved to /recipes and their own nav tab, taking the
+  // Foods | Recipes segmented control and the `?tab=` state with them.
+  it("is the catalog alone — no segmented control, no recipe list", () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const html = renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(MemoryRouter, null, createElement(FoodsPage, null)),
+      ),
+    );
+    expect(html).not.toContain('role="radiogroup"');
+    expect(html).not.toContain('aria-label="Catalog section"');
+    expect(html).not.toContain(">Recipes<");
+    expect(html).not.toContain('aria-label="Search recipes"');
+    expect(html).not.toContain('aria-label="Recipe scope"');
+    expect(html).not.toContain('href="/recipes/new"');
+  });
 });
 
-/** The page at a given URL — `?tab=` is what picks the segment (item 209). */
-function renderAt(url: string): string {
+/** The `/foods` route element at a given URL — `?tab=` no longer picks a
+ * segment, it only decides whether you get redirected (item 273). */
+function renderRouteAt(url: string): string {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderToString(
     createElement(
       QueryClientProvider,
       { client: queryClient },
-      createElement(MemoryRouter, { initialEntries: [url] }, createElement(FoodsPage, null)),
+      createElement(MemoryRouter, { initialEntries: [url] }, createElement(FoodsRoute, null)),
     ),
   );
 }
 
-describe("resolveFoodsTab", () => {
-  it("selects the Recipes segment for ?tab=recipes", () => {
-    expect(resolveFoodsTab("recipes")).toBe("recipes");
+describe("legacyRecipesTabRedirect (item 273)", () => {
+  it("sends the old ?tab=recipes links to the recipes route", () => {
+    expect(legacyRecipesTabRedirect("recipes")).toBe("/recipes");
+    // The one spelling of the destination, shared with every other caller.
+    expect(legacyRecipesTabRedirect("recipes")).toBe(RECIPES_TAB_PATH);
   });
 
-  it("falls back to Foods for an absent, blank or unknown value", () => {
-    expect(resolveFoodsTab(null)).toBe("foods");
-    expect(resolveFoodsTab("")).toBe("foods");
-    expect(resolveFoodsTab("Recipes")).toBe("foods");
-    expect(resolveFoodsTab("nonsense")).toBe("foods");
+  it("leaves every other value on the catalog", () => {
+    expect(legacyRecipesTabRedirect(null)).toBeNull();
+    expect(legacyRecipesTabRedirect("")).toBeNull();
+    expect(legacyRecipesTabRedirect("foods")).toBeNull();
+    expect(legacyRecipesTabRedirect("Recipes")).toBeNull();
+    expect(legacyRecipesTabRedirect("nonsense")).toBeNull();
   });
 });
 
-describe("FoodsPage segments (item 209)", () => {
-  it("offers both segments as a radiogroup, with Foods selected by default", () => {
-    const html = renderAt("/foods");
-    expect(html).toContain('role="radiogroup"');
-    expect(html).toContain('aria-label="Catalog section"');
-    expect(html).toMatch(/<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>Foods</);
-    expect(html).toMatch(/<button[^>]*role="radio"[^>]*aria-checked="false"[^>]*>Recipes</);
+describe("FoodsRoute (what /foods actually renders)", () => {
+  it("renders the catalog for a plain /foods, and for a stray ?tab= value", () => {
+    expect(renderRouteAt("/foods")).toContain('aria-label="Search foods"');
+    expect(renderRouteAt("/foods?tab=sandwiches")).toContain('aria-label="Search foods"');
   });
 
-  it("renders ONLY the foods segment on the default tab", () => {
-    const html = renderAt("/foods");
-    expect(html).toContain('aria-label="Search foods"');
-    expect(html).not.toContain('aria-label="Search recipes"');
-    expect(html).not.toContain('href="/recipes/new"');
-  });
-
-  it("switches to the recipes segment — header, action and list — on ?tab=recipes", () => {
-    const html = renderAt("/foods?tab=recipes");
-    expect(html).toMatch(/<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>Recipes</);
-    expect(html).toContain("🍳");
-    expect(html).toContain('aria-label="Search recipes"');
-    expect(html).toContain('aria-label="Recipe scope"');
-    expect(html).toContain('href="/recipes/new"');
-    expect(html).toContain(">Add recipe<");
-    // The foods half is gone entirely, filter state and all.
-    expect(html).not.toContain('aria-label="Search foods"');
-    expect(html).not.toContain('aria-label="Category"');
-    expect(html).not.toContain('href="/foods/new"');
-  });
-
-  it("keeps the header title with its segment", () => {
-    expect(renderAt("/foods")).toMatch(/<h1[^>]*>.*Foods<\/h1>/s);
-    expect(renderAt("/foods?tab=recipes")).toMatch(/<h1[^>]*>.*Recipes<\/h1>/s);
-  });
-
-  it("treats an unknown tab value as the Foods segment", () => {
-    expect(renderAt("/foods?tab=sandwiches")).toContain('aria-label="Search foods"');
+  it("redirects /foods?tab=recipes instead of rendering the catalog", () => {
+    // `Navigate` renders nothing and defers the redirect to an effect, which
+    // a server render never runs — so "redirected" looks like empty output
+    // here (same convention as RecipeEditPage.test.ts).
+    expect(renderRouteAt("/foods?tab=recipes")).toBe("");
   });
 });
 

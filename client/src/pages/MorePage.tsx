@@ -11,9 +11,11 @@ interface MoreLink {
 }
 
 const moreLinks: MoreLink[] = [
+  // First in the list, and named for the bottom-nav tab it replaced: "Learn"
+  // left the bar to make room for Recipes (item 274).
   {
     to: "/safety",
-    label: "Safety Library",
+    label: "Learn",
     description: "Choking, allergies, storage, and more — works offline.",
     emoji: "🛟",
   },

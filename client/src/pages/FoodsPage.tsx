@@ -1,22 +1,21 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import type { FoodCategory, FoodsQuery, Level } from "@blw/shared";
 import { useFoods } from "../features/catalog/hooks.js";
 import { FoodTile } from "../features/catalog/components/FoodTile.js";
 import { ActiveFilterPill, FilterChip, FunnelButton } from "../features/catalog/components/filters.js";
-import { RecipesSegment } from "../features/catalog/components/RecipesSegment.js";
 import {
   ALLERGEN_SLUGS,
   AGE_THRESHOLDS,
   CATEGORIES,
   IRON_LEVELS,
   VITAMIN_C_LEVELS,
+  RECIPES_TAB_PATH,
   addCustomFoodLabel,
   allergenLabel,
 } from "../features/catalog/constants.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
-import { SegmentedControl } from "../components/ui/SegmentedControl.js";
 import { SkeletonList } from "../components/ui/Skeleton.js";
 import { Input } from "../components/ui/Input.js";
 import { Sheet } from "../components/ui/Sheet.js";
@@ -172,22 +171,13 @@ export function FoodFilterGroups({ onChange, ...filters }: FoodFilterGroupsProps
   );
 }
 
-export type FoodsTab = "foods" | "recipes";
-
 /**
- * Which segment `?tab=` selects (item 209). The segment lives in the URL, not
- * in component state, so a link can point at the recipe list, the browser's
- * Back button steps between the two, and a reload keeps the one you were on.
- * Anything other than "recipes" — absent, misspelled, hand-edited — is the
- * Foods segment, which is the page's original behavior.
+ * `/foods` — the food catalog: the grid, its sticky search/category bar and
+ * its Filters sheet. Recipes used to share this page behind a `?tab=`
+ * segmented control; they have their own route and nav tab now (item 273),
+ * so this page is the catalog alone again.
  */
-export function resolveFoodsTab(param: string | null): FoodsTab {
-  return param === "recipes" ? "recipes" : "foods";
-}
-
-/** The foods grid, its sticky search/category bar, and its Filters sheet —
- * unchanged from before the segment split, just no longer the whole page. */
-function FoodsSegment() {
+export function FoodsPage() {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<FoodCategory | undefined>(undefined);
   const [allergen, setAllergen] = useState<string | undefined>(undefined);
@@ -215,7 +205,18 @@ function FoodsSegment() {
   const clearExtra = (key: ExtraFoodFilterKey) => applyExtra({ ...extraFilters, [key]: undefined });
 
   return (
-    <>
+    <div className="flex flex-col gap-4 p-4">
+      <PageHeader
+        title="Foods"
+        emoji="🍎"
+        description="Iron-rich foods first — filter by category, allergen, or age."
+        action={
+          <ButtonLink to="/foods/new" size="sm">
+            Add food
+          </ButtonLink>
+        }
+      />
+
       <div
         className="sticky z-[5] -mx-4 flex flex-col gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-4 pt-1 pb-2"
         style={{ top: "var(--header-height)" }}
@@ -281,66 +282,29 @@ function FoodsSegment() {
           </div>
         </div>
       </Sheet>
-    </>
+    </div>
   );
 }
 
-const TAB_OPTIONS = [
-  { value: "foods" as const, label: "Foods", icon: null },
-  { value: "recipes" as const, label: "Recipes", icon: null },
-];
-
 /**
- * `/foods` — the catalog, in two segments (item 209): the food grid this
- * page has always been, and the recipe list that used to have no home at
- * all (recipes were reachable only from a favorite or a dashboard card).
- *
- * The active segment is `?tab=`, pushed rather than replaced, so Back
- * returns to the segment the parent was just on instead of leaving the page.
- * Each segment keeps its own filter state in its own component, which is
- * also what unmounts a segment's filters when you leave it.
+ * Where `/foods?tab=` should send you instead of rendering the catalog, or
+ * `null` to stay put (item 273). `?tab=recipes` used to select the Recipes
+ * segment of this page; those links — bookmarks, anything already shared —
+ * now belong at `/recipes`. Every other value (absent, blank, "foods",
+ * hand-edited nonsense) was already the Foods segment, so it just renders the
+ * catalog and the stray param is ignored. Pure, so the one rule that matters
+ * is pinned by a test rather than by a redirect a server render never runs.
  */
-export function FoodsPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tab = resolveFoodsTab(searchParams.get("tab"));
+export function legacyRecipesTabRedirect(tabParam: string | null): string | null {
+  return tabParam === "recipes" ? RECIPES_TAB_PATH : null;
+}
 
-  function selectTab(next: FoodsTab) {
-    if (next === tab) return;
-    const params = new URLSearchParams(searchParams);
-    if (next === "recipes") params.set("tab", "recipes");
-    else params.delete("tab");
-    setSearchParams(params);
-  }
+/** The `/foods` route element: the catalog, behind the `?tab=recipes`
+ * redirect that keeps old links to the recipe list working. */
+export function FoodsRoute() {
+  const [searchParams] = useSearchParams();
+  const redirectTo = legacyRecipesTabRedirect(searchParams.get("tab"));
 
-  return (
-    <div className="flex flex-col gap-4 p-4">
-      {tab === "recipes" ? (
-        <PageHeader
-          title="Recipes"
-          emoji="🍳"
-          description="Ours and yours — filter by age, allergen, or what's in them."
-          action={
-            <ButtonLink to="/recipes/new" size="sm">
-              Add recipe
-            </ButtonLink>
-          }
-        />
-      ) : (
-        <PageHeader
-          title="Foods"
-          emoji="🍎"
-          description="Iron-rich foods first — filter by category, allergen, or age."
-          action={
-            <ButtonLink to="/foods/new" size="sm">
-              Add food
-            </ButtonLink>
-          }
-        />
-      )}
-
-      <SegmentedControl aria-label="Catalog section" options={TAB_OPTIONS} value={tab} onChange={selectTab} />
-
-      {tab === "recipes" ? <RecipesSegment /> : <FoodsSegment />}
-    </div>
-  );
+  if (redirectTo) return <Navigate to={redirectTo} replace />;
+  return <FoodsPage />;
 }

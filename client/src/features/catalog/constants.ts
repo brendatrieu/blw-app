@@ -44,12 +44,13 @@ export const AGE_THRESHOLDS: { value: number; label: string }[] = [
 ];
 
 /**
- * Where the recipe list lives (item 209). It's a segment of the Foods page,
- * not a route of its own, so every "back to the list" destination — after a
- * delete, from a create page's close button — spells the same URL by
- * importing this rather than by retyping the query string.
+ * Where the recipe list lives (item 273). It's a route of its own now — and a
+ * bottom-nav tab — rather than a `?tab=` segment of the Foods page, so every
+ * "back to the list" destination (after a delete, from a create page's close
+ * button, from the old `/foods?tab=recipes` redirect) spells it by importing
+ * this rather than by retyping the path.
  */
-export const RECIPES_TAB_PATH = "/foods?tab=recipes";
+export const RECIPES_TAB_PATH = "/recipes";
 
 /** The Recipes segment's scope chips (item 210). "all" is the default and
  * the one every other scope falls back to when it's tapped off again. */

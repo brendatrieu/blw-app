@@ -1,5 +1,5 @@
-import type { SVGProps } from "react";
-import { NavLink } from "react-router-dom";
+import type { ReactElement, SVGProps } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 // Five hand-drawn, friendly-geometry icons — rounded strokes, no sharp
 // corners, matching the Sunny Sprout illustration style. Color comes from
@@ -47,11 +47,15 @@ function AppleIcon() {
   );
 }
 
-function BookIcon() {
+/** A lidded cooking pot (item 272) — the Recipes tab's glyph, drawn in the
+ * same 24-box outline weight as its neighbours: domed lid with a knob, the
+ * rim, then the body with a nub of a handle either side. */
+function PotIcon() {
   return (
     <svg {...ICON_PROPS}>
-      <path d="M12 6.2c-1.6-1.4-4-1.9-6.5-1.4a1 1 0 0 0-.8 1v11.7a1 1 0 0 0 1.2 1c2.1-.4 4.2 0 5.6 1.3.3.3.9.3 1.2 0 1.4-1.3 3.5-1.7 5.6-1.3a1 1 0 0 0 1.2-1V5.8a1 1 0 0 0-.8-1c-2.5-.5-4.9 0-6.5 1.4Z" />
-      <path d="M12 6.2v13" />
+      <path d="M7.6 10.4a4.4 4.4 0 0 1 8.8 0M12 6v-1.4" />
+      <path d="M3.4 10.4h17.2" />
+      <path d="M5.3 10.4v4.8a4 4 0 0 0 4 4h5.4a4 4 0 0 0 4-4v-4.8M5.3 12.7H3.7M18.7 12.7h1.6" />
     </svg>
   );
 }
@@ -66,15 +70,56 @@ function DotsIcon() {
   );
 }
 
-const tabs = [
+/** Is `pathname` that route or one nested under it? `/safety` covers
+ * `/safety/choking`; it must NOT cover `/safetyville`. */
+function isWithin(pathname: string, base: string): boolean {
+  return pathname === base || pathname.startsWith(`${base}/`);
+}
+
+/**
+ * Which paths light the More tab (item 272). Learn left the bar to make room
+ * for Recipes, so the safety library has no tab of its own any more — its
+ * routes belong to More, which is where the "Learn" entry now lives, as do
+ * the other More-page destinations (settings, favorites, chat, the symptom
+ * checker). Pure and exported so the rule is pinned by a test.
+ */
+export function isMoreTabPath(pathname: string): boolean {
+  return ["/more", "/safety", "/settings", "/favorites", "/chat", "/symptom-check"].some((base) =>
+    isWithin(pathname, base),
+  );
+}
+
+interface Tab {
+  to: string;
+  label: string;
+  Icon: () => ReactElement;
+}
+
+const tabs: Tab[] = [
   { to: "/", label: "Home", Icon: HomeIcon },
   { to: "/pantry", label: "Pantry", Icon: BasketIcon },
   { to: "/foods", label: "Foods", Icon: AppleIcon },
-  { to: "/safety", label: "Learn", Icon: BookIcon },
+  { to: "/recipes", label: "Recipes", Icon: PotIcon },
   { to: "/more", label: "More", Icon: DotsIcon },
 ];
 
+/**
+ * The single active-tab rule, pure so it is pinned by a test and so the
+ * rendered `aria-current="page"` always agrees with the highlight (NavLink's
+ * own matching couldn't express "More owns /safety"). Home is exact; the
+ * section tabs cover their nested routes; More covers everything it lists.
+ * Returns the tab's `to`, or null when no tab owns the path.
+ */
+export function resolveActiveTab(pathname: string): string | null {
+  if (pathname === "/") return "/";
+  if (isMoreTabPath(pathname)) return "/more";
+  for (const base of ["/pantry", "/foods", "/recipes"]) if (isWithin(pathname, base)) return base;
+  return null;
+}
+
 export function BottomNav() {
+  const { pathname } = useLocation();
+
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-10 mx-auto flex w-full max-w-lg items-stretch border-t px-1 pt-1"
@@ -85,35 +130,31 @@ export function BottomNav() {
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
-      {tabs.map(({ to, label, Icon }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={to === "/"}
-          className="flex min-h-11 flex-1 flex-col items-center justify-center gap-1 text-xs"
-        >
-          {({ isActive }) => (
-            <>
-              <span
-                className="flex h-8 w-12 items-center justify-center rounded-[var(--radius-pill)] transition-[background-color,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] motion-reduce:transition-none"
-                style={{
-                  backgroundColor: isActive ? "var(--color-primary)" : "transparent",
-                  color: isActive ? "var(--color-primary-contrast)" : "var(--color-text-muted)",
-                  transform: isActive ? "scale(1)" : "scale(0.92)",
-                }}
-              >
-                <Icon />
-              </span>
-              <span
-                className="font-caption"
-                style={{ color: isActive ? "var(--color-accent)" : "var(--color-text-muted)" }}
-              >
-                {label}
-              </span>
-            </>
-          )}
-        </NavLink>
-      ))}
+      {tabs.map(({ to, label, Icon }) => {
+        const active = resolveActiveTab(pathname) === to;
+        return (
+          <Link
+            key={to}
+            to={to}
+            aria-current={active ? "page" : undefined}
+            className="flex min-h-11 flex-1 flex-col items-center justify-center gap-1 text-xs"
+          >
+            <span
+              className="flex h-8 w-12 items-center justify-center rounded-[var(--radius-pill)] transition-[background-color,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] motion-reduce:transition-none"
+              style={{
+                backgroundColor: active ? "var(--color-primary)" : "transparent",
+                color: active ? "var(--color-primary-contrast)" : "var(--color-text-muted)",
+                transform: active ? "scale(1)" : "scale(0.92)",
+              }}
+            >
+              <Icon />
+            </span>
+            <span className="font-caption" style={{ color: active ? "var(--color-accent)" : "var(--color-text-muted)" }}>
+              {label}
+            </span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }
