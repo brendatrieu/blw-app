@@ -5,6 +5,9 @@ import {
   buildDateOptions,
   centeredRowForIndex,
   clampToNow,
+  FUTURE_TIME_ERROR,
+  resolveSaveAction,
+  rowTapTarget,
   combineDateTime,
   dayIndexToRow,
   DateTimeField,
@@ -632,5 +635,37 @@ describe("WheelPickerBody (render)", () => {
     expect((dateColumnHtml.match(/>Today</g) ?? []).length).toBe(1);
     expect((meridiemHtml.match(/>AM</g) ?? []).length).toBe(1);
     expect((meridiemHtml.match(/>PM</g) ?? []).length).toBe(1);
+  });
+});
+
+describe("resolveSaveAction (Done on a future time is an error, not a silent clamp)", () => {
+  it("refuses a future time with the user-facing message and accepts now or earlier", () => {
+    const now = new Date(2026, 8, 8, 14, 5);
+    expect(resolveSaveAction(new Date(2026, 8, 8, 14, 6), now)).toEqual({ ok: false, error: FUTURE_TIME_ERROR });
+    expect(resolveSaveAction(new Date(2026, 8, 8, 14, 5), now)).toEqual({ ok: true, value: new Date(2026, 8, 8, 14, 5) });
+    expect(resolveSaveAction(new Date(2026, 8, 7, 9, 0), now)).toEqual({ ok: true, value: new Date(2026, 8, 7, 9, 0) });
+    expect(FUTURE_TIME_ERROR).toBe("Time can't be in the future");
+  });
+});
+
+describe("PickerSheetFooter error slot", () => {
+  it("renders the message as an alert above Done, and nothing when there is none", () => {
+    const withError = renderToString(createElement(PickerSheetFooter, { onSave: () => {}, error: FUTURE_TIME_ERROR }));
+    // React escapes the apostrophe in SSR output.
+    expect(withError).toMatch(/role="alert"[^>]*>Time can(?:&#x27;|')t be in the future<\/p>/);
+    expect(withError.indexOf('role="alert"')).toBeLessThan(withError.indexOf(">Done<"));
+    const without = renderToString(createElement(PickerSheetFooter, { onSave: () => {} }));
+    expect(without).not.toContain('role="alert"');
+    expect(without).toContain(">Done<");
+  });
+});
+
+describe("rowTapTarget (tapping a visible wheel row selects it)", () => {
+  it("lands on the tapped row itself: plain columns by index, loop columns by absolute row", () => {
+    expect(rowTapTarget(3, 8, false)).toEqual({ trueIndex: 3, absRow: 3 });
+    expect(rowTapTarget(99, 8, false)).toEqual({ trueIndex: 7, absRow: 7 });
+    expect(rowTapTarget(-2, 8, false)).toEqual({ trueIndex: 0, absRow: 0 });
+    // Loop: row 14 of a 12-item wheel is the 3rd item of the second copy.
+    expect(rowTapTarget(14, 12, true)).toEqual({ trueIndex: 2, absRow: 14 });
   });
 });

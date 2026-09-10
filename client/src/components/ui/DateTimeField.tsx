@@ -117,6 +117,33 @@ export function clampToNow(date: Date, now: Date): Date {
   return date.getTime() > now.getTime() ? now : date;
 }
 
+export const FUTURE_TIME_ERROR = "Time can't be in the future";
+
+/**
+ * What Done should do with the drafted time. A future time is an ERROR the
+ * user must see and fix (the sheet stays open) — it used to be silently
+ * clamped to "now" and closed, which read as the picker ignoring the tap.
+ * `now` is minute-truncated by callers so the comparison matches the
+ * minute-aligned timestamps every commit path submits.
+ */
+export function resolveSaveAction(
+  candidate: Date,
+  now: Date,
+): { ok: true; value: Date } | { ok: false; error: string } {
+  if (candidate.getTime() > now.getTime()) return { ok: false, error: FUTURE_TIME_ERROR };
+  return { ok: true, value: candidate };
+}
+
+/**
+ * Where a tap on a visible wheel row should land: the row's own position
+ * (absolute row for loop columns, so the wheel scrolls to the copy that was
+ * tapped rather than jumping to the middle copy) and its true item index.
+ */
+export function rowTapTarget(row: number, count: number, loop: boolean): { trueIndex: number; absRow: number } {
+  const clampedRow = Math.min(Math.max(row, 0), (loop ? count * LOOP_REPEAT_COUNT : count) - 1);
+  return { trueIndex: loop ? trueIndexFromRow(clampedRow, count) : clampedRow, absRow: clampedRow };
+}
+
 /**
  * Truncates `date` (defaults to the real current time) down to the minute —
  * zeroes seconds and milliseconds. Matches the granularity the old native
@@ -361,6 +388,13 @@ export function WheelColumn({
     scrollRef.current?.scrollTo({ top: absRow * WHEEL_ROW_HEIGHT, behavior: "smooth" });
   }
 
+  function handleRowTap(row: number) {
+    const target = rowTapTarget(row, count, loop);
+    if (loop) absoluteRowRef.current = target.absRow;
+    onIndexChange(target.trueIndex);
+    scrollRef.current?.scrollTo({ top: target.absRow * WHEEL_ROW_HEIGHT, behavior: "smooth" });
+  }
+
   function handleScroll() {
     clearTimeout(settleTimeout.current);
     settleTimeout.current = setTimeout(() => {
@@ -404,16 +438,22 @@ export function WheelColumn({
       {...(valueText !== undefined ? { "aria-valuetext": valueText } : {})}
       onScroll={handleScroll}
       onKeyDown={handleKeyDown}
-      className={`snap-y snap-mandatory overflow-y-auto outline-none scroll-momentum [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className} scroll-thin`}
+      className={`snap-y snap-mandatory overflow-y-auto outline-none scroll-momentum [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
       style={{ height: WHEEL_VISIBLE_HEIGHT, paddingTop: WHEEL_PADDING, paddingBottom: WHEEL_PADDING }}
     >
       {Array.from({ length: rowCount }, (_, row) => {
         const trueIndex = loop ? trueIndexFromRow(row, count) : row;
         const item = items[trueIndex]!;
         return (
+          // Rows are tappable (user: "they should be able to tap the numbers")
+          // — a plain div with onClick, not a nested button, because the
+          // column itself is the focusable spinbutton and keyboard users step
+          // it with the arrow keys.
           <div
             key={loop ? `${Math.floor(row / count)}-${item.key}` : item.key}
-            className={`flex items-center justify-center px-1 text-sm transition-colors duration-[var(--duration-fast)] snap-center ${
+            data-wheel-row={row}
+            onClick={() => handleRowTap(row)}
+            className={`flex cursor-pointer items-center justify-center px-1 text-sm transition-colors duration-[var(--duration-fast)] snap-center ${
               trueIndex === index ? "font-semibold text-[var(--color-text)]" : "text-[var(--color-text-muted)]"
             }`}
             style={{ height: WHEEL_ROW_HEIGHT }}
@@ -540,6 +580,9 @@ export function WheelPickerBody({ draft, onDraftChange, dateOptions }: WheelPick
 }
 
 export interface PickerSheetFooterProps {
+  /** Validation message rendered above Done (e.g. a future time); the sheet
+   * stays open while it is shown. */
+  error?: string | null;
   onSave: () => void;
 }
 
@@ -553,13 +596,20 @@ export interface PickerSheetFooterProps {
  * overlay tap, or the device back gesture, so a Cancel button beside Done
  * was a fourth way to do what three gestures already did.
  */
-export function PickerSheetFooter({ onSave }: PickerSheetFooterProps) {
+export function PickerSheetFooter({ onSave, error = null }: PickerSheetFooterProps) {
   return (
     // "Done" (not "Save"): overlays close/commit with Done, only true form
     // submits say Save.
-    <Button type="button" onClick={onSave} className="w-full">
-      Done
-    </Button>
+    <div className="flex flex-col gap-2">
+      {error && (
+        <p role="alert" className="text-center text-xs font-medium text-[var(--color-danger)]">
+          {error}
+        </p>
+      )}
+      <Button type="button" onClick={onSave} className="w-full">
+        Done
+      </Button>
+    </div>
   );
 }
 
@@ -597,14 +647,28 @@ export function DateTimeField({ id, value, onChange, disabled = false, daysBack 
     const openedAt = now ?? new Date();
     setAnchorNow(openedAt);
     setDraft(resolvePresetDraft(value, openedAt));
+    setSaveError(null);
     setOpen(true);
   }
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   function handleSave() {
-    // Clamp target is minute-truncated so even the clamped path submits a
-    // minute-aligned timestamp, matching every other commit path (item 41).
-    onChange(clampToNow(combineDateTime(draft, anchorNow), nowAtMinute(anchorNow)));
+    // Compared against a minute-truncated "now" so a minute-aligned draft
+    // equal to now is not "future" (item 41).
+    const action = resolveSaveAction(combineDateTime(draft, anchorNow), nowAtMinute(anchorNow));
+    if (!action.ok) {
+      setSaveError(action.error);
+      return;
+    }
+    setSaveError(null);
+    onChange(action.value);
     setOpen(false);
+  }
+
+  function handleDraftChange(next: SplitDateTime) {
+    setSaveError(null);
+    setDraft(next);
   }
 
   function handleCancel() {
@@ -642,8 +706,8 @@ export function DateTimeField({ id, value, onChange, disabled = false, daysBack 
       </button>
 
       <Sheet open={open} onClose={handleCancel} title="Time" showClose>
-        <WheelPickerBody draft={draft} onDraftChange={setDraft} dateOptions={dateOptions} />
-        <PickerSheetFooter onSave={handleSave} />
+        <WheelPickerBody draft={draft} onDraftChange={handleDraftChange} dateOptions={dateOptions} />
+        <PickerSheetFooter onSave={handleSave} error={saveError} />
       </Sheet>
     </>
   );
