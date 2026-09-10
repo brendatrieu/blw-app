@@ -140,10 +140,35 @@ describe("RecipeDetailPage (catalog recipe)", () => {
     expect(html).not.toMatch(/href="\/recipes\/[^"]*\/edit"/);
   });
 
-  it("offers to log it, carrying the recipe id over to the log form", () => {
+  // Item 283: the actions row is the Home pair — primary "Log meal" first,
+  // tonal "Add to fridge" second — each carrying this recipe's id.
+  it("offers the Log meal / Add to fridge pair, in that order, both carrying the recipe id", () => {
     const html = renderRecipe(catalogRecipe());
-    expect(html).toContain(`href="/log-meal?recipe=${catalogRecipe().id}"`);
+    const id = catalogRecipe().id;
+    expect(html).toContain(`href="/log-meal?recipe=${id}"`);
+    expect(html).toContain(`href="/fridge/add?recipe=${id}"`);
     expect(html).toContain(">Log meal<");
+    expect(html).toContain(">Add to fridge<");
+    expect(html.indexOf(">Log meal<")).toBeLessThan(html.indexOf(">Add to fridge<"));
+  });
+
+  it("gives the pair the primary and tonal fills, each taking half the row", () => {
+    const html = renderRecipe(catalogRecipe());
+    const link = (label: string) => html.match(new RegExp(`<a[^>]*>${label}</a>`))?.[0] ?? "";
+    expect(link("Log meal")).toContain("bg-[var(--color-primary)]");
+    expect(link("Log meal")).toContain("flex-1");
+    expect(link("Add to fridge")).toContain("bg-[var(--color-success)]");
+    expect(link("Add to fridge")).toContain("flex-1");
+  });
+
+  // The thin location-only "I prepped this" expander is gone with it — the
+  // full add form at /fridge/add is the one way to stash a prepped recipe.
+  it("no longer offers the I-prepped-this expander", () => {
+    const html = renderRecipe(catalogRecipe());
+    expect(html).not.toContain("I prepped this");
+    expect(html).not.toContain("Where&#x27;s it stored?");
+    expect(html).not.toContain("Where's it stored?");
+    expect(html).not.toContain(">Not now<");
   });
 
   // A recipe need not carry all three stages: shrimp is held to 9 months on
@@ -310,5 +335,15 @@ describe("RecipeDetailPage — Basic badge", () => {
 
   it("gives the badge the neutral tone", () => {
     expect(renderRecipe(catalogRecipe())).toMatch(/class="[^"]*color-neutral-soft[^"]*"[^>]*>Basic</);
+  });
+});
+
+describe("RecipeDetailPage actions pair on a custom recipe (item 283)", () => {
+  it("gives a custom recipe the same Log meal / Add to fridge pair, in that order", () => {
+    const html = renderRecipe(CUSTOM_RECIPE);
+    const logAt = html.indexOf(`href="/log-meal?recipe=${CUSTOM_RECIPE.id}"`);
+    const fridgeAt = html.indexOf(`href="/fridge/add?recipe=${CUSTOM_RECIPE.id}"`);
+    expect(logAt).toBeGreaterThan(-1);
+    expect(fridgeAt).toBeGreaterThan(logAt);
   });
 });

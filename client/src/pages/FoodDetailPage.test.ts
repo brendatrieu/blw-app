@@ -3,7 +3,9 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { FoodDetail } from "@blw/shared";
+import type { Baby, FoodDetail, MealItem } from "@blw/shared";
+import { babyKeys } from "../features/babies/api.js";
+import { trackingKeys } from "../features/tracking/hooks.js";
 import { catalogKeys } from "../features/catalog/hooks.js";
 import { CUSTOM_FOOD_SOFT_NOTE, customFoodConflictMessage } from "../features/catalog/constants.js";
 import { CustomFoodActions, FoodDetailPage } from "./FoodDetailPage.js";
@@ -64,6 +66,50 @@ const CUSTOM_FOOD = catalogFood({
 function renderFood(food: FoodDetail) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(catalogKeys.food(food.slug), food);
+  return renderToString(
+    createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(
+        MemoryRouter,
+        { initialEntries: [`/foods/${food.slug}`] },
+        createElement(
+          Routes,
+          null,
+          createElement(Route, { path: "/foods/:slug", element: createElement(FoodDetailPage, null) }),
+        ),
+      ),
+    ),
+  );
+}
+
+const BABY: Baby = {
+  id: "baby-1",
+  name: "Robin",
+  birthDate: "2026-01-01",
+  notes: null,
+  archived: false,
+  archivedAt: null,
+  createdAt: "2026-01-01T00:00:00.000Z",
+};
+
+/** Same render, but with a baby and meals in the cache, so the served-count
+ * fact under the actions row has something to count (item 282). */
+function renderFoodWithMeals(food: FoodDetail, servings: number) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient.setQueryData(catalogKeys.food(food.slug), food);
+  queryClient.setQueryData(babyKeys.list(false), [BABY]);
+  const meals: MealItem[] = Array.from({ length: servings }, (_, i) => ({
+    id: `meal-${i}`,
+    babyId: BABY.id,
+    servedAt: new Date(2026, 7, 26 - i, 12, 0).toISOString(),
+    reactionNote: null,
+    notes: null,
+    recipeId: null,
+    recipeTitle: null,
+    foods: [{ id: food.id, slug: food.slug, name: food.name, category: food.category, fridgeItemId: null }],
+  }));
+  queryClient.setQueryData([...trackingKeys.meals(BABY.id), { limit: 100 }], { items: meals });
   return renderToString(
     createElement(
       QueryClientProvider,
@@ -152,6 +198,56 @@ describe("FoodDetailPage — custom food (item 181)", () => {
     expect(html).toContain(">Delete<");
     // Delete is two-step: the destructive confirm isn't on screen yet.
     expect(html).not.toContain("Delete for good");
+  });
+});
+
+// Item 282: the actions row is the Home pair — primary "Log meal" first,
+// tonal "Add to fridge" second — each carrying this food's id.
+describe("FoodDetailPage — actions row (item 282)", () => {
+  it("offers the pair in order, both linking with the food id", () => {
+    const html = renderFood(catalogFood());
+    const id = catalogFood().id;
+    expect(html).toContain(`href="/log-meal?food=${id}"`);
+    expect(html).toContain(`href="/fridge/add?food=${id}"`);
+    expect(html).toContain(">Log meal<");
+    expect(html).toContain(">Add to fridge<");
+    expect(html.indexOf(">Log meal<")).toBeLessThan(html.indexOf(">Add to fridge<"));
+  });
+
+  it("gives the pair the primary and tonal fills, each taking half the row", () => {
+    const html = renderFood(catalogFood());
+    const link = (label: string) => html.match(new RegExp(`<a[^>]*>${label}</a>`))?.[0] ?? "";
+    expect(link("Log meal")).toContain("bg-[var(--color-primary)]");
+    expect(link("Log meal")).toContain("flex-1");
+    expect(link("Add to fridge")).toContain("bg-[var(--color-success)]");
+    expect(link("Add to fridge")).toContain("flex-1");
+  });
+
+  // A food the parent added is served and stashed exactly like a catalog one.
+  it("gives a custom food the same pair", () => {
+    const html = renderFood(CUSTOM_FOOD);
+    expect(html).toContain(`href="/log-meal?food=${CUSTOM_FOOD.id}"`);
+    expect(html).toContain(`href="/fridge/add?food=${CUSTOM_FOOD.id}"`);
+  });
+
+  // With no baby in the cache `useActiveBaby` resolves to none, so this also
+  // pins that the pair is not gated on having one — the nudge sits under it.
+  it("shows no I-prepped-this expander", () => {
+    const html = renderFood(catalogFood());
+    expect(html).not.toContain("I prepped this");
+    expect(html).not.toContain("Where&#x27;s it stored?");
+    expect(html).not.toContain("Where's it stored?");
+  });
+
+  // The fact stays, under the pair rather than beside one button.
+  it("keeps the served-count fact, pluralised, naming the baby", () => {
+    const two = renderFoodWithMeals(catalogFood(), 2);
+    expect(two).toMatch(/Served (?:<!-- -->)?2(?:<!-- -->)? (?:<!-- -->)?times/);
+    expect(two).toContain("Robin");
+    const one = renderFoodWithMeals(catalogFood(), 1);
+    expect(one).toMatch(/Served (?:<!-- -->)?1(?:<!-- -->)? (?:<!-- -->)?time/);
+    // Nothing served, nothing claimed.
+    expect(renderFoodWithMeals(catalogFood(), 0)).not.toContain("Served");
   });
 });
 

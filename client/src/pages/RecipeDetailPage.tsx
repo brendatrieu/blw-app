@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { AgeStage, RecipeDetail } from "@blw/shared";
 import { ageInMonths } from "@blw/shared";
@@ -12,25 +11,15 @@ import { Badge } from "../features/catalog/components/Badge.js";
 import { RECIPES_TAB_PATH, allergenLabel, customRecipeConflictMessage } from "../features/catalog/constants.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
-import { apiPost } from "../lib/api.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { DeleteConfirmActions } from "../components/ui/DeleteConfirmActions.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
-import { KeepButton } from "../components/ui/KeepButton.js";
 
 const AGE_STAGES: { value: AgeStage; label: string }[] = [
   { value: "6", label: "6mo" },
   { value: "9", label: "9mo" },
   { value: "12", label: "12mo" },
-];
-
-type FridgeLocation = "fridge" | "freezer" | "counter";
-
-const FRIDGE_LOCATIONS: { value: FridgeLocation; label: string }[] = [
-  { value: "fridge", label: "Fridge" },
-  { value: "freezer", label: "Freezer" },
-  { value: "counter", label: "Counter" },
 ];
 
 interface FavoriteHeartProps {
@@ -82,53 +71,6 @@ function FavoriteHeart({
       </span>
       {favorited ? "Favorited" : "Favorite"}
     </button>
-  );
-}
-
-interface PrepThisProps {
-  recipeId: string;
-}
-
-function PrepThis({ recipeId }: PrepThisProps) {
-  const [open, setOpen] = useState(false);
-  const prepped = useMutation({
-    mutationFn: (location: FridgeLocation) =>
-      // The fridge endpoint ships from a parallel-phase agent; this route
-      // isn't owned here, only the request against its documented contract.
-      apiPost<unknown>("/api/fridge", { recipeId, location, preparedAt: new Date().toISOString() }),
-  });
-
-  if (prepped.isSuccess) {
-    return <p className="text-sm font-medium text-[var(--color-accent)]">Added to your fridge.</p>;
-  }
-
-  if (!open) {
-    return (
-      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
-        I prepped this
-      </Button>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
-      <p className="text-xs font-medium text-[var(--color-text-muted)]">Where's it stored?</p>
-      <div className="flex flex-wrap gap-1.5">
-        {FRIDGE_LOCATIONS.map((loc) => (
-          <button
-            key={loc.value}
-            type="button"
-            disabled={prepped.isPending}
-            onClick={() => prepped.mutate(loc.value)}
-            className="min-h-9 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-bg)] px-3.5 py-1.5 text-xs font-semibold text-[var(--color-text)] disabled:opacity-60"
-          >
-            {prepped.isPending ? "Saving…" : loc.label}
-          </button>
-        ))}
-        <KeepButton label="Not now" onClick={() => setOpen(false)} />
-      </div>
-      {prepped.isError && <p className="text-xs text-[var(--color-danger)]">Couldn't save that — try again.</p>}
-    </div>
   );
 }
 
@@ -275,8 +217,18 @@ export function RecipeDetailPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <ButtonLink to={`/log-meal?recipe=${recipe.id}`}>Log meal</ButtonLink>
+      {/* The same pair Home offers, in the same order and the same variants
+          (item 283): logging what the baby ate and stashing what you cooked
+          are the two things you do from a recipe, and neither is a
+          sub-action of the other. Both are plain links carrying the recipe
+          id — the full forms live at the other end. */}
+      <div className="flex items-center gap-2">
+        <ButtonLink to={`/log-meal?recipe=${recipe.id}`} className="flex-1">
+          Log meal
+        </ButtonLink>
+        <ButtonLink to={`/fridge/add?recipe=${recipe.id}`} variant="tonal" className="flex-1">
+          Add to fridge
+        </ButtonLink>
       </div>
 
       <section className="flex flex-col gap-2">
@@ -391,8 +343,6 @@ export function RecipeDetailPage() {
           <p className="text-sm whitespace-pre-line text-[var(--color-text)]">{recipe.notes}</p>
         </section>
       )}
-
-      <PrepThis recipeId={recipe.id} />
 
       {recipe.isCustom && <CustomRecipeActions recipe={recipe} />}
     </div>

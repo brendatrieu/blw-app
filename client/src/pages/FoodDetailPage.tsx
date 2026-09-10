@@ -27,10 +27,16 @@ interface MarkAsServedProps {
 }
 
 /**
- * "Log meal" entry point + served-count fact. The old inline mini-form
- * (date-only, reaction-only) was a stripped duplicate of the real log flow;
- * per user direction it now links to /log-meal?food=<id> so serving from a
- * food page gets the FULL form — time, notes, reaction, and leftovers.
+ * The food page's actions row: the same pair Home offers — primary "Log
+ * meal" and tonal "Add to fridge", in that order (item 282) — over the
+ * served-count fact. Both are plain links carrying this food's id; the full
+ * forms (time, notes, reaction, leftovers / location, servings, best-by)
+ * live at the other end, which is why the old inline mini-forms are gone.
+ *
+ * The pair renders whether or not a baby exists: adding to the fridge never
+ * needed one, and "Log meal" without a baby lands on the log page's own
+ * "Add a baby first" state rather than being hidden here. The count and the
+ * "add a baby" nudge are facts UNDER the row, not gates on it.
  */
 function MarkAsServed({ food }: MarkAsServedProps) {
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
@@ -40,23 +46,25 @@ function MarkAsServed({ food }: MarkAsServedProps) {
   const timesServed =
     recentMeals?.items.filter((meal) => meal.foods.some((mealFood) => mealFood.id === food.id)).length ?? null;
 
-  if (babyLoading) return null;
-
-  if (!activeBaby) {
-    return (
-      <p className="text-xs text-[var(--color-text-muted)]">
-        <Link to="/settings" className="font-medium text-[var(--color-primary)] underline">
-          Add a baby
-        </Link>{" "}
-        to log this as served.
-      </p>
-    );
-  }
-
   return (
-    <div className="flex items-center gap-2">
-      <ButtonLink to={`/log-meal?food=${food.id}`}>Log meal</ButtonLink>
-      {timesServed !== null && timesServed > 0 && (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <ButtonLink to={`/log-meal?food=${food.id}`} className="flex-1">
+          Log meal
+        </ButtonLink>
+        <ButtonLink to={`/fridge/add?food=${food.id}`} variant="tonal" className="flex-1">
+          Add to fridge
+        </ButtonLink>
+      </div>
+      {!babyLoading && !activeBaby && (
+        <p className="text-xs text-[var(--color-text-muted)]">
+          <Link to="/settings" className="font-medium text-[var(--color-primary)] underline">
+            Add a baby
+          </Link>{" "}
+          to log this as served.
+        </p>
+      )}
+      {activeBaby && timesServed !== null && timesServed > 0 && (
         <span className="text-xs text-[var(--color-text-muted)]">
           Served {timesServed} {timesServed === 1 ? "time" : "times"} to {activeBaby.name}
         </span>

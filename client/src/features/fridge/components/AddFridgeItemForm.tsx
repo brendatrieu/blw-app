@@ -1,12 +1,11 @@
 import { useState } from "react";
 import type { FridgeLocation } from "@blw/shared";
-import { useFavorites } from "../../tracking/hooks.js";
 import { FoodPicker } from "../../catalog/components/FoodPicker.js";
+import { RecipePicker } from "../../catalog/components/RecipePicker.js";
 import { useCreateFridgeItem } from "../hooks.js";
 import { LOCATIONS } from "../format.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
-import { Select } from "../../../components/ui/Select.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
 import { DateField } from "../../../components/ui/DateField.js";
 import { Button } from "../../../components/ui/Button.js";
@@ -51,6 +50,35 @@ export function validateAddFridgeItem(values: AddFridgeItemValues): AddFridgeIte
   return errors;
 }
 
+/**
+ * What `/fridge/add?food=<id>` / `?recipe=<id>` asks the form to open with
+ * (item 284) — the same query-param idiom `/log-meal?food=<id>` uses, so
+ * "Add to fridge" from a food or recipe page lands on the right tab with the
+ * right thing already chosen.
+ *
+ * `source: null` means "open the form as if nobody asked for anything": a
+ * missing param, a blank one (`?food=`), or whitespace. Ids are NOT checked
+ * for existence here — this is pure and knows nothing about the catalog. An
+ * id that doesn't resolve simply leaves its picker showing nothing selected,
+ * exactly as a hand-typed URL should.
+ *
+ * `?food=` wins when both are given: a fridge item comes from one source,
+ * and the food tab is the form's own default, so the tie breaks toward it.
+ */
+export interface FridgePrefill {
+  source: "food" | "recipe" | null;
+  foodId?: string;
+  recipeId?: string;
+}
+
+export function resolveFridgePrefill(params: URLSearchParams): FridgePrefill {
+  const foodId = params.get("food")?.trim();
+  if (foodId) return { source: "food", foodId };
+  const recipeId = params.get("recipe")?.trim();
+  if (recipeId) return { source: "recipe", recipeId };
+  return { source: null };
+}
+
 const SOURCE_TABS: { value: Source; label: string }[] = [
   { value: "food", label: "From a food" },
   { value: "recipe", label: "From a recipe" },
@@ -59,6 +87,8 @@ const SOURCE_TABS: { value: Source; label: string }[] = [
 
 interface AddFridgeItemFormProps {
   onDone: () => void;
+  /** From the page's query string — see `resolveFridgePrefill`. */
+  prefill?: FridgePrefill;
 }
 
 /**
@@ -66,12 +96,15 @@ interface AddFridgeItemFormProps {
  * the inline AddFridgeItemSheet: same source tabs, food combobox, recipe
  * select, location segments, wheel "Prepared" field, and quantity note.
  * Now rendered full-screen by FridgeAddPage, which supplies `onDone` for
- * both a successful save and Cancel.
+ * both a successful save and Cancel, plus the `prefill` it read off the
+ * query string. The prefill seeds the INITIAL state only — after that the
+ * tabs and pickers are the parent's to change, and re-rendering never drags
+ * them back to where the link pointed.
  */
-export function AddFridgeItemForm({ onDone }: AddFridgeItemFormProps) {
-  const [source, setSource] = useState<Source>("food");
-  const [foodIds, setFoodIds] = useState<string[]>([]);
-  const [recipeId, setRecipeId] = useState("");
+export function AddFridgeItemForm({ onDone, prefill }: AddFridgeItemFormProps) {
+  const [source, setSource] = useState<Source>(prefill?.source ?? "food");
+  const [foodIds, setFoodIds] = useState<string[]>(prefill?.foodId ? [prefill.foodId] : []);
+  const [recipeId, setRecipeId] = useState(prefill?.recipeId ?? "");
   const [label, setLabel] = useState("");
   const [location, setLocation] = useState<FridgeLocation>("fridge");
   const [preparedAt, setPreparedAt] = useState(() => nowAtMinute());
@@ -80,13 +113,7 @@ export function AddFridgeItemForm({ onDone }: AddFridgeItemFormProps) {
   const [bestBy, setBestBy] = useState("");
   const [notes, setNotes] = useState("");
 
-  // There's no standalone "list recipes" endpoint, so favorited recipes —
-  // the set a parent has already chosen to come back to — double as the
-  // recipe picker's source list.
-  const { data: favoritesData, isLoading: favoritesLoading } = useFavorites();
   const createItem = useCreateFridgeItem();
-
-  const favorites = favoritesData?.items ?? [];
 
   // Item 235: "Add to fridge" stays enabled, the missing answer shows under
   // whichever source field is on screen, and a failed submit focuses it.
@@ -145,24 +172,14 @@ export function AddFridgeItemForm({ onDone }: AddFridgeItemFormProps) {
         </Field>
       )}
 
+      {/* The same searchable picker the log form uses, over EVERY recipe.
+          It replaced a native select of favorited recipes only, which could
+          not show a recipe arriving via `?recipe=<id>` unless it happened to
+          be favorited — the prefill would have set a recipe the field then
+          rendered as blank. */}
       {source === "recipe" && (
         <Field label="Recipe" htmlFor="fridge-add-recipe" error={shownErrors.recipe}>
-          {!favoritesLoading && favorites.length === 0 ? (
-            <p className="text-xs text-[var(--color-text-muted)]">
-              No favorited recipes yet — favorite one from its recipe page first.
-            </p>
-          ) : (
-            <Select id="fridge-add-recipe" required value={recipeId} onChange={(e) => setRecipeId(e.target.value)}>
-              <option value="" disabled>
-                {favoritesLoading ? "Loading recipes…" : "Select a recipe"}
-              </option>
-              {favorites.map((recipe) => (
-                <option key={recipe.recipeId} value={recipe.recipeId}>
-                  {recipe.title}
-                </option>
-              ))}
-            </Select>
-          )}
+          <RecipePicker id="fridge-add-recipe" value={recipeId} onChange={setRecipeId} />
         </Field>
       )}
 

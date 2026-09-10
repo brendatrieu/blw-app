@@ -2,10 +2,14 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
+import type { FoodListItem, RecipeListItem } from "@blw/shared";
+import { catalogKeys } from "../../catalog/hooks.js";
 import {
   AddFridgeItemForm,
+  resolveFridgePrefill,
   validateAddFridgeItem,
   type AddFridgeItemValues,
+  type FridgePrefill,
 } from "./AddFridgeItemForm.js";
 
 function values(overrides: Partial<AddFridgeItemValues> = {}): AddFridgeItemValues {
@@ -41,10 +45,83 @@ describe("validateAddFridgeItem", () => {
   });
 });
 
-function renderForm() {
+// Item 284: "Add to fridge" from a food or recipe page arrives as
+// /fridge/add?food=<id> | ?recipe=<id>, the same idiom /log-meal?food=<id>
+// uses. The rule is pure, so it is pinned without rendering anything.
+describe("resolveFridgePrefill", () => {
+  const prefill = (query: string): FridgePrefill => resolveFridgePrefill(new URLSearchParams(query));
+
+  it("reads ?food= as the food tab with that food chosen", () => {
+    expect(prefill("food=food-1")).toEqual({ source: "food", foodId: "food-1" });
+  });
+
+  it("reads ?recipe= as the recipe tab with that recipe chosen", () => {
+    expect(prefill("recipe=recipe-1")).toEqual({ source: "recipe", recipeId: "recipe-1" });
+  });
+
+  it("asks for nothing when neither param is there", () => {
+    expect(prefill("")).toEqual({ source: null });
+    expect(prefill("edit=fridge-1&location=freezer")).toEqual({ source: null });
+  });
+
+  it("ignores a blank or whitespace-only id rather than opening an empty tab", () => {
+    expect(prefill("food=")).toEqual({ source: null });
+    expect(prefill("food=%20%20")).toEqual({ source: null });
+    expect(prefill("recipe=")).toEqual({ source: null });
+  });
+
+  it("falls through to ?recipe= when ?food= is blank", () => {
+    expect(prefill("food=&recipe=recipe-1")).toEqual({ source: "recipe", recipeId: "recipe-1" });
+  });
+
+  it("breaks a both-params tie toward food — the form's own default tab", () => {
+    expect(prefill("food=food-1&recipe=recipe-1")).toEqual({ source: "food", foodId: "food-1" });
+  });
+
+  it("trims the id it hands on", () => {
+    expect(prefill("food=%20food-1%20")).toEqual({ source: "food", foodId: "food-1" });
+  });
+});
+
+const FOOD: FoodListItem = {
+  id: "food-1",
+  slug: "banana",
+  name: "Banana",
+  category: "fruit",
+  ironLevel: "low",
+  vitaminCLevel: "moderate",
+  fiberLevel: "low",
+  chokingRisk: "moderate",
+  minAgeMonths: 6,
+  allergens: [],
+  isCustom: false,
+  emoji: null,
+};
+
+const RECIPE: RecipeListItem = {
+  id: "recipe-1",
+  slug: "banana-porridge",
+  title: "Banana porridge",
+  minAgeMonths: 6,
+  ironFocus: false,
+  vitaminCHigh: false,
+  fiberHigh: false,
+  allergens: [],
+  isCustom: false,
+  isFavorite: false,
+  ingredientNames: [],
+};
+
+function renderForm(prefill?: FridgePrefill) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient.setQueryData(catalogKeys.foodsList({}), { foods: [FOOD] });
+  queryClient.setQueryData(catalogKeys.recipesList({}), { recipes: [RECIPE] });
   return renderToString(
-    createElement(QueryClientProvider, { client: queryClient }, createElement(AddFridgeItemForm, { onDone: () => {} })),
+    createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(AddFridgeItemForm, { onDone: () => {}, ...(prefill ? { prefill } : {}) }),
+    ),
   );
 }
 
@@ -83,7 +160,8 @@ describe("AddFridgeItemForm (render)", () => {
     expect(html).not.toContain("Add at least one food");
   });
 
-  // Item 236: the free-form and recipe tabs carry native `required` controls
+  // Item 236: the free-form tab carries a native `required` Input (the recipe
+  // tab's picker no longer does)
   // whose bubbles would otherwise pre-empt the inline message.
   it("opts out of native constraint validation", () => {
     expect(renderForm()).toMatch(/<form[^>]*novalidate/i);
@@ -96,5 +174,45 @@ describe("AddFridgeItemForm (render)", () => {
     expect(html).not.toContain(">Cancel<");
     expect(html).toContain(">Add to fridge<");
     expect((html.match(/type="submit"/g) ?? []).length).toBe(1);
+  });
+});
+
+describe("AddFridgeItemForm (prefill, item 284)", () => {
+  /** The tab strip marks the open tab with aria-pressed. */
+  function pressedTab(html: string): string | undefined {
+    return html.match(/<button[^>]*aria-pressed="true"[^>]*>([^<]*)<\/button>/)?.[1];
+  }
+
+  it("opens on the food tab with the food chosen when given one", () => {
+    const html = renderForm({ source: "food", foodId: FOOD.id });
+    expect(pressedTab(html)).toBe("From a food");
+    expect(html).toContain(">Food<");
+    // The chosen food shows as a chip under the picker's field.
+    expect(html).toContain('aria-label="Remove Banana"');
+    expect(html).toMatch(/1(?:<!--\s*-->)? selected/);
+  });
+
+  it("opens on the recipe tab with the recipe chosen when given one", () => {
+    const html = renderForm({ source: "recipe", recipeId: RECIPE.id });
+    expect(pressedTab(html)).toBe("From a recipe");
+    expect(html).toContain(">Recipe<");
+    expect(html).toContain('aria-label="Remove Banana porridge"');
+    // The food tab's field is not on screen at the same time.
+    expect(html).not.toContain(">Food<");
+  });
+
+  it("opens on the food tab, with nothing chosen, when nothing is asked for", () => {
+    const html = renderForm({ source: null });
+    expect(pressedTab(html)).toBe("From a food");
+    expect(html).not.toMatch(/aria-label="Remove /);
+    expect(html).not.toContain("selected</span>");
+  });
+
+  // The prefill only seeds a picker; it never fills in the rest of the form.
+  it("leaves the location, prepared and optional fields exactly as they were", () => {
+    const html = renderForm({ source: "food", foodId: FOOD.id });
+    expect(html).toContain(">Location<");
+    expect(html).toContain(">Prepared<");
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Add to fridge</);
   });
 });
