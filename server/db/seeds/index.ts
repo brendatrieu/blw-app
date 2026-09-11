@@ -174,7 +174,8 @@ export async function runSeeds(db: Database): Promise<void> {
           ironFocus: r.ironFocus,
           fridgeHoursOverride: r.fridgeHoursOverride ?? null,
           freezerDaysOverride: r.freezerDaysOverride ?? null,
-          extraIngredients: r.extraIngredients ?? null,
+          extraIngredients:
+            r.extraIngredients?.map((extra) => ({ name: extra.name, quantityNote: extra.quantityNote ?? "" })) ?? null,
         })),
       )
       .onConflictDoUpdate({

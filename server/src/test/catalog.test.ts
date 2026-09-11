@@ -118,7 +118,7 @@ async function seedFixtures(db: Database) {
       minAgeMonths: 6,
       prepMinutes: 10,
       ironFocus: true,
-      extraIngredients: ["olive oil"],
+      extraIngredients: [{ name: "olive oil", quantityNote: "" }, { name: "cumin", quantityNote: "a pinch of" }],
     })
     .returning();
 
@@ -278,7 +278,11 @@ describe("catalog routes", () => {
     expect(body.variants).toHaveLength(3);
     expect(body.variants.map((v) => v.ageStage).sort()).toEqual(["12", "6", "9"]);
     expect(body.allergens).toEqual(["egg"]);
-    expect(body.extraIngredients).toEqual(["olive oil"]);
+    // Objects since item 298 — a stored `quantityNote: ""` means "no quantity given".
+    expect(body.extraIngredients).toEqual([
+      { name: "olive oil", quantityNote: "" },
+      { name: "cumin", quantityNote: "a pinch of" },
+    ]);
   });
 
   it("GET /api/recipes/:id 404s for an unknown id", async () => {

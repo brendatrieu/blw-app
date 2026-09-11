@@ -17,7 +17,11 @@ export interface RecipeSeed {
   ironFocus: boolean;
   fridgeHoursOverride?: number; freezerDaysOverride?: number;
   ingredients: { foodSlug: string; quantityNote: string }[];
-  extraIngredients?: string[];
+  // Free-text staples with no catalog food row. Objects since item 298: an
+  // obvious leading quantity ("a pinch of", "1 teaspoon") is split off into
+  // `quantityNote` HERE rather than in migration 0011, which only renames the
+  // old strings into `name`. Omitted quantityNote is stored as "".
+  extraIngredients?: { name: string; quantityNote?: string }[];
   // Stage variants. Every stage at or above the recipe's minAgeMonths is
   // present; earlier stages are omitted — a 9-month recipe (shrimp) carries
   // 9 and 12 only, and the seeder writes a row per stage that IS present.

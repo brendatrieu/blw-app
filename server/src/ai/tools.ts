@@ -17,7 +17,7 @@
 // actually cares about. Flagged in the phase brief.
 import { and, asc, eq, ilike, inArray, isNull, lte, or } from "drizzle-orm";
 import { betaTool } from "@anthropic-ai/sdk/helpers/beta/json-schema";
-import { ageInMonths, unionAllergenStatus } from "@blw/shared";
+import { ageInMonths, formatExtraIngredient, unionAllergenStatus } from "@blw/shared";
 import type { Database } from "../db/index.js";
 import {
   allergenOverrides,
@@ -252,7 +252,13 @@ function buildSearchRecipesTool(db: Database, userId: string) {
       // needs the ingredient join, so rank in memory over a bounded
       // candidate set rather than ordering by the raw column.
       const candidates = await db
-        .select({ id: recipes.id, title: recipes.title, minAgeMonths: recipes.minAgeMonths, ironFocus: recipes.ironFocus })
+        .select({
+          id: recipes.id,
+          title: recipes.title,
+          minAgeMonths: recipes.minAgeMonths,
+          ironFocus: recipes.ironFocus,
+          extraIngredients: recipes.extraIngredients,
+        })
         .from(recipes)
         .where(and(...conditions))
         .orderBy(asc(recipes.title))
@@ -275,6 +281,10 @@ function buildSearchRecipesTool(db: Database, userId: string) {
           ironFocus: deriveIronFocus(row.ironFocus, nutritionFor(nutrition, row.id)),
           fiberHigh: nutritionFor(nutrition, row.id).fiberHigh,
           vitaminCHigh: nutritionFor(nutrition, row.id).vitaminCHigh,
+          // Cupboard staples the recipe needs on top of its ingredient foods,
+          // printed the way the recipe page prints them: "1 teaspoon chia
+          // seeds", or a bare "olive oil" when no quantity was given.
+          extraIngredients: (row.extraIngredients ?? []).map(formatExtraIngredient),
         }))
         .sort((a, b) => Number(b.ironFocus) - Number(a.ironFocus) || a.title.localeCompare(b.title))
         .slice(0, 5);

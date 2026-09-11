@@ -98,7 +98,14 @@ describe("required-field errors reach their own field (item 237)", () => {
   it("CustomRecipeForm: title under the title input, ingredients under the picker", () => {
     const html = render(createElement(CustomRecipeForm, { onSaved: () => {} }));
     expectErrorUnder(html, 'id="custom-recipe-title"', "Title is required", 'id="custom-recipe-age"');
-    expectErrorUnder(html, 'id="custom-recipe-ingredients"', "Add at least one ingredient", 'id="custom-recipe-extra"');
+    expectErrorUnder(
+      html,
+      'id="custom-recipe-ingredients"',
+      "Add at least one ingredient",
+      // Item 299: the extras field's first control is a row's name box now,
+      // not the old single chip input.
+      'id="custom-recipe-extra-name-0"',
+    );
     expect(alertCount(html)).toBe(2);
     // Item 240: steps are optional, so an empty recipe never complains here.
     expect(html).not.toContain("Add at least one step");

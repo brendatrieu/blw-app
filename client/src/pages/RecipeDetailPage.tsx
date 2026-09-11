@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { AgeStage, RecipeDetail } from "@blw/shared";
-import { ageInMonths } from "@blw/shared";
+import { ageInMonths, formatExtraIngredient } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useDeleteCustomRecipe, useRecipe } from "../features/catalog/hooks.js";
 import { asCustomRecipeConflict } from "../features/catalog/api.js";
@@ -256,15 +256,21 @@ export function RecipeDetailPage() {
               </Link>
             </li>
           ))}
-          {recipe.extraIngredients.map((extra) => (
+          {/* An extra reads as "a drizzle of olive oil" — quantity first,
+              name after, and the name alone when no quantity was given
+              (item 299). The whole row is already in the muted tone a real
+              ingredient's quantity note gets, so the quantity needs no
+              styling of its own; `formatExtraIngredient` is shared with the
+              AI recipe tool so the two can never word it differently. */}
+          {recipe.extraIngredients.map((extra, index) => (
             <li
-              key={extra}
+              key={`${index}-${extra.name}`}
               className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text-muted)]"
             >
               <span aria-hidden="true" className="text-lg leading-none">
                 🧂
               </span>
-              {extra}
+              {formatExtraIngredient(extra)}
             </li>
           ))}
         </ul>

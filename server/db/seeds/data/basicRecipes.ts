@@ -40,7 +40,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 20,
     ironFocus: false,
     ingredients: [{ foodSlug: 'beef', quantityNote: '55g (2oz) lean beef — a thin-cut steak or lean ground beef' }],
-    extraIngredients: ['olive oil or a spoonful of the cooking liquid, to moisten'],
+    extraIngredients: [{ name: 'olive oil or a spoonful of the cooking liquid, to moisten' }],
     variants: {
       '6': {
         textureNote: 'A finger-length strip of well-done beef cut along the grain, or a moist pile of very finely minced beef.',
@@ -79,7 +79,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 25,
     ironFocus: false,
     ingredients: [{ foodSlug: 'chicken_thigh', quantityNote: '1 small boneless, skinless chicken thigh (about 55g)' }],
-    extraIngredients: ['olive oil or a spoonful of the cooking liquid, to moisten'],
+    extraIngredients: [{ name: 'olive oil or a spoonful of the cooking liquid, to moisten' }],
     variants: {
       '6': {
         textureNote: 'A finger-length strip of thoroughly cooked dark meat, or finely shredded thigh moistened so it is not dry.',
@@ -189,7 +189,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 10,
     ironFocus: false,
     ingredients: [{ foodSlug: 'egg', quantityNote: '1 whole egg' }],
-    extraIngredients: ['a splash of breast milk, formula, or water, to loosen'],
+    extraIngredients: [{ name: 'breast milk, formula, or water, to loosen', quantityNote: 'a splash of' }],
     variants: {
       '6': {
         textureNote: 'Well-cooked whole egg mashed and loosened, or a soft scrambled pile.',
@@ -225,7 +225,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 25,
     ironFocus: false,
     ingredients: [{ foodSlug: 'lentils', quantityNote: '1/4 cup dried red lentils (about 1/2 cup cooked)' }],
-    extraIngredients: ['water, for cooking and thinning'],
+    extraIngredients: [{ name: 'water, for cooking and thinning' }],
     variants: {
       '6': {
         textureNote: 'A smooth, thinned lentil puree loose enough to scoop.',
@@ -261,7 +261,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 10,
     ironFocus: false,
     ingredients: [{ foodSlug: 'chickpeas', quantityNote: '1/3 cup cooked or no-salt-added canned chickpeas' }],
-    extraIngredients: ['a little water or olive oil, to loosen'],
+    extraIngredients: [{ name: 'water or olive oil, to loosen', quantityNote: 'a little' }],
     variants: {
       '6': {
         textureNote: 'A smooth, mashed hummus-style chickpea spread — no whole chickpeas and no loose skins.',
@@ -299,7 +299,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 10,
     ironFocus: false,
     ingredients: [{ foodSlug: 'black_beans', quantityNote: '1/3 cup cooked or no-salt-added canned black beans' }],
-    extraIngredients: ['a little water, to loosen the mash'],
+    extraIngredients: [{ name: 'water, to loosen the mash', quantityNote: 'a little' }],
     variants: {
       '6': {
         textureNote: 'Well-mashed black beans with no whole, round bean left.',
@@ -337,7 +337,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 12,
     ironFocus: false,
     ingredients: [{ foodSlug: 'tofu', quantityNote: '1/4 block (about 60g) firm tofu' }],
-    extraIngredients: ['a little oil for the pan'],
+    extraIngredients: [{ name: 'oil for the pan', quantityNote: 'a little' }],
     variants: {
       '6': {
         textureNote: 'Finger-length strips of firm tofu, lightly pan-fried so they are easy to grip.',
@@ -374,7 +374,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 8,
     ironFocus: false,
     ingredients: [{ foodSlug: 'iron_fortified_oats', quantityNote: '3 tablespoons iron-fortified rolled or baby oats' }],
-    extraIngredients: ['breast milk, formula, or water'],
+    extraIngredients: [{ name: 'breast milk, formula, or water' }],
     variants: {
       '6': {
         textureNote: 'A smooth, thinned porridge loose enough to drip slowly off a spoon.',
@@ -446,7 +446,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 20,
     ironFocus: false,
     ingredients: [{ foodSlug: 'quinoa', quantityNote: '1/4 cup dry quinoa (about 3/4 cup cooked)' }],
-    extraIngredients: ['water, for cooking'],
+    extraIngredients: [{ name: 'water, for cooking' }],
     variants: {
       '6': {
         textureNote: 'Soft, sticky quinoa mashed lightly and pressed into a patty rather than served as loose grains.',
@@ -797,7 +797,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 5,
     ironFocus: false,
     ingredients: [{ foodSlug: 'peanut_butter', quantityNote: '1-2 teaspoons smooth peanut butter' }],
-    extraIngredients: ['warm water, breast milk, or formula, to thin'],
+    extraIngredients: [{ name: 'warm water, breast milk, or formula, to thin' }],
     variants: {
       '6': {
         textureNote: 'Smooth peanut butter thinned until runny, on a spoon or in a very thin layer on a soft toast finger — never a thick spoonful.',
@@ -834,7 +834,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 5,
     ironFocus: false,
     ingredients: [{ foodSlug: 'almond_butter', quantityNote: '1-2 teaspoons smooth almond butter' }],
-    extraIngredients: ['warm water, breast milk, or formula, to thin'],
+    extraIngredients: [{ name: 'warm water, breast milk, or formula, to thin' }],
     variants: {
       '6': {
         textureNote: 'Smooth almond butter thinned until runny, on a spoon or in a very thin layer on a soft toast finger — never a thick spoonful.',
@@ -871,7 +871,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 5,
     ironFocus: false,
     ingredients: [{ foodSlug: 'tahini', quantityNote: '1 teaspoon tahini' }],
-    extraIngredients: ['warm water, breast milk, or formula, to thin'],
+    extraIngredients: [{ name: 'warm water, breast milk, or formula, to thin' }],
     variants: {
       '6': {
         textureNote: 'A teaspoon of tahini thinned until runny and drizzled in a light layer.',
@@ -978,7 +978,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 5,
     ironFocus: false,
     ingredients: [{ foodSlug: 'wheat_toast', quantityNote: '1 slice of soft wheat bread' }],
-    extraIngredients: ['a little water, whole milk, or a thin smooth spread, to moisten'],
+    extraIngredients: [{ name: 'water, whole milk, or a thin smooth spread, to moisten', quantityNote: 'a little' }],
     variants: {
       '6': {
         textureNote: 'Soft, moistened toast fingers that bend without snapping.',
@@ -1078,7 +1078,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 3,
     ironFocus: false,
     ingredients: [{ foodSlug: 'avocado', quantityNote: '1/2 ripe avocado' }],
-    extraIngredients: ['a little oat flour for grip (optional)'],
+    extraIngredients: [{ name: 'oat flour for grip (optional)', quantityNote: 'a little' }],
     variants: {
       '6': {
         textureNote: 'A finger-length wedge of ripe avocado, with a little skin left on one side as a grip.',
@@ -1401,7 +1401,7 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 20,
     ironFocus: false,
     ingredients: [{ foodSlug: 'rice', quantityNote: '1/4 cup short-grain white rice' }],
-    extraIngredients: ['water, for cooking'],
+    extraIngredients: [{ name: 'water, for cooking' }],
     variants: {
       '6': {
         textureNote: 'Soft, sticky rice pressed into a ball or patty rather than served as loose grains.',

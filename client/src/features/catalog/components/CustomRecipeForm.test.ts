@@ -4,13 +4,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { RecipeDetail } from "@blw/shared";
 import {
-  addExtraIngredient,
   buildCustomRecipeInput,
   CustomRecipeForm,
+  emptyExtraIngredientRow,
+  extraRowEnterKeyHint,
+  extraRowFieldId,
   initialCustomRecipeValues,
-  getChipKeyProps,
+  getExtraRowKeyProps,
   getStepKeyProps,
-  resolveChipKey,
+  resolveExtraRowKey,
   resolveStepKey,
   validateCustomRecipe,
   type CustomRecipeValues,
@@ -55,7 +57,10 @@ function recipe(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
       },
       { foodId: "food-2", foodSlug: "carrot", foodName: "Carrot", isCustom: false, foodEmoji: null, quantityNote: "" },
     ],
-    extraIngredients: ["olive oil"],
+    extraIngredients: [
+      { name: "olive oil", quantityNote: "a drizzle" },
+      { name: "cinnamon", quantityNote: "" },
+    ],
     variants: [{ ageStage: "9", textureNote: "", steps: ["Cook", "Mash"] }],
     isCustom: true,
     notes: "Freezes well",
@@ -112,10 +117,34 @@ describe("validateCustomRecipe", () => {
     expect(validateCustomRecipe(values({ prepMinutes: "601" })).prepMinutes).toContain("600 minutes or fewer");
   });
 
-  it("caps an extra ingredient's length", () => {
-    expect(validateCustomRecipe(values({ extraIngredients: ["x".repeat(61)] })).extraIngredients).toContain(
-      "60 characters or fewer",
+  it("caps an extra ingredient's name and its quantity separately", () => {
+    expect(
+      validateCustomRecipe(values({ extraIngredients: [{ name: "x".repeat(61), quantityNote: "" }] }))
+        .extraIngredients,
+    ).toContain("60 characters or fewer");
+    expect(
+      validateCustomRecipe(values({ extraIngredients: [{ name: "olive oil", quantityNote: "x".repeat(81) }] }))
+        .extraIngredients,
+    ).toContain("80 characters or fewer");
+  });
+
+  // A blank ROW is "I haven't filled this in" — the same reading a blank step
+  // box gets — so it is dropped, never an error, and never counted toward the
+  // cap of 20. A row with only a quantity in it is blank by that rule.
+  it("ignores blank rows entirely", () => {
+    expect(validateCustomRecipe(values({ extraIngredients: [emptyExtraIngredientRow()] }))).toEqual({});
+    expect(
+      validateCustomRecipe(values({ extraIngredients: [{ name: "   ", quantityNote: "a drizzle" }] })),
+    ).toEqual({});
+    const twentyOne = Array.from({ length: 21 }, (_, i) =>
+      i === 0 ? emptyExtraIngredientRow() : { name: `extra-${i}`, quantityNote: "" },
     );
+    expect(validateCustomRecipe(values({ extraIngredients: twentyOne })).extraIngredients).toBeUndefined();
+  });
+
+  it("caps the number of filled-in rows at the shared 20", () => {
+    const rows = Array.from({ length: 21 }, (_, i) => ({ name: `extra-${i}`, quantityNote: "" }));
+    expect(validateCustomRecipe(values({ extraIngredients: rows })).extraIngredients).toContain("At most 20");
   });
 });
 
@@ -135,12 +164,50 @@ describe("buildCustomRecipeInput", () => {
     ]);
   });
 
-  it("drops blank steps and blank extras, trimming what survives", () => {
+  it("drops blank steps and blank extra rows, trimming what survives", () => {
     const input = buildCustomRecipeInput(
-      values({ steps: [" Cook ", "", "   ", "Mash"], extraIngredients: [" olive oil ", "  "] }),
+      values({
+        steps: [" Cook ", "", "   ", "Mash"],
+        extraIngredients: [
+          { name: " olive oil ", quantityNote: " a drizzle " },
+          { name: "  ", quantityNote: "" },
+          // Only a quantity typed: no name, so no ingredient.
+          { name: "   ", quantityNote: "a pinch" },
+        ],
+      }),
     );
     expect(input.steps).toEqual(["Cook", "Mash"]);
-    expect(input.extraIngredients).toEqual(["olive oil"]);
+    expect(input.extraIngredients).toEqual([{ name: "olive oil", quantityNote: "a drizzle" }]);
+  });
+
+  // The object form, quantity and all — this is the whole point of item 299.
+  it("emits a name/quantityNote object per row, in the order the rows sit in", () => {
+    const input = buildCustomRecipeInput(
+      values({
+        extraIngredients: [
+          { name: "cinnamon", quantityNote: "a pinch" },
+          { name: "olive oil", quantityNote: "" },
+        ],
+      }),
+    );
+    expect(input.extraIngredients).toEqual([
+      { name: "cinnamon", quantityNote: "a pinch" },
+      { name: "olive oil", quantityNote: "" },
+    ]);
+  });
+
+  // `normalizeExtraIngredients` is the server's own rule: running it here
+  // means what the form sends is already what comes back on the recipe page.
+  it("keeps the first of a case-insensitive duplicate name, quantity and all", () => {
+    const input = buildCustomRecipeInput(
+      values({
+        extraIngredients: [
+          { name: "Olive oil", quantityNote: "a drizzle" },
+          { name: "olive OIL", quantityNote: "two spoons" },
+        ],
+      }),
+    );
+    expect(input.extraIngredients).toEqual([{ name: "Olive oil", quantityNote: "a drizzle" }]);
   });
 
   it("collapses blank notes to null", () => {
@@ -157,13 +224,13 @@ describe("buildCustomRecipeInput", () => {
 });
 
 describe("initialCustomRecipeValues", () => {
-  it("starts a new recipe at 6 months with exactly one empty step box", () => {
+  it("starts a new recipe at 6 months with one empty step box and one empty extra row", () => {
     expect(initialCustomRecipeValues()).toEqual({
       title: "",
       minAgeMonths: 6,
       foodIds: [],
       quantityNotes: {},
-      extraIngredients: [],
+      extraIngredients: [{ name: "", quantityNote: "" }],
       steps: [""],
       notes: "",
       prepMinutes: "",
@@ -176,7 +243,10 @@ describe("initialCustomRecipeValues", () => {
     expect(initial.minAgeMonths).toBe(9);
     expect(initial.foodIds).toEqual(["food-1", "food-2"]);
     expect(initial.quantityNotes).toEqual({ "food-1": "half a cup", "food-2": "" });
-    expect(initial.extraIngredients).toEqual(["olive oil"]);
+    expect(initial.extraIngredients).toEqual([
+      { name: "olive oil", quantityNote: "a drizzle" },
+      { name: "cinnamon", quantityNote: "" },
+    ]);
     expect(initial.steps).toEqual(["Cook", "Mash"]);
     expect(initial.notes).toBe("Freezes well");
     expect(initial.prepMinutes).toBe("20");
@@ -190,12 +260,24 @@ describe("initialCustomRecipeValues", () => {
     expect(initialCustomRecipeValues(recipe({ variants: [] })).steps).toEqual([""]);
   });
 
-  it("copies the arrays rather than aliasing the cached recipe", () => {
+  it("opens a blank extra row for a recipe saved without any", () => {
+    expect(initialCustomRecipeValues(recipe({ extraIngredients: [] })).extraIngredients).toEqual([
+      { name: "", quantityNote: "" },
+    ]);
+  });
+
+  // Rows are edited in place, so the row OBJECTS have to be copies too — not
+  // just the array around them.
+  it("copies the arrays and the extra rows rather than aliasing the cached recipe", () => {
     const source = recipe();
     const initial = initialCustomRecipeValues(source);
-    initial.extraIngredients.push("salt");
+    initial.extraIngredients.push({ name: "salt", quantityNote: "" });
+    initial.extraIngredients[0]!.quantityNote = "a gallon";
     initial.steps.push("Serve");
-    expect(source.extraIngredients).toEqual(["olive oil"]);
+    expect(source.extraIngredients).toEqual([
+      { name: "olive oil", quantityNote: "a drizzle" },
+      { name: "cinnamon", quantityNote: "" },
+    ]);
     expect(source.variants[0]!.steps).toEqual(["Cook", "Mash"]);
   });
 });
@@ -224,7 +306,7 @@ describe("resolveStepKey (item 231: Enter finishes the step)", () => {
   });
 });
 
-describe("getStepKeyProps / getChipKeyProps (the wiring, not just the decision)", () => {
+describe("getStepKeyProps (the wiring, not just the decision)", () => {
   function stepEvent(key: string, shiftKey: boolean) {
     let prevented = false;
     let blurred = false;
@@ -265,85 +347,122 @@ describe("getStepKeyProps / getChipKeyProps (the wiring, not just the decision)"
   it("step: promises the on-screen keyboard the same thing the handler does", () => {
     expect(getStepKeyProps().enterKeyHint).toBe("done");
   });
-
-  it("chip: Enter commits the trimmed draft and never falls through to submit", () => {
-    const added: string[] = [];
-    let prevented = false;
-    getChipKeyProps("  olive oil  ", (entry) => added.push(entry)).onKeyDown({
-      key: "Enter",
-      preventDefault: () => {
-        prevented = true;
-      },
-    } as never);
-    expect(added).toEqual(["olive oil"]);
-    expect(prevented).toBe(true);
-  });
-
-  it("chip: a blank draft still swallows Enter, but adds nothing", () => {
-    const added: string[] = [];
-    let prevented = false;
-    getChipKeyProps("   ", (entry) => added.push(entry)).onKeyDown({
-      key: "Enter",
-      preventDefault: () => {
-        prevented = true;
-      },
-    } as never);
-    expect(added).toEqual([]);
-    expect(prevented).toBe(true);
-  });
-
-  it("chip: leaves every other key alone", () => {
-    const added: string[] = [];
-    let prevented = false;
-    getChipKeyProps("olive", (entry) => added.push(entry)).onKeyDown({
-      key: "a",
-      preventDefault: () => {
-        prevented = true;
-      },
-    } as never);
-    expect(added).toEqual([]);
-    expect(prevented).toBe(false);
-    expect(getChipKeyProps("olive", () => {}).enterKeyHint).toBe("done");
-  });
 });
 
-describe("resolveChipKey (Enter never submits the recipe)", () => {
-  it("swallows Enter and commits the trimmed draft", () => {
-    expect(resolveChipKey("Enter", "  olive oil  ")).toEqual({ prevent: true, commit: "olive oil" });
+describe("resolveExtraRowKey (item 299: Enter walks the rows, never submits)", () => {
+  it("moves from a name to that row's own quantity", () => {
+    expect(resolveExtraRowKey("Enter", "name", 0, 3)).toEqual({
+      prevent: true,
+      focus: { index: 0, field: "quantity" },
+      addRow: false,
+    });
   });
 
-  // The important half: even with nothing to add, Enter must not fall
-  // through to the browser's implicit form submission (item 211).
-  it("still swallows Enter on a blank draft, with nothing to commit", () => {
-    expect(resolveChipKey("Enter", "   ")).toEqual({ prevent: true, commit: null });
-    expect(resolveChipKey("Enter", "")).toEqual({ prevent: true, commit: null });
+  it("moves from a quantity to the next row that already exists", () => {
+    expect(resolveExtraRowKey("Enter", "quantity", 0, 3)).toEqual({
+      prevent: true,
+      focus: { index: 1, field: "name" },
+      addRow: false,
+    });
+  });
+
+  it("appends a row from the last quantity, so a list can be typed straight through", () => {
+    expect(resolveExtraRowKey("Enter", "quantity", 2, 3)).toEqual({
+      prevent: true,
+      focus: { index: 3, field: "name" },
+      addRow: true,
+    });
+  });
+
+  it("adds nothing past the shared cap of 20, but still swallows the key", () => {
+    expect(resolveExtraRowKey("Enter", "quantity", 19, 20)).toEqual({
+      prevent: true,
+      focus: null,
+      addRow: false,
+    });
+  });
+
+  // The half that matters most: these are <input>s inside the recipe form, so
+  // an unprevented Enter would implicit-submit a half-written recipe — the
+  // same hazard the chip input guarded against (item 211).
+  it("prevents EVERY Enter, wherever it lands and whatever it does next", () => {
+    const everywhere = [
+      resolveExtraRowKey("Enter", "name", 0, 1),
+      resolveExtraRowKey("Enter", "quantity", 0, 1),
+      resolveExtraRowKey("Enter", "name", 19, 20),
+      resolveExtraRowKey("Enter", "quantity", 19, 20),
+    ];
+    for (const decision of everywhere) expect(decision.prevent).toBe(true);
   });
 
   it("leaves every other key alone", () => {
-    expect(resolveChipKey("a", "olive")).toEqual({ prevent: false, commit: null });
-    expect(resolveChipKey("Tab", "olive")).toEqual({ prevent: false, commit: null });
-    expect(resolveChipKey("Backspace", "")).toEqual({ prevent: false, commit: null });
+    for (const key of ["a", "Tab", "Backspace", "Escape"]) {
+      expect(resolveExtraRowKey(key, "name", 0, 3)).toEqual({ prevent: false, focus: null, addRow: false });
+      expect(resolveExtraRowKey(key, "quantity", 2, 3)).toEqual({ prevent: false, focus: null, addRow: false });
+    }
   });
 });
 
-describe("addExtraIngredient", () => {
-  it("appends the trimmed entry", () => {
-    expect(addExtraIngredient(["olive oil"], "  cinnamon ")).toEqual(["olive oil", "cinnamon"]);
+describe("extraRowEnterKeyHint", () => {
+  it("says 'next' wherever Enter moves somewhere", () => {
+    expect(extraRowEnterKeyHint("name", 0, 1)).toBe("next");
+    expect(extraRowEnterKeyHint("quantity", 0, 3)).toBe("next");
+    // The last quantity still moves — onto a row it creates.
+    expect(extraRowEnterKeyHint("quantity", 2, 3)).toBe("next");
   });
 
-  it("refuses a blank entry, returning the same array", () => {
-    const current = ["olive oil"];
-    expect(addExtraIngredient(current, "   ")).toBe(current);
+  it("says 'done' only where Enter has nowhere left to go", () => {
+    expect(extraRowEnterKeyHint("quantity", 19, 20)).toBe("done");
+  });
+});
+
+describe("extraRowFieldId", () => {
+  it("namespaces both boxes of a row by the form's own prefix", () => {
+    expect(extraRowFieldId("custom-recipe", 0, "name")).toBe("custom-recipe-extra-name-0");
+    expect(extraRowFieldId("recipe-edit", 2, "quantity")).toBe("recipe-edit-extra-quantity-2");
+  });
+});
+
+describe("getExtraRowKeyProps (the wiring, not just the decision)", () => {
+  function press(key: string, field: "name" | "quantity", index: number, rowCount: number) {
+    const acted: { focus: unknown; addRow: boolean }[] = [];
+    let prevented = false;
+    getExtraRowKeyProps(field, index, rowCount, (decision) => acted.push(decision)).onKeyDown({
+      key,
+      preventDefault: () => {
+        prevented = true;
+      },
+    } as never);
+    return { acted, prevented };
+  }
+
+  it("Enter hands the component the append-and-focus decision, and never submits", () => {
+    const { acted, prevented } = press("Enter", "quantity", 2, 3);
+    expect(prevented).toBe(true);
+    expect(acted).toEqual([{ focus: { index: 3, field: "name" }, addRow: true }]);
   });
 
-  it("refuses a case-insensitive duplicate", () => {
-    const current = ["Olive oil"];
-    expect(addExtraIngredient(current, "olive OIL")).toBe(current);
+  it("Enter in a name asks only for a move, not a new row", () => {
+    const { acted, prevented } = press("Enter", "name", 1, 3);
+    expect(prevented).toBe(true);
+    expect(acted).toEqual([{ focus: { index: 1, field: "quantity" }, addRow: false }]);
   });
 
-  it("refuses to go past the shared cap of 20", () => {
-    const current = Array.from({ length: 20 }, (_, i) => `extra-${i}`);
-    expect(addExtraIngredient(current, "one more")).toBe(current);
+  it("at the cap, Enter is swallowed and the component is asked to do nothing", () => {
+    const { acted, prevented } = press("Enter", "quantity", 19, 20);
+    expect(prevented).toBe(true);
+    expect(acted).toEqual([]);
+  });
+
+  it("leaves every other key alone", () => {
+    const { acted, prevented } = press("a", "name", 0, 3);
+    expect(prevented).toBe(false);
+    expect(acted).toEqual([]);
+  });
+
+  it("promises the on-screen keyboard the same thing the handler does", () => {
+    expect(getExtraRowKeyProps("name", 0, 1, () => {}).enterKeyHint).toBe("next");
+    expect(getExtraRowKeyProps("quantity", 19, 20, () => {}).enterKeyHint).toBe("done");
   });
 });
 
@@ -423,9 +542,66 @@ describe("CustomRecipeForm (render)", () => {
     for (const step of steps) expect(step).toContain('enterKeyHint="done"');
   });
 
-  it("wires the extra-ingredient input to its own Enter-adds-a-chip handler", () => {
+  // Item 300: the autosize wiring is spread whole onto each step textarea
+  // and the notes one, so the rendered `data-autosize` is present exactly
+  // when the ref + onInput handler are. This is the assertion that fails if
+  // the behaviour is unwired, not just if the height rule is wrong.
+  it("marks every step textarea and the notes textarea as auto-growing", () => {
+    const html = renderForm({ recipe: recipe() });
+    const steps = html.match(/<textarea[^>]*aria-label="Step \d+"[^>]*>/g) ?? [];
+    expect(steps.length).toBe(2);
+    for (const step of steps) expect(step).toContain('data-autosize="true"');
+    expect(html).toMatch(/<textarea[^>]*id="custom-recipe-notes"[^>]*data-autosize="true"/);
+  });
+
+  // …and the step LIST carries the wiring that re-fits those boxes when a
+  // step is removed (cycle 1): the list is keyed by index, so a removal hands
+  // an existing textarea different text without firing `input`. The rendered
+  // attribute is present exactly when the effect + ref are.
+  it("marks the step list as one that re-fits itself when it changes length", () => {
+    const html = renderForm({ recipe: recipe() });
+    expect(html).toMatch(/<ol[^>]*data-autosize-list="true"/);
+    // On the <ol> that holds the steps, not some other list.
+    const list = /<ol[^>]*data-autosize-list="true"[^>]*>/.exec(html)?.[0] ?? "";
+    expect(list).toContain('aria-labelledby="custom-recipe-steps-label"');
+    expect((html.match(/data-autosize-list="true"/g) ?? []).length).toBe(1);
+  });
+
+  // …and every autosized field still opens at two rows, so a no-JS render
+  // (and the first paint before the ref runs) is the right size already.
+  it("starts the auto-growing fields at two rows", () => {
     const html = renderForm();
-    expect(html).toMatch(/<input[^>]*id="custom-recipe-extra"[^>]*enterKeyHint="done"/);
+    for (const field of html.match(/<textarea[^>]*data-autosize="true"[^>]*>/g) ?? []) {
+      expect(field).toContain('rows="2"');
+    }
+    expect((html.match(/data-autosize="true"/g) ?? []).length).toBe(2);
+  });
+
+  // Item 299: rows, not chips. The old single "add a chip" box is gone.
+  it("renders an extra-ingredient ROW: a name box, a quantity box and a remove button", () => {
+    const html = renderForm();
+    expect(html).toMatch(/<input[^>]*id="custom-recipe-extra-name-0"/);
+    expect(html).toMatch(/<input[^>]*id="custom-recipe-extra-quantity-0"/);
+    expect(html).toContain(">Ingredient 1<");
+    expect(html).toMatch(/Quantity(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
+    expect(html).toContain('aria-label="Remove ingredient 1"');
+    expect(html).toContain("+ Add ingredient");
+    // The chip input and its Add button are gone for good.
+    expect(html).not.toContain('id="custom-recipe-extra"');
+  });
+
+  it("wires both boxes of every row to the Enter-walks-the-rows handler", () => {
+    const html = renderForm();
+    expect(html).toMatch(/<input[^>]*id="custom-recipe-extra-name-0"[^>]*enterKeyHint="next"/);
+    expect(html).toMatch(/<input[^>]*id="custom-recipe-extra-quantity-0"[^>]*enterKeyHint="next"/);
+  });
+
+  // The × has to be a real tap target on a phone, not a 12px glyph.
+  it("gives the row's remove button a 44px target and a name of its own", () => {
+    const html = renderForm();
+    const button = /<button[^>]*aria-label="Remove ingredient 1"[^>]*>/.exec(html)?.[0] ?? "";
+    expect(button).toContain("min-h-11");
+    expect(button).toContain("min-w-11");
   });
 
   it("starts with exactly one step box, and no way to remove the only one", () => {
@@ -443,14 +619,42 @@ describe("CustomRecipeForm (render)", () => {
     expect(html).toContain('value="20"');
     // Two steps now, so each one can be removed.
     expect(html).toContain('aria-label="Remove step 2"');
-    // The free-text extra came back as a removable chip.
-    expect(html).toContain('aria-label="Remove olive oil"');
+  });
+
+  // Item 299/301: the stored extras come back as editable rows — the name in
+  // one box, the quantity it was saved with in the other, and an empty
+  // quantity box for the extra that never had one.
+  it("loads every stored extra ingredient into a row of its own, quantities included", () => {
+    const html = renderForm({ recipe: recipe() });
+    expect(html).toMatch(/<input[^>]*id="custom-recipe-extra-name-0"[^>]*value="olive oil"/);
+    expect(html).toMatch(/<input[^>]*id="custom-recipe-extra-quantity-0"[^>]*value="a drizzle"/);
+    expect(html).toMatch(/<input[^>]*id="custom-recipe-extra-name-1"[^>]*value="cinnamon"/);
+    expect(html).toMatch(/<input[^>]*id="custom-recipe-extra-quantity-1"[^>]*value=""/);
+    expect(html).toContain('aria-label="Remove ingredient 2"');
+    expect(html).not.toMatch(/id="custom-recipe-extra-name-2"/);
   });
 
   it("namespaces its control ids by idPrefix, so two forms can share a page", () => {
     const html = renderForm({ idPrefix: "recipe-edit" });
     expect(html).toContain('id="recipe-edit-title"');
-    expect(html).toContain('id="recipe-edit-extra"');
+    expect(html).toContain('id="recipe-edit-extra-name-0"');
+    expect(html).toContain('id="recipe-edit-extra-quantity-0"');
     expect(html).toContain('id="recipe-edit-notes"');
+  });
+});
+
+describe("validateCustomRecipe — duplicate additional ingredients", () => {
+  it("names the duplicate instead of letting the server drop it silently", () => {
+    const base = initialCustomRecipeValues();
+    const errors = validateCustomRecipe({
+      ...base,
+      title: "Toast",
+      foodIds: ["food-1"],
+      extraIngredients: [
+        { name: "Olive oil", quantityNote: "for the pan" },
+        { name: "olive oil", quantityNote: "to finish" },
+      ],
+    });
+    expect(errors.extraIngredients).toBe("Duplicate ingredient: olive oil");
   });
 });

@@ -33,7 +33,7 @@ function recipe(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
         quantityNote: "half a cup",
       },
     ],
-    extraIngredients: ["olive oil"],
+    extraIngredients: [{ name: "olive oil", quantityNote: "a drizzle" }],
     variants: [{ ageStage: "9", textureNote: "", steps: ["Cook", "Mash"] }],
     isCustom: true,
     notes: "Freezes well",
@@ -72,7 +72,10 @@ describe("RecipeEditPage", () => {
     expect(html).toContain("Cook</textarea>");
     expect(html).toContain("Freezes well</textarea>");
     expect(html).toContain('value="20"');
-    expect(html).toContain('aria-label="Remove olive oil"');
+    // Item 299: the stored extra comes back as an editable row — its name in
+    // one box and the quantity it was saved with in the other.
+    expect(html).toMatch(/<input[^>]*id="recipe-edit-extra-name-0"[^>]*value="olive oil"/);
+    expect(html).toMatch(/<input[^>]*id="recipe-edit-extra-quantity-0"[^>]*value="a drizzle"/);
     expect(html).toContain(">Save<");
   });
 

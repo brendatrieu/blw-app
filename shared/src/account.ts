@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { extraIngredientSchema } from "./catalog.js";
+
 /**
  * Account-wide operations: take everything out, or remove everything.
  *
@@ -17,7 +19,7 @@ import { z } from "zod";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 8;
+export const ACCOUNT_EXPORT_VERSION = 9;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -149,7 +151,9 @@ export const exportCustomRecipeSchema = z.object({
   ingredients: z.array(
     z.object({ foodId: z.string(), foodName: z.string(), quantityNote: z.string() }),
   ),
-  extraIngredients: z.array(z.string()),
+  /** v9. Objects since item 298 — `{ name, quantityNote }`, where `""` means
+   * no quantity was given. A v8 file carried plain strings here. */
+  extraIngredients: z.array(extraIngredientSchema),
   steps: z.array(z.string()),
 });
 

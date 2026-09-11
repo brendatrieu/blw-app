@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {
   CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX,
   CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX,
@@ -9,7 +9,9 @@ import {
   CUSTOM_RECIPE_STEP_MAX,
   CUSTOM_RECIPE_STEPS_MAX,
   CUSTOM_RECIPE_TITLE_MAX,
+  normalizeExtraIngredients,
   type CreateCustomRecipeInput,
+  type ExtraIngredient,
   type RecipeDetail,
 } from "@blw/shared";
 import { CUSTOM_RECIPE_AGE_OPTIONS } from "../constants.js";
@@ -19,6 +21,7 @@ import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
 import { Select } from "../../../components/ui/Select.js";
 import { Button } from "../../../components/ui/Button.js";
+import { getAutosizeProps, useAutosizeListProps } from "../../../components/ui/autosize.js";
 import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 
 /** The form's own state — everything a control can hold directly, converted
@@ -30,7 +33,9 @@ export interface CustomRecipeValues {
   foodIds: string[];
   /** foodId -> the parent's quantity note; "" is a real answer ("no amount given"). */
   quantityNotes: Record<string, string>;
-  extraIngredients: string[];
+  /** One entry per extra-ingredient ROW (item 299), blank ones included —
+   * `buildCustomRecipeInput` drops those, exactly as it does blank steps. */
+  extraIngredients: ExtraIngredient[];
   /** One entry per step box, blank ones included — `buildCustomRecipeInput` drops those. */
   steps: string[];
   notes: string;
@@ -80,10 +85,31 @@ export function validateCustomRecipe(values: CustomRecipeValues): CustomRecipeEr
     errors.ingredients = `Each quantity must be ${CUSTOM_RECIPE_QUANTITY_NOTE_MAX} characters or fewer`;
   }
 
-  if (values.extraIngredients.length > CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX) {
+  // A blank ROW is "I haven't filled this in", not an error and not an
+  // ingredient — so the caps are checked against what would actually be
+  // sent, which is what the server will check in turn. A row with only a
+  // quantity typed in it is blank by that rule too, and simply vanishes.
+  const extras = normalizeExtraIngredients(values.extraIngredients);
+  if (extras.length > CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX) {
     errors.extraIngredients = `At most ${CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX} extra ingredients`;
-  } else if (values.extraIngredients.some((extra) => extra.trim().length > CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX)) {
+  } else if (extras.some((extra) => extra.name.length > CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX)) {
     errors.extraIngredients = `Each one must be ${CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX} characters or fewer`;
+  } else if (extras.some((extra) => extra.quantityNote.length > CUSTOM_RECIPE_QUANTITY_NOTE_MAX)) {
+    errors.extraIngredients = `Each quantity must be ${CUSTOM_RECIPE_QUANTITY_NOTE_MAX} characters or fewer`;
+  }
+  if (!errors.extraIngredients) {
+    // The server dedupes names case-insensitively; say so here instead of
+    // letting the second row vanish silently on save.
+    const seen = new Set<string>();
+    for (const extra of values.extraIngredients) {
+      const key = extra.name.trim().toLowerCase();
+      if (!key) continue;
+      if (seen.has(key)) {
+        errors.extraIngredients = `Duplicate ingredient: ${extra.name.trim()}`;
+        break;
+      }
+      seen.add(key);
+    }
   }
 
   // Steps are OPTIONAL (item 240): a recipe can be a title plus a list of
@@ -130,16 +156,27 @@ export function buildCustomRecipeInput(values: CustomRecipeValues): CreateCustom
       foodId,
       quantityNote: (values.quantityNotes[foodId] ?? "").trim(),
     })),
-    extraIngredients: values.extraIngredients.map((extra) => extra.trim()).filter((extra) => extra.length > 0),
+    // `normalizeExtraIngredients` is the SHARED rule the server applies to
+    // whatever arrives (trim, drop blank names, keep the first of a
+    // case-insensitive duplicate). Running it here too means what the form
+    // sends is already what gets stored, so the recipe page after a save
+    // shows exactly the rows the parent saw before it.
+    extraIngredients: normalizeExtraIngredients(values.extraIngredients),
     steps: values.steps.map((step) => step.trim()).filter((step) => step.length > 0),
     notes: values.notes.trim() || null,
     prepMinutes: prep ? Number(prep) : 0,
   };
 }
 
+/** A fresh, empty extra-ingredient row. */
+export function emptyExtraIngredientRow(): ExtraIngredient {
+  return { name: "", quantityNote: "" };
+}
+
 /** The form's starting values: an existing recipe's own fields when editing,
- * otherwise one empty step and the youngest age. A custom recipe keeps its
- * single set of steps in `variants[0]` (item 203). */
+ * otherwise the youngest age with one empty step box and one empty extra
+ * ingredient row. A custom recipe keeps its single set of steps in
+ * `variants[0]` (item 203). */
 export function initialCustomRecipeValues(recipe?: RecipeDetail): CustomRecipeValues {
   if (!recipe) {
     return {
@@ -147,7 +184,7 @@ export function initialCustomRecipeValues(recipe?: RecipeDetail): CustomRecipeVa
       minAgeMonths: DEFAULT_CUSTOM_RECIPE_AGE_MONTHS,
       foodIds: [],
       quantityNotes: {},
-      extraIngredients: [],
+      extraIngredients: [emptyExtraIngredientRow()],
       steps: [""],
       notes: "",
       prepMinutes: "",
@@ -156,34 +193,80 @@ export function initialCustomRecipeValues(recipe?: RecipeDetail): CustomRecipeVa
   const quantityNotes: Record<string, string> = {};
   for (const ingredient of recipe.ingredients) quantityNotes[ingredient.foodId] = ingredient.quantityNote;
   const steps = recipe.variants[0]?.steps ?? [];
+  // Every stored extra becomes an editable row, name and quantity both
+  // (item 299). A recipe saved without any opens the same single blank row
+  // a new one does, so adding one is never a hunt for a button.
+  const extras = recipe.extraIngredients.map((extra) => ({ ...extra }));
   return {
     title: recipe.title,
     minAgeMonths: recipe.minAgeMonths,
     foodIds: recipe.ingredients.map((ingredient) => ingredient.foodId),
     quantityNotes,
-    extraIngredients: [...recipe.extraIngredients],
+    extraIngredients: extras.length > 0 ? extras : [emptyExtraIngredientRow()],
     steps: steps.length > 0 ? [...steps] : [""],
     notes: recipe.notes ?? "",
     prepMinutes: recipe.prepMinutes > 0 ? String(recipe.prepMinutes) : "",
   };
 }
 
+/** Which of an extra-ingredient row's two inputs is being talked about. */
+export type ExtraRowField = "name" | "quantity";
+
+/** Where focus should land next, as a row index plus a field. */
+export interface ExtraRowTarget {
+  index: number;
+  field: ExtraRowField;
+}
+
 /**
- * What Enter should do inside the free-text "extra ingredients" box.
+ * What Enter should do inside an extra-ingredient row (item 299).
  *
- * `prevent` is true for EVERY Enter, whatever the draft holds: this input
- * sits inside the recipe form, and a browser's implicit submission would
- * otherwise save a half-written recipe the moment someone pressed Enter to
- * commit a chip (item 211). `commit` carries the trimmed chip when there's
- * something to add, and is null for a blank/whitespace draft.
+ * `prevent` is true for EVERY Enter, wherever it lands and whatever happens
+ * next: these are `<input>`s inside the recipe form, and a browser's
+ * implicit submission would otherwise save a half-written recipe the moment
+ * someone pressed Enter to move along (the same hazard the old chip input
+ * guarded against, item 211).
+ *
+ * Otherwise Enter reads as "done with this box, on to the next one":
+ * - in a name, move to that row's own quantity;
+ * - in a quantity, move to the next row's name;
+ * - in the LAST row's quantity, append a fresh row and go to its name, so a
+ *   parent can type a whole shopping list without touching the button;
+ * - at the shared cap of 20 rows there is nowhere to go, so Enter is
+ *   swallowed and nothing moves.
  *
  * Pure and consumed verbatim by the keydown handler, in the same spirit as
- * `resolveEnterAction` in MultiCombobox.
+ * `resolveStepKey` below.
  */
-export function resolveChipKey(key: string, draft: string): { prevent: boolean; commit: string | null } {
-  if (key !== "Enter") return { prevent: false, commit: null };
-  const trimmed = draft.trim();
-  return { prevent: true, commit: trimmed.length > 0 ? trimmed : null };
+export function resolveExtraRowKey(
+  key: string,
+  field: ExtraRowField,
+  index: number,
+  rowCount: number,
+): { prevent: boolean; focus: ExtraRowTarget | null; addRow: boolean } {
+  if (key !== "Enter") return { prevent: false, focus: null, addRow: false };
+  if (field === "name") return { prevent: true, focus: { index, field: "quantity" }, addRow: false };
+  const next = index + 1;
+  if (next < rowCount) return { prevent: true, focus: { index: next, field: "name" }, addRow: false };
+  if (rowCount >= CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX) return { prevent: true, focus: null, addRow: false };
+  return { prevent: true, focus: { index: next, field: "name" }, addRow: true };
+}
+
+/**
+ * The promise the on-screen keyboard's return key makes, derived from
+ * `resolveExtraRowKey` itself so the two can never disagree: "next" wherever
+ * Enter moves somewhere, "done" only in the one spot where it can't (the
+ * twentieth row's quantity).
+ */
+export function extraRowEnterKeyHint(field: ExtraRowField, index: number, rowCount: number): "next" | "done" {
+  return resolveExtraRowKey("Enter", field, index, rowCount).focus ? "next" : "done";
+}
+
+/** The DOM id of one extra-ingredient input. The JSX and the keydown handler
+ * both go through this, so the ids the handler focuses cannot drift from the
+ * ids the inputs actually carry. */
+export function extraRowFieldId(idPrefix: string, index: number, field: ExtraRowField): string {
+  return `${idPrefix}-extra-${field}-${index}`;
 }
 
 /**
@@ -233,37 +316,32 @@ export function getStepKeyProps(): {
 }
 
 /**
- * The extra-ingredient input's Enter wiring, spreadable for the same reason
- * as `getStepKeyProps` — and carrying the same `enterkeyhint="done"`, since
- * Enter here finishes a chip rather than saving the recipe (item 211).
+ * An extra-ingredient input's Enter wiring, spreadable for the same reason as
+ * `getStepKeyProps`: the JSX spreads this and sets none of it itself, so the
+ * rendered `enterkeyhint` is present exactly when the handler is.
+ *
+ * `act` receives the pure decision's two halves — whether to append a row,
+ * and where focus should go — because only the component can do either.
  */
-export function getChipKeyProps(
-  draft: string,
-  commitEntry: (entry: string) => void,
+export function getExtraRowKeyProps(
+  field: ExtraRowField,
+  index: number,
+  rowCount: number,
+  act: (decision: { focus: ExtraRowTarget | null; addRow: boolean }) => void,
 ): {
-  enterKeyHint: "done";
+  enterKeyHint: "next" | "done";
   onKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => void;
 } {
   return {
-    enterKeyHint: "done",
+    enterKeyHint: extraRowEnterKeyHint(field, index, rowCount),
     onKeyDown: (event) => {
-      // Verbatim pass-through of the pure decision — Enter here adds a chip
-      // and must NEVER save the recipe.
-      const { prevent, commit } = resolveChipKey(event.key, draft);
+      // Verbatim pass-through of the pure decision — Enter here moves along
+      // the rows and must NEVER save the recipe.
+      const { prevent, focus, addRow } = resolveExtraRowKey(event.key, field, index, rowCount);
       if (prevent) event.preventDefault();
-      if (commit) commitEntry(commit);
+      if (focus || addRow) act({ focus, addRow });
     },
   };
-}
-
-/** The extra-ingredient list with `entry` appended: trimmed, never blank,
- * never a duplicate (case-insensitive), never past the shared cap. Returns
- * the SAME array when the entry can't be added. */
-export function addExtraIngredient(current: string[], entry: string): string[] {
-  const trimmed = entry.trim();
-  if (trimmed.length === 0 || current.length >= CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX) return current;
-  if (current.some((existing) => existing.toLowerCase() === trimmed.toLowerCase())) return current;
-  return [...current, trimmed];
 }
 
 export interface CustomRecipeFormProps {
@@ -287,7 +365,6 @@ export interface CustomRecipeFormProps {
  */
 export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }: CustomRecipeFormProps) {
   const [values, setValues] = useState<CustomRecipeValues>(() => initialCustomRecipeValues(recipe));
-  const [extraDraft, setExtraDraft] = useState("");
   const createRecipe = useCreateCustomRecipe();
   const updateRecipe = useUpdateCustomRecipe();
   const { data: foodsData } = useFoods();
@@ -302,7 +379,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
       title: `${idPrefix}-title`,
       // The MultiCombobox behind FoodPicker puts this id on its text input.
       ingredients: `${idPrefix}-ingredients`,
-      extraIngredients: `${idPrefix}-extra`,
+      extraIngredients: extraRowFieldId(idPrefix, 0, "name"),
       steps: `${idPrefix}-step-0`,
       notes: `${idPrefix}-notes`,
       prepMinutes: `${idPrefix}-prep`,
@@ -314,6 +391,14 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
     () => new Map((foodsData?.foods ?? []).map((food) => [food.id, food])),
     [foodsData],
   );
+
+  /* Item 300: the step boxes grow with their own text, but the list is keyed
+   * by index — removing a step hands an EXISTING <textarea> the next step's
+   * text, which fires no `input` and re-runs no ref, so it would keep the
+   * removed step's height with the scrollbar already hidden (text present,
+   * invisible, unscrollable). This re-fits every step box whenever the list
+   * changes length, and never on a keystroke. */
+  const stepListProps = useAutosizeListProps<HTMLOListElement>(values.steps.length);
 
   function setValue<K extends keyof CustomRecipeValues>(key: K, value: CustomRecipeValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
@@ -333,9 +418,50 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
     });
   }
 
-  function commitExtra(entry: string) {
-    setValues((current) => ({ ...current, extraIngredients: addExtraIngredient(current.extraIngredients, entry) }));
-    setExtraDraft("");
+  function setExtra(index: number, field: ExtraRowField, text: string) {
+    setValues((current) => ({
+      ...current,
+      extraIngredients: current.extraIngredients.map((row, i) =>
+        i === index ? { ...row, ...(field === "name" ? { name: text } : { quantityNote: text }) } : row,
+      ),
+    }));
+  }
+
+  function addExtraRow() {
+    setValues((current) =>
+      current.extraIngredients.length >= CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX
+        ? current
+        : { ...current, extraIngredients: [...current.extraIngredients, emptyExtraIngredientRow()] },
+    );
+  }
+
+  /** Unlike a step box, the LAST extra row can go too: "no extras" is a real
+   * answer for an optional list, and "+ Add ingredient" brings one back. */
+  function removeExtraRow(index: number) {
+    setValues((current) => ({
+      ...current,
+      extraIngredients: current.extraIngredients.filter((_, i) => i !== index),
+    }));
+  }
+
+  /** Set by Enter when the row it wants to focus does not exist yet; the
+   * effect below focuses it once React has rendered the new row. */
+  const pendingExtraFocus = useRef<string | null>(null);
+  useEffect(() => {
+    const id = pendingExtraFocus.current;
+    if (!id) return;
+    pendingExtraFocus.current = null;
+    document.getElementById(id)?.focus();
+  });
+
+  function actOnExtraRowKey({ focus, addRow }: { focus: ExtraRowTarget | null; addRow: boolean }) {
+    if (addRow) addExtraRow();
+    if (!focus) return;
+    const id = extraRowFieldId(idPrefix, focus.index, focus.field);
+    // An existing box can be focused straight away; a just-appended one has
+    // to wait for the render that creates it.
+    if (addRow) pendingExtraFocus.current = id;
+    else document.getElementById(id)?.focus();
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -419,65 +545,86 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
         </div>
       )}
 
+      {/* Item 299: rows, not chips. An extra now carries its own quantity,
+          which a one-line chip has nowhere to put — so each one is a pair of
+          boxes shaped like the ingredient quantities just above. */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={`${idPrefix}-extra`} className="text-sm font-semibold text-[var(--color-text)]">
+        <span id={`${idPrefix}-extra-label`} className="text-sm font-semibold text-[var(--color-text)]">
           Additional ingredients{" "}
           <span className="font-normal text-[var(--color-text-muted)]">(optional)</span>
-        </label>
+        </span>
         <p className="text-xs text-[var(--color-text-muted)]">
           Store-cupboard bits with no food of their own — oil, herbs, a squeeze of lemon.
         </p>
-        <div className="flex gap-2">
-          <Input
-            id={`${idPrefix}-extra`}
-            type="text"
-            maxLength={CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX}
-            value={extraDraft}
-            onChange={(e) => setExtraDraft(e.target.value)}
-            {...getChipKeyProps(extraDraft, commitExtra)}
-            placeholder="e.g. olive oil"
-          />
-          <Button type="button" variant="secondary" onClick={() => commitExtra(extraDraft)}>
-            Add
-          </Button>
-        </div>
+        {values.extraIngredients.length > 0 && (
+          <ul className="flex flex-col gap-2" aria-labelledby={`${idPrefix}-extra-label`}>
+            {values.extraIngredients.map((extra, index) => (
+              // Index key, like the step list: a row's identity IS its
+              // position, and keying by the name would remount the box the
+              // parent is typing into on every keystroke.
+              <li
+                key={index}
+                className="flex items-start gap-2 rounded-[var(--radius-md)] bg-[var(--color-bg-inset)] p-2"
+              >
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <Field label={`Ingredient ${index + 1}`} htmlFor={extraRowFieldId(idPrefix, index, "name")}>
+                    <Input
+                      id={extraRowFieldId(idPrefix, index, "name")}
+                      type="text"
+                      maxLength={CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX}
+                      value={extra.name}
+                      onChange={(e) => setExtra(index, "name", e.target.value)}
+                      {...getExtraRowKeyProps("name", index, values.extraIngredients.length, actOnExtraRowKey)}
+                      placeholder="e.g. olive oil"
+                    />
+                  </Field>
+                  <Field label="Quantity (optional)" htmlFor={extraRowFieldId(idPrefix, index, "quantity")}>
+                    <Input
+                      id={extraRowFieldId(idPrefix, index, "quantity")}
+                      type="text"
+                      maxLength={CUSTOM_RECIPE_QUANTITY_NOTE_MAX}
+                      value={extra.quantityNote}
+                      onChange={(e) => setExtra(index, "quantity", e.target.value)}
+                      {...getExtraRowKeyProps("quantity", index, values.extraIngredients.length, actOnExtraRowKey)}
+                      placeholder="e.g. a drizzle"
+                    />
+                  </Field>
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Remove ingredient ${index + 1}`}
+                  onClick={() => removeExtraRow(index)}
+                  className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         {shownErrors.extraIngredients && (
           <p role="alert" className="text-xs font-medium text-[var(--color-danger)]">
             {shownErrors.extraIngredients}
           </p>
         )}
-        {values.extraIngredients.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {values.extraIngredients.map((extra) => (
-              <span
-                key={extra}
-                className="inline-flex min-h-8 items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] py-1 pr-1 pl-2.5 text-sm text-[var(--color-text)]"
-              >
-                {extra}
-                <button
-                  type="button"
-                  aria-label={`Remove ${extra}`}
-                  onClick={() =>
-                    setValues((current) => ({
-                      ...current,
-                      extraIngredients: current.extraIngredients.filter((candidate) => candidate !== extra),
-                    }))
-                  }
-                  className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                >
-                  <span aria-hidden="true">×</span>
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
+        <div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={values.extraIngredients.length >= CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX}
+            onClick={addExtraRow}
+          >
+            + Add ingredient
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
         <span id={`${idPrefix}-steps-label`} className="text-sm font-semibold text-[var(--color-text)]">
           Steps <span className="font-normal text-[var(--color-text-muted)]">(optional)</span>
         </span>
-        <ol className="flex flex-col gap-2" aria-labelledby={`${idPrefix}-steps-label`}>
+        <ol {...stepListProps} className="flex flex-col gap-2" aria-labelledby={`${idPrefix}-steps-label`}>
           {values.steps.map((step, index) => (
             <li key={index} className="flex items-start gap-2">
               <span aria-hidden="true" className="mt-2 text-sm font-medium text-[var(--color-accent)]">
@@ -495,6 +642,9 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
                 value={step}
                 onChange={(e) => setStep(index, e.target.value)}
                 {...getStepKeyProps()}
+                // Item 300: two rows to start, then as tall as the step is.
+                // Shift+Enter's newlines grow it the same way typing does.
+                {...getAutosizeProps()}
                 placeholder={index === 0 ? "e.g. Steam the sweet potato until soft" : "Next step"}
               />
               {values.steps.length > 1 && (
@@ -542,6 +692,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
           value={values.notes}
           onChange={(e) => setValue("notes", e.target.value)}
           rows={2}
+          {...getAutosizeProps()}
           placeholder="e.g. freezes well in ice-cube trays"
         />
       </Field>

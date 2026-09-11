@@ -197,7 +197,7 @@ async function seedOneOfEverything(
       minAgeMonths: 9,
       prepMinutes: 15,
       ironFocus: false,
-      extraIngredients: ["sesame oil"],
+      extraIngredients: [{ name: "sesame oil", quantityNote: "1 tsp" }],
       notes: "Robin likes it cold.",
       ownerId: userId,
     })
@@ -420,7 +420,7 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(8);
+    expect(bundle.exportVersion).toBe(9);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -559,7 +559,7 @@ describe("account export", () => {
       minAgeMonths: 9,
       prepMinutes: 15,
       notes: "Robin likes it cold.",
-      extraIngredients: ["sesame oil"],
+      extraIngredients: [{ name: "sesame oil", quantityNote: "1 tsp" }],
       steps: ["Thin the sauce.", "Toss through the noodles."],
     });
     expect(recipe.slug).toMatch(/^satay-noodles-/);

@@ -25,7 +25,7 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'beef', quantityNote: '115g (4oz) lean ground beef or a thin-cut steak' },
       { foodSlug: 'sweet_potato', quantityNote: '1 small sweet potato, peeled' },
     ],
-    extraIngredients: ['olive oil', 'pinch of cumin (optional)'],
+    extraIngredients: [{ name: 'olive oil' }, { name: 'cumin (optional)', quantityNote: 'pinch of' }],
     variants: {
       '6': {
         textureNote:
@@ -71,7 +71,7 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'iron_fortified_oats', quantityNote: '1/4 cup rolled oats' },
       { foodSlug: 'egg', quantityNote: '1 egg, beaten' },
     ],
-    extraIngredients: ['olive oil for the pan'],
+    extraIngredients: [{ name: 'olive oil for the pan' }],
     variants: {
       '6': {
         textureNote: 'Soft finger-shaped patties, about the length and thickness of an adult finger, easy to gum and mash against the roof of the mouth.',
@@ -116,7 +116,10 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'carrot', quantityNote: '1 small carrot, grated' },
       { foodSlug: 'egg', quantityNote: '1 egg, beaten' },
     ],
-    extraIngredients: ['olive oil for the pan', 'pinch of cumin or mild paprika (optional)'],
+    extraIngredients: [
+      { name: 'olive oil for the pan' },
+      { name: 'cumin or mild paprika (optional)', quantityNote: 'pinch of' },
+    ],
     variants: {
       '6': {
         textureNote: 'Soft, finger-length fritters that squish easily between two fingers.',
@@ -162,7 +165,7 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'peanut_butter', quantityNote: '1 tablespoon smooth peanut butter' },
       { foodSlug: 'egg', quantityNote: '1 egg' },
     ],
-    extraIngredients: ['pinch of cinnamon (optional)'],
+    extraIngredients: [{ name: 'cinnamon (optional)', quantityNote: 'pinch of' }],
     variants: {
       '6': {
         textureNote: 'Soft, thin mini pancakes cut into finger-length strips.',
@@ -205,7 +208,7 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'bell_pepper', quantityNote: '1/4 bell pepper, finely diced' },
       { foodSlug: 'spinach', quantityNote: 'a small handful of spinach, finely chopped' },
     ],
-    extraIngredients: ['olive oil for the pan'],
+    extraIngredients: [{ name: 'olive oil for the pan' }],
     variants: {
       '6': {
         textureNote: 'Soft omelet cut into finger-length strips.',
@@ -287,7 +290,10 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'pear', quantityNote: '1/2 ripe pear, grated or finely diced' },
       { foodSlug: 'yogurt', quantityNote: '1/4 cup plain whole-milk yogurt' },
     ],
-    extraIngredients: ['1 teaspoon chia seeds', 'breast milk, formula, or water to thin'],
+    extraIngredients: [
+      { name: 'chia seeds', quantityNote: '1 teaspoon' },
+      { name: 'breast milk, formula, or water to thin' },
+    ],
     variants: {
       '6': {
         textureNote: 'Smooth, thinned porridge-like texture loose enough to drip slowly off a spoon.',
@@ -330,7 +336,10 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'chicken_thigh', quantityNote: '225g (8oz) ground chicken thigh' },
       { foodSlug: 'apple', quantityNote: '1/2 apple, peeled and finely grated' },
     ],
-    extraIngredients: ['pinch of dried thyme or sage (optional)', 'olive oil for the pan'],
+    extraIngredients: [
+      { name: 'dried thyme or sage (optional)', quantityNote: 'pinch of' },
+      { name: 'olive oil for the pan' },
+    ],
     variants: {
       '6': {
         textureNote: 'Soft finger-length meat logs or well-mashed meatballs.',
@@ -373,7 +382,10 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'avocado', quantityNote: '1/4 ripe avocado' },
       { foodSlug: 'wheat_toast', quantityNote: '1 slice bread, toasted' },
     ],
-    extraIngredients: ['squeeze of lemon juice', 'drizzle of olive oil'],
+    extraIngredients: [
+      { name: 'lemon juice', quantityNote: 'squeeze of' },
+      { name: 'olive oil', quantityNote: 'drizzle of' },
+    ],
     variants: {
       '6': {
         textureNote: 'Thick hummus and mashed avocado spread thinly on soft toast fingers.',
@@ -415,7 +427,10 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'tofu', quantityNote: '200g (7oz) firm tofu, pressed' },
       { foodSlug: 'iron_fortified_oats', quantityNote: '1/4 cup oats, blended into fine crumbs' },
     ],
-    extraIngredients: ['olive oil for the pan', 'pinch of garlic powder (optional)'],
+    extraIngredients: [
+      { name: 'olive oil for the pan' },
+      { name: 'garlic powder (optional)', quantityNote: 'pinch of' },
+    ],
     variants: {
       '6': {
         textureNote: 'Soft finger-length tofu strips with a lightly crisp oat coating.',
@@ -457,7 +472,7 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'avocado', quantityNote: '1/4 ripe avocado' },
       { foodSlug: 'wheat_toast', quantityNote: '1 slice bread, toasted' },
     ],
-    extraIngredients: ['squeeze of lemon juice'],
+    extraIngredients: [{ name: 'lemon juice', quantityNote: 'squeeze of' }],
     variants: {
       '6': {
         textureNote: 'Soft mashed sardine and avocado spread thinly on soft toast fingers.',
@@ -500,9 +515,9 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'tomato', quantityNote: '1 tomato, diced' },
     ],
     extraIngredients: [
-      'unsweetened coconut milk',
-      'mild curry spices such as cumin, turmeric, and coriander (no added salt)',
-      'olive oil',
+      { name: 'unsweetened coconut milk' },
+      { name: 'mild curry spices such as cumin, turmeric, and coriander (no added salt)' },
+      { name: 'olive oil' },
     ],
     variants: {
       '6': {
@@ -546,7 +561,7 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'egg', quantityNote: '1 egg, beaten' },
       { foodSlug: 'cheese', quantityNote: '2 tablespoons mild cheese, finely grated' },
     ],
-    extraIngredients: ['olive oil for the pan'],
+    extraIngredients: [{ name: 'olive oil for the pan' }],
     variants: {
       '6': {
         textureNote: 'Soft finger-length bites, easy to squish between gums.',
@@ -587,7 +602,10 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'apple', quantityNote: '1/2 apple, peeled, cored, and finely diced' },
       { foodSlug: 'tahini', quantityNote: '1 teaspoon tahini' },
     ],
-    extraIngredients: ['pinch of cinnamon', 'breast milk, formula, or water to thin'],
+    extraIngredients: [
+      { name: 'cinnamon', quantityNote: 'pinch of' },
+      { name: 'breast milk, formula, or water to thin' },
+    ],
     variants: {
       '6': {
         textureNote: 'Smooth, thinned porridge loose enough to drip slowly off a spoon.',

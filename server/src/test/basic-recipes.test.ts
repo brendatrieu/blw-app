@@ -368,6 +368,38 @@ describe("single-food basic recipes", () => {
     expect(checked).toBeGreaterThan(80);
   });
 
+  // Item 298: the seed data is where a leading quantity is split off, so the
+  // stored objects are checked against the REAL seeded rows rather than a
+  // fixture — a split that lost a word fails here.
+  it("seeds every extra ingredient as an object, splitting an obvious leading quantity", async () => {
+    const rows = await db
+      .select({ slug: schema.recipes.slug, extraIngredients: schema.recipes.extraIngredients })
+      .from(schema.recipes)
+      .where(isNull(schema.recipes.ownerId));
+    const bySlug = new Map(rows.map((row) => [row.slug, row.extraIngredients ?? []]));
+
+    // One curated recipe and one basic, pinned exactly.
+    expect(bySlug.get("beef-sweet-potato-strips")).toEqual([
+      { name: "olive oil", quantityNote: "" },
+      { name: "cumin (optional)", quantityNote: "pinch of" },
+    ]);
+    expect(bySlug.get("simple-egg")).toEqual([
+      { name: "breast milk, formula, or water, to loosen", quantityNote: "a splash of" },
+    ]);
+
+    for (const [slug, extras] of bySlug) {
+      for (const extra of extras) {
+        // Every entry is a real object with a non-empty name, and nothing
+        // still reads like a leading quantity waiting to be split.
+        expect(typeof extra.name, slug).toBe("string");
+        expect(extra.name.trim(), slug).toBe(extra.name);
+        expect(extra.name.length, slug).toBeGreaterThan(0);
+        expect(typeof extra.quantityNote, slug).toBe("string");
+        expect(extra.name, slug).not.toMatch(/^(a pinch of|pinch of|a splash of|a little|a drizzle of|drizzle of|squeeze of|\d)/i);
+      }
+    }
+  });
+
   it("leaves the 15 curated recipes in place, un-duplicated, after re-seeding", async () => {
     const recipes = await catalogRecipes();
     const slugs = recipes.map((r) => r.slug);

@@ -281,7 +281,7 @@ describe("custom recipes", () => {
             { foodId: fixtures.banana.id, quantityNote: "1 ripe" },
             { foodId: fixtures.oats.id },
           ],
-          extraIngredients: ["olive oil"],
+          extraIngredients: [{ name: "chia seeds", quantityNote: "1 tsp" }, { name: "olive oil" }],
           steps: ["Mash the banana.", "Stir in the oats."],
           notes: "Robin likes it cold.",
         }),
@@ -292,7 +292,11 @@ describe("custom recipes", () => {
         minAgeMonths: 9,
         isCustom: true,
         notes: "Robin likes it cold.",
-        extraIngredients: ["olive oil"],
+        // Objects since item 298; an omitted quantity is stored as "".
+        extraIngredients: [
+          { name: "chia seeds", quantityNote: "1 tsp" },
+          { name: "olive oil", quantityNote: "" },
+        ],
         // Nothing curated: no image, no storage overrides, no stored iron
         // claim (banana + oats derive none either), and
         // prepMinutes 0 meaning "not stated" rather than "instant".
@@ -367,6 +371,60 @@ describe("custom recipes", () => {
         });
         expect(detail.statusCode).toBe(200);
         expect(detail.json<RecipeDetail>()).toEqual(recipe);
+      }
+    });
+
+    // Item 298: extra ingredients carry their own quantity.
+    it("keeps each extra ingredient's quantity, dropping blanks and case-insensitive repeats", async () => {
+      const recipe = await createRecipe(
+        owner,
+        recipePayload({
+          extraIngredients: [
+            { name: "  Olive oil  ", quantityNote: "  a drizzle of  " },
+            { name: "", quantityNote: "1 tsp" },
+            { name: "   " },
+            // Same name in another casing: the FIRST row stands, quantity included.
+            { name: "OLIVE OIL", quantityNote: "2 tbsp" },
+            { name: "chia seeds", quantityNote: "1 tsp" },
+          ],
+        }),
+      );
+
+      expect(recipe.extraIngredients).toEqual([
+        { name: "Olive oil", quantityNote: "a drizzle of" },
+        { name: "chia seeds", quantityNote: "1 tsp" },
+      ]);
+
+      // And it survives the round trip through the database unchanged.
+      const detail = await app.inject({
+        method: "GET",
+        url: `/api/recipes/${recipe.id}`,
+        headers: { cookie: owner.cookie },
+      });
+      expect(detail.json<RecipeDetail>().extraIngredients).toEqual(recipe.extraIngredients);
+    });
+
+    it("still accepts plain strings for extra ingredients, reading them as a name with no quantity", async () => {
+      const recipe = await createRecipe(owner, recipePayload({ extraIngredients: ["olive oil", "  chia seeds  "] }));
+      expect(recipe.extraIngredients).toEqual([
+        { name: "olive oil", quantityNote: "" },
+        { name: "chia seeds", quantityNote: "" },
+      ]);
+    });
+
+    it("400s an over-long extra ingredient name or quantity, and too many of them", async () => {
+      for (const extraIngredients of [
+        [{ name: "x".repeat(61) }],
+        [{ name: "olive oil", quantityNote: "q".repeat(81) }],
+        Array.from({ length: 21 }, (_unused, i) => ({ name: `extra ${i}` })),
+      ]) {
+        const response = await app.inject({
+          method: "POST",
+          url: "/api/recipes",
+          headers: { cookie: owner.cookie },
+          payload: recipePayload({ extraIngredients }),
+        });
+        expect(response.statusCode, JSON.stringify(extraIngredients).slice(0, 40)).toBe(400);
       }
     });
 
@@ -955,7 +1013,7 @@ describe("custom recipes", () => {
       const recipe = await createRecipe(
         owner,
         recipePayload({
-          extraIngredients: ["olive oil"],
+          extraIngredients: [{ name: "olive oil", quantityNote: "a drizzle of" }],
           notes: "First note.",
           ingredients: [{ foodId: fixtures.banana.id, quantityNote: "1 ripe" }],
         }),
@@ -982,6 +1040,36 @@ describe("custom recipes", () => {
       expect(updated.variants).toEqual(recipe.variants);
       expect(updated.notes).toBe("First note.");
       expect(updated.minAgeMonths).toBe(recipe.minAgeMonths);
+    });
+
+    it("replaces the extra ingredients with quantities and reads them back (item 298)", async () => {
+      const recipe = await createRecipe(owner, recipePayload({ extraIngredients: [{ name: "olive oil" }] }));
+      expect(recipe.extraIngredients).toEqual([{ name: "olive oil", quantityNote: "" }]);
+
+      const response = await app.inject({
+        method: "PATCH",
+        url: `/api/recipes/${recipe.id}`,
+        headers: { cookie: owner.cookie },
+        payload: {
+          extraIngredients: [
+            { name: "olive oil", quantityNote: "1 tbsp" },
+            { name: "cinnamon", quantityNote: "a pinch of" },
+          ],
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json<RecipeDetail>().extraIngredients).toEqual([
+        { name: "olive oil", quantityNote: "1 tbsp" },
+        { name: "cinnamon", quantityNote: "a pinch of" },
+      ]);
+
+      // Persisted as jsonb objects, not re-flattened to strings on the way in.
+      const [row] = await db.select().from(schema.recipes).where(eq(schema.recipes.id, recipe.id));
+      expect(row?.extraIngredients).toEqual([
+        { name: "olive oil", quantityNote: "1 tbsp" },
+        { name: "cinnamon", quantityNote: "a pinch of" },
+      ]);
     });
 
     it("moves the steps to the stage a new age derives, and rewrites them on request", async () => {
@@ -1405,6 +1493,27 @@ describe("custom recipes", () => {
       // Banana + oats are both "moderate" fiber — the catalog recipe is false,
       // the same answer the list and detail routes give.
       expect(byId.get(fixtures.catalogRecipe.id)?.fiberHigh).toBe(false);
+    });
+
+    it("prints each extra ingredient as \"quantity name\" on the search_recipes rows (item 298)", async () => {
+      const withExtras = await createRecipe(
+        owner,
+        recipePayload({
+          title: "Chia banana pudding",
+          extraIngredients: [
+            { name: "chia seeds", quantityNote: "1 teaspoon" },
+            { name: "olive oil" },
+          ],
+        }),
+      );
+
+      const tools = buildChatTools(db, await userId(owner), null);
+      const result = JSON.parse(String(await tools.search_recipes.run({ ageMonths: 12 }))) as {
+        recipes: Array<{ id: string; extraIngredients: string[] }>;
+      };
+      const row = result.recipes.find((r) => r.id === withExtras.id);
+      // A quantity is printed in front of the name; an empty one prints nothing.
+      expect(row?.extraIngredients).toEqual(["1 teaspoon chia seeds", "olive oil"]);
     });
 
     it("lists a food's recipes per caller, custom ones included", async () => {

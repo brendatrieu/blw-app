@@ -224,6 +224,32 @@ export const recipeIngredientSchema = z.object({
 });
 export type RecipeIngredient = z.infer<typeof recipeIngredientSchema>;
 
+/**
+ * A free-text ingredient with no food row behind it — "olive oil", or
+ * "1 teaspoon" + "chia seeds" since item 298. `quantityNote` is `""` when no
+ * quantity was given (never null), so every reader can print it through
+ * `formatExtraIngredient` without a branch of its own.
+ *
+ * Deliberately UNCAPPED here, exactly like `title` below: this is the shape of
+ * what the server sends back, and the seeded catalog carries names longer than
+ * a parent is allowed to type ("mild curry spices such as cumin, turmeric…").
+ * The 1–60 / 0–80 caps live on the create/update INPUT further down.
+ */
+export const extraIngredientSchema = z.object({
+  name: z.string(),
+  quantityNote: z.string(),
+});
+export type ExtraIngredient = z.infer<typeof extraIngredientSchema>;
+
+/**
+ * How one extra reads on a single line: "1 teaspoon chia seeds", or just
+ * "olive oil" when no quantity was given. The recipe page and the AI recipe
+ * tool both print it this way, so they can never drift apart.
+ */
+export function formatExtraIngredient(extra: ExtraIngredient): string {
+  return extra.quantityNote ? `${extra.quantityNote} ${extra.name}` : extra.name;
+}
+
 export const recipeVariantSchema = z.object({
   ageStage: ageStageSchema,
   textureNote: z.string(),
@@ -252,7 +278,10 @@ export const recipeDetailSchema = z.object({
   freezerDaysOverride: z.number().int().nullable(),
   allergens: z.array(z.string()),
   ingredients: z.array(recipeIngredientSchema),
-  extraIngredients: z.array(z.string()),
+  /** Free-text ingredients, each with its own optional quantity (item 298).
+   * Stored as jsonb since migration 0011; rows written before it read back as
+   * `{ name: <the old string>, quantityNote: "" }`. */
+  extraIngredients: z.array(extraIngredientSchema),
   variants: z.array(recipeVariantSchema),
   /**
    * True for a recipe a parent wrote themselves (`recipes.owner_id` set).
@@ -392,9 +421,59 @@ const customRecipeIngredients = z
   .min(1, "Add at least one ingredient")
   .max(CUSTOM_RECIPE_INGREDIENTS_MAX, `A recipe can have at most ${CUSTOM_RECIPE_INGREDIENTS_MAX} ingredients`);
 
+/**
+ * The list rules for extra ingredients, exported so the client's form builder
+ * and this schema can never disagree: a blank name is DROPPED (an empty row
+ * means "I did not fill this in", not "an ingredient with no name"), and a
+ * name repeated in ANY casing keeps its FIRST row — quantity and all. Both
+ * ends of every entry are trimmed.
+ */
+export function normalizeExtraIngredients(list: ExtraIngredient[]): ExtraIngredient[] {
+  const seen = new Set<string>();
+  const kept: ExtraIngredient[] = [];
+  for (const extra of list) {
+    const name = extra.name.trim();
+    if (name.length === 0) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    kept.push({ name, quantityNote: extra.quantityNote.trim() });
+  }
+  return kept;
+}
+
+/**
+ * One extra ingredient on the way IN. The object form is what the form sends;
+ * a bare string is accepted too and coerced to `{ name, quantityNote: "" }`,
+ * so a client (or a script) written before item 298 posting `["olive oil"]`
+ * still saves rather than drawing a 400.
+ */
+export const customRecipeExtraIngredientInputSchema = z.union([
+  z
+    .string()
+    .trim()
+    .max(CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX, `Each ingredient must be ${CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX} characters or fewer`)
+    .transform((name) => ({ name, quantityNote: "" })),
+  z.object({
+    name: z
+      .string()
+      .trim()
+      .max(CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX, `Each ingredient must be ${CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX} characters or fewer`),
+    /** Same 0–80 rule (and same `""` meaning) as a catalog ingredient's. */
+    quantityNote: customRecipeQuantityNote,
+  }),
+]);
+export type CustomRecipeExtraIngredientInput = z.input<typeof customRecipeExtraIngredientInputSchema>;
+
 const customRecipeExtraIngredients = z
-  .array(z.string().trim().min(1).max(CUSTOM_RECIPE_EXTRA_INGREDIENT_MAX))
-  .max(CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX);
+  .array(customRecipeExtraIngredientInputSchema)
+  .max(
+    CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX,
+    `A recipe can have at most ${CUSTOM_RECIPE_EXTRA_INGREDIENTS_MAX} extra ingredients`,
+  )
+  // The cap applies to what was SENT, before blanks are dropped — the same
+  // order the steps list uses.
+  .transform(normalizeExtraIngredients);
 
 /**
  * A custom recipe's steps — OPTIONAL since item 240: plenty of real recipes
@@ -426,7 +505,9 @@ export const createCustomRecipeSchema = z.object({
   /** Every food id must be one the caller can see — the catalog or their own
    * custom foods. Anything else is a 400, never a silent drop. */
   ingredients: customRecipeIngredients,
-  /** Free-text ingredients with no food row behind them ("olive oil"). */
+  /** Free-text ingredients with no food row behind them, each with its own
+   * optional quantity: `{ name: "chia seeds", quantityNote: "1 tsp" }`. A bare
+   * string is still accepted and read as a name with no quantity. */
   extraIngredients: customRecipeExtraIngredients.default([]),
   /** Optional since item 240 — an omitted list means "no steps". */
   steps: customRecipeSteps.default([]),

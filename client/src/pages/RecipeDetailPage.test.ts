@@ -32,7 +32,10 @@ function catalogRecipe(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
         quantityNote: "1 fillet",
       },
     ],
-    extraIngredients: ["olive oil"],
+    extraIngredients: [
+      { name: "olive oil", quantityNote: "a drizzle" },
+      { name: "cinnamon", quantityNote: "" },
+    ],
     variants: [
       { ageStage: "6", textureNote: "Smooth purée", steps: ["Steam", "Blend"] },
       { ageStage: "9", textureNote: "Chunkier", steps: ["Steam", "Mash"] },
@@ -266,6 +269,22 @@ describe("RecipeDetailPage ingredients", () => {
 
   it("drops the dash when no quantity was given", () => {
     expect(renderRecipe(CUSTOM_RECIPE)).not.toContain("— </span>");
+  });
+
+  // Item 299: an extra now carries its own quantity, and reads quantity-first
+  // — "a drizzle of olive oil" is how a recipe says it, not "olive oil — a
+  // drizzle". An extra with no quantity is just its name.
+  it("prints an extra ingredient as 'quantity name', and as the name alone when there is none", () => {
+    const html = renderRecipe(catalogRecipe());
+    expect(html).toContain("a drizzle olive oil");
+    expect(html).toContain("cinnamon");
+    expect(html).not.toContain("olive oil — ");
+  });
+
+  it("keeps extras in the muted tone a real ingredient's quantity note gets", () => {
+    const html = renderRecipe(catalogRecipe());
+    const row = /<li[^>]*>(?:(?!<\/li>).)*a drizzle olive oil/s.exec(html)?.[0] ?? "";
+    expect(row).toContain("text-[var(--color-text-muted)]");
   });
 
   it("nests no interactive element inside an ingredient link", () => {

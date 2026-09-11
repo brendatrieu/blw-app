@@ -242,7 +242,11 @@ export const recipes = pgTable(
     // Free-text ingredients not tied to a catalog food row (e.g. "olive oil"),
     // from RecipeSeed.extraIngredients. Not itemized in the plan's Data model
     // table list; added so seed content has a home without a join table.
-    extraIngredients: text("extra_ingredients").array(),
+    // jsonb since migration 0011 (item 298): each entry carries its own
+    // optional quantity, and `quantityNote: ""` means none was given. The type
+    // is spelled out rather than imported from @blw/shared because drizzle-kit
+    // bundles this file on its own (see the header note).
+    extraIngredients: jsonb("extra_ingredients").$type<{ name: string; quantityNote: string }[]>(),
     // NULL for the seeded catalog (everyone's), set for a recipe a parent
     // wrote for themselves — every read filters on
     // `owner_id IS NULL OR owner_id = <caller>`, exactly like `foods`.
