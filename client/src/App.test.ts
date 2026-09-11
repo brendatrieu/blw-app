@@ -3,6 +3,7 @@ import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { readFileSync } from "node:fs";
 import { App, legacyStoragePath } from "./App.js";
 import { storageKeys } from "./features/storage/hooks.js";
+import { preferenceKeys } from "./features/tour/hooks.js";
 
 /**
  * Items 287 and 293: the two wildcard routes in App (`/pantry/*` and
@@ -69,6 +70,19 @@ describe("App route wiring (items 287/293 — both legacy redirects are mounted,
   });
 });
 
+describe("App route wiring (item 303 — the tour is a real, authenticated route)", () => {
+  it("mounts /tour inside the authenticated tree, not as a public page", () => {
+    const paths = collectRoutePaths((App as unknown as () => ReactNode)());
+    expect(paths).toContain("/tour");
+    // Sanity: the walk reaches the guarded branch these siblings live in, so
+    // "/tour is present" really does mean "present behind RequireAuth".
+    expect(paths).toContain("/more");
+    expect(paths).toContain("/settings");
+    // Exactly one tour route — no stray public duplicate.
+    expect(paths.filter((path) => path === "/tour")).toHaveLength(1);
+  });
+});
+
 describe("storage query keys survive offline persistence", () => {
   it("start with the 'storage' prefix that main.tsx persists", () => {
     expect(storageKeys.list("active")[0]).toBe("storage");
@@ -76,5 +90,11 @@ describe("storage query keys survive offline persistence", () => {
     expect(main).toMatch(/PERSISTED_QUERY_KEY_PREFIXES[\s\S]*"storage"/);
     expect(main).not.toMatch(/PERSISTED_QUERY_KEY_PREFIXES[\s\S]{0,400}"pantry"/);
     expect(main).not.toMatch(/PERSISTED_QUERY_KEY_PREFIXES[\s\S]{0,400}"fridge"/);
+  });
+
+  it("persist the tour's 'seen' flag under the 'preferences' prefix (item 304)", () => {
+    expect(preferenceKeys.all()[0]).toBe("preferences");
+    const main = readFileSync(new URL("./main.tsx", import.meta.url), "utf8");
+    expect(main).toMatch(/PERSISTED_QUERY_KEY_PREFIXES[\s\S]*"preferences"/);
   });
 });

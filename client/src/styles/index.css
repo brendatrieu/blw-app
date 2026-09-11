@@ -335,6 +335,17 @@ textarea {
   border-radius: var(--radius-pill);
 }
 
+/* Scrollbar-free scroll area, for tracks the user drives by swiping and
+   whose position is already shown another way (the tour's dot indicators).
+   The opposite choice from `.scroll-thin` above, and deliberate: a rail
+   under a full-bleed carousel reads as a second, broken control. */
+.scroll-hidden {
+  scrollbar-width: none;
+}
+.scroll-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 /* -------------------------------------------------------------------------
  * Focus visibility — everywhere, for free. One rule instead of a className
  * on every interactive element across the app. Being unlayered, it also

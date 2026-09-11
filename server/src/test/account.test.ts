@@ -241,6 +241,11 @@ async function seedOneOfEverything(
     lastValidatedAt: new Date("2026-03-01T07:00:00Z"),
   });
 
+  // v10: this account has already seen the first-run tour.
+  await db
+    .insert(schema.userPreferences)
+    .values({ userId, tourCompletedAt: new Date("2026-03-02T08:00:00Z") });
+
   return {
     userId,
     babyId: baby!.id,
@@ -258,6 +263,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     storage,
     threads,
     aiKeys,
+    preferences,
     users,
     sessions,
     accounts,
@@ -274,6 +280,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
       db.select().from(schema.storageItems).where(eq(schema.storageItems.userId, seeded.userId)),
       db.select().from(schema.chatThreads).where(eq(schema.chatThreads.userId, seeded.userId)),
       db.select().from(schema.userAiKeys).where(eq(schema.userAiKeys.userId, seeded.userId)),
+      db.select().from(schema.userPreferences).where(eq(schema.userPreferences.userId, seeded.userId)),
       db.select().from(schema.user).where(eq(schema.user.id, seeded.userId)),
       db.select().from(schema.session).where(eq(schema.session.userId, seeded.userId)),
       db.select().from(schema.account).where(eq(schema.account.userId, seeded.userId)),
@@ -309,6 +316,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     chatThreads: threads.length,
     chatMessages: messages.length,
     userAiKeys: aiKeys.length,
+    userPreferences: preferences.length,
     sessions: sessions.length,
     accounts: accounts.length,
   };
@@ -328,6 +336,7 @@ const FULL_COUNTS = {
   chatThreads: 1,
   chatMessages: 2,
   userAiKeys: 1,
+  userPreferences: 1,
   sessions: 1,
   accounts: 1,
 };
@@ -346,6 +355,7 @@ const EMPTY_COUNTS = {
   chatThreads: 0,
   chatMessages: 0,
   userAiKeys: 0,
+  userPreferences: 0,
   sessions: 0,
   accounts: 0,
 };
@@ -414,13 +424,14 @@ describe("account export", () => {
         "exportedAt",
         "favorites",
         "storageItems",
+        "preferences",
         "profile",
         "meals",
         "symptomChecks",
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(9);
+    expect(bundle.exportVersion).toBe(10);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -617,6 +628,32 @@ describe("account export", () => {
     expect(raw).not.toContain(stored!.encryptedKey);
   });
 
+  it("carries the account's app preferences (v10)", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/account/export",
+      headers: { cookie: user.cookie },
+    });
+
+    expect(response.json<AccountExport>().preferences).toEqual({
+      tourCompletedAt: "2026-03-02T08:00:00.000Z",
+    });
+  });
+
+  it("exports null preferences for an account that has never written one", async () => {
+    await db.delete(schema.userPreferences).where(eq(schema.userPreferences.userId, seeded.userId));
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/account/export",
+      headers: { cookie: user.cookie },
+    });
+
+    // Null, not a defaulted `{ tourCompletedAt: null }` — "never wrote one"
+    // and "wrote one and has not seen the tour" are different facts.
+    expect(accountExportSchema.parse(response.json()).preferences).toBeNull();
+  });
+
   it("reports an unconfigured key as such", async () => {
     await db.delete(schema.userAiKeys).where(eq(schema.userAiKeys.userId, seeded.userId));
 
@@ -655,6 +692,9 @@ describe("account export", () => {
     expect(bundle.allergenOverrides).toHaveLength(0);
     expect(bundle.chatThreads).toHaveLength(0);
     expect(bundle.aiKey.configured).toBe(false);
+    // The seeded account next door has a stamped preferences row, so an
+    // unscoped query would surface it here.
+    expect(bundle.preferences).toBeNull();
 
     // Nothing belonging to the first account leaked in by id either.
     expect(response.body).not.toContain(seeded.babyId);

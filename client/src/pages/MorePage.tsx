@@ -32,6 +32,14 @@ const moreLinks: MoreLink[] = [
     description: "Recipe help and ask-anything BLW questions.",
     emoji: "💬",
   },
+  // Item 305: the tour's only other way in. Last of the content rows and
+  // ahead of Settings, which stays the end of the list.
+  {
+    to: "/tour",
+    label: "Take the tour",
+    description: "A quick look around the app",
+    emoji: "🧭",
+  },
   { to: "/settings", label: "Settings", description: "Babies, account, and app preferences.", emoji: "⚙️" },
 ];
 

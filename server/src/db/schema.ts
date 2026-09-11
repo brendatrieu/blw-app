@@ -455,6 +455,23 @@ export const userAiKeys = pgTable("user_ai_keys", {
   lastValidatedAt: timestamp("last_validated_at", { withTimezone: true }),
 });
 
+/**
+ * Per-user app preferences, created lazily: an account that has never
+ * written one has no row here at all, and the API answers with the same
+ * defaults it would have had. Keyed by user (one row per account) and
+ * cascaded from it, so a deleted account takes its preferences with it.
+ */
+export const userPreferences = pgTable("user_preferences", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  // Null until the first-run tour is finished or skipped — both count as
+  // "seen". A timestamp rather than a boolean so a future "what's new"
+  // tour has a date to compare against.
+  tourCompletedAt: timestamp("tour_completed_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const triageLevelEnum = pgEnum("triage_level", [
   "monitor_at_home",
   "contact_doctor_24h",

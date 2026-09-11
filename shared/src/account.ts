@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { extraIngredientSchema } from "./catalog.js";
+import { userPreferencesSchema } from "./preferences.js";
 
 /**
  * Account-wide operations: take everything out, or remove everything.
@@ -19,7 +20,7 @@ import { extraIngredientSchema } from "./catalog.js";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 9;
+export const ACCOUNT_EXPORT_VERSION = 10;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -219,6 +220,11 @@ export const accountExportSchema = z.object({
   symptomChecks: z.array(exportSymptomCheckSchema),
   chatThreads: z.array(exportChatThreadSchema),
   aiKey: exportAiKeySchema,
+  /** v10. Per-user app preferences — currently just the first-run tour's
+   * "seen" timestamp. Null when the account has never written one: the row
+   * is created lazily, and "no row" is a real, distinguishable state rather
+   * than a defaulted object pretending to be one. */
+  preferences: userPreferencesSchema.nullable(),
 });
 
 export type AccountExport = z.infer<typeof accountExportSchema>;

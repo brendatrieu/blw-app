@@ -39,6 +39,7 @@ import {
   symptomChecks,
   user,
   userAiKeys,
+  userPreferences,
 } from "../db/schema.js";
 
 /**
@@ -337,6 +338,15 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       else messagesByThread.set(row.threadId, [message]);
     }
 
+    // Created lazily, so an account that has never written one has no row
+    // at all — exported as null rather than a defaulted object, which is a
+    // state a re-import could not otherwise tell apart.
+    const [preferencesRow] = await db
+      .select({ tourCompletedAt: userPreferences.tourCompletedAt })
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId))
+      .limit(1);
+
     // Status only. `encryptedKey` is deliberately not selected: the column
     // never enters this process during an export, so it cannot leak from it.
     const [aiKeyRow] = await db
@@ -447,6 +457,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
             lastValidatedAt: isoOrNull(aiKeyRow.lastValidatedAt),
           }
         : { configured: false, last4: null, lastValidatedAt: null },
+      preferences: preferencesRow ? { tourCompletedAt: isoOrNull(preferencesRow.tourCompletedAt) } : null,
     };
 
     // Serialised once, by hand: returning the object would have Fastify
@@ -551,7 +562,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       // CASCADE chain, so one delete takes it all:
       //   user -> babies -> meals -> meal_foods, babies -> symptom_checks
       //   user -> babies -> allergen_overrides
-      //   user -> favorites, storage_items, user_ai_keys
+      //   user -> favorites, storage_items, user_ai_keys, user_preferences
       //   user -> foods, recipes (custom only) -> recipe_ingredients/variants
       //   user -> chat_threads -> chat_messages
       //   user -> session, account            (better-auth's own tables)

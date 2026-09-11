@@ -20,6 +20,7 @@ import { registerAiKeyRoutes } from "./routes/ai-keys.js";
 import { registerSymptomRoutes, type SymptomRoutesOptions } from "./routes/symptom.js";
 import { registerChatRoutes, type ChatRoutesOptions } from "./routes/chat.js";
 import { registerAccountRoutes } from "./routes/account.js";
+import { registerPreferenceRoutes } from "./routes/preferences.js";
 import type { ApiKeyVerifier } from "./ai/client.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -86,6 +87,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     registerSymptomRoutes(app, db, options.symptom); // triage + symptom checker
     registerChatRoutes(app, db, options.chat); // recipe assistant + ask-anything BLW chat
     registerAccountRoutes(app, db); // data export + account deletion
+    registerPreferenceRoutes(app, db); // per-user app preferences (first-run tour)
   });
 
   const clientBuildExists = fs.existsSync(path.join(clientDistDir, "index.html"));

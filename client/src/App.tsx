@@ -28,6 +28,7 @@ import { SymptomCheckPage } from "./pages/SymptomCheckPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { MorePage } from "./pages/MorePage.js";
+import { TourPage } from "./pages/TourPage.js";
 import { NotFoundPage } from "./pages/NotFoundPage.js";
 
 /**
@@ -110,6 +111,10 @@ export function App() {
         <Route path="/symptom-check" element={<SymptomCheckPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/chat/:threadId" element={<ChatPage />} />
+        {/* Full-viewport and chromeless (see isChromelessPath), but still
+            inside the authenticated tree: the tour reads and writes this
+            account's preferences. */}
+        <Route path="/tour" element={<TourPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/more" element={<MorePage />} />
         <Route path="*" element={<NotFoundPage />} />

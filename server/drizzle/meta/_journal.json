@@ -85,6 +85,13 @@
       "when": 1789095412769,
       "tag": "0011_recipe_extra_ingredients_jsonb",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1789163791971,
+      "tag": "0012_user_preferences",
+      "breakpoints": true
     }
   ]
 }

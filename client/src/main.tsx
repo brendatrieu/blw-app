@@ -37,6 +37,9 @@ const PERSISTED_QUERY_KEY_PREFIXES = new Set([
   "meals",
   "favorites",
   "allergen-progress",
+  // The first-run tour's "seen" flag. Restoring it is what stops a cold,
+  // offline start from replaying the tour for someone who has seen it.
+  "preferences",
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
