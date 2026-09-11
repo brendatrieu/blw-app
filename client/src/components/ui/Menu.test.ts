@@ -60,10 +60,10 @@ describe("MenuItem (render)", () => {
 describe("MenuLinkItem (render)", () => {
   it("renders as a role=menuitem link to the given href", () => {
     const html = renderToString(
-      createElement(MemoryRouter, null, createElement(MenuLinkItem, { to: "/fridge/item-1/edit" }, "Edit")),
+      createElement(MemoryRouter, null, createElement(MenuLinkItem, { to: "/storage/item-1/edit" }, "Edit")),
     );
     expect(html).toContain('role="menuitem"');
-    expect(html).toContain('href="/fridge/item-1/edit"');
+    expect(html).toContain('href="/storage/item-1/edit"');
     expect(html).toContain(">Edit<");
   });
 });

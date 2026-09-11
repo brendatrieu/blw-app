@@ -2,7 +2,7 @@
 
 A PWA for baby-led weaning: a curated starter-food catalog (iron-rich foods
 paired with vitamin-C foods, plus a top-allergen introduction plan),
-age-staged recipes, per-baby serve tracking, a fridge/expiry dashboard for
+age-staged recipes, per-baby serve tracking, a storage/expiry dashboard for
 prepped foods, an offline-readable safety library, and a few AI-assisted
 features (symptom pattern-checker, recipe chat, ask-anything chat) that run
 on each user's own Anthropic API key.

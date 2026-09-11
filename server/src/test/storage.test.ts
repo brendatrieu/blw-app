@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import type { Baby, MealsResponse, FridgeItem, FridgeResponse, ServeFridgeItemResponse } from "@blw/shared";
+import type { Baby, MealsResponse, StorageItem, StorageResponse, ServeStorageItemResponse } from "@blw/shared";
 import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
-import { FRIDGE_FALLBACK_WINDOW } from "../routes/fridge.js";
+import { STORAGE_FALLBACK_WINDOW } from "../routes/storage.js";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
 
@@ -13,7 +13,7 @@ const UNKNOWN_ID = "00000000-0000-4000-8000-000000000000";
 // Minimal fixture content (not the real seed data, which lives in
 // server/db/seeds and is out of this route file's ownership) — just enough
 // to exercise every window-resolution branch: a food with a plain category
-// window, a recipe whose ingredient's category is overridden on fridge but
+// window, a recipe whose ingredient's category is overridden on storage but
 // not freezer, and a bare label with no food/recipe at all.
 async function seedFixtures(db: Database) {
   await db.insert(schema.storageGuidelines).values([
@@ -53,7 +53,7 @@ async function seedFixtures(db: Database) {
     ])
     .returning();
 
-  // fridgeHoursOverride cuts the chicken category's 24h fridge window down to
+  // fridgeHoursOverride cuts the chicken category's 24h storage window down to
   // 6h; freezerDaysOverride is left null so the freezer window still falls
   // back to the category's 60 days.
   const [recipe] = await db
@@ -72,7 +72,7 @@ async function seedFixtures(db: Database) {
     .insert(schema.recipeIngredients)
     .values({ recipeId: recipe!.id, foodId: chicken!.id, quantityNote: "1 breast" });
 
-  // Serving a recipe-sourced fridge item expands the recipe's ingredients
+  // Serving a recipe-sourced storage item expands the recipe's ingredients
   // server-side, so the serve tests need a recipe with more than one — kept
   // separate from `recipe` above so the expiry tests' "first ingredient
   // category" pick stays exactly as it was.
@@ -101,40 +101,40 @@ async function seedFixtures(db: Database) {
   };
 }
 
-/** POST /api/fridge now returns an array (one row per batched food). Most
+/** POST /api/storage now returns an array (one row per batched food). Most
  * existing tests exercise a single food/recipe/label, so this unwraps that
  * one row for them; batch-specific behavior gets its own tests below using
- * `postFridgeItemBatch` directly. */
-async function postFridgeItemBatch(
+ * `postStorageItemBatch` directly. */
+async function postStorageItemBatch(
   app: FastifyInstance,
   cookie: string,
   payload: Record<string, unknown>,
-): Promise<{ statusCode: number; body: FridgeItem[] }> {
+): Promise<{ statusCode: number; body: StorageItem[] }> {
   const response = await app.inject({
     method: "POST",
-    url: "/api/fridge",
+    url: "/api/storage",
     headers: { cookie },
     payload,
   });
-  return { statusCode: response.statusCode, body: response.statusCode === 201 ? response.json<FridgeItem[]>() : [] };
+  return { statusCode: response.statusCode, body: response.statusCode === 201 ? response.json<StorageItem[]>() : [] };
 }
 
-async function postFridgeItem(
+async function postStorageItem(
   app: FastifyInstance,
   cookie: string,
   payload: Record<string, unknown>,
-): Promise<{ statusCode: number; body: FridgeItem }> {
-  const { statusCode, body } = await postFridgeItemBatch(app, cookie, payload);
-  return { statusCode, body: body[0] as FridgeItem };
+): Promise<{ statusCode: number; body: StorageItem }> {
+  const { statusCode, body } = await postStorageItemBatch(app, cookie, payload);
+  return { statusCode, body: body[0] as StorageItem };
 }
 
-async function getFridge(
+async function getStorage(
   app: FastifyInstance,
   cookie: string,
   view: "active" | "history" = "active",
-): Promise<FridgeResponse> {
-  const response = await app.inject({ method: "GET", url: `/api/fridge?view=${view}`, headers: { cookie } });
-  return response.json<FridgeResponse>();
+): Promise<StorageResponse> {
+  const response = await app.inject({ method: "GET", url: `/api/storage?view=${view}`, headers: { cookie } });
+  return response.json<StorageResponse>();
 }
 
 function hoursAgoIso(hours: number): string {
@@ -171,7 +171,7 @@ function dbWithFailingTransactionUpdate(db: Database): Database {
       get(target, prop) {
         if (prop === "update") {
           return () => {
-            throw new Error("simulated fridge write failure");
+            throw new Error("simulated storage write failure");
           };
         }
         return passthrough(target, prop);
@@ -193,7 +193,7 @@ function dbWithFailingTransactionUpdate(db: Database): Database {
   });
 }
 
-describe("fridge routes", () => {
+describe("storage routes", () => {
   let app: FastifyInstance;
   let db: Database;
   let close: () => Promise<void>;
@@ -213,7 +213,7 @@ describe("fridge routes", () => {
   describe("expiry math", () => {
     it("uses the food's storage-guideline fridge window", async () => {
       const preparedAt = hoursAgoIso(0);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt,
@@ -227,7 +227,7 @@ describe("fridge routes", () => {
 
     it("uses the food's storage-guideline freezer window (days -> hours)", async () => {
       const preparedAt = hoursAgoIso(0);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "freezer",
         preparedAt,
@@ -238,7 +238,7 @@ describe("fridge routes", () => {
 
     it("uses the food's storage-guideline counter (room temp) window", async () => {
       const preparedAt = hoursAgoIso(0);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "counter",
         preparedAt,
@@ -249,7 +249,7 @@ describe("fridge routes", () => {
 
     it("a recipe's fridgeHoursOverride wins over its ingredient's category default", async () => {
       const preparedAt = hoursAgoIso(0);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         recipeId: fixtures.recipe.id,
         location: "fridge",
         preparedAt,
@@ -261,7 +261,7 @@ describe("fridge routes", () => {
 
     it("falls back to the ingredient's category default freezer window when the recipe has no override", async () => {
       const preparedAt = hoursAgoIso(0);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         recipeId: fixtures.recipe.id,
         location: "freezer",
         preparedAt,
@@ -274,18 +274,18 @@ describe("fridge routes", () => {
 
     it("a bare label with no food/recipe uses the fallback window", async () => {
       const preparedAt = hoursAgoIso(0);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         label: "Leftover soup",
         location: "fridge",
         preparedAt,
       });
-      const expectedExpiry = new Date(preparedAt).getTime() + FRIDGE_FALLBACK_WINDOW.fridgeHours * HOUR_MS;
+      const expectedExpiry = new Date(preparedAt).getTime() + STORAGE_FALLBACK_WINDOW.fridgeHours * HOUR_MS;
       expect(new Date(created.body.expiresAt).getTime()).toBe(expectedExpiry);
     });
 
     it("flags useSoon at the 75% mark and clears it once expired", async () => {
-      // banana/fridge window is 72h. 75% = 54h.
-      const notYet = await postFridgeItem(app, user.cookie, {
+      // banana/storage window is 72h. 75% = 54h.
+      const notYet = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt: hoursAgoIso(53),
@@ -293,7 +293,7 @@ describe("fridge routes", () => {
       expect(notYet.body.useSoon).toBe(false);
       expect(notYet.body.expired).toBe(false);
 
-      const justOver = await postFridgeItem(app, user.cookie, {
+      const justOver = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt: hoursAgoIso(55),
@@ -301,7 +301,7 @@ describe("fridge routes", () => {
       expect(justOver.body.useSoon).toBe(true);
       expect(justOver.body.expired).toBe(false);
 
-      const expired = await postFridgeItem(app, user.cookie, {
+      const expired = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt: hoursAgoIso(73),
@@ -314,54 +314,54 @@ describe("fridge routes", () => {
 
   describe("active/history sort and transitions", () => {
     it("sorts the active view soonest-expiry first, and lists finish/discard in history newest-changed first", async () => {
-      const soon = await postFridgeItem(app, user.cookie, {
+      const soon = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "counter", // 2h window
         preparedAt: hoursAgoIso(0),
       });
-      const later = await postFridgeItem(app, user.cookie, {
+      const later = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge", // 72h window
         preparedAt: hoursAgoIso(0),
       });
 
-      const active = await getFridge(app, user.cookie, "active");
+      const active = await getStorage(app, user.cookie, "active");
       expect(active.items.map((i) => i.id)).toEqual([soon.body.id, later.body.id]);
 
       const finish = await app.inject({
         method: "PATCH",
-        url: `/api/fridge/${soon.body.id}`,
+        url: `/api/storage/${soon.body.id}`,
         headers: { cookie: user.cookie },
         payload: { status: "finished" },
       });
       expect(finish.statusCode).toBe(200);
-      expect(finish.json<FridgeItem>().status).toBe("finished");
+      expect(finish.json<StorageItem>().status).toBe("finished");
 
-      const activeAfter = await getFridge(app, user.cookie, "active");
+      const activeAfter = await getStorage(app, user.cookie, "active");
       expect(activeAfter.items.map((i) => i.id)).toEqual([later.body.id]);
 
-      const history = await getFridge(app, user.cookie, "history");
+      const history = await getStorage(app, user.cookie, "history");
       expect(history.items.map((i) => i.id)).toEqual([soon.body.id]);
 
       // Undo: status back to 'active' restores it to the active view.
       const undo = await app.inject({
         method: "PATCH",
-        url: `/api/fridge/${soon.body.id}`,
+        url: `/api/storage/${soon.body.id}`,
         headers: { cookie: user.cookie },
         payload: { status: "active" },
       });
       expect(undo.statusCode).toBe(200);
-      expect(undo.json<FridgeItem>().status).toBe("active");
+      expect(undo.json<StorageItem>().status).toBe("active");
 
-      const activeRestored = await getFridge(app, user.cookie, "active");
+      const activeRestored = await getStorage(app, user.cookie, "active");
       expect(activeRestored.items.map((i) => i.id).sort()).toEqual([later.body.id, soon.body.id].sort());
 
-      const historyAfterUndo = await getFridge(app, user.cookie, "history");
+      const historyAfterUndo = await getStorage(app, user.cookie, "history");
       expect(historyAfterUndo.items).toHaveLength(0);
     });
 
     it("recomputes expiry when location or preparedAt changes via PATCH", async () => {
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "counter", // 2h window
         preparedAt: hoursAgoIso(0),
@@ -371,11 +371,11 @@ describe("fridge routes", () => {
       // Move it to the fridge (72h window) — should no longer be about to expire.
       const moved = await app.inject({
         method: "PATCH",
-        url: `/api/fridge/${created.body.id}`,
+        url: `/api/storage/${created.body.id}`,
         headers: { cookie: user.cookie },
         payload: { location: "fridge" },
       });
-      const movedBody = moved.json<FridgeItem>();
+      const movedBody = moved.json<StorageItem>();
       expect(movedBody.location).toBe("fridge");
       const expectedExpiry = new Date(created.body.preparedAt).getTime() + 72 * HOUR_MS;
       expect(new Date(movedBody.expiresAt).getTime()).toBe(expectedExpiry);
@@ -383,10 +383,10 @@ describe("fridge routes", () => {
   });
 
   describe("ownership", () => {
-    it("404s PATCH on another account's fridge item and leaves it unchanged", async () => {
+    it("404s PATCH on another account's storage item and leaves it unchanged", async () => {
       const owner = user;
       const intruder = await signUpUser(app, "Intruder");
-      const created = await postFridgeItem(app, owner.cookie, {
+      const created = await postStorageItem(app, owner.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt: hoursAgoIso(0),
@@ -394,44 +394,44 @@ describe("fridge routes", () => {
 
       const patch = await app.inject({
         method: "PATCH",
-        url: `/api/fridge/${created.body.id}`,
+        url: `/api/storage/${created.body.id}`,
         headers: { cookie: intruder.cookie },
         payload: { status: "finished" },
       });
       expect(patch.statusCode).toBe(404);
 
-      const ownerActive = await getFridge(app, owner.cookie, "active");
+      const ownerActive = await getStorage(app, owner.cookie, "active");
       expect(ownerActive.items[0]?.status).toBe("active");
     });
 
     it("does not list another account's items", async () => {
       const owner = user;
       const other = await signUpUser(app, "Other");
-      await postFridgeItem(app, owner.cookie, {
+      await postStorageItem(app, owner.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt: hoursAgoIso(0),
       });
 
-      const otherActive = await getFridge(app, other.cookie, "active");
+      const otherActive = await getStorage(app, other.cookie, "active");
       expect(otherActive.items).toHaveLength(0);
     });
   });
 
   describe("POST validation", () => {
     it("rejects a body with none of foodIds/recipeId/label", async () => {
-      const response = await postFridgeItem(app, user.cookie, { location: "fridge" });
+      const response = await postStorageItem(app, user.cookie, { location: "fridge" });
       expect(response.statusCode).toBe(400);
     });
 
     it("accepts a free-form label alone", async () => {
-      const response = await postFridgeItem(app, user.cookie, { label: "Mashed sweet potato", location: "fridge" });
+      const response = await postStorageItem(app, user.cookie, { label: "Mashed sweet potato", location: "fridge" });
       expect(response.statusCode).toBe(201);
       expect(response.body.label).toBe("Mashed sweet potato");
     });
 
     it("rejects an unknown foodId", async () => {
-      const response = await postFridgeItem(app, user.cookie, {
+      const response = await postStorageItem(app, user.cookie, {
         foodIds: ["00000000-0000-4000-8000-000000000000"],
         location: "fridge",
       });
@@ -439,21 +439,21 @@ describe("fridge routes", () => {
     });
 
     it("rejects an empty foodIds array", async () => {
-      const response = await postFridgeItem(app, user.cookie, { foodIds: [], location: "fridge" });
+      const response = await postStorageItem(app, user.cookie, { foodIds: [], location: "fridge" });
       expect(response.statusCode).toBe(400);
     });
 
     it("rejects more than 25 foodIds", async () => {
       const tooMany = Array.from({ length: 26 }, () => fixtures.banana.id);
-      const response = await postFridgeItem(app, user.cookie, { foodIds: tooMany, location: "fridge" });
+      const response = await postStorageItem(app, user.cookie, { foodIds: tooMany, location: "fridge" });
       expect(response.statusCode).toBe(400);
     });
   });
 
   describe("batch create", () => {
-    it("creates one fridge row per food sharing the other fields, deduping repeated ids", async () => {
+    it("creates one storage row per food sharing the other fields, deduping repeated ids", async () => {
       const preparedAt = hoursAgoIso(0);
-      const created = await postFridgeItemBatch(app, user.cookie, {
+      const created = await postStorageItemBatch(app, user.cookie, {
         foodIds: [fixtures.banana.id, fixtures.chicken.id, fixtures.banana.id],
         location: "fridge",
         preparedAt,
@@ -463,18 +463,18 @@ describe("fridge routes", () => {
       expect(created.body.map((item) => item.foodSlug).sort()).toEqual(["banana", "chicken"]);
       expect(created.body.every((item) => item.location === "fridge")).toBe(true);
 
-      const active = await getFridge(app, user.cookie, "active");
+      const active = await getStorage(app, user.cookie, "active");
       expect(active.items).toHaveLength(2);
     });
 
     it("rejects the whole batch and persists nothing when one foodId among several is unknown", async () => {
-      const created = await postFridgeItemBatch(app, user.cookie, {
+      const created = await postStorageItemBatch(app, user.cookie, {
         foodIds: [fixtures.banana.id, "00000000-0000-4000-8000-000000000000"],
         location: "fridge",
       });
       expect(created.statusCode).toBe(400);
 
-      const active = await getFridge(app, user.cookie, "active");
+      const active = await getStorage(app, user.cookie, "active");
       expect(active.items).toHaveLength(0);
     });
   });
@@ -484,23 +484,23 @@ describe("fridge routes", () => {
   // -------------------------------------------------------------------------
 
   async function patchItem(cookie: string, id: string, payload: Record<string, unknown>) {
-    const response = await app.inject({ method: "PATCH", url: `/api/fridge/${id}`, headers: { cookie }, payload });
-    return { statusCode: response.statusCode, body: response.statusCode === 200 ? response.json<FridgeItem>() : null };
+    const response = await app.inject({ method: "PATCH", url: `/api/storage/${id}`, headers: { cookie }, payload });
+    return { statusCode: response.statusCode, body: response.statusCode === 200 ? response.json<StorageItem>() : null };
   }
 
   describe("servings", () => {
     it("leaves both servings fields null when the item does not track servings", async () => {
-      const created = await postFridgeItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+      const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
       expect(created.body.servingsTotal).toBeNull();
       expect(created.body.servingsLeft).toBeNull();
 
-      const [listed] = (await getFridge(app, user.cookie, "active")).items;
+      const [listed] = (await getStorage(app, user.cookie, "active")).items;
       expect(listed?.servingsTotal).toBeNull();
       expect(listed?.servingsLeft).toBeNull();
     });
 
     it("initializes servingsLeft to servingsTotal on create, for every row of a batch", async () => {
-      const created = await postFridgeItemBatch(app, user.cookie, {
+      const created = await postStorageItemBatch(app, user.cookie, {
         foodIds: [fixtures.banana.id, fixtures.chicken.id],
         location: "fridge",
         servingsTotal: 4,
@@ -514,7 +514,7 @@ describe("fridge routes", () => {
 
     it("rejects a servingsTotal outside 1–999 or not a whole number", async () => {
       for (const servingsTotal of [0, -1, 1000, 2.5]) {
-        const response = await postFridgeItem(app, user.cookie, {
+        const response = await postStorageItem(app, user.cookie, {
           foodIds: [fixtures.banana.id],
           location: "fridge",
           servingsTotal,
@@ -524,7 +524,7 @@ describe("fridge routes", () => {
     });
 
     it("clamps servingsLeft down when PATCH shrinks servingsTotal", async () => {
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 6,
@@ -536,7 +536,7 @@ describe("fridge routes", () => {
     });
 
     it("keeps the remaining count when PATCH grows servingsTotal, and clamps an over-large servingsLeft", async () => {
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 3,
@@ -556,7 +556,7 @@ describe("fridge routes", () => {
     });
 
     it("turns tracking on for an untracked item and off again with servingsTotal null", async () => {
-      const created = await postFridgeItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+      const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
       expect(created.body.servingsTotal).toBeNull();
 
       const turnedOn = await patchItem(user.cookie, created.body.id, { servingsTotal: 3 });
@@ -568,13 +568,13 @@ describe("fridge routes", () => {
     });
 
     it("400s a servingsLeft edit on an item that does not track servings", async () => {
-      const created = await postFridgeItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+      const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
       const response = await patchItem(user.cookie, created.body.id, { servingsLeft: 2 });
       expect(response.statusCode).toBe(400);
     });
 
     it("rejects a negative servingsLeft", async () => {
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 3,
@@ -586,18 +586,18 @@ describe("fridge routes", () => {
 
   describe("bestBy", () => {
     it("stores a plain calendar date and returns it unchanged", async () => {
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         bestBy: "2026-12-31",
       });
       expect(created.statusCode).toBe(201);
       expect(created.body.bestBy).toBe("2026-12-31");
-      expect((await getFridge(app, user.cookie, "active")).items[0]?.bestBy).toBe("2026-12-31");
+      expect((await getStorage(app, user.cookie, "active")).items[0]?.bestBy).toBe("2026-12-31");
     });
 
     it("accepts a full ISO datetime and keeps only its UTC calendar day", async () => {
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         bestBy: "2026-12-31T18:30:00.000Z",
@@ -606,7 +606,7 @@ describe("fridge routes", () => {
     });
 
     it("defaults to null and can be set then cleared via PATCH", async () => {
-      const created = await postFridgeItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+      const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
       expect(created.body.bestBy).toBeNull();
 
       const set = await patchItem(user.cookie, created.body.id, { bestBy: "2027-01-05" });
@@ -617,7 +617,7 @@ describe("fridge routes", () => {
     });
 
     it("rejects a date that does not exist", async () => {
-      const response = await postFridgeItem(app, user.cookie, {
+      const response = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         bestBy: "2026-02-30",
@@ -627,19 +627,19 @@ describe("fridge routes", () => {
 
     it("does not change the derived expiry window", async () => {
       const preparedAt = hoursAgoIso(0);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         preparedAt,
         bestBy: "2030-01-01",
       });
-      // Still the banana/fridge 72h window, not the best-by date.
+      // Still the banana/storage 72h window, not the best-by date.
       expect(new Date(created.body.expiresAt).getTime()).toBe(new Date(preparedAt).getTime() + 72 * HOUR_MS);
     });
   });
 
   // -------------------------------------------------------------------------
-  // POST /api/fridge/:id/serve
+  // POST /api/storage/:id/serve
   // -------------------------------------------------------------------------
 
   describe("serve", () => {
@@ -647,16 +647,16 @@ describe("fridge routes", () => {
       cookie: string,
       itemId: string,
       payload?: Record<string, unknown>,
-    ): Promise<{ statusCode: number; body: ServeFridgeItemResponse | null }> {
+    ): Promise<{ statusCode: number; body: ServeStorageItemResponse | null }> {
       const response = await app.inject({
         method: "POST",
-        url: `/api/fridge/${itemId}/serve`,
+        url: `/api/storage/${itemId}/serve`,
         headers: { cookie },
         ...(payload === undefined ? {} : { payload }),
       });
       return {
         statusCode: response.statusCode,
-        body: response.statusCode === 201 ? response.json<ServeFridgeItemResponse>() : null,
+        body: response.statusCode === 201 ? response.json<ServeStorageItemResponse>() : null,
       };
     }
 
@@ -665,9 +665,9 @@ describe("fridge routes", () => {
       return response.json<MealsResponse>();
     }
 
-    it("logs a meal for a food-sourced item, links it to the fridge item, and takes one serving", async () => {
+    it("logs a meal for a food-sourced item, links it to the storage item, and takes one serving", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 3,
@@ -684,7 +684,7 @@ describe("fridge routes", () => {
           category: "fruit",
           // Null for a catalog food; only a parent-added food carries one.
           emoji: null,
-          fridgeItemId: created.body.id,
+          storageItemId: created.body.id,
         },
       ]);
       // Default servings is 1.
@@ -693,12 +693,12 @@ describe("fridge routes", () => {
       // The meal is a normal meal: it shows up in the log, carrying the link.
       const meals = await listMeals(user.cookie, babyId);
       expect(meals.items).toHaveLength(1);
-      expect(meals.items[0]?.foods[0]?.fridgeItemId).toBe(created.body.id);
+      expect(meals.items[0]?.foods[0]?.storageItemId).toBe(created.body.id);
     });
 
     it("expands a recipe-sourced item into the recipe's ingredient foods, all linked to the item", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         recipeId: fixtures.twoFoodRecipe.id,
         location: "fridge",
       });
@@ -711,12 +711,12 @@ describe("fridge routes", () => {
       });
       // Ordered by food name, exactly like any other meal.
       expect(served.body?.meal.foods.map((food) => food.slug)).toEqual(["banana", "chicken"]);
-      expect(served.body?.meal.foods.every((food) => food.fridgeItemId === created.body.id)).toBe(true);
+      expect(served.body?.meal.foods.every((food) => food.storageItemId === created.body.id)).toBe(true);
     });
 
     it("defaults servedAt to now and servings to 1 with no body at all", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 2,
@@ -735,7 +735,7 @@ describe("fridge routes", () => {
     it("honours an explicit servedAt and a multi-serving count", async () => {
       const babyId = await createBaby(app, user);
       const servedAt = hoursAgoIso(3);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 5,
@@ -748,7 +748,7 @@ describe("fridge routes", () => {
 
     it("floors servingsLeft at 0 and finishes the item into History when it empties", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 2,
@@ -763,8 +763,8 @@ describe("fridge routes", () => {
 
       // Finished the same way the manual flow finishes it: out of the active
       // view, into history, never deleted.
-      expect((await getFridge(app, user.cookie, "active")).items).toHaveLength(0);
-      expect((await getFridge(app, user.cookie, "history")).items.map((item) => item.id)).toEqual([created.body.id]);
+      expect((await getStorage(app, user.cookie, "active")).items).toHaveLength(0);
+      expect((await getStorage(app, user.cookie, "history")).items.map((item) => item.id)).toEqual([created.body.id]);
 
       // And the meal it produced is still there.
       expect((await listMeals(user.cookie, babyId)).items).toHaveLength(1);
@@ -772,19 +772,19 @@ describe("fridge routes", () => {
 
     it("decrements nothing for an item that does not track servings", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+      const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
 
       const served = await serve(user.cookie, created.body.id, { babyId, servings: 4 });
       expect(served.statusCode).toBe(201);
       expect(served.body?.item.servingsTotal).toBeNull();
       expect(served.body?.item.servingsLeft).toBeNull();
       expect(served.body?.item.status).toBe("active");
-      expect((await getFridge(app, user.cookie, "active")).items).toHaveLength(1);
+      expect((await getStorage(app, user.cookie, "active")).items).toHaveLength(1);
     });
 
     it("400s a label-only item and persists nothing", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, { label: "Leftover soup", location: "fridge" });
+      const created = await postStorageItem(app, user.cookie, { label: "Leftover soup", location: "fridge" });
 
       const served = await serve(user.cookie, created.body.id, { babyId });
       expect(served.statusCode).toBe(400);
@@ -793,7 +793,7 @@ describe("fridge routes", () => {
 
     it("400s a recipe-sourced item whose recipe has no ingredient foods", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         recipeId: fixtures.emptyRecipe.id,
         location: "fridge",
       });
@@ -803,10 +803,10 @@ describe("fridge routes", () => {
       expect(await db.select().from(schema.meals)).toHaveLength(0);
     });
 
-    it("404s another account's fridge item, leaving its servings and the meal log untouched", async () => {
+    it("404s another account's storage item, leaving its servings and the meal log untouched", async () => {
       const intruder = await signUpUser(app, "Intruder");
       const intruderBabyId = await createBaby(app, intruder, "Sam");
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 3,
@@ -815,10 +815,10 @@ describe("fridge routes", () => {
       const served = await serve(intruder.cookie, created.body.id, { babyId: intruderBabyId });
       expect(served.statusCode).toBe(404);
       expect(await db.select().from(schema.meals)).toHaveLength(0);
-      expect((await getFridge(app, user.cookie, "active")).items[0]?.servingsLeft).toBe(3);
+      expect((await getStorage(app, user.cookie, "active")).items[0]?.servingsLeft).toBe(3);
     });
 
-    it("404s an unknown fridge item id", async () => {
+    it("404s an unknown storage item id", async () => {
       const served = await serve(user.cookie, UNKNOWN_ID, {});
       expect(served.statusCode).toBe(404);
     });
@@ -826,7 +826,7 @@ describe("fridge routes", () => {
     it("404s a babyId belonging to somebody else and persists nothing", async () => {
       const other = await signUpUser(app, "Other");
       const otherBabyId = await createBaby(app, other, "Sam");
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 3,
@@ -835,11 +835,11 @@ describe("fridge routes", () => {
       const served = await serve(user.cookie, created.body.id, { babyId: otherBabyId });
       expect(served.statusCode).toBe(404);
       expect(await db.select().from(schema.meals)).toHaveLength(0);
-      expect((await getFridge(app, user.cookie, "active")).items[0]?.servingsLeft).toBe(3);
+      expect((await getStorage(app, user.cookie, "active")).items[0]?.servingsLeft).toBe(3);
     });
 
     it("400s an omitted babyId when the account has no baby, or more than one", async () => {
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 3,
@@ -854,12 +854,12 @@ describe("fridge routes", () => {
       expect(twoBabies.statusCode).toBe(400);
 
       expect(await db.select().from(schema.meals)).toHaveLength(0);
-      expect((await getFridge(app, user.cookie, "active")).items[0]?.servingsLeft).toBe(3);
+      expect((await getStorage(app, user.cookie, "active")).items[0]?.servingsLeft).toBe(3);
     });
 
     it("rejects a servedAt more than 24h in the future, and an out-of-range servings count", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 3,
@@ -879,13 +879,13 @@ describe("fridge routes", () => {
       expect(await db.select().from(schema.meals)).toHaveLength(0);
     });
 
-    it("rolls the meal back when the fridge write inside the transaction fails", async () => {
+    it("rolls the meal back when the storage-item write inside the transaction fails", async () => {
       const failing = await createTestApp({}, {}, dbWithFailingTransactionUpdate);
       try {
         const localFixtures = await seedFixtures(failing.db);
         const localUser = await signUpUser(failing.app);
         const babyId = await createBaby(failing.app, localUser);
-        const created = await postFridgeItem(failing.app, localUser.cookie, {
+        const created = await postStorageItem(failing.app, localUser.cookie, {
           foodIds: [localFixtures.banana.id],
           location: "fridge",
           servingsTotal: 3,
@@ -893,7 +893,7 @@ describe("fridge routes", () => {
 
         const response = await failing.app.inject({
           method: "POST",
-          url: `/api/fridge/${created.body.id}/serve`,
+          url: `/api/storage/${created.body.id}/serve`,
           headers: { cookie: localUser.cookie },
           payload: { babyId },
         });
@@ -902,7 +902,7 @@ describe("fridge routes", () => {
         // The meal insert ran first — it must not have survived the failure.
         expect(await failing.db.select().from(schema.meals)).toHaveLength(0);
         expect(await failing.db.select().from(schema.mealFoods)).toHaveLength(0);
-        const [item] = await failing.db.select().from(schema.fridgeItems);
+        const [item] = await failing.db.select().from(schema.storageItems);
         expect(item?.servingsLeft).toBe(3);
         expect(item?.status).toBe("active");
       } finally {
@@ -910,9 +910,9 @@ describe("fridge routes", () => {
       }
     });
 
-    it("keeps the meal but clears the link when the fridge item row is deleted", async () => {
+    it("keeps the meal but clears the link when the storage item row is deleted", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 2,
@@ -920,20 +920,20 @@ describe("fridge routes", () => {
       const served = await serve(user.cookie, created.body.id, { babyId });
       expect(served.statusCode).toBe(201);
 
-      await db.delete(schema.fridgeItems).where(eq(schema.fridgeItems.id, created.body.id));
+      await db.delete(schema.storageItems).where(eq(schema.storageItems.id, created.body.id));
 
       const rows = await db.select().from(schema.mealFoods);
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.fridgeItemId).toBeNull();
+      expect(rows[0]?.storageItemId).toBeNull();
 
       const meals = await listMeals(user.cookie, babyId);
       expect(meals.items).toHaveLength(1);
-      expect(meals.items[0]?.foods[0]?.fridgeItemId).toBeNull();
+      expect(meals.items[0]?.foods[0]?.storageItemId).toBeNull();
     });
 
-    it("logging a meal the ordinary way never touches the fridge", async () => {
+    it("logging a meal the ordinary way never touches storage", async () => {
       const babyId = await createBaby(app, user);
-      await postFridgeItem(app, user.cookie, {
+      await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 3,
@@ -947,9 +947,9 @@ describe("fridge routes", () => {
       });
       expect(logged.statusCode).toBe(201);
 
-      const [item] = (await getFridge(app, user.cookie, "active")).items;
+      const [item] = (await getStorage(app, user.cookie, "active")).items;
       expect(item).toMatchObject({ servingsTotal: 3, servingsLeft: 3, status: "active" });
-      expect((await listMeals(user.cookie, babyId)).items[0]?.foods[0]?.fridgeItemId).toBeNull();
+      expect((await listMeals(user.cookie, babyId)).items[0]?.foods[0]?.storageItemId).toBeNull();
     });
   });
 
@@ -970,7 +970,7 @@ describe("fridge routes", () => {
     ): Promise<{ statusCode: number; body: Record<string, unknown> }> {
       const response = await app.inject({
         method: "POST",
-        url: `/api/fridge/${itemId}/serve`,
+        url: `/api/storage/${itemId}/serve`,
         headers: { cookie: user.cookie },
         payload,
       });
@@ -980,7 +980,7 @@ describe("fridge routes", () => {
     async function patchItem(itemId: string, payload: Record<string, unknown>): Promise<number> {
       const response = await app.inject({
         method: "PATCH",
-        url: `/api/fridge/${itemId}`,
+        url: `/api/storage/${itemId}`,
         headers: { cookie: user.cookie },
         payload,
       });
@@ -990,13 +990,13 @@ describe("fridge routes", () => {
     /** The row as the database actually holds it — the assertions below are
      * about what was NOT written, so they read past the API. */
     async function storedItem(itemId: string) {
-      const [row] = await db.select().from(schema.fridgeItems).where(eq(schema.fridgeItems.id, itemId));
+      const [row] = await db.select().from(schema.storageItems).where(eq(schema.storageItems.id, itemId));
       return row;
     }
 
     it("409s the second serve of a last serving, leaving the finished item exactly as the first serve left it", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 1,
@@ -1024,7 +1024,7 @@ describe("fridge routes", () => {
 
     it("409s an item that is still active but has no servings left, and logs no meal", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 2,
@@ -1044,7 +1044,7 @@ describe("fridge routes", () => {
 
     it.each(["finished", "discarded"] as const)("409s a %s item and never overwrites its status", async (status) => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 3,
@@ -1065,7 +1065,7 @@ describe("fridge routes", () => {
 
     it("409s a finished item that tracks no servings at all", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+      const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
       expect(await patchItem(created.body.id, { status: "finished" })).toBe(200);
 
       const served = await serveItem(created.body.id, { babyId });
@@ -1074,9 +1074,9 @@ describe("fridge routes", () => {
       expect(await storedItem(created.body.id)).toMatchObject({ status: "finished", servingsLeft: null });
     });
 
-    it("serves again after the item is put back in the fridge", async () => {
+    it("serves again after the item is restored to active", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 1,
@@ -1093,7 +1093,7 @@ describe("fridge routes", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Fridge provenance survives meal edits (meal_foods.fridge_item_id).
+  // Storage provenance survives meal edits (meal_foods.storage_item_id).
   // -------------------------------------------------------------------------
 
   describe("serve provenance across meal edits", () => {
@@ -1110,47 +1110,47 @@ describe("fridge routes", () => {
       return response.json<MealsResponse["items"][number]>();
     }
 
-    async function servedMeal(): Promise<{ mealId: string; fridgeItemId: string }> {
+    async function servedMeal(): Promise<{ mealId: string; storageItemId: string }> {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 3,
       });
       const response = await app.inject({
         method: "POST",
-        url: `/api/fridge/${created.body.id}/serve`,
+        url: `/api/storage/${created.body.id}/serve`,
         headers: { cookie: user.cookie },
         payload: { babyId },
       });
       expect(response.statusCode).toBe(201);
-      return { mealId: response.json<ServeFridgeItemResponse>().meal.id, fridgeItemId: created.body.id };
+      return { mealId: response.json<ServeStorageItemResponse>().meal.id, storageItemId: created.body.id };
     }
 
     it("keeps the link when the edit does not touch the food list", async () => {
-      const { mealId, fridgeItemId } = await servedMeal();
+      const { mealId, storageItemId } = await servedMeal();
 
       const patched = await patchMeal(mealId, { reactionNote: "a bit windy after" });
       expect(patched.reactionNote).toBe("a bit windy after");
-      expect(patched.foods.map((food) => food.fridgeItemId)).toEqual([fridgeItemId]);
+      expect(patched.foods.map((food) => food.storageItemId)).toEqual([storageItemId]);
     });
 
     it("carries a surviving food's link through a food-list replacement and gives a swapped-in food none", async () => {
-      const { mealId, fridgeItemId } = await servedMeal();
+      const { mealId, storageItemId } = await servedMeal();
 
       // Banana survives the edit (it really did come out of that container);
       // chicken is added at edit time and was never served from anywhere.
       const patched = await patchMeal(mealId, { foodIds: [fixtures.banana.id, fixtures.chicken.id] });
-      expect(patched.foods.map((food) => [food.slug, food.fridgeItemId])).toEqual([
-        ["banana", fridgeItemId],
+      expect(patched.foods.map((food) => [food.slug, food.storageItemId])).toEqual([
+        ["banana", storageItemId],
         ["chicken", null],
       ]);
 
       // And it survives a second edit, so the carry-forward is not a
       // one-shot copy of the original insert.
       const again = await patchMeal(mealId, { foodIds: [fixtures.banana.id, fixtures.chicken.id], notes: "seconds" });
-      expect(again.foods.map((food) => [food.slug, food.fridgeItemId])).toEqual([
-        ["banana", fridgeItemId],
+      expect(again.foods.map((food) => [food.slug, food.storageItemId])).toEqual([
+        ["banana", storageItemId],
         ["chicken", null],
       ]);
     });
@@ -1159,7 +1159,7 @@ describe("fridge routes", () => {
       const { mealId } = await servedMeal();
 
       const patched = await patchMeal(mealId, { foodIds: [fixtures.chicken.id] });
-      expect(patched.foods.map((food) => [food.slug, food.fridgeItemId])).toEqual([["chicken", null]]);
+      expect(patched.foods.map((food) => [food.slug, food.storageItemId])).toEqual([["chicken", null]]);
       expect(await db.select().from(schema.mealFoods)).toHaveLength(1);
     });
   });
@@ -1170,23 +1170,23 @@ describe("fridge routes", () => {
 
   describe("notes", () => {
     it("round-trips a note on create, trims it, and clears it on edit", async () => {
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         notes: "  back of the middle shelf  ",
       });
       expect(created.body.notes).toBe("back of the middle shelf");
-      expect((await getFridge(app, user.cookie)).items[0]?.notes).toBe("back of the middle shelf");
+      expect((await getStorage(app, user.cookie)).items[0]?.notes).toBe("back of the middle shelf");
 
-      const patch = async (payload: Record<string, unknown>): Promise<FridgeItem> => {
+      const patch = async (payload: Record<string, unknown>): Promise<StorageItem> => {
         const response = await app.inject({
           method: "PATCH",
-          url: `/api/fridge/${created.body.id}`,
+          url: `/api/storage/${created.body.id}`,
           headers: { cookie: user.cookie },
           payload,
         });
         expect(response.statusCode).toBe(200);
-        return response.json<FridgeItem>();
+        return response.json<StorageItem>();
       };
 
       // An absent key leaves it alone; "" and null clear it.
@@ -1198,10 +1198,10 @@ describe("fridge routes", () => {
     });
 
     it("defaults to null and rejects an over-long note", async () => {
-      const created = await postFridgeItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+      const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
       expect(created.body.notes).toBeNull();
 
-      const tooLong = await postFridgeItemBatch(app, user.cookie, {
+      const tooLong = await postStorageItemBatch(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         notes: "x".repeat(501),
@@ -1211,7 +1211,7 @@ describe("fridge routes", () => {
 
     it("puts a serve's notes on the meal it creates, alongside the reaction note", async () => {
       const babyId = await createBaby(app, user);
-      const created = await postFridgeItem(app, user.cookie, {
+      const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
         servingsTotal: 2,
@@ -1220,12 +1220,12 @@ describe("fridge routes", () => {
 
       const response = await app.inject({
         method: "POST",
-        url: `/api/fridge/${created.body.id}/serve`,
+        url: `/api/storage/${created.body.id}/serve`,
         headers: { cookie: user.cookie },
         payload: { babyId, reactionNote: "  hives  ", notes: "  ate the lot  " },
       });
       expect(response.statusCode).toBe(201);
-      const served = response.json<ServeFridgeItemResponse>();
+      const served = response.json<ServeStorageItemResponse>();
       expect(served.meal.reactionNote).toBe("hives");
       expect(served.meal.notes).toBe("ate the lot");
       // The container's own note is its own field and is untouched by serving.

@@ -17,7 +17,7 @@ import { z } from "zod";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 7;
+export const ACCOUNT_EXPORT_VERSION = 8;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -50,13 +50,14 @@ export const exportBabySchema = z.object({
 
 /** Food and recipe names are denormalised in so the file reads on its own.
  * v2 (meal model): one entry per meal, with its foods nested — where v1 had
- * one flat entry per food served. v3 adds `fridgeItemId`: set when this food
- * was served out of a fridge item, so the export can trace it back. */
+ * one flat entry per food served. v3 adds `storageItemId` (named `pantryItemId`
+ * then, `fridgeItemId` in v7): set when this food was served out of a storage
+ * item, so the export can trace it back. */
 export const exportMealFoodSchema = z.object({
   id: z.string(),
   slug: z.string(),
   name: z.string(),
-  fridgeItemId: z.string().nullable(),
+  storageItemId: z.string().nullable(),
 });
 
 export const exportMealSchema = z.object({
@@ -80,12 +81,12 @@ export const exportFavoriteSchema = z.object({
 });
 
 /**
- * Every fridge row the account has ever had, `active` and closed alike —
+ * Every storage row the account has ever had, `active` and closed alike —
  * `status` plus `statusChangedAt` is the history, so nothing is filtered out.
  * v3 adds the optional servings-tracking pair, the packaging `bestBy` date,
  * and the free-form container `notes`.
  */
-export const exportFridgeItemSchema = z.object({
+export const exportStorageItemSchema = z.object({
   id: z.string(),
   foodId: z.string().nullable(),
   foodName: z.string().nullable(),
@@ -198,10 +199,11 @@ export const accountExportSchema = z.object({
   babies: z.array(exportBabySchema),
   meals: z.array(exportMealSchema),
   favorites: z.array(exportFavoriteSchema),
-  /** v7. The Pantry became the Fridge (item 289): this key was `pantryItems`
-   * in v6 and earlier, and `meals[].foods[].fridgeItemId` was `pantryItemId`.
-   * Nothing else about the rows changed. */
-  fridgeItems: z.array(exportFridgeItemSchema),
+  /** v8. The feature is now "Storage" (item 295): this key was `fridgeItems`
+   * in v7 and `pantryItems` in v6 and earlier, and `meals[].foods[].storageItemId`
+   * was `fridgeItemId`/`pantryItemId` in those versions. Nothing else about the
+   * rows changed — `location` still reads "fridge" | "freezer" | "counter". */
+  storageItems: z.array(exportStorageItemSchema),
   /** v4. Per-baby manual allergen marks, ordered by `createdAt`. */
   allergenOverrides: z.array(exportAllergenOverrideSchema),
   /** v5. Foods this account added itself, ordered by name. The `foods` table
@@ -221,7 +223,7 @@ export type ExportBaby = z.infer<typeof exportBabySchema>;
 export type ExportMeal = z.infer<typeof exportMealSchema>;
 export type ExportMealFood = z.infer<typeof exportMealFoodSchema>;
 export type ExportFavorite = z.infer<typeof exportFavoriteSchema>;
-export type ExportFridgeItem = z.infer<typeof exportFridgeItemSchema>;
+export type ExportStorageItem = z.infer<typeof exportStorageItemSchema>;
 export type ExportAllergenOverride = z.infer<typeof exportAllergenOverrideSchema>;
 export type ExportCustomFood = z.infer<typeof exportCustomFoodSchema>;
 export type ExportCustomRecipe = z.infer<typeof exportCustomRecipeSchema>;

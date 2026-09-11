@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { FridgeItem } from "@blw/shared";
-import { useFridgeServe } from "../hooks.js";
-import { clampServings, fridgeItemTitle } from "../format.js";
+import type { StorageItem } from "@blw/shared";
+import { useStorageServe } from "../hooks.js";
+import { clampServings, storageItemTitle } from "../format.js";
 import { Button } from "../../../components/ui/Button.js";
 import { Textarea } from "../../../components/ui/Input.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
@@ -24,7 +24,7 @@ export function buildServeInput(babyId: string, servings: number, reactionNote: 
 }
 
 interface ServeControlProps {
-  item: FridgeItem;
+  item: StorageItem;
   babyId: string;
   /** Fired after a successful serve so the owning sheet can close itself. */
   onServed?: () => void;
@@ -37,12 +37,12 @@ interface ServeControlProps {
  * "Serve" that posts the serve.
  *
  * This used to be a collapsed button that expanded into a confirming row on
- * the fridge card, with the notes hidden behind a "+ Add a note" toggle and
+ * the storage card, with the notes hidden behind a "+ Add a note" toggle and
  * a Cancel beside Confirm. Both are gone: there is exactly one Serve
  * surface now, the sheet, so there is nothing to collapse back to and the
  * sheet's own X / overlay tap is the way out.
  *
- * Serve semantics are untouched — same `useFridgeServe` mutation, same
+ * Serve semantics are untouched — same `useStorageServe` mutation, same
  * celebration, same auto-depletion (a depleted item leaves Active because
  * of that hook's cache invalidation, not anything here).
  */
@@ -51,7 +51,7 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
   const [servings, setServings] = useState(1);
   const [reactionNote, setReactionNote] = useState("");
   const [notes, setNotes] = useState("");
-  const serve = useFridgeServe(babyId);
+  const serve = useStorageServe(babyId);
 
   return (
     <div className="flex flex-col gap-3">
@@ -125,7 +125,7 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
 }
 
 interface ServeSheetProps {
-  item: FridgeItem;
+  item: StorageItem;
   babyId: string;
   open: boolean;
   onClose: () => void;
@@ -133,24 +133,24 @@ interface ServeSheetProps {
 
 /**
  * The one Serve surface in the app (item 263): a bottom sheet titled
- * "Serve <item>", opened from the fridge card's Serve button AND from the
+ * "Serve <item>", opened from the storage card's Serve button AND from the
  * kebab menu's Serve row, so the two paths can no longer drift. Closed by
  * the X at the LEFT of its header, an overlay tap, or Escape.
  */
 export function ServeSheet({ item, babyId, open, onClose }: ServeSheetProps) {
   return (
-    <Sheet open={open} onClose={onClose} title={`Serve ${fridgeItemTitle(item)}`} showClose>
+    <Sheet open={open} onClose={onClose} title={`Serve ${storageItemTitle(item)}`} showClose>
       <ServeControl item={item} babyId={babyId} onServed={onClose} />
     </Sheet>
   );
 }
 
 /**
- * A "Serve" button that owns its own sheet — what a full-size fridge card
- * (`FridgeDetailPage`) renders in its action row. The kebab menu opens
+ * A "Serve" button that owns its own sheet — what a full-size storage card
+ * (`StorageDetailPage`) renders in its action row. The kebab menu opens
  * `ServeSheet` directly instead, since its trigger is the menu row.
  */
-export function ServeAction({ item, babyId }: { item: FridgeItem; babyId: string }) {
+export function ServeAction({ item, babyId }: { item: StorageItem; babyId: string }) {
   const [open, setOpen] = useState(false);
 
   return (

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { FridgeItem, FridgeLocation } from "@blw/shared";
-import { useUpdateFridgeItem } from "../hooks.js";
+import type { StorageItem, StorageLocation } from "@blw/shared";
+import { useUpdateStorageItem } from "../hooks.js";
 import { LOCATIONS } from "../format.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
@@ -8,26 +8,26 @@ import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField
 import { DateField } from "../../../components/ui/DateField.js";
 import { Button } from "../../../components/ui/Button.js";
 
-interface EditFridgeItemFormProps {
-  item: FridgeItem;
+interface EditStorageItemFormProps {
+  item: StorageItem;
   onDone: () => void;
 }
 
 /**
- * The fridge "edit" form, byte-compatible with the one that used to live in
- * the inline EditFridgeItemSheet: location segments, wheel "Prepared" field
+ * The storage "edit" form, byte-compatible with the one that used to live in
+ * the inline EditStorageItemSheet: location segments, wheel "Prepared" field
  * preset from the item's stored value, and quantity note. Now rendered
- * full-screen by FridgeEditPage, which supplies `onDone` for both a
+ * full-screen by StorageEditPage, which supplies `onDone` for both a
  * successful save and Cancel.
  */
-export function EditFridgeItemForm({ item, onDone }: EditFridgeItemFormProps) {
-  const [location, setLocation] = useState<FridgeLocation>(item.location);
+export function EditStorageItemForm({ item, onDone }: EditStorageItemFormProps) {
+  const [location, setLocation] = useState<StorageLocation>(item.location);
   const [preparedAt, setPreparedAt] = useState(() => nowAtMinute(new Date(item.preparedAt)));
   const [quantityNote, setQuantityNote] = useState(item.quantityNote ?? "");
   const [servingsTotal, setServingsTotal] = useState(item.servingsTotal != null ? String(item.servingsTotal) : "");
   const [bestBy, setBestBy] = useState(item.bestBy ?? "");
   const [notes, setNotes] = useState(item.notes ?? "");
-  const updateItem = useUpdateFridgeItem();
+  const updateItem = useUpdateStorageItem();
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -70,13 +70,13 @@ export function EditFridgeItemForm({ item, onDone }: EditFridgeItemFormProps) {
         </div>
       </label>
 
-      <Field label="Prepared" htmlFor="fridge-edit-prepared">
-        <DateTimeField id="fridge-edit-prepared" value={preparedAt} onChange={setPreparedAt} />
+      <Field label="Prepared" htmlFor="storage-edit-prepared">
+        <DateTimeField id="storage-edit-prepared" value={preparedAt} onChange={setPreparedAt} />
       </Field>
 
-      <Field label="Quantity note (optional)" htmlFor="fridge-edit-note">
+      <Field label="Quantity note (optional)" htmlFor="storage-edit-note">
         <Input
-          id="fridge-edit-note"
+          id="storage-edit-note"
           type="text"
           value={quantityNote}
           onChange={(e) => setQuantityNote(e.target.value)}
@@ -84,9 +84,9 @@ export function EditFridgeItemForm({ item, onDone }: EditFridgeItemFormProps) {
         />
       </Field>
 
-      <Field label="Total servings (optional)" htmlFor="fridge-edit-servings">
+      <Field label="Total servings (optional)" htmlFor="storage-edit-servings">
         <Input
-          id="fridge-edit-servings"
+          id="storage-edit-servings"
           type="number"
           inputMode="numeric"
           min={1}
@@ -97,13 +97,13 @@ export function EditFridgeItemForm({ item, onDone }: EditFridgeItemFormProps) {
         />
       </Field>
 
-      <Field label="Best by (optional)" htmlFor="fridge-edit-best-by">
-        <DateField id="fridge-edit-best-by" value={bestBy} onChange={setBestBy} allowFuture title="Best by" />
+      <Field label="Best by (optional)" htmlFor="storage-edit-best-by">
+        <DateField id="storage-edit-best-by" value={bestBy} onChange={setBestBy} allowFuture title="Best by" />
       </Field>
 
-      <Field label="Notes (optional)" htmlFor="fridge-edit-notes">
+      <Field label="Notes (optional)" htmlFor="storage-edit-notes">
         <Textarea
-          id="fridge-edit-notes"
+          id="storage-edit-notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={2}

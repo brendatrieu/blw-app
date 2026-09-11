@@ -78,7 +78,7 @@ export function resolveYearsBack(yearsBack: number, presetYear: number, currentY
 
 /**
  * Forward counterpart of `resolveYearsBack`, for `allowFuture` fields (e.g.
- * a fridge best-by date): extends the year wheel's forward range so a
+ * a storage best-by date): extends the year wheel's forward range so a
  * preset already beyond the default forward window (an already-far-future
  * stored value) is never out of range. Never shrinks below the requested
  * default.
@@ -212,7 +212,7 @@ interface DateFieldProps {
  * styling, three wheel columns (month / day / year) instead of four. Reuses
  * `WheelColumn`/`WheelFrame` rather than forking the wheel mechanics. Future
  * dates can never be committed by default — "Save" clamps the draft to
- * today — unless `allowFuture` opts a field (e.g. a fridge best-by date)
+ * today — unless `allowFuture` opts a field (e.g. a storage best-by date)
  * out of that clamp.
  */
 export function DateField({

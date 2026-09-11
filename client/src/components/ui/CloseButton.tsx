@@ -9,7 +9,7 @@ interface CloseButtonProps {
 
 /**
  * Icon-only "X" dismissal control for full-screen action pages (log food,
- * add/edit fridge item). Shares the exact history-aware back idiom
+ * add/edit storage item). Shares the exact history-aware back idiom
  * `BackButton` uses — pop history when there's somewhere to pop back to,
  * otherwise land on `fallback` — just presented as a close glyph instead of
  * a back chevron, matching how these pages were reached (opened as an

@@ -437,7 +437,7 @@ export function AiSection() {
       <p className="text-sm text-[var(--color-text-muted)]">
         Your key is encrypted before it is stored, is never shown again, and is deleted with your
         account. What we send Claude is limited to your baby&apos;s age in months, food names,
-        symptoms and fridge items — never their name, your email, or any account id.{" "}
+        symptoms and storage items — never their name, your email, or any account id.{" "}
         <a
           href={ANTHROPIC_CONSOLE_URL}
           target="_blank"
@@ -688,7 +688,7 @@ export function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
 
         <p className="text-sm text-[var(--color-text)]">
           This permanently deletes your account and everything in it — every baby profile, the whole
-          food log, your allergen progress, favourites, fridge, symptom checks, chats, and your
+          food log, your allergen progress, favourites, storage, symptom checks, chats, and your
           Anthropic key. <strong>It cannot be undone and there is no backup we can restore from.</strong>
         </p>
 
@@ -787,7 +787,7 @@ function AccountSection() {
 
       <p className="text-xs text-[var(--color-text-muted)]">
         The export is a single JSON file with everything on your account: babies, food log,
-        favourites, fridge, symptom checks and chats. It never contains your API key.
+        favourites, storage, symptom checks and chats. It never contains your API key.
       </p>
 
       {exportData.isError ? (

@@ -257,7 +257,7 @@ describe("chat threads and messages", () => {
       // The recipe kind gets all four tools.
       const params = capturedParams[0] as { tools: { name: string }[] };
       expect(params.tools.map((t) => t.name).sort()).toEqual(
-        ["get_baby_profile", "get_food_prep_guidance", "get_fridge", "search_recipes"].sort(),
+        ["get_baby_profile", "get_food_prep_guidance", "get_storage", "search_recipes"].sort(),
       );
 
       const messages = await app.inject({

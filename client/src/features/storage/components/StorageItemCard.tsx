@@ -1,23 +1,23 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import type { FridgeItem } from "@blw/shared";
+import type { StorageItem } from "@blw/shared";
 import { Badge } from "../../catalog/components/Badge.js";
 import { getFoodEmoji } from "../../catalog/foodEmoji.js";
-import { bestByLabel, countdownLabel, LOCATION_LABEL, fridgeItemTitle, servingsLabel } from "../format.js";
+import { bestByLabel, countdownLabel, LOCATION_LABEL, storageItemTitle, servingsLabel } from "../format.js";
 
-/** Emoji for a fridge item: the food's own emoji when it was prepped from a
+/** Emoji for a storage item: the food's own emoji when it was prepped from a
  * catalog food, otherwise a friendly stand-in for a recipe or free-form entry.
- * Exported so `FridgeDetailPage` can reuse it for its own header. */
-export function fridgeItemEmoji(item: FridgeItem): string {
-  // Fridge rows carry no category — a custom food's own emoji, or the
+ * Exported so `StorageDetailPage` can reuse it for its own header. */
+export function storageItemEmoji(item: StorageItem): string {
+  // Storage rows carry no category — a custom food's own emoji, or the
   // slug map, is all there is to go on.
   if (item.foodSlug) return getFoodEmoji(item.foodSlug, null, item.foodEmoji);
   if (item.recipeTitle) return "🍲";
   return "📝";
 }
 
-interface FridgeItemCardProps {
-  item: FridgeItem;
+interface StorageItemCardProps {
+  item: StorageItem;
   /** Kept for callers' symmetry with the kebab; the card itself renders no
    * button that could be disabled by it. */
   busy: boolean;
@@ -26,21 +26,21 @@ interface FridgeItemCardProps {
    * button row any more. */
   actions?: ReactNode;
   /** False renders the info block as plain content instead of a Link to
-   * `/fridge/:id` — for `FridgeDetailPage` itself, which must not link to
-   * itself. Defaults to true (Home and the Fridge list both tap through). */
+   * `/storage/:id` — for `StorageDetailPage` itself, which must not link to
+   * itself. Defaults to true (Home and the Storage list both tap through). */
   linkable?: boolean;
 }
 
-export function FridgeItemCard({ item, actions, linkable = true }: FridgeItemCardProps) {
+export function StorageItemCard({ item, actions, linkable = true }: StorageItemCardProps) {
   const preparedLabel = new Date(item.preparedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
   const info = (
     <>
       <span aria-hidden="true" className="text-xl leading-none">
-        {fridgeItemEmoji(item)}
+        {storageItemEmoji(item)}
       </span>
       <div className="flex flex-col">
-        <span className="text-sm font-semibold text-[var(--color-text)]">{fridgeItemTitle(item)}</span>
+        <span className="text-sm font-semibold text-[var(--color-text)]">{storageItemTitle(item)}</span>
         <span className="text-xs text-[var(--color-text-muted)]">
           Prepared {preparedLabel}
           {item.quantityNote ? ` · ${item.quantityNote}` : ""}
@@ -61,7 +61,7 @@ export function FridgeItemCard({ item, actions, linkable = true }: FridgeItemCar
             siblings — nothing interactive is ever nested inside the anchor. */}
         {linkable ? (
           <Link
-            to={`/fridge/${item.id}`}
+            to={`/storage/${item.id}`}
             className="flex items-start gap-2 rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
           >
             {info}

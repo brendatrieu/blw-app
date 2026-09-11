@@ -173,7 +173,7 @@ export type CreateCustomFoodInput = z.input<typeof createCustomFoodSchema>;
 /**
  * A true partial update: an absent key leaves that column alone. `emoji` and
  * `notes` still collapse `""`/null to null when they ARE sent, so the form
- * can clear them. The slug is deliberately not editable — links and fridge
+ * can clear them. The slug is deliberately not editable — links and storage
  * rows already point at it.
  */
 export const updateCustomFoodSchema = z
@@ -192,13 +192,13 @@ export type UpdateCustomFoodInput = z.input<typeof updateCustomFoodSchema>;
 
 /**
  * DELETE /api/foods/:id when the food is still referenced. The counts are
- * what the UI needs to say "used in N meals and N fridge items" instead of a
+ * what the UI needs to say "used in N meals and N storage items" instead of a
  * bare "can't delete this".
  */
 export const customFoodConflictSchema = z.object({
   error: z.literal("conflict"),
   mealCount: z.number().int(),
-  fridgeCount: z.number().int(),
+  storageCount: z.number().int(),
   /** Custom recipes this food is an ingredient of. Optional so a body from
    * before custom recipes still parses; the server always sends it. */
   recipeCount: z.number().int().optional(),
@@ -459,12 +459,12 @@ export type UpdateCustomRecipeInput = z.input<typeof updateCustomRecipeSchema>;
 
 /**
  * DELETE /api/recipes/:id when the recipe is still referenced by logged meals
- * or fridge items. Favorites are NOT a block — the caller's own favorite row
+ * or storage items. Favorites are NOT a block — the caller's own favorite row
  * is simply removed with the recipe.
  */
 export const customRecipeConflictSchema = z.object({
   error: z.literal("conflict"),
   mealCount: z.number().int(),
-  fridgeCount: z.number().int(),
+  storageCount: z.number().int(),
 });
 export type CustomRecipeConflict = z.infer<typeof customRecipeConflictSchema>;

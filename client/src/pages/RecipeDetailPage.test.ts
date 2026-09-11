@@ -141,15 +141,15 @@ describe("RecipeDetailPage (catalog recipe)", () => {
   });
 
   // Item 283: the actions row is the Home pair — primary "Log meal" first,
-  // tonal "Add to fridge" second — each carrying this recipe's id.
-  it("offers the Log meal / Add to fridge pair, in that order, both carrying the recipe id", () => {
+  // tonal "Add to storage" second — each carrying this recipe's id.
+  it("offers the Log meal / Add to storage pair, in that order, both carrying the recipe id", () => {
     const html = renderRecipe(catalogRecipe());
     const id = catalogRecipe().id;
     expect(html).toContain(`href="/log-meal?recipe=${id}"`);
-    expect(html).toContain(`href="/fridge/add?recipe=${id}"`);
+    expect(html).toContain(`href="/storage/add?recipe=${id}"`);
     expect(html).toContain(">Log meal<");
-    expect(html).toContain(">Add to fridge<");
-    expect(html.indexOf(">Log meal<")).toBeLessThan(html.indexOf(">Add to fridge<"));
+    expect(html).toContain(">Add to storage<");
+    expect(html.indexOf(">Log meal<")).toBeLessThan(html.indexOf(">Add to storage<"));
   });
 
   it("gives the pair the primary and tonal fills, each taking half the row", () => {
@@ -157,12 +157,12 @@ describe("RecipeDetailPage (catalog recipe)", () => {
     const link = (label: string) => html.match(new RegExp(`<a[^>]*>${label}</a>`))?.[0] ?? "";
     expect(link("Log meal")).toContain("bg-[var(--color-primary)]");
     expect(link("Log meal")).toContain("flex-1");
-    expect(link("Add to fridge")).toContain("bg-[var(--color-success)]");
-    expect(link("Add to fridge")).toContain("flex-1");
+    expect(link("Add to storage")).toContain("bg-[var(--color-success)]");
+    expect(link("Add to storage")).toContain("flex-1");
   });
 
   // The thin location-only "I prepped this" expander is gone with it — the
-  // full add form at /fridge/add is the one way to stash a prepped recipe.
+  // full add form at /storage/add is the one way to stash a prepped recipe.
   it("no longer offers the I-prepped-this expander", () => {
     const html = renderRecipe(catalogRecipe());
     expect(html).not.toContain("I prepped this");
@@ -291,20 +291,20 @@ describe("CustomRecipeActions", () => {
 
 describe("customRecipeConflictMessage", () => {
   it("names both places the recipe is still referenced (the 409 body's counts)", () => {
-    expect(customRecipeConflictMessage({ mealCount: 3, fridgeCount: 2 })).toBe(
-      "Used in 3 meals and 2 fridge items — remove those first.",
+    expect(customRecipeConflictMessage({ mealCount: 3, storageCount: 2 })).toBe(
+      "Used in 3 meals and 2 storage items — remove those first.",
     );
   });
 
   it("uses the singular at exactly one", () => {
-    expect(customRecipeConflictMessage({ mealCount: 1, fridgeCount: 1 })).toBe(
-      "Used in 1 meal and 1 fridge item — remove those first.",
+    expect(customRecipeConflictMessage({ mealCount: 1, storageCount: 1 })).toBe(
+      "Used in 1 meal and 1 storage item — remove those first.",
     );
   });
 
   it("still names a zero count rather than dropping the clause", () => {
-    expect(customRecipeConflictMessage({ mealCount: 0, fridgeCount: 4 })).toBe(
-      "Used in 0 meals and 4 fridge items — remove those first.",
+    expect(customRecipeConflictMessage({ mealCount: 0, storageCount: 4 })).toBe(
+      "Used in 0 meals and 4 storage items — remove those first.",
     );
   });
 });
@@ -339,11 +339,11 @@ describe("RecipeDetailPage — Basic badge", () => {
 });
 
 describe("RecipeDetailPage actions pair on a custom recipe (item 283)", () => {
-  it("gives a custom recipe the same Log meal / Add to fridge pair, in that order", () => {
+  it("gives a custom recipe the same Log meal / Add to storage pair, in that order", () => {
     const html = renderRecipe(CUSTOM_RECIPE);
     const logAt = html.indexOf(`href="/log-meal?recipe=${CUSTOM_RECIPE.id}"`);
-    const fridgeAt = html.indexOf(`href="/fridge/add?recipe=${CUSTOM_RECIPE.id}"`);
+    const storageAt = html.indexOf(`href="/storage/add?recipe=${CUSTOM_RECIPE.id}"`);
     expect(logAt).toBeGreaterThan(-1);
-    expect(fridgeAt).toBeGreaterThan(logAt);
+    expect(storageAt).toBeGreaterThan(logAt);
   });
 });

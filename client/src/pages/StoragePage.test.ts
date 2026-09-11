@@ -3,11 +3,11 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { Baby, FridgeItem } from "@blw/shared";
+import type { Baby, StorageItem } from "@blw/shared";
 import { CelebrationProvider } from "../components/ui/Celebration.js";
 import { babyKeys } from "../features/babies/api.js";
-import { fridgeKeys } from "../features/fridge/hooks.js";
-import { FridgePage } from "./FridgePage.js";
+import { storageKeys } from "../features/storage/hooks.js";
+import { StoragePage } from "./StoragePage.js";
 
 const BABY: Baby = {
   id: "baby-1",
@@ -19,7 +19,7 @@ const BABY: Baby = {
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
-const ITEM: FridgeItem = {
+const ITEM: StorageItem = {
   id: "11111111-1111-1111-1111-111111111111",
   label: null,
   foodSlug: "avocado",
@@ -43,7 +43,7 @@ const ITEM: FridgeItem = {
 function render() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(babyKeys.list(false), [BABY]);
-  queryClient.setQueryData(fridgeKeys.list("active"), { items: [ITEM] });
+  queryClient.setQueryData(storageKeys.list("active"), { items: [ITEM] });
   return renderToString(
     createElement(
       QueryClientProvider,
@@ -51,13 +51,13 @@ function render() {
       createElement(
         CelebrationProvider,
         null,
-        createElement(MemoryRouter, { initialEntries: ["/fridge"] }, createElement(FridgePage, null)),
+        createElement(MemoryRouter, { initialEntries: ["/storage"] }, createElement(StoragePage, null)),
       ),
     ),
   );
 }
 
-describe("FridgePage cards (item 264 — kebab everywhere)", () => {
+describe("StoragePage cards (item 264 — kebab everywhere)", () => {
   const html = render();
 
   it("gives each card the same three-dot Actions menu Home uses", () => {
@@ -74,12 +74,12 @@ describe("FridgePage cards (item 264 — kebab everywhere)", () => {
   });
 
   it("keeps the card body a stretched link into the item's detail page", () => {
-    expect(html).toMatch(/<a [^>]*class="[^"]*after:absolute after:inset-0[^"]*"[^>]*href="\/fridge\//);
+    expect(html).toMatch(/<a [^>]*class="[^"]*after:absolute after:inset-0[^"]*"[^>]*href="\/storage\//);
   });
 
   it("keeps the page's own header untouched — no chevron on a tab root", () => {
-    expect(html).toContain("Fridge</h1>");
+    expect(html).toContain("Storage</h1>");
     expect(html).not.toContain('<span class="sr-only">Back</span>');
-    expect(html).toMatch(/<a [^>]*href="\/fridge\/add"/);
+    expect(html).toMatch(/<a [^>]*href="\/storage\/add"/);
   });
 });

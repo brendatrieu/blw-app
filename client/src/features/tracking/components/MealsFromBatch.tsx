@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
 import { useMeals } from "../hooks.js";
-import { mealsFromFridgeItem } from "../mealsFromBatch.js";
+import { mealsFromStorageItem } from "../mealsFromBatch.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
 import { SkeletonList } from "../../../components/ui/Skeleton.js";
 
 interface MealsFromBatchProps {
   babyId: string | undefined;
-  fridgeItemId: string;
+  storageItemId: string;
 }
 
 function mealTimingLabel(servedAt: string): string {
@@ -17,16 +17,16 @@ function mealTimingLabel(servedAt: string): string {
 }
 
 /**
- * "Meals from this batch" on `FridgeDetailPage`: which of the baby's recent
- * meals were served from this exact fridge item — see `mealsFromFridgeItem`
+ * "Meals from this batch" on `StorageDetailPage`: which of the baby's recent
+ * meals were served from this exact storage item — see `mealsFromStorageItem`
  * for the membership rule. Pulled from the same best-effort recent-meals
  * window `FoodDetailPage`'s "times served" count uses (the 100-row page-size
  * ceiling, not an exact lifetime total), hence the muted "recent meals"
  * qualifier rather than claiming completeness.
  */
-export function MealsFromBatch({ babyId, fridgeItemId }: MealsFromBatchProps) {
+export function MealsFromBatch({ babyId, storageItemId }: MealsFromBatchProps) {
   const { data, isLoading } = useMeals(babyId, { limit: 100 });
-  const meals = mealsFromFridgeItem(data?.items ?? [], fridgeItemId);
+  const meals = mealsFromStorageItem(data?.items ?? [], storageItemId);
 
   return (
     <section className="flex flex-col gap-2">
@@ -44,7 +44,7 @@ export function MealsFromBatch({ babyId, fridgeItemId }: MealsFromBatchProps) {
           {meals.map((meal) => (
             <li key={meal.id} className="rounded-[var(--radius-md)] bg-[var(--color-bg-inset)]">
               {/* The whole row is the link target — no other interactive
-                  control lives in this row, so (unlike FridgeItemCard/
+                  control lives in this row, so (unlike StorageItemCard/
                   MealCard) nothing needs to stay outside it. */}
               <Link
                 to={`/meals/${meal.id}`}

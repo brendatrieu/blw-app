@@ -1,19 +1,19 @@
 import { useState } from "react";
-import type { FridgeView } from "@blw/shared";
-import { useFridgeItems, useFridgeStatusChange } from "../features/fridge/hooks.js";
+import type { StorageView } from "@blw/shared";
+import { useStorageItems, useStorageStatusChange } from "../features/storage/hooks.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { FridgeItemCard } from "../features/fridge/components/FridgeItemCard.js";
-import { FridgeItemActionsMenu } from "../features/fridge/components/FridgeItemActionsMenu.js";
-import { FridgeStatusBanner } from "../features/fridge/components/FridgeStatusBanner.js";
+import { StorageItemCard } from "../features/storage/components/StorageItemCard.js";
+import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
+import { StorageStatusBanner } from "../features/storage/components/StorageStatusBanner.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { SkeletonList } from "../components/ui/Skeleton.js";
 
-export function FridgePage() {
-  const [view, setView] = useState<FridgeView>("active");
-  const { data, isLoading, isError } = useFridgeItems(view);
-  const { recentChange, setStatus, undo, isPending } = useFridgeStatusChange();
+export function StoragePage() {
+  const [view, setView] = useState<StorageView>("active");
+  const { data, isLoading, isError } = useStorageItems(view);
+  const { recentChange, setStatus, undo, isPending } = useStorageStatusChange();
   const { activeBaby } = useActiveBaby();
 
   const items = data?.items ?? [];
@@ -21,10 +21,10 @@ export function FridgePage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <PageHeader
-        title="Fridge"
-        emoji="🧊"
+        title="Storage"
+        emoji="📦"
         action={
-          <ButtonLink to="/fridge/add" size="sm">
+          <ButtonLink to="/storage/add" size="sm">
             + Add item
           </ButtonLink>
         }
@@ -48,21 +48,21 @@ export function FridgePage() {
         ))}
       </div>
 
-      {recentChange && <FridgeStatusBanner change={recentChange} onUndo={undo} />}
+      {recentChange && <StorageStatusBanner change={recentChange} onUndo={undo} />}
 
       {isLoading && <SkeletonList count={4} />}
-      {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load the fridge.</p>}
+      {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load storage.</p>}
 
       {!isLoading && !isError && items.length === 0 && (
         <EmptyState
           icon="🥣"
-          title={view === "active" ? "Nothing in the fridge yet" : "Nothing finished or discarded yet"}
+          title={view === "active" ? "Nothing in storage yet" : "Nothing finished or discarded yet"}
           description={
             view === "active" ? "Add what you prepped so you don't lose track of it." : undefined
           }
           action={
             view === "active" ? (
-              <ButtonLink to="/fridge/add" size="sm" variant="secondary">
+              <ButtonLink to="/storage/add" size="sm" variant="secondary">
                 + Add item
               </ButtonLink>
             ) : undefined
@@ -71,17 +71,17 @@ export function FridgePage() {
       )}
 
       <ul className="flex flex-col gap-2">
-        {/* Item 264: the Fridge tab's cards carry the same kebab Home does
+        {/* Item 264: the Storage tab's cards carry the same kebab Home does
             instead of their own Serve/Remove/Edit footer row — Remove and
-            Restore still run through `useFridgeStatusChange` so the undo
+            Restore still run through `useStorageStatusChange` so the undo
             banner above keeps working. */}
         {items.map((item) => (
-          <FridgeItemCard
+          <StorageItemCard
             key={item.id}
             item={item}
             busy={isPending}
             actions={
-              <FridgeItemActionsMenu
+              <StorageItemActionsMenu
                 item={item}
                 babyId={activeBaby?.id}
                 busy={isPending}

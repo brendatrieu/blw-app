@@ -103,10 +103,10 @@ export interface MealSeed {
   /** General, non-clinical note on the meal itself (see schema.meals.notes). */
   notes?: string | null;
   /**
-   * Set when every food in this meal was served from the same fridge item
-   * (POST /api/fridge/:id/serve provenance). Applied to all of `foodIds`.
+   * Set when every food in this meal was served from the same storage item
+   * (POST /api/storage/:id/serve provenance). Applied to all of `foodIds`.
    */
-  fridgeItemId?: string | null;
+  storageItemId?: string | null;
 }
 
 /**
@@ -135,7 +135,7 @@ export async function insertMeals(db: Database, seeds: MealSeed[]): Promise<stri
 
     await db
       .insert(schema.mealFoods)
-      .values(foodIds.map((foodId) => ({ mealId: meal.id, foodId, fridgeItemId: seed.fridgeItemId ?? null })));
+      .values(foodIds.map((foodId) => ({ mealId: meal.id, foodId, storageItemId: seed.storageItemId ?? null })));
     ids.push(meal.id);
   }
   return ids;

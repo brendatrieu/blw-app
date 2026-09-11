@@ -31,7 +31,7 @@ import {
   foods,
   mealFoods,
   meals,
-  fridgeItems,
+  storageItems,
   recipeIngredients,
   recipeVariants,
   recipes,
@@ -132,7 +132,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
             id: foods.id,
             slug: foods.slug,
             name: foods.name,
-            fridgeItemId: mealFoods.fridgeItemId,
+            storageItemId: mealFoods.storageItemId,
           })
           .from(mealFoods)
           .innerJoin(foods, eq(mealFoods.foodId, foods.id))
@@ -147,10 +147,10 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
 
     const foodsByMealId = new Map<
       string,
-      { id: string; slug: string; name: string; fridgeItemId: string | null }[]
+      { id: string; slug: string; name: string; storageItemId: string | null }[]
     >();
     for (const row of mealFoodRows) {
-      const entry = { id: row.id, slug: row.slug, name: row.name, fridgeItemId: row.fridgeItemId };
+      const entry = { id: row.id, slug: row.slug, name: row.name, storageItemId: row.storageItemId };
       const existing = foodsByMealId.get(row.mealId);
       if (existing) existing.push(entry);
       else foodsByMealId.set(row.mealId, [entry]);
@@ -190,32 +190,32 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       .where(eq(favorites.userId, userId))
       .orderBy(asc(favorites.createdAt));
 
-    const fridgeRows = await db
+    const storageRows = await db
       .select({
-        id: fridgeItems.id,
-        foodId: fridgeItems.foodId,
+        id: storageItems.id,
+        foodId: storageItems.foodId,
         foodName: foods.name,
-        recipeId: fridgeItems.recipeId,
+        recipeId: storageItems.recipeId,
         recipeTitle: recipes.title,
-        label: fridgeItems.label,
-        preparedAt: fridgeItems.preparedAt,
-        location: fridgeItems.location,
-        status: fridgeItems.status,
-        statusChangedAt: fridgeItems.statusChangedAt,
-        quantityNote: fridgeItems.quantityNote,
-        servingsTotal: fridgeItems.servingsTotal,
-        servingsLeft: fridgeItems.servingsLeft,
-        bestBy: fridgeItems.bestBy,
-        notes: fridgeItems.notes,
+        label: storageItems.label,
+        preparedAt: storageItems.preparedAt,
+        location: storageItems.location,
+        status: storageItems.status,
+        statusChangedAt: storageItems.statusChangedAt,
+        quantityNote: storageItems.quantityNote,
+        servingsTotal: storageItems.servingsTotal,
+        servingsLeft: storageItems.servingsLeft,
+        bestBy: storageItems.bestBy,
+        notes: storageItems.notes,
       })
-      .from(fridgeItems)
-      // Left joins: a fridge row can be a free-text label with neither a
+      .from(storageItems)
+      // Left joins: a storage row can be a free-text label with neither a
       // catalog food nor a recipe behind it.
-      .leftJoin(foods, eq(fridgeItems.foodId, foods.id))
-      .leftJoin(recipes, eq(fridgeItems.recipeId, recipes.id))
-      .where(eq(fridgeItems.userId, userId))
+      .leftJoin(foods, eq(storageItems.foodId, foods.id))
+      .leftJoin(recipes, eq(storageItems.recipeId, recipes.id))
+      .where(eq(storageItems.userId, userId))
       // Every row, `active` and closed alike — status history is the point.
-      .orderBy(asc(fridgeItems.preparedAt));
+      .orderBy(asc(storageItems.preparedAt));
 
     // Foods this account added itself. Only the fields the parent chose:
     // the curated columns on a custom row are inert placeholders the app
@@ -380,7 +380,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         recipeTitle: row.recipeTitle,
         createdAt: row.createdAt.toISOString(),
       })),
-      fridgeItems: fridgeRows.map((row) => ({
+      storageItems: storageRows.map((row) => ({
         id: row.id,
         foodId: row.foodId,
         foodName: row.foodName,
@@ -551,13 +551,13 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       // CASCADE chain, so one delete takes it all:
       //   user -> babies -> meals -> meal_foods, babies -> symptom_checks
       //   user -> babies -> allergen_overrides
-      //   user -> favorites, fridge_items, user_ai_keys
+      //   user -> favorites, storage_items, user_ai_keys
       //   user -> foods, recipes (custom only) -> recipe_ingredients/variants
       //   user -> chat_threads -> chat_messages
       //   user -> session, account            (better-auth's own tables)
       //
       // The exception is the account's own custom foods. `meal_foods.food_id`
-      // and `fridge_items.food_id` deliberately do NOT cascade — eaten
+      // and `storage_items.food_id` deliberately do NOT cascade — eaten
       // history must survive a food being tidied away — and Postgres checks
       // those references while the cascade is still running, so a lone
       // `delete(user)` trips the constraint even though every referencing row
@@ -578,11 +578,11 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
           .where(
             or(inArray(recipeIngredients.foodId, ownFoodIds), inArray(recipeIngredients.recipeId, ownRecipeIds)),
           );
-        // `fridge_items.recipe_id` has no action at all, so a fridge row made
+        // `storage_items.recipe_id` has no action at all, so a storage row made
         // from an own recipe would block the recipe's cascade the same way.
         await tx
-          .delete(fridgeItems)
-          .where(or(inArray(fridgeItems.foodId, ownFoodIds), inArray(fridgeItems.recipeId, ownRecipeIds)));
+          .delete(storageItems)
+          .where(or(inArray(storageItems.foodId, ownFoodIds), inArray(storageItems.recipeId, ownRecipeIds)));
         // Deleting rows that are already gone is a no-op, which is what makes
         // a retried request safe.
         await tx.delete(user).where(eq(user.id, userId));

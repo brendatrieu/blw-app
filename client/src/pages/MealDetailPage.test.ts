@@ -9,7 +9,7 @@ import { trackingKeys } from "../features/tracking/hooks.js";
 import { MealDetailPage, mealTitle } from "./MealDetailPage.js";
 
 // `MealDetailPage` reads `:id` via `useParams`, which only resolves inside a
-// matching `<Route>` — see `FridgeDetailPage.test.ts` for the same idiom.
+// matching `<Route>` — see `StorageDetailPage.test.ts` for the same idiom.
 function renderAtMealDetailRoute(mealId: string) {
   return createElement(
     MemoryRouter,
@@ -37,8 +37,8 @@ const MEAL: MealItem = {
   recipeId: null,
   recipeTitle: null,
   foods: [
-    { id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", fridgeItemId: "fridge-1" },
-    { id: "food-2", slug: "chicken", name: "Chicken", category: "protein", fridgeItemId: null },
+    { id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", storageItemId: "storage-1" },
+    { id: "food-2", slug: "chicken", name: "Chicken", category: "protein", storageItemId: null },
   ],
 };
 
@@ -69,7 +69,7 @@ describe("MealDetailPage", () => {
     expect(html).not.toContain("Avocado");
   });
 
-  it("renders the found meal's foods, served time, notes, and a fridge provenance link", () => {
+  it("renders the found meal's foods, served time, notes, and a storage provenance link", () => {
     const html = renderToString(
       createElement(QueryClientProvider, { client: seededClient([MEAL]) }, renderAtMealDetailRoute(MEAL.id)),
     );
@@ -78,17 +78,17 @@ describe("MealDetailPage", () => {
     expect(html).toContain("Chicken");
     expect(html).toContain("ate the whole thing");
     expect(html).toMatch(/2:05\s?PM/);
-    expect(html).toContain(`href="/fridge/${MEAL.foods[0]!.fridgeItemId}"`);
-    // Only the first food is fridge-linked; the second has no provenance link.
-    expect((html.match(/href="\/fridge\//g) ?? []).length).toBe(1);
+    expect(html).toContain(`href="/storage/${MEAL.foods[0]!.storageItemId}"`);
+    // Only the first food is storage-linked; the second has no provenance link.
+    expect((html.match(/href="\/storage\//g) ?? []).length).toBe(1);
   });
 
-  it("omits the fridge provenance link when no food in the meal has a fridgeItemId", () => {
-    const noBatch: MealItem = { ...MEAL, foods: MEAL.foods.map((food) => ({ ...food, fridgeItemId: null })) };
+  it("omits the storage provenance link when no food in the meal has a storageItemId", () => {
+    const noBatch: MealItem = { ...MEAL, foods: MEAL.foods.map((food) => ({ ...food, storageItemId: null })) };
     const html = renderToString(
       createElement(QueryClientProvider, { client: seededClient([noBatch]) }, renderAtMealDetailRoute(noBatch.id)),
     );
-    expect(html).not.toContain('href="/fridge/');
+    expect(html).not.toContain('href="/storage/');
   });
 
   it("shows the recipe title and Reaction note, danger-styled, when present", () => {

@@ -21,9 +21,9 @@ describe("Button variants", () => {
 
   it("ButtonLink supports the tonal variant too", () => {
     const html = renderToString(
-      createElement(MemoryRouter, null, createElement(ButtonLink, { to: "/fridge/add", variant: "tonal" }, "Add to fridge")),
+      createElement(MemoryRouter, null, createElement(ButtonLink, { to: "/storage/add", variant: "tonal" }, "Add to storage")),
     );
     expect(html).toContain("bg-[var(--color-success)]");
-    expect(html).toContain('href="/fridge/add"');
+    expect(html).toContain('href="/storage/add"');
   });
 });

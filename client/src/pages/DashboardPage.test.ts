@@ -3,11 +3,11 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { Baby, FridgeItem } from "@blw/shared";
+import type { Baby, StorageItem } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
-import { fridgeKeys } from "../features/fridge/hooks.js";
+import { storageKeys } from "../features/storage/hooks.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
-import { DashboardPage, HOME_FRIDGE_LIMIT } from "./DashboardPage.js";
+import { DashboardPage, HOME_STORAGE_LIMIT } from "./DashboardPage.js";
 import type { MealItem } from "@blw/shared";
 
 describe("DashboardPage", () => {
@@ -26,7 +26,7 @@ describe("DashboardPage", () => {
     expect(typeof html).toBe("string");
   });
 
-  it("renders an Expiring soon row's Actions menu trigger once a baby and a fridge item are loaded", () => {
+  it("renders an Expiring soon row's Actions menu trigger once a baby and a storage item are loaded", () => {
     const baby: Baby = {
       id: "baby-1",
       name: "Baby",
@@ -36,7 +36,7 @@ describe("DashboardPage", () => {
       archivedAt: null,
       createdAt: "2026-01-01T00:00:00.000Z",
     };
-    const item: FridgeItem = {
+    const item: StorageItem = {
       id: "11111111-1111-1111-1111-111111111111",
       label: null,
       foodSlug: "avocado",
@@ -59,7 +59,7 @@ describe("DashboardPage", () => {
 
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     queryClient.setQueryData(babyKeys.list(false), [baby]);
-    queryClient.setQueryData(fridgeKeys.list("active"), { items: [item] });
+    queryClient.setQueryData(storageKeys.list("active"), { items: [item] });
     queryClient.setQueryData(trackingKeys.allergenProgress(baby.id), { items: [] });
     queryClient.setQueryData([...trackingKeys.meals(baby.id), { limit: 100 }], { items: [] });
 
@@ -75,7 +75,7 @@ describe("DashboardPage", () => {
     expect(html).toContain('aria-haspopup="menu"');
   });
 
-  it("titles the fridge section 'Fridge' with a See all link to /fridge, and no leftover greeting card", () => {
+  it("titles the storage section 'Storage' with a See all link to /storage, and no leftover greeting card", () => {
     const baby: Baby = {
       id: "baby-1",
       name: "Baby",
@@ -87,7 +87,7 @@ describe("DashboardPage", () => {
     };
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     queryClient.setQueryData(babyKeys.list(false), [baby]);
-    queryClient.setQueryData(fridgeKeys.list("active"), { items: [] });
+    queryClient.setQueryData(storageKeys.list("active"), { items: [] });
     queryClient.setQueryData(trackingKeys.allergenProgress(baby.id), { items: [] });
     queryClient.setQueryData([...trackingKeys.meals(baby.id), { limit: 100 }], { items: [] });
 
@@ -99,15 +99,15 @@ describe("DashboardPage", () => {
       ),
     );
 
-    expect(html).toContain(">Fridge<");
+    expect(html).toContain(">Storage<");
     expect(html).toContain(">See all<");
     expect(html).not.toContain("Expiring soon");
-    expect(html).not.toContain("See fridge");
+    expect(html).not.toContain("See storage");
     expect(html).not.toContain("👋");
     expect(html).not.toContain("months old");
   });
 
-  it("caps Home at three fridge items and three meals, each section with a See all link", () => {
+  it("caps Home at three storage items and three meals, each section with a See all link", () => {
     const baby: Baby = {
       id: "baby-1",
       name: "Baby",
@@ -117,11 +117,11 @@ describe("DashboardPage", () => {
       archivedAt: null,
       createdAt: "2026-01-01T00:00:00.000Z",
     };
-    const fridgeItem = (i: number): FridgeItem => ({
-      id: `fridge-${i}`,
+    const storageItem = (i: number): StorageItem => ({
+      id: `storage-${i}`,
       label: null,
       foodSlug: "avocado",
-      foodName: `Fridge food ${i}`,
+      foodName: `Storage food ${i}`,
       recipeId: null,
       recipeTitle: null,
       preparedAt: "2026-08-20T10:00:00.000Z",
@@ -145,11 +145,11 @@ describe("DashboardPage", () => {
       notes: null,
       recipeId: null,
       recipeTitle: null,
-      foods: [{ id: `food-${i}`, slug: "avocado", name: `Meal food ${i}`, category: "fruit", fridgeItemId: null }],
+      foods: [{ id: `food-${i}`, slug: "avocado", name: `Meal food ${i}`, category: "fruit", storageItemId: null }],
     });
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     queryClient.setQueryData(babyKeys.list(false), [baby]);
-    queryClient.setQueryData(fridgeKeys.list("active"), { items: Array.from({ length: 5 }, (_, i) => fridgeItem(i)) });
+    queryClient.setQueryData(storageKeys.list("active"), { items: Array.from({ length: 5 }, (_, i) => storageItem(i)) });
     queryClient.setQueryData(trackingKeys.allergenProgress(baby.id), { items: [] });
     queryClient.setQueryData([...trackingKeys.meals(baby.id), { limit: 100 }], {
       items: Array.from({ length: 5 }, (_, i) => meal(i)),
@@ -163,12 +163,12 @@ describe("DashboardPage", () => {
       ),
     );
 
-    expect(HOME_FRIDGE_LIMIT).toBe(3);
-    expect((html.match(/href="\/fridge\/fridge-/g) ?? []).length).toBe(3);
-    expect(html).not.toContain("Fridge food 3");
+    expect(HOME_STORAGE_LIMIT).toBe(3);
+    expect((html.match(/href="\/storage\/storage-/g) ?? []).length).toBe(3);
+    expect(html).not.toContain("Storage food 3");
     expect((html.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(3);
     expect(html).not.toContain("Meal food 3");
-    expect(html).toMatch(/<a [^>]*href="\/fridge"[^>]*>See all<\/a>/);
+    expect(html).toMatch(/<a [^>]*href="\/storage"[^>]*>See all<\/a>/);
     expect(html).toMatch(/<a [^>]*href="\/meals"[^>]*>See all<\/a>/);
   });
 });

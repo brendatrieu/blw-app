@@ -47,7 +47,7 @@ function openPanelItems(options: { onRequestDelete?: () => void; close?: () => v
 }
 
 describe("MealActionsMenu (item 194)", () => {
-  it("renders a closed Actions trigger with the same menu ARIA wiring fridge rows use", () => {
+  it("renders a closed Actions trigger with the same menu ARIA wiring storage rows use", () => {
     const html = renderMenu();
     expect(html).toContain('aria-label="Actions"');
     expect(html).toContain('aria-haspopup="menu"');

@@ -28,7 +28,7 @@ export const servedAtSchema = z
   });
 
 /** Empty string from a form field means "no note", not an empty string.
- * Exported so the fridge serve endpoint takes the identical note field. */
+ * Exported so the storage serve endpoint takes the identical note field. */
 export const optionalReactionNote = z
   .string()
   .trim()
@@ -43,7 +43,7 @@ export const optionalReactionNote = z
  * pipeline, so anything written here can never mark a food reactive.
  *
  * Same handling as `optionalReactionNote` — trimmed, `""`/null/undefined all
- * collapse to null, 500 characters max. Exported so the fridge create/edit
+ * collapse to null, 500 characters max. Exported so the storage create/edit
  * and serve endpoints take the identical field.
  */
 export const optionalNotes = z
@@ -141,11 +141,11 @@ export const mealFoodSchema = z.object({
   category: foodCategorySchema,
   emoji: z.string().nullable().optional(),
   /**
-   * The fridge item this food was served from, or `null` for a meal logged
-   * by hand. Only POST /api/fridge/:id/serve sets it — logging through
-   * /api/babies/:babyId/meals never links to (or decrements) the fridge.
+   * The storage item this food was served from, or `null` for a meal logged
+   * by hand. Only POST /api/storage/:id/serve sets it — logging through
+   * /api/babies/:babyId/meals never links to (or decrements) a storage item.
    */
-  fridgeItemId: z.string().uuid().nullable(),
+  storageItemId: z.string().uuid().nullable(),
 });
 export type MealFood = z.infer<typeof mealFoodSchema>;
 

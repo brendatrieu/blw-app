@@ -84,7 +84,7 @@ interface CustomRecipeActionsProps {
  * on the thing you're looking at, not a native modal.
  *
  * The 409 is the case worth spelling out: a recipe still referenced by
- * logged meals or fridge items can't be deleted (those rows would be left
+ * logged meals or storage items can't be deleted (those rows would be left
  * pointing at nothing), and the server sends both counts so this can name
  * exactly where to go clean up. Favorites never block — the server drops
  * the caller's own favorite row along with the recipe.
@@ -226,8 +226,8 @@ export function RecipeDetailPage() {
         <ButtonLink to={`/log-meal?recipe=${recipe.id}`} className="flex-1">
           Log meal
         </ButtonLink>
-        <ButtonLink to={`/fridge/add?recipe=${recipe.id}`} variant="tonal" className="flex-1">
-          Add to fridge
+        <ButtonLink to={`/storage/add?recipe=${recipe.id}`} variant="tonal" className="flex-1">
+          Add to storage
         </ButtonLink>
       </div>
 

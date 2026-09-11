@@ -28,12 +28,12 @@ interface MarkAsServedProps {
 
 /**
  * The food page's actions row: the same pair Home offers — primary "Log
- * meal" and tonal "Add to fridge", in that order (item 282) — over the
+ * meal" and tonal "Add to storage", in that order (item 282) — over the
  * served-count fact. Both are plain links carrying this food's id; the full
  * forms (time, notes, reaction, leftovers / location, servings, best-by)
  * live at the other end, which is why the old inline mini-forms are gone.
  *
- * The pair renders whether or not a baby exists: adding to the fridge never
+ * The pair renders whether or not a baby exists: adding to storage never
  * needed one, and "Log meal" without a baby lands on the log page's own
  * "Add a baby first" state rather than being hidden here. The count and the
  * "add a baby" nudge are facts UNDER the row, not gates on it.
@@ -52,8 +52,8 @@ function MarkAsServed({ food }: MarkAsServedProps) {
         <ButtonLink to={`/log-meal?food=${food.id}`} className="flex-1">
           Log meal
         </ButtonLink>
-        <ButtonLink to={`/fridge/add?food=${food.id}`} variant="tonal" className="flex-1">
-          Add to fridge
+        <ButtonLink to={`/storage/add?food=${food.id}`} variant="tonal" className="flex-1">
+          Add to storage
         </ButtonLink>
       </div>
       {!babyLoading && !activeBaby && (
@@ -84,7 +84,7 @@ interface CustomFoodActionsProps {
  * be the only native modal left in the app.
  *
  * The 409 case is the interesting one. A food still referenced by meals or
- * fridge items can't be deleted (deleting it would strand those rows and the
+ * storage items can't be deleted (deleting it would strand those rows and the
  * allergen exposures counted from them), and the server answers with the two
  * counts so this can say exactly where to go clean up instead of a bare
  * "couldn't delete".

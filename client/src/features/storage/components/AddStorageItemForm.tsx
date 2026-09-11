@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { FridgeLocation } from "@blw/shared";
+import type { StorageLocation } from "@blw/shared";
 import { FoodPicker } from "../../catalog/components/FoodPicker.js";
 import { RecipePicker } from "../../catalog/components/RecipePicker.js";
-import { useCreateFridgeItem } from "../hooks.js";
+import { useCreateStorageItem } from "../hooks.js";
 import { LOCATIONS } from "../format.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
@@ -14,13 +14,13 @@ import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 type Source = "food" | "recipe" | "label";
 
 /** One key per source tab: only the visible tab's field can ever error. */
-export type AddFridgeItemField = Source;
-export type AddFridgeItemErrors = FormErrors<AddFridgeItemField>;
+export type AddStorageItemField = Source;
+export type AddStorageItemErrors = FormErrors<AddStorageItemField>;
 
 /** Visual field order — what a failed submit focuses first (item 235). */
-export const ADD_FRIDGE_ITEM_FIELD_ORDER: readonly AddFridgeItemField[] = ["food", "recipe", "label"];
+export const ADD_STORAGE_ITEM_FIELD_ORDER: readonly AddStorageItemField[] = ["food", "recipe", "label"];
 
-export interface AddFridgeItemValues {
+export interface AddStorageItemValues {
   source: Source;
   foodIds: string[];
   recipeId: string;
@@ -28,7 +28,7 @@ export interface AddFridgeItemValues {
 }
 
 /**
- * The add-to-fridge form's required-field rules (item 235). What is required
+ * The add-to-storage form's required-field rules (item 235). What is required
  * depends on the source tab, and only the tab on screen is judged — a food id
  * left over from a tab the parent has moved away from is not an error, and is
  * not sent either. Location defaults to "fridge" and Prepared is seeded with
@@ -36,8 +36,8 @@ export interface AddFridgeItemValues {
  *
  * An empty object means valid — same reading as `validateCustomFood`.
  */
-export function validateAddFridgeItem(values: AddFridgeItemValues): AddFridgeItemErrors {
-  const errors: AddFridgeItemErrors = {};
+export function validateAddStorageItem(values: AddStorageItemValues): AddStorageItemErrors {
+  const errors: AddStorageItemErrors = {};
   if (values.source === "food") {
     if (values.foodIds.length === 0) errors.food = "Add at least one food";
   } else if (values.source === "recipe") {
@@ -51,9 +51,9 @@ export function validateAddFridgeItem(values: AddFridgeItemValues): AddFridgeIte
 }
 
 /**
- * What `/fridge/add?food=<id>` / `?recipe=<id>` asks the form to open with
+ * What `/storage/add?food=<id>` / `?recipe=<id>` asks the form to open with
  * (item 284) — the same query-param idiom `/log-meal?food=<id>` uses, so
- * "Add to fridge" from a food or recipe page lands on the right tab with the
+ * "Add to storage" from a food or recipe page lands on the right tab with the
  * right thing already chosen.
  *
  * `source: null` means "open the form as if nobody asked for anything": a
@@ -62,16 +62,16 @@ export function validateAddFridgeItem(values: AddFridgeItemValues): AddFridgeIte
  * id that doesn't resolve simply leaves its picker showing nothing selected,
  * exactly as a hand-typed URL should.
  *
- * `?food=` wins when both are given: a fridge item comes from one source,
+ * `?food=` wins when both are given: a storage item comes from one source,
  * and the food tab is the form's own default, so the tie breaks toward it.
  */
-export interface FridgePrefill {
+export interface StoragePrefill {
   source: "food" | "recipe" | null;
   foodId?: string;
   recipeId?: string;
 }
 
-export function resolveFridgePrefill(params: URLSearchParams): FridgePrefill {
+export function resolveStoragePrefill(params: URLSearchParams): StoragePrefill {
   const foodId = params.get("food")?.trim();
   if (foodId) return { source: "food", foodId };
   const recipeId = params.get("recipe")?.trim();
@@ -85,43 +85,43 @@ const SOURCE_TABS: { value: Source; label: string }[] = [
   { value: "label", label: "Free-form" },
 ];
 
-interface AddFridgeItemFormProps {
+interface AddStorageItemFormProps {
   onDone: () => void;
-  /** From the page's query string — see `resolveFridgePrefill`. */
-  prefill?: FridgePrefill;
+  /** From the page's query string — see `resolveStoragePrefill`. */
+  prefill?: StoragePrefill;
 }
 
 /**
- * The fridge "add" form, byte-compatible with the one that used to live in
- * the inline AddFridgeItemSheet: same source tabs, food combobox, recipe
+ * The storage "add" form, byte-compatible with the one that used to live in
+ * the inline AddStorageItemSheet: same source tabs, food combobox, recipe
  * select, location segments, wheel "Prepared" field, and quantity note.
- * Now rendered full-screen by FridgeAddPage, which supplies `onDone` for
+ * Now rendered full-screen by StorageAddPage, which supplies `onDone` for
  * both a successful save and Cancel, plus the `prefill` it read off the
  * query string. The prefill seeds the INITIAL state only — after that the
  * tabs and pickers are the parent's to change, and re-rendering never drags
  * them back to where the link pointed.
  */
-export function AddFridgeItemForm({ onDone, prefill }: AddFridgeItemFormProps) {
+export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps) {
   const [source, setSource] = useState<Source>(prefill?.source ?? "food");
   const [foodIds, setFoodIds] = useState<string[]>(prefill?.foodId ? [prefill.foodId] : []);
   const [recipeId, setRecipeId] = useState(prefill?.recipeId ?? "");
   const [label, setLabel] = useState("");
-  const [location, setLocation] = useState<FridgeLocation>("fridge");
+  const [location, setLocation] = useState<StorageLocation>("fridge");
   const [preparedAt, setPreparedAt] = useState(() => nowAtMinute());
   const [quantityNote, setQuantityNote] = useState("");
   const [servingsTotal, setServingsTotal] = useState("");
   const [bestBy, setBestBy] = useState("");
   const [notes, setNotes] = useState("");
 
-  const createItem = useCreateFridgeItem();
+  const createItem = useCreateStorageItem();
 
-  // Item 235: "Add to fridge" stays enabled, the missing answer shows under
+  // Item 235: "Add to storage" stays enabled, the missing answer shows under
   // whichever source field is on screen, and a failed submit focuses it.
   const { errors: shownErrors, attemptSubmit } = useSubmitValidation(
     { source, foodIds, recipeId, label },
-    validateAddFridgeItem,
-    ADD_FRIDGE_ITEM_FIELD_ORDER,
-    { food: "fridge-add-food", recipe: "fridge-add-recipe", label: "fridge-add-label" },
+    validateAddStorageItem,
+    ADD_STORAGE_ITEM_FIELD_ORDER,
+    { food: "storage-add-food", recipe: "storage-add-recipe", label: "storage-add-label" },
   );
 
   function handleSubmit(event: React.FormEvent) {
@@ -167,8 +167,8 @@ export function AddFridgeItemForm({ onDone, prefill }: AddFridgeItemFormProps) {
       </div>
 
       {source === "food" && (
-        <Field label="Food" htmlFor="fridge-add-food" error={shownErrors.food}>
-          <FoodPicker id="fridge-add-food" value={foodIds} onChange={setFoodIds} />
+        <Field label="Food" htmlFor="storage-add-food" error={shownErrors.food}>
+          <FoodPicker id="storage-add-food" value={foodIds} onChange={setFoodIds} />
         </Field>
       )}
 
@@ -178,15 +178,15 @@ export function AddFridgeItemForm({ onDone, prefill }: AddFridgeItemFormProps) {
           be favorited — the prefill would have set a recipe the field then
           rendered as blank. */}
       {source === "recipe" && (
-        <Field label="Recipe" htmlFor="fridge-add-recipe" error={shownErrors.recipe}>
-          <RecipePicker id="fridge-add-recipe" value={recipeId} onChange={setRecipeId} />
+        <Field label="Recipe" htmlFor="storage-add-recipe" error={shownErrors.recipe}>
+          <RecipePicker id="storage-add-recipe" value={recipeId} onChange={setRecipeId} />
         </Field>
       )}
 
       {source === "label" && (
-        <Field label="What is it?" htmlFor="fridge-add-label" error={shownErrors.label}>
+        <Field label="What is it?" htmlFor="storage-add-label" error={shownErrors.label}>
           <Input
-            id="fridge-add-label"
+            id="storage-add-label"
             type="text"
             required
             value={label}
@@ -217,13 +217,13 @@ export function AddFridgeItemForm({ onDone, prefill }: AddFridgeItemFormProps) {
         </div>
       </label>
 
-      <Field label="Prepared" htmlFor="fridge-add-prepared">
-        <DateTimeField id="fridge-add-prepared" value={preparedAt} onChange={setPreparedAt} />
+      <Field label="Prepared" htmlFor="storage-add-prepared">
+        <DateTimeField id="storage-add-prepared" value={preparedAt} onChange={setPreparedAt} />
       </Field>
 
-      <Field label="Quantity note (optional)" htmlFor="fridge-add-note">
+      <Field label="Quantity note (optional)" htmlFor="storage-add-note">
         <Input
-          id="fridge-add-note"
+          id="storage-add-note"
           type="text"
           value={quantityNote}
           onChange={(e) => setQuantityNote(e.target.value)}
@@ -231,9 +231,9 @@ export function AddFridgeItemForm({ onDone, prefill }: AddFridgeItemFormProps) {
         />
       </Field>
 
-      <Field label="Total servings (optional)" htmlFor="fridge-add-servings">
+      <Field label="Total servings (optional)" htmlFor="storage-add-servings">
         <Input
-          id="fridge-add-servings"
+          id="storage-add-servings"
           type="number"
           inputMode="numeric"
           min={1}
@@ -244,13 +244,13 @@ export function AddFridgeItemForm({ onDone, prefill }: AddFridgeItemFormProps) {
         />
       </Field>
 
-      <Field label="Best by (optional)" htmlFor="fridge-add-best-by">
-        <DateField id="fridge-add-best-by" value={bestBy} onChange={setBestBy} allowFuture title="Best by" />
+      <Field label="Best by (optional)" htmlFor="storage-add-best-by">
+        <DateField id="storage-add-best-by" value={bestBy} onChange={setBestBy} allowFuture title="Best by" />
       </Field>
 
-      <Field label="Notes (optional)" htmlFor="fridge-add-notes">
+      <Field label="Notes (optional)" htmlFor="storage-add-notes">
         <Textarea
-          id="fridge-add-notes"
+          id="storage-add-notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
@@ -262,7 +262,7 @@ export function AddFridgeItemForm({ onDone, prefill }: AddFridgeItemFormProps) {
 
       {/* Add only (item 257): the page's header X is the way out. */}
       <Button type="submit" disabled={createItem.isPending} className="w-full">
-        {createItem.isPending ? "Adding…" : "Add to fridge"}
+        {createItem.isPending ? "Adding…" : "Add to storage"}
       </Button>
     </form>
   );

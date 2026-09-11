@@ -3,12 +3,12 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { FridgeItem } from "@blw/shared";
+import type { StorageItem } from "@blw/shared";
 import { CelebrationProvider } from "../../../components/ui/Celebration.js";
 import { SheetPanel } from "../../../components/ui/Sheet.js";
 import { buildServeInput, ServeAction, ServeControl, ServeSheet } from "./ServeSheet.js";
 
-const BASE_ITEM: FridgeItem = {
+const BASE_ITEM: StorageItem = {
   id: "11111111-1111-1111-1111-111111111111",
   label: null,
   foodSlug: "avocado",

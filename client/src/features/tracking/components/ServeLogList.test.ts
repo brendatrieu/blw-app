@@ -8,7 +8,7 @@ import {
   dayKey,
   dayLabel,
   emojiCluster,
-  hasFridgeFood,
+  hasStorageFood,
   HOME_MEAL_LIMIT,
   limitMeals,
   MealCard,
@@ -24,7 +24,7 @@ function food(overrides: Partial<MealFood> = {}): MealFood {
     slug: "avocado",
     name: "Avocado",
     category: "fruit",
-    fridgeItemId: null,
+    storageItemId: null,
     ...overrides,
   };
 }
@@ -158,14 +158,14 @@ describe("servedLine (item 192)", () => {
   });
 });
 
-describe("hasFridgeFood (item 192)", () => {
-  it("is true when any food carries a fridgeItemId", () => {
-    expect(hasFridgeFood([food(), food({ id: "f2", fridgeItemId: "fridge-1" })])).toBe(true);
+describe("hasStorageFood (item 192)", () => {
+  it("is true when any food carries a storageItemId", () => {
+    expect(hasStorageFood([food(), food({ id: "f2", storageItemId: "storage-1" })])).toBe(true);
   });
 
   it("is false when no food does", () => {
-    expect(hasFridgeFood([food(), food({ id: "f2" })])).toBe(false);
-    expect(hasFridgeFood([])).toBe(false);
+    expect(hasStorageFood([food(), food({ id: "f2" })])).toBe(false);
+    expect(hasStorageFood([])).toBe(false);
   });
 });
 
@@ -193,8 +193,8 @@ const baseMeal: MealItem = {
   ],
 };
 
-describe("MealCard (render, fridge-card styling — item 192)", () => {
-  it("uses the same card chrome as FridgeItemCard (relative li, rounded-lg, border, elevated bg, p-3)", () => {
+describe("MealCard (render, storage-card styling — item 192)", () => {
+  it("uses the same card chrome as StorageItemCard (relative li, rounded-lg, border, elevated bg, p-3)", () => {
     const html = renderMealCard(baseMeal);
     expect(html).toMatch(/<li class="relative [^"]*rounded-\[var\(--radius-lg\)\][^"]*"/);
     expect(html).toMatch(/<li class="[^"]*border border-\[var\(--color-border\)\][^"]*"/);
@@ -233,19 +233,19 @@ describe("MealCard (render, fridge-card styling — item 192)", () => {
     expect(html).toMatch(/2:05\s?PM/);
   });
 
-  it("shows the neutral 'From fridge' badge when any food came from the fridge", () => {
+  it("shows the neutral 'From storage' badge when any food came out of storage", () => {
     const html = renderMealCard({
       ...baseMeal,
-      foods: [food({ id: "food-1", fridgeItemId: "fridge-1" }), food({ id: "food-2", name: "Chicken" })],
+      foods: [food({ id: "food-1", storageItemId: "storage-1" }), food({ id: "food-2", name: "Chicken" })],
     });
-    expect(html).toMatch(/🧊 (?:<!-- -->)?From fridge/);
+    expect(html).toMatch(/📦 (?:<!-- -->)?From storage/);
     expect(html).toContain("bg-[var(--color-neutral-soft)]");
     // One badge for the meal, not one marker per food.
-    expect((html.match(/From fridge/g) ?? []).length).toBe(1);
+    expect((html.match(/From storage/g) ?? []).length).toBe(1);
   });
 
-  it("omits the 'From fridge' badge when no food has a fridgeItemId", () => {
-    expect(renderMealCard(baseMeal)).not.toContain("From fridge");
+  it("omits the 'From storage' badge when no food has a storageItemId", () => {
+    expect(renderMealCard(baseMeal)).not.toContain("From storage");
   });
 
   it("shows the recipe title line when the meal has one", () => {

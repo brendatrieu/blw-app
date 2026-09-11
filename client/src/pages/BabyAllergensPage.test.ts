@@ -116,7 +116,7 @@ describe("BabyAllergensPage rows open the allergen detail page (item 188)", () =
     expect((html.match(/href="\/babies\/[^"]+\/allergens\/[^"]+"/g) ?? []).length).toBe(2);
   });
 
-  it("carries no chevron glyph, matching fridge rows (which open on tap without one)", () => {
+  it("carries no chevron glyph, matching storage rows (which open on tap without one)", () => {
     const html = renderWithItems([item({})]);
     expect(html).not.toContain('d="M9 6l6 6-6 6"');
   });

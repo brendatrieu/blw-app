@@ -107,7 +107,7 @@ function renderFoodWithMeals(food: FoodDetail, servings: number) {
     notes: null,
     recipeId: null,
     recipeTitle: null,
-    foods: [{ id: food.id, slug: food.slug, name: food.name, category: food.category, fridgeItemId: null }],
+    foods: [{ id: food.id, slug: food.slug, name: food.name, category: food.category, storageItemId: null }],
   }));
   queryClient.setQueryData([...trackingKeys.meals(BABY.id), { limit: 100 }], { items: meals });
   return renderToString(
@@ -202,16 +202,16 @@ describe("FoodDetailPage — custom food (item 181)", () => {
 });
 
 // Item 282: the actions row is the Home pair — primary "Log meal" first,
-// tonal "Add to fridge" second — each carrying this food's id.
+// tonal "Add to storage" second — each carrying this food's id.
 describe("FoodDetailPage — actions row (item 282)", () => {
   it("offers the pair in order, both linking with the food id", () => {
     const html = renderFood(catalogFood());
     const id = catalogFood().id;
     expect(html).toContain(`href="/log-meal?food=${id}"`);
-    expect(html).toContain(`href="/fridge/add?food=${id}"`);
+    expect(html).toContain(`href="/storage/add?food=${id}"`);
     expect(html).toContain(">Log meal<");
-    expect(html).toContain(">Add to fridge<");
-    expect(html.indexOf(">Log meal<")).toBeLessThan(html.indexOf(">Add to fridge<"));
+    expect(html).toContain(">Add to storage<");
+    expect(html.indexOf(">Log meal<")).toBeLessThan(html.indexOf(">Add to storage<"));
   });
 
   it("gives the pair the primary and tonal fills, each taking half the row", () => {
@@ -219,15 +219,15 @@ describe("FoodDetailPage — actions row (item 282)", () => {
     const link = (label: string) => html.match(new RegExp(`<a[^>]*>${label}</a>`))?.[0] ?? "";
     expect(link("Log meal")).toContain("bg-[var(--color-primary)]");
     expect(link("Log meal")).toContain("flex-1");
-    expect(link("Add to fridge")).toContain("bg-[var(--color-success)]");
-    expect(link("Add to fridge")).toContain("flex-1");
+    expect(link("Add to storage")).toContain("bg-[var(--color-success)]");
+    expect(link("Add to storage")).toContain("flex-1");
   });
 
   // A food the parent added is served and stashed exactly like a catalog one.
   it("gives a custom food the same pair", () => {
     const html = renderFood(CUSTOM_FOOD);
     expect(html).toContain(`href="/log-meal?food=${CUSTOM_FOOD.id}"`);
-    expect(html).toContain(`href="/fridge/add?food=${CUSTOM_FOOD.id}"`);
+    expect(html).toContain(`href="/storage/add?food=${CUSTOM_FOOD.id}"`);
   });
 
   // With no baby in the cache `useActiveBaby` resolves to none, so this also
@@ -268,37 +268,37 @@ describe("CustomFoodActions", () => {
 
 describe("customFoodConflictMessage", () => {
   it("names both places the food is still referenced (the 409 body's counts)", () => {
-    expect(customFoodConflictMessage({ mealCount: 3, fridgeCount: 1 })).toBe(
-      "Used in 3 meals and 1 fridge item — remove those first.",
+    expect(customFoodConflictMessage({ mealCount: 3, storageCount: 1 })).toBe(
+      "Used in 3 meals and 1 storage item — remove those first.",
     );
-    expect(customFoodConflictMessage({ mealCount: 0, fridgeCount: 2 })).toBe(
-      "Used in 0 meals and 2 fridge items — remove those first.",
+    expect(customFoodConflictMessage({ mealCount: 0, storageCount: 2 })).toBe(
+      "Used in 0 meals and 2 storage items — remove those first.",
     );
   });
 
   it("uses the singular at exactly one", () => {
-    expect(customFoodConflictMessage({ mealCount: 1, fridgeCount: 1 })).toBe(
-      "Used in 1 meal and 1 fridge item — remove those first.",
+    expect(customFoodConflictMessage({ mealCount: 1, storageCount: 1 })).toBe(
+      "Used in 1 meal and 1 storage item — remove those first.",
     );
   });
 
   // Custom recipes can hold a custom food as an ingredient, so the server's
   // 409 gained a third count — named only when there is one to name.
   it("names the custom recipes the food is an ingredient of, when there are any", () => {
-    expect(customFoodConflictMessage({ mealCount: 2, fridgeCount: 1, recipeCount: 3 })).toBe(
-      "Used in 2 meals, 1 fridge item and 3 recipes — remove those first.",
+    expect(customFoodConflictMessage({ mealCount: 2, storageCount: 1, recipeCount: 3 })).toBe(
+      "Used in 2 meals, 1 storage item and 3 recipes — remove those first.",
     );
-    expect(customFoodConflictMessage({ mealCount: 0, fridgeCount: 0, recipeCount: 1 })).toBe(
-      "Used in 0 meals, 0 fridge items and 1 recipe — remove those first.",
+    expect(customFoodConflictMessage({ mealCount: 0, storageCount: 0, recipeCount: 1 })).toBe(
+      "Used in 0 meals, 0 storage items and 1 recipe — remove those first.",
     );
   });
 
   it("keeps the two-clause sentence when no recipe references it (or an older body omits the count)", () => {
-    expect(customFoodConflictMessage({ mealCount: 1, fridgeCount: 0, recipeCount: 0 })).toBe(
-      "Used in 1 meal and 0 fridge items — remove those first.",
+    expect(customFoodConflictMessage({ mealCount: 1, storageCount: 0, recipeCount: 0 })).toBe(
+      "Used in 1 meal and 0 storage items — remove those first.",
     );
-    expect(customFoodConflictMessage({ mealCount: 1, fridgeCount: 0 })).toBe(
-      "Used in 1 meal and 0 fridge items — remove those first.",
+    expect(customFoodConflictMessage({ mealCount: 1, storageCount: 0 })).toBe(
+      "Used in 1 meal and 0 storage items — remove those first.",
     );
   });
 });

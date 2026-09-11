@@ -5,10 +5,10 @@ import { LoginPage } from "./pages/LoginPage.js";
 import { SignupPage } from "./pages/SignupPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
 import { LogFoodPage } from "./pages/LogFoodPage.js";
-import { FridgePage } from "./pages/FridgePage.js";
-import { FridgeAddPage } from "./pages/FridgeAddPage.js";
-import { FridgeEditPage } from "./pages/FridgeEditPage.js";
-import { FridgeDetailPage } from "./pages/FridgeDetailPage.js";
+import { StoragePage } from "./pages/StoragePage.js";
+import { StorageAddPage } from "./pages/StorageAddPage.js";
+import { StorageEditPage } from "./pages/StorageEditPage.js";
+import { StorageDetailPage } from "./pages/StorageDetailPage.js";
 import { MealDetailPage } from "./pages/MealDetailPage.js";
 import { MealsPage } from "./pages/MealsPage.js";
 import { FoodsRoute } from "./pages/FoodsPage.js";
@@ -31,19 +31,22 @@ import { MorePage } from "./pages/MorePage.js";
 import { NotFoundPage } from "./pages/NotFoundPage.js";
 
 /**
- * Item 287: the Pantry tab became the Fridge tab, so every old `/pantry*` URL
- * — a bookmark, the installed PWA's saved start URL, a back-button entry —
- * is rewritten to its `/fridge` twin instead of hitting Not found. Only the
- * prefix changes, so `/pantry/abc/edit` still lands on the edit page, and the
- * query/hash ride along. This is the ONE place the old word survives in
- * client code, and it has to: the redirect is what makes those URLs work.
+ * Items 287 and 293: the tab was the Pantry, then the Fridge, and is now
+ * Storage — so every old `/pantry*` AND `/fridge*` URL (a bookmark, the
+ * installed PWA's saved start URL, a back-button entry) is rewritten onto its
+ * `/storage` twin instead of hitting Not found. Only the leading segment
+ * changes, so `/fridge/abc/edit` still lands on the edit page, and the
+ * query/hash ride along. This is the ONE place the old words survive in
+ * client code, and they have to: the redirect is what makes those URLs work.
  */
-export function legacyFridgePath(location: { pathname: string; search: string; hash: string }): string {
-  return `${location.pathname.replace(/^\/pantry(?=$|\/)/, "/fridge")}${location.search}${location.hash}`;
+const LEGACY_STORAGE_PREFIX = /^\/(?:pantry|fridge)(?=$|\/)/;
+
+export function legacyStoragePath(location: { pathname: string; search: string; hash: string }): string {
+  return `${location.pathname.replace(LEGACY_STORAGE_PREFIX, "/storage")}${location.search}${location.hash}`;
 }
 
-function LegacyPantryRedirect() {
-  return <Navigate to={legacyFridgePath(useLocation())} replace />;
+function LegacyStorageRedirect() {
+  return <Navigate to={legacyStoragePath(useLocation())} replace />;
 }
 
 export function App() {
@@ -79,15 +82,16 @@ export function App() {
         <Route path="/log-meal" element={<LogFoodPage />} />
         <Route path="/meals" element={<MealsPage />} />
         <Route path="/meals/:id" element={<MealDetailPage />} />
-        <Route path="/fridge" element={<FridgePage />} />
-        <Route path="/fridge/add" element={<FridgeAddPage />} />
-        <Route path="/fridge/:id/edit" element={<FridgeEditPage />} />
-        <Route path="/fridge/:id" element={<FridgeDetailPage />} />
-        {/* Splat matches "/pantry" itself as well as anything under it. */}
-        <Route path="/pantry/*" element={<LegacyPantryRedirect />} />
+        <Route path="/storage" element={<StoragePage />} />
+        <Route path="/storage/add" element={<StorageAddPage />} />
+        <Route path="/storage/:id/edit" element={<StorageEditPage />} />
+        <Route path="/storage/:id" element={<StorageDetailPage />} />
+        {/* Each splat matches the bare prefix as well as anything under it. */}
+        <Route path="/pantry/*" element={<LegacyStorageRedirect />} />
+        <Route path="/fridge/*" element={<LegacyStorageRedirect />} />
         <Route path="/foods" element={<FoodsRoute />} />
-        {/* Ahead of "/foods/:slug", exactly like "/fridge/add" sits ahead of
-            "/fridge/:id" — otherwise "new" is read as a slug. */}
+        {/* Ahead of "/foods/:slug", exactly like "/storage/add" sits ahead of
+            "/storage/:id" — otherwise "new" is read as a slug. */}
         <Route path="/foods/new" element={<FoodCreatePage />} />
         <Route path="/foods/:slug/edit" element={<FoodEditPage />} />
         <Route path="/foods/:slug" element={<FoodDetailPage />} />

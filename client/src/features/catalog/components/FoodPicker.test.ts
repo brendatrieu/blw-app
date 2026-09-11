@@ -103,7 +103,7 @@ describe("FoodPicker (render)", () => {
   // and the count badge is the part of that mode a closed server render can
   // see. This fails if the picker ever asks for single mode — or if
   // `MultiCombobox`'s own default flips — which is exactly the change that
-  // would make the log-meal and fridge fields close after one food.
+  // would make the log-meal and storage fields close after one food.
   it("takes the multi-select mode: a selected food carries an 'N selected' count badge", () => {
     const html = renderPicker([food(), CUSTOM], [CUSTOM.id]);
     expect(html).toMatch(/log-food-food-count"[^>]*>1(?:<!--\s*-->)? selected</);

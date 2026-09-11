@@ -5,51 +5,51 @@ import { describe, expect, it } from "vitest";
 import type { FoodListItem, RecipeListItem } from "@blw/shared";
 import { catalogKeys } from "../../catalog/hooks.js";
 import {
-  AddFridgeItemForm,
-  resolveFridgePrefill,
-  validateAddFridgeItem,
-  type AddFridgeItemValues,
-  type FridgePrefill,
-} from "./AddFridgeItemForm.js";
+  AddStorageItemForm,
+  resolveStoragePrefill,
+  validateAddStorageItem,
+  type AddStorageItemValues,
+  type StoragePrefill,
+} from "./AddStorageItemForm.js";
 
-function values(overrides: Partial<AddFridgeItemValues> = {}): AddFridgeItemValues {
+function values(overrides: Partial<AddStorageItemValues> = {}): AddStorageItemValues {
   return { source: "food", foodIds: ["food-1"], recipeId: "", label: "", ...overrides };
 }
 
-describe("validateAddFridgeItem", () => {
+describe("validateAddStorageItem", () => {
   it("accepts each source tab once its own field is answered", () => {
-    expect(validateAddFridgeItem(values())).toEqual({});
-    expect(validateAddFridgeItem(values({ source: "recipe", recipeId: "recipe-1" }))).toEqual({});
-    expect(validateAddFridgeItem(values({ source: "label", label: "Lentil soup" }))).toEqual({});
+    expect(validateAddStorageItem(values())).toEqual({});
+    expect(validateAddStorageItem(values({ source: "recipe", recipeId: "recipe-1" }))).toEqual({});
+    expect(validateAddStorageItem(values({ source: "label", label: "Lentil soup" }))).toEqual({});
   });
 
   it("asks for a food on the food tab, phrased as a list error", () => {
-    expect(validateAddFridgeItem(values({ foodIds: [] })).food).toBe("Add at least one food");
+    expect(validateAddStorageItem(values({ foodIds: [] })).food).toBe("Add at least one food");
   });
 
   it("asks for a recipe on the recipe tab", () => {
-    expect(validateAddFridgeItem(values({ source: "recipe" })).recipe).toBe("Recipe is required");
+    expect(validateAddStorageItem(values({ source: "recipe" })).recipe).toBe("Recipe is required");
   });
 
   it("asks what it is on the free-form tab, treating whitespace as blank", () => {
-    expect(validateAddFridgeItem(values({ source: "label" })).label).toBe("Enter what it is");
-    expect(validateAddFridgeItem(values({ source: "label", label: "   " })).label).toBe("Enter what it is");
+    expect(validateAddStorageItem(values({ source: "label" })).label).toBe("Enter what it is");
+    expect(validateAddStorageItem(values({ source: "label", label: "   " })).label).toBe("Enter what it is");
   });
 
   // Only the tab on screen is judged: a food id left behind by a tab the
   // parent moved away from is not an error (and is not sent either).
   it("judges only the visible tab", () => {
-    expect(validateAddFridgeItem(values({ source: "recipe", foodIds: [], recipeId: "recipe-1" }))).toEqual({});
-    expect(validateAddFridgeItem(values({ source: "label", foodIds: [], label: "Soup" }))).toEqual({});
-    expect(validateAddFridgeItem(values({ source: "food", recipeId: "", label: "" }))).toEqual({});
+    expect(validateAddStorageItem(values({ source: "recipe", foodIds: [], recipeId: "recipe-1" }))).toEqual({});
+    expect(validateAddStorageItem(values({ source: "label", foodIds: [], label: "Soup" }))).toEqual({});
+    expect(validateAddStorageItem(values({ source: "food", recipeId: "", label: "" }))).toEqual({});
   });
 });
 
-// Item 284: "Add to fridge" from a food or recipe page arrives as
-// /fridge/add?food=<id> | ?recipe=<id>, the same idiom /log-meal?food=<id>
+// Item 284: "Add to storage" from a food or recipe page arrives as
+// /storage/add?food=<id> | ?recipe=<id>, the same idiom /log-meal?food=<id>
 // uses. The rule is pure, so it is pinned without rendering anything.
-describe("resolveFridgePrefill", () => {
-  const prefill = (query: string): FridgePrefill => resolveFridgePrefill(new URLSearchParams(query));
+describe("resolveStoragePrefill", () => {
+  const prefill = (query: string): StoragePrefill => resolveStoragePrefill(new URLSearchParams(query));
 
   it("reads ?food= as the food tab with that food chosen", () => {
     expect(prefill("food=food-1")).toEqual({ source: "food", foodId: "food-1" });
@@ -61,7 +61,7 @@ describe("resolveFridgePrefill", () => {
 
   it("asks for nothing when neither param is there", () => {
     expect(prefill("")).toEqual({ source: null });
-    expect(prefill("edit=fridge-1&location=freezer")).toEqual({ source: null });
+    expect(prefill("edit=storage-1&location=freezer")).toEqual({ source: null });
   });
 
   it("ignores a blank or whitespace-only id rather than opening an empty tab", () => {
@@ -112,7 +112,7 @@ const RECIPE: RecipeListItem = {
   ingredientNames: [],
 };
 
-function renderForm(prefill?: FridgePrefill) {
+function renderForm(prefill?: StoragePrefill) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(catalogKeys.foodsList({}), { foods: [FOOD] });
   queryClient.setQueryData(catalogKeys.recipesList({}), { recipes: [RECIPE] });
@@ -120,12 +120,12 @@ function renderForm(prefill?: FridgePrefill) {
     createElement(
       QueryClientProvider,
       { client: queryClient },
-      createElement(AddFridgeItemForm, { onDone: () => {}, ...(prefill ? { prefill } : {}) }),
+      createElement(AddStorageItemForm, { onDone: () => {}, ...(prefill ? { prefill } : {}) }),
     ),
   );
 }
 
-describe("AddFridgeItemForm (render)", () => {
+describe("AddStorageItemForm (render)", () => {
   it("renders the source tabs, the default 'From a food' field, location segments, and Prepared field", () => {
     const html = renderForm();
     expect(html).toContain("From a food");
@@ -154,8 +154,8 @@ describe("AddFridgeItemForm (render)", () => {
   // to say what is missing — and nothing is shown before that tap.
   it("leaves the submit enabled with nothing chosen, and shows no error markup before a submit attempt", () => {
     const html = renderForm();
-    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Add to fridge</);
-    expect(html).not.toMatch(/<button[^>]*type="submit"[^>]*\sdisabled=""[^>]*>Add to fridge</);
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Add to storage</);
+    expect(html).not.toMatch(/<button[^>]*type="submit"[^>]*\sdisabled=""[^>]*>Add to storage</);
     expect(html).not.toContain('role="alert"');
     expect(html).not.toContain("Add at least one food");
   });
@@ -172,12 +172,12 @@ describe("AddFridgeItemForm (render)", () => {
   it("renders no Cancel — just the single submit button", () => {
     const html = renderForm();
     expect(html).not.toContain(">Cancel<");
-    expect(html).toContain(">Add to fridge<");
+    expect(html).toContain(">Add to storage<");
     expect((html.match(/type="submit"/g) ?? []).length).toBe(1);
   });
 });
 
-describe("AddFridgeItemForm (prefill, item 284)", () => {
+describe("AddStorageItemForm (prefill, item 284)", () => {
   /** The tab strip marks the open tab with aria-pressed. */
   function pressedTab(html: string): string | undefined {
     return html.match(/<button[^>]*aria-pressed="true"[^>]*>([^<]*)<\/button>/)?.[1];
@@ -213,6 +213,6 @@ describe("AddFridgeItemForm (prefill, item 284)", () => {
     const html = renderForm({ source: "food", foodId: FOOD.id });
     expect(html).toContain(">Location<");
     expect(html).toContain(">Prepared<");
-    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Add to fridge</);
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Add to storage</);
   });
 });

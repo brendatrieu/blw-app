@@ -2,10 +2,10 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { FridgeItem } from "@blw/shared";
-import { EditFridgeItemForm } from "./EditFridgeItemForm.js";
+import type { StorageItem } from "@blw/shared";
+import { EditStorageItemForm } from "./EditStorageItemForm.js";
 
-const ITEM: FridgeItem = {
+const ITEM: StorageItem = {
   id: "11111111-1111-1111-1111-111111111111",
   label: null,
   foodSlug: "avocado",
@@ -26,14 +26,14 @@ const ITEM: FridgeItem = {
   notes: null,
 };
 
-function renderForm(item: FridgeItem = ITEM) {
+function renderForm(item: StorageItem = ITEM) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderToString(
-    createElement(QueryClientProvider, { client: queryClient }, createElement(EditFridgeItemForm, { item, onDone: () => {} })),
+    createElement(QueryClientProvider, { client: queryClient }, createElement(EditStorageItemForm, { item, onDone: () => {} })),
   );
 }
 
-describe("EditFridgeItemForm (render)", () => {
+describe("EditStorageItemForm (render)", () => {
   // Item 235 by construction: every field on this form is either seeded from
   // the item (location, prepared) or optional, so there is nothing that can
   // be missing — Save is enabled, and no error slot is ever filled. Pinned so
@@ -77,7 +77,7 @@ describe("EditFridgeItemForm (render)", () => {
 
   it("prefills Total servings and the Best by value from a tracked item", () => {
     const html = renderForm({ ...ITEM, servingsTotal: 6, servingsLeft: 2, bestBy: "2026-08-29" });
-    expect(html).toMatch(/id="fridge-edit-servings"[^>]*value="6"/);
+    expect(html).toMatch(/id="storage-edit-servings"[^>]*value="6"/);
     expect(html).toContain("Aug 29, 2026");
   });
 
@@ -87,7 +87,7 @@ describe("EditFridgeItemForm (render)", () => {
   });
 
   it("prefills Notes from the item's stored value", () => {
-    const html = renderForm({ ...ITEM, notes: "FRIDGE-NOTES-FIXTURE unlike the placeholder" });
-    expect(html).toContain("FRIDGE-NOTES-FIXTURE unlike the placeholder");
+    const html = renderForm({ ...ITEM, notes: "STORAGE-NOTES-FIXTURE unlike the placeholder" });
+    expect(html).toContain("STORAGE-NOTES-FIXTURE unlike the placeholder");
   });
 });

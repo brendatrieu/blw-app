@@ -1,21 +1,21 @@
-import type { FridgeLocation, FridgeStatus } from "@blw/shared";
+import type { StorageLocation, StorageStatus } from "@blw/shared";
 
 const HOUR_MS = 60 * 60 * 1000;
 
-export const LOCATION_LABEL: Record<FridgeLocation, string> = {
+export const LOCATION_LABEL: Record<StorageLocation, string> = {
   fridge: "Fridge",
   freezer: "Freezer",
   counter: "Counter",
 };
 
-export const LOCATIONS: { value: FridgeLocation; label: string }[] = [
+export const LOCATIONS: { value: StorageLocation; label: string }[] = [
   { value: "fridge", label: "Fridge" },
   { value: "freezer", label: "Freezer" },
   { value: "counter", label: "Counter" },
 ];
 
 /** Display name for whatever the item was prepared from. */
-export function fridgeItemTitle(item: { label: string | null; foodName: string | null; recipeTitle: string | null }): string {
+export function storageItemTitle(item: { label: string | null; foodName: string | null; recipeTitle: string | null }): string {
   return item.label ?? item.recipeTitle ?? item.foodName ?? "Prepared food";
 }
 
@@ -46,7 +46,7 @@ export function clampServings(value: number, max: number): number {
 }
 
 /**
- * Whether a fridge item has no linkable food or recipe — a free-form label
+ * Whether a storage item has no linkable food or recipe — a free-form label
  * with nothing a Serve action could log. The serve endpoint 400s on these
  * ("nothing to log"), so the client hides the Serve control rather than
  * surface an always-failing button.
@@ -56,16 +56,16 @@ export function isLabelOnly(item: { foodSlug: string | null; recipeTitle: string
 }
 
 /**
- * Which actions the fridge item Actions menu — the three-dot kebab every
- * list card now carries, on Home AND the Fridge tab (item 264) — should
+ * Which actions the storage item Actions menu — the three-dot kebab every
+ * list card now carries, on Home AND the Storage tab (item 264) — should
  * offer for a given item. Serve mirrors the active/food-or-recipe gate the
  * Serve sheet uses (see `isLabelOnly`); Edit and Remove are only meaningful
  * for an active item; Restore is the one action only a finished or
  * discarded item has. Pure so the menu's item list is unit-testable without
  * rendering.
  */
-export function resolveFridgeItemMenuActions(item: {
-  status: FridgeStatus;
+export function resolveStorageItemMenuActions(item: {
+  status: StorageStatus;
   foodSlug: string | null;
   recipeTitle: string | null;
 }): { serve: boolean; edit: boolean; remove: boolean; restore: boolean } {

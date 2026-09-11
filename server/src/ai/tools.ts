@@ -27,7 +27,7 @@ import {
   foods,
   mealFoods,
   meals,
-  fridgeItems,
+  storageItems,
   recipes,
   storageGuidelines,
 } from "../db/schema.js";
@@ -148,39 +148,39 @@ function buildBabyProfileTool(db: Database, userId: string, babyId: string | nul
 }
 
 // ---------------------------------------------------------------------------
-// get_fridge
+// get_storage
 // ---------------------------------------------------------------------------
 
-/** Same fallback window server/src/routes/fridge.ts uses for an item with no
+/** Same fallback window server/src/routes/storage.ts uses for an item with no
  * resolvable storage category — kept in sync by hand since duplicating the
  * whole hydration pipeline here for a model-facing summary isn't worth it. */
-const FRIDGE_TOOL_FALLBACK_WINDOW = { fridgeHours: 48, freezerDays: 60, roomTempHours: 2 };
+const STORAGE_TOOL_FALLBACK_WINDOW = { fridgeHours: 48, freezerDays: 60, roomTempHours: 2 };
 const HOUR_MS = 60 * 60 * 1000;
 
-function buildFridgeTool(db: Database, userId: string) {
+function buildStorageTool(db: Database, userId: string) {
   return betaTool({
-    name: "get_fridge",
+    name: "get_storage",
     description:
-      "List the household's active prepared-food fridge items with a freshness flag. An item flagged expired must never be suggested for reuse.",
+      "List the household's active prepared-food storage items with a freshness flag. An item flagged expired must never be suggested for reuse.",
     inputSchema: EMPTY_INPUT_SCHEMA,
     run: async () => {
       const rows = await db
         .select({
-          label: fridgeItems.label,
+          label: storageItems.label,
           foodName: foods.name,
           recipeTitle: recipes.title,
-          preparedAt: fridgeItems.preparedAt,
-          location: fridgeItems.location,
+          preparedAt: storageItems.preparedAt,
+          location: storageItems.location,
           foodStorageCategory: foods.storageCategory,
-          recipeFridgeOverride: recipes.fridgeHoursOverride,
+          recipeFridgeHoursOverride: recipes.fridgeHoursOverride,
           recipeFreezerOverride: recipes.freezerDaysOverride,
         })
-        .from(fridgeItems)
-        .leftJoin(foods, eq(fridgeItems.foodId, foods.id))
-        .leftJoin(recipes, eq(fridgeItems.recipeId, recipes.id))
-        .where(and(eq(fridgeItems.userId, userId), eq(fridgeItems.status, "active")));
+        .from(storageItems)
+        .leftJoin(foods, eq(storageItems.foodId, foods.id))
+        .leftJoin(recipes, eq(storageItems.recipeId, recipes.id))
+        .where(and(eq(storageItems.userId, userId), eq(storageItems.status, "active")));
 
-      if (rows.length === 0) return "The fridge is empty — nothing prepared right now.";
+      if (rows.length === 0) return "Storage is empty — nothing prepared right now.";
 
       const categories = [...new Set(rows.map((r) => r.foodStorageCategory).filter((c): c is string => Boolean(c)))];
       const guidelineRows =
@@ -192,9 +192,9 @@ function buildFridgeTool(db: Database, userId: string) {
       const now = Date.now();
       const items = rows.map((row) => {
         const guideline = row.foodStorageCategory ? guidelineByCategory.get(row.foodStorageCategory) : undefined;
-        const fridgeHours = row.recipeFridgeOverride ?? guideline?.fridgeHours ?? FRIDGE_TOOL_FALLBACK_WINDOW.fridgeHours;
-        const freezerDays = row.recipeFreezerOverride ?? guideline?.freezerDays ?? FRIDGE_TOOL_FALLBACK_WINDOW.freezerDays;
-        const roomTempHours = guideline?.roomTempHours ?? FRIDGE_TOOL_FALLBACK_WINDOW.roomTempHours;
+        const fridgeHours = row.recipeFridgeHoursOverride ?? guideline?.fridgeHours ?? STORAGE_TOOL_FALLBACK_WINDOW.fridgeHours;
+        const freezerDays = row.recipeFreezerOverride ?? guideline?.freezerDays ?? STORAGE_TOOL_FALLBACK_WINDOW.freezerDays;
+        const roomTempHours = guideline?.roomTempHours ?? STORAGE_TOOL_FALLBACK_WINDOW.roomTempHours;
         const windowHours = row.location === "fridge" ? fridgeHours : row.location === "freezer" ? freezerDays * 24 : roomTempHours;
         const expired = now > row.preparedAt.getTime() + windowHours * HOUR_MS;
 
@@ -347,7 +347,7 @@ function buildFoodPrepGuidanceTool(db: Database, userId: string) {
 
 export interface ChatTools {
   get_baby_profile: ReturnType<typeof buildBabyProfileTool>;
-  get_fridge: ReturnType<typeof buildFridgeTool>;
+  get_storage: ReturnType<typeof buildStorageTool>;
   search_recipes: ReturnType<typeof buildSearchRecipesTool>;
   get_food_prep_guidance: ReturnType<typeof buildFoodPrepGuidanceTool>;
 }
@@ -357,7 +357,7 @@ export interface ChatTools {
 export function buildChatTools(db: Database, userId: string, babyId: string | null): ChatTools {
   return {
     get_baby_profile: buildBabyProfileTool(db, userId, babyId),
-    get_fridge: buildFridgeTool(db, userId),
+    get_storage: buildStorageTool(db, userId),
     search_recipes: buildSearchRecipesTool(db, userId),
     get_food_prep_guidance: buildFoodPrepGuidanceTool(db, userId),
   };

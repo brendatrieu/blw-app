@@ -127,12 +127,12 @@ export const CUSTOM_FOOD_SOFT_NOTE =
  */
 export function customFoodConflictMessage(conflict: {
   mealCount: number;
-  fridgeCount: number;
+  storageCount: number;
   /** Custom recipes this food is an ingredient of. Absent on a 409 body
    * from before custom recipes existed; omitted from the sentence at 0. */
   recipeCount?: number;
 }): string {
-  const parts = [countPhrase(conflict.mealCount, "meal"), countPhrase(conflict.fridgeCount, "fridge item")];
+  const parts = [countPhrase(conflict.mealCount, "meal"), countPhrase(conflict.storageCount, "storage item")];
   if (conflict.recipeCount) parts.push(countPhrase(conflict.recipeCount, "recipe"));
   return usedInMessage(parts);
 }
@@ -143,11 +143,11 @@ export function customFoodConflictMessage(conflict: {
  * same wording and the same singular/plural care. Favorites never appear
  * here: they're removed with the recipe rather than blocking it.
  */
-export function customRecipeConflictMessage(conflict: { mealCount: number; fridgeCount: number }): string {
-  return usedInMessage([countPhrase(conflict.mealCount, "meal"), countPhrase(conflict.fridgeCount, "fridge item")]);
+export function customRecipeConflictMessage(conflict: { mealCount: number; storageCount: number }): string {
+  return usedInMessage([countPhrase(conflict.mealCount, "meal"), countPhrase(conflict.storageCount, "storage item")]);
 }
 
-/** "3 meals" / "1 fridge item" — the count with its noun pluralized. */
+/** "3 meals" / "1 storage item" — the count with its noun pluralized. */
 function countPhrase(count: number, noun: string): string {
   return `${count} ${count === 1 ? noun : `${noun}s`}`;
 }

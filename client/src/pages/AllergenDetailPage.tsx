@@ -27,7 +27,7 @@ const LINK_FOCUS =
 
 function FoodRow({ food }: { food: AllergenDetailFood }) {
   return (
-    // Info-region pattern (ServeLogList / FridgeItemCard): only the emoji +
+    // Info-region pattern (ServeLogList / StorageItemCard): only the emoji +
     // name block is the anchor to the food page; the "Log meal" CTA is a
     // SIBLING outside it, so nothing interactive is ever nested in a link.
     <Card as="li" padding="sm" className="flex items-center gap-2">
@@ -154,7 +154,7 @@ function AllergenDetailBody({
  * Mark/Undo control the row offers — literally the same components, imported,
  * so the two surfaces can never drift.
  *
- * States follow `FridgeDetailPage`: skeletons while the query is pending
+ * States follow `StorageDetailPage`: skeletons while the query is pending
  * (which includes an OFFLINE-paused fetch — it must never be mistaken for a
  * missing allergen), and a redirect out rather than a dead page when the
  * route somehow has no baby. An unknown slug 404s, and per ledger 189 that

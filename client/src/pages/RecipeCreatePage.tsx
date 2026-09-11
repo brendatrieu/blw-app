@@ -10,7 +10,7 @@ import { PageHeader } from "../components/ui/PageHeader.js";
  * state.
  *
  * Full-screen with a header X rather than a back chevron, like the other
- * "this page IS the task" forms (log a meal, add a fridge item): it's opened
+ * "this page IS the task" forms (log a meal, add a storage item): it's opened
  * as an action, not drilled into. Saving lands on the new recipe's own page
  * — the confirmation that it exists, and where Log meal, Edit and Delete
  * live — with `replace` keeping the spent form out of the back stack.

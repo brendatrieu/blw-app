@@ -125,7 +125,7 @@ describe("resolveEditState", () => {
     notes: null,
     recipeId: null,
     recipeTitle: null,
-    foods: [{ id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", fridgeItemId: null }],
+    foods: [{ id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", storageItemId: null }],
   };
 
   it("reports 'loading' while still loading, regardless of items/error", () => {

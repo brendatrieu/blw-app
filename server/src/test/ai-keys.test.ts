@@ -118,7 +118,7 @@ describe("/api/ai/* budget", () => {
 
     app.get("/api/ai/ping", { preHandler: asUser("user-a") }, async () => ({ ok: true }));
     app.get("/api/ai/other-user", { preHandler: asUser("user-b") }, async () => ({ ok: true }));
-    app.get("/api/fridge/ping", { preHandler: asUser("user-a") }, async () => ({ ok: true }));
+    app.get("/api/storage/ping", { preHandler: asUser("user-a") }, async () => ({ ok: true }));
     await app.ready();
 
     expect((await app.inject({ method: "GET", url: "/api/ai/ping" })).statusCode).toBe(200);
@@ -131,7 +131,7 @@ describe("/api/ai/* budget", () => {
     // Budget is per user, and non-AI routes never see the hook at all.
     expect((await app.inject({ method: "GET", url: "/api/ai/other-user" })).statusCode).toBe(200);
     for (let i = 0; i < 5; i += 1) {
-      expect((await app.inject({ method: "GET", url: "/api/fridge/ping" })).statusCode).toBe(200);
+      expect((await app.inject({ method: "GET", url: "/api/storage/ping" })).statusCode).toBe(200);
     }
 
     await app.close();

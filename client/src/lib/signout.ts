@@ -28,7 +28,7 @@ export function createSignOutDeps(queryClient: Pick<QueryClient, "clear">): Sign
  * Purges every client-side trace of the signed-in account: the live
  * react-query cache, its IndexedDB-persisted copy, and the active-baby
  * choice in localStorage. Without this, a shared device can rehydrate the
- * previous account's child data (nickname, birth date, serve logs, fridge,
+ * previous account's child data (nickname, birth date, serve logs, storage,
  * favourites) for up to `maxAge` after the next person signs in.
  *
  * Runs the cleanup steps after the auth sign-out resolves, so a later step

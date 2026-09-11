@@ -23,10 +23,10 @@ function activeTabLabel(html: string): string | undefined {
 }
 
 describe("BottomNav", () => {
-  it("renders five tabs in Home/Fridge/Foods/Recipes/More order, Recipes pointing at /recipes", () => {
+  it("renders five tabs in Home/Storage/Foods/Recipes/More order, Recipes pointing at /recipes", () => {
     const html = renderAt("/");
 
-    const labels = ["Home", "Fridge", "Foods", "Recipes", "More"];
+    const labels = ["Home", "Storage", "Foods", "Recipes", "More"];
     let cursor = -1;
     for (const label of labels) {
       const index = html.indexOf(`>${label}<`);
@@ -65,7 +65,7 @@ describe("BottomNav", () => {
   it("keeps Home exact — a nested route lights its own tab, not Home", () => {
     expect(activeTabLabel(renderAt("/"))).toBe("Home");
     expect(activeTabLabel(renderAt("/foods/banana"))).toBe("Foods");
-    expect(activeTabLabel(renderAt("/fridge/add"))).toBe("Fridge");
+    expect(activeTabLabel(renderAt("/storage/add"))).toBe("Storage");
   });
 });
 
@@ -87,7 +87,7 @@ describe("isMoreTabPath (the More tab's active rule)", () => {
 describe("resolveActiveTab (one rule for highlight AND aria-current)", () => {
   it("maps every route family to exactly one tab, More owning its whole page's destinations", () => {
     expect(resolveActiveTab("/")).toBe("/");
-    expect(resolveActiveTab("/fridge/abc/edit")).toBe("/fridge");
+    expect(resolveActiveTab("/storage/abc/edit")).toBe("/storage");
     expect(resolveActiveTab("/foods/avocado")).toBe("/foods");
     expect(resolveActiveTab("/recipes/new")).toBe("/recipes");
     for (const path of ["/more", "/safety", "/safety/choking", "/settings", "/favorites", "/chat/t1", "/symptom-check"]) {

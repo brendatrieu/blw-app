@@ -172,7 +172,7 @@ const BASE_PAIRS: Pair[] = [
   { name: "primary-contrast on primary fill (CTA)", fg: "color-primary-contrast", bg: "color-primary" },
   { name: "primary-contrast on primary-hover fill", fg: "color-primary-contrast", bg: "color-primary-hover" },
   { name: "primary-contrast on primary-active fill", fg: "color-primary-contrast", bg: "color-primary-active" },
-  // The tonal Button (fridge CTA): the same black on a solid mint fill.
+  // The tonal Button (storage CTA): the same black on a solid mint fill.
   { name: "primary-contrast on success fill (tonal Button)", fg: "color-primary-contrast", bg: "color-success" },
 
   // Interactive text accent — links, active nav label, focus-adjacent text.

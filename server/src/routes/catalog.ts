@@ -37,7 +37,7 @@ import {
   foodPairings,
   foods,
   mealFoods,
-  fridgeItems,
+  storageItems,
   recipeIngredients,
   recipes,
   storageGuidelines,
@@ -67,7 +67,7 @@ const CUSTOM_FOOD_PLACEHOLDERS = {
 } as const;
 
 /**
- * Storage window a custom food inherits, so a fridge item made from one
+ * Storage window a custom food inherits, so a storage item made from one
  * still has expiry math to run. `produce_cooked_soft` is the seeds' most
  * conservative general-purpose row.
  *
@@ -438,7 +438,7 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
     const existing = await loadOwnedFood(db, params.data.id, userId);
     if (!existing) return notFound(reply);
 
-    // Meal and fridge rows reference foods without a cascade, on purpose:
+    // Meal and storage rows reference foods without a cascade, on purpose:
     // eaten history must not disappear because a food was tidied away. So a
     // referenced food is a 409 the parent can act on, with the counts the UI
     // needs to say what is in the way. (`food_allergens` DOES cascade, so an
@@ -447,10 +447,10 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
       .select({ count: sql<number>`count(*)::int` })
       .from(mealFoods)
       .where(eq(mealFoods.foodId, existing.id));
-    const [fridgeRow] = await db
+    const [storageRow] = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(fridgeItems)
-      .where(eq(fridgeItems.foodId, existing.id));
+      .from(storageItems)
+      .where(eq(storageItems.foodId, existing.id));
     // `recipe_ingredients.food_id` has no cascade either, and since custom
     // recipes can be built out of custom foods, deleting the food underneath
     // one would otherwise trip the foreign key mid-request.
@@ -460,10 +460,10 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
       .where(eq(recipeIngredients.foodId, existing.id));
 
     const mealCount = mealRow?.count ?? 0;
-    const fridgeCount = fridgeRow?.count ?? 0;
+    const storageCount = storageRow?.count ?? 0;
     const recipeCount = recipeRow?.count ?? 0;
-    if (mealCount > 0 || fridgeCount > 0 || recipeCount > 0) {
-      return reply.code(409).send({ error: "conflict", mealCount, fridgeCount, recipeCount });
+    if (mealCount > 0 || storageCount > 0 || recipeCount > 0) {
+      return reply.code(409).send({ error: "conflict", mealCount, storageCount, recipeCount });
     }
 
     await db.delete(foods).where(and(eq(foods.id, existing.id), eq(foods.ownerId, userId)));

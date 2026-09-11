@@ -4,22 +4,22 @@ import {
   clampServings,
   countdownLabel,
   isLabelOnly,
-  fridgeItemTitle,
-  resolveFridgeItemMenuActions,
+  storageItemTitle,
+  resolveStorageItemMenuActions,
   servingsLabel,
 } from "./format.js";
 
-describe("fridgeItemTitle", () => {
+describe("storageItemTitle", () => {
   it("prefers the label when set", () => {
-    expect(fridgeItemTitle({ label: "Leftover soup", foodName: "Avocado", recipeTitle: "Purée" })).toBe(
+    expect(storageItemTitle({ label: "Leftover soup", foodName: "Avocado", recipeTitle: "Purée" })).toBe(
       "Leftover soup",
     );
   });
 
   it("falls back to the recipe title, then the food name, then a generic label", () => {
-    expect(fridgeItemTitle({ label: null, foodName: "Avocado", recipeTitle: "Purée" })).toBe("Purée");
-    expect(fridgeItemTitle({ label: null, foodName: "Avocado", recipeTitle: null })).toBe("Avocado");
-    expect(fridgeItemTitle({ label: null, foodName: null, recipeTitle: null })).toBe("Prepared food");
+    expect(storageItemTitle({ label: null, foodName: "Avocado", recipeTitle: "Purée" })).toBe("Purée");
+    expect(storageItemTitle({ label: null, foodName: "Avocado", recipeTitle: null })).toBe("Avocado");
+    expect(storageItemTitle({ label: null, foodName: null, recipeTitle: null })).toBe("Prepared food");
   });
 });
 
@@ -73,9 +73,9 @@ describe("isLabelOnly", () => {
   });
 });
 
-describe("resolveFridgeItemMenuActions", () => {
+describe("resolveStorageItemMenuActions", () => {
   it("offers Serve, Edit, and Remove for an active, food-sourced item", () => {
-    expect(resolveFridgeItemMenuActions({ status: "active", foodSlug: "avocado", recipeTitle: null })).toEqual({
+    expect(resolveStorageItemMenuActions({ status: "active", foodSlug: "avocado", recipeTitle: null })).toEqual({
       serve: true,
       edit: true,
       remove: true,
@@ -85,12 +85,12 @@ describe("resolveFridgeItemMenuActions", () => {
 
   it("offers Serve for an active, recipe-sourced item", () => {
     expect(
-      resolveFridgeItemMenuActions({ status: "active", foodSlug: null, recipeTitle: "Iron-Rich Purée" }),
+      resolveStorageItemMenuActions({ status: "active", foodSlug: null, recipeTitle: "Iron-Rich Purée" }),
     ).toEqual({ serve: true, edit: true, remove: true, restore: false });
   });
 
   it("withholds Serve for a label-only active item (nothing the serve endpoint could log)", () => {
-    expect(resolveFridgeItemMenuActions({ status: "active", foodSlug: null, recipeTitle: null })).toEqual({
+    expect(resolveStorageItemMenuActions({ status: "active", foodSlug: null, recipeTitle: null })).toEqual({
       serve: false,
       edit: true,
       remove: true,
@@ -102,7 +102,7 @@ describe("resolveFridgeItemMenuActions", () => {
   // a finished/discarded item offers exactly one thing — Restore — instead
   // of nothing at all.
   it("offers only Restore for a finished item", () => {
-    expect(resolveFridgeItemMenuActions({ status: "finished", foodSlug: "avocado", recipeTitle: null })).toEqual({
+    expect(resolveStorageItemMenuActions({ status: "finished", foodSlug: "avocado", recipeTitle: null })).toEqual({
       serve: false,
       edit: false,
       remove: false,
@@ -111,7 +111,7 @@ describe("resolveFridgeItemMenuActions", () => {
   });
 
   it("offers only Restore for a discarded item", () => {
-    expect(resolveFridgeItemMenuActions({ status: "discarded", foodSlug: "avocado", recipeTitle: null })).toEqual({
+    expect(resolveStorageItemMenuActions({ status: "discarded", foodSlug: "avocado", recipeTitle: null })).toEqual({
       serve: false,
       edit: false,
       remove: false,
@@ -121,7 +121,7 @@ describe("resolveFridgeItemMenuActions", () => {
 
   it("never offers Restore alongside Remove — they are exact complements", () => {
     for (const status of ["active", "finished", "discarded"] as const) {
-      const actions = resolveFridgeItemMenuActions({ status, foodSlug: "avocado", recipeTitle: null });
+      const actions = resolveStorageItemMenuActions({ status, foodSlug: "avocado", recipeTitle: null });
       expect(actions.restore).toBe(!actions.remove);
     }
   });

@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { FoodListItem, RecipeListItem } from "@blw/shared";
 import { catalogKeys } from "../features/catalog/hooks.js";
-import { FridgeAddPage } from "./FridgeAddPage.js";
+import { StorageAddPage } from "./StorageAddPage.js";
 
 const FOOD: FoodListItem = {
   id: "food-1",
@@ -44,7 +44,7 @@ function renderAt(path: string) {
     createElement(
       QueryClientProvider,
       { client: queryClient },
-      createElement(MemoryRouter, { initialEntries: [path] }, createElement(FridgeAddPage, null)),
+      createElement(MemoryRouter, { initialEntries: [path] }, createElement(StorageAddPage, null)),
     ),
   );
 }
@@ -54,17 +54,17 @@ function pressedTab(html: string): string | undefined {
   return html.match(/<button[^>]*aria-pressed="true"[^>]*>([^<]*)<\/button>/)?.[1];
 }
 
-describe("FridgeAddPage", () => {
+describe("StorageAddPage", () => {
   it("renders the page title, a Close control, and the add-item form", () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const html = renderToString(
       createElement(
         QueryClientProvider,
         { client: queryClient },
-        createElement(MemoryRouter, null, createElement(FridgeAddPage, null)),
+        createElement(MemoryRouter, null, createElement(StorageAddPage, null)),
       ),
     );
-    expect(html).toContain("Add to fridge");
+    expect(html).toContain("Add to storage");
     expect(html).toContain('aria-label="Close"');
     expect(html).toContain("From a food");
     expect(html).toContain(">Location<");
@@ -73,21 +73,21 @@ describe("FridgeAddPage", () => {
 
 // Item 284: the page reads ?food= / ?recipe= off its own URL and hands the
 // answer to the form as its initial state.
-describe("FridgeAddPage — prefill from the query string", () => {
-  it("opens the food tab with that food chosen for /fridge/add?food=<id>", () => {
-    const html = renderAt(`/fridge/add?food=${FOOD.id}`);
+describe("StorageAddPage — prefill from the query string", () => {
+  it("opens the food tab with that food chosen for /storage/add?food=<id>", () => {
+    const html = renderAt(`/storage/add?food=${FOOD.id}`);
     expect(pressedTab(html)).toBe("From a food");
     expect(html).toContain('aria-label="Remove Banana"');
   });
 
-  it("opens the recipe tab with that recipe chosen for /fridge/add?recipe=<id>", () => {
-    const html = renderAt(`/fridge/add?recipe=${RECIPE.id}`);
+  it("opens the recipe tab with that recipe chosen for /storage/add?recipe=<id>", () => {
+    const html = renderAt(`/storage/add?recipe=${RECIPE.id}`);
     expect(pressedTab(html)).toBe("From a recipe");
     expect(html).toContain('aria-label="Remove Banana porridge"');
   });
 
   it("opens the plain food tab with nothing chosen when no id is carried", () => {
-    const html = renderAt("/fridge/add");
+    const html = renderAt("/storage/add");
     expect(pressedTab(html)).toBe("From a food");
     expect(html).not.toMatch(/aria-label="Remove /);
   });
@@ -95,15 +95,15 @@ describe("FridgeAddPage — prefill from the query string", () => {
   // An id nothing resolves to is ignored by the picker, not fatal: the tab
   // opens, the field simply holds no chip.
   it("survives an id that matches nothing", () => {
-    const html = renderAt("/fridge/add?food=not-a-real-food");
+    const html = renderAt("/storage/add?food=not-a-real-food");
     expect(pressedTab(html)).toBe("From a food");
     expect(html).not.toMatch(/aria-label="Remove /);
-    expect(html).toContain("Add to fridge");
+    expect(html).toContain("Add to storage");
   });
 
-  // The X stays a history-aware close with /fridge as its fallback, whatever
+  // The X stays a history-aware close with /storage as its fallback, whatever
   // the query string carried.
   it("keeps the Close control on a prefilled visit", () => {
-    expect(renderAt(`/fridge/add?food=${FOOD.id}`)).toContain('aria-label="Close"');
+    expect(renderAt(`/storage/add?food=${FOOD.id}`)).toContain('aria-label="Close"');
   });
 });

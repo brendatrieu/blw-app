@@ -168,7 +168,7 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
 
     // One transaction so a meal is all-or-nothing: either the meal and every
     // one of its foods land, or nothing does. Hand-logged meals never link to
-    // a fridge item — that link is what the serve endpoint alone creates.
+    // a storage item — that link is what the serve endpoint alone creates.
     const mealId = await db.transaction((tx) =>
       insertMealWithFoods(tx, {
         babyId: params.data.babyId,
@@ -228,22 +228,22 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
 
       if (foodIds) {
         // Replacing the children wholesale would throw away each row's
-        // fridge provenance, so it is carried forward per food: a food that
-        // survives the edit keeps the fridge item it was served from, and a
+        // storage provenance, so it is carried forward per food: a food that
+        // survives the edit keeps the storage item it was served from, and a
         // food swapped in during the edit was not served from anywhere and
         // gets null. Read before the delete — the rows are gone after it.
         const previous = await tx
-          .select({ foodId: mealFoods.foodId, fridgeItemId: mealFoods.fridgeItemId })
+          .select({ foodId: mealFoods.foodId, storageItemId: mealFoods.storageItemId })
           .from(mealFoods)
           .where(eq(mealFoods.mealId, existing.id));
-        const fridgeItemIdByFoodId = new Map(previous.map((row) => [row.foodId, row.fridgeItemId]));
+        const storageItemIdByFoodId = new Map(previous.map((row) => [row.foodId, row.storageItemId]));
 
         await tx.delete(mealFoods).where(eq(mealFoods.mealId, existing.id));
         await tx.insert(mealFoods).values(
           foodIds.map((foodId) => ({
             mealId: existing.id,
             foodId,
-            fridgeItemId: fridgeItemIdByFoodId.get(foodId) ?? null,
+            storageItemId: storageItemIdByFoodId.get(foodId) ?? null,
           })),
         );
       }

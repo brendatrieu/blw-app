@@ -6,7 +6,7 @@ import type { FavoriteItem, FoodListItem, MealItem, RecipeListItem } from "@blw/
 import { CelebrationProvider } from "../../../components/ui/Celebration.js";
 import { catalogKeys } from "../../catalog/hooks.js";
 import {
-  buildLeftoverFridgeInput,
+  buildLeftoverStorageInput,
   LeftoversFields,
   LogFoodForm,
   resolveLeftoverSource,
@@ -71,14 +71,14 @@ describe("LogFoodForm (render)", () => {
   });
 
   // Item 152/154: create mode always renders the collapsed "+ Save leftovers
-  // to fridge" toggle (disabled at zero selected foods — the edge case none
+  // to storage" toggle (disabled at zero selected foods — the edge case none
   // of the three `resolveLeftoverSource` branches can resolve usefully), and
   // never renders any of the expanded fields until it's tapped open.
   it("renders the collapsed leftovers toggle, disabled while no foods are selected, with no expanded fields", () => {
     const html = renderWithProviders(createElement(LogFoodForm, { babyId: "baby-1", onDone: () => {} }));
     // A borderless switch row — disabled until a food is picked.
     expect(html).toMatch(/role="switch"[^>]*aria-checked="false"[^>]*disabled/);
-    expect(html).toContain("Save leftovers to fridge");
+    expect(html).toContain("Save leftovers to storage");
     expect(html).not.toContain("Total servings");
     expect(html).not.toContain("Best by");
     expect(html).not.toContain("Which food?");
@@ -95,10 +95,10 @@ describe("LogFoodForm (render)", () => {
       notes: null,
       recipeId: null,
       recipeTitle: null,
-      foods: [{ id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", fridgeItemId: null }],
+      foods: [{ id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", storageItemId: null }],
     };
     const html = renderWithProviders(createElement(LogFoodForm, { babyId: "baby-1", meal, onDone: () => {} }));
-    expect(html).not.toContain("Save leftovers to fridge");
+    expect(html).not.toContain("Save leftovers to storage");
   });
 
   it("pins the 'Recipe (optional)' select as always present", () => {
@@ -153,8 +153,8 @@ describe("LogFoodForm (render)", () => {
       recipeId: favorite.recipeId,
       recipeTitle: favorite.title,
       foods: [
-        { id: food1.id, slug: food1.slug, name: food1.name, category: food1.category, fridgeItemId: null },
-        { id: food2.id, slug: food2.slug, name: food2.name, category: food2.category, fridgeItemId: null },
+        { id: food1.id, slug: food1.slug, name: food1.name, category: food1.category, storageItemId: null },
+        { id: food2.id, slug: food2.slug, name: food2.name, category: food2.category, storageItemId: null },
       ],
     };
 
@@ -315,12 +315,12 @@ describe("resolveLeftoverSource", () => {
   });
 });
 
-describe("buildLeftoverFridgeInput", () => {
+describe("buildLeftoverStorageInput", () => {
   const preparedAt = new Date(2026, 7, 26, 10, 36);
 
   it("builds a recipe-sourced payload: recipeId present, foodIds absent", () => {
     const source: ResolvedLeftoverSource = { kind: "recipe", recipeId: "recipe-1" };
-    const result = buildLeftoverFridgeInput(source, "freezer", "", "", preparedAt);
+    const result = buildLeftoverStorageInput(source, "freezer", "", "", preparedAt);
     expect(result).toEqual({
       recipeId: "recipe-1",
       location: "freezer",
@@ -333,7 +333,7 @@ describe("buildLeftoverFridgeInput", () => {
 
   it("builds a food-sourced payload: foodIds: [foodId] present, recipeId absent", () => {
     const source: ResolvedLeftoverSource = { kind: "food", foodId: "food-1" };
-    const result = buildLeftoverFridgeInput(source, "fridge", "", "", preparedAt);
+    const result = buildLeftoverStorageInput(source, "fridge", "", "", preparedAt);
     expect(result).toEqual({
       foodIds: ["food-1"],
       location: "fridge",
@@ -346,14 +346,14 @@ describe("buildLeftoverFridgeInput", () => {
 
   it("parses a non-blank servingsTotal to a number and passes bestBy through", () => {
     const source: ResolvedLeftoverSource = { kind: "food", foodId: "food-1" };
-    const result = buildLeftoverFridgeInput(source, "counter", "6", "2026-09-10", preparedAt);
+    const result = buildLeftoverStorageInput(source, "counter", "6", "2026-09-10", preparedAt);
     expect(result.servingsTotal).toBe(6);
     expect(result.bestBy).toBe("2026-09-10");
   });
 
   it("treats a blank/whitespace servingsTotal as omitted, not zero or NaN", () => {
     const source: ResolvedLeftoverSource = { kind: "food", foodId: "food-1" };
-    const result = buildLeftoverFridgeInput(source, "fridge", "   ", "", preparedAt);
+    const result = buildLeftoverStorageInput(source, "fridge", "   ", "", preparedAt);
     expect(result.servingsTotal).toBeUndefined();
   });
 
@@ -361,7 +361,7 @@ describe("buildLeftoverFridgeInput", () => {
   // that sends them as "" or null instead of omitting the keys entirely.
   it("never includes notes or quantityNote", () => {
     const source: ResolvedLeftoverSource = { kind: "recipe", recipeId: "recipe-1" };
-    const result = buildLeftoverFridgeInput(source, "fridge", "", "", preparedAt);
+    const result = buildLeftoverStorageInput(source, "fridge", "", "", preparedAt);
     expect(result).not.toHaveProperty("notes");
     expect(result).not.toHaveProperty("quantityNote");
   });
@@ -417,14 +417,14 @@ describe("resolveSubmitAction (no-double-meal guard)", () => {
   });
 
   it("NEVER returns create once the meal is saved (kills the double-meal mutant)", () => {
-    expect(resolveSubmitAction(true, true)).toBe("retry-fridge");
+    expect(resolveSubmitAction(true, true)).toBe("retry-storage");
     expect(resolveSubmitAction(true, false)).toBe("noop");
   });
 });
 
-describe("buildLeftoverFridgeInput default preparedAt", () => {
+describe("buildLeftoverStorageInput default preparedAt", () => {
   it("minute-truncates the default preparedAt (seconds and ms are zero)", () => {
-    const input = buildLeftoverFridgeInput({ kind: "food", foodId: "f-1" }, "fridge", "", "");
+    const input = buildLeftoverStorageInput({ kind: "food", foodId: "f-1" }, "fridge", "", "");
     const prepared = new Date(input.preparedAt!);
     expect(prepared.getSeconds()).toBe(0);
     expect(prepared.getMilliseconds()).toBe(0);
@@ -458,7 +458,7 @@ describe("initialFoodIds prefill (log meal from a food page)", () => {
       notes: null,
       recipeId: null,
       recipeTitle: null,
-      foods: [{ id: avocado.id, slug: avocado.slug, name: avocado.name, category: avocado.category, fridgeItemId: null }],
+      foods: [{ id: avocado.id, slug: avocado.slug, name: avocado.name, category: avocado.category, storageItemId: null }],
     };
     const html = renderWithProviders(
       createElement(LogFoodForm, { babyId: "baby-1", meal, initialFoodIds: [banana.id], onDone: () => {} }),

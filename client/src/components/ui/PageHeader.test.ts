@@ -71,8 +71,8 @@ describe("PageHeader leading slot (items 258/260)", () => {
   });
 
   it("renders no leading wrapper at all when a page has no way out of its own", () => {
-    const html = render({ title: "Fridge", emoji: "🧊" });
+    const html = render({ title: "Storage", emoji: "📦" });
     expect(html).not.toContain("<button");
-    expect(html).toContain("Fridge</h1>");
+    expect(html).toContain("Storage</h1>");
   });
 });
