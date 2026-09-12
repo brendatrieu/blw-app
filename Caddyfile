@@ -20,3 +20,9 @@
 
 	reverse_proxy app:3000
 }
+
+# The bare domain is canonical; www redirects there (Caddy issues a cert for
+# both names, so the redirect itself is served over HTTPS).
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
