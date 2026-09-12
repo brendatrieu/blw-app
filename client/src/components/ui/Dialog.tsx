@@ -120,6 +120,9 @@ export function DialogPanel({ ariaLabel, children, panelRef }: DialogPanelProps)
       aria-modal="true"
       aria-label={ariaLabel}
       tabIndex={-1}
+      // The panel takes focus when the dialog opens (see Dialog's effect); the
+      // global `:focus-visible` ring must not draw around the whole card.
+      data-no-focus-ring=""
       className="dialog-panel scroll-momentum relative z-10 flex max-h-[85dvh] w-[min(100%-2rem,24rem)] flex-col overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4 shadow-[var(--shadow-lg)] outline-none scroll-thin"
     >
       {children}

@@ -23,6 +23,8 @@ describe("DialogPanel (item 309)", () => {
     expect(html).toContain('aria-label="Little Meals tour"');
     // Focusable as a fallback target when the card holds no controls.
     expect(html).toContain('tabindex="-1"');
+    // Focus lands on the panel when it opens; the app-wide focus ring is opted out.
+    expect(html).toContain("data-no-focus-ring");
     expect(html).toContain("panel content");
   });
 
