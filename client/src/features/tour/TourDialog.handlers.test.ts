@@ -1,24 +1,24 @@
-// Drives TourPage's real handlers without a DOM. The renderToString suite
-// (TourPage.test.ts) can only ever see the first slide — state never moves
-// there — so everything that depends on *which* slide is showing was
-// unpinned: Skip disappearing on the last slide, Next becoming "Get
+// Drives TourDialog's real handlers without a DOM. A renderToString suite can
+// only ever see the first slide — state never moves there — so everything
+// that depends on *which* slide is showing would otherwise be unpinned: Back
+// appearing after slide 1, Skip disappearing on the last, Next becoming "Get
 // started", and the scroll itself (including the reduced-motion behaviour).
-// React's hooks are replaced with a tiny store so the page can be called as
-// a plain function, its element tree read, and its callbacks invoked against
-// a fake track. Harness ported from DateTimeField.handlers.test.ts.
+// React's hooks are replaced with a tiny store so the dialog can be called as
+// a plain function, its element tree read, and its callbacks invoked against a
+// fake track. Harness ported from the v1 TourPage.handlers.test.ts.
 import { describe, expect, it, vi, afterEach } from "vitest";
 
 const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], refs: [] as { current: unknown }[], i: 0, r: 0 };
-  const nav = { calls: [] as { to: string; options: unknown }[] };
   const tour = { completions: 0 };
+  const closes = { count: 0 };
   const prefs = { status: "success" as "pending" | "error" | "success", tourCompletedAt: null as string | null };
   const media = { queries: [] as string[], reduced: false };
 
   return {
     store,
-    nav,
     tour,
+    closes,
     prefs,
     media,
     useState: (init: unknown) => {
@@ -39,8 +39,8 @@ const h = vi.hoisted(() => {
       store.refs = [];
       store.i = 0;
       store.r = 0;
-      nav.calls = [];
       tour.completions = 0;
+      closes.count = 0;
       prefs.status = "success";
       prefs.tourCompletedAt = tourCompletedAt;
       media.queries = [];
@@ -65,18 +65,7 @@ vi.mock("react", async (importOriginal) => {
   };
 });
 
-vi.mock("react-router-dom", async (importOriginal) => {
-  const actual = await importOriginal<Record<string, unknown>>();
-  return {
-    ...actual,
-    useNavigate: () => (to: string, options?: unknown) => {
-      h.nav.calls.push({ to, options });
-    },
-  };
-});
-
-vi.mock("../features/tour/hooks.js", () => ({
-  preferenceKeys: { all: () => ["preferences"] as const },
+vi.mock("./hooks.js", () => ({
   usePreferences: () => ({ data: { tourCompletedAt: h.prefs.tourCompletedAt }, status: h.prefs.status }),
   useCompleteTour: () => ({
     mutate: () => {
@@ -85,8 +74,8 @@ vi.mock("../features/tour/hooks.js", () => ({
   }),
 }));
 
-import { TOUR_SLIDE_COUNT } from "../features/tour/slides.js";
-import { TourPage } from "./TourPage.js";
+import { TOUR_SLIDES, TOUR_SLIDE_COUNT } from "./slides.js";
+import { TourDialog } from "./TourDialog.js";
 
 type Rendered = {
   type: unknown;
@@ -95,7 +84,11 @@ type Rendered = {
     children?: unknown;
     className?: string;
     onClick?: () => void;
+    onClose?: () => void;
+    ariaLabel?: string;
+    open?: boolean;
     onScroll?: (event: { currentTarget: { scrollLeft: number; clientWidth: number } }) => void;
+    [key: string]: unknown;
   };
 };
 
@@ -106,7 +99,7 @@ interface ScrollCall {
 
 const SLIDE_WIDTH = 320;
 
-/** A stand-in for the scroll container: the two properties the page reads. */
+/** A stand-in for the scroll container: the two properties the dialog reads. */
 function fakeTrack(scrolls: ScrollCall[], clientWidth = SLIDE_WIDTH) {
   return {
     clientWidth,
@@ -118,21 +111,28 @@ function fakeTrack(scrolls: ScrollCall[], clientWidth = SLIDE_WIDTH) {
 function renderTour() {
   h.store.i = 0;
   h.store.r = 0;
-  const tree = (TourPage as unknown as (props: unknown) => Rendered)({});
+  const tree = (TourDialog as unknown as (props: unknown) => Rendered)({
+    onClose: () => {
+      h.closes.count += 1;
+    },
+  });
   const [skipRow, track, footer] = tree.props.children as Rendered[];
-  if (!skipRow || !track || !footer) throw new Error("TourPage should render the skip row, the track and the footer");
-  const [dotRow, primary] = footer.props.children as Rendered[];
-  if (!dotRow || !primary) throw new Error("the footer should render the dots and the primary button");
+  if (!skipRow || !track || !footer) throw new Error("TourDialog should render the skip row, the track and the footer");
+  const [dotRow, buttonRow] = footer.props.children as Rendered[];
+  if (!dotRow || !buttonRow) throw new Error("the footer should render the dots and the button row");
+  const [back, primary] = buttonRow.props.children as (Rendered | null)[];
+  if (!primary) throw new Error("the button row should always render the primary action");
   return {
     tree,
     track,
     skip: (skipRow.props.children ?? null) as Rendered | null,
     dots: dotRow.props.children as Rendered[],
+    back,
     primary,
   };
 }
 
-/** Every string the page would render, wherever it sits in the tree. */
+/** Every string the dialog would render, wherever it sits in the tree. */
 function collectText(node: unknown, out: string[] = []): string[] {
   if (node === null || node === undefined || typeof node === "boolean") return out;
   if (typeof node === "string" || typeof node === "number") {
@@ -145,6 +145,21 @@ function collectText(node: unknown, out: string[] = []): string[] {
   }
   collectText((node as Rendered).props?.children, out);
   return out;
+}
+
+/** The first element in the subtree whose className contains `needle`. */
+function findByClass(node: unknown, needle: string): Rendered | null {
+  if (node === null || node === undefined || typeof node !== "object") return null;
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = findByClass(child, needle);
+      if (found) return found;
+    }
+    return null;
+  }
+  const element = node as Rendered;
+  if (typeof element.props?.className === "string" && element.props.className.includes(needle)) return element;
+  return findByClass(element.props?.children, needle);
 }
 
 /** Moves the real track to slide `index` the way a swipe would. */
@@ -171,7 +186,7 @@ interface FakeKey {
   preventDefault: () => void;
 }
 
-/** Installs a stand-in `document` and returns the page's keydown listeners as they register. */
+/** Installs a stand-in `document` and returns the dialog's keydown listeners. */
 function fakeDocument() {
   const listeners: ((event: FakeKey) => void)[] = [];
   globals.document = {
@@ -183,16 +198,90 @@ function fakeDocument() {
   return listeners;
 }
 
-describe("TourPage handlers (items 303, 306)", () => {
+describe("TourDialog (items 310, 313)", () => {
+  it("is a modal named for the app, opened the moment it is mounted", () => {
+    h.reset();
+    const { tree } = renderTour();
+    expect(tree.props.open).toBe(true);
+    expect(tree.props.ariaLabel).toBe("Little Meals tour");
+  });
+
+  it("renders all six slides in order, copy verbatim, with the line break preserved", () => {
+    h.reset();
+    const { track } = renderTour();
+    const slides = track.props.children as Rendered[];
+    expect(slides).toHaveLength(TOUR_SLIDE_COUNT);
+
+    slides.forEach((slide, index) => {
+      const expected = TOUR_SLIDES[index]!;
+      const text = collectText(slide);
+      expect(text, `slide ${index + 1} emoji`).toContain(expected.emoji);
+      expect(text, `slide ${index + 1} title`).toContain(expected.title);
+      // The body string, newline and all — not a reflowed or split copy.
+      expect(text, `slide ${index + 1} body`).toContain(expected.body);
+    });
+
+    // Slide 5's break survives as a break: the body element carries the raw
+    // string, newline and all, and renders it `whitespace-pre-line`.
+    const body = findByClass(slides[4]!, "whitespace-pre-line");
+    expect(body, "slide 5's body should render pre-line").not.toBeNull();
+    expect(body!.props.children).toBe(TOUR_SLIDES[4]!.body);
+    expect(String(body!.props.children)).toContain("\n");
+    // Every slide's body takes the same treatment, not just the one that
+    // needs it today.
+    for (const slide of slides) {
+      expect(findByClass(slide, "whitespace-pre-line")).not.toBeNull();
+    }
+  });
+
+  it("gives every slide the same height so the card cannot resize mid-swipe", () => {
+    h.reset();
+    const { track } = renderTour();
+    expect(track.props.className).toContain("items-stretch");
+    expect(track.props.className).toContain("snap-x");
+    expect(track.props.className).toContain("snap-mandatory");
+    // On a short viewport the card scrolls; the track is never squeezed and
+    // the slides never cropped.
+    expect(track.props.className).toContain("shrink-0");
+    for (const slide of track.props.children as Rendered[]) {
+      expect(slide.props.className).toContain("w-full");
+      expect(slide.props.className).toContain("shrink-0");
+      expect(slide.props.className).toContain("snap-center");
+    }
+  });
+
+  it("hides Back on the first slide and steps back one slide everywhere else", () => {
+    h.reset();
+    const scrolls: ScrollCall[] = [];
+    let view = renderTour();
+    view.track.ref!.current = fakeTrack(scrolls);
+
+    view = scrollTo(view, 0);
+    expect(view.back, "slide 1 should not render Back").toBeNull();
+    expect(collectText(view.tree), "no Back anywhere on the first slide").not.toContain("Back");
+
+    for (let index = 1; index < TOUR_SLIDE_COUNT; index += 1) {
+      view = scrollTo(view, index);
+      expect(view.back, `slide ${index + 1} should render Back`).not.toBeNull();
+      expect(collectText(view.back)).toContain("Back");
+      // Secondary, and a full 44px target.
+      expect(view.back!.props.variant).toBe("secondary");
+
+      const before = scrolls.length;
+      view.back!.props.onClick?.();
+      expect(scrolls.length, "Back scrolls the track").toBe(before + 1);
+      expect(scrolls.at(-1)).toEqual({ left: (index - 1) * SLIDE_WIDTH, behavior: "smooth" });
+    }
+  });
+
   it("hides Skip on the last slide and nowhere else", () => {
     h.reset();
     let view = renderTour();
 
     for (let index = 0; index < TOUR_SLIDE_COUNT; index += 1) {
       view = scrollTo(view, index);
-      const isLast = index === TOUR_SLIDE_COUNT - 1;
       const text = collectText(view.tree);
-      if (isLast) {
+      if (index === TOUR_SLIDE_COUNT - 1) {
         expect(view.skip, `slide ${index + 1} should not render Skip`).toBeNull();
         expect(text, "no Skip anywhere on the last slide").not.toContain("Skip");
       } else {
@@ -229,7 +318,7 @@ describe("TourPage handlers (items 303, 306)", () => {
     view = renderTour();
     view.primary.props.onClick?.();
     expect(scrolls.at(-1)).toEqual({ left: SLIDE_WIDTH, behavior: "smooth" });
-    expect(h.nav.calls).toHaveLength(0);
+    expect(h.closes.count).toBe(0);
     expect(h.tour.completions).toBe(0);
 
     view = scrollTo(view, TOUR_SLIDE_COUNT - 1);
@@ -237,7 +326,7 @@ describe("TourPage handlers (items 303, 306)", () => {
     // "Get started" leaves; it does not try to scroll past the end.
     expect(scrolls).toHaveLength(1);
     expect(h.tour.completions).toBe(1);
-    expect(h.nav.calls).toEqual([{ to: "/", options: { replace: true } }]);
+    expect(h.closes.count).toBe(1);
   });
 
   it("scrolls the track to a tapped dot, clamped to the deck", () => {
@@ -342,9 +431,11 @@ describe("TourPage handlers (items 303, 306)", () => {
     press("ArrowRight");
     expect(scrolls.at(-1)?.left).toBe(last * SLIDE_WIDTH);
 
-    // Other keys, modifiers and form fields are left alone.
+    // Other keys, modifiers and form fields are left alone. Escape in
+    // particular belongs to the Dialog, not to the carousel.
     const before = scrolls.length;
     expect(press("Enter")).toBe(false);
+    expect(press("Escape")).toBe(false);
     expect(press("ArrowRight", { metaKey: true })).toBe(false);
     expect(press("ArrowRight", { target: { tagName: "INPUT" } })).toBe(false);
     expect(scrolls.length).toBe(before);
@@ -360,33 +451,48 @@ describe("TourPage handlers (items 303, 306)", () => {
     expect(scrolls).toHaveLength(0);
   });
 
-  it("Skip on a first run marks the tour seen and starts the app at the dashboard", () => {
+  it("Skip on a first run marks the tour seen and closes", () => {
     h.reset(null);
     const view = renderTour();
     view.skip!.props.onClick?.();
     expect(h.tour.completions).toBe(1);
     // Asserted straight after the click: the exit never awaits the PATCH.
-    expect(h.nav.calls).toEqual([{ to: "/", options: { replace: true } }]);
+    expect(h.closes.count).toBe(1);
   });
 
-  it("Skip on a replay writes nothing and goes back to More", () => {
+  it("Skip on a replay writes nothing and just closes", () => {
     h.reset("2026-09-11T10:00:00.000Z");
     const view = renderTour();
     view.skip!.props.onClick?.();
     expect(h.tour.completions).toBe(0);
-    expect(h.nav.calls).toEqual([{ to: "/more", options: { replace: true } }]);
+    expect(h.closes.count).toBe(1);
+  });
+
+  it("takes the same exit on an overlay tap or Escape — PATCH on a first run, nothing on a replay", () => {
+    // Both reach the dialog through its single `onClose`, which is the
+    // dialog's own exit, so neither can drift from Skip's behaviour.
+    h.reset(null);
+    let view = renderTour();
+    view.tree.props.onClose?.();
+    expect(h.tour.completions).toBe(1);
+    expect(h.closes.count).toBe(1);
+
+    h.reset("2026-09-11T10:00:00.000Z");
+    view = renderTour();
+    view.tree.props.onClose?.();
+    expect(h.tour.completions).toBe(0);
+    expect(h.closes.count).toBe(1);
   });
 
   it("treats a still-loading preferences read as a first run, not a replay", () => {
-    // The gate only ever opens the tour once the query has resolved, but a
-    // replay must never be *guessed*: an unresolved read means no stamp is
-    // known, so the exit marks the tour seen rather than silently skipping
-    // the write.
+    // The gate only opens the tour once the query has resolved, but a replay
+    // must never be *guessed*: an unresolved read means no stamp is known, so
+    // the exit marks the tour seen rather than silently skipping the write.
     h.reset("2026-09-11T10:00:00.000Z");
     h.prefs.status = "pending";
     const view = renderTour();
     view.skip!.props.onClick?.();
     expect(h.tour.completions).toBe(1);
-    expect(h.nav.calls).toEqual([{ to: "/", options: { replace: true } }]);
+    expect(h.closes.count).toBe(1);
   });
 });

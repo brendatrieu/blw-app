@@ -29,8 +29,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "icons/apple-touch-icon.png", "icons/icon-maskable-512.png"],
       manifest: {
-        name: "blw-app",
-        short_name: "blw-app",
+        name: "Little Meals",
+        short_name: "Little Meals",
         description: "A calm, offline-friendly companion for baby-led weaning — foods, recipes, storage, and safety guidance.",
         theme_color: "#fbfaf8",
         background_color: "#fbfaf8",

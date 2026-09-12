@@ -70,16 +70,15 @@ describe("App route wiring (items 287/293 — both legacy redirects are mounted,
   });
 });
 
-describe("App route wiring (item 303 — the tour is a real, authenticated route)", () => {
-  it("mounts /tour inside the authenticated tree, not as a public page", () => {
+describe("App route wiring (item 310 — the tour is a modal, not a route)", () => {
+  it("mounts no /tour route at all, so an old link falls through to Not found", () => {
     const paths = collectRoutePaths((App as unknown as () => ReactNode)());
-    expect(paths).toContain("/tour");
-    // Sanity: the walk reaches the guarded branch these siblings live in, so
-    // "/tour is present" really does mean "present behind RequireAuth".
+    // Sanity: the walk reaches the guarded branch the tour used to live in.
     expect(paths).toContain("/more");
     expect(paths).toContain("/settings");
-    // Exactly one tour route — no stray public duplicate.
-    expect(paths.filter((path) => path === "/tour")).toHaveLength(1);
+    expect(paths.some((path) => path.startsWith("/tour"))).toBe(false);
+    // The catch-all is what an old /tour bookmark now lands on.
+    expect(paths).toContain("*");
   });
 });
 
@@ -92,9 +91,43 @@ describe("storage query keys survive offline persistence", () => {
     expect(main).not.toMatch(/PERSISTED_QUERY_KEY_PREFIXES[\s\S]{0,400}"fridge"/);
   });
 
-  it("persist the tour's 'seen' flag under the 'preferences' prefix (item 304)", () => {
+  it("deliberately do NOT persist the tour's 'seen' flag (item 311)", () => {
+    // A restored `["preferences"]` entry makes the query read "success" off
+    // the cache on a cold start, and v1's gate re-ran the tour for parents
+    // who had already finished it. The prefix must stay out of the set.
     expect(preferenceKeys.all()[0]).toBe("preferences");
     const main = readFileSync(new URL("./main.tsx", import.meta.url), "utf8");
-    expect(main).toMatch(/PERSISTED_QUERY_KEY_PREFIXES[\s\S]*"preferences"/);
+    const block = /PERSISTED_QUERY_KEY_PREFIXES = new Set\(\[([\s\S]*?)\]\)/.exec(main)?.[1] ?? "";
+    // Comments in the set explain the absence; the entries are what counts.
+    const set = block.replace(/\/\/[^\n]*/g, "");
+    expect(block).not.toBe("");
+    expect(set).toContain('"storage"');
+    expect(set).not.toContain('"preferences"');
+  });
+});
+
+describe("the app's user-facing name (item 308)", () => {
+  const read = (relative: string) => readFileSync(new URL(relative, import.meta.url), "utf8");
+
+  it("is 'Little Meals' in the browser tab and on an iOS home screen", () => {
+    const html = read("../index.html");
+    expect(html).toContain("<title>Little Meals</title>");
+    expect(html).toContain('<meta name="apple-mobile-web-app-title" content="Little Meals" />');
+    expect(html).not.toContain("blw-app");
+  });
+
+  it("is 'Little Meals' in the installed PWA's manifest", () => {
+    const config = read("../vite.config.ts");
+    const manifest = /manifest: \{([\s\S]*?)\n {6}\}/.exec(config)?.[1] ?? "";
+    expect(manifest).not.toBe("");
+    expect(manifest).toContain('name: "Little Meals"');
+    expect(manifest).toContain('short_name: "Little Meals"');
+    expect(manifest).not.toContain("blw-app");
+  });
+
+  it("leaves the package/workspace identifiers alone — only what a parent reads is renamed", () => {
+    // The repo, the packages and the API are still @blw/*; renaming those
+    // would be a rename of the codebase, not of the product.
+    expect(read("../package.json")).toContain('"name": "@blw/client"');
   });
 });

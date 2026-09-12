@@ -7,13 +7,14 @@ export const preferenceKeys = {
 };
 
 /**
- * This account's app preferences. Read once per app load by AppLayout (the
- * first-run gate depends on it) and cached generously — it only changes when
- * the parent finishes or skips the tour, which invalidates it by hand.
+ * This account's app preferences. Read once per app load by `TourProvider`
+ * (the first-run gate depends on it) and cached generously — it only changes
+ * when the parent finishes or skips the tour, which invalidates it by hand.
  *
- * The `"preferences"` prefix is persisted offline alongside the other
- * user-data families (see main.tsx): a restored flag is what stops a cold,
- * offline start from re-running the tour on somebody who has already seen it.
+ * Deliberately NOT in `PERSISTED_QUERY_KEY_PREFIXES` (see main.tsx): a
+ * restored copy would make the query read "success" off the cache before the
+ * server had answered, and the gate would open the tour again for someone
+ * who had already finished it. The gate waits for the network instead.
  */
 export function usePreferences() {
   return useQuery({

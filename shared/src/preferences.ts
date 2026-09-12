@@ -18,7 +18,7 @@ import { z } from "zod";
 /**
  * `tourCompletedAt` is the first time the first-run tour was finished OR
  * skipped — both are "this parent has seen it". Null means they have not,
- * which is what sends them to `/tour` on their first authenticated render.
+ * which is what opens the tour dialog over their first authenticated screen.
  * It is a timestamp rather than a boolean so a future "what's new since"
  * tour has a date to compare against.
  */

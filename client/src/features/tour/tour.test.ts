@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { clampSlide, resolveTourExit, shouldRedirectToTour, slideIndexFromScroll } from "./tour.js";
-import { TOUR_SLIDES, TOUR_SLIDE_COUNT } from "./slides.js";
+import { clampSlide, resolveTourExit, shouldOpenTour, slideIndexFromScroll } from "./tour.js";
+import { TOUR_SLIDE_COUNT } from "./slides.js";
 
 const COUNT = TOUR_SLIDE_COUNT;
 const WIDTH = 390; // an iPhone-ish slide width
@@ -67,94 +67,61 @@ describe("slideIndexFromScroll", () => {
 });
 
 describe("resolveTourExit", () => {
-  it("marks the tour seen and starts the app on a first run", () => {
-    expect(resolveTourExit(false)).toEqual({ patch: true, to: "/", replace: true });
+  it("marks the tour seen on a first run", () => {
+    expect(resolveTourExit(false)).toEqual({ patch: true });
   });
 
-  it("writes nothing and goes back to More on a replay", () => {
-    // Re-stamping would move the date the parent first saw the tour, and
-    // /more is where the replay was started from.
-    expect(resolveTourExit(true)).toEqual({ patch: false, to: "/more", replace: true });
+  it("writes nothing on a replay", () => {
+    // Re-stamping would move the date the parent first saw the tour.
+    expect(resolveTourExit(true)).toEqual({ patch: false });
+  });
+
+  it("never navigates — the tour is a modal, so closing it goes nowhere", () => {
+    for (const replay of [true, false]) {
+      expect(Object.keys(resolveTourExit(replay))).toEqual(["patch"]);
+    }
   });
 });
 
-describe("shouldRedirectToTour", () => {
+describe("shouldOpenTour", () => {
   const base = {
     status: "success" as const,
-    tourCompletedAt: null as string | null,
-    pathname: "/",
-    alreadyRedirected: false,
+    fetchStatus: "idle" as const,
+    tourCompletedAt: null as string | null | undefined,
+    alreadyOpened: false,
   };
 
-  it("sends a parent who has never seen the tour, once", () => {
-    expect(shouldRedirectToTour(base)).toBe(true);
+  it("opens for a parent who has never seen the tour, once the server has said so", () => {
+    expect(shouldOpenTour(base)).toBe(true);
   });
 
-  it("never redirects before the answer is known", () => {
-    expect(shouldRedirectToTour({ ...base, status: "pending" })).toBe(false);
-    expect(shouldRedirectToTour({ ...base, status: "pending", tourCompletedAt: undefined })).toBe(false);
+  it("never opens before the answer is known", () => {
+    expect(shouldOpenTour({ ...base, status: "pending", fetchStatus: "fetching" })).toBe(false);
+    expect(shouldOpenTour({ ...base, status: "pending", tourCompletedAt: undefined })).toBe(false);
     // An API blip is not a reason to interrupt someone mid-app.
-    expect(shouldRedirectToTour({ ...base, status: "error", tourCompletedAt: undefined })).toBe(false);
+    expect(shouldOpenTour({ ...base, status: "error", tourCompletedAt: undefined })).toBe(false);
+  });
+
+  it("ignores a cached answer that is still being refetched", () => {
+    // The v1 bug: a persisted `{ tourCompletedAt: null }` made the query read
+    // "success" off the cache on a cold start, and the tour re-ran for
+    // someone who had already finished it. A restored-but-refetching query
+    // is "success" + "fetching", and decides nothing.
+    expect(shouldOpenTour({ ...base, fetchStatus: "fetching" })).toBe(false);
+    // Offline, the same query parks in "paused" — also not an answer.
+    expect(shouldOpenTour({ ...base, fetchStatus: "paused" })).toBe(false);
   });
 
   it("leaves a parent who has already seen it alone", () => {
-    expect(shouldRedirectToTour({ ...base, tourCompletedAt: "2026-09-11T10:00:00.000Z" })).toBe(false);
+    expect(shouldOpenTour({ ...base, tourCompletedAt: "2026-09-11T10:00:00.000Z" })).toBe(false);
   });
 
-  it("does not redirect the tour to itself", () => {
-    expect(shouldRedirectToTour({ ...base, pathname: "/tour" })).toBe(false);
-  });
-
-  it("fires at most once per session", () => {
-    // The guard against a loop when the completing PATCH fails.
-    expect(shouldRedirectToTour({ ...base, alreadyRedirected: true })).toBe(false);
-  });
-
-  it("redirects from a deep link too, not just the dashboard", () => {
-    expect(shouldRedirectToTour({ ...base, pathname: "/storage/abc-123" })).toBe(true);
+  it("opens at most once per session", () => {
+    // The guard against re-opening when the completing PATCH fails.
+    expect(shouldOpenTour({ ...base, alreadyOpened: true })).toBe(false);
   });
 
   it("treats a resolved-but-missing payload as 'do nothing'", () => {
-    expect(shouldRedirectToTour({ ...base, tourCompletedAt: undefined })).toBe(false);
-  });
-});
-
-describe("tour deck", () => {
-  it("is the six slides the copy was written for", () => {
-    expect(TOUR_SLIDE_COUNT).toBe(6);
-    expect(TOUR_SLIDES).toHaveLength(6);
-    // The copy is fixed: every title, body and emoji pinned word for word.
-    expect(TOUR_SLIDES).toEqual([
-      {
-        title: "Welcome",
-        body: "A quick look at what you can do here. Swipe to continue, or skip anytime.",
-        emoji: "👋",
-      },
-      {
-        title: "Log every meal",
-        body: "Tap Log meal after your baby eats. Over time you get a full picture of what they've tried, and if a reaction shows up you can trace it back to the foods and allergens served that day.",
-        emoji: "🍽️",
-      },
-      {
-        title: "Keep track of what you've prepped",
-        body: "Add batches to Storage with where they live: fridge, freezer, or counter. Each item shows how long it stays fresh, so you serve it in time and toss it when it's past.",
-        emoji: "📦",
-      },
-      {
-        title: "Introduce allergens step by step",
-        body: "The allergen ladder lists the common allergens. Mark each one established once it's been tolerated, and tap it to see which foods carry it and when you served them.",
-        emoji: "🪜",
-      },
-      {
-        title: "Help when you need it",
-        body: "Learn has short guides on choking, allergies, and tummy changes. Symptom check helps you decide when to call someone. Find both under More.",
-        emoji: "🛟",
-      },
-      {
-        title: "You're ready",
-        body: "Add your baby's profile, then log the first meal.",
-        emoji: "✨",
-      },
-    ]);
+    expect(shouldOpenTour({ ...base, tourCompletedAt: undefined })).toBe(false);
   });
 });

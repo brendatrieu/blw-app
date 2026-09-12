@@ -37,9 +37,12 @@ const PERSISTED_QUERY_KEY_PREFIXES = new Set([
   "meals",
   "favorites",
   "allergen-progress",
-  // The first-run tour's "seen" flag. Restoring it is what stops a cold,
-  // offline start from replaying the tour for someone who has seen it.
-  "preferences",
+  // Deliberately NOT here: the tour's "seen" flag (["preferences"]). A
+  // restored `{ tourCompletedAt: null }` makes the query read "success"
+  // before the network has said anything, and that is exactly how a parent
+  // who had finished the tour was shown it again on the next cold start.
+  // The gate (shouldOpenTour) only ever acts on a network answer, so there
+  // is nothing for a persisted copy to do but lie.
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

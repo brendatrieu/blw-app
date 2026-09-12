@@ -5,7 +5,7 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { Baby } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
-import { AppLayout, isChromelessPath, shouldScrollToTop } from "./AppLayout.js";
+import { AppLayout, shouldScrollToTop } from "./AppLayout.js";
 
 function renderLayout(queryClient: QueryClient, pathname = "/") {
   return renderToString(
@@ -53,49 +53,22 @@ describe("AppLayout header", () => {
   });
 });
 
-describe("isChromelessPath (item 303)", () => {
-  it("is true for the tour and nothing else the app routes to", () => {
-    expect(isChromelessPath("/tour")).toBe(true);
-    for (const pathname of [
-      "/",
-      "/more",
-      "/settings",
-      "/storage",
-      "/log-meal",
-      "/safety",
-      "/chat",
-      // Neither a prefix nor a suffix match: only the exact route is chromeless.
-      "/tour/",
-      "/tour/2",
-      "/tourism",
-      "/detour",
-    ]) {
-      expect(isChromelessPath(pathname), pathname).toBe(false);
+describe("AppLayout chrome (item 310 — the tour stopped being a route)", () => {
+  it("renders the header, the bottom nav and the nav-height padding on every route", () => {
+    // v1 had a chromeless branch for /tour. The tour is a dialog over the
+    // app now, so there is no route left that hides the app's own chrome —
+    // and /tour itself is just a Not found.
+    for (const pathname of ["/", "/more", "/settings", "/storage", "/tour"]) {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const html = renderLayout(queryClient, pathname);
+
+      expect(html, pathname).toContain("<nav");
+      expect(html, pathname).toContain(">Home<");
+      expect(html, pathname).toContain('aria-label="Settings"');
+      expect(html, pathname).toContain("--nav-height");
+      // The outlet still renders under it.
+      expect(html, pathname).toContain("content");
     }
-  });
-});
-
-describe("AppLayout chrome", () => {
-  it("drops the bottom nav, the header and the nav-height padding on the tour", () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const html = renderLayout(queryClient, "/tour");
-
-    expect(html).not.toContain("<nav");
-    expect(html).not.toContain(">Home<");
-    expect(html).not.toContain('aria-label="Settings"');
-    expect(html).not.toContain("--nav-height");
-    // The page itself still renders — the chrome went, not the outlet.
-    expect(html).toContain("content");
-  });
-
-  it("keeps both on every other route", () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const html = renderLayout(queryClient, "/more");
-
-    expect(html).toContain("<nav");
-    expect(html).toContain(">Home<");
-    expect(html).toContain('aria-label="Settings"');
-    expect(html).toContain("--nav-height");
   });
 });
 

@@ -1,16 +1,19 @@
 import type { ReactNode } from "react";
 import { PageHeader } from "../components/ui/PageHeader.js";
-import { CardLink } from "../components/ui/Card.js";
+import { CardButton, CardLink } from "../components/ui/Card.js";
+import { useTour } from "../features/tour/TourProvider.js";
 
-interface MoreLink {
-  to: string;
+interface MoreRow {
   label: string;
   description: string;
   emoji: string;
   badge?: string;
+  /** Where the row goes, or `"tour"` for the one row that opens a dialog instead. */
+  to?: string;
+  action?: "tour";
 }
 
-const moreLinks: MoreLink[] = [
+const moreLinks: MoreRow[] = [
   // First in the list, and named for the bottom-nav tab it replaced: "Learn"
   // left the bar to make room for Recipes (item 274).
   {
@@ -32,10 +35,11 @@ const moreLinks: MoreLink[] = [
     description: "Recipe help and ask-anything BLW questions.",
     emoji: "💬",
   },
-  // Item 305: the tour's only other way in. Last of the content rows and
-  // ahead of Settings, which stays the end of the list.
+  // Item 311: the tour's only other way in. It is a modal now, not a route,
+  // so this row is a button wearing the same card as its neighbours — last of
+  // the content rows and ahead of Settings, which stays the end of the list.
   {
-    to: "/tour",
+    action: "tour",
     label: "Take the tour",
     description: "A quick look around the app",
     emoji: "🧭",
@@ -51,30 +55,51 @@ function ComingSoonChip({ children }: { children: ReactNode }) {
   );
 }
 
+/** One row's insides, shared so the link rows and the button row cannot drift apart. */
+function RowContent({ row }: { row: MoreRow }) {
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg-inset)] text-xl leading-none"
+      >
+        {row.emoji}
+      </span>
+      <span className="flex flex-1 flex-col gap-0.5">
+        <span className="text-sm font-semibold text-[var(--color-text)]">{row.label}</span>
+        <span className="text-xs text-[var(--color-text-muted)]">{row.description}</span>
+      </span>
+      {row.badge ? <ComingSoonChip>{row.badge}</ComingSoonChip> : null}
+    </>
+  );
+}
+
+const ROW_CLASSES = "flex items-center gap-3";
+
 export function MorePage() {
+  const { openTour } = useTour();
+
   return (
     <div className="flex flex-col gap-4 p-4">
       <PageHeader title="More" emoji="✨" />
 
       <nav className="flex flex-col gap-2">
-        {moreLinks.map((link) => (
-          <CardLink key={link.to} to={link.to} padding="sm" className="flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg-inset)] text-xl leading-none"
-            >
-              {link.emoji}
-            </span>
-            <span className="flex flex-1 flex-col gap-0.5">
-              <span className="text-sm font-semibold text-[var(--color-text)]">{link.label}</span>
-              <span className="text-xs text-[var(--color-text-muted)]">{link.description}</span>
-            </span>
-            {link.badge ? <ComingSoonChip>{link.badge}</ComingSoonChip> : null}
-          </CardLink>
-        ))}
+        {moreLinks.map((row) =>
+          row.to ? (
+            <CardLink key={row.to} to={row.to} padding="sm" className={ROW_CLASSES}>
+              <RowContent row={row} />
+            </CardLink>
+          ) : (
+            <CardButton key={row.label} padding="sm" className={ROW_CLASSES} onClick={openTour}>
+              <RowContent row={row} />
+            </CardButton>
+          ),
+        )}
       </nav>
 
-      <p className="mt-2 text-center font-caption text-[var(--color-text-muted)]">blw-app v{__APP_VERSION__}</p>
+      <p className="mt-2 text-center font-caption text-[var(--color-text-muted)]">
+        Little Meals v{__APP_VERSION__}
+      </p>
     </div>
   );
 }

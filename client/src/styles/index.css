@@ -428,6 +428,40 @@ textarea {
 }
 
 /* -------------------------------------------------------------------------
+ * Dialog — dimmed overlay + a centred card that settles into place (see
+ * ui/Dialog.tsx). Same idiom as the sheet above: instant for reduced-motion
+ * users rather than skipped, so the dialog still appears. Carries no colors
+ * — those come from the tokens on the elements themselves.
+ * ---------------------------------------------------------------------- */
+@keyframes dialog-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialog-panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.dialog-overlay {
+  animation: dialog-overlay-in var(--duration-base) var(--ease-out) both;
+}
+
+.dialog-panel {
+  animation: dialog-panel-in var(--duration-base) var(--ease-spring) both;
+}
+
+/* -------------------------------------------------------------------------
  * Celebration — CSS-only confetti burst (see ui/Celebration.tsx). Each
  * piece is a small rotated rectangle that arcs up and settles down; the
  * whole burst is skipped (no particle elements rendered) for
@@ -474,6 +508,8 @@ textarea {
   }
   .sheet-overlay,
   .sheet-panel,
+  .dialog-overlay,
+  .dialog-panel,
   .celebration-toast {
     animation: none;
   }

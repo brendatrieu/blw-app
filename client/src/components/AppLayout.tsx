@@ -1,9 +1,8 @@
 import { useEffect, useRef, type SVGProps } from "react";
-import { Link, Outlet, useLocation, useNavigate, useNavigationType } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { ageInMonths } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { usePreferences } from "../features/tour/hooks.js";
-import { shouldRedirectToTour } from "../features/tour/tour.js";
+import { TourProvider } from "../features/tour/TourProvider.js";
 import { isDaytimeHour, timeOfDayGreeting } from "../lib/greeting.js";
 import { BottomNav } from "./BottomNav.js";
 import { CelebrationProvider } from "./ui/Celebration.js";
@@ -141,26 +140,8 @@ export function shouldScrollToTop(navigationType: "PUSH" | "POP" | "REPLACE"): b
   return navigationType !== "POP";
 }
 
-/**
- * Routes that own the whole viewport: no header, no bottom nav, no
- * nav-height padding. The tour is the only one — it is a full-bleed,
- * six-slide takeover with its own Skip control, and the app's chrome around
- * it would both crop it and offer a half-configured account (an empty baby
- * switcher, a nav to pages they have not been introduced to yet).
- *
- * A function over a set rather than a `startsWith`: chromelessness is a
- * property of specific routes, and a prefix rule would quietly swallow any
- * future `/tour/...` sub-page's decision to keep the chrome.
- */
-const CHROMELESS_PATHS = new Set(["/tour"]);
-
-export function isChromelessPath(pathname: string): boolean {
-  return CHROMELESS_PATHS.has(pathname);
-}
-
 export function AppLayout() {
   const location = useLocation();
-  const navigate = useNavigate();
   const navigationType = useNavigationType();
   // Read through a ref so the effect keys on the PATH alone — a ?tab=
   // change on the same page keeps its scroll position.
@@ -174,42 +155,16 @@ export function AppLayout() {
     if (shouldScrollToTop(navigationTypeRef.current)) window.scrollTo(0, 0);
   }, [location.pathname]);
 
-  // -----------------------------------------------------------------------
-  // First-run gate (item 304)
-  // -----------------------------------------------------------------------
-  // Nothing about this renders: while the query is pending the app looks
-  // exactly as it always did, and the redirect only fires once the answer is
-  // actually known — so there is no flash of the dashboard-then-tour for a
-  // returning parent, and no blank screen for anyone.
-  const { data: preferences, status: preferencesStatus } = usePreferences();
-  const redirectedToTourRef = useRef(false);
-
-  useEffect(() => {
-    const redirect = shouldRedirectToTour({
-      status: preferencesStatus,
-      tourCompletedAt: preferences?.tourCompletedAt,
-      pathname: location.pathname,
-      alreadyRedirected: redirectedToTourRef.current,
-    });
-    if (!redirect) return;
-    // Latched before navigating: one automatic trip to the tour per session,
-    // however the visit ends. A parent who skips it and whose PATCH failed
-    // gets the app, not a loop back into the tour.
-    redirectedToTourRef.current = true;
-    navigate("/tour", { replace: true });
-  }, [preferencesStatus, preferences, location.pathname, navigate]);
-
-  const chromeless = isChromelessPath(location.pathname);
-
   return (
     <CelebrationProvider>
-      <div
-        className="mx-auto flex min-h-full max-w-lg flex-col"
-        style={
-          chromeless ? undefined : { paddingBottom: "calc(var(--nav-height) + env(safe-area-inset-bottom))" }
-        }
-      >
-        {chromeless ? null : (
+      {/* The tour lives here rather than in App so it can open over any
+          authenticated page, keep the chrome behind it, and leave the parent
+          exactly where they were when it closes. */}
+      <TourProvider>
+        <div
+          className="mx-auto flex min-h-full max-w-lg flex-col"
+          style={{ paddingBottom: "calc(var(--nav-height) + env(safe-area-inset-bottom))" }}
+        >
           <header
             className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b px-4 py-2.5"
             style={{
@@ -221,15 +176,15 @@ export function AppLayout() {
             <BabySwitcher />
             <SettingsLink />
           </header>
-        )}
 
-        <main className="scroll-momentum flex-1">
-          <div key={location.pathname} className="page-transition">
-            <Outlet />
-          </div>
-        </main>
-        {chromeless ? null : <BottomNav />}
-      </div>
+          <main className="scroll-momentum flex-1">
+            <div key={location.pathname} className="page-transition">
+              <Outlet />
+            </div>
+          </main>
+          <BottomNav />
+        </div>
+      </TourProvider>
     </CelebrationProvider>
   );
 }

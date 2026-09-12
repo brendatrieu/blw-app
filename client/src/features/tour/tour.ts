@@ -3,18 +3,18 @@
  *
  * Everything the carousel and the first-run gate actually *decide* lives
  * here rather than inside an effect or a scroll handler: which slide the
- * track is showing, where a Skip goes, and whether a signed-in parent should
- * be sent to `/tour` at all. The components stay a thin shell over these, so
- * the node-env suite (renderToString, no DOM) can pin the behaviour without
- * a browser.
+ * track is showing, what leaving writes, and whether the dialog should open
+ * itself at all. The components stay a thin shell over these, so the
+ * node-env suite (no DOM) can pin the behaviour without a browser.
  */
 
 /**
  * Clamps a slide index into `[0, count - 1]`.
  *
  * Every way into the carousel goes through here — a rounded scroll position,
- * a Next tap on the last slide, an End key, a dot — so "there is no slide 6
- * of 6" is answered in one place instead of at each call site.
+ * a Next tap on the last slide, a Back tap on the first, an End key, a dot —
+ * so "there is no slide 6 of 6" is answered in one place instead of at each
+ * call site.
  */
 export function clampSlide(index: number, count: number): number {
   if (count <= 0) return 0;
@@ -36,59 +36,62 @@ export function slideIndexFromScroll(scrollLeft: number, slideWidth: number, cou
   return clampSlide(Math.round(scrollLeft / slideWidth), count);
 }
 
-/** What Skip and "Get started" do, which is the same thing twice over. */
+/** What every way out of the tour does, which is the same thing four times over. */
 export interface TourExit {
   /** Whether to mark the tour seen. A replay must not re-stamp the date. */
   patch: boolean;
-  to: string;
-  replace: boolean;
 }
 
 /**
- * Where leaving the tour lands.
+ * What leaving the tour writes.
  *
- * `replay` is "the tour was already marked seen when this page opened" —
- * i.e. the parent arrived from More's "Take the tour" row rather than from
- * the first-run redirect. A replay goes back where it came from and writes
- * nothing; a first run marks the tour seen and starts the app properly at
- * the dashboard.
+ * `replay` is "the tour was already marked seen when the dialog opened" —
+ * i.e. the parent tapped More's "Take the tour" row after finishing it once,
+ * rather than meeting it on a first run. A replay writes nothing; a first run
+ * marks the tour seen.
  *
- * Both replace rather than push: the tour is not somewhere the back button
- * should be able to return to.
+ * Nowhere to go: the tour is a modal over the app now, so every exit just
+ * closes it and leaves the parent on the page they were already on. The
+ * decision is still a function rather than an `if` inside the dialog so the
+ * "a replay must not re-stamp the date" rule has one pinned home.
  */
 export function resolveTourExit(replay: boolean): TourExit {
-  return replay ? { patch: false, to: "/more", replace: true } : { patch: true, to: "/", replace: true };
+  return { patch: !replay };
 }
 
-export interface TourRedirectInput {
+export interface TourOpenInput {
   /** The `["preferences"]` query's status — nothing is decided until it resolves. */
   status: "pending" | "error" | "success";
+  /**
+   * The same query's `fetchStatus`. "idle" alongside a "success" status means
+   * the answer on hand is the one the network gave us this session.
+   */
+  fetchStatus: "fetching" | "paused" | "idle";
   tourCompletedAt: string | null | undefined;
-  pathname: string;
-  /** Whether this session has already sent the user to the tour once. */
-  alreadyRedirected: boolean;
+  /** Whether this session has already opened the tour once. */
+  alreadyOpened: boolean;
 }
 
 /**
- * Whether a signed-in parent should be sent to the tour right now.
+ * Whether the tour should open itself right now.
  *
- * Deliberately false in every uncertain case. A pending query must not
- * redirect (that is the flash), an errored one must not either (an API blip
- * is not a reason to interrupt someone who has already seen the tour), and
- * once a session has redirected once it never does so again — otherwise a
- * failed PATCH would trap the user in a loop between the dashboard and the
- * tour, which is exactly the wall the tour must not be.
+ * Deliberately false in every uncertain case. A pending query must not open
+ * it, an errored one must not either (an API blip is not a reason to
+ * interrupt someone who has already seen the tour), and once a session has
+ * opened it once it never re-opens by itself.
+ *
+ * `fetchStatus === "idle"` is the load-bearing clause, not a belt-and-braces
+ * one: a persisted cache can make `status` read "success" off a *restored*
+ * `{ tourCompletedAt: null }` while the real answer is still in flight, and
+ * that is exactly how a parent who had finished the tour got it again on the
+ * next cold start. A restored-but-refetching query reads "success" +
+ * "fetching", so it decides nothing until the network answers.
  */
-export function shouldRedirectToTour({
-  status,
-  tourCompletedAt,
-  pathname,
-  alreadyRedirected,
-}: TourRedirectInput): boolean {
+export function shouldOpenTour({ status, fetchStatus, tourCompletedAt, alreadyOpened }: TourOpenInput): boolean {
   if (status !== "success") return false;
+  if (fetchStatus !== "idle") return false;
   // `undefined` is "resolved to nothing", which is not the same as a known
-  // null and is not worth redirecting on.
+  // null and is not worth interrupting anyone over.
   if (tourCompletedAt !== null) return false;
-  if (pathname === "/tour") return false;
-  return !alreadyRedirected;
+  return !alreadyOpened;
 }
