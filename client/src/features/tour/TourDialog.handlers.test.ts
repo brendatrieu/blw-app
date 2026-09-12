@@ -206,7 +206,7 @@ describe("TourDialog (items 310, 313)", () => {
     expect(tree.props.ariaLabel).toBe("Little Meals tour");
   });
 
-  it("renders all six slides in order, copy verbatim, with the line break preserved", () => {
+  it("renders all six slides in order, copy verbatim", () => {
     h.reset();
     const { track } = renderTour();
     const slides = track.props.children as Rendered[];
@@ -217,21 +217,14 @@ describe("TourDialog (items 310, 313)", () => {
       const text = collectText(slide);
       expect(text, `slide ${index + 1} emoji`).toContain(expected.emoji);
       expect(text, `slide ${index + 1} title`).toContain(expected.title);
-      // The body string, newline and all — not a reflowed or split copy.
+      // The body string as written — not a reflowed or split copy.
       expect(text, `slide ${index + 1} body`).toContain(expected.body);
+      // One paragraph, rendered as plain text: nothing reintroduces a break.
+      const body = findByClass(slide, "text-sm");
+      expect(body, `slide ${index + 1} body element`).not.toBeNull();
+      expect(body!.props.children).toBe(expected.body);
+      expect(body!.props.className).not.toContain("whitespace-pre");
     });
-
-    // Slide 5's break survives as a break: the body element carries the raw
-    // string, newline and all, and renders it `whitespace-pre-line`.
-    const body = findByClass(slides[4]!, "whitespace-pre-line");
-    expect(body, "slide 5's body should render pre-line").not.toBeNull();
-    expect(body!.props.children).toBe(TOUR_SLIDES[4]!.body);
-    expect(String(body!.props.children)).toContain("\n");
-    // Every slide's body takes the same treatment, not just the one that
-    // needs it today.
-    for (const slide of slides) {
-      expect(findByClass(slide, "whitespace-pre-line")).not.toBeNull();
-    }
   });
 
   it("gives every slide the same height so the card cannot resize mid-swipe", () => {

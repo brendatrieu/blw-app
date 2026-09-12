@@ -33,7 +33,7 @@ describe("tour deck", () => {
       },
       {
         title: "Help when you need it",
-        body: "Learn has short guides on choking, allergies, and tummy changes.\nSymptom check helps you decide if you should seek care. Find both under More.",
+        body: "Learn has short guides on choking, allergies, and tummy changes. Symptom check helps you decide if you should seek care. Find both under More.",
         emoji: "🛟",
       },
       {
@@ -44,18 +44,8 @@ describe("tour deck", () => {
     ]);
   });
 
-  it("breaks slide 5's body across two lines, and no other slide's", () => {
-    // A real newline in the data, not a `<br>` in the component: the break is
-    // part of the copy. TourDialog renders bodies `whitespace-pre-line`.
-    const fifth = TOUR_SLIDES[4]!;
-    expect(fifth.title).toBe("Help when you need it");
-    expect(fifth.body.split("\n")).toEqual([
-      "Learn has short guides on choking, allergies, and tummy changes.",
-      "Symptom check helps you decide if you should seek care. Find both under More.",
-    ]);
-
+  it("keeps every body as one flowing paragraph — no line breaks in the copy", () => {
     for (const [index, slide] of TOUR_SLIDES.entries()) {
-      if (index === 4) continue;
       expect(slide.body, `slide ${index + 1} should be one line`).not.toContain("\n");
     }
   });

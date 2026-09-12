@@ -3,12 +3,6 @@
  * idea each, no subtitle and no extra sentences — so it lives here as data
  * rather than inside the dialog's markup, and `slides.test.ts` can pin it
  * word for word.
- *
- * Slide 5's body carries a real `\n`: two sentences about two different
- * places to get help, and they read as two lines. The dialog renders bodies
- * with `whitespace-pre-line` so the break survives into the DOM — it is
- * content, not formatting, which is why it lives in the string here rather
- * than as a `<br>` in the component.
  */
 export interface TourSlide {
   title: string;
@@ -40,7 +34,7 @@ export const TOUR_SLIDES: readonly TourSlide[] = [
   },
   {
     title: "Help when you need it",
-    body: "Learn has short guides on choking, allergies, and tummy changes.\nSymptom check helps you decide if you should seek care. Find both under More.",
+    body: "Learn has short guides on choking, allergies, and tummy changes. Symptom check helps you decide if you should seek care. Find both under More.",
     emoji: "🛟",
   },
   {

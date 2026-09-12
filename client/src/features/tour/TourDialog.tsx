@@ -156,9 +156,7 @@ export function TourDialog({ onClose }: TourDialogProps) {
               {slide.emoji}
             </span>
             <h2 className="text-xl font-semibold text-[var(--color-text)]">{slide.title}</h2>
-            {/* `whitespace-pre-line`: slide 5's copy carries a real newline
-                between its two sentences, and it is content, not layout. */}
-            <p className="text-sm whitespace-pre-line text-[var(--color-text-muted)]">{slide.body}</p>
+            <p className="text-sm text-[var(--color-text-muted)]">{slide.body}</p>
           </section>
         ))}
       </div>
