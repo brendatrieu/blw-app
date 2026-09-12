@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuthConfig } from "../features/babies/hooks.js";
+import { useLocation, useNavigate } from "react-router-dom";
 import { authErrorMessage, signIn } from "../lib/auth.js";
-import { Button } from "../components/ui/Button.js";
+import { Button, ButtonLink } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
 import { Field } from "../components/ui/Field.js";
 import { Input } from "../components/ui/Input.js";
@@ -37,7 +36,6 @@ export function validateLogin(values: LoginValues): LoginErrors {
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const authConfig = useAuthConfig();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,7 +43,6 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const redirectTo = (location.state as { from?: string } | null)?.from ?? "/";
-  const googleEnabled = authConfig.data?.googleEnabled ?? false;
 
   const { errors, attemptSubmit } = useSubmitValidation({ email, password }, validateLogin, LOGIN_FIELD_ORDER, {
     email: "login-email",
@@ -76,8 +73,8 @@ export function LoginPage() {
         <span aria-hidden="true" className="text-4xl leading-none">
           👋
         </span>
-        <h1 className="font-display text-[var(--color-text)]">Welcome back</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">Sign in to pick up where you left off.</p>
+        <h1 className="font-display text-[var(--color-text)]">Welcome to Little Meals</h1>
+        <p className="text-sm text-[var(--color-text-muted)]">Sign in or create an account.</p>
       </div>
 
       <Card padding="md" className="flex flex-col gap-4">
@@ -122,30 +119,11 @@ export function LoginPage() {
           </Button>
         </form>
 
-        <div className="flex flex-col gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!googleEnabled}
-            className="text-base"
-            onClick={() => {
-              void signIn.social({ provider: "google", callbackURL: redirectTo });
-            }}
-          >
-            Continue with Google
-          </Button>
-          {!googleEnabled && authConfig.isSuccess ? (
-            <p className="text-xs text-[var(--color-text-muted)]">Google sign-in is not configured on this server.</p>
-          ) : null}
-        </div>
-      </Card>
-
-      <p className="text-center text-sm text-[var(--color-text-muted)]">
-        New here?{" "}
-        <Link to="/signup" className="font-semibold text-[var(--color-accent)] underline">
+        {/* The two ways in sit together: sign in above, or start fresh. */}
+        <ButtonLink to="/signup" variant="secondary" className="text-base">
           Create an account
-        </Link>
-      </p>
+        </ButtonLink>
+      </Card>
     </div>
   );
 }

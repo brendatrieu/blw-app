@@ -69,6 +69,15 @@ describe("LoginPage (render)", () => {
     expect(render()).toMatch(/<form[^>]*novalidate/i);
   });
 
+  it("offers both ways in — sign in, or create an account — and no Google button", () => {
+    const html = render();
+    expect(html).toContain("Welcome to Little Meals");
+    expect(html).toContain("Sign in or create an account.");
+    expect(html).toMatch(/<a[^>]*href="\/signup"[^>]*>Create an account<\/a>/);
+    expect(html).not.toContain("Google");
+    expect(html).not.toContain("Welcome back");
+  });
+
   it("still renders both fields with the ids a failed submit focuses", () => {
     const html = render();
     expect(html).toContain('id="login-email"');

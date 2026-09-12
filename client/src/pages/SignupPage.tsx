@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuthConfig } from "../features/babies/hooks.js";
-import { authErrorMessage, signIn, signUp } from "../lib/auth.js";
+import { authErrorMessage, signUp } from "../lib/auth.js";
 import { Button } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
 import { Field } from "../components/ui/Field.js";
@@ -43,15 +42,12 @@ export function validateSignup(values: SignupValues): SignupErrors {
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const authConfig = useAuthConfig();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const googleEnabled = authConfig.data?.googleEnabled ?? false;
 
   const { errors, attemptSubmit } = useSubmitValidation({ name, email, password }, validateSignup, SIGNUP_FIELD_ORDER, {
     name: "signup-name",
@@ -152,23 +148,6 @@ export function SignupPage() {
             {submitting ? "Creating account…" : "Create account"}
           </Button>
         </form>
-
-        <div className="flex flex-col gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!googleEnabled}
-            className="text-base"
-            onClick={() => {
-              void signIn.social({ provider: "google", callbackURL: "/" });
-            }}
-          >
-            Continue with Google
-          </Button>
-          {!googleEnabled && authConfig.isSuccess ? (
-            <p className="text-xs text-[var(--color-text-muted)]">Google sign-in is not configured on this server.</p>
-          ) : null}
-        </div>
       </Card>
 
       <p className="text-center text-sm text-[var(--color-text-muted)]">

@@ -1,11 +1,9 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { Baby, CreateBabyInput, UpdateBabyInput } from "@blw/shared";
 import {
-  authConfigKey,
   babyKeys,
   createBaby,
   deleteBaby,
-  fetchAuthConfig,
   fetchBabies,
   updateBaby,
 } from "./api.js";
@@ -15,16 +13,6 @@ export function useBabies(includeArchived = false) {
     queryKey: babyKeys.list(includeArchived),
     queryFn: () => fetchBabies(includeArchived),
     staleTime: 30_000,
-  });
-}
-
-export function useAuthConfig() {
-  return useQuery({
-    queryKey: authConfigKey,
-    queryFn: fetchAuthConfig,
-    // The server's OAuth configuration cannot change without a restart.
-    staleTime: Infinity,
-    retry: false,
   });
 }
 

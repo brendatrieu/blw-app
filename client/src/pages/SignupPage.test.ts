@@ -78,6 +78,8 @@ describe("SignupPage (render)", () => {
 
   it("renders all three fields with the ids a failed submit focuses", () => {
     const html = render();
+    expect(html).not.toContain("Google");
+    expect(html).toMatch(/href="\/login"/);
     expect(html).toContain('id="signup-name"');
     expect(html).toContain('id="signup-email"');
     expect(html).toContain('id="signup-password"');
