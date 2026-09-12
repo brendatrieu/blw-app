@@ -45,9 +45,12 @@ export function Dialog({ open, onClose, ariaLabel, children }: DialogProps) {
     document.body.style.overflow = "hidden";
 
     previouslyFocused.current = document.activeElement as HTMLElement | null;
+    // Focus lands on the panel itself (tabIndex -1, no outline), not on its
+    // first control: a programmatic focus on a button draws the browser's
+    // focus ring around it on mobile, which read as a stray border on Skip.
+    // Tab from here goes to the first control as usual.
     const panel = panelRef.current;
-    const focusable = panel?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-    (focusable?.[0] ?? panel)?.focus();
+    panel?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {

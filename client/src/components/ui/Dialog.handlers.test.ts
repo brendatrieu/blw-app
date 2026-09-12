@@ -162,7 +162,8 @@ describe("Dialog handlers (item 309)", () => {
     // The panel ref is seeded before the effect runs, the way React has it attached by then.
     h.store.refs[0] = { current: panel };
     open(() => {});
-    expect(focused).toEqual(["first"]);
+    // Opening focuses the panel, never a control (no stray focus ring on Skip).
+    expect(focused).toEqual(["panel"]);
 
     const tab = (shiftKey: boolean) => {
       let prevented = false;
