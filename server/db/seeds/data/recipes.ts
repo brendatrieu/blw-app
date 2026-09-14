@@ -1,6 +1,7 @@
 import { basicRecipes } from './basicRecipes'
 import { coverageRecipesA } from './coverageRecipesA'
 import { coverageRecipesB } from './coverageRecipesB'
+import { coverageRecipesC } from './coverageRecipesC'
 import type { RecipeSeed } from './types'
 
 // 15 starter recipes, each with 6/9/12-month variants. No added salt or sugar anywhere, and no
@@ -676,9 +677,10 @@ const curatedRecipes: RecipeSeed[] = [
   },
 ]
 
-// The seeded catalog, 113 recipes: the 15 curated multi-ingredient recipes FIRST, in
-// their original order, then the 39 coverage recipes (items 338-339, split across two
-// files purely so two authors could write them in parallel), then the 59 single-food
+// The seeded catalog, 119 recipes: the 15 curated multi-ingredient recipes FIRST, in
+// their original order, then the 43 coverage recipes (items 338-339 wrote 39 across two
+// files purely so two authors could write them in parallel; item 343 added batch C for
+// the two plain tree nuts), then the 61 single-food
 // "Simple <food>" basics (one per non-spice food — spices have none, see
 // basicRecipes.ts). Order matters only for readability of a fresh seed — every row
 // upserts by slug — but keeping the curated block first means the original 15 are
@@ -693,5 +695,6 @@ export const recipes: RecipeSeed[] = [
   ...curatedRecipes,
   ...coverageRecipesA,
   ...coverageRecipesB,
+  ...coverageRecipesC,
   ...basicRecipes,
 ]

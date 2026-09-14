@@ -22,8 +22,8 @@ async function loadRunSeeds(): Promise<(db: Database) => Promise<void>> {
   return mod.runSeeds;
 }
 
-/** Catalog size after the spices batch (ledger items 329-332). */
-const CATALOG_FOOD_COUNT = 71;
+/** Catalog size after the spices batch (329-332) and the plain nuts (item 342). */
+const CATALOG_FOOD_COUNT = 73;
 
 /** The 12 spice/herb rows, in seed order. */
 const SPICE_SLUGS = [
@@ -43,7 +43,16 @@ const SPICE_SLUGS = [
 
 /** Every catalog food that carries each allergen, after the expansion. */
 const ALLERGEN_CARRIERS: Record<string, string[]> = {
-  tree_nut: ["almond_butter", "cashew_butter", "hazelnuts", "pecans", "pistachios", "walnuts"],
+  tree_nut: [
+    "almond_butter",
+    "almonds",
+    "cashew_butter",
+    "cashews",
+    "hazelnuts",
+    "pecans",
+    "pistachios",
+    "walnuts",
+  ],
   fish: ["cod", "salmon", "sardines", "trout", "tuna"],
   sesame: ["sesame_seeds", "tahini"],
 };
@@ -55,6 +64,16 @@ const ALLERGEN_CARRIERS: Record<string, string[]> = {
  * form ("grind them to a meal") leaves "a handful of walnuts" unanswered.
  */
 const PROHIBITION = /\bnever\b|stays? off the menu|\bavoid\b|\brather than\b/i;
+/**
+ * Nuts and hard seeds are safe in exactly one form — a fine meal or a thinned
+ * smooth butter. For these, any sentence that names a piece-like form has to
+ * be the one forbidding it; tomatoes and berries are left out because
+ * "quarter into small pieces" IS their safe form.
+ */
+const GROUND_ONLY = new Set(["almonds", "cashews", "walnuts", "pistachios", "hazelnuts", "pecans", "pumpkin_seeds"]);
+const UNSAFE_FORM = /\b(?:whole|chopped|halved|halves|half|slivered|flaked|chunks?|pieces?|crushed)\b/i;
+const FORBIDS =
+  /\b(?:never|not|no|avoid|without|until|rather than|instead of|hazard|hazards|choking|always)\b|stays? off the menu|\bn't\b/i;
 
 interface HazardCopy {
   /** The preparation that makes the food safe, asserted on `chokingNotes`. */
@@ -134,6 +153,17 @@ const HAZARD_COPY: Record<string, HazardCopy> = {
   pecans: {
     safeForm: /fine meal/i,
     hazard: /halves and pieces/i,
+    everyPrep: /\bgrind\b|\bground\b/i,
+  },
+  // ---- The plain nuts behind the two butters (item 342) ----
+  almonds: {
+    safeForm: /fine meal/i,
+    hazard: /whole and chopped/i,
+    everyPrep: /\bgrind\b|\bground\b/i,
+  },
+  cashews: {
+    safeForm: /fine meal|thinned runny/i,
+    hazard: /whole and chopped/i,
     everyPrep: /\bgrind\b|\bground\b/i,
   },
   // ---- The spices whose safety is a shape, not a dose (item 330) ----
@@ -270,7 +300,7 @@ describe("seeded catalog after the spices expansion", () => {
     await close();
   });
 
-  it("seeds exactly 71 catalog foods, 12 of them spices", async () => {
+  it("seeds exactly 73 catalog foods, 12 of them spices", async () => {
     const rows = await db
       .select({ slug: schema.foods.slug, category: schema.foods.category })
       .from(schema.foods)
@@ -357,7 +387,7 @@ describe("seeded catalog after the spices expansion", () => {
       expect(body.foods.map((f) => f.slug).sort()).toEqual([...slugs].sort());
       expect(body.foods.every((f) => f.allergens.includes(allergen))).toBe(true);
     }
-    expect(ALLERGEN_CARRIERS.tree_nut).toHaveLength(6);
+    expect(ALLERGEN_CARRIERS.tree_nut).toHaveLength(8);
     expect(ALLERGEN_CARRIERS.fish).toHaveLength(5);
     expect(ALLERGEN_CARRIERS.sesame).toHaveLength(2);
   });
@@ -441,12 +471,20 @@ describe("seeded catalog after the spices expansion", () => {
       if (!PROHIBITION.test(safetyText)) {
         failures.push(`${slug}: nothing in the safety copy forbids the unsafe form (${PROHIBITION})`);
       }
+      // The presence checks above cannot see an unsafe suggestion ADDED next
+      // to the safe one ("...or scatter a few chopped almonds on top"), so any
+      // sentence that names an unsafe form has to be the one forbidding it.
+      for (const sentence of GROUND_ONLY.has(slug) ? safetyText.split(/(?<=[.!?;])\s+/) : []) {
+        if (UNSAFE_FORM.test(sentence) && !FORBIDS.test(sentence)) {
+          failures.push(`${slug}: a sentence offers an unsafe form without forbidding it — "${sentence.trim()}"`);
+        }
+      }
     }
     expect(failures).toEqual([]);
   });
 
   it("requires a pinned safety sentence for every high-choking-risk food", async () => {
-    // The completeness half: a 12th nut, or any new food bucketed `high`, has
+    // The completeness half: another nut, or any new food bucketed `high`, has
     // to arrive with its copy pinned in HAZARD_COPY above rather than slipping
     // in unguarded — which is exactly how the copy came to be undefended.
     const rows = await db
@@ -456,9 +494,9 @@ describe("seeded catalog after the spices expansion", () => {
 
     expect(rows.filter((r) => !r.chokingNotes?.trim()).map((r) => r.slug)).toEqual([]);
     expect(rows.filter((r) => !Object.hasOwn(HAZARD_COPY, r.slug)).map((r) => r.slug)).toEqual([]);
-    // The 13 the catalog holds today (4 produce, 3 butters, 5 nuts, pumpkin
+    // The 15 the catalog holds today (4 produce, 3 butters, 7 nuts, pumpkin
     // seeds) — a food dropping OUT of `high` is a safety change too.
-    expect(rows).toHaveLength(13);
+    expect(rows).toHaveLength(15);
   });
 
   it("re-seeds without changing a single catalog row", async () => {
@@ -471,7 +509,7 @@ describe("seeded catalog after the spices expansion", () => {
     expect(secondPass.counts).toEqual(firstPass.counts);
     expect(secondPass.digest).toBe(firstPass.digest);
     expect(firstPass.counts.foods).toBe(CATALOG_FOOD_COUNT);
-    // 15 curated + 39 coverage (items 338-339) + 59 single-food basics.
-    expect(firstPass.counts.recipes).toBe(113);
+    // 15 curated + 43 coverage (items 338-339, 343) + 61 single-food basics.
+    expect(firstPass.counts.recipes).toBe(119);
   });
 });

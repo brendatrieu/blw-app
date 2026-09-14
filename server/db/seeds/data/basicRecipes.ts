@@ -2181,4 +2181,77 @@ export const basicRecipes: RecipeSeed[] = [
       },
     },
   },
+  // Item 343. Both nuts are raw-served: no step here cooks anything, not even
+  // the word "toast" — the grinding is the whole preparation.
+  {
+    slug: 'simple-almonds',
+    title: 'Simple almonds',
+    minAgeMonths: 6,
+    prepMinutes: 5,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'almonds', quantityNote: '1 teaspoon shelled almonds, ground to a fine meal' }],
+    variants: {
+      '6': {
+        textureNote: 'A teaspoon of fine almond meal stirred through porridge, yogurt, or a fruit mash.',
+        steps: [
+          'Grind shelled almonds to a fine, flour-like meal — whole and chopped almonds are a serious choking hazard and stay off the menu until age 4-5.',
+          'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash until nothing hard is left.',
+          'Tree nut is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
+          'Plain almond flour from a bag is the same thing, as long as nothing has been added to it.',
+        ],
+      },
+      '9': {
+        textureNote: 'Fine almond meal stirred through porridge, yogurt, soft fruit, or a mash.',
+        steps: [
+          'Grind shelled almonds to a fine meal, in a small batch.',
+          'Stir it through porridge, yogurt, soft fruit, or a mash.',
+          'Pieces and halves stay off the menu — the grinding is what makes this safe.',
+        ],
+      },
+      '12': {
+        textureNote: 'Fine almond meal stirred into food, or a smooth almond butter thinned runny.',
+        steps: [
+          'Keep to finely ground almond meal stirred into food, or a smooth almond butter thinned until runny.',
+          'Pieces, halves, and whole nuts stay off the menu until age 4-5.',
+          'Grind small batches and keep the meal in the fridge.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-cashews',
+    title: 'Simple cashews',
+    minAgeMonths: 6,
+    prepMinutes: 5,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'cashews', quantityNote: '1 teaspoon plain, unsalted cashews, ground to a fine meal' }],
+    variants: {
+      '6': {
+        textureNote: 'A teaspoon of fine cashew meal stirred through porridge, yogurt, or a fruit mash.',
+        steps: [
+          'Grind plain, unsalted cashews to a fine, flour-like meal — whole and chopped cashews are a serious choking hazard and stay off the menu until age 4-5.',
+          'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash until nothing hard is left.',
+          'Tree nut is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
+          'Buy the plain kernels rather than the salted ones, which carry far too much sodium for a baby.',
+        ],
+      },
+      '9': {
+        textureNote: 'Fine cashew meal stirred through porridge, yogurt, soft fruit, or a mash.',
+        steps: [
+          'Grind plain, unsalted cashews to a fine meal, in a small batch.',
+          'Stir it through porridge, yogurt, soft fruit, or a mash.',
+          'Pieces and halves stay off the menu — the grinding is what makes this safe.',
+          'Cashew and pistachio are closely related, so a reaction to one means taking care with the other.',
+        ],
+      },
+      '12': {
+        textureNote: 'Fine cashew meal stirred into food, or a smooth cashew butter thinned runny.',
+        steps: [
+          'Keep to finely ground cashew meal stirred into food, or a smooth cashew butter thinned until runny.',
+          'Pieces, halves, and whole nuts stay off the menu until age 4-5.',
+          'Grind small batches and keep the meal in the fridge.',
+        ],
+      },
+    },
+  },
 ]

@@ -105,4 +105,9 @@ export const pairings: PairingSeed[] = [
     vitCFoodSlug: 'mango',
     reason: "Mango's vitamin C boosts absorption of the non-heme iron in thinned cashew butter.",
   },
+  {
+    ironFoodSlug: 'cashews',
+    vitCFoodSlug: 'broccoli',
+    reason: "Broccoli's vitamin C helps baby absorb more of the non-heme iron in finely ground cashew meal.",
+  },
 ]

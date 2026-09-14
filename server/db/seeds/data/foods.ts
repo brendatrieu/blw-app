@@ -1,6 +1,6 @@
 import type { FoodSeed } from './types'
 
-// ~71 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
+// ~73 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
 // staples. minAgeMonths is 6 for nearly everything (BLW typically starts around 6 months when
 // baby shows readiness signs); shellfish is held to 9 months per the allergen ladder ordering.
 // Prep guidance is age-specific: 6-8m favors palmar-grasp finger shapes and thinned textures,
@@ -1184,6 +1184,51 @@ export const foods: FoodSeed[] = [
       'Keep to finely ground pecan meal stirred into food; halves and pieces stay off the menu.',
     chokingNotes: 'Pecan halves and pieces are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal and stir it into a wet food.',
     notes: 'A tree-nut carrier for the allergen ladder. Grind in small batches and keep the meal in the fridge — pecan meal is oily and turns rancid quickly.',
+    allergens: ['tree_nut'],
+    storageCategory: 'pantry_dry',
+  },
+  // Item 342: the plain nuts behind the two butters the catalog already carries.
+  // `almond_butter` and `cashew_butter` stay — a ground meal and a thinned butter
+  // are different things on the tray — and both rows are held to the same rule as
+  // the other ground nuts: a fine, flour-like meal stirred into a wet food, never a
+  // piece, a half, or a whole nut.
+  {
+    slug: 'almonds',
+    name: 'Almonds',
+    category: 'protein',
+    ironLevel: 'moderate',
+    vitaminCLevel: 'low',
+    fiberLevel: 'high',
+    chokingRisk: 'high',
+    minAgeMonths: 6,
+    prep6m:
+      'Grind shelled almonds to a fine, flour-like meal and stir 1 teaspoon through porridge, yogurt, or a fruit mash — never a piece, a half, or a whole nut.',
+    prep9m:
+      'Stir finely ground almond meal through porridge, yogurt, soft fruit, or a mash.',
+    prep12m:
+      'Keep to finely ground almond meal stirred into food, or a smooth almond butter thinned runny; pieces and whole nuts stay off the menu.',
+    chokingNotes: 'Whole and chopped almonds are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal and stir it into a wet food so nothing hard is left.',
+    notes: 'The plain-nut form of the tree-nut ladder step almond butter already covers. Plain ground almonds (sold as almond flour or almond meal) are the same thing, as long as nothing is added to them.',
+    allergens: ['tree_nut'],
+    storageCategory: 'pantry_dry',
+  },
+  {
+    slug: 'cashews',
+    name: 'Cashews',
+    category: 'protein',
+    ironLevel: 'high',
+    vitaminCLevel: 'low',
+    fiberLevel: 'high',
+    chokingRisk: 'high',
+    minAgeMonths: 6,
+    prep6m:
+      'Grind plain, unsalted cashews to a fine, flour-like meal and stir 1 teaspoon through porridge, yogurt, or a fruit mash — never a piece, a half, or a whole nut.',
+    prep9m:
+      'Stir finely ground cashew meal through porridge, yogurt, soft fruit, or a mash.',
+    prep12m:
+      'Keep to finely ground cashew meal stirred into food, or a smooth cashew butter thinned runny; pieces and whole nuts stay off the menu.',
+    chokingNotes: 'Whole and chopped cashews are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal and stir it into a wet food, or use a plain smooth cashew butter thinned runny.',
+    notes: 'Buy plain, unsalted kernels: salted cashews carry far too much sodium for a baby. One of the better plant-based iron sources, so pair it with a vitamin-C food. Cashew and pistachio are closely related, so a reaction to one means taking care with the other.',
     allergens: ['tree_nut'],
     storageCategory: 'pantry_dry',
   },

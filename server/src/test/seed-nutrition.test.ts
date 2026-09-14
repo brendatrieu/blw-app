@@ -48,6 +48,11 @@ const EXPECTED_FIBER_LEVEL: Record<string, "high" | "moderate" | "low"> = {
   chia_seeds: "high", // 34.4 g, dried
   cashew_butter: "moderate", // 2.0 g, plain without salt — the one nut/seed here under 3 g
   cod: "low", // 0 g, Atlantic, cooked
+  // Item 342, same sources file and the same rule. Cashews sit just over the
+  // 3 g line, so a row that reused the cashew-BUTTER figure (2.0 g) would fail
+  // here rather than ship a `moderate` badge on the whole nut.
+  almonds: "high", // 12.5 g, whole nuts
+  cashews: "high", // 3.3 g, raw
 };
 
 describe("seeded fiber levels", () => {

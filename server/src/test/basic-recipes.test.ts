@@ -41,7 +41,7 @@ const CURATED_SLUGS = [
 
 /**
  * Ledger item 266. Runs over the seeded catalog, which is every recipe file
- * (recipes.ts exports the curated 15, the 39 coverage recipes and the 59
+ * (recipes.ts exports the curated 15, the 43 coverage recipes and the 61
  * basics), so a step added to any of them is covered.
  */
 const COOKING_VERB = /\b(?:roast|bake|steam|boil|simmer|saut[eé]|fry|poach|scramble|toast|cook)\b/i;
@@ -92,6 +92,10 @@ const RAW_SERVED_FOODS: readonly string[] = [
   "pistachios",
   "hazelnuts",
   "pecans",
+  // Item 342: the plain nuts, ground to a meal and stirred into a wet food —
+  // never cooked, in any recipe, at any age.
+  "almonds",
+  "cashews",
 ];
 
 /**
@@ -372,9 +376,9 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     expect(wrong).toEqual([]);
 
     // The exact row count, so deleting one stage of one recipe fails HERE even
-    // though the recipe count is untouched: 110 six-month recipes x 3 stages +
+    // though the recipe count is untouched: 116 six-month recipes x 3 stages +
     // 3 nine-month recipes (simple-shrimp and the two shrimp dishes) x 2.
-    expect(variantRows.length).toBe(336);
+    expect(variantRows.length).toBe(354);
   });
 
   it("gives every catalog variant 3-6 steps and a texture note", async () => {
@@ -418,10 +422,10 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
 
   it("gives every cooking step a temperature or a time", async () => {
     const variants = await catalogVariants();
-    // 113 recipes: the curated 15, the 39 coverage recipes added for the
-    // "3 recipes per food" rule (items 338-339), and 59 basics (58 x 3 stages +
-    // shrimp's 2) — one per non-spice food after the expansion (item 331).
-    expect(new Set(variants.map((v) => v.slug)).size).toBe(113);
+    // 119 recipes: the curated 15, the 43 coverage recipes added for the
+    // "3 recipes per food" rule (items 338-339, 343), and 61 basics (60 x 3
+    // stages + shrimp's 2) — one per non-spice food (item 331, item 342).
+    expect(new Set(variants.map((v) => v.slug)).size).toBe(119);
 
     const cookingSteps = variants.flatMap((v) =>
       v.instructions
