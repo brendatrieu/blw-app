@@ -471,6 +471,7 @@ describe("seeded catalog after the spices expansion", () => {
     expect(secondPass.counts).toEqual(firstPass.counts);
     expect(secondPass.digest).toBe(firstPass.digest);
     expect(firstPass.counts.foods).toBe(CATALOG_FOOD_COUNT);
-    expect(firstPass.counts.recipes).toBe(74);
+    // 15 curated + 39 coverage (items 338-339) + 59 single-food basics.
+    expect(firstPass.counts.recipes).toBe(113);
   });
 });

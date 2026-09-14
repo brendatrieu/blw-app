@@ -1,4 +1,6 @@
 import { basicRecipes } from './basicRecipes'
+import { coverageRecipesA } from './coverageRecipesA'
+import { coverageRecipesB } from './coverageRecipesB'
 import type { RecipeSeed } from './types'
 
 // 15 starter recipes, each with 6/9/12-month variants. No added salt or sugar anywhere, and no
@@ -24,15 +26,16 @@ const curatedRecipes: RecipeSeed[] = [
     ingredients: [
       { foodSlug: 'beef', quantityNote: '115g (4oz) lean ground beef or a thin-cut steak' },
       { foodSlug: 'sweet_potato', quantityNote: '1 small sweet potato, peeled' },
+      { foodSlug: 'cumin', quantityNote: 'a pinch, seasoned onto the beef' },
     ],
-    extraIngredients: [{ name: 'olive oil' }, { name: 'cumin (optional)', quantityNote: 'pinch of' }],
+    extraIngredients: [{ name: 'olive oil' }],
     variants: {
       '6': {
         textureNote:
           'Finger-length, soft strips baby can hold in a fist with some poking out the top; beef cooked well-done and shredded fine, sweet potato steamed until it mashes easily between two fingers.',
         steps: [
           'Peel and cube the sweet potato, then steam or boil it for 12-15 minutes, until a fork slides through with no resistance and a cube mashes easily between two fingers.',
-          'Season the beef with a pinch of cumin if using (no added salt), then pan-fry a thin steak over medium heat for 4-5 minutes a side, or shape ground beef into a thin patty and bake it at 350°F (180°C) for 20-25 minutes, until well-done at 160°F (71°C) with no pink left.',
+          'Season the beef with a pinch of cumin (no added salt), then pan-fry a thin steak over medium heat for 4-5 minutes a side, or shape ground beef into a thin patty and bake it at 350°F (180°C) for 20-25 minutes, until well-done at 160°F (71°C) with no pink left.',
           'Once cool enough to handle, mince or finely shred the beef so no tough or stringy pieces remain, and mash the sweet potato with a drizzle of olive oil.',
           'Cut the sweet potato into finger-length wedges and serve alongside a small pile of minced beef moistened with a little olive oil or cooking liquid so it is not dry.',
           'Sit with baby throughout the meal and supervise closely.',
@@ -85,7 +88,7 @@ const curatedRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Pea-sized, soft crumbled pieces of patty baby can pick up between finger and thumb.',
         steps: [
-          'Prepare the patty mixture as for the 6-month version, double-checking the salmon is completely bone-free.',
+          'Prepare the patty mixture as for the 6-month version — bake the salmon at 375°F (190°C) for 10-12 minutes, until it is opaque and flakes at 145°F (63°C) — double-checking it is completely bone-free.',
           'Shape into smaller patties, or one larger patty to slice after cooking.',
           'Cook in a little olive oil over medium heat, about 3 minutes per side, until firm and set to 160°F (71°C), then cool and break into pea-sized, soft pieces.',
           'Serve on a plate for baby to self-feed.',
@@ -94,7 +97,7 @@ const curatedRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Small bite-sized patty pieces or a mini whole patty baby can pick up and bite from.',
         steps: [
-          'Make the mixture as above and shape into small mini patties suited to little hands.',
+          'Make the mixture as above — bake the salmon at 375°F (190°C) for 10-12 minutes, until it flakes at 145°F (63°C) — and shape into small mini patties suited to little hands.',
           'Cook in a little olive oil over medium heat for about 3 minutes per side, until golden, firm, and 160°F (71°C) in the centre.',
           'Cut into bite-sized pieces or serve whole for baby to bite pieces off with supervision.',
           'Pair with a vitamin-C side like steamed broccoli for extra iron absorption.',
@@ -115,18 +118,16 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'zucchini', quantityNote: '1/2 small zucchini, grated' },
       { foodSlug: 'carrot', quantityNote: '1 small carrot, grated' },
       { foodSlug: 'egg', quantityNote: '1 egg, beaten' },
+      { foodSlug: 'paprika', quantityNote: 'a pinch of sweet (mild) paprika' },
     ],
-    extraIngredients: [
-      { name: 'olive oil for the pan' },
-      { name: 'cumin or mild paprika (optional)', quantityNote: 'pinch of' },
-    ],
+    extraIngredients: [{ name: 'olive oil for the pan' }],
     variants: {
       '6': {
         textureNote: 'Soft, finger-length fritters that squish easily between two fingers.',
         steps: [
           'Simmer the lentils in unsalted water over low heat for 15-20 minutes, until they collapse and mash easily, then drain well.',
           'Squeeze excess water from the grated zucchini and carrot using a clean towel.',
-          'Mix the lentils, zucchini, carrot, and beaten egg together with a pinch of cumin if using.',
+          'Mix the lentils, zucchini, carrot, and beaten egg together with a pinch of sweet paprika.',
           'Spoon into finger-length oval shapes and pan-fry in olive oil over medium-low heat, about 3-4 minutes per side, until set, golden, and cooked through to 160°F (71°C).',
           'Cool until warm and check a fritter mashes easily between your fingers before serving.',
         ],
@@ -164,15 +165,15 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'iron_fortified_oats', quantityNote: '1/2 cup rolled oats, blended into flour' },
       { foodSlug: 'peanut_butter', quantityNote: '1 tablespoon smooth peanut butter' },
       { foodSlug: 'egg', quantityNote: '1 egg' },
+      { foodSlug: 'cinnamon', quantityNote: 'a pinch, whisked into the batter' },
     ],
-    extraIngredients: [{ name: 'cinnamon (optional)', quantityNote: 'pinch of' }],
     variants: {
       '6': {
         textureNote: 'Soft, thin mini pancakes cut into finger-length strips.',
         steps: [
           'Blend the oats into a coarse flour.',
           'In a bowl, thoroughly whisk the peanut butter with a tablespoon of warm water until smooth and runny — never serve peanut butter thick or straight from the jar.',
-          'Mash the banana and mix with the egg, oat flour, thinned peanut butter, and cinnamon if using into a smooth batter.',
+          'Mash the banana and mix with the egg, oat flour, thinned peanut butter, and a pinch of cinnamon into a smooth batter.',
           'Cook small, thin pancakes in a lightly oiled non-stick pan over medium-low heat, about 2 minutes per side — bubbles should break on the surface before you flip — until fully set with no wet batter inside.',
           'Cool and cut into finger-length strips to serve.',
         ],
@@ -289,11 +290,12 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'iron_fortified_oats', quantityNote: '1/3 cup rolled oats' },
       { foodSlug: 'pear', quantityNote: '1/2 ripe pear, grated or finely diced' },
       { foodSlug: 'yogurt', quantityNote: '1/4 cup plain whole-milk yogurt' },
+      {
+        foodSlug: 'chia_seeds',
+        quantityNote: '1 teaspoon chia seeds, soaked with the oats until every seed has swelled into a soft gel',
+      },
     ],
-    extraIngredients: [
-      { name: 'chia seeds', quantityNote: '1 teaspoon' },
-      { name: 'breast milk, formula, or water to thin' },
-    ],
+    extraIngredients: [{ name: 'breast milk, formula, or water to thin' }],
     variants: {
       '6': {
         textureNote: 'Smooth, thinned porridge-like texture loose enough to drip slowly off a spoon.',
@@ -426,17 +428,15 @@ const curatedRecipes: RecipeSeed[] = [
     ingredients: [
       { foodSlug: 'tofu', quantityNote: '200g (7oz) firm tofu, pressed' },
       { foodSlug: 'iron_fortified_oats', quantityNote: '1/4 cup oats, blended into fine crumbs' },
+      { foodSlug: 'garlic', quantityNote: 'a pinch of salt-free garlic powder' },
     ],
-    extraIngredients: [
-      { name: 'olive oil for the pan' },
-      { name: 'garlic powder (optional)', quantityNote: 'pinch of' },
-    ],
+    extraIngredients: [{ name: 'olive oil for the pan' }],
     variants: {
       '6': {
         textureNote: 'Soft finger-length tofu strips with a lightly crisp oat coating.',
         steps: [
           'Press the tofu to remove excess water, then slice into finger-length strips.',
-          'Blend the oats into fine crumbs and season lightly with garlic powder if using.',
+          'Blend the oats into fine crumbs and season lightly with a pinch of salt-free garlic powder.',
           'Press each tofu strip into the oat crumbs to coat.',
           'Pan-fry in olive oil over medium heat for 2-3 minutes per side, until lightly golden and crisp at the edges, keeping the inside soft.',
           'Cool slightly and check the strip squishes easily before serving.',
@@ -513,17 +513,19 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'chickpeas', quantityNote: '1 cup cooked chickpeas' },
       { foodSlug: 'sweet_potato', quantityNote: '1 medium sweet potato, peeled and cubed' },
       { foodSlug: 'tomato', quantityNote: '1 tomato, diced' },
+      { foodSlug: 'cumin', quantityNote: 'a pinch, warmed in the oil first' },
+      { foodSlug: 'turmeric', quantityNote: 'a pinch, warmed in the oil first' },
     ],
     extraIngredients: [
       { name: 'unsweetened coconut milk' },
-      { name: 'mild curry spices such as cumin, turmeric, and coriander (no added salt)' },
+      { name: 'ground coriander', quantityNote: 'a pinch of' },
       { name: 'olive oil' },
     ],
     variants: {
       '6': {
         textureNote: 'Soft, well-mashed curry with a thick, scoopable texture; sweet potato mashes easily against the roof of the mouth.',
         steps: [
-          'Sauté the mild spices in olive oil over medium heat for 30-60 seconds, until they smell fragrant, then add the sweet potato, chickpeas, tomato, and coconut milk.',
+          'Sauté a pinch each of cumin, turmeric, and ground coriander in olive oil over medium heat for 30-60 seconds, until they smell fragrant, then add the sweet potato, chickpeas, tomato, and coconut milk.',
           'Simmer covered over low heat for 15-20 minutes, until the sweet potato is completely soft and falls apart under a fork.',
           'Mash roughly with a fork so the mixture is soft and scoopable but not fully smooth.',
           'Cool to a safe temperature and serve loaded onto a pre-loaded spoon.',
@@ -601,11 +603,9 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'iron_fortified_oats', quantityNote: '1/3 cup rolled oats' },
       { foodSlug: 'apple', quantityNote: '1/2 apple, peeled, cored, and finely diced' },
       { foodSlug: 'tahini', quantityNote: '1 teaspoon tahini' },
+      { foodSlug: 'cinnamon', quantityNote: 'a pinch' },
     ],
-    extraIngredients: [
-      { name: 'cinnamon', quantityNote: 'pinch of' },
-      { name: 'breast milk, formula, or water to thin' },
-    ],
+    extraIngredients: [{ name: 'breast milk, formula, or water to thin' }],
     variants: {
       '6': {
         textureNote: 'Smooth, thinned porridge loose enough to drip slowly off a spoon.',
@@ -629,7 +629,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Cook the oats over medium-low heat for 5-6 minutes, to a thick, family-style porridge consistency.',
           'Stir in the softened apple and tahini, mixed evenly through so no thick pockets remain.',
-          'Sprinkle with a pinch of cinnamon and serve with a spoon.',
+          'Stir a pinch of cinnamon through the porridge — never sprinkled on dry — and serve with a spoon.',
         ],
       },
     },
@@ -676,9 +676,22 @@ const curatedRecipes: RecipeSeed[] = [
   },
 ]
 
-// The seeded catalog: the 15 curated multi-ingredient recipes FIRST, in their
-// original order, then the 59 single-food "Simple <food>" basics (one per
-// non-spice food — spices have none, see basicRecipes.ts). Order matters
-// only for readability of a fresh seed — every row upserts by slug — but keeping
-// the curated block first means the existing 15 are untouched by the addition.
-export const recipes: RecipeSeed[] = [...curatedRecipes, ...basicRecipes]
+// The seeded catalog, 113 recipes: the 15 curated multi-ingredient recipes FIRST, in
+// their original order, then the 39 coverage recipes (items 338-339, split across two
+// files purely so two authors could write them in parallel), then the 59 single-food
+// "Simple <food>" basics (one per non-spice food — spices have none, see
+// basicRecipes.ts). Order matters only for readability of a fresh seed — every row
+// upserts by slug — but keeping the curated block first means the original 15 are
+// untouched by the additions, and keeping the basics last keeps them easy to find.
+//
+// The coverage block exists to satisfy the owner's rule, pinned by the guard in
+// server/src/test/recipe-coverage.test.ts: every non-spice catalog food is an
+// ingredient of at least 3 seeded recipes (its "Simple <food>" basic counts as one)
+// and every spice of at least 2. Most foods sit exactly ON that minimum, so dropping
+// an ingredient link from any recipe in these files breaks the guard.
+export const recipes: RecipeSeed[] = [
+  ...curatedRecipes,
+  ...coverageRecipesA,
+  ...coverageRecipesB,
+  ...basicRecipes,
+]

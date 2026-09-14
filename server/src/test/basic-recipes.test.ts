@@ -40,12 +40,181 @@ const CURATED_SLUGS = [
 ];
 
 /**
+ * Ledger item 266. Runs over the seeded catalog, which is every recipe file
+ * (recipes.ts exports the curated 15, the 39 coverage recipes and the 59
+ * basics), so a step added to any of them is covered.
+ */
+const COOKING_VERB = /\b(?:roast|bake|steam|boil|simmer|saut[eé]|fry|poach|scramble|toast|cook)\b/i;
+/** The same verbs minus `toast`, which in these recipes only ever means bread. */
+const NON_TOAST_VERB = /\b(?:roast|bake|steam|boil|simmer|saut[eé]|fry|poach|scramble|cook)\b/i;
+/** °F / °C, or a stovetop heat setting ("medium heat", "medium-low heat", "low heat"). */
+const TEMPERATURE = /\d\s*°\s*[FC]|\b(?:high|medium|low)(?:-(?:high|medium|low))?\s+heat\b/i;
+/** A clock time ("10-12 minutes", "30 seconds", "2-3 hours") or a "until …" doneness cue. */
+const TIME = /\b\d+(?:\s*[-–]\s*\d+)?\s*(?:second|minute|hour)s?\b|\buntil\b/i;
+
+/**
+ * Items 337-339. The safety rules below used to be pinned against a list of
+ * `simple-*` recipe slugs, which left the 39 coverage recipes — and any recipe
+ * added after them — outside every one of them. They are keyed on FOODS now,
+ * so they apply to whichever recipe happens to carry that food, and each has a
+ * completeness half so a newly catalogued food cannot slip past unclassified.
+ *
+ * Foods the catalog never cooks: canned fish, every seed, every nut and nut or
+ * seed butter, dairy, and the fruit that is served raw. No cooking step may
+ * reach one of these at any age — a seed toasted dry, or tuna "warmed through",
+ * is a different food from the one the catalog's prep text and choking copy
+ * describe.
+ */
+const RAW_SERVED_FOODS: readonly string[] = [
+  "sardines",
+  "tuna",
+  "strawberry",
+  "orange",
+  "kiwi",
+  "mango",
+  "yogurt",
+  "cheese",
+  "avocado",
+  "banana",
+  "blueberry",
+  "watermelon",
+  "sesame_seeds",
+  "chia_seeds",
+  "flax_seeds",
+  "hemp_seeds",
+  "pumpkin_seeds",
+  "peanut_butter",
+  "almond_butter",
+  "tahini",
+  "sunflower_seed_butter",
+  "cashew_butter",
+  "walnuts",
+  "pistachios",
+  "hazelnuts",
+  "pecans",
+];
+
+/**
+ * The other side of that coin: foods whose own prep text never cooks them, but
+ * which the recipes legitimately cook. Tomato is served raw in quarters and
+ * simmered into sauce; egg is raw in the shell and always cooked through.
+ */
+const COOKED_IN_RECIPES: readonly string[] = ["tomato", "egg"];
+
+/**
+ * USDA/FSIS + FDA figures, recorded in .workflow/scratch/recipe-detail/sources.md
+ * and .workflow/scratch/catalog-expansion/sources.md. Poultry is 165°F whatever
+ * the cut; pork and lamb take the ground-meat figure because babies get meat
+ * well-done, the same call the catalog already made for beef. EVERY stage of
+ * EVERY recipe carrying one of these foods has to cite it — a stage that says
+ * "prepare as for the 6-month version" has to name the temperature too.
+ */
+const INTERNAL_TEMP: Record<string, RegExp> = {
+  beef: /160°F \(71°C\)/,
+  pork: /160°F \(71°C\)/,
+  lamb: /160°F \(71°C\)/,
+  chicken: /165°F \(74°C\)/,
+  chicken_thigh: /165°F \(74°C\)/,
+  turkey: /165°F \(74°C\)/,
+  salmon: /145°F \(63°C\)/,
+  cod: /145°F \(63°C\)/,
+  trout: /145°F \(63°C\)/,
+  shrimp: /145°F \(63°C\)/,
+};
+
+/** Cooked proteins that carry a doneness cue instead of a probe temperature. */
+const NO_INTERNAL_TEMP: readonly string[] = ["egg", "tofu"];
+
+/** "on a toast finger", "onto toast cut into squares" — bread, not a cooking step. */
+const TOAST_AS_NOUN_SOURCE =
+  "\\b(?:on|onto)\\s+(?:a\\s+soft\\s+)?toast\\b|\\btoast\\s+(?:finger|square|strip|cut)";
+const TOAST_AS_NOUN = new RegExp(TOAST_AS_NOUN_SOURCE, "gi");
+/** The step is talking about bread, so a `toast` in it is not cooking the raw food. */
+const BREAD_IN_STEP = new RegExp(`${TOAST_AS_NOUN_SOURCE}|\\bbread\\b`, "i");
+
+/** Words a slug shares with every other food of its kind, so useless as a cue. */
+const RAW_KEYWORD_NOISE = new Set(["seed", "butter"]);
+
+/** How a step would name a raw-served food: the slug as a phrase, plus its distinctive words. */
+function rawFoodKeywords(slug: string): string[] {
+  const words = slug.split("_").filter((w) => w.length > 3 && !RAW_KEYWORD_NOISE.has(w));
+  // A step names the food in the singular as often as not ("the pecan mixture",
+  // "the walnut meal"), so a plural slug guards both forms.
+  const singular = words.filter((w) => w.length > 4 && w.endsWith("s")).map((w) => w.slice(0, -1));
+  return [...new Set([slug.replace(/_/g, " "), ...words, ...singular])];
+}
+
+const RAW_VERBS = "roast|bake|steam|boil|simmer|saut[eé]|fry|poach|scramble|toast|cook";
+/** Articles and adjectives that may sit between a verb and the food it governs. */
+const RAW_MODIFIERS =
+  "the|a|an|some|your|any|two|three|more|rest|of|it|them|[a-z]+ly|[a-z-]+ed|[a-z-]+ing|" +
+  "ripe|soft|fine|small|thin|warm|cold|smooth|whole|plain|mild|extra";
+
+/**
+ * Does this step apply a cooking verb TO one of these foods? The verb has to
+ * govern the food within three modifier words, so "Toast the bread, then spread
+ * the mashed avocado over it" stays legal while "Simmer the tuna over medium
+ * heat" does not.
+ */
+function cookedRawFood(step: string, slugs: readonly string[]): string | undefined {
+  for (const slug of slugs) {
+    for (const keyword of rawFoodKeywords(slug)) {
+      const pattern = new RegExp(
+        `\\b(?:${RAW_VERBS})\\b(?:\\s+(?:${RAW_MODIFIERS})){0,3}\\s+(?:${keyword})\\b`,
+        "i",
+      );
+      if (pattern.test(step)) return slug;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * honey-salt-sugar.mdx: honey is off-limits in every form under 12 months, and
+ * the catalog never sweetens anything. Every mention has to be a prohibition,
+ * so the negation is required right next to the word — "no honey before 12
+ * months" passes, "with a drizzle of honey, no added salt" does not.
+ */
+const SWEETENER = /\b(?:honey|maple syrup|agave|molasses|golden syrup)\b/i;
+const NEGATED_JUST_BEFORE = /\b(?:no|not|never|without|avoid|skip|don'?t)\b[^.;]{0,24}$/i;
+
+function suggestsSweetener(text: string): boolean {
+  const scan = new RegExp(SWEETENER.source, "gi");
+  let match = scan.exec(text);
+  while (match !== null) {
+    if (!NEGATED_JUST_BEFORE.test(text.slice(Math.max(0, match.index - 28), match.index))) {
+      return true;
+    }
+    match = scan.exec(text);
+  }
+  return false;
+}
+
+/**
+ * Salt and sugar are named far more loosely ("no-salt-added stock", "check the
+ * label for added salt and sugar"), so the qualifier is required somewhere in
+ * the same sentence rather than adjacent. An unqualified "season with a pinch
+ * of salt" has nowhere to hide.
+ */
+const SALT_OR_SUGAR = /\b(?:salt|sugar|syrup|sweeten\w*)\b/i;
+const SALT_SUGAR_QUALIFIER =
+  /\b(?:no|not|never|without|avoid|skip|free|instead|unsweetened|unsalted|label)\b/i;
+
+function unqualifiedSaltOrSugar(text: string): string | undefined {
+  for (const sentence of text.split(/(?<=[.;!?])\s+/)) {
+    if (!SALT_OR_SUGAR.test(sentence)) continue;
+    if (!SALT_SUGAR_QUALIFIER.test(sentence)) return sentence;
+  }
+  return undefined;
+}
+
+/**
  * Ledger item 254. `pnpm db:seed` is never run against the dev database from
  * a test — this proves the same `runSeeds()` the script calls, against a
  * throwaway in-memory Postgres, and proves it TWICE so the "idempotent upsert
  * by slug" claim is a tested property rather than a comment.
  */
-describe("single-food basic recipes", () => {
+describe("catalog recipes: the single-food basics and the curated dishes", () => {
   let close: () => Promise<void>;
   let db: Awaited<ReturnType<typeof createTestDb>>["db"];
 
@@ -163,7 +332,7 @@ describe("single-food basic recipes", () => {
     expect(bySlug.get("simple-shrimp")?.minAgeMonths).toBe(9);
   });
 
-  it("carries a variant for every stage the food allows, and none below it", async () => {
+  it("carries a variant for every stage at or above each recipe's minimum age", async () => {
     const recipes = await catalogRecipes();
     const bySlug = new Map(recipes.map((r) => [r.slug, r]));
 
@@ -185,46 +354,42 @@ describe("single-food basic recipes", () => {
     expect(shrimp).toBeDefined();
     expect([...(stagesByRecipeId.get(shrimp?.id ?? "") ?? [])].sort()).toEqual(["12", "9"]);
 
-    // No basic recipe may carry a variant for a stage below its own minimum.
-    const tooEarly = recipes
-      .filter((r) => r.slug.startsWith("simple-") && r.minAgeMonths > 6)
-      .filter((r) => (stagesByRecipeId.get(r.id) ?? []).includes("6"))
-      .map((r) => r.slug);
-    expect(tooEarly).toEqual([]);
+    // Items 339-340: EVERY catalog recipe, not only the basics. A 6-month
+    // recipe carries 6/9/12 and a 9-month recipe carries 9/12 — a coverage
+    // recipe that lost its 9-month stage would leave that age with nothing to
+    // cook, and one that gained a stage below its minimum would offer a baby a
+    // food it is not ready for.
+    const wrong = recipes
+      .map((r) => ({
+        slug: r.slug,
+        have: [...(stagesByRecipeId.get(r.id) ?? [])].sort().join(","),
+        want: (["6", "9", "12"] as const)
+          .filter((stage) => Number(stage) >= r.minAgeMonths)
+          .sort()
+          .join(","),
+      }))
+      .filter((entry) => entry.have !== entry.want);
+    expect(wrong).toEqual([]);
+
+    // The exact row count, so deleting one stage of one recipe fails HERE even
+    // though the recipe count is untouched: 110 six-month recipes x 3 stages +
+    // 3 nine-month recipes (simple-shrimp and the two shrimp dishes) x 2.
+    expect(variantRows.length).toBe(336);
   });
 
-  it("gives every basic variant 3-6 steps and a texture note", async () => {
-    const basicIds = new Set(
-      (await catalogRecipes()).filter((r) => r.slug.startsWith("simple-")).map((r) => r.id),
-    );
+  it("gives every catalog variant 3-6 steps and a texture note", async () => {
+    // Item 339: the coverage recipes are held to the same shape as the basics,
+    // so this no longer filters to `simple-*`.
+    const variants = await catalogVariants();
+    expect(variants.length).toBeGreaterThan(300);
 
-    const variantRows = await db
-      .select({
-        recipeId: schema.recipeVariants.recipeId,
-        ageStage: schema.recipeVariants.ageStage,
-        textureNote: schema.recipeVariants.textureNote,
-        instructions: schema.recipeVariants.instructions,
-      })
-      .from(schema.recipeVariants);
-
-    const bad = variantRows
-      .filter((v) => basicIds.has(v.recipeId))
-      .filter((v) => v.textureNote.trim() === "" || v.instructions.length < 3 || v.instructions.length > 6);
+    const bad = variants
+      .filter((v) => v.textureNote.trim() === "" || v.instructions.length < 3 || v.instructions.length > 6)
+      .map((v) => ({ slug: v.slug, stage: v.ageStage, steps: v.instructions.length }));
     expect(bad).toEqual([]);
   });
 
-  /**
-   * Ledger item 266. Runs over the seeded catalog, which is BOTH recipe files
-   * (recipes.ts exports the curated 15 followed by the 59 basics), so a step
-   * added to either file is covered.
-   */
-  const COOKING_VERB = /\b(?:roast|bake|steam|boil|simmer|saut[eé]|fry|poach|scramble|toast|cook)\b/i;
-  /** °F / °C, or a stovetop heat setting ("medium heat", "medium-low heat", "low heat"). */
-  const TEMPERATURE = /\d\s*°\s*[FC]|\b(?:high|medium|low)(?:-(?:high|medium|low))?\s+heat\b/i;
-  /** A clock time ("10-12 minutes", "30 seconds", "2-3 hours") or a "until …" doneness cue. */
-  const TIME = /\b\d+(?:\s*[-–]\s*\d+)?\s*(?:second|minute|hour)s?\b|\buntil\b/i;
-
-  /** Every seeded catalog variant, with its recipe slug and stage. */
+  /** Every seeded catalog variant, with its recipe slug, stage and foods. */
   async function catalogVariants() {
     const recipeRows = await catalogRecipes();
     const byId = new Map(recipeRows.map((r) => [r.id, r]));
@@ -238,15 +403,25 @@ describe("single-food basic recipes", () => {
       .from(schema.recipeVariants);
     return variantRows.flatMap((v) => {
       const recipe = byId.get(v.recipeId);
-      return recipe ? [{ ...v, slug: recipe.slug, foodSlugs: recipe.foodSlugs }] : [];
+      return recipe
+        ? [
+            {
+              ...v,
+              slug: recipe.slug,
+              foodSlugs: recipe.foodSlugs,
+              minAgeMonths: recipe.minAgeMonths,
+            },
+          ]
+        : [];
     });
   }
 
   it("gives every cooking step a temperature or a time", async () => {
     const variants = await catalogVariants();
-    // 74 recipes: the curated 15 (3 stages each) plus 59 basics (58 x 3 +
+    // 113 recipes: the curated 15, the 39 coverage recipes added for the
+    // "3 recipes per food" rule (items 338-339), and 59 basics (58 x 3 stages +
     // shrimp's 2) — one per non-spice food after the expansion (item 331).
-    expect(new Set(variants.map((v) => v.slug)).size).toBe(74);
+    expect(new Set(variants.map((v) => v.slug)).size).toBe(113);
 
     const cookingSteps = variants.flatMap((v) =>
       v.instructions
@@ -280,79 +455,202 @@ describe("single-food basic recipes", () => {
     expect(missingUnits).toEqual([]);
   });
 
-  it("adds no cooking step to a food that is served raw", async () => {
-    // Every basic whose food's prep text never cooks it. A regression that
-    // sneaks "bake the banana" in would otherwise pass every other guard.
-    const RAW_SERVED = [
-      "simple-sardines",
-      "simple-strawberry",
-      "simple-orange",
-      "simple-kiwi",
-      "simple-mango",
-      "simple-yogurt",
-      "simple-cheese",
-      "simple-avocado",
-      "simple-banana",
-      "simple-blueberry",
-      "simple-watermelon",
-      // Item 331. Canned tuna arrives cooked; every seed and every tree nut is
-      // ground, soaked, or thinned and stirred in cold. Note the guard reads
-      // "toast" as a cooking verb, so none of these steps may reach for a toast
-      // finger even as a serving suggestion.
-      "simple-tuna",
-      "simple-sesame-seeds",
-      "simple-chia-seeds",
-      "simple-flax-seeds",
-      "simple-hemp-seeds",
-      "simple-pumpkin-seeds",
-      "simple-sunflower-seed-butter",
-      "simple-cashew-butter",
-      "simple-walnuts",
-      "simple-pistachios",
-      "simple-hazelnuts",
-      "simple-pecans",
-    ];
+  it("adds no cooking step to a food that is served raw, in any recipe", async () => {
+    // Guard the guard: the detector has to fire on a step that really does
+    // cook a raw-served food, and stay quiet on one that cooks something else
+    // in the same sentence. Without these two, a regex that stopped matching
+    // would make the whole test pass vacuously.
+    expect(cookedRawFood("Simmer the tuna over medium heat for 5 minutes, until hot.", ["tuna"])).toBe(
+      "tuna",
+    );
+    expect(cookedRawFood("Toast the sesame seeds in a dry pan for 2 minutes.", ["sesame_seeds"])).toBe(
+      "sesame_seeds",
+    );
+    expect(
+      cookedRawFood("Toast the bread, then spread the mashed avocado over it.", ["avocado"]),
+    ).toBeUndefined();
+
     const variants = await catalogVariants();
-    const offenders = variants
-      .filter((v) => RAW_SERVED.includes(v.slug))
-      .flatMap((v) =>
-        v.instructions
-          .map((step, index) => ({ slug: v.slug, stage: v.ageStage, index, step }))
-          .filter((s) => COOKING_VERB.test(s.step)),
-      );
-    expect(variants.filter((v) => RAW_SERVED.includes(v.slug)).length).toBeGreaterThanOrEqual(RAW_SERVED.length);
+    const offenders = variants.flatMap((v) => {
+      const raw = v.foodSlugs.filter((slug) => RAW_SERVED_FOODS.includes(slug));
+      if (raw.length === 0) return [];
+      return v.instructions.flatMap((step, index) => {
+        const found: { slug: string; stage: string; index: number; problem: string }[] = [];
+        // A single-food basic for a raw food may cook NOTHING — except bread,
+        // which several of the spreads suggest as a toast finger. A `toast`
+        // that is not talking about bread is cooking the food itself.
+        if (v.foodSlugs.length === 1) {
+          const cooksItsOwnFood =
+            NON_TOAST_VERB.test(step) || (/\btoast\b/i.test(step) && !BREAD_IN_STEP.test(step));
+          if (cooksItsOwnFood) {
+            found.push({ slug: v.slug, stage: v.ageStage, index, problem: `cooks its only food: ${step}` });
+          }
+        }
+        // Everywhere else the verb has to be governing something other than
+        // the raw food — "toast the bread" is fine, "toast the seeds" is not.
+        const cooked = cookedRawFood(step, raw);
+        if (cooked !== undefined) {
+          found.push({ slug: v.slug, stage: v.ageStage, index, problem: `cooks ${cooked}: ${step}` });
+        }
+        return found;
+      });
+    });
     expect(offenders).toEqual([]);
+
+    // Every raw-served food is actually in the seeded catalog, so the list
+    // cannot quietly name foods that no longer exist.
+    const seeded = new Set(variants.flatMap((v) => v.foodSlugs));
+    expect(RAW_SERVED_FOODS.filter((slug) => !seeded.has(slug))).toEqual([]);
   });
 
-  it("cites the safe minimum internal temperature in every meat, fish, and egg basic", async () => {
-    // USDA/FSIS + FDA figures, recorded in .workflow/scratch/recipe-detail/sources.md.
-    const required: [string, RegExp][] = [
-      ["simple-beef", /160°F \(71°C\)/],
-      ["simple-chicken-thigh", /165°F \(74°C\)/],
-      ["simple-salmon", /145°F \(63°C\)/],
-      ["simple-shrimp", /145°F \(63°C\)/],
-      ["simple-egg", /yolk and (?:the )?white are firm/i],
-      // Item 331. Poultry is 165°F whatever the cut; pork and lamb take the
-      // ground-meat figure because babies get meat well-done, the same call the
-      // catalog already made for beef. Sources:
-      // .workflow/scratch/catalog-expansion/sources.md
-      ["simple-chicken", /165°F \(74°C\)/],
-      ["simple-turkey", /165°F \(74°C\)/],
-      ["simple-pork", /160°F \(71°C\)/],
-      ["simple-lamb", /160°F \(71°C\)/],
-      ["simple-cod", /145°F \(63°C\)/],
-      ["simple-trout", /145°F \(63°C\)/],
-    ];
+  it("classifies every food the catalog never cooks as raw-served or cooked-by-recipe", async () => {
+    // The completeness half of the rule above (item 339). A new food whose prep
+    // text never cooks it has to be sorted into one of the two lists rather
+    // than landing outside the raw-served guard by default — which is exactly
+    // how the coverage recipes' own raw-served copy came to be undefended.
+    const foodRows = await db
+      .select({
+        slug: schema.foods.slug,
+        category: schema.foods.category,
+        prep6m: schema.foods.prep6m,
+        prep9m: schema.foods.prep9m,
+        prep12m: schema.foods.prep12m,
+      })
+      .from(schema.foods)
+      .where(isNull(schema.foods.ownerId));
+    expect(foodRows.length).toBeGreaterThan(0);
+
+    // `toast` as a noun ("on a soft toast finger") is bread, not a method.
+    const neverCooked = foodRows
+      .filter((f) => f.category !== "spice")
+      .filter(
+        (f) =>
+          ![f.prep6m, f.prep9m, f.prep12m].some((text) =>
+            COOKING_VERB.test(text.replace(TOAST_AS_NOUN, " ")),
+          ),
+      )
+      .map((f) => f.slug);
+    expect(neverCooked.length).toBeGreaterThan(20);
+
+    const unclassified = neverCooked.filter(
+      (slug) => !RAW_SERVED_FOODS.includes(slug) && !COOKED_IN_RECIPES.includes(slug),
+    );
+    expect(unclassified).toEqual([]);
+
+    // …and the reverse: a food listed as raw-served whose prep text has started
+    // cooking it means the list, or the prep copy, has drifted.
+    expect(RAW_SERVED_FOODS.filter((slug) => !neverCooked.includes(slug))).toEqual([]);
+  });
+
+  it("cites the safe internal temperature in every stage of every recipe that cooks meat or fish", async () => {
+    // Item 339: keyed on the FOOD, so the rule follows beef or cod into any
+    // recipe that carries them rather than stopping at the `simple-*` basics.
     const variants = await catalogVariants();
 
-    const missing = required.flatMap(([slug, pattern]) => {
-      const stages = variants.filter((v) => v.slug === slug);
-      if (stages.length === 0) return [{ slug, problem: "no variants seeded" }];
-      return stages
-        .filter((v) => !v.instructions.some((step) => pattern.test(step)))
-        .map((v) => ({ slug, problem: `stage ${v.ageStage} never cites ${String(pattern)}` }));
-    });
+    const missing = variants.flatMap((v) =>
+      v.foodSlugs.flatMap((foodSlug) => {
+        const pattern = INTERNAL_TEMP[foodSlug];
+        if (pattern === undefined) return [];
+        if (v.instructions.some((step) => pattern.test(step))) return [];
+        return [{ slug: v.slug, problem: `stage ${v.ageStage} never cites ${String(pattern)} for ${foodSlug}` }];
+      }),
+    );
     expect(missing).toEqual([]);
+
+    // Guard the guard: every food the map names is really on the menu, so a
+    // renamed slug shows up here instead of silently checking nothing.
+    const unused = Object.keys(INTERNAL_TEMP).filter(
+      (foodSlug) => !variants.some((v) => v.foodSlugs.includes(foodSlug)),
+    );
+    expect(unused).toEqual([]);
+
+    // Egg is the one cooked protein that carries a doneness cue rather than a
+    // probe reading — the basic is where that cue is pinned.
+    const eggBasic = variants.filter((v) => v.slug === "simple-egg");
+    expect(eggBasic.length).toBeGreaterThan(0);
+    expect(
+      eggBasic
+        .filter((v) => !v.instructions.some((s) => /yolk and (?:the )?white are firm/i.test(s)))
+        .map((v) => v.ageStage),
+    ).toEqual([]);
+  });
+
+  it("classifies every protein food as probe-temperature, raw-served, or doneness-cued", async () => {
+    // The completeness half (item 339): a new meat or fish added to the catalog
+    // has to be given its temperature here rather than arriving unguarded.
+    const proteinRows = await db
+      .select({ slug: schema.foods.slug })
+      .from(schema.foods)
+      .where(and(eq(schema.foods.category, "protein"), isNull(schema.foods.ownerId)));
+    expect(proteinRows.length).toBeGreaterThan(20);
+
+    const unclassified = proteinRows
+      .map((f) => f.slug)
+      .filter(
+        (slug) =>
+          INTERNAL_TEMP[slug] === undefined &&
+          !RAW_SERVED_FOODS.includes(slug) &&
+          !NO_INTERNAL_TEMP.includes(slug),
+      );
+    expect(unclassified).toEqual([]);
+  });
+
+  it("never suggests honey, added salt, or added sugar in any recipe", async () => {
+    // Item 339. The catalog's honey guard reads FOOD prep text
+    // (seed-catalog.test.ts); nothing read the recipes themselves, so a step
+    // that finished "…with a drizzle of honey" was free to ship. Every field a
+    // parent reads is scanned here: steps, texture notes, ingredient quantity
+    // notes and the free-text extras.
+    expect(suggestsSweetener("Mash the rice and beans with a drizzle of honey.")).toBe(true);
+    expect(suggestsSweetener("Serve unsweetened — no honey before 12 months.")).toBe(false);
+    expect(unqualifiedSaltOrSugar("Season the mince with a pinch of salt.")).toBeDefined();
+    expect(unqualifiedSaltOrSugar("Serve with no added salt.")).toBeUndefined();
+
+    const variants = await catalogVariants();
+    const recipeRows = await db
+      .select({ slug: schema.recipes.slug, extraIngredients: schema.recipes.extraIngredients })
+      .from(schema.recipes)
+      .where(isNull(schema.recipes.ownerId));
+    const ingredientRows = await db
+      .select({ slug: schema.recipes.slug, quantityNote: schema.recipeIngredients.quantityNote })
+      .from(schema.recipeIngredients)
+      .innerJoin(schema.recipes, eq(schema.recipeIngredients.recipeId, schema.recipes.id))
+      .where(isNull(schema.recipes.ownerId));
+
+    const fields: { slug: string; where: string; text: string }[] = [
+      ...variants.flatMap((v) => [
+        ...v.instructions.map((text, index) => ({
+          slug: v.slug,
+          where: `stage ${v.ageStage} step ${String(index)}`,
+          text,
+        })),
+        { slug: v.slug, where: `stage ${v.ageStage} texture note`, text: v.textureNote },
+      ]),
+      ...recipeRows.flatMap((r) =>
+        (r.extraIngredients ?? []).map((extra) => ({
+          slug: r.slug,
+          where: "extra ingredient",
+          text: `${extra.quantityNote} ${extra.name}`,
+        })),
+      ),
+      ...ingredientRows.map((row) => ({
+        slug: row.slug,
+        where: "quantity note",
+        text: row.quantityNote,
+      })),
+    ];
+    expect(fields.length).toBeGreaterThan(1000);
+
+    const offenders = fields.flatMap((field) => {
+      if (suggestsSweetener(field.text)) {
+        return [{ slug: field.slug, where: field.where, problem: `sweetener: ${field.text}` }];
+      }
+      const sentence = unqualifiedSaltOrSugar(field.text);
+      return sentence === undefined
+        ? []
+        : [{ slug: field.slug, where: field.where, problem: `unqualified salt/sugar: ${sentence}` }];
+    });
+    expect(offenders).toEqual([]);
   });
 
   /**
@@ -423,10 +721,10 @@ describe("single-food basic recipes", () => {
     const bySlug = new Map(rows.map((row) => [row.slug, row.extraIngredients ?? []]));
 
     // One curated recipe and one basic, pinned exactly.
-    expect(bySlug.get("beef-sweet-potato-strips")).toEqual([
-      { name: "olive oil", quantityNote: "" },
-      { name: "cumin (optional)", quantityNote: "pinch of" },
-    ]);
+    // Item 338: cumin left this list when it became a real `cumin` ingredient
+    // link, so the spice counts toward its own coverage minimum. Olive oil has
+    // no catalog food row, so it stays an extra.
+    expect(bySlug.get("beef-sweet-potato-strips")).toEqual([{ name: "olive oil", quantityNote: "" }]);
     expect(bySlug.get("simple-egg")).toEqual([
       { name: "breast milk, formula, or water, to loosen", quantityNote: "a splash of" },
     ]);
