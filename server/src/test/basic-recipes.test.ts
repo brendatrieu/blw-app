@@ -440,6 +440,25 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     expect(undated).toEqual([]);
   });
 
+  it("gives every stovetop step a heat level — a simmer or a poach is one by itself", async () => {
+    const variants = await catalogVariants();
+    // Frying, sautéing, browning and scrambling need a burner setting; a
+    // simmer or a poach names its own (just under the boil), so those pass
+    // as written. Steaming and boiling are water temperature and need nothing.
+    // Verbs only — "a soft scrambled pile" and "not browned and brittle"
+    // describe a result, they do not put a pan on the hob.
+    const STOVETOP = /\b(?:fry|frying|saut[eé]|saut[eé]ing|scramble|scrambling|grill|grilling|brown|browning|sear|searing)\b/i;
+    const HEAT_LEVEL =
+      /\b(?:high|medium|low)(?:-(?:high|medium|low))?\s+heat\b|\b(?:low|gentle|bare|slow)\s+simmer\b|\bsimmer\w*\b|\bpoach\w*\b/i;
+    const stovetop = variants.flatMap((v) =>
+      v.instructions
+        .map((step, index) => ({ slug: v.slug, stage: v.ageStage, index, step }))
+        .filter((s) => STOVETOP.test(s.step)),
+    );
+    expect(stovetop.length).toBeGreaterThan(20);
+    expect(stovetop.filter((s) => !HEAT_LEVEL.test(s.step))).toEqual([]);
+  });
+
   it("gives every oven step a temperature in both °F and °C", async () => {
     const variants = await catalogVariants();
     const ovenSteps = variants.flatMap((v) =>
