@@ -8,7 +8,8 @@ import { asCustomRecipeConflict } from "../features/catalog/api.js";
 import { clampStageToAvailable, stageForAge } from "../features/catalog/stage.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../features/catalog/basicRecipe.js";
 import { Badge } from "../features/catalog/components/Badge.js";
-import { RECIPES_TAB_PATH, allergenLabel, customRecipeConflictMessage } from "../features/catalog/constants.js";
+import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
+import { RECIPES_TAB_PATH, customRecipeConflictMessage } from "../features/catalog/constants.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
 import { BackButton } from "../components/ui/BackButton.js";
@@ -209,11 +210,7 @@ export function RecipeDetailPage() {
           {/* Derived from the ingredient list, not stored (item 255). */}
           {isBasicRecipe(recipe.ingredients.length) && <Badge tone="neutral">{BASIC_RECIPE_LABEL}</Badge>}
           {recipe.isCustom && <Badge tone="neutral">Custom</Badge>}
-          {recipe.allergens.map((slug) => (
-            <Badge key={slug} tone="danger">
-              {allergenLabel(slug)}
-            </Badge>
-          ))}
+          <AllergenChips allergens={recipe.allergens} />
         </div>
       </div>
 
@@ -247,12 +244,17 @@ export function RecipeDetailPage() {
                 <span aria-hidden="true" className="text-lg leading-none">
                   {getFoodEmoji(ingredient.foodSlug, null, ingredient.foodEmoji)}
                 </span>
-                <span>
+                <span className="flex-1">
                   <span className="font-medium">{ingredient.foodName}</span>
                   {ingredient.quantityNote ? (
                     <span className="text-[var(--color-text-muted)]"> — {ingredient.quantityNote}</span>
                   ) : null}
                 </span>
+                {/* Item 334: which INGREDIENT brought the allergen the header
+                    badges the whole dish with — "this recipe contains fish"
+                    is not the same answer as "the salmon is the fish". Badges
+                    are plain spans, so the row stays a single link. */}
+                <AllergenChips allergens={ingredient.allergens} />
               </Link>
             </li>
           ))}

@@ -54,8 +54,17 @@ function recipe(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
         isCustom: false,
         foodEmoji: null,
         quantityNote: "half a cup",
+        allergens: [],
       },
-      { foodId: "food-2", foodSlug: "carrot", foodName: "Carrot", isCustom: false, foodEmoji: null, quantityNote: "" },
+      {
+        foodId: "food-2",
+        foodSlug: "carrot",
+        foodName: "Carrot",
+        isCustom: false,
+        foodEmoji: null,
+        quantityNote: "",
+        allergens: [],
+      },
     ],
     extraIngredients: [
       { name: "olive oil", quantityNote: "a drizzle" },

@@ -116,6 +116,40 @@ export const bestBySchema = z.string().trim().transform((value, ctx): string | n
   return new Date(value).toISOString().slice(0, 10);
 });
 
+/** The message both the create schema and the PATCH route answer with, so a
+ * client that skips its own check reads one sentence, not two. */
+export const BEST_BY_BEFORE_PREPARED_ERROR = "bestBy cannot be before the prepared date";
+
+/**
+ * Server-side backstop for "best by is before the prepared date" — the
+ * combination that, since item 333, would make a just-prepared container
+ * render as Expired. The client checks it against LOCAL calendar days,
+ * which is the honest comparison; the server has no timezone at all, so it
+ * allows the same ONE DAY of slack `preparedAtSchema` allows for exactly
+ * the same reason (a parent east of UTC saves "today" on a UTC day that has
+ * not started). Only a date genuinely earlier than that is rejected.
+ *
+ * Zero-padded `YYYY-MM-DD` strings compare lexically the same as
+ * chronologically, so no re-parsing is needed once both sides are days.
+ *
+ * `preparedAt` omitted means "now" — the default the create route applies.
+ */
+export function isBestByBeforePreparedDay(
+  bestBy: string | null | undefined,
+  preparedAt: string | Date | null | undefined,
+): boolean {
+  if (!bestBy) return false;
+  const preparedMs =
+    preparedAt == null
+      ? Date.now()
+      : preparedAt instanceof Date
+        ? preparedAt.getTime()
+        : Date.parse(preparedAt);
+  if (Number.isNaN(preparedMs)) return false;
+  const earliestAllowedDay = new Date(preparedMs - FUTURE_SLACK_MS).toISOString().slice(0, 10);
+  return bestBy < earliestAllowedDay;
+}
+
 export const createStorageItemInputSchema = z
   .object({
     foodIds: z
@@ -143,6 +177,13 @@ export const createStorageItemInputSchema = z
   .refine((value) => Boolean(value.foodIds || value.recipeId || value.label), {
     message: "At least one of foodIds, recipeId, or label is required",
     path: ["foodIds"],
+  })
+  // Both fields are on this payload, so create can decide it here. PATCH
+  // cannot — its answer depends on the row's stored values — so the route
+  // calls `isBestByBeforePreparedDay` on the merged pair instead.
+  .refine((value) => !isBestByBeforePreparedDay(value.bestBy, value.preparedAt), {
+    message: BEST_BY_BEFORE_PREPARED_ERROR,
+    path: ["bestBy"],
   });
 export type CreateStorageItemInput = z.input<typeof createStorageItemInputSchema>;
 
@@ -196,8 +237,17 @@ export const storageItemSchema = z.object({
   /** Both null when servings tracking is off, both set when it is on. */
   servingsTotal: z.number().int().nullable(),
   servingsLeft: z.number().int().nullable(),
-  /** `YYYY-MM-DD`, or null. Does not affect `expiresAt`/`useSoon`/`expired`,
-   * which stay derived from `preparedAt` + the storage window. */
+  /**
+   * `YYYY-MM-DD`, or null.
+   *
+   * `expiresAt`/`useSoon`/`expired` beside it stay derived from `preparedAt`
+   * + the category storage window and are NOT affected by it — the server
+   * never learns the caller's timezone, so it cannot say which local day a
+   * calendar date is. When a best-by date IS set it nonetheless wins: the
+   * client resolves the Use soon / Expired chip from it, and falls back to
+   * these three fields only when it is null (item 333, `resolveFreshness` in
+   * client/src/features/storage/freshness.ts).
+   */
   bestBy: z.string().nullable(),
   /** Free-form note about the container, or null. */
   notes: z.string().nullable(),

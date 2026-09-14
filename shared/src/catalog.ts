@@ -9,7 +9,7 @@ import { z } from "zod";
 export const levelSchema = z.enum(["high", "moderate", "low"]);
 export type Level = z.infer<typeof levelSchema>;
 
-export const foodCategorySchema = z.enum(["protein", "veg", "fruit", "grain", "dairy", "legume"]);
+export const foodCategorySchema = z.enum(["protein", "veg", "fruit", "grain", "dairy", "legume", "spice"]);
 export type FoodCategory = z.infer<typeof foodCategorySchema>;
 
 export const ageStageSchema = z.enum(["6", "9", "12"]);
@@ -221,6 +221,14 @@ export const recipeIngredientSchema = z.object({
    * keep resolving their emoji from the client's slug/category map. */
   foodEmoji: z.string().nullable(),
   quantityNote: z.string(),
+  /**
+   * This ingredient's OWN allergen slugs — the per-food breakdown of the
+   * recipe-level `allergens` above, which only says the dish contains them
+   * somewhere (item 334). Derived from the same `food_allergens` join, so a
+   * custom recipe built on a custom food carries whatever the parent ticked.
+   * Empty for an ingredient with none.
+   */
+  allergens: z.array(z.string()),
 });
 export type RecipeIngredient = z.infer<typeof recipeIngredientSchema>;
 

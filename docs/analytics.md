@@ -78,6 +78,14 @@ is `food_page`, `/storage/add` reached from Home is `home` — never wired to a
 particular button. Only the PRESENCE of a query parameter is read; its value
 never leaves the function that checks it.
 
+`freshness_at_change` is likewise derived, by `resolveFreshness`
+(`features/storage/freshness.ts`) — the same rule that decides the Use soon /
+Expired chip on the card. A parent-entered best-by date wins over the
+category storage window the server's `expired`/`useSoon` flags come from, so
+this property always says what the parent was actually looking at when they
+removed the container. The date itself never leaves the device; only the
+bucket (`fresh` / `use_soon` / `expired`) is sent.
+
 The plan's P2 events (`meal_deleted`, `custom_item_created`, `recipe_favorited`,
 `article_read_depth`, `allergen_marked`, `symptom_alarm_dismissed`,
 `chat_failed`, `pwa_install_prompt_shown`, `account_deleted`) are deliberately

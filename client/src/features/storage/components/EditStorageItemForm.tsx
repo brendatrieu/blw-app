@@ -2,11 +2,42 @@ import { useState } from "react";
 import type { StorageItem, StorageLocation } from "@blw/shared";
 import { useUpdateStorageItem } from "../hooks.js";
 import { LOCATIONS } from "../format.js";
+import { BEST_BY_BEFORE_PREPARED_MESSAGE, isBestByBeforePrepared } from "../freshness.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
 import { DateField } from "../../../components/ui/DateField.js";
 import { Button } from "../../../components/ui/Button.js";
+import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
+
+/** The one field on this form that can be answered wrongly — everything else
+ * is either seeded from the item or optional-and-free-form. */
+export type EditStorageItemField = "bestBy";
+export type EditStorageItemErrors = FormErrors<EditStorageItemField>;
+
+export const EDIT_STORAGE_ITEM_FIELD_ORDER: readonly EditStorageItemField[] = ["bestBy"];
+
+export interface EditStorageItemValues {
+  /** "" when the optional field is unset. */
+  bestBy: string;
+  preparedAt: Date;
+}
+
+/**
+ * The edit form's one rule (item 333): a best-by date before the prepared
+ * date. Both fields live on THIS form, so an edit that moves Prepared
+ * forward past an existing best-by is caught the same way an edit that moves
+ * Best by back is — and the server's PATCH re-checks the merged pair anyway.
+ *
+ * An empty object means valid — same reading as `validateAddStorageItem`.
+ */
+export function validateEditStorageItem(values: EditStorageItemValues): EditStorageItemErrors {
+  const errors: EditStorageItemErrors = {};
+  if (isBestByBeforePrepared(values.bestBy, values.preparedAt)) {
+    errors.bestBy = BEST_BY_BEFORE_PREPARED_MESSAGE;
+  }
+  return errors;
+}
 
 interface EditStorageItemFormProps {
   item: StorageItem;
@@ -29,8 +60,20 @@ export function EditStorageItemForm({ item, onDone }: EditStorageItemFormProps) 
   const [notes, setNotes] = useState(item.notes ?? "");
   const updateItem = useUpdateStorageItem();
 
+  // Same convention as every other form (item 235): Save stays enabled, the
+  // message appears under Best by only after a failed submit, and that
+  // submit focuses the field.
+  const { errors: shownErrors, attemptSubmit } = useSubmitValidation(
+    { bestBy, preparedAt },
+    validateEditStorageItem,
+    EDIT_STORAGE_ITEM_FIELD_ORDER,
+    { bestBy: "storage-edit-best-by" },
+  );
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (updateItem.isPending) return;
+    if (!attemptSubmit()) return;
     updateItem.mutate(
       {
         id: item.id,
@@ -48,7 +91,8 @@ export function EditStorageItemForm({ item, onDone }: EditStorageItemFormProps) 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    // `noValidate`: this form answers its own field rule inline (item 236).
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="text-sm font-semibold text-[var(--color-text)]">Location</span>
         <div className="flex gap-1.5">
@@ -97,7 +141,7 @@ export function EditStorageItemForm({ item, onDone }: EditStorageItemFormProps) 
         />
       </Field>
 
-      <Field label="Best by (optional)" htmlFor="storage-edit-best-by">
+      <Field label="Best by (optional)" htmlFor="storage-edit-best-by" error={shownErrors.bestBy}>
         <DateField id="storage-edit-best-by" value={bestBy} onChange={setBestBy} allowFuture title="Best by" />
       </Field>
 

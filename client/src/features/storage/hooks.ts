@@ -12,6 +12,7 @@ import type {
 } from "@blw/shared";
 import { createStorageItem, fetchStorage, serveStorageItem, updateStorageItem } from "./api.js";
 import { storageItemTitle } from "./format.js";
+import { sortActiveByFreshness } from "./freshness.js";
 import { useCelebration } from "../../components/ui/Celebration.js";
 import { celebrateForNewMeal, snapshotMealCelebrationContext, trackingKeys } from "../tracking/hooks.js";
 import { track } from "../../lib/usage/track.js";
@@ -33,11 +34,26 @@ export const storageKeys = {
   list: (view: StorageView) => ["storage", view] as const,
 };
 
+/**
+ * The active view's order, applied at `select` so EVERY reader gets it: the
+ * server sorts by its own derived `expiresAt`, which a best-by date now
+ * overrides (item 333), so a container best-by tomorrow could otherwise sit
+ * below one the window says is good for three more days. Module-level — a
+ * `select` defined inline would be a new function on every render and
+ * re-sort the cache each time.
+ */
+function selectActiveByFreshness(data: StorageResponse): StorageResponse {
+  return { items: sortActiveByFreshness(data.items) };
+}
+
 export function useStorageItems(view: StorageView) {
   return useQuery({
     queryKey: storageKeys.list(view),
     queryFn: () => fetchStorage(view),
     staleTime: 15_000,
+    // History is a record of what happened, not a queue to work through: it
+    // keeps the server's order (most recently changed first).
+    select: view === "active" ? selectActiveByFreshness : undefined,
   });
 }
 

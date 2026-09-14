@@ -121,6 +121,11 @@ export const foodCategoryEnum = pgEnum("food_category", [
   "grain",
   "dairy",
   "legume",
+  // Added by migration 0014 (item 329). Spices and herbs are catalog foods
+  // like any other — they carry prep guidance ("how to use this by age")
+  // rather than a serving shape, and they are the one category with no
+  // "Simple <food>" basic recipe.
+  "spice",
 ]);
 
 // Category is the natural key seeds upsert on ("on conflict category do
@@ -431,9 +436,12 @@ export const storageItems = pgTable(
     // decrements servings_left and finishes the item when it hits 0.
     servingsTotal: integer("servings_total"),
     servingsLeft: integer("servings_left"),
-    // Parent-declared date on the packaging/container. Purely informational:
-    // the derived expiresAt/useSoon/expired window is still computed from
-    // prepared_at, and the client shows this instead when it is set.
+    // Parent-declared date on the packaging/container, and the authority on
+    // freshness whenever it is set: the client derives its Use soon /
+    // Expired chip from THIS, falling back to the prepared_at + storage
+    // window derivation only when it is null (item 333). The derived window
+    // is still computed server-side and sent alongside — the server has no
+    // timezone, so it cannot resolve a calendar date into a local day.
     bestBy: date("best_by"),
     // Free-form note about the container itself, separate from the
     // measurement-flavoured quantity_note ("half a portion", "3 cubes").

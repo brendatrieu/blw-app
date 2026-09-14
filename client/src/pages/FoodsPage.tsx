@@ -9,6 +9,7 @@ import {
   ALLERGEN_SLUGS,
   AGE_THRESHOLDS,
   CATEGORIES,
+  categoryChipLabel,
   IRON_LEVELS,
   VITAMIN_C_LEVELS,
   FIBER_LEVELS,
@@ -288,7 +289,7 @@ export function FoodsPage() {
           {CATEGORIES.map((opt) => (
             <FilterChip
               key={opt.value}
-              label={opt.label}
+              label={categoryChipLabel(opt)}
               active={opt.value === category}
               onClick={() => setCategory(opt.value === category ? undefined : opt.value)}
               className="min-w-0 flex-1 overflow-hidden px-1 text-[10px] text-ellipsis"

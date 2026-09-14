@@ -2,7 +2,9 @@ import type { FoodCategory } from "@blw/shared";
 
 /**
  * Explicit emoji per seed food slug — one entry for every food in
- * `server/db/seeds/data/foods.ts` (40 as of writing). Kept as a plain
+ * `server/db/seeds/data/foods.ts` (71 as of writing, pinned slug-by-slug in
+ * `foodEmoji.test.ts` so a seed addition cannot quietly fall through to the
+ * category fallback). Kept as a plain
  * record rather than derived from the food's name/category so each choice
  * can be a deliberate, recognizable piece of art rather than a guess.
  */
@@ -54,6 +56,49 @@ const FOOD_EMOJI: Record<string, string> = {
   peas: "🟢",
   rice: "🍚",
   watermelon: "🍉",
+
+  // Plain meats
+  chicken: "🍗",
+  turkey: "🦃",
+  pork: "🍖",
+  lamb: "🐑",
+
+  // More fish
+  cod: "🐟",
+  trout: "🐟",
+  tuna: "🥫",
+
+  // Plain oats
+  oats: "🥣",
+
+  // Seeds
+  sesame_seeds: "🫘",
+  chia_seeds: "🌱",
+  flax_seeds: "🌾",
+  hemp_seeds: "🍃",
+  pumpkin_seeds: "🎃",
+  sunflower_seed_butter: "🌻",
+
+  // Tree nuts
+  cashew_butter: "🌰",
+  walnuts: "🌰",
+  pistachios: "🌰",
+  hazelnuts: "🌰",
+  pecans: "🌰",
+
+  // Spices & herbs
+  cinnamon: "🪵",
+  cumin: "🟤",
+  turmeric: "🟡",
+  paprika: "🌶️",
+  curry_powder: "🍛",
+  black_pepper: "⚫",
+  oregano: "🌿",
+  garlic: "🧄",
+  ginger: "🫚",
+  basil: "🌿",
+  cilantro: "🌿",
+  dill: "🌿",
 };
 
 /** Fallback emoji when a food's slug isn't in `FOOD_EMOJI` (e.g. a future seed addition). */
@@ -64,6 +109,7 @@ const CATEGORY_FALLBACK_EMOJI: Record<FoodCategory, string> = {
   grain: "🌾",
   dairy: "🥛",
   legume: "🫘",
+  spice: "🌿",
 };
 
 /** Emoji shown when neither the slug nor a category is available. */

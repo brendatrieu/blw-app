@@ -144,10 +144,28 @@ describe("via — derived from the route, never wired to a button", () => {
     expect(storageSourceFromInput({})).toBe("label");
   });
 
-  it("reads freshness off the flags the API already sends", () => {
-    expect(freshnessAtChange({ expired: true, useSoon: true })).toBe("expired");
-    expect(freshnessAtChange({ expired: false, useSoon: true })).toBe("use_soon");
-    expect(freshnessAtChange({ expired: false, useSoon: false })).toBe("fresh");
+  it("reads freshness off the flags the API already sends when there is no best-by date", () => {
+    const windowItem = { bestBy: null, expiresAt: "2026-09-20T10:00:00.000Z" };
+    expect(freshnessAtChange({ ...windowItem, expired: true, useSoon: true })).toBe("expired");
+    expect(freshnessAtChange({ ...windowItem, expired: false, useSoon: true })).toBe("use_soon");
+    expect(freshnessAtChange({ ...windowItem, expired: false, useSoon: false })).toBe("fresh");
+  });
+
+  // Item 333: the chip the parent was actually looking at when they hit
+  // Remove is the one the event has to report, and a best-by date beats the
+  // server's window-derived flags on that chip.
+  it("prefers a best-by date over the flags, in both directions", () => {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const ymd = (offsetDays: number) => {
+      const d = new Date(Date.now() + offsetDays * dayMs);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
+    const flaggedFresh = { expired: false, useSoon: false, expiresAt: new Date(Date.now() + 5 * dayMs).toISOString() };
+    const flaggedExpired = { expired: true, useSoon: true, expiresAt: new Date(Date.now() - dayMs).toISOString() };
+
+    expect(freshnessAtChange({ ...flaggedFresh, bestBy: ymd(-1) })).toBe("expired");
+    expect(freshnessAtChange({ ...flaggedFresh, bestBy: ymd(0) })).toBe("use_soon");
+    expect(freshnessAtChange({ ...flaggedExpired, bestBy: ymd(7) })).toBe("fresh");
   });
 
   it("falls back to a blank location outside a browser rather than throwing", () => {

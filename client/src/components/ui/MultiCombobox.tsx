@@ -1,6 +1,39 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
-export type MultiComboboxOption = { value: string; label: string; emoji?: string };
+export type MultiComboboxOption = {
+  value: string;
+  label: string;
+  emoji?: string;
+  /**
+   * Short warning words shown after the label, in the menu row AND on the
+   * selected chip — food allergens, in every caller so far (item 334). Kept
+   * generic (plain strings, no slug/allergen vocabulary) so this stays a UI
+   * kit component: it renders what it is handed and knows nothing about the
+   * catalog. Absent or empty renders nothing.
+   */
+  markers?: string[];
+};
+
+/**
+ * One marker, in the muted-danger tone the Expired chip uses: a fact worth
+ * noticing while scanning a list, not an alarm. Non-interactive, so it never
+ * competes with the row's own hit target or the chip's remove button.
+ */
+function MultiComboboxMarkers({ markers }: { markers: string[] | undefined }) {
+  if (!markers || markers.length === 0) return null;
+  return (
+    <>
+      {markers.map((marker) => (
+        <span
+          key={marker}
+          className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-danger-soft)] px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-danger-soft-text)]"
+        >
+          {marker}
+        </span>
+      ))}
+    </>
+  );
+}
 
 /**
  * How many values this combobox holds — the one thing that decides what
@@ -450,6 +483,11 @@ export function MultiComboboxOptionList({
               </span>
               {option.emoji ? <span aria-hidden="true">{option.emoji}</span> : null}
               <span className="flex-1">{option.label}</span>
+              {/* After the label, right-aligned by the label's flex-1: the
+                  name is what a parent is scanning for, the marker is what
+                  they need to see once they have found it. The row keeps its
+                  min-h-11 — these are small spans, not another control. */}
+              <MultiComboboxMarkers markers={option.markers} />
             </li>
           );
         })
@@ -867,6 +905,10 @@ export function MultiCombobox({
             >
               {option.emoji ? <span aria-hidden="true">{option.emoji}</span> : null}
               {option.label}
+              {/* The same markers the menu row shows: a chip is what stays on
+                  screen once the menu is closed, so the mark has to survive
+                  the selection, not just precede it. */}
+              <MultiComboboxMarkers markers={option.markers} />
               <button
                 type="button"
                 aria-label={`Remove ${option.label}`}

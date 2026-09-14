@@ -31,6 +31,7 @@ function recipe(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
         isCustom: false,
         foodEmoji: null,
         quantityNote: "half a cup",
+        allergens: [],
       },
     ],
     extraIngredients: [{ name: "olive oil", quantityNote: "a drizzle" }],

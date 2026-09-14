@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { FoodListItem, RecipeListItem } from "@blw/shared";
 import { catalogKeys } from "../../catalog/hooks.js";
 import {
+  ADD_STORAGE_ITEM_FIELD_ORDER,
   AddStorageItemForm,
   resolveStoragePrefill,
   validateAddStorageItem,
@@ -12,8 +13,17 @@ import {
   type StoragePrefill,
 } from "./AddStorageItemForm.js";
 
+/** Prepared "now" and no best-by date — what the form opens with. */
 function values(overrides: Partial<AddStorageItemValues> = {}): AddStorageItemValues {
-  return { source: "food", foodIds: ["food-1"], recipeId: "", label: "", ...overrides };
+  return {
+    source: "food",
+    foodIds: ["food-1"],
+    recipeId: "",
+    label: "",
+    bestBy: "",
+    preparedAt: new Date(2026, 8, 14, 10, 0),
+    ...overrides,
+  };
 }
 
 describe("validateAddStorageItem", () => {
@@ -42,6 +52,41 @@ describe("validateAddStorageItem", () => {
     expect(validateAddStorageItem(values({ source: "recipe", foodIds: [], recipeId: "recipe-1" }))).toEqual({});
     expect(validateAddStorageItem(values({ source: "label", foodIds: [], label: "Soup" }))).toEqual({});
     expect(validateAddStorageItem(values({ source: "food", recipeId: "", label: "" }))).toEqual({});
+  });
+
+  // Item 333: best-by now decides the Use soon / Expired chip, so a date
+  // behind the prepared date would file a just-cooked container as expired.
+  describe("best by vs prepared", () => {
+    it("rejects a best-by date before the prepared day", () => {
+      expect(validateAddStorageItem(values({ bestBy: "2026-09-13" })).bestBy).toBe(
+        "Best by can't be before the prepared date",
+      );
+    });
+
+    it("accepts the prepared day itself, and any day after it", () => {
+      expect(validateAddStorageItem(values({ bestBy: "2026-09-14" })).bestBy).toBeUndefined();
+      expect(validateAddStorageItem(values({ bestBy: "2026-09-15" })).bestBy).toBeUndefined();
+      expect(validateAddStorageItem(values({ bestBy: "2027-01-01" })).bestBy).toBeUndefined();
+    });
+
+    it("leaves the optional field alone when it is unset", () => {
+      expect(validateAddStorageItem(values({ bestBy: "" }))).toEqual({});
+    });
+
+    it("compares local calendar days, not instants — a late-evening prepare is fine", () => {
+      // 23:30 local on the 14th, best by the 14th: the same day, so valid —
+      // which a raw timestamp comparison would have rejected.
+      expect(
+        validateAddStorageItem(values({ preparedAt: new Date(2026, 8, 14, 23, 30), bestBy: "2026-09-14" })).bestBy,
+      ).toBeUndefined();
+    });
+
+    it("reports it alongside the visible tab's own missing answer, and is focused second", () => {
+      const errors = validateAddStorageItem(values({ foodIds: [], bestBy: "2026-09-13" }));
+      expect(errors.food).toBe("Add at least one food");
+      expect(errors.bestBy).toBeDefined();
+      expect(ADD_STORAGE_ITEM_FIELD_ORDER.indexOf("bestBy")).toBe(ADD_STORAGE_ITEM_FIELD_ORDER.length - 1);
+    });
   });
 });
 

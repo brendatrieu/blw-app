@@ -116,4 +116,17 @@ export const storageGuidelines: StorageGuidelineSeed[] = [
     notes:
       'Once opened, store-bought pouches and jars go from ambient-stable to perishable — refrigerate immediately and use within 24 hours. Never refreeze, and never feed baby directly from the pouch or jar if it will be stored again, since saliva contamination means the remainder must be discarded.',
   },
+  {
+    category: 'pantry_dry',
+    // Sealed, shelf-stable dry goods: spice jars, whole seeds, shelled nuts.
+    // The "fridge" and "counter" windows here are months, not hours — the
+    // freshness chip is a best-by reminder for this category rather than a
+    // food-safety countdown, and a best-by date the parent types always wins
+    // over these numbers.
+    fridgeHours: 2160,
+    freezerDays: 365,
+    roomTempHours: 4320,
+    notes:
+      'Dry spices, herbs, seeds, and shelled nuts keep in a sealed jar somewhere cool and dark, away from the stove and out of direct sun. Ground spices fade rather than spoil — replace them when the smell goes flat. Anything you grind yourself (flax, nut and seed meal, hemp hearts) is oily and turns rancid fast: grind small batches and keep those in the fridge or freezer instead of the cupboard.',
+  },
 ]

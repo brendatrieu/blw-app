@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { UsageEvent } from "@blw/shared";
 import { fromRouteFor } from "./track.js";
 import { toRoutePattern } from "./routes.js";
+import { resolveFreshness, type FreshnessInput } from "../../features/storage/freshness.js";
 
 /**
  * Every prop a call site sends, derived in one pure place.
@@ -171,14 +172,17 @@ export function storageSourceFromInput(input: {
   return "label";
 }
 
-/** How fresh an item was at the moment its status changed. */
-export function freshnessAtChange(item: {
-  expired: boolean;
-  useSoon: boolean;
-}): Props<"storage_item_closed">["freshness_at_change"] {
-  if (item.expired) return "expired";
-  if (item.useSoon) return "use_soon";
-  return "fresh";
+/**
+ * How fresh an item was at the moment its status changed.
+ *
+ * Read through `resolveFreshness` — the same rule the card's chip shows — so
+ * an item a parent discarded because the app called it Expired is never
+ * counted as "fresh" just because the server's window-derived flags
+ * disagreed with the best-by date on the tub (item 333). Still three buckets
+ * and still nothing about the container itself.
+ */
+export function freshnessAtChange(item: FreshnessInput): Props<"storage_item_closed">["freshness_at_change"] {
+  return resolveFreshness(item).state;
 }
 
 // ---------------------------------------------------------------------------

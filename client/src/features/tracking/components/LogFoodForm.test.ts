@@ -14,6 +14,7 @@ import {
   type MealSubmitInput,
   type ResolvedLeftoverSource,
   resolveSubmitAction,
+  LOG_FOOD_FIELD_ORDER,
   validateLogFood,
 } from "./LogFoodForm.js";
 
@@ -35,6 +36,40 @@ describe("validateLogFood", () => {
   it("clears its own error as soon as a food is picked", () => {
     expect(validateLogFood({ foodIds: [] }).foods).toBeDefined();
     expect(validateLogFood({ foodIds: ["food-1"] }).foods).toBeUndefined();
+  });
+
+  // Item 333: leftovers are prepared NOW, so a best-by date behind today
+  // would file a container the parent just saved as already expired.
+  describe("leftovers best-by", () => {
+    const prepared = new Date(2026, 8, 14, 18, 0);
+    const base = { foodIds: ["food-1"], leftoversOpen: true, leftoverPreparedAt: prepared };
+
+    it("rejects a date before the day the leftovers are being saved", () => {
+      expect(validateLogFood({ ...base, leftoverBestBy: "2026-09-13" }).leftoverBestBy).toBe(
+        "Best by can't be before the prepared date",
+      );
+    });
+
+    it("accepts today and any later day, and an unset field", () => {
+      expect(validateLogFood({ ...base, leftoverBestBy: "2026-09-14" }).leftoverBestBy).toBeUndefined();
+      expect(validateLogFood({ ...base, leftoverBestBy: "2026-09-21" }).leftoverBestBy).toBeUndefined();
+      expect(validateLogFood({ ...base, leftoverBestBy: "" }).leftoverBestBy).toBeUndefined();
+    });
+
+    // Same reading as the add form's source tabs: a value from a block that
+    // is closed is not judged, because it is not sent either.
+    it("ignores the date entirely while the leftovers switch is off", () => {
+      expect(
+        validateLogFood({ ...base, leftoversOpen: false, leftoverBestBy: "2026-09-13" }).leftoverBestBy,
+      ).toBeUndefined();
+    });
+
+    it("is judged after the food list, which is what a failed submit focuses first", () => {
+      const errors = validateLogFood({ ...base, foodIds: [], leftoverBestBy: "2026-09-13" });
+      expect(errors.foods).toBeDefined();
+      expect(errors.leftoverBestBy).toBeDefined();
+      expect(LOG_FOOD_FIELD_ORDER).toEqual(["foods", "leftoverBestBy"]);
+    });
   });
 });
 
@@ -432,8 +467,24 @@ describe("buildLeftoverStorageInput default preparedAt", () => {
 });
 
 describe("initialFoodIds prefill (log meal from a food page)", () => {
-  const avocado: FoodListItem = { id: "food-1", slug: "avocado", name: "Avocado", category: "fruit" } as FoodListItem;
-  const banana: FoodListItem = { id: "food-2", slug: "banana", name: "Banana", category: "fruit" } as FoodListItem;
+  // `allergens` is not optional padding: `foodPickerOption` reads it to mark
+  // the picker rows and chips (item 334), so a fixture without it crashes the
+  // render. Spelled `[] as string[]` because a bare `[]` infers `never[]`,
+  // which the surrounding `as FoodListItem` is then not comparable to.
+  const avocado: FoodListItem = {
+    id: "food-1",
+    slug: "avocado",
+    name: "Avocado",
+    category: "fruit",
+    allergens: [] as string[],
+  } as FoodListItem;
+  const banana: FoodListItem = {
+    id: "food-2",
+    slug: "banana",
+    name: "Banana",
+    category: "fruit",
+    allergens: [] as string[],
+  } as FoodListItem;
 
   function seededClient() {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });

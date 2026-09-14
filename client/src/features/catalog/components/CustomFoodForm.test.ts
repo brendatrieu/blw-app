@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { FoodDetail } from "@blw/shared";
 import { getCategoryEmoji } from "../foodEmoji.js";
-import { ALLERGEN_SLUGS } from "../constants.js";
+import { ALLERGEN_SLUGS, CATEGORIES } from "../constants.js";
 import {
   CustomFoodForm,
   buildCustomFoodInput,
@@ -203,6 +203,10 @@ describe("CustomFoodForm (render)", () => {
     expect(html).toContain(`value="${getCategoryEmoji("fruit")}"`);
     expect(html).toContain('<option value="protein">Protein</option>');
     expect(html).toContain('<option value="legume">Legume</option>');
+    // Item 332: the select uses the LONG label, while the Foods page's filter
+    // chip uses the short one — seven equal chips do not fit "Spices & herbs".
+    expect(html).toContain('<option value="spice">Spices &amp; herbs</option>');
+    expect((html.match(/<option value="/g) ?? []).length).toBe(CATEGORIES.length);
   });
 
   it("renders allergen chips as a labelled group of pressed/unpressed toggles when editing", () => {

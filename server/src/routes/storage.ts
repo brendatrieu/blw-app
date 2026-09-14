@@ -6,10 +6,21 @@
 // on every read from `preparedAt` + a storage window, so a location or
 // prepared-date edit "recomputes" automatically — there is nothing to
 // invalidate.
+//
+// Those three are the FALLBACK, not the last word: a parent-entered
+// `bestBy` beats them, and the client resolves the chip it shows from it
+// (item 333). That resolution cannot happen here — `bestBy` is a plain
+// calendar date and the server never learns the caller's timezone, so it
+// cannot say when "the 14th" starts or ends. What the server does do is
+// refuse the one combination that could only be a mis-tap: a best-by date
+// before the prepared date, on create (the schema's own refine) and on
+// PATCH (below, against the merged values).
 import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
+  BEST_BY_BEFORE_PREPARED_ERROR,
   createStorageItemInputSchema,
+  isBestByBeforePreparedDay,
   storageItemIdParamSchema,
   storageQuerySchema,
   serveStorageItemInputSchema,
@@ -338,11 +349,27 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     // Servings edits are relative to what the row already holds (a new total
     // re-clamps the existing remainder), so the current row is read first.
     const [existing] = await db
-      .select({ servingsTotal: storageItems.servingsTotal, servingsLeft: storageItems.servingsLeft })
+      .select({
+        servingsTotal: storageItems.servingsTotal,
+        servingsLeft: storageItems.servingsLeft,
+        preparedAt: storageItems.preparedAt,
+        bestBy: storageItems.bestBy,
+      })
       .from(storageItems)
       .where(and(eq(storageItems.id, params.data.id), eq(storageItems.userId, currentUserId(request))))
       .limit(1);
     if (!existing) return notFound(reply);
+
+    // Judged on the MERGED pair, not on what this patch happens to carry:
+    // moving Prepared forward past an existing best-by is the same mistake
+    // as moving Best by back behind an existing prepared date, and a patch
+    // that sends only one of them must not slip past because the other is
+    // absent.
+    const mergedPreparedAt = body.data.preparedAt !== undefined ? body.data.preparedAt : existing.preparedAt;
+    const mergedBestBy = body.data.bestBy !== undefined ? body.data.bestBy : existing.bestBy;
+    if (isBestByBeforePreparedDay(mergedBestBy, mergedPreparedAt)) {
+      return badRequest(reply, { fieldErrors: { bestBy: [BEST_BY_BEFORE_PREPARED_ERROR] } });
+    }
 
     const patch: Partial<typeof storageItems.$inferInsert> = {};
     if (body.data.location !== undefined) patch.location = body.data.location;

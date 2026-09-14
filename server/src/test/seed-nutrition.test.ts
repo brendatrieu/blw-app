@@ -42,6 +42,12 @@ const EXPECTED_FIBER_LEVEL: Record<string, "high" | "moderate" | "low"> = {
   watermelon: "low", // 0.4 g, raw
   beef: "low", // 0 g — meat carries none
   yogurt: "low", // 0 g
+  // Item 335, from .workflow/scratch/catalog-expansion/sources.md (same rule,
+  // same per-100 g convention: the form the app actually serves).
+  oats: "moderate", // 1.7 g, rolled/quick cooked with water — same as the fortified kind
+  chia_seeds: "high", // 34.4 g, dried
+  cashew_butter: "moderate", // 2.0 g, plain without salt — the one nut/seed here under 3 g
+  cod: "low", // 0 g, Atlantic, cooked
 };
 
 describe("seeded fiber levels", () => {

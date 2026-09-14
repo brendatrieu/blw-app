@@ -321,6 +321,9 @@ describe("custom recipes", () => {
           isCustom: false,
           foodEmoji: null,
           quantityNote: "1 ripe",
+          // Item 334: the per-ingredient breakdown, empty for a food that
+          // carries no allergen.
+          allergens: [],
         },
         {
           foodId: fixtures.oats.id,
@@ -330,6 +333,7 @@ describe("custom recipes", () => {
           foodEmoji: null,
           // An omitted quantity is "" — a real answer, not a missing field.
           quantityNote: "",
+          allergens: [],
         },
       ]);
 
@@ -530,6 +534,8 @@ describe("custom recipes", () => {
           isCustom: true,
           foodEmoji: "🥜",
           quantityNote: "1 tbsp",
+          // The custom food was created with no allergen tags.
+          allergens: [],
         },
       ]);
     });
@@ -1002,6 +1008,43 @@ describe("custom recipes", () => {
       const detail = response.json<RecipeDetail>();
       expect(detail.variants.map((v) => v.ageStage)).toEqual(["6", "9", "12"]);
       expect(detail).toMatchObject({ isCustom: false, notes: null });
+    });
+
+    // Item 334: the recipe-level `allergens` says the DISH contains them;
+    // the per-ingredient list says which food brought each one, which is
+    // what the ingredient rows now show.
+    it("breaks the derived allergens down per ingredient, from the same join", async () => {
+      const peanutFood = await createFood(owner, {
+        name: "Satay sauce",
+        category: "protein",
+        allergenSlugs: ["peanut"],
+      });
+      const recipe = await createRecipe(
+        owner,
+        recipePayload({
+          title: "Satay noodles",
+          ingredients: [
+            { foodId: peanutFood.id, quantityNote: "1 tbsp" },
+            { foodId: fixtures.pear.id, quantityNote: "1 ripe" },
+          ],
+        }),
+      );
+
+      expect(recipe.allergens).toEqual(["peanut"]);
+      const byName = new Map(recipe.ingredients.map((i) => [i.foodName, i.allergens]));
+      expect(byName.get("Satay sauce")).toEqual(["peanut"]);
+      expect(byName.get("Pear")).toEqual([]);
+    });
+
+    it("gives every catalog ingredient an allergens array, empty when it carries none", async () => {
+      const response = await app.inject({ method: "GET", url: `/api/recipes/${fixtures.catalogRecipe.id}` });
+      const detail = response.json<RecipeDetail>();
+      expect(detail.ingredients.length).toBeGreaterThan(0);
+      for (const ingredient of detail.ingredients) {
+        expect(Array.isArray(ingredient.allergens), ingredient.foodName).toBe(true);
+      }
+      expect(detail.allergens).toEqual([]);
+      expect(detail.ingredients.flatMap((i) => i.allergens)).toEqual([]);
     });
   });
 

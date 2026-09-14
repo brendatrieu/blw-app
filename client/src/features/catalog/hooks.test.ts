@@ -182,7 +182,15 @@ function recipeDetail(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
     freezerDaysOverride: null,
     allergens: [],
     ingredients: [
-      { foodId: "food-1", foodSlug: "lentil", foodName: "Lentils", isCustom: false, foodEmoji: null, quantityNote: "" },
+      {
+        foodId: "food-1",
+        foodSlug: "lentil",
+        foodName: "Lentils",
+        isCustom: false,
+        foodEmoji: null,
+        quantityNote: "",
+        allergens: [],
+      },
     ],
     extraIngredients: [],
     variants: [{ ageStage: "6", textureNote: "", steps: ["Cook", "Mash"] }],

@@ -3,8 +3,9 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { Baby, MealItem } from "@blw/shared";
+import type { Baby, FoodListItem, MealItem } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
+import { catalogKeys } from "../features/catalog/hooks.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
 import { MealDetailPage, mealTitle } from "./MealDetailPage.js";
 
@@ -135,5 +136,75 @@ describe("MealDetailPage", () => {
     );
     expect(html).toContain(`href="/log-meal?edit=${MEAL.id}"`);
     expect(html).toMatch(/<button[^>]*type="button"[^>]*>Delete<\/button>/);
+  });
+});
+
+// Item 334: the report was "salmon isn't triggering the fish badge", and the
+// person who made it had "added it to a meal" — this page (and the picker)
+// is where they would have looked. `mealFoodSchema` is deliberately NOT
+// widened: the allergens are resolved from the foods list the app already
+// caches, so every meal fixture in the suite stays as it was.
+describe("MealDetailPage allergen marks (item 334)", () => {
+  const FISH_MEAL: MealItem = {
+    ...MEAL,
+    foods: [
+      { id: "food-1", slug: "salmon", name: "Salmon", category: "protein", storageItemId: null },
+      { id: "food-2", slug: "pear", name: "Pear", category: "fruit", storageItemId: null },
+    ],
+  };
+
+  function foodRow(overrides: Partial<FoodListItem>): FoodListItem {
+    return {
+      id: "food-1",
+      slug: "salmon",
+      name: "Salmon",
+      category: "protein",
+      ironLevel: "moderate",
+      vitaminCLevel: "low",
+      fiberLevel: "low",
+      chokingRisk: "moderate",
+      minAgeMonths: 6,
+      allergens: [],
+      isCustom: false,
+      emoji: null,
+      ...overrides,
+    };
+  }
+
+  function renderWithFoods(foods: FoodListItem[] | null) {
+    const queryClient = seededClient([FISH_MEAL]);
+    if (foods) queryClient.setQueryData(catalogKeys.foodsList({}), { foods });
+    return renderToString(createElement(QueryClientProvider, { client: queryClient }, renderAtMealDetailRoute(MEAL.id)));
+  }
+
+  it("marks the food that carries an allergen, and only that one", () => {
+    const html = renderWithFoods([
+      foodRow({ allergens: ["fish"] }),
+      foodRow({ id: "food-2", slug: "pear", name: "Pear", category: "fruit" }),
+    ]);
+    // Scoped to the food-chip row: the page title is "Salmon, Pear" too, so
+    // a whole-document index comparison would be meaningless.
+    const chipRow = html.slice(html.indexOf('class="flex flex-wrap items-center gap-1.5"'));
+    expect(chipRow).toContain("Fish");
+    expect(chipRow.indexOf("Fish")).toBeGreaterThan(chipRow.indexOf("Salmon"));
+    expect(chipRow.indexOf("Fish")).toBeLessThan(chipRow.indexOf("Pear"));
+    // `--color-danger-contrast` is the badge tone and nothing else on the
+    // page (the Delete control only uses `--color-danger` on hover).
+    expect((html.match(/var\(--color-danger-contrast\)/g) ?? []).length).toBe(1);
+  });
+
+  it("shows the meal exactly as before when the foods list has not loaded yet", () => {
+    const html = renderWithFoods(null);
+    expect(html).toContain("Salmon");
+    expect(html).toContain("Pear");
+    expect(html).not.toContain("var(--color-danger-contrast)");
+    expect(html).not.toContain("Fish");
+  });
+
+  it("marks a custom food by the allergens the parent ticked on it", () => {
+    const html = renderWithFoods([
+      foodRow({ slug: "satay-sauce-k3f9q1", name: "Salmon", isCustom: true, allergens: ["peanut"] }),
+    ]);
+    expect(html).toContain("Peanut");
   });
 });

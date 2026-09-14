@@ -10,6 +10,7 @@ function ingredient(foodSlug: string): RecipeIngredient {
     isCustom: false,
     foodEmoji: null,
     quantityNote: "",
+    allergens: [],
   };
 }
 

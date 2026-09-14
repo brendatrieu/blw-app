@@ -3,7 +3,7 @@ export type Level = 'high' | 'moderate' | 'low'
 export type AllergenSlug = 'milk'|'egg'|'peanut'|'tree_nut'|'fish'|'shellfish'|'wheat'|'soy'|'sesame'
 export interface FoodSeed {
   slug: string; name: string;
-  category: 'protein'|'veg'|'fruit'|'grain'|'dairy'|'legume';
+  category: 'protein'|'veg'|'fruit'|'grain'|'dairy'|'legume'|'spice';
   ironLevel: Level; vitaminCLevel: Level; fiberLevel: Level; chokingRisk: Level;
   minAgeMonths: number;
   prep6m: string; prep9m: string; prep12m: string;

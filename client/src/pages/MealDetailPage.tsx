@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import type { MealItem } from "@blw/shared";
 import { useMeals } from "../features/tracking/hooks.js";
 import { MealDeleteControl } from "../features/tracking/components/ServeLogList.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
+import { useFoods } from "../features/catalog/hooks.js";
+import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { BackButton, useBackNavigate } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
@@ -48,6 +50,17 @@ export function MealDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
   const { data, isLoading: mealsLoading } = useMeals(activeBaby?.id, { limit: 100 });
+  // Item 334: a meal food row carries no allergens (and `mealFoodSchema`
+  // stays that way — every meal fixture in the app would otherwise need
+  // rewriting for a fact the catalog already knows). They are resolved by id
+  // from the foods list the app has cached anyway: the same query key the
+  // pickers use, so this page adds no fetch of its own on a warm cache, and
+  // simply shows nothing extra on a cold one.
+  const { data: foodsData } = useFoods();
+  const allergensByFoodId = useMemo(
+    () => new Map((foodsData?.foods ?? []).map((food) => [food.id, food.allergens])),
+    [foodsData],
+  );
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const goBack = useBackNavigate("/");
 
@@ -87,6 +100,7 @@ export function MealDetailPage() {
             >
               <span aria-hidden="true">{getFoodEmoji(food.slug, food.category, food.emoji)}</span>
               {food.name}
+              <AllergenChips allergens={allergensByFoodId.get(food.id) ?? []} />
               {food.storageItemId && (
                 <Link
                   to={`/storage/${food.storageItemId}`}

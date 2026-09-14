@@ -7,6 +7,7 @@ import { useCreateMeal, useUpdateMeal } from "../hooks.js";
 import { applyRecipeIngredients, recipeIngredientFoodIds } from "../recipeChips.js";
 import { useCreateStorageItem } from "../../storage/hooks.js";
 import { LOCATIONS } from "../../storage/format.js";
+import { BEST_BY_BEFORE_PREPARED_MESSAGE, isBestByBeforePrepared } from "../../storage/freshness.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
 import { Select } from "../../../components/ui/Select.js";
@@ -108,6 +109,9 @@ export interface LeftoversFieldsProps {
   onServingsTotalChange: (value: string) => void;
   bestBy: string;
   onBestByChange: (value: string) => void;
+  /** The "Best by can't be before the prepared date" message, once a failed
+   * submit has earned it — see `validateLogFood`. */
+  bestByError?: string;
 }
 
 /**
@@ -129,6 +133,7 @@ export function LeftoversFields({
   onServingsTotalChange,
   bestBy,
   onBestByChange,
+  bestByError,
 }: LeftoversFieldsProps) {
   return (
     <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
@@ -172,7 +177,7 @@ export function LeftoversFields({
         />
       </Field>
 
-      <Field label="Best by (optional)" htmlFor="log-food-leftover-best-by">
+      <Field label="Best by (optional)" htmlFor="log-food-leftover-best-by" error={bestByError}>
         <DateField id="log-food-leftover-best-by" value={bestBy} onChange={onBestByChange} allowFuture title="Best by" />
       </Field>
     </div>
@@ -228,23 +233,41 @@ export function resolveSubmitAction(
   return storageFailurePending ? "retry-storage" : "noop";
 }
 
-export type LogFoodField = "foods";
+export type LogFoodField = "foods" | "leftoverBestBy";
 export type LogFoodErrors = FormErrors<LogFoodField>;
 
-/** Visual field order — what a failed submit focuses first (item 235). */
-export const LOG_FOOD_FIELD_ORDER: readonly LogFoodField[] = ["foods"];
+/** Visual field order — what a failed submit focuses first (item 235). The
+ * leftovers block sits below the food picker, so it is judged second. */
+export const LOG_FOOD_FIELD_ORDER: readonly LogFoodField[] = ["foods", "leftoverBestBy"];
 
 /**
- * The log form's required-field rules (item 235). Only the food list is
- * required: "When" is seeded with the current minute and can never be empty,
- * the recipe is optional, and every leftovers control either defaults or is
+ * The log form's field rules (item 235). Only the food list is REQUIRED:
+ * "When" is seeded with the current minute and can never be empty, the
+ * recipe is optional, and every leftovers control either defaults or is
  * gated behind at least one food.
+ *
+ * The leftovers best-by date is optional but, since item 333, decides the
+ * storage chip — and these leftovers are prepared NOW, so a date before
+ * today would file a just-saved container as expired. Judged only while the
+ * leftovers switch is on, for the same reason `validateAddStorageItem`
+ * judges only the visible source tab: a value from a block that is closed is
+ * not sent either.
  *
  * An empty object means valid — same reading as `validateCustomFood`.
  */
-export function validateLogFood(values: { foodIds: string[] }): LogFoodErrors {
+export function validateLogFood(values: {
+  foodIds: string[];
+  leftoversOpen?: boolean;
+  leftoverBestBy?: string;
+  /** What the leftovers are prepared at — `buildLeftoverStorageInput`'s own
+   * default, i.e. now. Passed explicitly so this stays a pure function. */
+  leftoverPreparedAt?: Date;
+}): LogFoodErrors {
   const errors: LogFoodErrors = {};
   if (values.foodIds.length === 0) errors.foods = "Add at least one food";
+  if (values.leftoversOpen && isBestByBeforePrepared(values.leftoverBestBy, values.leftoverPreparedAt ?? new Date())) {
+    errors.leftoverBestBy = BEST_BY_BEFORE_PREPARED_MESSAGE;
+  }
   return errors;
 }
 
@@ -343,10 +366,10 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
   // Item 235: Save stays enabled, "Add at least one food" appears under the
   // food picker on a failed submit, and that submit focuses it.
   const { errors: shownErrors, attemptSubmit } = useSubmitValidation(
-    { foodIds },
+    { foodIds, leftoversOpen, leftoverBestBy },
     validateLogFood,
     LOG_FOOD_FIELD_ORDER,
-    { foods: "log-food-food" },
+    { foods: "log-food-food", leftoverBestBy: "log-food-leftover-best-by" },
   );
 
   /** Resolves `leftoverSource`'s "choose" branch to a concrete food, using
@@ -484,6 +507,7 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
               onServingsTotalChange={setLeftoverServingsTotal}
               bestBy={leftoverBestBy}
               onBestByChange={setLeftoverBestBy}
+              bestByError={shownErrors.leftoverBestBy}
             />
           )}
         </div>

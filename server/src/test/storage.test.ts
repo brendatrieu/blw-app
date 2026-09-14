@@ -141,6 +141,13 @@ function hoursAgoIso(hours: number): string {
   return new Date(Date.now() - hours * HOUR_MS).toISOString();
 }
 
+/** A `YYYY-MM-DD` best-by date `days` from today, on the SAME UTC clock the
+ * server's best-by/prepared comparison uses — so the pins below mean the
+ * same thing in every timezone CI runs in. */
+function ymdDaysFromNow(days: number): string {
+  return new Date(Date.now() + days * 24 * HOUR_MS).toISOString().slice(0, 10);
+}
+
 async function createBaby(app: FastifyInstance, user: TestUser, name = "Robin"): Promise<string> {
   const response = await app.inject({
     method: "POST",
@@ -625,7 +632,12 @@ describe("storage routes", () => {
       expect(response.statusCode).toBe(400);
     });
 
-    it("does not change the derived expiry window", async () => {
+    // The server's three derived fields stay window-derived even when a
+    // best-by date is set — it has no timezone, so it cannot resolve a
+    // calendar date into a local day. The CLIENT prefers the best-by date
+    // over them (item 333, `resolveFreshness`); this pins that the fallback
+    // the client falls back TO is still computed and still honest.
+    it("leaves the derived expiry window alone — best-by is resolved client-side, not here", async () => {
       const preparedAt = hoursAgoIso(0);
       const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
@@ -635,6 +647,74 @@ describe("storage routes", () => {
       });
       // Still the banana/storage 72h window, not the best-by date.
       expect(new Date(created.body.expiresAt).getTime()).toBe(new Date(preparedAt).getTime() + 72 * HOUR_MS);
+    });
+
+    // Item 333: the one combination that could only be a mis-tap on the
+    // wheel. Both ends allow a day of timezone slack, the same slack
+    // `preparedAt` itself allows, so a parent east of UTC is never refused
+    // for saving "today".
+    describe("best-by before the prepared date", () => {
+      it("400s on create", async () => {
+        const response = await postStorageItem(app, user.cookie, {
+          foodIds: [fixtures.banana.id],
+          location: "fridge",
+          preparedAt: hoursAgoIso(0),
+          bestBy: ymdDaysFromNow(-3),
+        });
+        expect(response.statusCode).toBe(400);
+      });
+
+      it("still accepts a best-by on the prepared day itself, and one a day behind it (tz slack)", async () => {
+        const onTheDay = await postStorageItem(app, user.cookie, {
+          foodIds: [fixtures.banana.id],
+          location: "fridge",
+          preparedAt: hoursAgoIso(0),
+          bestBy: ymdDaysFromNow(0),
+        });
+        expect(onTheDay.statusCode).toBe(201);
+
+        const oneDayBehind = await postStorageItem(app, user.cookie, {
+          foodIds: [fixtures.banana.id],
+          location: "fridge",
+          preparedAt: hoursAgoIso(0),
+          bestBy: ymdDaysFromNow(-1),
+        });
+        expect(oneDayBehind.statusCode).toBe(201);
+      });
+
+      it("400s on PATCH when the new best-by falls behind the row's stored prepared date", async () => {
+        const created = await postStorageItem(app, user.cookie, {
+          foodIds: [fixtures.banana.id],
+          location: "fridge",
+          preparedAt: hoursAgoIso(0),
+        });
+        const response = await patchItem(user.cookie, created.body.id, { bestBy: ymdDaysFromNow(-3) });
+        expect(response.statusCode).toBe(400);
+      });
+
+      it("400s on PATCH when the new prepared date moves past the row's stored best-by", async () => {
+        const created = await postStorageItem(app, user.cookie, {
+          foodIds: [fixtures.banana.id],
+          location: "fridge",
+          preparedAt: hoursAgoIso(72),
+          bestBy: ymdDaysFromNow(-3),
+        });
+        expect(created.statusCode).toBe(201);
+        const response = await patchItem(user.cookie, created.body.id, { preparedAt: hoursAgoIso(0) });
+        expect(response.statusCode).toBe(400);
+      });
+
+      it("leaves an untouched pair alone — a patch of something else never re-judges it", async () => {
+        const created = await postStorageItem(app, user.cookie, {
+          foodIds: [fixtures.banana.id],
+          location: "fridge",
+          preparedAt: hoursAgoIso(0),
+          bestBy: ymdDaysFromNow(5),
+        });
+        const response = await patchItem(user.cookie, created.body.id, { quantityNote: "2 cubes" });
+        expect(response.statusCode).toBe(200);
+        expect(response.body?.bestBy).toBe(ymdDaysFromNow(5));
+      });
     });
   });
 

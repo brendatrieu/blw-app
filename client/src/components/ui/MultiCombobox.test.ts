@@ -1007,3 +1007,96 @@ describe("deriveComboboxView", () => {
     expect(view(ui, { value: ["banana"], mode: "single" }).showCountBadge).toBe(false);
   });
 });
+
+// Item 334: the picker rows and chips carried no allergen mark at all, so a
+// parent adding salmon to a meal saw nothing — the fish badge lived only on
+// the food's own page. `markers` is deliberately generic: this component
+// renders the strings it is handed and knows nothing about allergens.
+describe("MultiCombobox option markers (item 334)", () => {
+  const MARKED: MultiComboboxOption[] = [
+    { value: "salmon", label: "Salmon", emoji: "🐟", markers: ["Fish"] },
+    { value: "hummus", label: "Hummus", emoji: "🥣", markers: ["Sesame", "Soy"] },
+    { value: "pear", label: "Pear", emoji: "🍐", markers: [] },
+  ];
+
+  it("renders each marker after its option's label in the menu row", () => {
+    const html = renderToString(
+      createElement(MultiComboboxOptionList, {
+        listboxId: "food-listbox",
+        options: MARKED,
+        selectedValues: [],
+        highlighted: -1,
+        emptyMessage: "No matches",
+        onHoverOption: () => {},
+        onSelectOption: () => {},
+      }),
+    );
+    const rows = html.split('role="option"').slice(1);
+    expect(rows[0]).toContain("Fish");
+    expect(rows[0]!.indexOf("Fish")).toBeGreaterThan(rows[0]!.indexOf("Salmon"));
+    expect(rows[1]).toContain("Sesame");
+    expect(rows[1]).toContain("Soy");
+  });
+
+  it("renders nothing extra for an option with no markers, or none at all", () => {
+    const html = renderToString(
+      createElement(MultiComboboxOptionList, {
+        listboxId: "food-listbox",
+        options: [MARKED[2]!, { value: "oat", label: "Oats" }],
+        selectedValues: [],
+        highlighted: -1,
+        emptyMessage: "No matches",
+        onHoverOption: () => {},
+        onSelectOption: () => {},
+      }),
+    );
+    expect(html).not.toContain("color-danger-soft");
+  });
+
+  it("keeps the marked row at the 44px hit target", () => {
+    const html = renderToString(
+      createElement(MultiComboboxOptionList, {
+        listboxId: "food-listbox",
+        options: MARKED,
+        selectedValues: [],
+        highlighted: -1,
+        emptyMessage: "No matches",
+        onHoverOption: () => {},
+        onSelectOption: () => {},
+      }),
+    );
+    expect(html.split('role="option"').slice(1)[0]).toContain("min-h-11");
+  });
+
+  it("carries the markers onto the selected chip, which is what survives the menu closing", () => {
+    const html = renderToString(
+      createElement(MultiCombobox, {
+        id: "food",
+        options: MARKED,
+        value: ["salmon"],
+        onChange: () => {},
+      }),
+    );
+    const chipRow = html.slice(html.indexOf("mt-1.5 flex flex-wrap"));
+    expect(chipRow).toContain("Fish");
+    expect(chipRow).toContain("color-danger-soft");
+    // The mark sits between the label and the remove button, so the button
+    // stays the last thing in the chip and keeps its own tap target.
+    expect(chipRow.indexOf("Fish")).toBeLessThan(chipRow.indexOf('aria-label="Remove Salmon"'));
+    expect(chipRow).toContain("p-[10px] -m-[10px]");
+  });
+
+  it("leaves an unmarked chip exactly as it was", () => {
+    const html = renderToString(
+      createElement(MultiCombobox, {
+        id: "food",
+        options: MARKED,
+        value: ["pear"],
+        onChange: () => {},
+      }),
+    );
+    const chipRow = html.slice(html.indexOf("mt-1.5 flex flex-wrap"));
+    expect(chipRow).toContain('aria-label="Remove Pear"');
+    expect(chipRow).not.toContain("color-danger-soft");
+  });
+});

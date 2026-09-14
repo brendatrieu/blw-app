@@ -37,12 +37,52 @@ describe("getFoodEmoji", () => {
 
 describe("getCategoryEmoji", () => {
   it("answers one emoji per category, and matches getFoodEmoji's own fallback", () => {
-    const categories = ["protein", "veg", "fruit", "grain", "dairy", "legume"] as const;
+    const categories = ["protein", "veg", "fruit", "grain", "dairy", "legume", "spice"] as const;
     for (const category of categories) {
       const emoji = getCategoryEmoji(category);
       expect(emoji.length).toBeGreaterThan(0);
       expect(getFoodEmoji("not-a-seeded-slug", category)).toBe(emoji);
     }
     expect(new Set(categories.map(getCategoryEmoji)).size).toBe(categories.length);
+  });
+});
+
+/**
+ * Every slug in `server/db/seeds/data/foods.ts`, pinned here (item 332) so a
+ * seed addition that forgets its emoji fails on this side rather than shipping
+ * a generic plate onto the Foods grid. Kept in seed order, not alphabetical —
+ * it is easier to diff against the seed file that way.
+ */
+const CATALOG_SLUGS = [
+  "beef", "chicken_thigh", "salmon", "sardines", "egg", "lentils", "chickpeas", "black_beans", "tofu",
+  "iron_fortified_oats", "spinach", "quinoa", "broccoli", "bell_pepper", "strawberry", "orange", "kiwi",
+  "mango", "tomato", "sweet_potato", "butternut_squash", "peanut_butter", "almond_butter", "tahini",
+  "yogurt", "cheese", "wheat_toast", "wheat_pasta", "shrimp", "avocado", "banana", "apple", "pear",
+  "blueberry", "carrot", "zucchini", "green_beans", "peas", "rice", "watermelon", "chicken", "turkey",
+  "pork", "lamb", "cod", "trout", "tuna", "oats", "sesame_seeds", "chia_seeds", "flax_seeds", "hemp_seeds",
+  "pumpkin_seeds", "sunflower_seed_butter", "cashew_butter", "walnuts", "pistachios", "hazelnuts", "pecans",
+  "cinnamon", "cumin", "turmeric", "paprika", "curry_powder", "black_pepper", "oregano", "garlic", "ginger",
+  "basil", "cilantro", "dill",
+];
+
+describe("emoji coverage for the seeded catalog", () => {
+  it("has an explicit emoji for all 71 catalog slugs", () => {
+    expect(CATALOG_SLUGS).toHaveLength(71);
+    expect(new Set(CATALOG_SLUGS).size).toBe(CATALOG_SLUGS.length);
+
+    // With no category passed, the only fallback left is the generic plate —
+    // so a slug that resolves to anything else came from the curated map.
+    const missing = CATALOG_SLUGS.filter((slug) => getFoodEmoji(slug) === getFoodEmoji("not-a-seeded-slug"));
+    expect(missing).toEqual([]);
+  });
+
+  it("gives the spices and the meats the emoji the Foods grid shows", () => {
+    // Spot checks across the three new groups, so a wholesale re-shuffle of the
+    // map is visible in the diff rather than silently green.
+    expect(getFoodEmoji("cinnamon")).toBe("🪵");
+    expect(getFoodEmoji("garlic")).toBe("🧄");
+    expect(getFoodEmoji("turkey")).toBe("🦃");
+    expect(getFoodEmoji("tuna")).toBe("🥫");
+    expect(getFoodEmoji("pumpkin_seeds")).toBe("🎃");
   });
 });

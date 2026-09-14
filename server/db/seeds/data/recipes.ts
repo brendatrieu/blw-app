@@ -677,7 +677,8 @@ const curatedRecipes: RecipeSeed[] = [
 ]
 
 // The seeded catalog: the 15 curated multi-ingredient recipes FIRST, in their
-// original order, then the 40 single-food "Simple <food>" basics. Order matters
+// original order, then the 59 single-food "Simple <food>" basics (one per
+// non-spice food — spices have none, see basicRecipes.ts). Order matters
 // only for readability of a fresh seed — every row upserts by slug — but keeping
 // the curated block first means the existing 15 are untouched by the addition.
 export const recipes: RecipeSeed[] = [...curatedRecipes, ...basicRecipes]

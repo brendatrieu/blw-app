@@ -1,6 +1,8 @@
 import type { RecipeSeed } from './types'
 
-// One single-ingredient "Simple <food>" recipe per catalog food (ledger item 253).
+// One single-ingredient "Simple <food>" recipe per catalog food (ledger item 253),
+// with one exception: `category: 'spice'` foods have NO basic (item 331). A spice
+// is a seasoning, not a serving — "Simple cinnamon" would be a recipe for a pinch.
 //
 // These exist so every food in the catalog has an obvious "just serve the food"
 // entry point: the steps EXPAND that food's own prep text for the stage
@@ -30,7 +32,8 @@ import type { RecipeSeed } from './types'
 //    the food's own prep wording; pasta at 6 months is al dente then a few
 //    minutes more, per the wheat-pasta prep text
 //  - foods served raw (banana, avocado, yogurt, cheese, nut butters, tahini,
-//    soft fruit) get NO cook step
+//    soft fruit, canned tuna, every seed and every ground nut) get NO cook
+//    step — not even the word "toast", which the guard reads as a cook verb
 // Sources: .workflow/scratch/recipe-detail/sources.md
 export const basicRecipes: RecipeSeed[] = [
   {
@@ -1461,6 +1464,719 @@ export const basicRecipes: RecipeSeed[] = [
           'Remove all rind and check for seeds once more.',
           'Dice the flesh into small bite-sized pieces rather than large slippery chunks.',
           'Serve chilled or at room temperature.',
+        ],
+      },
+    },
+  },
+
+  // ---- Plain meats (item 331) ----
+  {
+    slug: 'simple-chicken',
+    title: 'Simple chicken',
+    minAgeMonths: 6,
+    prepMinutes: 25,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'chicken', quantityNote: '1 small skinless chicken breast (about 55g)' }],
+    extraIngredients: [{ name: 'olive oil or a spoonful of the cooking liquid, to moisten' }],
+    variants: {
+      '6': {
+        textureNote: 'A finger-length strip of thoroughly cooked breast cut along the grain, or finely shredded chicken moistened so it is never dry.',
+        steps: [
+          'Trim any gristle from the breast and check it carefully for small bones.',
+          'Cook it thoroughly with no added salt — bake at 400°F (200°C) for 18-20 minutes, or poach at a bare simmer for 10-12 minutes — until a thermometer in the thickest part reads 165°F (74°C) and the juices run clear.',
+          'Rest it for 5 minutes, then cut a finger-length strip along the grain, or shred it finely.',
+          'Moisten the strip or the shreds with a little olive oil or cooking liquid — breast meat dries out fast and turns stringy when it does.',
+          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft, pea-sized shredded or chopped pieces for pincer-grasp practice.',
+        steps: [
+          'Bake the trimmed breast at 400°F (200°C) for 18-20 minutes, until it reads 165°F (74°C) all the way through, then rest it for 5 minutes.',
+          'Shred or chop it into soft, pea-sized pieces, feeling for any small bones as you go.',
+          'Stir through a little olive oil or cooking liquid so the pieces stay moist rather than crumbly.',
+          'Serve just-warm for baby to self-feed.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small, soft bite-sized dice of thoroughly cooked breast.',
+        steps: [
+          'Bake the trimmed breast at 400°F (200°C) for 18-20 minutes, until it reads 165°F (74°C) with clear juices, and rest it for 5 minutes.',
+          'Dice it into small, soft bite-sized pieces.',
+          'Moisten the dice with a little cooking liquid or olive oil, and check once more for small bones.',
+          'Serve just-warm with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-turkey',
+    title: 'Simple turkey',
+    minAgeMonths: 6,
+    prepMinutes: 25,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'turkey', quantityNote: '55g (2oz) ground turkey, or a small boneless turkey thigh' }],
+    extraIngredients: [
+      { name: 'grated vegetable, to bind the mince' },
+      { name: 'olive oil or a spoonful of the cooking liquid, to moisten' },
+    ],
+    variants: {
+      '6': {
+        textureNote: 'A finger-length strip of thin turkey patty, or finely shredded thigh moistened so it is not dry.',
+        steps: [
+          'Shape the ground turkey into a thin patty, binding it with a little grated vegetable so it does not come out crumbly.',
+          'Cook it through with no added salt — pan-fry over medium heat for 4-5 minutes a side, or bake at 375°F (190°C) for 18-20 minutes — until a thermometer in the centre reads 165°F (74°C) and no pink remains.',
+          'Rest it for 3-5 minutes, then cut the patty into finger-length strips, or shred slow-cooked thigh meat finely instead.',
+          'Moisten with a little olive oil or cooking liquid so nothing is dry or crumbly.',
+          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft, pea-sized pieces of mince or shredded thigh, or a small meatball squashed completely flat.',
+        steps: [
+          'Cook the turkey through — pan-fry over medium heat for 4-5 minutes a side, or bake at 375°F (190°C) for 18-20 minutes — until it reads 165°F (74°C) with no pink left.',
+          'Rest it for 3-5 minutes, then break or shred it into soft, pea-sized pieces, or squash a small meatball completely flat.',
+          'Stir through a little olive oil or cooking liquid so the pieces are not dry.',
+          'Serve just-warm for pincer-grasp practice, never as a firm round meatball.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small, soft bite-sized dice or shreds of thoroughly cooked turkey.',
+        steps: [
+          'Bake the turkey at 375°F (190°C) for 18-20 minutes, until it reads 165°F (74°C), then rest it for 3-5 minutes.',
+          'Dice or shred it into small, soft bite-sized pieces.',
+          'Moisten with a little cooking liquid or olive oil.',
+          'Serve just-warm with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-pork',
+    title: 'Simple pork',
+    minAgeMonths: 6,
+    prepMinutes: 30,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'pork', quantityNote: '55g (2oz) pork tenderloin or loin, trimmed of all fat' }],
+    extraIngredients: [{ name: 'olive oil or a spoonful of the cooking liquid, to moisten' }],
+    variants: {
+      '6': {
+        textureNote: 'A finger-length strip of well-done tenderloin cut along the grain, moistened so it is not dry.',
+        steps: [
+          'Trim every piece of fat, rind, and gristle from the pork — cured pork such as bacon or ham is far too salty and is never a substitute here.',
+          'Cook it well-done with no added salt — roast at 400°F (200°C) for 20-25 minutes, or pan-fry over medium heat for 5-6 minutes a side — until a thermometer in the thickest part reads 160°F (71°C).',
+          'Rest it for 5 minutes, then cut a finger-length strip along the grain.',
+          'Moisten the strip with a little olive oil or cooking liquid so it is not dry or chewy.',
+          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft, pea-sized shredded or finely chopped pieces of well-done pork.',
+        steps: [
+          'Roast the trimmed pork at 400°F (200°C) for 20-25 minutes, until it reads 160°F (71°C), then rest it for 5 minutes.',
+          'Shred it finely against the grain, or chop it into soft, pea-sized pieces.',
+          'Stir through a little olive oil or cooking liquid so the pieces stay moist.',
+          'Serve just-warm for baby to self-feed.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small, soft bite-sized dice, or shredded slow-cooked pork.',
+        steps: [
+          'Roast the trimmed pork at 400°F (200°C) for 20-25 minutes, until it reads 160°F (71°C), and rest it for 5 minutes — or slow-cook it for 2-3 hours until it falls apart.',
+          'Dice it into small, soft bite-sized pieces, or shred it.',
+          'Moisten with a little cooking liquid so nothing is dry or chewy.',
+          'Serve just-warm with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-lamb',
+    title: 'Simple lamb',
+    minAgeMonths: 6,
+    prepMinutes: 30,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'lamb', quantityNote: '55g (2oz) lamb mince, or a piece of boneless lamb shoulder' }],
+    extraIngredients: [{ name: 'olive oil or a spoonful of the cooking liquid, to moisten' }],
+    variants: {
+      '6': {
+        textureNote: 'A soft, moist pile of well-done lamb mince, or a finger-length shred of slow-cooked shoulder.',
+        steps: [
+          'Use mince or boneless shoulder only — chops and anything on the bone are not a baby food — and check by feel for bone fragments.',
+          'Cook it well-done with no added salt: brown the mince over medium heat for 6-8 minutes, or slow-cook the shoulder for 2-3 hours until it falls apart, in either case until a thermometer reads 160°F (71°C).',
+          'Drain off the fat, rest it for 3-5 minutes, and moisten with a little olive oil or cooking liquid.',
+          'Serve as a soft pile of fine mince, or pull a finger-length shred from the shoulder.',
+          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft, pea-sized pieces of well-done mince or shredded slow-cooked shoulder.',
+        steps: [
+          'Brown lamb mince over medium heat for 6-8 minutes, or slow-cook boneless shoulder until it falls apart, until it reads 160°F (71°C) with no pink left.',
+          'Drain the fat, then break the meat into soft, pea-sized pieces, or shred the shoulder finely.',
+          'Stir through a little olive oil or cooking liquid so the pieces are not dry.',
+          'Serve just-warm for pincer-grasp practice.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small, soft bite-sized dice or shreds of tender slow-cooked lamb.',
+        steps: [
+          'Slow-cook boneless lamb shoulder for 2-3 hours until it is falling apart, or brown the mince over medium heat for 6-8 minutes, until it reads 160°F (71°C).',
+          'Drain the fat, then dice or shred the meat into small, soft bite-sized pieces.',
+          'Moisten with a little cooking liquid.',
+          'Serve just-warm with no added salt, checking once more for bone fragments.',
+        ],
+      },
+    },
+  },
+
+  // ---- More fish ----
+  {
+    slug: 'simple-cod',
+    title: 'Simple cod',
+    minAgeMonths: 6,
+    prepMinutes: 15,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'cod', quantityNote: '55g (2oz) skinless cod fillet' }],
+    extraIngredients: [{ name: 'olive oil or a spoonful of the cooking liquid, to moisten' }],
+    variants: {
+      '6': {
+        textureNote: 'A soft finger-length piece of flaked cod, checked through with your fingers for bones.',
+        steps: [
+          'Run your fingers over the fillet and pull out every bone you can feel.',
+          'Bake it at 400°F (200°C) for 10-12 minutes, or poach it at a bare simmer for 6-8 minutes, until it is opaque right through and flakes under gentle pressure — 145°F (63°C) on a thermometer.',
+          'Flake a soft finger-length piece, running your fingers through the flakes for bones once more.',
+          'Moisten it with a little cooking liquid or olive oil — cod flakes dry quickly.',
+          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft, pea-sized flakes, re-checked for stray bones.',
+        steps: [
+          'Bake the cod at 400°F (200°C) for 10-12 minutes, until it is opaque and separates easily with a fork at 145°F (63°C).',
+          'Flake it into soft, pea-sized pieces, feeling through every flake for bones.',
+          'Moisten the flakes with a little cooking liquid or olive oil.',
+          'Serve just-warm for pincer-grasp self-feeding.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small bite-sized flakes, or a small piece of fillet to pick apart.',
+        steps: [
+          'Bake the cod at 400°F (200°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then let it cool to just-warm.',
+          'Flake it into small bite-sized pieces, or leave a small piece of fillet for baby to pick apart.',
+          'Check by feel for bones one last time before it reaches the plate.',
+          'Serve with no added salt alongside whatever else is on the tray.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-trout',
+    title: 'Simple trout',
+    minAgeMonths: 6,
+    prepMinutes: 15,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'trout', quantityNote: '55g (2oz) trout fillet, skin removed' }],
+    extraIngredients: [{ name: 'olive oil or a spoonful of the cooking liquid, to moisten' }],
+    variants: {
+      '6': {
+        textureNote: 'A soft finger-length piece of flaked trout, checked twice for pin bones.',
+        steps: [
+          'Run your fingers along the fillet and pull out the row of fine pin bones — they survive cooking, and a fillet sold as deboned often still has some.',
+          'Bake it at 375°F (190°C) for 10-12 minutes, or poach it at a bare simmer for 6-8 minutes, until it is opaque right through and flakes under gentle pressure — 145°F (63°C) on a thermometer.',
+          'Flake a soft finger-length piece, then check the flakes by feel for pin bones a second time.',
+          'Moisten with a little cooking liquid or olive oil.',
+          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft, pea-sized flakes, checked twice for pin bones.',
+        steps: [
+          'Bake the trout at 375°F (190°C) for 10-12 minutes, until it is opaque and separates easily with a fork at 145°F (63°C).',
+          'Flake it into soft, pea-sized pieces, checking by feel for pin bones twice as you go.',
+          'Moisten the flakes with a little cooking liquid or olive oil.',
+          'Serve just-warm for pincer-grasp self-feeding.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small bite-sized flakes of cooked trout.',
+        steps: [
+          'Bake the trout at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then let it cool to just-warm.',
+          'Flake it into small bite-sized pieces, checking twice for pin bones.',
+          'Serve with no added salt alongside whatever else is on the tray.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-tuna',
+    title: 'Simple canned light tuna',
+    minAgeMonths: 6,
+    prepMinutes: 5,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'tuna', quantityNote: '2 tablespoons skipjack ("light") tuna, canned in water and drained' }],
+    extraIngredients: [{ name: 'plain whole-milk yogurt, mashed avocado, or olive oil, to moisten' }],
+    variants: {
+      '6': {
+        textureNote: 'A soft mashed pile of tuna, smooth and wet enough to scoop from a pre-loaded spoon.',
+        steps: [
+          'Choose skipjack ("light") tuna canned in water, ideally with no salt added — never albacore, white, or bigeye tuna, which carry far more mercury.',
+          'Drain it well and mash it thoroughly with plain yogurt, mashed avocado, or a little olive oil until no dry, crumbly lumps remain.',
+          'Serve as a soft mashed pile, or pre-load a spoon and hand it over, sitting with baby throughout.',
+          'Keep tuna to about one small serving a week while baby is under two.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft, pea-sized dollops of mashed tuna, or tuna stirred through a mash.',
+        steps: [
+          'Drain skipjack ("light") tuna canned in water and mash it smooth with yogurt or a little olive oil.',
+          'Serve it as soft, pea-sized dollops, or stir it through soft pasta or a vegetable mash.',
+          'Never offer it dry and crumbly — on its own it packs into a dense ball in the mouth.',
+          'Keep tuna to about one small serving a week while baby is under two.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small bite-sized pieces of mashed or flaked tuna, moistened.',
+        steps: [
+          'Drain skipjack ("light") tuna canned in water, keeping to a no-salt-added can.',
+          'Mash or flake it into small bite-sized pieces, moistened with yogurt or olive oil.',
+          'Stir it through pasta or spread it thinly, still never in a dry pile.',
+          'Keep tuna to about one small serving a week while baby is under two.',
+        ],
+      },
+    },
+  },
+
+  // ---- Plain oats ----
+  {
+    slug: 'simple-oats',
+    title: 'Simple oats',
+    minAgeMonths: 6,
+    prepMinutes: 8,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'oats', quantityNote: '3 tablespoons rolled or quick oats' }],
+    extraIngredients: [{ name: 'breast milk, formula, or water' }],
+    variants: {
+      '6': {
+        textureNote: 'A smooth, thinned porridge loose enough to drip slowly off a spoon.',
+        steps: [
+          'Simmer the oats with plenty of breast milk, formula, or water over medium-low heat for 4-5 minutes, stirring, until the flakes are completely soft.',
+          'Thin the porridge until it drips slowly off a spoon rather than sitting in a stiff lump.',
+          'Stir well to release hot spots, cool to just-warm, and check the temperature.',
+          'Serve on a pre-loaded spoon — plain oats carry far less iron than the fortified kind, so pair the meal with an iron-rich food.',
+        ],
+      },
+      '9': {
+        textureNote: 'A thicker, spoonable porridge with a little texture left.',
+        steps: [
+          'Simmer the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, to a thicker, spoonable consistency.',
+          'Leave a little texture rather than cooking it completely smooth.',
+          'Cool to just-warm and serve in a bowl with a spoon for self-feeding practice.',
+        ],
+      },
+      '12': {
+        textureNote: 'A thick, family-style porridge.',
+        steps: [
+          'Simmer the oats over medium-low heat for 5-6 minutes, adding liquid a splash at a time, until thick and family-style.',
+          'Stir to release hot spots, cool to just-warm, and check the temperature.',
+          'Serve unsweetened, with no added sugar — and use rolled or quick oats rather than steel-cut, which stay chewy.',
+        ],
+      },
+    },
+  },
+
+  // ---- Seeds (served raw: ground, soaked, or sprinkled — never cooked) ----
+  {
+    slug: 'simple-sesame-seeds',
+    title: 'Simple sesame seeds',
+    minAgeMonths: 6,
+    prepMinutes: 2,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'sesame_seeds', quantityNote: 'a pinch of sesame seeds, whole or ground to a fine meal' }],
+    variants: {
+      '6': {
+        textureNote: 'A pinch of ground or whole sesame seeds stirred through a wet food so nothing is dry or loose.',
+        steps: [
+          'Grind the seeds to a fine meal if you want them to disappear completely, or leave them whole.',
+          'Sprinkle a pinch over a wet food — porridge, yogurt, or a soft vegetable mash — so the seeds cling rather than scatter.',
+          'Stir them through, and never hand over a spoonful or a pile of dry seeds: any dry seed is easy to inhale.',
+          'Sesame is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
+        ],
+      },
+      '9': {
+        textureNote: 'A pinch of whole or ground seeds stirred through yogurt, porridge, or a mash.',
+        steps: [
+          'Sprinkle a pinch of whole or ground sesame seeds over yogurt, porridge, hummus, or soft vegetables.',
+          'Stir them through a mash so they cling rather than scatter across the tray.',
+          'Keep it to a pinch, never a spoonful of dry seeds.',
+        ],
+      },
+      '12': {
+        textureNote: 'A pinch sprinkled over family food or stirred into a dip or a mash.',
+        steps: [
+          'Sprinkle a pinch of sesame seeds over family food, or stir them into a dip or a mash.',
+          'Ground seeds disappear into the food; whole seeds cling to anything wet.',
+          'It stays a pinch — a spoonful of dry seeds is still a hazard at this age.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-chia-seeds',
+    title: 'Simple chia seeds',
+    minAgeMonths: 6,
+    prepMinutes: 15,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'chia_seeds', quantityNote: '1 teaspoon chia seeds' }],
+    extraIngredients: [{ name: 'milk, water, or mashed fruit, to soak', quantityNote: '4-5 tablespoons' }],
+    variants: {
+      '6': {
+        textureNote: 'A soft chia gel thinned to a smooth, spoonable porridge, stirred through milk or mashed fruit.',
+        steps: [
+          'Stir 1 teaspoon of chia seeds into 4-5 tablespoons of milk, water, or mashed fruit.',
+          'Leave it at least 10 minutes, until every seed has swelled into a soft gel with no dry grit left.',
+          'Thin it until it is smooth and spoonable rather than stiff.',
+          'Never offer chia dry: it absorbs many times its weight in liquid and can swell and clump after it is swallowed.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soaked, gelled chia stirred through yogurt, porridge, or a fruit mash.',
+        steps: [
+          'Soak 1 teaspoon of chia in 4-5 tablespoons of liquid for at least 10 minutes, until it is a soft gel.',
+          'Stir the gel through yogurt, porridge, or a fruit mash.',
+          'Keep it spoonable rather than stiff, and never serve the seeds dry.',
+        ],
+      },
+      '12': {
+        textureNote: 'Soaked chia in a pudding, porridge, or smoothie — never dry.',
+        steps: [
+          'Soak the chia first, every time: at least 10 minutes in milk, water, or fruit.',
+          'Stir the gel into a pudding, porridge, or smoothie.',
+          'Chia is very high in fiber, so a teaspoon at a time is plenty, with extra fluid alongside.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-flax-seeds',
+    title: 'Simple flax seeds',
+    minAgeMonths: 6,
+    prepMinutes: 2,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'flax_seeds', quantityNote: '1 teaspoon flaxseed, ground to a meal' }],
+    variants: {
+      '6': {
+        textureNote: 'A teaspoon of ground flaxseed stirred through porridge, yogurt, or a vegetable mash until it disappears.',
+        steps: [
+          'Grind the flaxseed to a meal — whole seeds are hard and slippery and pass straight through undigested.',
+          'Stir 1 teaspoon of the meal through porridge, yogurt, or a soft vegetable mash until it disappears.',
+          'Serve it wet, never as a dry powder on a spoon.',
+          'Keep the rest of the meal in the fridge: ground flax turns rancid quickly.',
+        ],
+      },
+      '9': {
+        textureNote: 'Ground flaxseed stirred through porridge, yogurt, or a fruit mash.',
+        steps: [
+          'Grind the seeds fresh, or use meal you ground earlier and kept in the fridge.',
+          'Stir a teaspoon through porridge, yogurt, a fruit mash, or a fritter mix.',
+          'Whole seeds stay off the menu — it is the grinding that makes flax useful and safe.',
+        ],
+      },
+      '12': {
+        textureNote: 'Ground flaxseed stirred into porridge or into whatever you are baking.',
+        steps: [
+          'Use ground flaxseed only, stirred into porridge or into whatever you are baking.',
+          'Whole seeds still pass through undigested, so it is the meal that goes in.',
+          'Grind small batches and keep them in the fridge.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-hemp-seeds',
+    title: 'Simple hemp seeds',
+    minAgeMonths: 6,
+    prepMinutes: 2,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'hemp_seeds', quantityNote: '1 teaspoon hulled hemp hearts' }],
+    variants: {
+      '6': {
+        textureNote: 'A pinch of hulled hemp hearts stirred through a wet porridge, yogurt, or vegetable mash.',
+        steps: [
+          'Use hulled hemp hearts, not whole hemp seed with the shell on — the shell is hard and fibrous, the hearts are soft.',
+          'Sprinkle a pinch over porridge, yogurt, or a soft vegetable mash.',
+          'Stir them through so they soften and cling rather than scatter across the tray.',
+        ],
+      },
+      '9': {
+        textureNote: 'Hulled hemp hearts sprinkled or stirred through soft food.',
+        steps: [
+          'Sprinkle or stir a teaspoon of hulled hemp hearts through porridge, yogurt, soft fruit, or vegetables.',
+          'They need no grinding — the hearts crumble easily on their own.',
+          'Keep the bag sealed in the fridge; hemp hearts are oily and turn rancid in a warm cupboard.',
+        ],
+      },
+      '12': {
+        textureNote: 'Hulled hemp hearts sprinkled over family food or stirred into porridge and dips.',
+        steps: [
+          'Sprinkle hulled hemp hearts over family food, or stir them into porridge, dips, and baking.',
+          'Whole shelled hemp seed stays off the menu; the hulled hearts are the soft part.',
+          'Store them sealed in the fridge to keep them from turning rancid.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-pumpkin-seeds',
+    title: 'Simple pumpkin seeds',
+    minAgeMonths: 6,
+    prepMinutes: 5,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'pumpkin_seeds', quantityNote: '1 teaspoon hulled pumpkin seeds, ground to a fine meal' }],
+    variants: {
+      '6': {
+        textureNote: 'A teaspoon of fine pumpkin seed meal stirred through porridge, yogurt, or a vegetable mash.',
+        steps: [
+          'Whole pumpkin seeds are a listed choking hazard and stay off the menu until age 4-5 — grind hulled seeds to a fine, flour-like meal first.',
+          'Stir 1 teaspoon of the meal through porridge, yogurt, or a soft vegetable mash.',
+          'A smooth pumpkin seed butter thinned with warm water until runny works the same way — never thick, never a spoonful straight.',
+          'Check that nothing crunchy is left before it reaches the tray.',
+        ],
+      },
+      '9': {
+        textureNote: 'Fine pumpkin seed meal stirred through porridge, yogurt, or a mash, or thinned smooth butter spread very thinly.',
+        steps: [
+          'Grind hulled pumpkin seeds to a fine meal, or use a smooth pumpkin seed butter.',
+          'Stir the meal through porridge, yogurt, or a mash, or thin the butter until it is runny and spread it very thinly.',
+          'Whole and chopped seeds are still a hazard at this age, and remain one for years yet.',
+        ],
+      },
+      '12': {
+        textureNote: 'Ground meal or thinned smooth butter — never whole or chopped seeds.',
+        steps: [
+          'Keep to finely ground pumpkin seed meal, or a smooth butter thinned until runny.',
+          'Stir the meal into food, or spread the thinned butter in a thin layer.',
+          'Whole seeds stay off the menu until age 4-5, however confident the chewing looks.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-sunflower-seed-butter',
+    title: 'Simple sunflower seed butter',
+    minAgeMonths: 6,
+    prepMinutes: 5,
+    ironFocus: false,
+    ingredients: [
+      { foodSlug: 'sunflower_seed_butter', quantityNote: '1-2 teaspoons smooth, unsalted sunflower seed butter' },
+    ],
+    extraIngredients: [{ name: 'warm water, breast milk, or formula, to thin' }],
+    variants: {
+      '6': {
+        textureNote: 'Smooth sunflower seed butter thinned until runny, on a spoon or in a very thin layer on a soft toast finger — never a thick spoonful.',
+        steps: [
+          'Measure 1-2 teaspoons of smooth, unsalted, unsweetened sunflower seed butter into a small bowl.',
+          'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky.',
+          'Thick or sticky seed butter is a serious choking hazard, so never serve a spoonful straight, and never whole sunflower seeds.',
+          'Offer the thinned mixture on a pre-loaded spoon, in a small amount, and stay with baby through the meal.',
+        ],
+      },
+      '9': {
+        textureNote: 'Runny thinned sunflower seed butter stirred through food, or spread very thinly.',
+        steps: [
+          'Thin smooth sunflower seed butter with warm water, breast milk, or formula until it is runny.',
+          'Stir it into porridge or yogurt, or spread a very thin layer on soft fruit.',
+          'Keep the layer thin — never a thick glob, and never a spoonful straight.',
+        ],
+      },
+      '12': {
+        textureNote: 'Thinned sunflower seed butter used as a spread or a dip, still never a thick layer.',
+        steps: [
+          'Thin smooth sunflower seed butter until runny before using it as a spread or a dip base.',
+          'Keep any spread layer thin; thick spoonfuls and globs remain a choking hazard.',
+          'Check the label for added salt and sugar — sunflower seed butter is not a nut butter, but it is often sweetened.',
+        ],
+      },
+    },
+  },
+
+  // ---- Tree nuts (ground or thinned only — never whole, never in pieces) ----
+  {
+    slug: 'simple-cashew-butter',
+    title: 'Simple cashew butter',
+    minAgeMonths: 6,
+    prepMinutes: 5,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'cashew_butter', quantityNote: '1-2 teaspoons smooth, unsalted cashew butter' }],
+    extraIngredients: [{ name: 'warm water, breast milk, or formula, to thin' }],
+    variants: {
+      '6': {
+        textureNote: 'Smooth cashew butter thinned until runny, on a spoon or in a very thin layer on a soft toast finger — never a thick spoonful.',
+        steps: [
+          'Measure 1-2 teaspoons of smooth, unsalted cashew butter into a small bowl.',
+          'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky.',
+          'Thick or sticky nut butter is a serious choking hazard, so never serve a spoonful straight, and never whole or chopped cashews.',
+          'Tree nut is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
+        ],
+      },
+      '9': {
+        textureNote: 'Runny thinned cashew butter stirred through food, or spread very thinly.',
+        steps: [
+          'Thin smooth cashew butter with warm water, breast milk, or formula until it is runny.',
+          'Stir it into porridge or yogurt, or spread a very thin layer on soft fruit.',
+          'Keep the layer thin — never a thick glob, and never a spoonful straight.',
+        ],
+      },
+      '12': {
+        textureNote: 'Thinned cashew butter used as a spread or a dip, still never a thick layer.',
+        steps: [
+          'Thin smooth cashew butter until runny before using it as a spread or a dip base.',
+          'Keep any spread layer thin; thick spoonfuls and globs remain a choking hazard.',
+          'Whole and chopped nuts stay off the menu until age 4-5, at every stage.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-walnuts',
+    title: 'Simple walnuts',
+    minAgeMonths: 6,
+    prepMinutes: 5,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'walnuts', quantityNote: '1 teaspoon shelled walnuts, ground to a fine meal' }],
+    variants: {
+      '6': {
+        textureNote: 'A teaspoon of fine walnut meal stirred through porridge, yogurt, or a fruit mash.',
+        steps: [
+          'Grind shelled walnuts to a fine, flour-like meal — whole nuts and nut pieces are a serious choking hazard and stay off the menu until age 4-5.',
+          'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash until nothing crunchy is left.',
+          'Tree nut is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
+          'Keep the rest of the meal in the fridge — walnut meal turns rancid quickly.',
+        ],
+      },
+      '9': {
+        textureNote: 'Fine walnut meal stirred through porridge, yogurt, soft fruit, or a fritter mix.',
+        steps: [
+          'Grind shelled walnuts to a fine meal, in a small batch.',
+          'Stir it through porridge, yogurt, soft fruit, or a fritter mix.',
+          'Pieces and halves stay off the menu — it is the grinding that makes this safe.',
+        ],
+      },
+      '12': {
+        textureNote: 'Fine walnut meal stirred into food, or a smooth walnut butter thinned runny.',
+        steps: [
+          'Keep to finely ground walnut meal stirred into food, or a smooth walnut butter thinned until runny.',
+          'Pieces, halves, and whole nuts stay off the menu until age 4-5.',
+          'Grind small batches and keep the meal in the fridge.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-pistachios',
+    title: 'Simple pistachios',
+    minAgeMonths: 6,
+    prepMinutes: 5,
+    ironFocus: false,
+    ingredients: [
+      { foodSlug: 'pistachios', quantityNote: '1 teaspoon shelled, unsalted pistachios, ground to a fine meal' },
+    ],
+    variants: {
+      '6': {
+        textureNote: 'A teaspoon of fine pistachio meal stirred through porridge, yogurt, or a fruit mash.',
+        steps: [
+          'Use shelled, unsalted pistachios — salted ones carry far too much sodium for a baby — and grind them to a fine, flour-like meal.',
+          'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash.',
+          'Whole and chopped pistachios are a serious choking hazard and stay off the menu until age 4-5.',
+          'Tree nut is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
+        ],
+      },
+      '9': {
+        textureNote: 'Fine pistachio meal stirred through porridge, yogurt, soft fruit, or a mash.',
+        steps: [
+          'Grind shelled, unsalted pistachios to a fine meal, in a small batch.',
+          'Stir it through porridge, yogurt, soft fruit, or a mash.',
+          'Never serve them in the shell, and never in pieces.',
+        ],
+      },
+      '12': {
+        textureNote: 'Fine pistachio meal stirred into food; whole and chopped nuts stay off the menu.',
+        steps: [
+          'Keep to finely ground pistachio meal stirred into food.',
+          'Whole and chopped nuts stay off the menu until age 4-5.',
+          'Cashew and pistachio are closely related, so a reaction to one means taking care with the other.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-hazelnuts',
+    title: 'Simple hazelnuts',
+    minAgeMonths: 6,
+    prepMinutes: 5,
+    ironFocus: false,
+    ingredients: [
+      { foodSlug: 'hazelnuts', quantityNote: '1 teaspoon skinned, shelled hazelnuts, ground to a fine meal' },
+    ],
+    variants: {
+      '6': {
+        textureNote: 'A teaspoon of fine hazelnut meal stirred through porridge, yogurt, or a fruit mash, or plain hazelnut butter thinned runny.',
+        steps: [
+          'Grind skinned, shelled hazelnuts to a fine, flour-like meal, or use a plain smooth hazelnut butter.',
+          'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash, or thin the butter with warm water until it is runny.',
+          'A chocolate hazelnut spread is mostly sugar and is not a way to introduce this allergen.',
+          'Whole and chopped hazelnuts are a serious choking hazard and stay off the menu until age 4-5.',
+        ],
+      },
+      '9': {
+        textureNote: 'Fine hazelnut meal stirred through soft food, or thinned plain hazelnut butter spread very thinly.',
+        steps: [
+          'Grind skinned hazelnuts to a fine meal, or thin plain hazelnut butter until it is runny.',
+          'Stir the meal through porridge, yogurt, or soft fruit, or spread the thinned butter very thinly.',
+          'Nothing crunchy should be left — pieces stay off the menu.',
+        ],
+      },
+      '12': {
+        textureNote: 'Fine hazelnut meal or thinned plain hazelnut butter; whole and chopped nuts stay off the menu.',
+        steps: [
+          'Keep to finely ground hazelnut meal, or a plain smooth butter thinned until runny.',
+          'Read the jar: plain hazelnut butter only, with no added sugar.',
+          'Whole and chopped nuts stay off the menu until age 4-5.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-pecans',
+    title: 'Simple pecans',
+    minAgeMonths: 6,
+    prepMinutes: 5,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'pecans', quantityNote: '1 teaspoon shelled pecans, ground to a fine meal' }],
+    variants: {
+      '6': {
+        textureNote: 'A teaspoon of fine pecan meal stirred through porridge, yogurt, or a fruit mash.',
+        steps: [
+          'Grind shelled pecans to a fine, flour-like meal — halves and pieces are a serious choking hazard and stay off the menu until age 4-5.',
+          'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash until nothing crunchy is left.',
+          'Tree nut is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
+          'Keep the rest in the fridge — pecan meal is oily and turns rancid quickly.',
+        ],
+      },
+      '9': {
+        textureNote: 'Fine pecan meal stirred through porridge, yogurt, soft fruit, or a mash.',
+        steps: [
+          'Grind shelled pecans to a fine meal, in a small batch.',
+          'Stir it through porridge, yogurt, soft fruit, or a mash.',
+          'Halves and pieces stay off the menu — grinding is what makes this safe.',
+        ],
+      },
+      '12': {
+        textureNote: 'Fine pecan meal stirred into food; halves and pieces stay off the menu.',
+        steps: [
+          'Keep to finely ground pecan meal stirred into food.',
+          'Halves, pieces, and whole nuts stay off the menu until age 4-5.',
+          'Grind small batches and keep the meal in the fridge.',
         ],
       },
     },

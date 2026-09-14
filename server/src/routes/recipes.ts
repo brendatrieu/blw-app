@@ -176,7 +176,7 @@ async function writeRecipeVariant(
  * same way however the caller reached it.
  */
 async function loadRecipeDetail(db: Database, recipe: RecipeRow): Promise<RecipeDetail> {
-  const ingredientRows: RecipeIngredient[] = await db
+  const ingredientRows = await db
     .select({
       foodId: foods.id,
       foodSlug: foods.slug,
@@ -200,13 +200,31 @@ async function loadRecipeDetail(db: Database, recipe: RecipeRow): Promise<Recipe
     return v ? [{ ageStage: stage, textureNote: v.textureNote, steps: v.instructions }] : [];
   });
 
+  // One join, read twice: the recipe-level list (what the header badges say
+  // the dish contains) and the per-ingredient breakdown the ingredient rows
+  // now show (item 334) come from exactly the same rows, so a "Fish" badge
+  // on the header always has a row under it saying which food brought it.
   const derivedAllergenRows = await db
-    .select({ slug: allergens.slug })
+    .select({ foodId: recipeIngredients.foodId, slug: allergens.slug })
     .from(recipeIngredients)
     .innerJoin(foodAllergens, eq(recipeIngredients.foodId, foodAllergens.foodId))
     .innerJoin(allergens, eq(foodAllergens.allergenId, allergens.id))
-    .where(eq(recipeIngredients.recipeId, recipe.id));
+    .where(eq(recipeIngredients.recipeId, recipe.id))
+    // Alphabetical, for the same reason the ingredients are ordered by name:
+    // neither join has an order of its own worth preserving.
+    .orderBy(asc(allergens.slug));
   const allergenSlugs = [...new Set(derivedAllergenRows.map((a) => a.slug))];
+
+  const allergensByFoodId = new Map<string, string[]>();
+  for (const row of derivedAllergenRows) {
+    const slugs = allergensByFoodId.get(row.foodId) ?? [];
+    if (!slugs.includes(row.slug)) slugs.push(row.slug);
+    allergensByFoodId.set(row.foodId, slugs);
+  }
+  const ingredients: RecipeIngredient[] = ingredientRows.map((row) => ({
+    ...row,
+    allergens: allergensByFoodId.get(row.foodId) ?? [],
+  }));
 
   // Every nutrition badge comes from the one shared derivation the list and
   // the favorites route also use, so detail can never disagree with them.
@@ -225,7 +243,7 @@ async function loadRecipeDetail(db: Database, recipe: RecipeRow): Promise<Recipe
     fridgeHoursOverride: recipe.fridgeHoursOverride,
     freezerDaysOverride: recipe.freezerDaysOverride,
     allergens: allergenSlugs,
-    ingredients: ingredientRows,
+    ingredients,
     extraIngredients: recipe.extraIngredients ?? [],
     variants,
     isCustom: recipe.ownerId !== null,

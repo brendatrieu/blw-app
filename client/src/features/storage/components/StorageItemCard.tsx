@@ -4,6 +4,7 @@ import type { StorageItem } from "@blw/shared";
 import { Badge } from "../../catalog/components/Badge.js";
 import { getFoodEmoji } from "../../catalog/foodEmoji.js";
 import { bestByLabel, countdownLabel, LOCATION_LABEL, storageItemTitle, servingsLabel } from "../format.js";
+import { resolveFreshness } from "../freshness.js";
 
 /** Emoji for a storage item: the food's own emoji when it was prepped from a
  * catalog food, otherwise a friendly stand-in for a recipe or free-form entry.
@@ -33,6 +34,7 @@ interface StorageItemCardProps {
 
 export function StorageItemCard({ item, actions, linkable = true }: StorageItemCardProps) {
   const preparedLabel = new Date(item.preparedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const freshness = resolveFreshness(item);
 
   const info = (
     <>
@@ -79,16 +81,21 @@ export function StorageItemCard({ item, actions, linkable = true }: StorageItemC
 
       {item.status === "active" && (
         <div className="flex items-center gap-2">
-          {item.expired ? (
+          {freshness.state === "expired" ? (
             <Badge tone="dangerSoft">Expired</Badge>
-          ) : item.useSoon ? (
+          ) : freshness.state === "use_soon" ? (
             <Badge tone="sunshine">⏰ Use soon</Badge>
           ) : null}
-          {/* A user-entered best-by is shown even beside the safety badges —
-              the badges warn, the date informs; neither hides the other. */}
-          {(item.bestBy || (!item.expired && !item.useSoon)) && (
+          {/* The badge and the text are now the SAME fact told twice (item
+              333): with a best-by date it decides the badge, so the date is
+              always shown beside it — the warning and its reason read
+              together. Without one the badge comes from the category storage
+              window, and the countdown is shown only while the item is still
+              fresh; once it warns, repeating "Expired" under an Expired badge
+              would say nothing new. */}
+          {(freshness.source === "best_by" || freshness.state === "fresh") && (
             <span className="text-xs text-[var(--color-text-muted)]">
-              {item.bestBy ? bestByLabel(item.bestBy) : countdownLabel(item.expiresAt)}
+              {freshness.source === "best_by" ? bestByLabel(item.bestBy!) : countdownLabel(item.expiresAt)}
             </span>
           )}
         </div>

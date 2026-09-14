@@ -46,6 +46,11 @@ describe("FoodsPage", () => {
     expect(html).not.toContain("Vitamin C");
     // Same for the Fiber group added in item 279.
     expect(html).not.toContain(">Fiber<");
+    // Item 332: the chip row is seven equal-width chips on a 360px phone, so
+    // the spice category shows its SHORT label here. The long one belongs to
+    // the custom-food select (pinned in CustomFoodForm.test.ts).
+    expect(html).toContain(">Spices<");
+    expect(html).not.toContain("Spices &amp; herbs");
   });
 
   // Item 179: adding a food of your own is a first-class action on this page,

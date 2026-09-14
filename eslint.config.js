@@ -5,7 +5,12 @@ import eslintConfigPrettier from "eslint-config-prettier";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "**/.data/**", "**/*.d.ts"],
+    // Gitignored, never-built, never-shipped trees. `.workflow/` holds the
+    // orchestrator's scratch notes and one-off analysis scripts, which are
+    // copied somewhere runnable and deleted rather than kept as source —
+    // linting them made the root gate depend on whatever scratch file another
+    // batch happened to leave behind.
+    ignores: ["**/dist/**", "**/node_modules/**", "**/.data/**", "**/.workflow/**", "**/*.d.ts"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

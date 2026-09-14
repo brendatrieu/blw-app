@@ -4,6 +4,7 @@ import { FoodPicker } from "../../catalog/components/FoodPicker.js";
 import { RecipePicker } from "../../catalog/components/RecipePicker.js";
 import { useCreateStorageItem } from "../hooks.js";
 import { LOCATIONS } from "../format.js";
+import { BEST_BY_BEFORE_PREPARED_MESSAGE, isBestByBeforePrepared } from "../freshness.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
@@ -13,26 +14,35 @@ import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 
 type Source = "food" | "recipe" | "label";
 
-/** One key per source tab: only the visible tab's field can ever error. */
-export type AddStorageItemField = Source;
+/** One key per source tab (only the visible tab's field can ever error), plus
+ * the one optional field that can still be answered WRONG. */
+export type AddStorageItemField = Source | "bestBy";
 export type AddStorageItemErrors = FormErrors<AddStorageItemField>;
 
 /** Visual field order — what a failed submit focuses first (item 235). */
-export const ADD_STORAGE_ITEM_FIELD_ORDER: readonly AddStorageItemField[] = ["food", "recipe", "label"];
+export const ADD_STORAGE_ITEM_FIELD_ORDER: readonly AddStorageItemField[] = ["food", "recipe", "label", "bestBy"];
 
 export interface AddStorageItemValues {
   source: Source;
   foodIds: string[];
   recipeId: string;
   label: string;
+  /** "" when the optional field is unset. */
+  bestBy: string;
+  preparedAt: Date;
 }
 
 /**
- * The add-to-storage form's required-field rules (item 235). What is required
- * depends on the source tab, and only the tab on screen is judged — a food id
- * left over from a tab the parent has moved away from is not an error, and is
- * not sent either. Location defaults to "fridge" and Prepared is seeded with
- * the current minute, so neither can be empty.
+ * The add-to-storage form's field rules (item 235). What is REQUIRED depends
+ * on the source tab, and only the tab on screen is judged — a food id left
+ * over from a tab the parent has moved away from is not an error, and is not
+ * sent either. Location defaults to "fridge" and Prepared is seeded with the
+ * current minute, so neither can be empty.
+ *
+ * Best by is optional but not unconstrained: since item 333 it is what
+ * decides the Use soon / Expired chip, so a date BEFORE the prepared date
+ * would make a just-cooked container read as expired. It is caught here, and
+ * again by the create schema on the server.
  *
  * An empty object means valid — same reading as `validateCustomFood`.
  */
@@ -46,6 +56,9 @@ export function validateAddStorageItem(values: AddStorageItemValues): AddStorage
     // The field asks "What is it?", so the answer is phrased as the ask
     // rather than as "<Field> is required" (item 238).
     errors.label = "Enter what it is";
+  }
+  if (isBestByBeforePrepared(values.bestBy, values.preparedAt)) {
+    errors.bestBy = BEST_BY_BEFORE_PREPARED_MESSAGE;
   }
   return errors;
 }
@@ -118,10 +131,15 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
   // Item 235: "Add to storage" stays enabled, the missing answer shows under
   // whichever source field is on screen, and a failed submit focuses it.
   const { errors: shownErrors, attemptSubmit } = useSubmitValidation(
-    { source, foodIds, recipeId, label },
+    { source, foodIds, recipeId, label, bestBy, preparedAt },
     validateAddStorageItem,
     ADD_STORAGE_ITEM_FIELD_ORDER,
-    { food: "storage-add-food", recipe: "storage-add-recipe", label: "storage-add-label" },
+    {
+      food: "storage-add-food",
+      recipe: "storage-add-recipe",
+      label: "storage-add-label",
+      bestBy: "storage-add-best-by",
+    },
   );
 
   function handleSubmit(event: React.FormEvent) {
@@ -244,7 +262,7 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
         />
       </Field>
 
-      <Field label="Best by (optional)" htmlFor="storage-add-best-by">
+      <Field label="Best by (optional)" htmlFor="storage-add-best-by" error={shownErrors.bestBy}>
         <DateField id="storage-add-best-by" value={bestBy} onChange={setBestBy} allowFuture title="Best by" />
       </Field>
 

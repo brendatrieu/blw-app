@@ -4,14 +4,27 @@ import type { FoodCategory, Level, RecipeScope } from "@blw/shared";
 // list mirrors the seeded top-9 (server/db/seeds/index.ts) — it isn't a
 // hard-typed union server-side (allergens.slug is free text), so it's kept
 // here as a UI-only convenience for building filter chips.
-export const CATEGORIES: { value: FoodCategory; label: string }[] = [
+/**
+ * `chipLabel` is the Foods page's filter-chip wording, `label` the long one the
+ * custom-food select uses (item 332). Seven equal-width chips share a 360px
+ * phone, so "Spices & herbs" would ellipsize into "Spices…" anyway — the short
+ * label says the same thing on purpose rather than by truncation. Every other
+ * category is already one short word and sets no `chipLabel`.
+ */
+export const CATEGORIES: { value: FoodCategory; label: string; chipLabel?: string }[] = [
   { value: "protein", label: "Protein" },
   { value: "veg", label: "Veg" },
   { value: "fruit", label: "Fruit" },
   { value: "grain", label: "Grain" },
   { value: "dairy", label: "Dairy" },
   { value: "legume", label: "Legume" },
+  { value: "spice", label: "Spices & herbs", chipLabel: "Spices" },
 ];
+
+/** The chip row's wording for a category — the short label where one exists. */
+export function categoryChipLabel(category: { label: string; chipLabel?: string }): string {
+  return category.chipLabel ?? category.label;
+}
 
 export const IRON_LEVELS: { value: Level; label: string }[] = [
   { value: "high", label: "High iron" },

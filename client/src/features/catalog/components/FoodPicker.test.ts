@@ -46,13 +46,29 @@ function renderPicker(foods: FoodListItem[], value: string[] = []) {
   );
 }
 
+const SALMON = food({ id: "food-4", slug: "salmon", name: "Salmon", category: "protein", allergens: ["fish"] });
+
 describe("foodPickerOption", () => {
   it("selects by food id and shows the food's OWN emoji when it has one (item 177)", () => {
-    expect(foodPickerOption(CUSTOM)).toEqual({ value: "food-2", label: "Banana bread", emoji: "🍞" });
+    expect(foodPickerOption(CUSTOM)).toEqual({ value: "food-2", label: "Banana bread", emoji: "🍞", markers: [] });
   });
 
   it("falls back to the slug map for a catalog food", () => {
-    expect(foodPickerOption(food())).toEqual({ value: "food-1", label: "Banana", emoji: "🍌" });
+    expect(foodPickerOption(food())).toEqual({ value: "food-1", label: "Banana", emoji: "🍌", markers: [] });
+  });
+
+  // Item 334 — the one line that puts "Fish" beside Salmon in the log-meal
+  // picker, the add-to-storage picker AND the custom-recipe ingredient
+  // picker, because all three build their options through this function.
+  it("carries the food's allergens as markers, labelled the way the badges are", () => {
+    expect(foodPickerOption(SALMON).markers).toEqual(["Fish"]);
+  });
+
+  it("carries a custom food's own ticked allergens too", () => {
+    expect(foodPickerOption(food({ isCustom: true, allergens: ["peanut", "sesame"] })).markers).toEqual([
+      "Peanut",
+      "Sesame",
+    ]);
   });
 
   it("falls back to the category when a custom food carries no emoji", () => {
@@ -176,5 +192,24 @@ describe("SingleFoodPicker (item 210's 'contains ingredient' filter)", () => {
   it("takes a caller's placeholder, falling back to the picker's own", () => {
     expect(renderSingle([food()], "", "Any food…")).toContain('placeholder="Any food…"');
     expect(renderSingle([food()])).toContain('placeholder="Search foods…"');
+  });
+});
+
+describe("FoodPicker allergen markers (item 334)", () => {
+  // A server render only ever produces the CLOSED field, so the menu row is
+  // pinned on `MultiComboboxOptionList` itself; what this file can see — and
+  // what stays on screen after the menu closes — is the chip.
+  it("keeps the mark on the chip once the food is selected", () => {
+    const html = renderPicker([food(), SALMON], [SALMON.id]);
+    const chipRow = html.slice(html.indexOf("mt-1.5 flex flex-wrap"));
+    expect(chipRow).toContain("Salmon");
+    expect(chipRow).toContain("Fish");
+  });
+
+  it("leaves an allergen-free food's chip unmarked", () => {
+    const html = renderPicker([food(), SALMON], ["food-1"]);
+    const chipRow = html.slice(html.indexOf("mt-1.5 flex flex-wrap"));
+    expect(chipRow).toContain("Banana");
+    expect(chipRow).not.toContain("color-danger-soft");
   });
 });

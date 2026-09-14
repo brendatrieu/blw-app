@@ -3,7 +3,11 @@ import { renderToString } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { StorageItem } from "@blw/shared";
-import { EditStorageItemForm } from "./EditStorageItemForm.js";
+import {
+  EDIT_STORAGE_ITEM_FIELD_ORDER,
+  EditStorageItemForm,
+  validateEditStorageItem,
+} from "./EditStorageItemForm.js";
 
 const ITEM: StorageItem = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -33,12 +37,40 @@ function renderForm(item: StorageItem = ITEM) {
   );
 }
 
+// Item 333: the one rule this form has — and the reason it grew a validator
+// at all. Both halves of the comparison live on this form, so an edit that
+// moves Prepared forward is judged the same way one that moves Best by back.
+describe("validateEditStorageItem", () => {
+  const prepared = new Date(2026, 8, 14, 10, 0);
+
+  it("accepts an unset best-by, the prepared day itself, and any day after", () => {
+    expect(validateEditStorageItem({ bestBy: "", preparedAt: prepared })).toEqual({});
+    expect(validateEditStorageItem({ bestBy: "2026-09-14", preparedAt: prepared })).toEqual({});
+    expect(validateEditStorageItem({ bestBy: "2026-09-20", preparedAt: prepared })).toEqual({});
+  });
+
+  it("rejects a best-by date behind the prepared day", () => {
+    expect(validateEditStorageItem({ bestBy: "2026-09-13", preparedAt: prepared }).bestBy).toBe(
+      "Best by can't be before the prepared date",
+    );
+  });
+
+  it("catches it from the other side too — Prepared moved past a stored best-by", () => {
+    expect(validateEditStorageItem({ bestBy: "2026-09-13", preparedAt: new Date(2026, 8, 20, 8, 0) }).bestBy).toBe(
+      "Best by can't be before the prepared date",
+    );
+  });
+
+  it("focuses the best-by field, the only key in the order", () => {
+    expect(EDIT_STORAGE_ITEM_FIELD_ORDER).toEqual(["bestBy"]);
+  });
+});
+
 describe("EditStorageItemForm (render)", () => {
-  // Item 235 by construction: every field on this form is either seeded from
-  // the item (location, prepared) or optional, so there is nothing that can
-  // be missing — Save is enabled, and no error slot is ever filled. Pinned so
-  // a future required field on this form cannot arrive without validation.
-  it("has no required-field errors to show: Save is enabled and no alert markup renders", () => {
+  // Item 235: the form's one rule (best-by vs prepared) cannot be broken by
+  // an item as it stands — both come off the same stored row — so nothing is
+  // shown before a submit is attempted, and Save is enabled.
+  it("has no field errors to show on open: Save is enabled and no alert markup renders", () => {
     const html = renderForm();
     expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Save</);
     expect(html).not.toMatch(/<button[^>]*type="submit"[^>]*\sdisabled=""[^>]*>Save</);

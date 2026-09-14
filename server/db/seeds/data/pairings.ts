@@ -75,4 +75,34 @@ export const pairings: PairingSeed[] = [
     vitCFoodSlug: 'broccoli',
     reason: "Broccoli's vitamin C helps baby absorb more of tahini's non-heme iron.",
   },
+  {
+    ironFoodSlug: 'sesame_seeds',
+    vitCFoodSlug: 'broccoli',
+    reason: "Broccoli's vitamin C helps baby absorb more of the non-heme iron in a pinch of sesame seeds.",
+  },
+  {
+    ironFoodSlug: 'chia_seeds',
+    vitCFoodSlug: 'strawberry',
+    reason: 'Mashed strawberry soaked into chia gel adds the vitamin C that makes its plant-based iron easier to absorb.',
+  },
+  {
+    ironFoodSlug: 'flax_seeds',
+    vitCFoodSlug: 'orange',
+    reason: 'A little orange alongside ground flaxseed boosts how much of its non-heme iron baby actually absorbs.',
+  },
+  {
+    ironFoodSlug: 'hemp_seeds',
+    vitCFoodSlug: 'kiwi',
+    reason: "Kiwi's vitamin C helps baby absorb more of the plant-based iron in hemp hearts.",
+  },
+  {
+    ironFoodSlug: 'pumpkin_seeds',
+    vitCFoodSlug: 'bell_pepper',
+    reason: "Bell pepper's vitamin C converts ground pumpkin seed's non-heme iron into a form baby's body takes up far more easily.",
+  },
+  {
+    ironFoodSlug: 'cashew_butter',
+    vitCFoodSlug: 'mango',
+    reason: "Mango's vitamin C boosts absorption of the non-heme iron in thinned cashew butter.",
+  },
 ]

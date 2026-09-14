@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, ne } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
@@ -90,11 +90,14 @@ describe("single-food basic recipes", () => {
     return recipeRows.map((r) => ({ ...r, foodSlugs: foodSlugsByRecipeId.get(r.id) ?? [] }));
   }
 
-  it("gives every catalog food exactly one single-ingredient recipe of its own", async () => {
+  it("gives every non-spice catalog food exactly one single-ingredient recipe of its own", async () => {
+    // Spices are exempt (item 331): a pinch of cinnamon is a seasoning, not a
+    // serving, so "Simple cinnamon" would be a recipe for nothing. The
+    // zero-basics half of that rule is pinned in its own test below.
     const foodRows = await db
       .select({ slug: schema.foods.slug, minAgeMonths: schema.foods.minAgeMonths })
       .from(schema.foods)
-      .where(isNull(schema.foods.ownerId));
+      .where(and(isNull(schema.foods.ownerId), ne(schema.foods.category, "spice")));
     expect(foodRows.length).toBeGreaterThan(0);
 
     const recipes = await catalogRecipes();
@@ -115,11 +118,25 @@ describe("single-food basic recipes", () => {
     expect(singleIngredient).toHaveLength(foodRows.length);
   });
 
+  it("gives spice foods no basic recipe at all", async () => {
+    const spiceRows = await db
+      .select({ slug: schema.foods.slug })
+      .from(schema.foods)
+      .where(eq(schema.foods.category, "spice"));
+    expect(spiceRows.length).toBeGreaterThan(0);
+
+    const slugs = new Set((await catalogRecipes()).map((r) => r.slug));
+    const unwanted = spiceRows
+      .map((food) => `simple-${food.slug.replace(/_/g, "-")}`)
+      .filter((slug) => slugs.has(slug));
+    expect(unwanted).toEqual([]);
+  });
+
   it("matches each basic recipe's minimum age, slug, and title to its food", async () => {
     const foodRows = await db
       .select({ slug: schema.foods.slug, name: schema.foods.name, minAgeMonths: schema.foods.minAgeMonths })
       .from(schema.foods)
-      .where(isNull(schema.foods.ownerId));
+      .where(and(isNull(schema.foods.ownerId), ne(schema.foods.category, "spice")));
 
     const bySlug = new Map((await catalogRecipes()).map((r) => [r.slug, r]));
 
@@ -198,7 +215,7 @@ describe("single-food basic recipes", () => {
 
   /**
    * Ledger item 266. Runs over the seeded catalog, which is BOTH recipe files
-   * (recipes.ts exports the curated 15 followed by the 40 basics), so a step
+   * (recipes.ts exports the curated 15 followed by the 59 basics), so a step
    * added to either file is covered.
    */
   const COOKING_VERB = /\b(?:roast|bake|steam|boil|simmer|saut[eé]|fry|poach|scramble|toast|cook)\b/i;
@@ -227,8 +244,9 @@ describe("single-food basic recipes", () => {
 
   it("gives every cooking step a temperature or a time", async () => {
     const variants = await catalogVariants();
-    // 55 recipes: the curated 15 (3 stages each) plus 40 basics (39 x 3 + shrimp's 2).
-    expect(new Set(variants.map((v) => v.slug)).size).toBe(55);
+    // 74 recipes: the curated 15 (3 stages each) plus 59 basics (58 x 3 +
+    // shrimp's 2) — one per non-spice food after the expansion (item 331).
+    expect(new Set(variants.map((v) => v.slug)).size).toBe(74);
 
     const cookingSteps = variants.flatMap((v) =>
       v.instructions
@@ -277,6 +295,22 @@ describe("single-food basic recipes", () => {
       "simple-banana",
       "simple-blueberry",
       "simple-watermelon",
+      // Item 331. Canned tuna arrives cooked; every seed and every tree nut is
+      // ground, soaked, or thinned and stirred in cold. Note the guard reads
+      // "toast" as a cooking verb, so none of these steps may reach for a toast
+      // finger even as a serving suggestion.
+      "simple-tuna",
+      "simple-sesame-seeds",
+      "simple-chia-seeds",
+      "simple-flax-seeds",
+      "simple-hemp-seeds",
+      "simple-pumpkin-seeds",
+      "simple-sunflower-seed-butter",
+      "simple-cashew-butter",
+      "simple-walnuts",
+      "simple-pistachios",
+      "simple-hazelnuts",
+      "simple-pecans",
     ];
     const variants = await catalogVariants();
     const offenders = variants
@@ -298,6 +332,16 @@ describe("single-food basic recipes", () => {
       ["simple-salmon", /145°F \(63°C\)/],
       ["simple-shrimp", /145°F \(63°C\)/],
       ["simple-egg", /yolk and (?:the )?white are firm/i],
+      // Item 331. Poultry is 165°F whatever the cut; pork and lamb take the
+      // ground-meat figure because babies get meat well-done, the same call the
+      // catalog already made for beef. Sources:
+      // .workflow/scratch/catalog-expansion/sources.md
+      ["simple-chicken", /165°F \(74°C\)/],
+      ["simple-turkey", /165°F \(74°C\)/],
+      ["simple-pork", /160°F \(71°C\)/],
+      ["simple-lamb", /160°F \(71°C\)/],
+      ["simple-cod", /145°F \(63°C\)/],
+      ["simple-trout", /145°F \(63°C\)/],
     ];
     const variants = await catalogVariants();
 

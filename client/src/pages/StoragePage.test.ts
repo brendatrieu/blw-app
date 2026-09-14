@@ -83,3 +83,63 @@ describe("StoragePage cards (item 264 — kebab everywhere)", () => {
     expect(html).toMatch(/<a [^>]*href="\/storage\/add"/);
   });
 });
+
+/** A `YYYY-MM-DD` best-by date `days` from today on the LOCAL calendar — the
+ * clock `resolveFreshness` compares against. */
+function ymd(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function item(overrides: Partial<StorageItem>): StorageItem {
+  return { ...ITEM, ...overrides };
+}
+
+function renderWith(items: StorageItem[]) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  queryClient.setQueryData(babyKeys.list(false), [BABY]);
+  queryClient.setQueryData(storageKeys.list("active"), { items });
+  return renderToString(
+    createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(
+        CelebrationProvider,
+        null,
+        createElement(MemoryRouter, { initialEntries: ["/storage"] }, createElement(StoragePage, null)),
+      ),
+    ),
+  );
+}
+
+/** The order the item titles appear in the rendered list. */
+function titleOrder(html: string, titles: string[]): string[] {
+  return titles
+    .map((title) => ({ title, at: html.indexOf(title) }))
+    .filter((entry) => entry.at >= 0)
+    .sort((a, b) => a.at - b.at)
+    .map((entry) => entry.title);
+}
+
+// Item 333: the server orders the active view by its own window-derived
+// expiry, which a best-by date now overrides — so the sort moved to
+// `useStorageItems`' select and every reader (Home included) gets it.
+describe("StoragePage active ordering (item 333)", () => {
+  it("re-sorts an out-of-order cache so the soonest thing to eat is first", () => {
+    const html = renderWith([
+      item({ id: "a1", label: "Window in three days", foodSlug: null, foodName: null,
+        expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString() }),
+      // Best by TODAY ends at the next local midnight, so it is at most 24h
+      // away whatever time this test runs — no time-of-day flake.
+      item({ id: "a2", label: "Best by today", foodSlug: null, foodName: null, bestBy: ymd(0) }),
+      item({ id: "a3", label: "Window in thirty hours", foodSlug: null, foodName: null,
+        expiresAt: new Date(Date.now() + 30 * 60 * 60 * 1000).toISOString() }),
+    ]);
+    expect(titleOrder(html, ["Window in three days", "Best by today", "Window in thirty hours"])).toEqual([
+      "Best by today",
+      "Window in thirty hours",
+      "Window in three days",
+    ]);
+  });
+});

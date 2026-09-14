@@ -1,6 +1,7 @@
 import type { FoodListItem } from "@blw/shared";
 import { Badge } from "./Badge.js";
-import { allergenLabel, levelLabel } from "../constants.js";
+import { AllergenChips } from "./AllergenChips.js";
+import { levelLabel } from "../constants.js";
 
 interface FoodBadgesProps {
   food: Pick<FoodListItem, "ironLevel" | "vitaminCLevel" | "fiberLevel" | "allergens" | "minAgeMonths"> & {
@@ -30,11 +31,7 @@ export function FoodBadges({ food }: FoodBadgesProps) {
           reason to reach for the food — and nowhere on the grid tiles. */}
       {!food.isCustom && food.fiberLevel === "high" && <Badge tone="leaf">High fiber</Badge>}
       {!food.isCustom && <Badge tone="neutral">{food.minAgeMonths}m+</Badge>}
-      {food.allergens.map((slug) => (
-        <Badge key={slug} tone="danger">
-          {allergenLabel(slug)}
-        </Badge>
-      ))}
+      <AllergenChips allergens={food.allergens} />
     </div>
   );
 }

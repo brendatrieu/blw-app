@@ -172,3 +172,73 @@ describe("DashboardPage", () => {
     expect(html).toMatch(/<a [^>]*href="\/meals"[^>]*>See all<\/a>/);
   });
 });
+
+// Item 333: Home shows the top three of the SAME ordered list the Storage
+// tab does, because the order now lives in `useStorageItems`' select rather
+// than in either page — so "the three most urgent" can't mean two things.
+describe("DashboardPage storage ordering (item 333)", () => {
+  it("takes its top three from the freshness order, not the cache's order", () => {
+    const baby: Baby = {
+      id: "baby-1",
+      name: "Baby",
+      birthDate: "2026-01-01",
+      notes: null,
+      archived: false,
+      archivedAt: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    const hoursOut = (hours: number) => new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+    const today = new Date();
+    const ymdToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
+      today.getDate(),
+    ).padStart(2, "0")}`;
+    const base: Omit<StorageItem, "id" | "label" | "expiresAt" | "bestBy"> = {
+      foodSlug: null,
+      foodName: null,
+      recipeId: null,
+      recipeTitle: null,
+      preparedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      location: "fridge",
+      status: "active",
+      statusChangedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      useSoon: false,
+      expired: false,
+      quantityNote: null,
+      servingsTotal: null,
+      servingsLeft: null,
+      notes: null,
+    };
+    const items: StorageItem[] = [
+      { ...base, id: "s-far", label: "Five days of window", expiresAt: hoursOut(120), bestBy: null },
+      { ...base, id: "s-mid", label: "Three days of window", expiresAt: hoursOut(72), bestBy: null },
+      { ...base, id: "s-near", label: "Thirty hours of window", expiresAt: hoursOut(30), bestBy: null },
+      // Best by today ends at the next local midnight: at most 24h out,
+      // whatever time this runs — so it is always first.
+      { ...base, id: "s-first", label: "Best by today", expiresAt: hoursOut(120), bestBy: ymdToday },
+    ];
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(babyKeys.list(false), [baby]);
+    queryClient.setQueryData(storageKeys.list("active"), { items });
+    queryClient.setQueryData(trackingKeys.allergenProgress(baby.id), { items: [] });
+    queryClient.setQueryData([...trackingKeys.meals(baby.id), { limit: 100 }], { items: [] });
+
+    const html = renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(MemoryRouter, null, createElement(DashboardPage, null)),
+      ),
+    );
+
+    const order = ["s-first", "s-near", "s-mid", "s-far"]
+      .map((id) => ({ id, at: html.indexOf(`/storage/${id}`) }))
+      .filter((entry) => entry.at >= 0)
+      .sort((a, b) => a.at - b.at)
+      .map((entry) => entry.id);
+    expect(order).toEqual(["s-first", "s-near", "s-mid"]);
+    // The five-day item is the one the HOME_STORAGE_LIMIT slice drops — it
+    // would have survived under the cache's own order.
+    expect(html).not.toContain("Five days of window");
+  });
+});

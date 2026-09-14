@@ -30,6 +30,9 @@ function catalogRecipe(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
         isCustom: false,
         foodEmoji: null,
         quantityNote: "1 fillet",
+        // The recipe-level `allergens: ["fish"]` above is THIS ingredient's,
+        // which is the whole point of the per-row breakdown (item 334).
+        allergens: ["fish"],
       },
     ],
     extraIngredients: [
@@ -63,6 +66,7 @@ const CUSTOM_RECIPE = catalogRecipe({
       isCustom: true,
       foodEmoji: "🍞",
       quantityNote: "",
+      allergens: [],
     },
   ],
   extraIngredients: [],
@@ -346,6 +350,7 @@ describe("RecipeDetailPage — Basic badge", () => {
           isCustom: false,
           foodEmoji: null,
           quantityNote: "2 florets",
+          allergens: [],
         },
       ],
     });
@@ -364,5 +369,29 @@ describe("RecipeDetailPage actions pair on a custom recipe (item 283)", () => {
     const storageAt = html.indexOf(`href="/storage/add?recipe=${CUSTOM_RECIPE.id}"`);
     expect(logAt).toBeGreaterThan(-1);
     expect(storageAt).toBeGreaterThan(logAt);
+  });
+});
+
+// Item 334: the header said "Fish" about the whole dish; the ingredient rows
+// said nothing, so which food brought it was never on screen.
+describe("RecipeDetailPage ingredient allergen rows (item 334)", () => {
+  it("marks the ingredient that carries the allergen, inside its own row", () => {
+    const html = renderRecipe(catalogRecipe());
+    const ingredientsSection = html.slice(html.indexOf("Ingredients"));
+    expect(ingredientsSection).toContain("Salmon");
+    expect(ingredientsSection).toContain("Fish");
+    expect(ingredientsSection.indexOf("Fish")).toBeGreaterThan(ingredientsSection.indexOf("Salmon"));
+  });
+
+  it("leaves an allergen-free ingredient row unmarked", () => {
+    const html = renderRecipe(CUSTOM_RECIPE);
+    const ingredientsSection = html.slice(html.indexOf("Ingredients"));
+    expect(ingredientsSection).toContain("Grandma&#x27;s loaf");
+    expect(ingredientsSection).not.toContain("var(--color-danger-contrast)");
+  });
+
+  it("keeps the row a single link — the marks are plain spans, not controls", () => {
+    const html = renderRecipe(catalogRecipe());
+    expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
   });
 });

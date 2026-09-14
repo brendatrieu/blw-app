@@ -28,6 +28,15 @@ const BASE_ITEM: StorageItem = {
   notes: null,
 };
 
+/** A `YYYY-MM-DD` best-by date `days` from today on the LOCAL calendar — the
+ * same clock `resolveFreshness` compares against, so these pins mean the same
+ * thing in every timezone and on every day the suite is run. */
+function ymd(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 interface RenderOptions {
   linkable?: boolean;
   actions?: ReactNode;
@@ -71,10 +80,10 @@ describe("StorageItemCard (render)", () => {
     expect(html).not.toMatch(/Use within/);
   });
 
-  it("shows the Expired badge AND the best-by date together (badges warn, the date informs)", () => {
-    const html = renderCard({ ...BASE_ITEM, bestBy: "2026-08-29", expired: true });
+  it("shows the freshness badge AND the best-by date together — the badge warns, the date says why", () => {
+    const html = renderCard({ ...BASE_ITEM, bestBy: ymd(-1) });
     expect(html).toContain("Expired");
-    expect(html).toContain("Best by Sat, Aug 29");
+    expect(html).toContain("Best by");
   });
 
   it("hides the Serve action for a label-only item (nothing the serve endpoint could log)", () => {
@@ -232,4 +241,62 @@ describe("StorageItemCard action row (items 262/264)", () => {
     expect(html).not.toContain("Restore to active");
   });
 
+});
+
+// Item 333: the chip used to come from the server's window-derived flags and
+// ignore the best-by date entirely, so two containers with the same date
+// disagreed whenever their foods carried different storage windows.
+describe("StorageItemCard freshness chip (item 333)", () => {
+  it("badges a past best-by Expired, whatever the server's flags say", () => {
+    const html = renderCard({ ...BASE_ITEM, bestBy: ymd(-1), expired: false, useSoon: false });
+    expect(html).toContain("Expired");
+    expect(html).not.toContain("Use soon");
+    expect(html).toContain("Best by");
+  });
+
+  it("badges a best-by today, and one tomorrow, Use soon", () => {
+    for (const offset of [0, 1]) {
+      const html = renderCard({ ...BASE_ITEM, bestBy: ymd(offset), expired: false, useSoon: false });
+      expect(html).toContain("Use soon");
+      expect(html).not.toContain(">Expired<");
+      expect(html).toContain("Best by");
+    }
+  });
+
+  it("badges a best-by further out with nothing at all, and still shows the date", () => {
+    const html = renderCard({ ...BASE_ITEM, bestBy: ymd(5), expired: false, useSoon: false });
+    expect(html).not.toContain("Use soon");
+    expect(html).not.toContain(">Expired<");
+    expect(html).toContain("Best by");
+    expect(html).not.toMatch(/Use within/);
+  });
+
+  it("lets a future best-by clear a server-expired item's badge", () => {
+    const html = renderCard({ ...BASE_ITEM, bestBy: ymd(5), expired: true, useSoon: true });
+    expect(html).not.toContain(">Expired<");
+    expect(html).not.toContain("Use soon");
+  });
+
+  it("falls back to the server's flags, and the countdown, with no best-by date", () => {
+    const soon = renderCard({ ...BASE_ITEM, bestBy: null, useSoon: true });
+    expect(soon).toContain("Use soon");
+    // The countdown is dropped once a badge is warning — "Expired" under an
+    // Expired badge says nothing new.
+    expect(soon).not.toMatch(/Use within/);
+
+    const fresh = renderCard({
+      ...BASE_ITEM,
+      bestBy: null,
+      expiresAt: new Date(Date.now() + 30 * 60 * 60 * 1000).toISOString(),
+    });
+    expect(fresh).toMatch(/Use within/);
+    expect(fresh).not.toContain("Use soon");
+  });
+
+  it("shows no freshness row at all on a finished or discarded item", () => {
+    const html = renderCard({ ...BASE_ITEM, status: "finished", bestBy: ymd(-1) });
+    expect(html).toContain("Finished");
+    expect(html).not.toContain(">Expired<");
+    expect(html).not.toContain("Best by");
+  });
 });

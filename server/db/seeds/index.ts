@@ -38,12 +38,12 @@ const ALLERGENS: { slug: AllergenSlug; name: string; introGuidance: string }[] =
   { slug: "milk", name: "Milk", introGuidance: "Offer whole-milk yogurt or cheese as a first taste; watch for hives, vomiting, or eczema flares over the following days." },
   { slug: "egg", name: "Egg", introGuidance: "Well-cooked egg (e.g. scrambled or baked into pancakes) in a tiny first portion; one of the most common early allergens." },
   { slug: "peanut", name: "Peanut", introGuidance: "Thinned smooth peanut butter only — never whole nuts or thick globs, which are choking hazards." },
-  { slug: "tree_nut", name: "Tree nut", introGuidance: "Smooth nut butter thinned with water/yogurt/breastmilk, or finely ground nut mixed into food — never whole or chopped nuts." },
-  { slug: "fish", name: "Fish", introGuidance: "Well-cooked, deboned, flaked low-mercury fish (e.g. salmon) as a tiny first portion." },
+  { slug: "tree_nut", name: "Tree nut", introGuidance: "Smooth almond, cashew, or plain hazelnut butter thinned with water/yogurt/breastmilk, or walnut, pistachio, or pecan ground to a fine meal and stirred into food — never whole or chopped nuts." },
+  { slug: "fish", name: "Fish", introGuidance: "Well-cooked, deboned, flaked low-mercury fish (salmon, cod, trout, sardines) as a tiny first portion; canned light tuna only in moderation." },
   { slug: "shellfish", name: "Shellfish", introGuidance: "Well-cooked, finely chopped shellfish (e.g. shrimp) as a tiny first portion." },
   { slug: "wheat", name: "Wheat", introGuidance: "Wheat toast fingers or pasta as a tiny first portion." },
   { slug: "soy", name: "Soy", introGuidance: "Soft tofu or soy-based foods as a tiny first portion." },
-  { slug: "sesame", name: "Sesame", introGuidance: "Tahini thinned with water/yogurt, or hummus, as a tiny first portion." },
+  { slug: "sesame", name: "Sesame", introGuidance: "Tahini thinned with water/yogurt, hummus, or a pinch of sesame seeds stirred into a wet food, as a tiny first portion." },
 ];
 
 export async function runSeeds(db: Database): Promise<void> {

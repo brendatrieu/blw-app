@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { FoodListItem } from "@blw/shared";
-import { addCustomFoodLabel } from "../constants.js";
+import { addCustomFoodLabel, allergenLabel } from "../constants.js";
 import { getFoodEmoji } from "../foodEmoji.js";
 import { useFoods } from "../hooks.js";
 import { CustomFoodForm } from "./CustomFoodForm.js";
@@ -17,9 +17,20 @@ import { Sheet } from "../../../components/ui/Sheet.js";
  * Exported so the callers that still need the same option shape for their
  * OTHER controls (LogFoodForm's "which food did the leftovers come from?"
  * select) build it identically instead of re-deriving it.
+ *
+ * `markers` carries the food's allergens (item 334), which is why building
+ * every option through this one function matters: log a meal, add to
+ * storage, and pick ingredients for a custom recipe all go through the same
+ * `MultiCombobox`, so one line here puts "Fish" beside Salmon in all three.
+ * A custom food's allergens are the ones the parent ticked themselves.
  */
 export function foodPickerOption(food: FoodListItem): MultiComboboxOption {
-  return { value: food.id, label: food.name, emoji: getFoodEmoji(food.slug, food.category, food.emoji) };
+  return {
+    value: food.id,
+    label: food.name,
+    emoji: getFoodEmoji(food.slug, food.category, food.emoji),
+    markers: food.allergens.map(allergenLabel),
+  };
 }
 
 interface FoodPickerProps {
