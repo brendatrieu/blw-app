@@ -23,6 +23,13 @@ function makeDeps(order: string[]): SignOutDeps {
         order.push(`storage.removeItem:${key}`);
       },
     },
+    flushUsage: async () => {
+      await Promise.resolve();
+      order.push("flushUsage");
+    },
+    discardUsage: async () => {
+      order.push("discardUsage");
+    },
   };
 }
 
@@ -32,10 +39,16 @@ describe("performSignOut", () => {
     await performSignOut(makeDeps(order));
 
     expect(order).toEqual([
+      // The usage flush goes FIRST, while the session cookie is still valid:
+      // a queued event sent after the sign-out arrives anonymous.
+      "flushUsage",
       "authSignOut",
       "queryClient.clear",
       "clearCache",
       "storage.removeItem:blw.activeBabyId",
+      // And the queue is purged last, with the rest of the account's
+      // client-side state (item 319).
+      "discardUsage",
     ]);
   });
 

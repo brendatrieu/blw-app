@@ -90,6 +90,19 @@ describe("isNetworkOnlyRoute", () => {
     expect(isNetworkOnlyRoute(args(`${ORIGIN}/api/account/settings`))).toBe(true);
   });
 
+  it("matches /api/usage, so the service worker never caches or replays analytics (item 319)", () => {
+    // A cached 204 would make a flush look like it landed; workbox's own
+    // background sync would replay batches outside the consent check and
+    // outside the queue that owns retries.
+    expect(isNetworkOnlyRoute(args(`${ORIGIN}/api/usage`))).toBe(true);
+    expect(isNetworkOnlyRoute(args(`${ORIGIN}/api/usage?x=1`))).toBe(true);
+    expect(isNetworkOnlyRoute(args("https://evil.example.com/api/usage"))).toBe(false);
+  });
+
+  it("does not accidentally swallow a neighbouring path", () => {
+    expect(isNetworkOnlyRoute(args(`${ORIGIN}/api/usages`))).toBe(false);
+  });
+
   it("does not match /api/foods", () => {
     expect(isNetworkOnlyRoute(args(`${ORIGIN}/api/foods`))).toBe(false);
   });

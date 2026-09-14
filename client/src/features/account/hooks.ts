@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { clearPersistedQueryCache } from "../../lib/persister.js";
+import { discardUsage } from "../../lib/usage/track.js";
 import { ACTIVE_BABY_STORAGE_KEY } from "../babies/useActiveBaby.js";
 import { deleteAccount, downloadAccountExport } from "./api.js";
 
@@ -31,6 +32,12 @@ export function useDeleteAccount() {
     mutationFn: (password: string) => deleteAccount(password),
     onSuccess: () => {
       queryClient.clear();
+      // Before anything else, and synchronously as far as the in-memory
+      // queue is concerned: the account is gone, so nothing still waiting to
+      // be sent has anywhere to land. The sign-out that follows this would
+      // otherwise FLUSH it (see `performSignOut`) at an account that no
+      // longer exists.
+      void discardUsage();
       void clearPersistedQueryCache();
       try {
         window.localStorage.removeItem(ACTIVE_BABY_STORAGE_KEY);

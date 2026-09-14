@@ -20,7 +20,7 @@ import { userPreferencesSchema } from "./preferences.js";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 10;
+export const ACCOUNT_EXPORT_VERSION = 11;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -197,6 +197,22 @@ export const exportAiKeySchema = z.object({
   lastValidatedAt: z.string().nullable(),
 });
 
+/**
+ * v11. One anonymous usage event this account produced (see
+ * shared/src/usage.ts). Exported because the rows are stored against the
+ * account and a parent asking for "everything you hold about me" is owed
+ * them — even though nothing in one identifies anybody. The server-assigned
+ * `receivedAt` and the row id are left out: neither is a fact about the
+ * parent, and `occurredAt` already orders the file.
+ */
+export const exportUsageEventSchema = z.object({
+  name: z.string(),
+  props: storedJson,
+  route: z.string().nullable(),
+  appVersion: z.string(),
+  occurredAt: z.string(),
+});
+
 export const accountExportSchema = z.object({
   exportVersion: z.literal(ACCOUNT_EXPORT_VERSION),
   exportedAt: z.string(),
@@ -225,6 +241,9 @@ export const accountExportSchema = z.object({
    * is created lazily, and "no row" is a real, distinguishable state rather
    * than a defaulted object pretending to be one. */
   preferences: userPreferencesSchema.nullable(),
+  /** v11. Anonymous usage events, oldest first. Empty for an account that has
+   * sharing switched off — turning it off deletes them. */
+  usageEvents: z.array(exportUsageEventSchema),
 });
 
 export type AccountExport = z.infer<typeof accountExportSchema>;
@@ -240,6 +259,7 @@ export type ExportCustomRecipe = z.infer<typeof exportCustomRecipeSchema>;
 export type ExportSymptomCheck = z.infer<typeof exportSymptomCheckSchema>;
 export type ExportChatThread = z.infer<typeof exportChatThreadSchema>;
 export type ExportChatMessage = z.infer<typeof exportChatMessageSchema>;
+export type ExportUsageEvent = z.infer<typeof exportUsageEventSchema>;
 
 // ---------------------------------------------------------------------------
 // DELETE /api/account

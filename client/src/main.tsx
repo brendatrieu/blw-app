@@ -7,6 +7,7 @@ import { App } from "./App.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { ApiError } from "./lib/api.js";
 import { createIdbPersister } from "./lib/persister.js";
+import { UsageProvider } from "./lib/usage/UsageProvider.js";
 import { initTheme } from "./theme.js";
 import "./styles/index.css";
 
@@ -63,7 +64,12 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         }}
       >
         <BrowserRouter>
-          <App />
+          {/* Inside the router (screen_viewed needs a location) and outside
+              AppLayout, so /login and /signup are measured too — the signup
+              funnel starts on a screen the authenticated layout never renders. */}
+          <UsageProvider>
+            <App />
+          </UsageProvider>
         </BrowserRouter>
       </PersistQueryClientProvider>
     </ErrorBoundary>

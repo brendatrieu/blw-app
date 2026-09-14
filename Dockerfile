@@ -61,6 +61,15 @@ RUN apk add --no-cache dumb-init
 WORKDIR /app
 ENV NODE_ENV=production
 
+# The build this image was made from, for the analytics `deploys` marker the
+# server writes on boot (server/src/usage/deploys.ts). Same `GITHUB_SHA`
+# build-arg the client's __APP_VERSION__ uses, so the server and the client
+# name a deploy identically; config.ts truncates it to the same 12 characters.
+# Unset when the image is built by hand without the build-arg, which is fine —
+# the deploy row is simply skipped.
+ARG GITHUB_SHA
+ENV APP_VERSION=${GITHUB_SHA}
+
 # tsx is a devDependency of @blw/server, but the existing db:migrate/db:seed
 # scripts (see server/package.json) run TS source straight through it —
 # server/db/seeds isn't part of the tsc build, so there's no compiled JS to

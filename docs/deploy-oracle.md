@@ -143,6 +143,16 @@ stack reads:
 | `GOOGLE_CLIENT_SECRET` | optional | Pairs with the above. |
 | `RESEND_API_KEY` | optional | Needed for verification/password-reset emails; the app should still run without it. |
 | `KEY_ENCRYPTION_SECRET` | yes | Encrypts each user's own Anthropic API key at rest (AES-256-GCM). Generate with `openssl rand -base64 32` and never rotate it without a migration plan — rotating it without re-encrypting existing rows locks users out of their saved key. |
+| `USAGE_RATE_LIMIT_MAX` | optional | Requests per hour per caller for `POST /api/usage` (keyed by user when signed in, by IP when not). Default 120; an ordinary session sends far fewer. |
+| `USAGE_RETENTION_DAYS` | optional | How long anonymous usage events are kept. Default 180. The purge runs on boot and daily, cutting on the server's own `received_at`. |
+| `ADMIN_EMAILS` | optional | Comma-separated emails that get the metrics dashboard (phase 1b) without a database write — how the owner gets in on a fresh deployment, and how access is revoked by editing a file. Parsed today, unused until `/api/admin/*` ships. |
+
+`APP_VERSION` is deliberately **not** in `.env`: the image bakes it in from the
+deploy's commit SHA (`ARG GITHUB_SHA` in the Dockerfile's runner stage, the
+same build-arg the client's `__APP_VERSION__` uses, truncated to 12 characters
+by `config.ts`). That is how the server writes one `deploys` row per build, so
+the dashboard can mark "this change shipped here". An image built by hand
+without the build-arg simply writes no marker.
 
 Example:
 
@@ -261,6 +271,25 @@ For a full disaster recovery (new VM from scratch): repeat steps 1–5 above,
 restore the `.env` file from wherever you keep it outside the VM (a password
 manager — it's never in git), then run the restore procedure before
 `docker compose up -d --wait` starts serving traffic.
+
+## Uptime monitoring
+
+The container healthcheck polls `GET /api/health`, which is deliberately cheap
+— it answers `{"status":"ok"}` without touching Postgres, so a database blip
+cannot get a recoverable container killed.
+
+For an external pinger (UptimeRobot or Better Stack, free tier, 5-minute
+interval) point it at `https://<DOMAIN>/api/health?deep=1` instead. That form
+runs a `SELECT 1` and answers `{"status":"ok","database":"ok"}`, or **503**
+with `{"status":"error","database":"error"}` when the app is still answering in
+front of a dead database — which is exactly the failure a shallow check would
+report as healthy.
+
+Every response also carries an `x-request-id` header, and any 5xx answers
+`{"error":"internal_error","requestId":"…"}` with that same id. A user who
+reports a problem can read the id off the screen; it leads straight to the
+logged stack (`docker compose logs app | grep <id>`), without the app ever
+putting an error message into an analytics event.
 
 ## Security headers
 

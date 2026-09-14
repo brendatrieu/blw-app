@@ -33,6 +33,23 @@ const csvList = z
       .filter((entry) => entry.length > 0),
   );
 
+/** Same as `csvList`, but case-folded — used for matching email addresses,
+ * which are compared case-insensitively everywhere else too. */
+const lowercaseCsvList = z
+  .string()
+  .optional()
+  .transform((value) =>
+    (value ?? "")
+      .split(",")
+      .map((entry) => entry.trim().toLowerCase())
+      .filter((entry) => entry.length > 0),
+  );
+
+/** How many characters of a commit SHA identify a build. Matches the slice
+ * the client bakes into `__APP_VERSION__` (client/vite.config.ts), so an
+ * event's `app_version` joins to a `deploys.sha` on equality. */
+export const APP_VERSION_LENGTH = 12;
+
 const baseEnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().url().optional(),
@@ -79,6 +96,39 @@ const baseEnvSchema = z.object({
   AI_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
   /** Per-user hourly budget for `PUT /api/account/ai-key` (live validation). */
   AI_KEY_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  /**
+   * Per-caller hourly budget for `POST /api/usage`, counted in requests (not
+   * events). Sized well above what an ordinary session sends — the client
+   * flushes every 15s or 20 events — so a real parent never hits it, while a
+   * script cannot fill the disk on a 50 GB VM.
+   */
+  USAGE_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
+
+  // --- analytics --------------------------------------------------------
+  /**
+   * Days of usage events kept. Purged on boot and daily after that. 180 days
+   * is two quarters of cohort comparisons at roughly 1-2 GB steady state for
+   * 100 weekly-active parents; the data answers product questions, so keeping
+   * it longer than the questions live would be collecting for its own sake.
+   */
+  USAGE_RETENTION_DAYS: z.coerce.number().int().positive().default(180),
+  /**
+   * Bootstrap admins for the phase 1b metrics dashboard, comma separated.
+   * Parsed now so the key is documented and deployable with this release;
+   * nothing reads it until `/api/admin/*` exists. An email here grants
+   * dashboard access WITHOUT a database write, which is what lets the owner
+   * in on a fresh deployment — and, because it is env, what lets access be
+   * revoked by editing a file rather than by hoping a row is right.
+   */
+  ADMIN_EMAILS: lowercaseCsvList,
+  /**
+   * The build this container was made from — the deploy commit SHA, baked in
+   * by the Dockerfile from the same `GITHUB_SHA` build-arg the client's
+   * `__APP_VERSION__` uses, and truncated the same way so the two agree.
+   * Optional: unset in dev and test, where there is no deploy to record, and
+   * the boot-time `deploys` row is simply skipped.
+   */
+  APP_VERSION: optionalNonEmpty.transform((value) => value?.slice(0, APP_VERSION_LENGTH)),
 });
 
 const envSchema = baseEnvSchema

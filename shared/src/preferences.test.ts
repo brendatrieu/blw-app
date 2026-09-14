@@ -1,25 +1,44 @@
 import { describe, expect, it } from "vitest";
-import { updatePreferencesInputSchema, userPreferencesSchema } from "./preferences.js";
+import {
+  DEFAULT_SHARE_USAGE_DATA,
+  updatePreferencesInputSchema,
+  userPreferencesSchema,
+} from "./preferences.js";
 import { ACCOUNT_EXPORT_VERSION, accountExportSchema } from "./account.js";
 
+const seen = { tourCompletedAt: "2026-09-11T10:00:00.000Z", shareUsageData: true };
+const unseen = { tourCompletedAt: null, shareUsageData: false };
+
 describe("userPreferencesSchema", () => {
-  it("accepts a stamped tour and an unseen one", () => {
-    expect(userPreferencesSchema.parse({ tourCompletedAt: "2026-09-11T10:00:00.000Z" })).toEqual({
-      tourCompletedAt: "2026-09-11T10:00:00.000Z",
-    });
-    expect(userPreferencesSchema.parse({ tourCompletedAt: null })).toEqual({ tourCompletedAt: null });
+  it("accepts a stamped tour and an unseen one, each with a sharing choice", () => {
+    expect(userPreferencesSchema.parse(seen)).toEqual(seen);
+    expect(userPreferencesSchema.parse(unseen)).toEqual(unseen);
   });
 
   it("rejects a missing field, a non-ISO date, and a boolean stand-in", () => {
     expect(userPreferencesSchema.safeParse({}).success).toBe(false);
-    expect(userPreferencesSchema.safeParse({ tourCompletedAt: "yesterday" }).success).toBe(false);
-    expect(userPreferencesSchema.safeParse({ tourCompletedAt: true }).success).toBe(false);
+    expect(userPreferencesSchema.safeParse({ tourCompletedAt: null }).success).toBe(false);
+    expect(userPreferencesSchema.safeParse({ shareUsageData: true }).success).toBe(false);
+    expect(userPreferencesSchema.safeParse({ ...seen, tourCompletedAt: "yesterday" }).success).toBe(false);
+    expect(userPreferencesSchema.safeParse({ ...seen, tourCompletedAt: true }).success).toBe(false);
+    expect(userPreferencesSchema.safeParse({ ...seen, shareUsageData: "yes" }).success).toBe(false);
+  });
+
+  it("shares on by default — the events cannot carry anything about a child", () => {
+    expect(DEFAULT_SHARE_USAGE_DATA).toBe(true);
   });
 });
 
 describe("updatePreferencesInputSchema", () => {
-  it("accepts only { tourCompleted: true }", () => {
+  it("takes either key on its own, or both", () => {
     expect(updatePreferencesInputSchema.parse({ tourCompleted: true })).toEqual({ tourCompleted: true });
+    expect(updatePreferencesInputSchema.parse({ shareUsageData: false })).toEqual({
+      shareUsageData: false,
+    });
+    expect(updatePreferencesInputSchema.parse({ tourCompleted: true, shareUsageData: true })).toEqual({
+      tourCompleted: true,
+      shareUsageData: true,
+    });
   });
 
   it("rejects anything that would mean 'un-see the tour' or nothing at all", () => {
@@ -29,18 +48,38 @@ describe("updatePreferencesInputSchema", () => {
     expect(updatePreferencesInputSchema.safeParse({ tourCompleted: false }).success).toBe(false);
     expect(updatePreferencesInputSchema.safeParse({}).success).toBe(false);
     expect(updatePreferencesInputSchema.safeParse({ tourCompleted: "true" }).success).toBe(false);
+    expect(updatePreferencesInputSchema.safeParse({ shareUsageData: "false" }).success).toBe(false);
+    // A typo'd key would otherwise be a PATCH that reports success and
+    // changes nothing.
+    expect(updatePreferencesInputSchema.safeParse({ shareUsage: false }).success).toBe(false);
   });
 });
 
-describe("account export v10", () => {
-  it("bumped its version and carries preferences, null when the account has none", () => {
-    expect(ACCOUNT_EXPORT_VERSION).toBe(10);
+describe("account export v11", () => {
+  it("bumped its version and carries usage events alongside the preferences", () => {
+    expect(ACCOUNT_EXPORT_VERSION).toBe(11);
 
     const shape = accountExportSchema.shape;
     expect(shape.preferences.safeParse(null).success).toBe(true);
-    expect(shape.preferences.safeParse({ tourCompletedAt: null }).success).toBe(true);
-    expect(shape.preferences.safeParse({ tourCompletedAt: "2026-09-11T10:00:00.000Z" }).success).toBe(true);
-    // Absent is not the same as null — the key is always present in a v10 file.
+    expect(shape.preferences.safeParse(seen).success).toBe(true);
+    // v10's shape is not a v11 preferences object: the sharing choice is part
+    // of the bundle now, which is why the version moved.
+    expect(shape.preferences.safeParse({ tourCompletedAt: null }).success).toBe(false);
+    // Absent is not the same as null — the key is always present in a v11 file.
     expect(shape.preferences.safeParse(undefined).success).toBe(false);
+
+    expect(shape.usageEvents.safeParse([]).success).toBe(true);
+    expect(
+      shape.usageEvents.safeParse([
+        {
+          name: "screen_viewed",
+          props: { route_pattern: "/", from_route: null },
+          route: "/",
+          appVersion: "abc123def456",
+          occurredAt: "2026-09-13T10:00:00.000Z",
+        },
+      ]).success,
+    ).toBe(true);
+    expect(shape.usageEvents.safeParse(undefined).success).toBe(false);
   });
 });

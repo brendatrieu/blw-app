@@ -1,9 +1,11 @@
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import type { FastifyInstance } from "fastify";
+import type { UsageContext } from "@blw/shared";
 import { buildApp, type BuildAppOptions } from "../app.js";
 import type { AuthLogger } from "../auth.js";
 import type { Env } from "../config.js";
@@ -40,6 +42,11 @@ export function testEnv(overrides: Partial<Env> = {}): Env {
     GLOBAL_RATE_LIMIT_MAX: 300,
     AI_RATE_LIMIT_MAX: 20,
     AI_KEY_RATE_LIMIT_MAX: 5,
+    USAGE_RATE_LIMIT_MAX: 120,
+    USAGE_RETENTION_DAYS: 180,
+    ADMIN_EMAILS: [],
+    // No deploy behind a test run, so no `deploys` row is written.
+    APP_VERSION: undefined,
     ...overrides,
   };
 }
@@ -181,4 +188,37 @@ export async function signUpUser(app: FastifyInstance, name = "Test Parent"): Pr
   }
 
   return { email, password, cookie };
+}
+
+/** A valid session context, as the client builds it. */
+export const TEST_USAGE_CONTEXT: UsageContext = {
+  app_version: "abc123def456",
+  standalone: false,
+  theme: "system",
+  platform: "desktop",
+  online: true,
+  baby_age_bucket: "6-8",
+  baby_count: "1",
+  has_ai_key: false,
+};
+
+let usageEventCounter = 0;
+
+/**
+ * One valid `POST /api/usage` envelope, with a fresh uuid each call. Defaults
+ * to the simplest event in the catalog; `overrides` swap in whatever a test
+ * is actually about (a name and props, a clock, a duplicate id).
+ */
+export function usageEnvelope(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  usageEventCounter += 1;
+  return {
+    id: randomUUID(),
+    name: "screen_viewed",
+    props: { route_pattern: "/", from_route: null },
+    route: "/",
+    appVersion: TEST_USAGE_CONTEXT.app_version,
+    occurredAt: new Date(Date.now() - usageEventCounter * 1000).toISOString(),
+    context: TEST_USAGE_CONTEXT,
+    ...overrides,
+  };
 }

@@ -1,14 +1,24 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Baby } from "@blw/shared";
-import { ACCOUNT_DELETE_CONFIRMATION, ANTHROPIC_CONSOLE_URL, ageInMonths, maskAiKey } from "@blw/shared";
+import {
+  ACCOUNT_DELETE_CONFIRMATION,
+  ANTHROPIC_CONSOLE_URL,
+  DEFAULT_SHARE_USAGE_DATA,
+  ageInMonths,
+  maskAiKey,
+} from "@blw/shared";
 import { useDeleteAccount, useExportAccount } from "../features/account/hooks.js";
 import { useAiKeyStatus, useDeleteAiKey, useSaveAiKey } from "../features/ai/hooks.js";
 import { useBabies, useCreateBaby, useDeleteBaby, useUpdateBaby } from "../features/babies/hooks.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
+import { usePreferences, useUpdatePreferences } from "../features/tour/hooks.js";
 import { useSession } from "../lib/auth.js";
 import { createSignOutDeps, performSignOut } from "../lib/signout.js";
+import { isBrowserOptedOut, readBrowserSignals } from "../lib/usage/consent.js";
+import { aiKeySaveOutcome, attemptBucket } from "../lib/usage/properties.js";
+import { setUsageConsent, track } from "../lib/usage/track.js";
 import { getStoredTheme, setTheme, type ThemePreference } from "../theme.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Card } from "../components/ui/Card.js";
@@ -17,6 +27,7 @@ import { Field } from "../components/ui/Field.js";
 import { KeepButton } from "../components/ui/KeepButton.js";
 import { Input, Textarea } from "../components/ui/Input.js";
 import { Sheet } from "../components/ui/Sheet.js";
+import { Switch } from "../components/ui/Switch.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { SegmentedControl, type SegmentedControlOption } from "../components/ui/SegmentedControl.js";
 import { useSubmitValidation, type FormErrors } from "../lib/forms.js";
@@ -381,6 +392,10 @@ export function AiSection() {
   const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  /** Which try at saving a key this is, within one visit to this form —
+   * the "is BYO-key too much friction?" question needs the retries, not
+   * anything about the key itself. */
+  const attemptRef = useRef(0);
 
   const configured = status.data?.configured === true;
   const validatedAt = formatValidatedAt(status.data?.lastValidatedAt);
@@ -395,13 +410,18 @@ export function AiSection() {
     setSaved(false);
     if (saveKey.isPending) return;
     if (!attemptSubmit()) return;
+    attemptRef.current += 1;
+    const attempt = attemptBucket(attemptRef.current);
     saveKey.mutate(apiKey.trim(), {
       onSuccess: () => {
+        // Outcome and attempt COUNT only — never the key, never its last 4.
+        track("ai_key_saved", { outcome: "ok", attempt });
         // Drop the plaintext from component state the moment it is stored.
         setApiKey("");
         setSaved(true);
       },
       onError: (mutationError) => {
+        track("ai_key_saved", { outcome: aiKeySaveOutcome(mutationError), attempt });
         setError(aiKeyErrorMessage(mutationError.message));
       },
     });
@@ -611,6 +631,108 @@ function accountErrorMessage(code: string): string {
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// Privacy (item 321)
+// ---------------------------------------------------------------------------
+
+/** The switch's own label. Exported so a render test pins the exact words. */
+export const PRIVACY_SWITCH_LABEL = "Share anonymous usage data";
+
+/**
+ * What sharing actually means, in the two sentences a parent needs: what is
+ * collected, and what turning it off does. "Never notes, names, or your
+ * baby's details" is a promise the SCHEMA keeps (shared/src/usage.ts has no
+ * free-text field anywhere), not a policy we intend to follow.
+ */
+export const PRIVACY_DESCRIPTION =
+  "Which screens and features get used, never notes, names, or your baby's details. " +
+  "Turning this off also deletes what was already collected.";
+
+/** Shown instead of a live switch when the browser has already said no. */
+export const PRIVACY_BROWSER_OPT_OUT = "Your browser asked not to be tracked, so this is off.";
+
+/** One line on the page itself, so the switch is discoverable without hunting. */
+export const PRIVACY_SETTINGS_HINT =
+  "We count which screens get used to decide what to build next — turn that off under Privacy below.";
+
+/**
+ * The usage-sharing switch.
+ *
+ * Two rules it exists to keep. First, turning it OFF is retroactive: the
+ * PATCH deletes every event already collected for the account in the same
+ * transaction as the flag, and this client drops its own queue with it — so
+ * the sentence above is literally true rather than a promise about the
+ * future. Second, a browser that sends Do Not Track or Global Privacy
+ * Control wins outright: the switch renders off and disabled, because a
+ * control showing "on" while nothing is being sent would be a lie, and one
+ * that could be switched on would be overriding a request the parent already
+ * made of their browser.
+ */
+export function PrivacySection() {
+  const preferences = usePreferences();
+  const updatePreferences = useUpdatePreferences();
+
+  const browserOptedOut = isBrowserOptedOut(readBrowserSignals());
+  const stored = preferences.data?.shareUsageData ?? DEFAULT_SHARE_USAGE_DATA;
+  const checked = browserOptedOut ? false : stored;
+
+  function handleChange(next: boolean) {
+    if (browserOptedOut || updatePreferences.isPending) return;
+    if (!next) {
+      // Sent BEFORE the PATCH, which is the last moment this account is
+      // sending anything at all.
+      track("usage_sharing_changed", { enabled: false });
+    }
+    updatePreferences.mutate(
+      { shareUsageData: next },
+      {
+        onSuccess: () => {
+          // Only once the server has agreed: "off" discards the queue on
+          // this device, "on" releases it again.
+          setUsageConsent(next);
+          if (next) track("usage_sharing_changed", { enabled: true });
+        },
+      },
+    );
+  }
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="font-h2 flex items-center gap-2 text-[var(--color-text)]">
+        <span aria-hidden="true">🔒</span> Privacy
+      </h2>
+
+      <div className="flex min-h-11 items-center justify-between gap-3">
+        <span id="share-usage-data-label" className="text-sm font-semibold text-[var(--color-text)]">
+          {PRIVACY_SWITCH_LABEL}
+        </span>
+        <Switch
+          id="share-usage-data"
+          checked={checked}
+          disabled={browserOptedOut || preferences.isPending || updatePreferences.isPending}
+          onChange={handleChange}
+          aria-label={PRIVACY_SWITCH_LABEL}
+        />
+      </div>
+
+      <p className="text-sm text-[var(--color-text-muted)]">{PRIVACY_DESCRIPTION}</p>
+
+      {browserOptedOut ? (
+        <p role="status" className="text-sm text-[var(--color-text-muted)]">
+          {PRIVACY_BROWSER_OPT_OUT}
+        </p>
+      ) : null}
+
+      {updatePreferences.isError ? (
+        <p role="alert" className="text-sm text-[var(--color-danger)]">
+          Could not save that. {accountErrorMessage(updatePreferences.error.message)}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 export type DeleteAccountField = "phrase" | "password";
 export type DeleteAccountErrors = FormErrors<DeleteAccountField>;
 
@@ -817,9 +939,13 @@ export function SettingsPage() {
   return (
     <div className="flex flex-col gap-6 p-4">
       <PageHeader title="Settings" emoji="⚙️" />
+      {/* The one-line mention of the switch (item 321): a parent should not
+          have to go looking for it to know it exists. */}
+      <p className="-mt-4 text-sm text-[var(--color-text-muted)]">{PRIVACY_SETTINGS_HINT}</p>
       <BabiesSection />
       <AiSection />
       <AppearanceSection />
+      <PrivacySection />
       <AccountSection />
     </div>
   );

@@ -3,6 +3,7 @@ import type { RecipeListItem, RecipeScope } from "@blw/shared";
 import type { RecipeFilters } from "../api.js";
 import { AGE_THRESHOLDS, ALLERGEN_SLUGS, RECIPE_SCOPES, allergenLabel } from "../constants.js";
 import { useFoods, useRecipes } from "../hooks.js";
+import { useCatalogFilteredEvent } from "../../../lib/usage/useCatalogFiltered.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../basicRecipe.js";
 import { ActiveFilterPill, FilterChip, FunnelButton } from "./filters.js";
 import { SingleFoodPicker } from "./FoodPicker.js";
@@ -248,6 +249,8 @@ export function RecipesSegment() {
   const filters = useMemo(() => buildRecipesFilters({ q, scope, ...extra }), [q, scope, extra]);
 
   const { data, isLoading, isError } = useRecipes(filters);
+  // `catalog_filtered` — see FoodsPage; the same hook, the same debounce.
+  useCatalogFilteredEvent({ catalog: "recipes", filters, resultCount: data?.recipes.length });
   // Only to name the picked ingredient in its pill; the picker itself reads
   // the same (deduplicated) query.
   const { data: foodsData } = useFoods();

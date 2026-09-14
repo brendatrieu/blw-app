@@ -37,6 +37,7 @@ import {
   recipes,
   session,
   symptomChecks,
+  usageEvents,
   user,
   userAiKeys,
   userPreferences,
@@ -342,10 +343,30 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
     // at all — exported as null rather than a defaulted object, which is a
     // state a re-import could not otherwise tell apart.
     const [preferencesRow] = await db
-      .select({ tourCompletedAt: userPreferences.tourCompletedAt })
+      .select({
+        tourCompletedAt: userPreferences.tourCompletedAt,
+        shareUsageData: userPreferences.shareUsageData,
+      })
       .from(userPreferences)
       .where(eq(userPreferences.userId, userId))
       .limit(1);
+
+    // Anonymous usage events (v11). Nothing in one identifies anybody — the
+    // whole catalog is enums and buckets — but they are rows stored against
+    // this account, and "everything you hold about me" means everything.
+    // The server-assigned `receivedAt` and the row id are left out: neither
+    // is a fact about the parent, and `occurredAt` already orders the file.
+    const usageEventRows = await db
+      .select({
+        name: usageEvents.name,
+        props: usageEvents.props,
+        route: usageEvents.route,
+        appVersion: usageEvents.appVersion,
+        occurredAt: usageEvents.occurredAt,
+      })
+      .from(usageEvents)
+      .where(eq(usageEvents.userId, userId))
+      .orderBy(asc(usageEvents.occurredAt));
 
     // Status only. `encryptedKey` is deliberately not selected: the column
     // never enters this process during an export, so it cannot leak from it.
@@ -457,7 +478,19 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
             lastValidatedAt: isoOrNull(aiKeyRow.lastValidatedAt),
           }
         : { configured: false, last4: null, lastValidatedAt: null },
-      preferences: preferencesRow ? { tourCompletedAt: isoOrNull(preferencesRow.tourCompletedAt) } : null,
+      preferences: preferencesRow
+        ? {
+            tourCompletedAt: isoOrNull(preferencesRow.tourCompletedAt),
+            shareUsageData: preferencesRow.shareUsageData,
+          }
+        : null,
+      usageEvents: usageEventRows.map((row) => ({
+        name: row.name,
+        props: row.props,
+        route: row.route,
+        appVersion: row.appVersion,
+        occurredAt: row.occurredAt.toISOString(),
+      })),
     };
 
     // Serialised once, by hand: returning the object would have Fastify
@@ -563,6 +596,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       //   user -> babies -> meals -> meal_foods, babies -> symptom_checks
       //   user -> babies -> allergen_overrides
       //   user -> favorites, storage_items, user_ai_keys, user_preferences
+      //   user -> usage_events                (anonymous, but still theirs)
       //   user -> foods, recipes (custom only) -> recipe_ingredients/variants
       //   user -> chat_threads -> chat_messages
       //   user -> session, account            (better-auth's own tables)

@@ -28,9 +28,18 @@ export function isUserDataRoute({ url, sameOrigin }: RouteMatcherArgs): boolean 
   return sameOrigin && /^\/api\/(babies|storage|favorites)(\/|$|\?)/.test(url.pathname);
 }
 
-/** NetworkOnly, never cached: /api/auth, /api/ai, /api/account. */
+/**
+ * NetworkOnly, never cached: /api/auth, /api/ai, /api/account, /api/usage.
+ *
+ * `usage` is here so the service worker treats analytics as traffic it has
+ * no business in: never cached (a cached 204 would make a flush look like it
+ * landed) and never background-synced (workbox would replay batches on its
+ * own schedule, outside the consent check and outside the queue that owns
+ * retries). The queue does its own persistence and its own replay, and the
+ * uuid primary key is what makes a replay safe.
+ */
 export function isNetworkOnlyRoute({ url, sameOrigin }: RouteMatcherArgs): boolean {
-  return sameOrigin && /^\/api\/(auth|ai|account)(\/|$|\?)/.test(url.pathname);
+  return sameOrigin && /^\/api\/(auth|ai|account|usage)(\/|$|\?)/.test(url.pathname);
 }
 
 /** Meal-log POSTs, queued via BackgroundSync when offline. */

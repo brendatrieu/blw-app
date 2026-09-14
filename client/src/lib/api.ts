@@ -1,6 +1,7 @@
 // Small typed fetch helper shared by every feature's query layer. Kept
 // dependency-free (no axios etc.) since the server API is same-origin
 // (dev proxy / prod static serving both route /api -> Fastify).
+import { trackApiFailure } from "./usage/errors.js";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -42,17 +43,29 @@ async function extractError(response: Response): Promise<{ message: string; body
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      ...(init?.body !== undefined ? { "Content-Type": "application/json" } : {}),
-      ...init?.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      headers: {
+        Accept: "application/json",
+        ...(init?.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...init?.headers,
+      },
+    });
+  } catch (error) {
+    // The request never happened (offline, DNS, a blocked origin). Counted
+    // as `api_network`; the error itself is re-thrown untouched so every
+    // existing caller behaves exactly as before.
+    trackApiFailure(path, undefined);
+    throw error;
+  }
 
   if (!response.ok) {
     const { message, body } = await extractError(response);
+    // 5xx only — a 401/404 is the API answering correctly. The status
+    // bucket and the route pattern travel; the body never does.
+    trackApiFailure(path, response.status);
     throw new ApiError(response.status, message, body);
   }
 

@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { trackClientError } from "../lib/usage/errors.js";
 import { Button } from "./ui/Button.js";
 
 interface ErrorBoundaryProps {
@@ -27,7 +28,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   override componentDidCatch(error: unknown) {
+    // The message and the stack stay here, on this device. What leaves is a
+    // count against a route pattern — enough for "is any screen crashing?",
+    // and nothing that could carry what a parent had typed into it.
     console.error(error);
+    trackClientError(error, "render_crash");
   }
 
   override render() {

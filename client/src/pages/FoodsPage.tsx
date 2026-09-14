@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import type { FoodCategory, FoodsQuery, Level } from "@blw/shared";
 import { useFoods } from "../features/catalog/hooks.js";
+import { useCatalogFilteredEvent } from "../lib/usage/useCatalogFiltered.js";
 import { FoodTile } from "../features/catalog/components/FoodTile.js";
 import { ActiveFilterPill, FilterChip, FunnelButton } from "../features/catalog/components/filters.js";
 import {
@@ -243,6 +244,9 @@ export function FoodsPage() {
   const filters = useMemo(() => buildFoodsFilters(q, category, extraFilters), [q, category, extraFilters]);
 
   const { data, isLoading, isError } = useFoods(filters);
+  // `catalog_filtered`, once a changed filter set has actually resolved
+  // (item 320). Keys and a results bucket only — never the search text.
+  useCatalogFilteredEvent({ catalog: "foods", filters, resultCount: data?.foods.length });
 
   const pills = activeExtraFilters(extraFilters);
   const activeExtraFilterCount = pills.length;

@@ -23,6 +23,15 @@ import {
   type MealsQuery,
 } from "./api.js";
 import { useCelebration, type CelebrationOptions } from "../../components/ui/Celebration.js";
+import { track } from "../../lib/usage/track.js";
+import {
+  backdatedBucket,
+  failureKind,
+  foodCountBucket,
+  isOffline,
+  lookupRecipeKind,
+  mealViaFromLocation,
+} from "../../lib/usage/properties.js";
 
 export const trackingKeys = {
   meals: (babyId: string) => ["meals", babyId] as const,
@@ -176,10 +185,30 @@ export function celebrateForNewMeal(
 }
 
 /**
+ * The one fact about a save that the ROUTE cannot tell us, and that the
+ * payload does not carry either: whether the parent had the "+ Save
+ * leftovers to storage" switch on. Everything else in `meal_logged` is
+ * derived from the input, the celebration snapshot or the URL.
+ */
+export interface CreateMealUsage {
+  /**
+   * Whether the leftovers switch was on when Save was pressed — i.e. whether
+   * the parent ASKED for leftovers. Whether the storage write then succeeded
+   * is `storage_item_added`'s business, not this event's.
+   */
+  leftoversSaved: boolean;
+}
+
+/**
  * Creating a meal also drives the app's celebration moments — see
  * `celebrateForNewMeal` — and never fires on edit/delete.
+ *
+ * It is also where `meal_logged` is measured: once, on success, never per
+ * network attempt, so a retried save cannot be counted twice. The props are
+ * buckets and booleans derived from the input the caller already built —
+ * `has_notes` is whether a note exists, never the note.
  */
-export function useCreateMeal(babyId: string | undefined) {
+export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage = { leftoversSaved: false }) {
   const queryClient = useQueryClient();
   const { celebrate } = useCelebration();
   return useMutation({
@@ -188,13 +217,30 @@ export function useCreateMeal(babyId: string | undefined) {
       return createMeal(babyId, input);
     },
     onMutate: () => snapshotMealCelebrationContext(queryClient, babyId),
-    onSuccess: (created, _input, context) => {
+    onSuccess: (created, input, context) => {
+      track("meal_logged", {
+        food_count: foodCountBucket(input.foodIds.length),
+        recipe_kind: lookupRecipeKind(queryClient, input.recipeId),
+        from_storage: false,
+        via: mealViaFromLocation(),
+        leftovers_saved: usage.leftoversSaved,
+        has_notes: Boolean(input.notes || input.reactionNote),
+        // The celebration snapshot already answers "had this baby eaten
+        // anything before?", so the funnel's most important step costs no
+        // extra query.
+        is_first_meal: context?.hadAnyMeals !== true,
+        backdated: backdatedBucket(input.servedAt ?? new Date()),
+        offline: isOffline(),
+      });
       if (!babyId) return;
       const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
       for (const [key, data] of snapshots) {
         if (data) queryClient.setQueryData(key, { items: [created, ...data.items] });
       }
       celebrateForNewMeal(babyId, context, celebrate);
+    },
+    onError: (error) => {
+      track("meal_save_failed", { via: mealViaFromLocation(), kind: failureKind(error), offline: isOffline() });
     },
     onSettled: () => {
       if (!babyId) return;
@@ -213,6 +259,11 @@ export function useUpdateMeal(babyId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateMealInput }) => updateMeal(id, input),
+    // An edit is not a new meal, so it never sends `meal_logged` — but it IS
+    // a meal mutation that can fail, and the quality panel counts those.
+    onError: (error) => {
+      track("meal_save_failed", { via: mealViaFromLocation(), kind: failureKind(error), offline: isOffline() });
+    },
     onSuccess: (updated: MealItem) => {
       if (!babyId) return;
       const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });

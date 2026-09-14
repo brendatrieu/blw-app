@@ -36,6 +36,22 @@ export function slideIndexFromScroll(scrollLeft: number, slideWidth: number, cou
   return clampSlide(Math.round(scrollLeft / slideWidth), count);
 }
 
+/**
+ * Why the tour is on screen: the first-run gate, or More's "Take the tour"
+ * row. The one prop `tour_opened` / `tour_completed` / `tour_skipped` all
+ * carry, so a replay's numbers never contaminate the first-run funnel.
+ * Mirrors the shared catalog's `source` enum.
+ */
+export type TourSource = "first_run" | "more";
+
+/**
+ * How a parent left the tour. `complete` is the last slide's "Get started";
+ * the other three are the ways out that skip, and they are told apart
+ * because "the Skip button" and "I tapped outside it" are different
+ * feedback (see `DialogCloseReason`).
+ */
+export type TourExitVia = "complete" | "skip" | "overlay" | "escape";
+
 /** What every way out of the tour does, which is the same thing four times over. */
 export interface TourExit {
   /** Whether to mark the tour seen. A replay must not re-stamp the date. */

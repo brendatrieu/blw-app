@@ -4,9 +4,18 @@ import { createPortal } from "react-dom";
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/**
+ * How a dialog was dismissed. The two ways OUT of a modal that are not a
+ * button — a tap on the dimmed backdrop, and Escape — are different gestures
+ * with different meanings ("I am done here" vs "get me out"), and the tour
+ * reports which one it was. Callers that do not care take no argument, since
+ * `() => void` is assignable to this.
+ */
+export type DialogCloseReason = "overlay" | "escape";
+
 interface DialogProps {
   open: boolean;
-  onClose: () => void;
+  onClose: (reason?: DialogCloseReason) => void;
   /** Names the dialog for assistive tech — required, since the panel has no visible title row. */
   ariaLabel: string;
   children: ReactNode;
@@ -55,7 +64,7 @@ export function Dialog({ open, onClose, ariaLabel, children }: DialogProps) {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onClose("escape");
         return;
       }
       if (event.key !== "Tab" || !panel) return;
@@ -91,7 +100,7 @@ export function Dialog({ open, onClose, ariaLabel, children }: DialogProps) {
       <div
         className="dialog-overlay absolute inset-0 bg-[var(--color-text)]/40"
         aria-hidden="true"
-        onClick={onClose}
+        onClick={() => onClose("overlay")}
       />
       <DialogPanel panelRef={panelRef} ariaLabel={ariaLabel}>
         {children}

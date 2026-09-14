@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/Button.js";
 import { Dialog } from "../../components/ui/Dialog.js";
+// Aliased: `track` is already a local name in here for the scroll container.
+import { track as trackEvent } from "../../lib/usage/track.js";
 import { usePreferences, useCompleteTour } from "./hooks.js";
 import { TOUR_SLIDES, TOUR_SLIDE_COUNT } from "./slides.js";
-import { clampSlide, resolveTourExit, slideIndexFromScroll } from "./tour.js";
+import { clampSlide, resolveTourExit, slideIndexFromScroll, type TourExitVia, type TourSource } from "./tour.js";
 
 /**
  * The tour: six slides on one horizontal, snapping track, inside a centred
@@ -27,14 +29,23 @@ function prefersReducedMotion(): boolean {
 interface TourDialogProps {
   /** Closes the dialog. Called after the exit has decided what to write. */
   onClose: () => void;
+  /** First run, or a replay from More — carried on every tour event. */
+  source: TourSource;
 }
 
-export function TourDialog({ onClose }: TourDialogProps) {
+export function TourDialog({ onClose, source }: TourDialogProps) {
   const { data: preferences, status } = usePreferences();
   const completeTour = useCompleteTour();
 
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [index, setIndex] = useState(0);
+  /**
+   * The same number as `index`, mirrored into a ref purely so `exit` does not
+   * have to depend on it: `exit` is `Dialog`'s `onClose`, and a new identity
+   * on every slide would tear down and re-run Dialog's open effect — which
+   * restores focus and the page's scroll lock — mid-swipe.
+   */
+  const indexRef = useRef(0);
 
   /**
    * Whether the tour was ALREADY marked seen when this dialog opened — i.e.
@@ -101,24 +112,35 @@ export function TourDialog({ onClose }: TourDialogProps) {
    * The PATCH is fired and forgotten: closing never waits on the network, so
    * a failed write costs at most one extra viewing and never a stuck screen.
    */
-  const exit = useCallback(() => {
-    const { patch } = resolveTourExit(replayRef.current);
-    if (patch) completeTour.mutate();
-    onClose();
-  }, [completeTour, onClose]);
+  const exit = useCallback(
+    (via: TourExitVia) => {
+      const { patch } = resolveTourExit(replayRef.current);
+      if (patch) completeTour.mutate();
+      // "Is the tour worth its slides?" is answered by the completion rate
+      // and by WHICH slide the skips cluster on — so a skip carries the
+      // slide it happened on, and the gesture that caused it.
+      if (via === "complete") {
+        trackEvent("tour_completed", { source });
+      } else {
+        trackEvent("tour_skipped", { source, slide: clampSlide(indexRef.current, TOUR_SLIDE_COUNT), via });
+      }
+      onClose();
+    },
+    [completeTour, onClose, source],
+  );
 
   const isFirst = index === 0;
   const isLast = index === TOUR_SLIDE_COUNT - 1;
 
   return (
-    <Dialog open onClose={exit} ariaLabel="Little Meals tour">
+    <Dialog open onClose={(reason) => exit(reason ?? "overlay")} ariaLabel="Little Meals tour">
       {/* Fixed-height row so the track does not shift when Skip disappears
           on the last slide. */}
       <div className="flex min-h-11 shrink-0 items-center justify-end">
         {isLast ? null : (
           <button
             type="button"
-            onClick={exit}
+            onClick={() => exit("skip")}
             className="inline-flex min-h-11 items-center justify-center px-3 text-sm font-semibold text-[var(--color-text-muted)]"
           >
             Skip
@@ -129,8 +151,10 @@ export function TourDialog({ onClose }: TourDialogProps) {
       <div
         ref={trackRef}
         onScroll={(event) => {
-          const track = event.currentTarget;
-          setIndex(slideIndexFromScroll(track.scrollLeft, track.clientWidth, TOUR_SLIDE_COUNT));
+          const element = event.currentTarget;
+          const next = slideIndexFromScroll(element.scrollLeft, element.clientWidth, TOUR_SLIDE_COUNT);
+          indexRef.current = next;
+          setIndex(next);
         }}
         aria-roledescription="carousel"
         aria-label="Tour slides"
@@ -194,7 +218,7 @@ export function TourDialog({ onClose }: TourDialogProps) {
               Back
             </Button>
           )}
-          <Button className="flex-1 basis-0" onClick={isLast ? exit : () => scrollToSlide(index + 1)}>
+          <Button className="flex-1 basis-0" onClick={isLast ? () => exit("complete") : () => scrollToSlide(index + 1)}>
             {isLast ? "Get started" : "Next"}
           </Button>
         </div>

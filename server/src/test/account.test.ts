@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { beforeEach, afterEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
@@ -7,7 +8,13 @@ import {
   accountExportSchema,
   type AccountExport,
 } from "@blw/shared";
-import { createTestApp, insertMeals, signUpUser, type TestUser } from "./helpers.js";
+import {
+  TEST_USAGE_CONTEXT,
+  createTestApp,
+  insertMeals,
+  signUpUser,
+  type TestUser,
+} from "./helpers.js";
 import { encryptSecret, lastFour } from "../ai/crypto.js";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
@@ -246,6 +253,41 @@ async function seedOneOfEverything(
     .insert(schema.userPreferences)
     .values({ userId, tourCompletedAt: new Date("2026-03-02T08:00:00Z") });
 
+  // v11: two anonymous usage events, out of order so the export's sort is
+  // doing real work.
+  await db.insert(schema.usageEvents).values([
+    {
+      id: randomUUID(),
+      userId,
+      name: "meal_logged",
+      props: {
+        food_count: "2",
+        recipe_kind: "none",
+        from_storage: false,
+        via: "log_page",
+        leftovers_saved: false,
+        has_notes: false,
+        is_first_meal: true,
+        backdated: "now",
+        offline: false,
+      },
+      route: "/log-meal",
+      appVersion: "abc123def456",
+      context: TEST_USAGE_CONTEXT,
+      occurredAt: new Date("2026-03-03T09:00:00Z"),
+    },
+    {
+      id: randomUUID(),
+      userId,
+      name: "screen_viewed",
+      props: { route_pattern: "/", from_route: null },
+      route: "/",
+      appVersion: "abc123def456",
+      context: TEST_USAGE_CONTEXT,
+      occurredAt: new Date("2026-03-03T08:00:00Z"),
+    },
+  ]);
+
   return {
     userId,
     babyId: baby!.id,
@@ -264,6 +306,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     threads,
     aiKeys,
     preferences,
+    usage,
     users,
     sessions,
     accounts,
@@ -281,6 +324,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
       db.select().from(schema.chatThreads).where(eq(schema.chatThreads.userId, seeded.userId)),
       db.select().from(schema.userAiKeys).where(eq(schema.userAiKeys.userId, seeded.userId)),
       db.select().from(schema.userPreferences).where(eq(schema.userPreferences.userId, seeded.userId)),
+      db.select().from(schema.usageEvents).where(eq(schema.usageEvents.userId, seeded.userId)),
       db.select().from(schema.user).where(eq(schema.user.id, seeded.userId)),
       db.select().from(schema.session).where(eq(schema.session.userId, seeded.userId)),
       db.select().from(schema.account).where(eq(schema.account.userId, seeded.userId)),
@@ -317,6 +361,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     chatMessages: messages.length,
     userAiKeys: aiKeys.length,
     userPreferences: preferences.length,
+    usageEvents: usage.length,
     sessions: sessions.length,
     accounts: accounts.length,
   };
@@ -337,6 +382,7 @@ const FULL_COUNTS = {
   chatMessages: 2,
   userAiKeys: 1,
   userPreferences: 1,
+  usageEvents: 2,
   sessions: 1,
   accounts: 1,
 };
@@ -356,6 +402,7 @@ const EMPTY_COUNTS = {
   chatMessages: 0,
   userAiKeys: 0,
   userPreferences: 0,
+  usageEvents: 0,
   sessions: 0,
   accounts: 0,
 };
@@ -425,13 +472,14 @@ describe("account export", () => {
         "favorites",
         "storageItems",
         "preferences",
+        "usageEvents",
         "profile",
         "meals",
         "symptomChecks",
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(10);
+    expect(bundle.exportVersion).toBe(11);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -628,7 +676,7 @@ describe("account export", () => {
     expect(raw).not.toContain(stored!.encryptedKey);
   });
 
-  it("carries the account's app preferences (v10)", async () => {
+  it("carries the account's app preferences (v10) and its sharing choice (v11)", async () => {
     const response = await app.inject({
       method: "GET",
       url: "/api/account/export",
@@ -637,7 +685,50 @@ describe("account export", () => {
 
     expect(response.json<AccountExport>().preferences).toEqual({
       tourCompletedAt: "2026-03-02T08:00:00.000Z",
+      shareUsageData: true,
     });
+  });
+
+  it("carries the anonymous usage events, oldest first and with no ids (v11)", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/account/export",
+      headers: { cookie: user.cookie },
+    });
+
+    const bundle = accountExportSchema.parse(response.json());
+    expect(bundle.usageEvents).toEqual([
+      {
+        name: "screen_viewed",
+        props: { route_pattern: "/", from_route: null },
+        route: "/",
+        appVersion: "abc123def456",
+        occurredAt: "2026-03-03T08:00:00.000Z",
+      },
+      {
+        name: "meal_logged",
+        props: {
+          food_count: "2",
+          recipe_kind: "none",
+          from_storage: false,
+          via: "log_page",
+          leftovers_saved: false,
+          has_notes: false,
+          is_first_meal: true,
+          backdated: "now",
+          offline: false,
+        },
+        route: "/log-meal",
+        appVersion: "abc123def456",
+        occurredAt: "2026-03-03T09:00:00.000Z",
+      },
+    ]);
+
+    // Neither the row id nor the server-assigned receivedAt is a fact about
+    // the parent, so neither is in the file.
+    for (const event of bundle.usageEvents) {
+      expect(Object.keys(event).sort()).toEqual(["appVersion", "name", "occurredAt", "props", "route"]);
+    }
   });
 
   it("exports null preferences for an account that has never written one", async () => {

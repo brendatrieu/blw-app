@@ -8,8 +8,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { track } from "../../lib/usage/track.js";
 import { usePreferences } from "./hooks.js";
-import { shouldOpenTour } from "./tour.js";
+import { shouldOpenTour, type TourSource } from "./tour.js";
 import { TourDialog } from "./TourDialog.js";
 
 interface TourContextValue {
@@ -43,6 +44,12 @@ export function TourProvider({ children }: { children: ReactNode }) {
   // One automatic opening per session, however the visit ends — otherwise a
   // failed PATCH would re-open the tour on every route change.
   const openedRef = useRef(false);
+  /**
+   * Why this showing happened: the first-run gate, or More's "Take the tour"
+   * row. A ref rather than state — it is only ever read in the same render
+   * the `setOpen` below causes — so the state slots stay as they were.
+   */
+  const sourceRef = useRef<TourSource>("first_run");
 
   useEffect(() => {
     const shouldOpen = shouldOpenTour({
@@ -53,14 +60,18 @@ export function TourProvider({ children }: { children: ReactNode }) {
     });
     if (!shouldOpen) return;
     openedRef.current = true;
+    sourceRef.current = "first_run";
     setOpen(true);
+    track("tour_opened", { source: "first_run" });
   }, [status, fetchStatus, preferences]);
 
   const openTour = useCallback(() => {
     // Latched here too: a parent who opens the tour by hand before the query
     // answers must not then have it opened at them a second time.
     openedRef.current = true;
+    sourceRef.current = "more";
     setOpen(true);
+    track("tour_opened", { source: "more" });
   }, []);
 
   const closeTour = useCallback(() => {
@@ -74,7 +85,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
       {children}
       {/* Mounted only while open, so the dialog's replay latch is decided
           fresh on every visit rather than once per session. */}
-      {open ? <TourDialog onClose={closeTour} /> : null}
+      {open ? <TourDialog source={sourceRef.current} onClose={closeTour} /> : null}
     </TourContext.Provider>
   );
 }

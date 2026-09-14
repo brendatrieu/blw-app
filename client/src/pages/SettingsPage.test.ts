@@ -2,12 +2,18 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 import { ACCOUNT_DELETE_CONFIRMATION } from "@blw/shared";
 import {
   AiSection,
   BabyFields,
   DeleteAccountForm,
+  PRIVACY_BROWSER_OPT_OUT,
+  PRIVACY_DESCRIPTION,
+  PRIVACY_SETTINGS_HINT,
+  PRIVACY_SWITCH_LABEL,
+  PrivacySection,
   validateAiKey,
   validateBaby,
   validateDeleteAccount,
@@ -168,5 +174,83 @@ describe("DeleteAccountForm (render)", () => {
     expect(html).not.toContain(">Cancel<");
     expect(html).toContain("aria-label=\"Don&#x27;t delete\"");
     expect(html).toMatch(/aria-label="Don&#x27;t delete"[^>]*class="[^"]*h-11 w-11/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Privacy (item 321)
+// ---------------------------------------------------------------------------
+
+/** React escapes text nodes; the copy pins have to compare like for like. */
+function escaped(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
+const settingsSource = readFileSync(new URL("./SettingsPage.tsx", import.meta.url), "utf8");
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("PrivacySection — the copy", () => {
+  it("says exactly what the ledger asked for, word for word", () => {
+    expect(PRIVACY_SWITCH_LABEL).toBe("Share anonymous usage data");
+    expect(PRIVACY_DESCRIPTION).toBe(
+      "Which screens and features get used, never notes, names, or your baby's details. " +
+        "Turning this off also deletes what was already collected.",
+    );
+    expect(PRIVACY_BROWSER_OPT_OUT).toBe("Your browser asked not to be tracked, so this is off.");
+  });
+
+  it("renders the heading, the switch and both sentences", () => {
+    const html = renderInProviders(createElement(PrivacySection));
+    expect(html).toContain("Privacy");
+    expect(html).toContain(escaped(PRIVACY_SWITCH_LABEL));
+    expect(html).toContain(escaped(PRIVACY_DESCRIPTION));
+    // A real switch, named for assistive tech.
+    expect(html).toContain('role="switch"');
+    expect(html).toContain(`aria-label="${PRIVACY_SWITCH_LABEL}"`);
+  });
+
+  it("shows the shipped default (on) for an account that has never written a preference", () => {
+    const html = renderInProviders(createElement(PrivacySection));
+    expect(html).toContain('aria-checked="true"');
+    expect(html).not.toContain(escaped(PRIVACY_BROWSER_OPT_OUT));
+  });
+});
+
+describe("PrivacySection — Do Not Track / Global Privacy Control", () => {
+  it("renders OFF and disabled, with the reason, when the browser has asked not to be tracked", () => {
+    vi.stubGlobal("navigator", { doNotTrack: "1" });
+    const html = renderInProviders(createElement(PrivacySection));
+    // A switch reading "on" while nothing is sent would be a lie; one that
+    // could be switched on would override the parent's own browser setting.
+    expect(html).toContain('aria-checked="false"');
+    expect(html).toContain("disabled");
+    expect(html).toContain(escaped(PRIVACY_BROWSER_OPT_OUT));
+  });
+
+  it("honours Global Privacy Control the same way", () => {
+    vi.stubGlobal("navigator", { globalPrivacyControl: true });
+    const html = renderInProviders(createElement(PrivacySection));
+    expect(html).toContain('aria-checked="false"');
+    expect(html).toContain(escaped(PRIVACY_BROWSER_OPT_OUT));
+  });
+});
+
+describe("the Settings page mentions the switch", () => {
+  it("carries a one-line hint pointing at Privacy (item 321)", () => {
+    expect(PRIVACY_SETTINGS_HINT).toContain("Privacy");
+    expect(settingsSource).toContain("{PRIVACY_SETTINGS_HINT}");
+  });
+
+  it("puts Privacy between Appearance and Account", () => {
+    const order = [...settingsSource.matchAll(/<(\w+Section) \/>/g)].map((match) => match[1]);
+    expect(order).toEqual(["BabiesSection", "AiSection", "AppearanceSection", "PrivacySection", "AccountSection"]);
   });
 });

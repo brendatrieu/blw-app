@@ -112,6 +112,9 @@ function renderTour() {
   h.store.i = 0;
   h.store.r = 0;
   const tree = (TourDialog as unknown as (props: unknown) => Rendered)({
+    // `source` rides on every tour event (item 320); a first run is the
+    // case this suite drives.
+    source: "first_run",
     onClose: () => {
       h.closes.count += 1;
     },

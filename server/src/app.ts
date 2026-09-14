@@ -1,9 +1,11 @@
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs";
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyError, type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
-import type { HealthResponse } from "@blw/shared";
+import { sql } from "drizzle-orm";
+import type { DeepHealthResponse, HealthResponse } from "@blw/shared";
 import { loadConfig, type Env } from "./config.js";
 import { createDb, type Database } from "./db/index.js";
 import { createAuth, type AuthLogger } from "./auth.js";
@@ -21,10 +23,20 @@ import { registerSymptomRoutes, type SymptomRoutesOptions } from "./routes/sympt
 import { registerChatRoutes, type ChatRoutesOptions } from "./routes/chat.js";
 import { registerAccountRoutes } from "./routes/account.js";
 import { registerPreferenceRoutes } from "./routes/preferences.js";
+import { registerUsageRoutes } from "./routes/usage.js";
 import type { ApiKeyVerifier } from "./ai/client.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDistDir = path.resolve(__dirname, "../../client/dist");
+
+/**
+ * `?deep=1`, `?deep=true` and a bare `?deep` all ask for the database check;
+ * anything else (including `?deep=0`) keeps the cheap answer. Exported so the
+ * parsing is pinned by a test rather than by reading the handler.
+ */
+export function isDeepHealthRequested(deep: string | undefined): boolean {
+  return deep === "1" || deep === "true" || deep === "";
+}
 
 export interface BuildAppOptions {
   env?: Env;
@@ -55,10 +67,45 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const db = options.db ?? createDb(env.DATABASE_URL);
   const app = Fastify({
     logger: options.logger ?? env.NODE_ENV !== "test",
+    // Every request gets an id, echoed to the caller as `x-request-id` and
+    // logged with any failure. This is the whole of "error tracking" for now:
+    // a parent who reports a problem can read one short id off the screen,
+    // and it leads straight to the stack in the server log — without the app
+    // ever putting a message or a stack into an analytics event.
+    genReqId: () => randomUUID(),
   });
 
   registerSecurityHeaders(app);
   registerRateLimit(app, env);
+
+  // On every response, including errors and 404s.
+  app.addHook("onSend", async (request, reply) => {
+    reply.header("x-request-id", request.id);
+  });
+
+  /**
+   * 5xx answers become `{ error: "internal_error", requestId }`.
+   *
+   * Two reasons, in order: a stack or a driver message in a response body is
+   * an information leak, and the client needs something to show the parent
+   * that is useful to us later. Known errors — the rate limiter's 429, any
+   * 4xx a route throws — are passed through to Fastify's default handler
+   * unchanged, because their status, code and message are already the
+   * contract those callers were written against.
+   */
+  app.setErrorHandler<FastifyError>((error, request, reply) => {
+    const statusCode = error.statusCode ?? 500;
+
+    if (statusCode < 500) {
+      // Second pass through `send(err)` with the handler already run falls
+      // back to Fastify's built-in serializer, which is exactly what these
+      // responses looked like before this handler existed.
+      return reply.send(error);
+    }
+
+    request.log.error({ reqId: request.id, err: error }, "request failed");
+    return reply.code(statusCode).send({ error: "internal_error", requestId: request.id });
+  });
 
   // Routes go inside after(): @fastify/rate-limit wires per-route budgets
   // through an onRoute hook, which only sees routes declared once the plugin
@@ -69,8 +116,26 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       env,
     });
 
-    app.get("/api/health", async (): Promise<HealthResponse> => {
-      return { status: "ok" };
+    /**
+     * Shallow by default — the container healthcheck polls this every 30
+     * seconds and must not pay for a database round trip. `?deep=1` adds a
+     * `SELECT 1`, for an external uptime pinger that should notice an app
+     * still answering in front of a dead database. A failed deep check is a
+     * 503, so the pinger sees a failure rather than a cheerful 200.
+     */
+    app.get("/api/health", async (request, reply): Promise<HealthResponse | DeepHealthResponse> => {
+      const { deep } = request.query as { deep?: string };
+      if (!isDeepHealthRequested(deep)) {
+        return { status: "ok" };
+      }
+
+      try {
+        await db.execute(sql`select 1`);
+        return { status: "ok", database: "ok" };
+      } catch (err) {
+        request.log.error({ reqId: request.id, err }, "deep health check failed");
+        return reply.code(503).send({ status: "error", database: "error" } satisfies DeepHealthResponse);
+      }
     });
 
     // Must come before any /api/ai/* route: it installs the shared per-user
@@ -87,7 +152,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     registerSymptomRoutes(app, db, options.symptom); // triage + symptom checker
     registerChatRoutes(app, db, options.chat); // recipe assistant + ask-anything BLW chat
     registerAccountRoutes(app, db); // data export + account deletion
-    registerPreferenceRoutes(app, db); // per-user app preferences (first-run tour)
+    registerPreferenceRoutes(app, db); // per-user app preferences (tour, usage sharing)
+    registerUsageRoutes(app, db, env); // anonymous usage events
   });
 
   const clientBuildExists = fs.existsSync(path.join(clientDistDir, "index.html"));

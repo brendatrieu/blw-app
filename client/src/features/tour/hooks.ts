@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { UserPreferences } from "@blw/shared";
-import { completeTour, fetchPreferences } from "./api.js";
+import type { UpdatePreferencesInput, UserPreferences } from "@blw/shared";
+import { completeTour, fetchPreferences, updatePreferences } from "./api.js";
 
 export const preferenceKeys = {
   all: () => ["preferences"] as const,
@@ -47,6 +47,29 @@ export function useCompleteTour() {
     },
     onError: () => {
       // Deliberately silent — see above.
+    },
+  });
+}
+
+/**
+ * The general preference writer, behind the Settings switches.
+ *
+ * Deliberately the same shape as `useCompleteTour` — write the server's
+ * answer straight in, then invalidate either way — rather than an optimistic
+ * update: the Privacy switch's "off" also DELETES everything collected, and
+ * a switch that flips before the server has agreed would be claiming a
+ * deletion that has not happened yet.
+ */
+export function useUpdatePreferences() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpdatePreferencesInput) => updatePreferences(input),
+    onSuccess: (preferences: UserPreferences) => {
+      queryClient.setQueryData(preferenceKeys.all(), preferences);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: preferenceKeys.all() });
     },
   });
 }

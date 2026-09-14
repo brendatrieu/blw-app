@@ -14,6 +14,20 @@ import { createStorageItem, fetchStorage, serveStorageItem, updateStorageItem } 
 import { storageItemTitle } from "./format.js";
 import { useCelebration } from "../../components/ui/Celebration.js";
 import { celebrateForNewMeal, snapshotMealCelebrationContext, trackingKeys } from "../tracking/hooks.js";
+import { track } from "../../lib/usage/track.js";
+import {
+  ageDaysBucket,
+  daysBetween,
+  failureKind,
+  foodCountBucket,
+  freshnessAtChange,
+  isOffline,
+  lookupRecipeKind,
+  storageAddViaFromLocation,
+  storageClosedVia,
+  storageSourceFromInput,
+  type StorageClosedVia,
+} from "../../lib/usage/properties.js";
 
 export const storageKeys = {
   list: (view: StorageView) => ["storage", view] as const,
@@ -31,6 +45,21 @@ export function useCreateStorageItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateStorageItemInput) => createStorageItem(input),
+    onSuccess: (_created, input) => {
+      // `via` comes from the route the form is on (and, for the two bare
+      // `/storage/add` entry points, from the route it was reached from), so
+      // a new "Add to storage" button anywhere is measured the day it links
+      // here. `source` comes from the payload's own shape — a label-only
+      // container is the one with neither a food nor a recipe, and its text
+      // is never read.
+      track("storage_item_added", {
+        location: input.location,
+        source: storageSourceFromInput(input),
+        via: storageAddViaFromLocation(),
+        has_servings: input.servingsTotal !== undefined && input.servingsTotal !== null,
+        has_best_by: Boolean(input.bestBy),
+      });
+    },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["storage"] });
     },
@@ -93,13 +122,41 @@ export function useStorageServe(babyId: string | undefined) {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: ServeStorageItemInput }) => serveStorageItem(id, input),
     onMutate: () => snapshotMealCelebrationContext(queryClient, babyId),
-    onSuccess: ({ meal }, _variables, context) => {
+    onSuccess: ({ meal, item }, _variables, context) => {
+      // A serve IS a logged meal, so it sends the same event the log form
+      // does — same props, `from_storage` true, `via: storage_serve`.
+      track("meal_logged", {
+        food_count: foodCountBucket(meal.foods.length),
+        recipe_kind: lookupRecipeKind(queryClient, meal.recipeId),
+        from_storage: true,
+        via: "storage_serve",
+        leftovers_saved: false,
+        has_notes: Boolean(meal.notes || meal.reactionNote),
+        is_first_meal: context?.hadAnyMeals !== true,
+        // A serve is always "now" — the sheet has no when field.
+        backdated: "now",
+        offline: isOffline(),
+      });
+      // A tracked container that hit zero servings flips to `finished`
+      // server-side in this same response. That is a close, and the serve
+      // path is the only way it happens without anyone pressing Remove.
+      if (item.status !== "active") {
+        track("storage_item_closed", {
+          to: item.status,
+          via: "serve_depleted",
+          freshness_at_change: freshnessAtChange(item),
+          age_days_bucket: ageDaysBucket(daysBetween(item.preparedAt)),
+        });
+      }
       if (!babyId) return;
       const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
       for (const [key, data] of snapshots) {
         if (data) queryClient.setQueryData(key, { items: [meal, ...data.items] });
       }
       celebrateForNewMeal(babyId, context, celebrate);
+    },
+    onError: (error) => {
+      track("meal_save_failed", { via: "storage_serve", kind: failureKind(error), offline: isOffline() });
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["storage"] });
@@ -111,6 +168,23 @@ export function useStorageServe(babyId: string | undefined) {
 }
 
 const UNDO_WINDOW_MS = 6_000;
+
+/**
+ * The `storage_item_closed` event for one status write.
+ *
+ * Read entirely off the row the server just returned: the status it now
+ * holds, how fresh it was, and how long it had been open — all buckets. The
+ * container's label, food and recipe never come near it, which is the whole
+ * reason serve-through can be measured at all.
+ */
+function trackStorageStatusChange(item: StorageItem, via: StorageClosedVia): void {
+  track("storage_item_closed", {
+    to: item.status,
+    via,
+    freshness_at_change: freshnessAtChange(item),
+    age_days_bucket: ageDaysBucket(daysBetween(item.preparedAt)),
+  });
+}
 
 export interface StorageStatusChange {
   id: string;
@@ -155,6 +229,12 @@ export function useStorageStatusChange() {
       { id: item.id, input: { status } },
       {
         onSuccess: (updated) => {
+          // Every status change is a `storage_item_closed`, including a
+          // restore — `to: "active"` is what a restore looks like, and
+          // "closed" is the event's name, not its only meaning. `via` is
+          // read off the status being written rather than off the button
+          // that wrote it.
+          trackStorageStatusChange(updated, storageClosedVia(status));
           if (!announce) return;
           clearTimeout(undoTimer.current);
           setRecentChange({ id: updated.id, title: storageItemTitle(updated), from: item.status, to: status });
@@ -166,7 +246,10 @@ export function useStorageStatusChange() {
 
   function undo() {
     if (!recentChange) return;
-    updateItem.mutate({ id: recentChange.id, input: { status: recentChange.from } });
+    updateItem.mutate(
+      { id: recentChange.id, input: { status: recentChange.from } },
+      { onSuccess: (updated) => trackStorageStatusChange(updated, "undo") },
+    );
     clearTimeout(undoTimer.current);
     setRecentChange(null);
   }

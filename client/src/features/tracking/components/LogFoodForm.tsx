@@ -254,7 +254,6 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
   // for the two things the picker doesn't own: mapping a recipe's ingredient
   // slugs to food ids, and the leftovers "which food?" select's options.
   const { data: foodsData } = useFoods();
-  const createMeal = useCreateMeal(babyId);
   const updateMeal = useUpdateMeal(babyId);
   const isEditing = Boolean(meal);
 
@@ -273,6 +272,10 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
   const [chosenLeftoverFoodIdState, setChosenLeftoverFoodId] = useState("");
   const [storageFailure, setStorageFailure] = useState<CreateStorageItemInput | null>(null);
   const createStorageItem = useCreateStorageItem();
+  // Declared here, below the leftovers switch, because `meal_logged` carries
+  // whether that switch was on — the one thing about a save that neither the
+  // route nor the payload can say (item 320).
+  const createMeal = useCreateMeal(babyId, { leftoversSaved: leftoversOpen });
   // Belt-and-suspenders guard (the Retry button already only ever calls
   // `saveStorage`, never a meal mutation): once the meal itself has saved,
   // nothing in this component may create a second one — Retry re-attempts

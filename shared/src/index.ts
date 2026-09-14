@@ -8,3 +8,4 @@ export * from "./chat.js";
 export * from "./symptom.js";
 export * from "./account.js";
 export * from "./preferences.js";
+export * from "./usage.js";

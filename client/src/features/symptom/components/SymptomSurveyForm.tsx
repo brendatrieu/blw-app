@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { TriageBadge, TriageLegend } from "./TriageBadge.js";
 import {
   BODY_AREA_LABELS,
@@ -17,6 +17,7 @@ import {
   type SymptomCheckRequest,
 } from "@blw/shared";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
+import { track } from "../../../lib/usage/track.js";
 import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 
 function toggle<T>(set: Set<T>, value: T): Set<T> {
@@ -89,6 +90,22 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
     { symptoms: symptomCheckboxId(SYMPTOM_CATALOG[0]!.value) },
   );
 
+  /**
+   * `symptom_check_started` — the first touch of the survey, once.
+   *
+   * Wired to the FORM's `onChange` rather than to each control: React's
+   * synthetic change event bubbles, so one handler covers every checkbox,
+   * select and textarea in here and a new question added later is covered
+   * the day it is added. What the parent selected is never sent — completion
+   * is a `symptom_checks` row, and the answers stay in it.
+   */
+  const startedRef = useRef(false);
+  function noteSurveyStarted() {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    track("symptom_check_started", {});
+  }
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (isPending) return;
@@ -106,7 +123,7 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
   return (
     // `noValidate`: this survey answers its own required list inline, and its
     // checkboxes carry no native constraint to fall back on anyway (item 236).
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+    <form onSubmit={handleSubmit} onChange={noteSurveyStarted} noValidate className="flex flex-col gap-5">
       {/* Pulled up to sit closer to the page header (half the page gap) and
           pushed down so the questionnaire reads as a distinct block. */}
       <div className="-mt-3 mb-3">
