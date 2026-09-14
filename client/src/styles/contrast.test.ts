@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { CHART_RAMP_STEPS, RAMP_INK_THRESHOLD } from "../components/charts/helpers.js";
 
 /**
  * Automated WCAG AA gate for the design tokens in `./index.css`.
@@ -190,7 +191,48 @@ const BASE_PAIRS: Pair[] = [
 
   // Callout / disclaimer banner.
   { name: "callout icon/text on callout bg", fg: "color-callout-icon", bg: "color-callout-bg" },
+
+  // ---- Chart palette (item 326) ----
+  // Chart marks are non-text UI, so the floor is 3:1 — except the
+  // near-surface end of an ORDINAL ramp, which the dataviz method floors at
+  // 2:1 on purpose: "least" is allowed to recede toward the surface. That
+  // relaxation is legal only because every ramp chart also ships a legend, a
+  // direct label per bar and a screen-reader table, so no value is ever
+  // carried by the fill alone. Charts render inside `Card`
+  // (--color-bg-elevated) but are gated against the page ground too, so
+  // moving one out of a card can never quietly drop it below the floor.
+  { name: "chart series mark on page", fg: "chart-1", bg: "color-bg", min: 3 },
+  { name: "chart series mark on elevated surface", fg: "chart-1", bg: "color-bg-elevated", min: 3 },
+  // The funnel's lightest cohort step (ramp-2 — ramp-1 is the heat table's
+  // "near zero" fill and is read through its label, never on its own).
+  { name: "funnel's lightest cohort bar on page", fg: "chart-ramp-2", bg: "color-bg", min: 2 },
+  { name: "funnel's lightest cohort bar on elevated surface", fg: "chart-ramp-2", bg: "color-bg-elevated", min: 2 },
+  // Severity slices: the lightest (monitor at home) at the ordinal floor,
+  // the rest as ordinary marks.
+  { name: "severity 1 slice on page", fg: "chart-sev-1", bg: "color-bg", min: 2 },
+  { name: "severity 1 slice on elevated surface", fg: "chart-sev-1", bg: "color-bg-elevated", min: 2 },
+  { name: "severity 2 slice on page", fg: "chart-sev-2", bg: "color-bg", min: 3 },
+  { name: "severity 2 slice on elevated surface", fg: "chart-sev-2", bg: "color-bg-elevated", min: 3 },
+  { name: "severity 3 slice on page", fg: "chart-sev-3", bg: "color-bg", min: 3 },
+  { name: "severity 3 slice on elevated surface", fg: "chart-sev-3", bg: "color-bg-elevated", min: 3 },
+  { name: "severity 4 slice on page", fg: "chart-sev-4", bg: "color-bg", min: 3 },
+  { name: "severity 4 slice on elevated surface", fg: "chart-sev-4", bg: "color-bg-elevated", min: 3 },
 ];
+
+/**
+ * Retention cells print their value INSIDE the fill — the one place text
+ * wears a chart color — so which ink each ramp step takes is a contrast
+ * decision, not a style one. The threshold is imported rather than restated:
+ * moving it in `helpers.ts` moves these pairings with it, so the renderer
+ * and this gate cannot drift apart.
+ */
+const RAMP_INK_PAIRS: Pair[] = CHART_RAMP_STEPS.map((step) => ({
+  name: `retention cell label on ramp step ${step}`,
+  fg: step < RAMP_INK_THRESHOLD ? "chart-ramp-ink-low" : "chart-ramp-ink-high",
+  bg: `chart-ramp-${step}`,
+}));
+
+BASE_PAIRS.push(...RAMP_INK_PAIRS);
 
 const CHIP_TONES = [
   { name: "primary", text: "color-primary-soft-text", tint: "color-primary-soft" },

@@ -83,6 +83,9 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         name: user.name,
         emailVerified: user.emailVerified,
         createdAt: user.createdAt,
+        // v12. "parent" for everybody except the few who can open the
+        // metrics dashboard; see shared/src/admin.ts.
+        role: user.role,
       })
       .from(user)
       .where(eq(user.id, userId))
@@ -385,6 +388,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         name: profileRow.name,
         emailVerified: profileRow.emailVerified,
         createdAt: profileRow.createdAt.toISOString(),
+        role: profileRow.role,
       },
       babies: babyRows.map((row) => ({
         id: row.id,

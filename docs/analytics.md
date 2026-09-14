@@ -144,16 +144,71 @@ the client discards its queue as part of the delete.
 
 ## Data export
 
-`ACCOUNT_EXPORT_VERSION` 11 adds `usageEvents` (name, props, route, appVersion,
-occurredAt) and `preferences.shareUsageData` to the JSON export from
-Settings → Account, so everything collected about an account is downloadable
-by that account.
+`ACCOUNT_EXPORT_VERSION` 12 adds `usageEvents` (name, props, route, appVersion,
+occurredAt), `preferences.shareUsageData` and `profile.role` to the JSON export
+from Settings → Account, so everything collected about an account — including
+whether it holds dashboard access — is downloadable by that account.
 
 ## Reading the data
 
-Phase 1b adds `GET /api/admin/metrics`, a `/admin/metrics` dashboard and a CLI
-that prints the same JSON as Markdown. Until then, the tables are queried by
-hand.
+`GET /api/admin/metrics?range=4w|12w|26w` returns every panel as one JSON
+payload (the contract is `shared/src/admin.ts`), and `/admin/metrics` renders
+it. Results are cached in memory for five minutes per range, so refreshing the
+page does not re-run a dozen aggregate scans on a two-core VM; the "as of"
+timestamp in `meta` says how old the answer is.
+
+The same numbers, as Markdown, without a browser:
+
+```
+docker compose exec app node dist/metrics/cli.js --range 12w
+docker compose exec app node dist/metrics/cli.js --range 4w --json
+```
+
+`--range` takes `4w`, `12w` (the default) or `26w`; `--json` prints the raw
+payload instead of the report. The CLI reads the database directly — there is
+no session to authenticate with on the box — and runs the same
+`collectMetrics()` the endpoint does, so the report and the dashboard can never
+disagree.
+
+Every panel is an aggregate. No endpoint under `/api/admin/` can return a row
+id, an email address or a name; the single exception is the collaborators
+list, which is a list of admins shown to admins.
+
+**What the panels mean.** Week buckets are UTC Mondays, and the last bucket is
+the current, still-running week. Behaviour panels (tour, catalog filters,
+Learn, client errors) count events by `occurred_at`; volume and liveness
+panels (DAU/WAU/MAU) use the server's `received_at`. Weekly logging parents is
+three or more meals *created* in one week. Activation measures each account
+from its own signup instant (baby within 24h, first meal within 48h, three
+logging days within 28 days). A retention cell is `null`, not zero, until that
+week has finished for the whole cohort. Storage serve-through is read from the
+`storage_items` table rather than from events, so it covers parents who
+switched sharing off. Feature adoption is share of weekly logging parents in
+the trailing 28 days; `custom_items` currently counts parents who OPENED a
+custom food or recipe editor, because P1 has no `custom_item_created` event —
+it tightens when P2 adds one.
+
+## Who can see the dashboard
+
+Two independent sources of access, either of which is sufficient:
+
+- `ADMIN_EMAILS` (comma-separated, matched case-insensitively) — a deployment
+  fact. This is what lets the owner in on a fresh deployment with no database
+  write, and what lets access be revoked by editing the environment.
+- `user.role = 'admin'` — granted from the Access panel on the dashboard by an
+  existing admin, to somebody who already signed up as an ordinary parent.
+
+Guards: an env-bootstrapped admin cannot be demoted from the UI (clearing the
+row would change nothing), nobody can demote themselves, and every grant and
+revoke needs a session younger than ten minutes and writes a row to
+`admin_audit` (actor, action, target, timestamp) that survives the deletion of
+either account.
+
+Everyone else gets a 404 — the app's ordinary unknown-route 404, the same
+status, body and headers — from every `/api/admin/*` route, anonymous or
+signed in. The per-admin rate limit sits behind that guard on purpose: a 429
+would tell a parent there is something here to find. `/admin/metrics` in the
+client renders the normal not-found page for them.
 
 ## The review ritual
 

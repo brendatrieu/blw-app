@@ -145,7 +145,7 @@ stack reads:
 | `KEY_ENCRYPTION_SECRET` | yes | Encrypts each user's own Anthropic API key at rest (AES-256-GCM). Generate with `openssl rand -base64 32` and never rotate it without a migration plan — rotating it without re-encrypting existing rows locks users out of their saved key. |
 | `USAGE_RATE_LIMIT_MAX` | optional | Requests per hour per caller for `POST /api/usage` (keyed by user when signed in, by IP when not). Default 120; an ordinary session sends far fewer. |
 | `USAGE_RETENTION_DAYS` | optional | How long anonymous usage events are kept. Default 180. The purge runs on boot and daily, cutting on the server's own `received_at`. |
-| `ADMIN_EMAILS` | optional | Comma-separated emails that get the metrics dashboard (phase 1b) without a database write — how the owner gets in on a fresh deployment, and how access is revoked by editing a file. Parsed today, unused until `/api/admin/*` ships. |
+| `ADMIN_EMAILS` | optional | Comma-separated emails that get the metrics dashboard without a database write — how the owner gets in on a fresh deployment, and how access is revoked by editing a file. Matched case-insensitively. Everyone else gets a plain 404 from every `/api/admin/*` route (see docs/analytics.md). |
 
 `APP_VERSION` is deliberately **not** in `.env`: the image bakes it in from the
 deploy's commit SHA (`ARG GITHUB_SHA` in the Dockerfile's runner stage, the

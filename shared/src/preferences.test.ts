@@ -55,9 +55,9 @@ describe("updatePreferencesInputSchema", () => {
   });
 });
 
-describe("account export v11", () => {
+describe("account export v12", () => {
   it("bumped its version and carries usage events alongside the preferences", () => {
-    expect(ACCOUNT_EXPORT_VERSION).toBe(11);
+    expect(ACCOUNT_EXPORT_VERSION).toBe(12);
 
     const shape = accountExportSchema.shape;
     expect(shape.preferences.safeParse(null).success).toBe(true);
@@ -81,5 +81,21 @@ describe("account export v11", () => {
       ]).success,
     ).toBe(true);
     expect(shape.usageEvents.safeParse(undefined).success).toBe(false);
+  });
+
+  it("carries the account's role in the profile block", () => {
+    const profile = {
+      id: "u1",
+      email: "parent@example.com",
+      name: "Parent",
+      emailVerified: true,
+      createdAt: "2026-09-11T10:00:00.000Z",
+    };
+
+    // v11's profile is not a v12 profile: the role is what moved the version,
+    // so a file without it is a file from before the column was exported.
+    expect(accountExportSchema.shape.profile.safeParse(profile).success).toBe(false);
+    expect(accountExportSchema.shape.profile.safeParse({ ...profile, role: "parent" }).success).toBe(true);
+    expect(accountExportSchema.shape.profile.safeParse({ ...profile, role: "admin" }).success).toBe(true);
   });
 });

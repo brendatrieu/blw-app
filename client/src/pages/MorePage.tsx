@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { CardButton, CardLink } from "../components/ui/Card.js";
+import { useIsAdmin } from "../features/admin/hooks.js";
 import { useTour } from "../features/tour/TourProvider.js";
 
 interface MoreRow {
@@ -11,6 +12,14 @@ interface MoreRow {
   /** Where the row goes, or `"tour"` for the one row that opens a dialog instead. */
   to?: string;
   action?: "tour";
+  /**
+   * Item 327: rendered only for an admin. This is a convenience, not a
+   * guard — the page it points at renders Not found for everybody else and
+   * the API behind it 404s them, so a leaked row would cost nothing but
+   * confusion. Which is exactly why it can be a plain filter rather than a
+   * second copy of the access rule.
+   */
+  adminOnly?: boolean;
 }
 
 const moreLinks: MoreRow[] = [
@@ -43,6 +52,13 @@ const moreLinks: MoreRow[] = [
     label: "Take the tour",
     description: "A quick look around the app",
     emoji: "🧭",
+  },
+  {
+    to: "/admin/metrics",
+    label: "Metrics",
+    description: "How the app is actually being used.",
+    emoji: "📈",
+    adminOnly: true,
   },
   { to: "/settings", label: "Settings", description: "Babies, account, and app preferences.", emoji: "⚙️" },
 ];
@@ -78,13 +94,15 @@ const ROW_CLASSES = "flex items-center gap-3";
 
 export function MorePage() {
   const { openTour } = useTour();
+  const { isAdmin } = useIsAdmin();
+  const rows = moreLinks.filter((row) => !row.adminOnly || isAdmin);
 
   return (
     <div className="flex flex-col gap-4 p-4">
       <PageHeader title="More" emoji="✨" />
 
       <nav className="flex flex-col gap-2">
-        {moreLinks.map((row) =>
+        {rows.map((row) =>
           row.to ? (
             <CardLink key={row.to} to={row.to} padding="sm" className={ROW_CLASSES}>
               <RowContent row={row} />

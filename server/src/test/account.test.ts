@@ -479,12 +479,15 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(11);
+    expect(bundle.exportVersion).toBe(12);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
     expect(bundle.profile.name).toBe("Test Parent");
     expect(bundle.profile.createdAt).toBeTruthy();
+    // v12: the account's own role, which for every ordinary parent is the
+    // default the column was created with.
+    expect(bundle.profile.role).toBe("parent");
 
     expect(bundle.babies).toHaveLength(1);
     expect(bundle.babies[0]?.name).toBe("Robin");

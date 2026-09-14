@@ -3,7 +3,7 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const h = vi.hoisted(() => ({ opens: { count: 0 } }));
+const h = vi.hoisted(() => ({ opens: { count: 0 }, admin: { is: false } }));
 
 // The tour is a modal now: More reaches it through the provider's context,
 // not a route. Mocked so this page renders (and its row can be clicked)
@@ -14,6 +14,14 @@ vi.mock("../features/tour/TourProvider.js", () => ({
       h.opens.count += 1;
     },
   }),
+}));
+
+// Same reason, and the harness the admin-row tests below drive: `useIsAdmin`
+// is a react-query read of `/api/admin/me`, so without this the page cannot
+// render outside a QueryClientProvider at all. Default is NOT an admin —
+// every pre-existing pin in this file describes the page a parent sees.
+vi.mock("../features/admin/hooks.js", () => ({
+  useIsAdmin: () => ({ isAdmin: h.admin.is, isResolved: true }),
 }));
 
 import { CardButton } from "../components/ui/Card.js";
@@ -43,6 +51,7 @@ function collectButtons(node: unknown, out: Rendered[] = []): Rendered[] {
 
 beforeEach(() => {
   h.opens.count = 0;
+  h.admin.is = false;
 });
 
 describe("MorePage (item 274)", () => {
@@ -136,5 +145,39 @@ describe("MorePage (item 274)", () => {
       expect(html).toContain(`>${label}<`);
       expect(html).toContain(`href="${href}"`);
     }
+  });
+});
+
+describe("MorePage admin row (item 327)", () => {
+  it("shows a Metrics row to an admin, between the tour and Settings", () => {
+    h.admin.is = true;
+    const html = render();
+
+    expect(html).toContain(">Metrics<");
+    expect(html).toContain('href="/admin/metrics"');
+    expect(html).toContain(">How the app is actually being used.<");
+    expect(html).toContain(">📈</span>");
+
+    const metrics = html.indexOf(">Metrics<");
+    expect(html.indexOf(">Take the tour<")).toBeLessThan(metrics);
+    // Settings is still the end of the list for everybody, admin or not.
+    expect(html.indexOf(">Settings<")).toBeGreaterThan(metrics);
+  });
+
+  it("shows a parent no Metrics row and no trace of the route", () => {
+    h.admin.is = false;
+    const html = render();
+
+    expect(html).not.toContain(">Metrics<");
+    expect(html).not.toContain("/admin/metrics");
+    expect(html).not.toContain("admin");
+  });
+
+  it("changes only that one row — the parent's list is the admin's minus Metrics", () => {
+    h.admin.is = false;
+    const parentRows = render().split(/<(?:a|button) /).length;
+    h.admin.is = true;
+    const adminRows = render().split(/<(?:a|button) /).length;
+    expect(adminRows).toBe(parentRows + 1);
   });
 });

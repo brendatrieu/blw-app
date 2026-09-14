@@ -9,3 +9,4 @@ export * from "./symptom.js";
 export * from "./account.js";
 export * from "./preferences.js";
 export * from "./usage.js";
+export * from "./admin.js";

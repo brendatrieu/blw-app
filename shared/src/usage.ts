@@ -31,8 +31,10 @@ import { storageLocationSchema, storageStatusSchema } from "./storage.js";
  * else can be sent at all.
  *
  * Mirrors `App()`'s route table (client/src/App.tsx) in declaration order;
- * the client pins the two against each other. Phase 1b's `/admin/metrics`
- * is deliberately absent — it joins this list when the route does.
+ * the client pins the two against each other. `/admin/metrics` (phase 1b)
+ * is last before the catch-all, and the route must be declared in that same
+ * position — it is a screen like any other, and a dashboard that cannot be
+ * measured is a dashboard nobody notices going unused.
  */
 export const ROUTE_PATTERNS = [
   "/login",
@@ -66,6 +68,10 @@ export const ROUTE_PATTERNS = [
   "/chat/:threadId",
   "/settings",
   "/more",
+  /** Admin-only metrics dashboard. Everyone else gets the not-found page,
+   * and the API behind it answers 404 to them, so this pattern can only ever
+   * be reported by an admin's own browser. */
+  "/admin/metrics",
   /** Anything the table above does not match, including a typo'd URL. */
   "/*",
 ] as const;
@@ -162,6 +168,7 @@ export const catalogFilterKeySchema = z.enum([
   "fiber_high",
   "ingredient_food_id",
 ]);
+export type CatalogFilterKey = z.infer<typeof catalogFilterKeySchema>;
 
 /** Highest 0-based slide index the six-slide tour can report. The client
  * pins this against `TOUR_SLIDE_COUNT - 1`. */

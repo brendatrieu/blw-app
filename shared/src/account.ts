@@ -20,7 +20,7 @@ import { userPreferencesSchema } from "./preferences.js";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 11;
+export const ACCOUNT_EXPORT_VERSION = 12;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -40,6 +40,14 @@ export const exportProfileSchema = z.object({
   name: z.string(),
   emailVerified: z.boolean(),
   createdAt: z.string(),
+  /**
+   * v12. `"parent"` for everybody, `"admin"` for the handful of people who
+   * can open the metrics dashboard. Exported because it is a fact the
+   * database holds about this account and the export promises everything —
+   * and because an account that has been given, or quietly left holding,
+   * dashboard access should be able to see that for themselves.
+   */
+  role: z.string(),
 });
 
 export const exportBabySchema = z.object({

@@ -105,6 +105,48 @@
   --color-callout-border: #eedba3;
   --color-callout-icon: #6b4f10;
 
+  /* ---- Chart palette (item 326) ----
+     The ONLY colors any `components/charts/*` mark is allowed to wear, and
+     deliberately separate from the product tokens above: `--color-primary`
+     is the CTA fill and `--color-accent` means "interactive", so a bar
+     painted in either would claim to be a button. Every value here is a
+     step from a documented, validated palette (dataviz skill's blue ramp /
+     warm ordinal ramp) rather than an eyeballed hex, and each is checked
+     against BOTH grounds in BOTH themes by styles/contrast.test.ts.
+
+     Roles (see components/charts/helpers.ts for the code that reads them):
+     - --chart-1: the one SERIES hue. Every nominal chart (signups, adoption,
+       Learn, filters, tour) uses this single hue: bar length already encodes
+       the value, so spending the identity channel on re-encoding it would
+       be a second, redundant scale. `--color-danger` is the one substitute,
+       for the series that MEANS bad (client errors).
+     - --chart-ramp-1..5: a one-hue SEQUENTIAL/ORDINAL ramp, light→dark in
+       light mode and dark→light in dark mode (the near-surface end is the
+       "near zero" end in both, so magnitude reads the same way). Steps 1..5
+       paint retention cells; the funnel's cohort bars use 2..5, whose
+       near-surface end still clears the 2:1 ordinal floor.
+     - --chart-ramp-ink-low / -high: label ink INSIDE a ramp cell, picked by
+       the step's luminance — low for steps 1-2, high for 3-5 (see
+       RAMP_INK_THRESHOLD). The one place text wears a chart color, because
+       it sits on the fill rather than on the surface.
+     - --chart-sev-1..4: severity, for the four triage levels. Ordinal, not
+       categorical: green/amber/orange/red as four *separate* hues collapses
+       under deuteranopia (ΔE 0.9 measured), so severity is carried by
+       lightness along one warm hue, with the legend's labels and values as
+       the second channel. ---- */
+  --chart-1: #2a78d6;
+  --chart-ramp-1: #cde2fb;
+  --chart-ramp-2: #86b6ef;
+  --chart-ramp-3: #256abf;
+  --chart-ramp-4: #184f95;
+  --chart-ramp-5: #0d366b;
+  --chart-ramp-ink-low: #1f2a36;
+  --chart-ramp-ink-high: #ffffff;
+  --chart-sev-1: #eb9478;
+  --chart-sev-2: #e2694a;
+  --chart-sev-3: #c0392b;
+  --chart-sev-4: #7d1512;
+
   /* ---- Elevation — navy-tinted instead of neutral black, so shadows read
      as part of the palette rather than generic UI murk. ---- */
   --shadow-sm: 0 1px 2px rgb(31 42 54 / 0.08), 0 1px 1px rgb(31 42 54 / 0.06);
@@ -183,6 +225,22 @@
   --_dark-callout-border: #5e5122;
   --_dark-callout-icon: #ffecc3;
 
+  /* Chart palette, stepped for the dark ground rather than flipped: both
+     ramps run dark→light here so their near-surface end still means "near
+     zero", and the two ramp inks swap roles with them. */
+  --_dark-chart-1: #3987e5;
+  --_dark-chart-ramp-1: #1c3a5e;
+  --_dark-chart-ramp-2: #256abf;
+  --_dark-chart-ramp-3: #3987e5;
+  --_dark-chart-ramp-4: #6da7ec;
+  --_dark-chart-ramp-5: #9ec5f4;
+  --_dark-chart-ramp-ink-low: #eef3f7;
+  --_dark-chart-ramp-ink-high: #0e1218;
+  --_dark-chart-sev-1: #8c3327;
+  --_dark-chart-sev-2: #bd5540;
+  --_dark-chart-sev-3: #e0795f;
+  --_dark-chart-sev-4: #f5a58c;
+
   --_dark-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 1px rgb(0 0 0 / 0.24);
   --_dark-shadow-md: 0 8px 20px rgb(0 0 0 / 0.36), 0 2px 6px rgb(0 0 0 / 0.24);
   --_dark-shadow-lg: 0 20px 40px rgb(0 0 0 / 0.44), 0 4px 10px rgb(0 0 0 / 0.28);
@@ -219,6 +277,19 @@
     --color-callout-border: var(--_dark-callout-border);
     --color-callout-icon: var(--_dark-callout-icon);
 
+    --chart-1: var(--_dark-chart-1);
+    --chart-ramp-1: var(--_dark-chart-ramp-1);
+    --chart-ramp-2: var(--_dark-chart-ramp-2);
+    --chart-ramp-3: var(--_dark-chart-ramp-3);
+    --chart-ramp-4: var(--_dark-chart-ramp-4);
+    --chart-ramp-5: var(--_dark-chart-ramp-5);
+    --chart-ramp-ink-low: var(--_dark-chart-ramp-ink-low);
+    --chart-ramp-ink-high: var(--_dark-chart-ramp-ink-high);
+    --chart-sev-1: var(--_dark-chart-sev-1);
+    --chart-sev-2: var(--_dark-chart-sev-2);
+    --chart-sev-3: var(--_dark-chart-sev-3);
+    --chart-sev-4: var(--_dark-chart-sev-4);
+
     --shadow-sm: var(--_dark-shadow-sm);
     --shadow-md: var(--_dark-shadow-md);
     --shadow-lg: var(--_dark-shadow-lg);
@@ -254,6 +325,19 @@
   --color-callout-bg: var(--_dark-callout-bg);
   --color-callout-border: var(--_dark-callout-border);
   --color-callout-icon: var(--_dark-callout-icon);
+
+  --chart-1: var(--_dark-chart-1);
+  --chart-ramp-1: var(--_dark-chart-ramp-1);
+  --chart-ramp-2: var(--_dark-chart-ramp-2);
+  --chart-ramp-3: var(--_dark-chart-ramp-3);
+  --chart-ramp-4: var(--_dark-chart-ramp-4);
+  --chart-ramp-5: var(--_dark-chart-ramp-5);
+  --chart-ramp-ink-low: var(--_dark-chart-ramp-ink-low);
+  --chart-ramp-ink-high: var(--_dark-chart-ramp-ink-high);
+  --chart-sev-1: var(--_dark-chart-sev-1);
+  --chart-sev-2: var(--_dark-chart-sev-2);
+  --chart-sev-3: var(--_dark-chart-sev-3);
+  --chart-sev-4: var(--_dark-chart-sev-4);
 
   --shadow-sm: var(--_dark-shadow-sm);
   --shadow-md: var(--_dark-shadow-md);

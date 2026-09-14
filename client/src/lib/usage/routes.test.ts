@@ -35,8 +35,13 @@ describe("ROUTE_PATTERNS mirrors the router", () => {
     expect(appRoutePaths).toEqual([...ROUTE_PATTERNS]);
   });
 
-  it("deliberately does not yet carry phase 1b's /admin/metrics", () => {
-    expect(ROUTE_PATTERNS).not.toContain("/admin/metrics");
+  it("carries /admin/metrics, declared last inside the layout (item 327)", () => {
+    // The dashboard is a real screen and reports its own views like any
+    // other — but only an admin's browser can ever produce this pattern,
+    // since everyone else renders Not found there.
+    expect(ROUTE_PATTERNS).toContain("/admin/metrics");
+    expect(appRoutePaths.indexOf("/admin/metrics")).toBe(appRoutePaths.length - 2);
+    expect(appRoutePaths[appRoutePaths.length - 1]).toBe(UNMATCHED_ROUTE);
   });
 });
 
@@ -76,6 +81,7 @@ describe("toRoutePattern", () => {
     ["/chat/6f1c0b1a-0000-4000-8000-000000000005", "/chat/:threadId"],
     ["/settings", "/settings"],
     ["/more", "/more"],
+    ["/admin/metrics", "/admin/metrics"],
   ];
 
   it("covers every route App declares (bar the catch-all, which has no pathname of its own)", () => {
@@ -95,7 +101,7 @@ describe("toRoutePattern", () => {
   });
 
   it("turns anything it does not recognise into the catch-all, never into itself", () => {
-    for (const pathname of ["/nope", "/foods/a/b/c", "/admin/metrics", "", "/settings/secret"]) {
+    for (const pathname of ["/nope", "/foods/a/b/c", "/admin", "/admin/metrics/secret", "", "/settings/secret"]) {
       expect(toRoutePattern(pathname)).toBe(UNMATCHED_ROUTE);
     }
   });

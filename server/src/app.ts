@@ -2,7 +2,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs";
-import Fastify, { type FastifyError, type FastifyInstance } from "fastify";
+import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { sql } from "drizzle-orm";
 import type { DeepHealthResponse, HealthResponse } from "@blw/shared";
@@ -24,6 +24,8 @@ import { registerChatRoutes, type ChatRoutesOptions } from "./routes/chat.js";
 import { registerAccountRoutes } from "./routes/account.js";
 import { registerPreferenceRoutes } from "./routes/preferences.js";
 import { registerUsageRoutes } from "./routes/usage.js";
+import { registerAdminRoutes } from "./routes/admin.js";
+import { decorateAdminRequest } from "./admin/access.js";
 import type { ApiKeyVerifier } from "./ai/client.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -36,6 +38,26 @@ const clientDistDir = path.resolve(__dirname, "../../client/dist");
  */
 export function isDeepHealthRequested(deep: string | undefined): boolean {
   return deep === "1" || deep === "true" || deep === "";
+}
+
+/**
+ * Takes the rate limiter's counters off a response.
+ *
+ * `@fastify/rate-limit` stamps `x-ratelimit-*` from an onRequest hook, which
+ * runs only when the URL matched a registered route. Anything that answers
+ * before or outside that — an unknown URL, a body Fastify could not parse —
+ * therefore answers WITHOUT the headers, and the difference is a map of the
+ * route table: send `{` to a path and the presence of `x-ratelimit-limit`
+ * tells you whether something is listening. `/api/admin/*` is built to be
+ * indistinguishable from a URL that does not exist, so that map cannot be
+ * allowed to exist either. Nothing reads these counters on a 404 or on a
+ * rejected body, so removing them there costs nothing and makes the two
+ * answers one answer.
+ */
+function stripRateLimitHeaders(reply: FastifyReply): void {
+  reply.removeHeader("x-ratelimit-limit");
+  reply.removeHeader("x-ratelimit-remaining");
+  reply.removeHeader("x-ratelimit-reset");
 }
 
 export interface BuildAppOptions {
@@ -77,10 +99,19 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   registerSecurityHeaders(app);
   registerRateLimit(app, env);
+  // Request decorator, at the root scope like the auth plugin's, so the
+  // admin guard can publish what it resolved to the handlers behind it.
+  decorateAdminRequest(app);
 
   // On every response, including errors and 404s.
   app.addHook("onSend", async (request, reply) => {
     reply.header("x-request-id", request.id);
+    // See stripRateLimitHeaders: a 404 must look the same whether or not the
+    // URL was a real route, and the rate limiter's onRequest hook only runs
+    // when it was.
+    if (reply.statusCode === 404) {
+      stripRateLimitHeaders(reply);
+    }
   });
 
   /**
@@ -97,6 +128,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     const statusCode = error.statusCode ?? 500;
 
     if (statusCode < 500) {
+      // A body Fastify refused to parse never reached a route, so the
+      // counters say nothing about it — and leaving them on would say which
+      // URLs are routes. See stripRateLimitHeaders.
+      if (typeof error.code === "string" && error.code.startsWith("FST_ERR_CTP_")) {
+        stripRateLimitHeaders(reply);
+      }
       // Second pass through `send(err)` with the handler already run falls
       // back to Fastify's built-in serializer, which is exactly what these
       // responses looked like before this handler existed.
@@ -154,6 +191,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     registerAccountRoutes(app, db); // data export + account deletion
     registerPreferenceRoutes(app, db); // per-user app preferences (tour, usage sharing)
     registerUsageRoutes(app, db, env); // anonymous usage events
+    registerAdminRoutes(app, db, env); // metrics dashboard + collaborators (404 to everyone else)
   });
 
   const clientBuildExists = fs.existsSync(path.join(clientDistDir, "index.html"));
@@ -163,19 +201,31 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       root: clientDistDir,
       index: "index.html",
     });
-
-    // SPA fallback: serve index.html for any non-API GET that doesn't match a
-    // static asset, so client-side routing works on refresh/deep-link. Never
-    // intercepts /api/* — those either matched a route above or fall through
-    // to the default 404 handler.
-    app.setNotFoundHandler((request, reply) => {
-      if (request.method !== "GET" || request.url.startsWith("/api/")) {
-        reply.code(404).send({ error: "not_found" });
-        return;
-      }
-      reply.sendFile("index.html");
-    });
   }
+
+  /**
+   * One not-found handler, registered whether or not a client bundle was
+   * built.
+   *
+   * It used to live inside the `clientBuildExists` branch, which made the
+   * API's 404 body depend on something that has nothing to do with the API:
+   * with a bundle present an unknown `/api/*` URL answered
+   * `{ error: "not_found" }`, and without one it answered Fastify's default
+   * `{ message, error, statusCode }`. That difference is load-bearing now —
+   * `/api/admin/*` refuses non-admins by calling this handler, so that a
+   * route which exists is indistinguishable from one that does not, and an
+   * invariant cannot depend on a build artifact being on disk.
+   *
+   * SPA fallback: index.html for any non-API GET that matched no static
+   * asset, so client-side routing survives a refresh or a deep link.
+   */
+  app.setNotFoundHandler((request, reply) => {
+    if (clientBuildExists && request.method === "GET" && !request.url.startsWith("/api/")) {
+      reply.sendFile("index.html");
+      return;
+    }
+    reply.code(404).send({ error: "not_found" });
+  });
 
   return app;
 }

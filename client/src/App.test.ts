@@ -82,6 +82,24 @@ describe("App route wiring (item 310 — the tour is a modal, not a route)", () 
   });
 });
 
+describe("App route wiring (item 327 — the admin dashboard)", () => {
+  const paths = () => collectRoutePaths((App as unknown as () => ReactNode)());
+
+  it("mounts /admin/metrics inside the guarded layout, immediately ahead of the catch-all", () => {
+    // Order matters twice over: inside the layout so the dashboard wears the
+    // app's chrome like every other screen, and ahead of `*` so the route
+    // resolves at all. Last-but-one is also what `ROUTE_PATTERNS` pins.
+    const declared = paths();
+    expect(declared).toContain("/admin/metrics");
+    expect(declared.indexOf("/admin/metrics")).toBe(declared.length - 2);
+    expect(declared[declared.length - 1]).toBe("*");
+  });
+
+  it("mounts nothing else under /admin, so any other probe is an ordinary 404 page", () => {
+    expect(paths().filter((path) => path.startsWith("/admin"))).toEqual(["/admin/metrics"]);
+  });
+});
+
 describe("storage query keys survive offline persistence", () => {
   it("start with the 'storage' prefix that main.tsx persists", () => {
     expect(storageKeys.list("active")[0]).toBe("storage");
