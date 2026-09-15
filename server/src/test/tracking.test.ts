@@ -772,6 +772,131 @@ describe("tracking routes", () => {
       const items = await progressItems(user, babyId);
       expect(items.every((item) => item.overridden === false)).toBe(true);
     });
+
+    // "Established after 3 servings without a reaction" (item 369), end to
+    // end: the shared rule decides, this pins what the meal log feeds it.
+    describe("reaction notes", () => {
+      const DAY1 = "2026-03-01T08:00:00.000Z";
+      const DAY2 = "2026-03-03T08:00:00.000Z";
+      const DAY3 = "2026-03-05T08:00:00.000Z";
+      const DAY4 = "2026-03-07T08:00:00.000Z";
+
+      it("holds the allergen at started when one of the three servings reacted", async () => {
+        const user = await signUpUser(app);
+        const babyId = await createBaby(app, user);
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY1 });
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY2 });
+        await postMeal(user, babyId, {
+          foodIds: [fixtures.egg.id],
+          servedAt: DAY3,
+          reactionNote: "Hives around the mouth.",
+        });
+
+        const egg = await eggProgress(user, babyId);
+        // Three exposures on the log, two of them clean: the count is
+        // reported in full and the promotion is the only thing withheld.
+        expect(egg).toMatchObject({
+          status: "started",
+          exposures: 3,
+          overridden: false,
+          reactionNotedAt: DAY3,
+        });
+        // Started rows carry no maintenance countdown, paused or not.
+        expect(egg?.dueAt).toBeNull();
+      });
+
+      it("keeps an established allergen established when a later serving reacts", async () => {
+        const user = await signUpUser(app);
+        const babyId = await createBaby(app, user);
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY1 });
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY2 });
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY3 });
+        expect(await eggProgress(user, babyId)).toMatchObject({ status: "established", reactionNotedAt: null });
+
+        await postMeal(user, babyId, {
+          foodIds: [fixtures.egg.id],
+          servedAt: DAY4,
+          reactionNote: "Rash after dinner.",
+        });
+
+        // The three clean servings that established it already happened, so
+        // the reaction flags the row without taking the status back.
+        expect(await eggProgress(user, babyId)).toMatchObject({
+          status: "established",
+          exposures: 4,
+          overridden: false,
+          reactionNotedAt: DAY4,
+        });
+      });
+
+      it("lets the parent's own mark clear the pause, keeping the reaction on the wire", async () => {
+        const user = await signUpUser(app);
+        const babyId = await createBaby(app, user);
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY1, reactionNote: "Red cheeks." });
+        expect(await eggProgress(user, babyId)).toMatchObject({ status: "started", reactionNotedAt: DAY1 });
+
+        expect((await putOverride(user, babyId, "egg", { establishedAt: DAY2 })).statusCode).toBe(204);
+
+        // The mark wins (it is a parent saying the doctor cleared it) and is
+        // flagged as the reason; the fact itself still rides along, and it
+        // is the client that stops badging an overridden row.
+        expect(await eggProgress(user, babyId)).toMatchObject({
+          status: "established",
+          overridden: true,
+          reactionNotedAt: DAY1,
+        });
+      });
+
+      it("reports the LATEST reaction, and ignores a blank note", async () => {
+        const user = await signUpUser(app);
+        const babyId = await createBaby(app, user);
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY1, reactionNote: "Sniffles." });
+        const blank = await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY2, reactionNote: "" });
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY3, reactionNote: "Hives." });
+
+        expect(await eggProgress(user, babyId)).toMatchObject({ reactionNotedAt: DAY3, status: "started" });
+
+        // "" is already a null by the time it reaches the column; whitespace
+        // written by any other path is not a note either.
+        await db.update(schema.meals).set({ reactionNote: "   " }).where(eq(schema.meals.id, blank.id));
+        expect(await eggProgress(user, babyId)).toMatchObject({ reactionNotedAt: DAY3 });
+      });
+
+      it("ignores a reaction on a meal that carried none of the allergen's foods", async () => {
+        const user = await signUpUser(app);
+        const babyId = await createBaby(app, user);
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY1 });
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY2 });
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY3 });
+        await postMeal(user, babyId, {
+          foodIds: [fixtures.banana.id],
+          servedAt: DAY4,
+          reactionNote: "Off day, no idea why.",
+        });
+
+        expect(await eggProgress(user, babyId)).toMatchObject({
+          status: "established",
+          exposures: 3,
+          reactionNotedAt: null,
+        });
+      });
+
+      it("keeps a paused allergen out of the AI baby-profile summary until the mark", async () => {
+        const user = await signUpUser(app);
+        const babyId = await createBaby(app, user);
+        const userId = await userIdFor(user);
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY1 });
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY2 });
+        await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: DAY3, reactionNote: "Hives." });
+
+        // The model must never be told an allergen is settled while the
+        // ladder is showing the parent "talk to your doctor".
+        expect((await fetchBabyProfileSummary(db, userId, babyId))?.establishedTop9Allergens).toEqual([]);
+
+        await putOverride(user, babyId, "egg", { establishedAt: DAY4 });
+        expect((await fetchBabyProfileSummary(db, userId, babyId))?.establishedTop9Allergens).toEqual(["egg"]);
+      });
+    });
   });
 
   // -------------------------------------------------------------------------

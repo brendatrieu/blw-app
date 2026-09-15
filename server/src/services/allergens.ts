@@ -10,7 +10,13 @@
 // something else. Ownership is the caller's business here, exactly as in
 // `loadMeals`: these functions only read by id.
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
-import { allergenDueAt, unionAllergenStatus, type AllergenDetail, type AllergenProgressItem } from "@blw/shared";
+import {
+  allergenDueAt,
+  allergenReactionPauses,
+  unionAllergenStatus,
+  type AllergenDetail,
+  type AllergenProgressItem,
+} from "@blw/shared";
 import type { Database } from "../db/index.js";
 import {
   allergenLadderSteps,
@@ -38,6 +44,12 @@ const EXPOSURE_LIMIT = 50;
  * are read alongside the derivation rather than folded into the exposure
  * query on purpose: `exposures` stays a pure count of real meals, and the
  * union happens in one shared function.
+ *
+ * Reaction notes are read the same way — as a fact of the meal log, split
+ * out of the same aggregate — and the rule they feed ("established after 3
+ * servings without a reaction") lives entirely in shared's
+ * `allergenReactionPauses`/`deriveAllergenStatus`, so the ladder, the detail
+ * page and the AI baby-profile summary cannot disagree about a paused row.
  */
 export async function loadAllergenProgress(db: Database, babyId: string): Promise<AllergenProgressItem[]> {
   const allergenRows = await db
@@ -51,12 +63,20 @@ export async function loadAllergenProgress(db: Database, babyId: string): Promis
     .leftJoin(allergenLadderSteps, eq(allergenLadderSteps.allergenId, allergens.id))
     .orderBy(asc(sql`coalesce(${allergenLadderSteps.step}, 999)`), asc(allergens.name));
 
+  // `cleanExposures` and `lastReactionAt` split the same rows the count above
+  // already scans by the meal's reaction note, so "3 servings WITHOUT a
+  // reaction" costs no extra query. A note is non-empty TEXT: the API
+  // already collapses "" to null (`optionalReactionNote`), and the trim here
+  // catches whitespace written by any other path.
+  const hasReaction = sql`${meals.reactionNote} is not null and btrim(${meals.reactionNote}) <> ''`;
   const exposureRows = await db
     .select({
       allergenId: foodAllergens.allergenId,
       exposures: sql<number>`count(*)::int`,
+      cleanExposures: sql<number>`(count(*) filter (where not (${hasReaction})))::int`,
       firstAt: sql<string>`min(${meals.servedAt})`,
       lastAt: sql<string>`max(${meals.servedAt})`,
+      lastReactionAt: sql<string | null>`max(${meals.servedAt}) filter (where ${hasReaction})`,
     })
     .from(mealFoods)
     .innerJoin(meals, eq(mealFoods.mealId, meals.id))
@@ -79,7 +99,13 @@ export async function loadAllergenProgress(db: Database, babyId: string): Promis
     const exposure = exposuresByAllergenId.get(a.id);
     const exposures = exposure?.exposures ?? 0;
     const markedAt = markedAtBySlug.get(a.slug) ?? null;
-    const { status, overridden } = unionAllergenStatus(exposures, markedAt !== null);
+    // The latest serving this baby had a reaction noted on. It rides on the
+    // response whatever the status does — the badge is owed to an
+    // established row too — and only pauses the climb while the log is still
+    // short of three clean servings (`allergenReactionPauses`).
+    const reactionNotedAt = exposure?.lastReactionAt ? new Date(exposure.lastReactionAt).toISOString() : null;
+    const reactionNoted = allergenReactionPauses(reactionNotedAt, exposure?.cleanExposures ?? 0);
+    const { status, overridden } = unionAllergenStatus(exposures, markedAt !== null, reactionNoted);
     const lastServed = exposure ? new Date(exposure.lastAt) : null;
     const lastServedAt = lastServed ? lastServed.toISOString() : null;
     // The later of the two ways this baby is known to have met the allergen.
@@ -104,6 +130,7 @@ export async function loadAllergenProgress(db: Database, babyId: string): Promis
       // to say when the parent marked it.
       establishedAt: markedAt ? markedAt.toISOString() : null,
       lastExposureAt,
+      reactionNotedAt,
       // One rule, in shared, so the client's countdown copy and this date can
       // never disagree about when the week is up.
       dueAt: allergenDueAt(lastExposureAt, status),

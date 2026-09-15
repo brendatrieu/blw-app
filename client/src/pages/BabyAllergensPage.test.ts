@@ -19,6 +19,7 @@ function item(overrides: Partial<AllergenProgressItem>): AllergenProgressItem {
     lastServedAt: null,
     establishedAt: null,
     lastExposureAt: null,
+    reactionNotedAt: null,
     dueAt: null,
     status: "not_started",
     overridden: false,
@@ -167,6 +168,85 @@ describe("BabyAllergensPage recency fact + countdown (items 143/365)", () => {
     expect(html).toContain('<span class="sr-only"> — Consider serving again soon to maintain tolerance.</span>');
     // Caution tokens, not a new color.
     expect(html).toContain("bg-[var(--color-caution-soft)]");
+  });
+});
+
+// The rule the ladder now states in words, and the two row facts that make
+// it visible (item 370).
+describe("BabyAllergensPage established rule + reaction pause (item 370)", () => {
+  it("states the rule once, at the top of the page", () => {
+    const html = renderWithItems([item({ status: "not_started" })]);
+    expect(html).toContain("Established after 3 servings without a reaction.");
+    // The Mark affordance's own explanation stays with it.
+    expect(html).toContain("Already established? Mark it so your progress reflects it.");
+  });
+
+  it("counts a started row's servings toward the rule", () => {
+    expect(renderWithItems([item({ status: "started", exposures: 1 })])).toContain("1 of 3 servings");
+    expect(renderWithItems([item({ status: "started", exposures: 2 })])).toContain("2 of 3 servings");
+  });
+
+  it("counts nothing on a not_started or established row", () => {
+    expect(renderWithItems([item({ status: "not_started" })])).not.toContain("of 3 servings");
+    expect(renderWithItems([item({ status: "established", exposures: 3 })])).not.toContain("of 3 servings");
+  });
+
+  it("badges a paused row with the caution chip and the doctor sentence, and drops the count", () => {
+    const reacted = agoIso(2);
+    const html = renderWithItems([
+      item({ status: "started", exposures: 3, lastServedAt: reacted, lastExposureAt: reacted, reactionNotedAt: reacted }),
+    ]);
+    expect(html).toContain("Reaction noted");
+    expect(html).toContain("Talk to your doctor before serving again.");
+    // Caution tokens, the same chip the due nudge uses — no new color.
+    expect(html).toContain("bg-[var(--color-caution-soft)]");
+    // Still climbing, so the status chip stays Started...
+    expect(html).toContain(">Started<");
+    // ...and the progress count steps aside for the badge.
+    expect(html).not.toContain("of 3 servings");
+  });
+
+  it("badges an established row whose log holds a later reaction, without downgrading it", () => {
+    const reacted = agoIso(1);
+    const html = renderWithItems([
+      item({
+        status: "established",
+        exposures: 4,
+        lastServedAt: reacted,
+        lastExposureAt: reacted,
+        dueAt: dueFrom(reacted),
+        reactionNotedAt: reacted,
+      }),
+    ]);
+    expect(html).toContain(">Established<");
+    expect(html).toContain("Reaction noted");
+    expect(html).toContain("Talk to your doctor before serving again.");
+  });
+
+  it("drops the badge once the parent has marked the allergen themselves", () => {
+    const reacted = agoIso(4);
+    const marked = agoIso(1);
+    const html = renderWithItems([
+      item({
+        status: "established",
+        overridden: true,
+        exposures: 1,
+        lastServedAt: reacted,
+        establishedAt: marked,
+        lastExposureAt: marked,
+        dueAt: dueFrom(marked),
+        reactionNotedAt: reacted,
+      }),
+    ]);
+    expect(html).not.toContain("Reaction noted");
+    expect(html).not.toContain("Talk to your doctor before serving again.");
+    expect(html).toContain("Marked by you");
+  });
+
+  it("shows no reaction copy at all on an ordinary row", () => {
+    const html = renderWithItems([item({ status: "started", exposures: 2 })]);
+    expect(html).not.toContain("Reaction noted");
+    expect(html).not.toContain("Talk to your doctor");
   });
 });
 

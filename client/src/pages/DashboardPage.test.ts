@@ -272,6 +272,7 @@ describe("DashboardPage allergen due nudge (item 365)", () => {
       lastServedAt: last,
       establishedAt: null,
       lastExposureAt: last,
+      reactionNotedAt: null,
       dueAt: new Date(Date.parse(last) + ALLERGEN_MAINTENANCE_DAYS * 24 * 60 * 60 * 1000).toISOString(),
       status: "established",
       overridden: false,

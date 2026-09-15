@@ -2,13 +2,18 @@ import { Link, useParams } from "react-router-dom";
 import type { AllergenProgressItem } from "@blw/shared";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
 import {
+  ALLERGEN_RULE_COPY,
   ALLERGEN_STATUS_LABEL,
   ALLERGEN_STATUS_TONE,
   DUE_BADGE_LABEL,
+  REACTION_BADGE_LABEL,
+  REACTION_HINT_COPY,
   RECENCY_HINT_COPY,
   formatAllergenDate,
   resolveAllergenRowAction,
   resolveAllergenRecency,
+  servingsProgressLabel,
+  showsReactionBadge,
 } from "../features/tracking/allergenRow.js";
 import { allergenEmoji } from "../features/tracking/allergenEmoji.js";
 import { MarkEstablishedAction, OverriddenHint } from "../features/tracking/components/AllergenActions.js";
@@ -21,6 +26,8 @@ import { SkeletonList } from "../components/ui/Skeleton.js";
 function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: string | undefined }) {
   const action = resolveAllergenRowAction(item);
   const recency = resolveAllergenRecency(item);
+  const servings = servingsProgressLabel(item);
+  const reaction = showsReactionBadge(item);
 
   // Info-region pattern (ServeLogList / StorageItemCard): everything that
   // describes the allergen is one anchor to its detail page, and the
@@ -44,6 +51,8 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
         <span>{item.exposures === 1 ? "1 exposure" : `${item.exposures} exposures`}</span>
         <span>First: {formatAllergenDate(item.firstAt)}</span>
+        {/* The rule the header states, counted out on the row it applies to. */}
+        {servings && <span>{servings}</span>}
         {recency.fact && <span>{recency.fact}</span>}
       </div>
       <p className="text-sm text-[var(--color-text)]">{item.introGuidance}</p>
@@ -60,6 +69,19 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
         </span>
       ) : (
         recency.countdown && <p className="text-xs text-[var(--color-text-muted)]">{recency.countdown}</p>
+      )}
+      {/* A reaction on the log, said once: the chip catches the eye and the
+          sentence is VISIBLE under it rather than tucked into a tooltip the
+          way the due nudge is — this is the line that sends a parent to a
+          clinician. Shown on started and established rows alike; the parent's
+          own mark is what clears it (`showsReactionBadge`). */}
+      {reaction && (
+        <div className="flex flex-col gap-1">
+          <span className="w-fit">
+            <Badge tone="sunshine">{REACTION_BADGE_LABEL}</Badge>
+          </span>
+          <p className="text-xs text-[var(--color-text)]">{REACTION_HINT_COPY}</p>
+        </div>
       )}
     </div>
   );
@@ -95,8 +117,7 @@ export function BabyAllergensPage() {
         leading={<BackButton fallback="/" />}
         description={
           <>
-            Introduce one new allergen at a time, in the morning at home, and wait a few days before
-            the next one.
+            {ALLERGEN_RULE_COPY}
             <span className="mt-1 block">Already established? Mark it so your progress reflects it.</span>
           </>
         }

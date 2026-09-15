@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  ALLERGEN_ESTABLISHED_SERVINGS,
   ALLERGEN_MAINTENANCE_DAYS,
   allergenDueAt,
+  allergenReactionPauses,
   deriveAllergenStatus,
   markAllergenEstablishedInputSchema,
   unionAllergenStatus,
@@ -47,6 +49,74 @@ describe("unionAllergenStatus", () => {
       for (const hasOverride of [false, true]) {
         const { status, overridden } = unionAllergenStatus(exposures, hasOverride);
         if (overridden) expect(status).toBe("established");
+      }
+    }
+  });
+});
+
+// The whole "established after 3 servings without a reaction" rule (item
+// 368), as a table. `loadAllergenProgress` feeds these two functions the
+// counts straight off the meal log and reports what they say, so every row
+// here is a row a parent can actually see on the ladder.
+describe("deriveAllergenStatus with the reaction pause", () => {
+  const REACTION = "2026-09-01T09:00:00.000Z";
+
+  /** What the server does with one allergen's meal-log facts, in one line. */
+  function ladder(exposures: number, cleanExposures: number, reactionNotedAt: string | null, hasOverride = false) {
+    return unionAllergenStatus(exposures, hasOverride, allergenReactionPauses(reactionNotedAt, cleanExposures));
+  }
+
+  it("counts exactly as it always did when nothing reacted", () => {
+    expect(ALLERGEN_ESTABLISHED_SERVINGS).toBe(3);
+    expect(deriveAllergenStatus(0)).toBe("not_started");
+    expect(deriveAllergenStatus(1)).toBe("started");
+    expect(deriveAllergenStatus(2)).toBe("started");
+    expect(deriveAllergenStatus(3)).toBe("established");
+    expect(deriveAllergenStatus(9)).toBe("established");
+  });
+
+  it("keeps a row started when a reaction is pausing it, however many servings are behind it", () => {
+    expect(deriveAllergenStatus(1, true)).toBe("started");
+    expect(deriveAllergenStatus(3, true)).toBe("started");
+    expect(deriveAllergenStatus(30, true)).toBe("started");
+    // A pause is never a downgrade: no count turns into not_started.
+    expect(deriveAllergenStatus(0, true)).toBe("not_started");
+  });
+
+  it("pauses the climb until three servings carried no reaction note", () => {
+    expect(allergenReactionPauses(null, 0)).toBe(false);
+    expect(allergenReactionPauses(null, 9)).toBe(false);
+    expect(allergenReactionPauses(REACTION, 0)).toBe(true);
+    expect(allergenReactionPauses(REACTION, 2)).toBe(true);
+    expect(allergenReactionPauses(REACTION, 3)).toBe(false);
+  });
+
+  it("holds a reaction during the climb at started (3 servings, one of them reactive)", () => {
+    // Three servings logged, the third with a reaction note: two clean.
+    expect(ladder(3, 2, REACTION)).toEqual({ status: "started", overridden: false });
+  });
+
+  it("leaves a reaction AFTER establishment established, flagged but not downgraded", () => {
+    // Three clean servings established it; a fourth reacted. The three that
+    // did the establishing already happened, so the status stands and only
+    // the badge (`reactionNotedAt` on the wire) is new.
+    expect(ladder(4, 3, REACTION)).toEqual({ status: "established", overridden: false });
+  });
+
+  it("lets the parent's own mark clear the pause", () => {
+    // Same paused row as above plus a mark: established, and flagged
+    // `overridden` because the log alone would not have gotten there.
+    expect(ladder(3, 2, REACTION, true)).toEqual({ status: "established", overridden: true });
+    // The mark also wins from a standing start (a first serving that reacted).
+    expect(ladder(1, 0, REACTION, true)).toEqual({ status: "established", overridden: true });
+  });
+
+  it("never downgrades a row the log already established, whatever reacted later", () => {
+    const rank = { not_started: 0, started: 1, established: 2 } as const;
+    for (const clean of [3, 4, 10]) {
+      for (const extra of [0, 1, 5]) {
+        const { status } = ladder(clean + extra, clean, extra > 0 ? REACTION : null);
+        expect(rank[status]).toBe(rank.established);
       }
     }
   });

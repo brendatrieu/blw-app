@@ -6,11 +6,15 @@ import {
   ALLERGEN_STATUS_LABEL,
   ALLERGEN_STATUS_TONE,
   DUE_BADGE_LABEL,
+  REACTION_BADGE_LABEL,
+  REACTION_HINT_COPY,
   RECENCY_HINT_COPY,
   formatAllergenDate,
   markedEstablishedAt,
   resolveAllergenRecency,
   resolveAllergenRowAction,
+  servingsProgressLabel,
+  showsReactionBadge,
 } from "../features/tracking/allergenRow.js";
 import { allergenEmoji } from "../features/tracking/allergenEmoji.js";
 import { MarkEstablishedAction, OverriddenHint } from "../features/tracking/components/AllergenActions.js";
@@ -86,6 +90,7 @@ function AllergenDetailBody({
   const recency = resolveAllergenRecency(progress);
   const action = resolveAllergenRowAction(progress);
   const markedAt = markedEstablishedAt(progress);
+  const servings = servingsProgressLabel(progress);
 
   return (
     <>
@@ -99,6 +104,8 @@ function AllergenDetailBody({
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
         <span>{progress.exposures === 1 ? "1 exposure" : `${progress.exposures} exposures`}</span>
         <span>First: {formatAllergenDate(progress.firstAt)}</span>
+        {/* Same count the ladder row prints, from the same helper. */}
+        {servings && <span>{servings}</span>}
         {/* Exact dates when there are any — a detail page can afford them
             where the ladder row only has room for "last served 3d ago". The
             two are separate facts on purpose: a mark is a parent saying the
@@ -118,6 +125,17 @@ function AllergenDetailBody({
         </span>
       ) : (
         recency.countdown && <p className="text-xs text-[var(--color-text-muted)]">{recency.countdown}</p>
+      )}
+      {/* The ladder row's reaction badge, on the page that row opens — same
+          helper, same copy, so the two can never disagree. The meals below
+          show WHICH serving it was; this says what to do about it. */}
+      {showsReactionBadge(progress) && (
+        <div className="flex flex-col gap-1">
+          <span className="w-fit">
+            <Badge tone="sunshine">{REACTION_BADGE_LABEL}</Badge>
+          </span>
+          <p className="text-xs text-[var(--color-text)]">{REACTION_HINT_COPY}</p>
+        </div>
       )}
 
       <p className="text-sm text-[var(--color-text)]">{progress.introGuidance}</p>

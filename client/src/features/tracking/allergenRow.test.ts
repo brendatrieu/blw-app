@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ALLERGEN_MAINTENANCE_DAYS, type AllergenProgressItem } from "@blw/shared";
 import {
+  ALLERGEN_RULE_COPY,
   DUE_BADGE_LABEL,
+  REACTION_HINT_COPY,
   RECENCY_HINT_COPY,
   dueAllergens,
   isAllergenDue,
@@ -12,6 +14,8 @@ import {
   resolveAllergenRecency,
   resolveAllergenRowAction,
   serveAgainByLabel,
+  servingsProgressLabel,
+  showsReactionBadge,
 } from "./allergenRow.js";
 
 /** Local-time constructor: every day count in this module is measured on
@@ -50,6 +54,7 @@ function progress(overrides: Partial<AllergenProgressItem> = {}): AllergenProgre
     lastServedAt: null,
     establishedAt: null,
     lastExposureAt: null,
+    reactionNotedAt: null,
     dueAt: null,
     status: "not_started",
     overridden: false,
@@ -316,5 +321,135 @@ describe("markedEstablishedAt — the date the detail page can name", () => {
       dueAt: dueAfter(mark),
     });
     expect(markedEstablishedAt(item)).toBe(iso(mark));
+  });
+});
+
+// The two facts item 370 adds to a row: how far up the ladder it is, and
+// whether the log holds a reaction the parent should act on.
+describe("servingsProgressLabel — 'N of 3 servings' (item 370)", () => {
+  it("counts a started row toward the rule the header states", () => {
+    expect(servingsProgressLabel(progress({ status: "started", exposures: 1 }))).toBe("1 of 3 servings");
+    expect(servingsProgressLabel(progress({ status: "started", exposures: 2 }))).toBe("2 of 3 servings");
+  });
+
+  it("says nothing for a row with nothing to count or nothing left to count", () => {
+    expect(servingsProgressLabel(progress({ status: "not_started", exposures: 0 }))).toBeNull();
+    expect(servingsProgressLabel(progress({ status: "established", exposures: 3 }))).toBeNull();
+    // Marked-established, no serves at all: the count would be "0 of 3"
+    // under a row that already reads Established.
+    expect(servingsProgressLabel(progress({ status: "established", overridden: true, exposures: 0 }))).toBeNull();
+  });
+
+  it("drops the count once a reaction has paused the row", () => {
+    // "3 of 3 servings" next to a Started chip is a contradiction, and even
+    // "1 of 3" reads as "two more to go" under advice to call a doctor.
+    const paused = progress({ status: "started", exposures: 3, reactionNotedAt: iso(daysAgo(2)) });
+    expect(servingsProgressLabel(paused)).toBeNull();
+    expect(servingsProgressLabel({ ...paused, exposures: 1 })).toBeNull();
+  });
+
+  it("states the rule in the same words the count adds up to", () => {
+    expect(ALLERGEN_RULE_COPY).toBe("Established after 3 servings without a reaction.");
+    expect(REACTION_HINT_COPY).toBe("Talk to your doctor before serving again.");
+  });
+});
+
+describe("showsReactionBadge (item 370)", () => {
+  const REACTED = iso(daysAgo(3));
+
+  it("badges a started row the log holds a reaction for", () => {
+    expect(showsReactionBadge(progress({ status: "started", exposures: 3, reactionNotedAt: REACTED }))).toBe(true);
+  });
+
+  it("badges an established row too — a reaction after the ladder still matters", () => {
+    expect(showsReactionBadge(progress({ status: "established", exposures: 4, reactionNotedAt: REACTED }))).toBe(true);
+  });
+
+  it("says nothing when the log holds no reaction", () => {
+    expect(showsReactionBadge(progress({ status: "started", exposures: 2 }))).toBe(false);
+  });
+
+  it("stops once the parent has marked the allergen themselves", () => {
+    // The mark IS the parent answering the badge ("we talked to the doctor"),
+    // and a badge nobody can dismiss would outlive its own advice.
+    const marked = progress({
+      status: "established",
+      overridden: true,
+      exposures: 3,
+      reactionNotedAt: REACTED,
+      establishedAt: iso(daysAgo(1)),
+    });
+    expect(showsReactionBadge(marked)).toBe(false);
+  });
+});
+
+describe("resolveAllergenRecency with a reaction on the log (item 370)", () => {
+  const REACTED = iso(daysAgo(9));
+
+  it("stands the maintenance nudge down while the reaction badge is up", () => {
+    // Nine days since the last (reactive) serving: the week is up, and the
+    // row would otherwise read "Serve again soon" directly above "Talk to
+    // your doctor before serving again."
+    const item = progress({
+      status: "established",
+      exposures: 4,
+      lastServedAt: REACTED,
+      lastExposureAt: REACTED,
+      dueAt: dueAfter(daysAgo(9)),
+      reactionNotedAt: REACTED,
+    });
+    expect(isAllergenDue(item.dueAt, NOW)).toBe(true);
+    expect(resolveAllergenRecency(item, NOW)).toEqual({ fact: "last served 9d ago", countdown: null, due: false });
+  });
+
+  it("silences the countdown too, not just the badge", () => {
+    const served = daysAgo(2);
+    const item = progress({
+      status: "established",
+      exposures: 4,
+      lastServedAt: iso(served),
+      lastExposureAt: iso(served),
+      dueAt: dueAfter(served),
+      reactionNotedAt: iso(served),
+    });
+    expect(resolveAllergenRecency(item, NOW).countdown).toBeNull();
+  });
+
+  it("brings the nudge back once the parent marks the allergen", () => {
+    // The mark clears the badge, so the maintenance cadence resumes — the
+    // row is established on the parent's word and paced like any other.
+    const item = progress({
+      status: "established",
+      overridden: true,
+      exposures: 1,
+      lastServedAt: REACTED,
+      establishedAt: REACTED,
+      lastExposureAt: REACTED,
+      dueAt: dueAfter(daysAgo(9)),
+      reactionNotedAt: REACTED,
+    });
+    expect(resolveAllergenRecency(item, NOW).due).toBe(true);
+  });
+});
+
+describe("showsReactionBadge after a manual mark (chair tightening)", () => {
+  it("hides a reaction the mark already answered, shows one logged after the mark", () => {
+    const marked = progress({ status: "established", overridden: true, establishedAt: iso(daysAgo(5)) });
+    expect(showsReactionBadge({ ...marked, reactionNotedAt: iso(daysAgo(9)) })).toBe(false);
+    expect(showsReactionBadge({ ...marked, reactionNotedAt: iso(daysAgo(2)) })).toBe(true);
+  });
+});
+
+describe("dueAllergens leaves a reaction-paused row out of Home's count", () => {
+  it("counts a due row, but not one carrying the reaction badge", () => {
+    const due = progress({
+      status: "established",
+      exposures: 3,
+      lastServedAt: iso(daysAgo(10)),
+      lastExposureAt: iso(daysAgo(10)),
+      dueAt: dueAfter(daysAgo(10)),
+    });
+    expect(dueAllergens([due], NOW)).toEqual([due]);
+    expect(dueAllergens([{ ...due, reactionNotedAt: iso(daysAgo(1)) }], NOW)).toEqual([]);
   });
 });

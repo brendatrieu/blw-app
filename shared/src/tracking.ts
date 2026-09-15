@@ -187,14 +187,54 @@ export const allergenStatusSchema = z.enum(["not_started", "started", "establish
 export type AllergenStatus = z.infer<typeof allergenStatusSchema>;
 
 /**
- * 0 exposures = not started, 1-2 = started, 3+ = established. The single
- * place this rule is spelled out — the server route and its tests both call
- * this instead of re-deriving the thresholds.
+ * Servings it takes to call an allergen established — the "3" in the rule
+ * the ladder header states in words ("Established after 3 servings without a
+ * reaction."). Exported so the copy, the derivation and the "2 of 3
+ * servings" progress fact all count to the same number.
  */
-export function deriveAllergenStatus(exposures: number): AllergenStatus {
+export const ALLERGEN_ESTABLISHED_SERVINGS = 3;
+
+/**
+ * 0 exposures = not started, 1-2 = started, 3+ = established — unless a
+ * noted reaction is still pausing the climb (`reactionNoted`), which keeps
+ * the row at `started` however many servings are behind it. The single place
+ * this rule is spelled out — the server route and its tests both call this
+ * instead of re-deriving the thresholds.
+ *
+ * `exposures` stays the row's whole count (one per food per meal, any
+ * timing); the pause is a separate question, asked by
+ * `allergenReactionPauses`, so that this function keeps taking the same
+ * number the API reports. A pause is never a downgrade: it only withholds
+ * the promotion, and `unionAllergenStatus` still lets a parent's mark
+ * establish the allergen over it.
+ */
+export function deriveAllergenStatus(exposures: number, reactionNoted = false): AllergenStatus {
   if (exposures <= 0) return "not_started";
-  if (exposures < 3) return "started";
+  if (reactionNoted || exposures < ALLERGEN_ESTABLISHED_SERVINGS) return "started";
   return "established";
+}
+
+/**
+ * Whether a noted reaction still pauses this allergen's climb, which is the
+ * rule "established after 3 servings WITHOUT a reaction" read as a predicate:
+ * a reaction pauses the ladder until the log holds
+ * `ALLERGEN_ESTABLISHED_SERVINGS` servings that carried no reaction note.
+ *
+ * Two consequences worth stating, because they are the whole point:
+ *  - A reaction DURING the climb (say the third serving) leaves the row
+ *    started — there are only two clean servings behind it — so the app
+ *    never calls something settled while the parent is still worried.
+ *  - A reaction AFTER establishment changes no status: the three clean
+ *    servings that established it already happened, so the row keeps its
+ *    `established` standing and only gains the caution badge.
+ *
+ * `cleanExposures` counts exposures whose meal carries no reaction note; it
+ * is a fact off the meal log, where the threshold it is compared against is
+ * the rule, which is why the comparison lives here and not in the server.
+ */
+export function allergenReactionPauses(reactionNotedAt: string | null, cleanExposures: number): boolean {
+  if (!reactionNotedAt) return false;
+  return cleanExposures < ALLERGEN_ESTABLISHED_SERVINGS;
 }
 
 /**
@@ -219,12 +259,19 @@ export function deriveAllergenStatus(exposures: number): AllergenStatus {
  * derived — an override contributes a status, and the only date it carries
  * is its own `establishedAt`, which feeds `lastExposureAt`/`dueAt` and never
  * the meal-log facts.
+ *
+ * The precedence is unchanged by the reaction pause: `reactionNoted` only
+ * feeds the DERIVED half, so a paused row reads `started` on its own and a
+ * parent's mark still wins over it — marking is exactly how a parent says
+ * "we talked to the doctor, this one is fine", and it reports
+ * `overridden: true` because the log alone would not have gotten there.
  */
 export function unionAllergenStatus(
   exposures: number,
   hasOverride: boolean,
+  reactionNoted = false,
 ): { status: AllergenStatus; overridden: boolean } {
-  const derived = deriveAllergenStatus(exposures);
+  const derived = deriveAllergenStatus(exposures, reactionNoted);
   if (derived === "established") return { status: "established", overridden: false };
   if (hasOverride) return { status: "established", overridden: true };
   return { status: derived, overridden: false };
@@ -308,6 +355,21 @@ export const allergenProgressItemSchema = z.object({
    * the same instant — see `allergenDueAt`.
    */
   dueAt: z.string().nullable(),
+  /**
+   * The `servedAt` of the most recent meal that both carried this allergen
+   * and was logged with a (non-empty) reaction note, ISO, or null when the
+   * log holds none. The meal's date, not the moment the note was typed —
+   * there is no timestamp on the note itself, and the serving is the event
+   * the parent is being reminded of.
+   *
+   * On the wire in its own right rather than folded into `status`, because
+   * the two answer different questions: the badge ("Reaction noted", with
+   * "Talk to your doctor before serving again.") is owed to a row whose
+   * three clean servings already established it just as much as to one still
+   * climbing — see `allergenReactionPauses`, which is the only place the
+   * reaction touches the status.
+   */
+  reactionNotedAt: z.string().nullable(),
   /** Derived status unioned with the parent's override — see `unionAllergenStatus`. */
   status: allergenStatusSchema,
   /**

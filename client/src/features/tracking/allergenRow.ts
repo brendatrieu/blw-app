@@ -1,4 +1,9 @@
-import { ALLERGEN_MAINTENANCE_DAYS, type AllergenProgressItem, type AllergenStatus } from "@blw/shared";
+import {
+  ALLERGEN_ESTABLISHED_SERVINGS,
+  ALLERGEN_MAINTENANCE_DAYS,
+  type AllergenProgressItem,
+  type AllergenStatus,
+} from "@blw/shared";
 import type { BadgeTone } from "../../components/ui/Badge.js";
 
 export type AllergenRowAction = "mark" | "undo" | "none";
@@ -15,6 +20,20 @@ export const RECENCY_HINT_COPY = "Consider serving again soon to maintain tolera
 
 /** The caution badge's visible label once an established allergen is due. */
 export const DUE_BADGE_LABEL = "Serve again soon";
+
+/** The caution badge on a row whose log holds a reaction note (item 370). */
+export const REACTION_BADGE_LABEL = "Reaction noted";
+
+/**
+ * The badge's sentence — visible, not a tooltip like `RECENCY_HINT_COPY`:
+ * "serve again soon" is a nudge, this is the one line on the ladder that
+ * sends a parent to a clinician, and a chip alone cannot carry it.
+ */
+export const REACTION_HINT_COPY = "Talk to your doctor before serving again.";
+
+/** The one-sentence rule, stated on the ladder header and in the Learn
+ * article ("Introducing allergens") in exactly these words. */
+export const ALLERGEN_RULE_COPY = `Established after ${ALLERGEN_ESTABLISHED_SERVINGS} servings without a reaction.`;
 
 /**
  * Whole calendar days between an ISO instant and `now`, counting by local
@@ -119,7 +138,8 @@ export interface AllergenRecency {
    * intro guidance, not by a maintenance cadence). */
   countdown: string | null;
   /** True once the maintenance week is up — the row shows the caution badge
-   * (`DUE_BADGE_LABEL`) instead of the countdown. */
+   * (`DUE_BADGE_LABEL`) instead of the countdown. False while a reaction is
+   * badged on the row, whatever `dueAt` says: see `resolveAllergenRecency`. */
   due: boolean;
 }
 
@@ -129,10 +149,16 @@ export interface AllergenRecency {
  * down are mutually exclusive) can't silently drift from the helpers above.
  */
 export function resolveAllergenRecency(
-  item: Pick<AllergenProgressItem, "status" | "lastServedAt" | "lastExposureAt" | "dueAt">,
+  item: Pick<AllergenProgressItem, "status" | "lastServedAt" | "lastExposureAt" | "dueAt" | "reactionNotedAt" | "overridden" | "establishedAt">,
   now: Date = new Date(),
 ): AllergenRecency {
   if (item.status === "not_started") return { fact: null, countdown: null, due: false };
+  // A row carrying the reaction badge is not also nudged to serve: "Serve
+  // again soon" under "Talk to your doctor before serving again." is the app
+  // contradicting itself on one card, and the safety line is the one that
+  // wins. Only the nudge stands down — `dueAt` is server truth and keeps
+  // running, so nothing is lost once the parent marks the allergen.
+  if (showsReactionBadge(item)) return { fact: lastExposureLabel(item, now), countdown: null, due: false };
   const due = isAllergenDue(item.dueAt, now);
   return {
     fact: lastExposureLabel(item, now),
@@ -142,12 +168,62 @@ export function resolveAllergenRecency(
 }
 
 /**
+ * "2 of 3 servings" — how far up the ladder a started row has climbed, so
+ * the rule the header states in words is visible as a count on the row
+ * itself. Null for anything not started: a not-yet-started row has nothing
+ * to count, and an established one has finished counting.
+ *
+ * Also null once a reaction has paused the row. "3 of 3 servings" next to a
+ * Started chip would be a contradiction, and even "1 of 3" would read as
+ * "two more to go" directly above a badge asking the parent to talk to a
+ * doctor before serving again — the badge is the state of that row, not a
+ * countdown.
+ */
+export function servingsProgressLabel(
+  item: Pick<AllergenProgressItem, "status" | "exposures" | "reactionNotedAt">,
+): string | null {
+  if (item.status !== "started" || item.reactionNotedAt) return null;
+  // A started row without a pause holds fewer servings than the threshold by
+  // construction; the clamp only keeps the copy sane if that ever changes.
+  const served = Math.min(item.exposures, ALLERGEN_ESTABLISHED_SERVINGS);
+  return `${served} of ${ALLERGEN_ESTABLISHED_SERVINGS} servings`;
+}
+
+/**
+ * Whether a row carries the "Reaction noted" badge (and its sentence).
+ *
+ * Any row with a reaction note on the log does, `started` and `established`
+ * alike — a reaction after the ladder was climbed changes no status but is
+ * still exactly the thing a parent needs to see.
+ *
+ * Except an overridden one: the parent marking an allergen established is
+ * them telling the app the reaction has been dealt with ("we talked to the
+ * doctor"), and a badge that outlives the mark would make its own advice
+ * unactionable — there is no way to dismiss it. The per-meal "Reaction: …"
+ * chip on the detail page keeps the underlying fact visible either way, so
+ * nothing is lost, only un-nagged.
+ */
+export function showsReactionBadge(
+  item: Pick<AllergenProgressItem, "reactionNotedAt" | "overridden" | "establishedAt">,
+): boolean {
+  if (item.reactionNotedAt === null) return false;
+  // A manual mark answers the reactions that came before it; a reaction
+  // logged AFTER the mark is new information and shows again.
+  if (!item.overridden || !item.establishedAt) return true;
+  return Date.parse(item.reactionNotedAt) > Date.parse(item.establishedAt);
+}
+
+/**
  * Home's nudge input (item 365): every allergen whose maintenance week is up.
  * Pure and exported so "how many are due" is one rule both the ladder rows
  * and the Home line answer with, rather than Home counting its own way.
  */
-export function dueAllergens<T extends Pick<AllergenProgressItem, "dueAt">>(items: T[], now: Date = new Date()): T[] {
-  return items.filter((item) => isAllergenDue(item.dueAt, now));
+export function dueAllergens<
+  T extends Pick<AllergenProgressItem, "dueAt" | "reactionNotedAt" | "overridden" | "establishedAt">,
+>(items: T[], now: Date = new Date()): T[] {
+  // A row paused for a reaction is not asking to be served again, so Home
+  // must not count it — the row itself already stands its nudge down.
+  return items.filter((item) => isAllergenDue(item.dueAt, now) && !showsReactionBadge(item));
 }
 
 /**

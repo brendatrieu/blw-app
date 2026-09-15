@@ -17,19 +17,10 @@
 // actually cares about. Flagged in the phase brief.
 import { and, asc, eq, ilike, isNull, lte, or } from "drizzle-orm";
 import { betaTool } from "@anthropic-ai/sdk/helpers/beta/json-schema";
-import { ageInMonths, formatExtraIngredient, unionAllergenStatus } from "@blw/shared";
+import { ageInMonths, formatExtraIngredient } from "@blw/shared";
 import type { Database } from "../db/index.js";
-import {
-  allergenOverrides,
-  allergens,
-  babies,
-  foodAllergens,
-  foods,
-  mealFoods,
-  meals,
-  storageItems,
-  recipes,
-} from "../db/schema.js";
+import { babies, foods, mealFoods, meals, storageItems, recipes } from "../db/schema.js";
+import { loadAllergenProgress } from "../services/allergens.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import { deriveIronFocus, loadRecipeNutrition, nutritionFor } from "../services/recipeNutrition.js";
 import {
@@ -83,40 +74,19 @@ export async function fetchBabyProfileSummary(
   const foodsIntroduced = new Set(servedRows.map((r) => r.foodName));
   const knownReactiveFoods = [...new Set(servedRows.filter((r) => r.reactionNote).map((r) => r.foodName))];
 
-  // Same >=3-exposures threshold the allergen ladder tracker uses, via the
-  // shared derivation function, so this summary never disagrees with what
-  // the parent sees on /babies/:id/allergens.
-  const exposureRows = await db
-    .select({ allergenSlug: allergens.slug })
-    .from(mealFoods)
-    .innerJoin(meals, eq(mealFoods.mealId, meals.id))
-    .innerJoin(foodAllergens, eq(mealFoods.foodId, foodAllergens.foodId))
-    .innerJoin(allergens, eq(foodAllergens.allergenId, allergens.id))
-    .where(eq(meals.babyId, babyId));
-  const exposureCountBySlug = new Map<string, number>();
-  for (const row of exposureRows) {
-    exposureCountBySlug.set(row.allergenSlug, (exposureCountBySlug.get(row.allergenSlug) ?? 0) + 1);
-  }
-
-  // Same union the progress route reports: an allergen a parent marked as
-  // established before they started logging counts as established here too,
-  // or the model would keep suggesting a "first try" for something the baby
-  // has eaten for months. Overrides are per-baby, and this baby is already
-  // proven to be the caller's by the lookup above.
-  const overrideRows = await db
-    .select({ allergenKey: allergenOverrides.allergenKey })
-    .from(allergenOverrides)
-    .where(eq(allergenOverrides.babyId, babyId));
-  const overriddenSlugs = new Set(overrideRows.map((row) => row.allergenKey));
-
-  const candidateSlugs = new Set([...exposureCountBySlug.keys(), ...overriddenSlugs]);
-  const establishedTop9Allergens = [...candidateSlugs]
-    .filter((slug) => {
-      const exposures = exposureCountBySlug.get(slug) ?? 0;
-      return unionAllergenStatus(exposures, overriddenSlugs.has(slug)).status === "established";
-    })
-    // Sorted so the same baby always produces the same summary string —
-    // the set's insertion order depends on row order otherwise.
+  // Literally the ladder the parent sees on /babies/:id/allergens, not a
+  // second derivation that agrees with it today: `loadAllergenProgress` is
+  // the one place the count, the parent's "we established this" mark and the
+  // reaction pause are unioned, so a row the app is holding at `started`
+  // because a serving got a reaction note can never reach the model as
+  // established. Overrides are per-baby, and this baby is already proven to
+  // be the caller's by the lookup above.
+  const progress = await loadAllergenProgress(db, babyId);
+  const establishedTop9Allergens = progress
+    .filter((item) => item.status === "established")
+    .map((item) => item.allergenSlug)
+    // Sorted so the same baby always produces the same summary string — the
+    // ladder's own order is by intro step, which is not stable copy.
     .sort();
 
   return {

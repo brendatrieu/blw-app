@@ -44,6 +44,7 @@ function detail(overrides: Partial<AllergenDetail> = {}): AllergenDetail {
       lastServedAt: "2026-08-20T09:00:00.000Z",
       establishedAt: null,
       lastExposureAt: "2026-08-20T09:00:00.000Z",
+      reactionNotedAt: null,
       dueAt: null,
       status: "started",
       overridden: false,
@@ -273,6 +274,67 @@ describe("AllergenDetailPage header + facts (item 187)", () => {
     expect(html).toContain('title="Consider serving again soon to maintain tolerance."');
     expect(html).toContain("bg-[var(--color-caution-soft)]");
     expect(html).not.toContain("Serve again by");
+  });
+});
+
+// The detail page mirrors the ladder row it opens from — same helpers, same
+// copy — so the progress count and the reaction badge show up here too.
+describe("AllergenDetailPage servings count + reaction badge (item 370)", () => {
+  it("counts the servings behind a started row", () => {
+    // The fixture is a started row with two exposures.
+    expect(renderWithDetail(detail())).toContain("2 of 3 servings");
+  });
+
+  it("badges a paused row with the chip and the doctor sentence, and drops the count", () => {
+    const reacted = agoIso(2);
+    const html = renderWithDetail(
+      detail({
+        progress: { ...detail().progress, exposures: 3, reactionNotedAt: reacted },
+      }),
+    );
+    expect(html).toContain("Reaction noted");
+    expect(html).toContain("Talk to your doctor before serving again.");
+    expect(html).toContain("bg-[var(--color-caution-soft)]");
+    expect(html).toContain("Started");
+    expect(html).not.toContain("of 3 servings");
+  });
+
+  it("badges an established row whose log holds a later reaction, without downgrading it", () => {
+    const reacted = agoIso(1);
+    const html = renderWithDetail(
+      detail({
+        progress: {
+          ...detail().progress,
+          status: "established",
+          exposures: 4,
+          lastExposureAt: reacted,
+          dueAt: dueFrom(reacted),
+          reactionNotedAt: reacted,
+        },
+      }),
+    );
+    expect(html).toContain("Established");
+    expect(html).toContain("Reaction noted");
+    expect(html).toContain("Talk to your doctor before serving again.");
+  });
+
+  it("drops the badge once the parent has marked the allergen themselves", () => {
+    const marked = agoIso(1);
+    const html = renderWithDetail(
+      detail({
+        progress: {
+          ...detail().progress,
+          status: "established",
+          overridden: true,
+          establishedAt: marked,
+          lastExposureAt: marked,
+          dueAt: dueFrom(marked),
+          reactionNotedAt: agoIso(4),
+        },
+      }),
+    );
+    expect(html).not.toContain("Reaction noted");
+    expect(html).not.toContain("Talk to your doctor before serving again.");
   });
 });
 
