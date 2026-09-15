@@ -2,7 +2,13 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import { METRICS_FEATURES, RETENTION_WEEKS, USAGE_TOUR_SLIDE_MAX, type AdminMetricsResponse } from "@blw/shared";
+import {
+  METRICS_FEATURES,
+  RETENTION_WEEKS,
+  USAGE_TOUR_SLIDE_MAX,
+  type AdminFeedbackItem,
+  type AdminMetricsResponse,
+} from "@blw/shared";
 
 /**
  * The dashboard's render pins.
@@ -26,14 +32,25 @@ const h = vi.hoisted(() => ({
     refetch: () => {},
   },
   collaborators: { data: { collaborators: [] }, isLoading: false, isError: false },
+  feedback: {
+    data: undefined as { items: AdminFeedbackItem[] } | undefined,
+    isLoading: false,
+    isError: false,
+  },
+  summary: { data: undefined as { new: number; read: number; resolved: number; archived: number } | undefined },
 }));
 
+// A whole-module replacement: every admin hook the page (or a panel inside
+// it) calls has to appear here, or the page throws before it renders a thing.
 vi.mock("../features/admin/hooks.js", () => ({
   useIsAdmin: () => h.admin,
   useAdminMetrics: () => h.metrics,
   useCollaborators: () => h.collaborators,
   useGrantCollaborator: () => ({ mutate: () => {}, isPending: false }),
   useRevokeCollaborator: () => ({ mutate: () => {}, isPending: false }),
+  useFeedbackSummary: () => h.summary,
+  useAdminFeedback: () => h.feedback,
+  useUpdateFeedback: () => ({ mutate: () => {}, isPending: false }),
 }));
 
 import { formatTimestamp } from "../components/charts/helpers.js";
@@ -139,6 +156,19 @@ const EMPTY: AdminMetricsResponse = {
   recentDeploys: [],
 };
 
+const FEEDBACK_ITEM: AdminFeedbackItem = {
+  id: "11111111-2222-4333-8444-555555555555",
+  message: "The storage list\n\nkeeps scrolling to the top.",
+  senderEmail: "parent@example.com",
+  routePattern: "/storage",
+  appVersion: "abc1234",
+  status: "new",
+  archived: false,
+  createdAt: "2026-09-13T15:30:00.000Z",
+  readAt: null,
+  resolvedAt: null,
+};
+
 function render(): string {
   return renderToString(createElement(MemoryRouter, null, createElement(AdminMetricsPage, null)));
 }
@@ -147,6 +177,8 @@ beforeEach(() => {
   h.admin = { isAdmin: true, isResolved: true };
   h.metrics = { data: FULL, isLoading: false, isError: false, isFetching: false, refetch: () => {} };
   h.collaborators = { data: { collaborators: [] }, isLoading: false, isError: false };
+  h.feedback = { data: { items: [FEEDBACK_ITEM] }, isLoading: false, isError: false };
+  h.summary = { data: { new: 2, read: 1, resolved: 4, archived: 5 } };
 });
 
 describe("who can see it (item 327)", () => {
@@ -392,16 +424,103 @@ describe("accessibility and privacy", () => {
 
   it("puts nothing on screen that could identify one parent", () => {
     // Not a promise about the queries — a property of the payload type,
-    // which has nowhere to put an id, an email or a name. The Access panel
-    // is the one exception and it lists admins, not parents.
-    // Everything above the Access panel, which is the documented exception:
-    // it lists admins' addresses to admins, and its own field placeholder is
-    // the only "@" the page is allowed to hold.
+    // which has nowhere to put an id, an email or a name.
+    //
+    // The METRICS region is everything from the first KPI tile to the Access
+    // panel's heading. It is bounded that way because the page now has two
+    // documented exceptions, one at each end: the Inbox above the tiles,
+    // which shows one parent's words and the address to answer them at (item
+    // 361, pinned below with a real message in the fixture), and the Access
+    // panel below, which lists admins to admins. Everything between them is
+    // aggregates, and stays that way even with a populated inbox.
     const html = render();
+    const start = html.indexOf(">Logging parents<");
     const heading = html.indexOf('id="admin-access-heading"');
-    expect(heading).toBeGreaterThan(-1);
-    const metrics = html.slice(0, heading);
+    expect(start).toBeGreaterThan(-1);
+    expect(heading).toBeGreaterThan(start);
+    const metrics = html.slice(start, heading);
     expect(metrics).not.toContain("@");
     expect(metrics).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/);
+  });
+});
+
+describe("the feedback inbox on the dashboard (item 361)", () => {
+  it("leads the page — above the range picker, the tiles and every chart", () => {
+    const html = render();
+    const inbox = html.indexOf(">Inbox</h2>");
+    expect(inbox).toBeGreaterThan(-1);
+    expect(inbox).toBeLessThan(html.indexOf('aria-label="Range"'));
+    expect(inbox).toBeLessThan(html.indexOf(">Logging parents<"));
+    expect(inbox).toBeLessThan(html.indexOf(">Weekly logging parents</h2>"));
+  });
+
+  it("offers the three tabs with their counts, opening on Open", () => {
+    const html = render();
+    expect(html).toContain('aria-label="Feedback filter"');
+    // Open is new + read; the other two are their own buckets.
+    expect(html).toContain(">Open (3)<");
+    expect(html).toContain(">Resolved (4)<");
+    expect(html).toContain(">Archived (5)<");
+    expect(html).toMatch(/aria-checked="true"[^>]*>(?:<[^>]*>)*Open \(3\)/);
+  });
+
+  it("shows the sender as a mailto, with the screen, the build and the age", () => {
+    const html = render();
+    expect(html).toContain('href="mailto:parent@example.com"');
+    expect(html).toContain(">parent@example.com<");
+    expect(html).toContain("/storage · vabc1234 · ");
+  });
+
+  it("keeps the message exactly as it was typed, blank lines and all", () => {
+    const html = render();
+    expect(html).toContain("whitespace-pre-wrap");
+    expect(html).toContain("keeps scrolling to the top.");
+  });
+
+  it("offers an unread message Mark read, Resolve and Clear", () => {
+    const html = render();
+    for (const label of ["Mark read", "Resolve", "Clear"]) {
+      expect(html, label).toContain(`>${label}<`);
+    }
+    // Nothing here deletes: Clear archives, and Archived is the undo.
+    expect(html).not.toContain(">Delete<");
+  });
+
+  it("drops Mark read once the message has been read", () => {
+    h.feedback = { data: { items: [{ ...FEEDBACK_ITEM, status: "read", readAt: "2026-09-13T16:00:00.000Z" }] }, isLoading: false, isError: false };
+    const html = render();
+    expect(html).not.toContain(">Mark read<");
+    expect(html).toContain(">Resolve<");
+    expect(html).toContain(">Clear<");
+  });
+
+  it("says so plainly when a tab is empty", () => {
+    h.feedback = { data: { items: [] }, isLoading: false, isError: false };
+    const html = render();
+    expect(html).toContain(">Nothing here.<");
+    expect(html).not.toContain("parent@example.com");
+  });
+
+  it("shows a skeleton while the first list is in flight", () => {
+    h.feedback = { data: undefined, isLoading: true, isError: false };
+    const html = render();
+    expect(html).toContain("skeleton");
+    expect(html).not.toContain(">Nothing here.<");
+  });
+
+  it("renders even when the metrics payload failed — it has its own queries", () => {
+    h.metrics = { data: undefined, isLoading: false, isError: true, isFetching: false, refetch: () => {} };
+    const html = render();
+    expect(html).toContain(">Inbox</h2>");
+    expect(html).toContain(">parent@example.com<");
+    expect(html).toContain("Couldn&#x27;t load metrics.");
+  });
+
+  it("stays invisible to a non-admin, like the rest of the page", () => {
+    h.admin = { isAdmin: false, isResolved: true };
+    const html = render();
+    for (const word of ["Inbox", "parent@example.com", "Nothing here."]) {
+      expect(html, word).not.toContain(word);
+    }
   });
 });

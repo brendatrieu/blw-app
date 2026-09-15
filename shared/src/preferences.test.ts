@@ -55,9 +55,9 @@ describe("updatePreferencesInputSchema", () => {
   });
 });
 
-describe("account export v13", () => {
+describe("account export v14", () => {
   it("bumped its version and carries usage events alongside the preferences", () => {
-    expect(ACCOUNT_EXPORT_VERSION).toBe(13);
+    expect(ACCOUNT_EXPORT_VERSION).toBe(14);
 
     const shape = accountExportSchema.shape;
     expect(shape.preferences.safeParse(null).success).toBe(true);
@@ -81,6 +81,43 @@ describe("account export v13", () => {
       ]).success,
     ).toBe(true);
     expect(shape.usageEvents.safeParse(undefined).success).toBe(false);
+  });
+
+  // v14 (item 358): the messages this account sent the admins.
+  it("carries the account's own feedback, without naming the admin who handled it", () => {
+    const shape = accountExportSchema.shape;
+    expect(shape.feedback.safeParse([]).success).toBe(true);
+    expect(
+      shape.feedback.safeParse([
+        {
+          message: "The log form saves twice on my phone.",
+          status: "resolved",
+          routePattern: "/log-meal",
+          createdAt: "2026-09-13T10:00:00.000Z",
+        },
+      ]).success,
+    ).toBe(true);
+    // A message sent from a screen the client could not name is still a
+    // message.
+    expect(
+      shape.feedback.safeParse([
+        { message: "Hello", status: "new", routePattern: null, createdAt: "2026-09-13T10:00:00.000Z" },
+      ]).success,
+    ).toBe(true);
+    // Who resolved it is a fact about a member of staff, not about this
+    // account, and there is nowhere in the shape to put one.
+    expect(
+      shape.feedback.safeParse([
+        {
+          message: "Hello",
+          status: "new",
+          routePattern: null,
+          createdAt: "2026-09-13T10:00:00.000Z",
+          resolvedBy: "admin-1",
+        },
+      ]).data,
+    ).toEqual([{ message: "Hello", status: "new", routePattern: null, createdAt: "2026-09-13T10:00:00.000Z" }]);
+    expect(shape.feedback.safeParse(undefined).success).toBe(false);
   });
 
   // v13 (item 345): a container holds a whole meal, so the single

@@ -25,6 +25,7 @@ import { registerAccountRoutes } from "./routes/account.js";
 import { registerPreferenceRoutes } from "./routes/preferences.js";
 import { registerUsageRoutes } from "./routes/usage.js";
 import { registerAdminRoutes } from "./routes/admin.js";
+import { registerFeedbackRoutes } from "./routes/feedback.js";
 import { decorateAdminRequest } from "./admin/access.js";
 import type { ApiKeyVerifier } from "./ai/client.js";
 
@@ -192,6 +193,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     registerPreferenceRoutes(app, db); // per-user app preferences (tour, usage sharing)
     registerUsageRoutes(app, db, env); // anonymous usage events
     registerAdminRoutes(app, db, env); // metrics dashboard + collaborators (404 to everyone else)
+    registerFeedbackRoutes(app, db, env); // parent feedback + the admin inbox (404 to everyone else)
   });
 
   const clientBuildExists = fs.existsSync(path.join(clientDistDir, "index.html"));

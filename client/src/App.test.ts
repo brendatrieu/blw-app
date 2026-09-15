@@ -82,6 +82,23 @@ describe("App route wiring (item 310 — the tour is a modal, not a route)", () 
   });
 });
 
+describe("App route wiring (item 360 — Send feedback)", () => {
+  it("mounts /feedback inside the guarded layout, right after the More page it is reached from", () => {
+    // Position is not cosmetic: `ROUTE_PATTERNS` is this table in order, and
+    // `routes.test.ts` asserts the two are equal — so the route's place here
+    // is the same fact as the pattern's place there.
+    const declared = collectRoutePaths((App as unknown as () => ReactNode)());
+    expect(declared).toContain("/feedback");
+    expect(declared.indexOf("/feedback")).toBe(declared.indexOf("/more") + 1);
+    expect(declared.indexOf("/feedback")).toBeLessThan(declared.indexOf("/admin/metrics"));
+  });
+
+  it("mounts exactly one feedback route — the admin inbox is a panel, not a page", () => {
+    const declared = collectRoutePaths((App as unknown as () => ReactNode)());
+    expect(declared.filter((path) => path.startsWith("/feedback"))).toEqual(["/feedback"]);
+  });
+});
+
 describe("App route wiring (item 327 — the admin dashboard)", () => {
   const paths = () => collectRoutePaths((App as unknown as () => ReactNode)());
 

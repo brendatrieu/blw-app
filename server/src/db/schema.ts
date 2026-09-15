@@ -587,6 +587,56 @@ export const chatMessages = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Parent feedback (item 358)
+// ---------------------------------------------------------------------------
+
+export const feedbackStatusEnum = pgEnum("feedback_status", ["new", "read", "resolved"]);
+
+/**
+ * One message a parent sent the admins from Send feedback.
+ *
+ * `message` is the one place a parent's own prose leaves their account, so
+ * the rules around it are narrow on purpose: it never enters a usage event
+ * (`feedback_sent` carries no props at all), only an admin behind
+ * `requireAdmin` can read it, and the account's own export gives it back.
+ *
+ * Nothing here is ever deleted by the product. "Clear" in the inbox writes
+ * `archived_at`, which is a tab rather than a bin — the only delete is the
+ * account's own cascade from `user`.
+ *
+ * `resolved_by` is SET NULL for the same reason `admin_audit`'s references
+ * are: deleting the admin who handled a message must not take the parent's
+ * message with it.
+ */
+export const feedback = pgTable(
+  "feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // 1–2000 characters, enforced by shared/src/feedback.ts.
+    message: text("message").notNull(),
+    // Route PATTERN ("/foods/:slug"), never a real path — same rule as
+    // `usage_events.route`. Null when the sender's client had none.
+    routePattern: text("route_pattern"),
+    appVersion: text("app_version").notNull(),
+    status: feedbackStatusEnum("status").notNull().default("new"),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedBy: text("resolved_by").references(() => user.id, { onDelete: "set null" }),
+  },
+  (t) => [
+    // The two shapes anything reads this table by: the inbox's filtered,
+    // newest-first list, and one account's own messages (export, cascade).
+    index("feedback_status_created_at_idx").on(t.status, t.createdAt),
+    index("feedback_user_id_created_at_idx").on(t.userId, t.createdAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Analytics: anonymous usage events, the deploy log they are compared across,
 // and the audit trail for admin access grants.
 // ---------------------------------------------------------------------------
@@ -661,6 +711,14 @@ export const adminAudit = pgTable(
     actorUserId: text("actor_user_id").references(() => user.id, { onDelete: "set null" }),
     action: text("action").notNull(),
     targetUserId: text("target_user_id").references(() => user.id, { onDelete: "set null" }),
+    /**
+     * What the action was about when it was about a row rather than an
+     * account: the feedback id for every `feedback_*` action (item 358).
+     * Plain text with no foreign key on purpose — the audit trail has to
+     * outlive the row it names, and both a cascade and a SET NULL would take
+     * away the one fact this column carries.
+     */
+    targetRef: text("target_ref"),
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("admin_audit_at_idx").on(t.at)],

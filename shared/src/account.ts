@@ -20,7 +20,7 @@ import { userPreferencesSchema } from "./preferences.js";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 13;
+export const ACCOUNT_EXPORT_VERSION = 14;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -225,6 +225,24 @@ export const exportUsageEventSchema = z.object({
   occurredAt: z.string(),
 });
 
+/**
+ * v14. One message this account sent the admins from Send feedback.
+ *
+ * The parent's own words come back, along with what the admins have done
+ * with it (`status`) — and deliberately nothing about WHICH admin did it:
+ * `resolvedBy` is a fact about a member of staff, not about this account.
+ * The row id is left out for the same reason `exportUsageEventSchema` leaves
+ * its own out — it is not a fact about the parent, and `createdAt` already
+ * orders the file. Archived messages are included: "Cleared" is a tab in the
+ * inbox, not a deletion, and the parent still sent them.
+ */
+export const exportFeedbackSchema = z.object({
+  message: z.string(),
+  status: z.string(),
+  routePattern: z.string().nullable(),
+  createdAt: z.string(),
+});
+
 export const accountExportSchema = z.object({
   exportVersion: z.literal(ACCOUNT_EXPORT_VERSION),
   exportedAt: z.string(),
@@ -256,6 +274,8 @@ export const accountExportSchema = z.object({
   /** v11. Anonymous usage events, oldest first. Empty for an account that has
    * sharing switched off — turning it off deletes them. */
   usageEvents: z.array(exportUsageEventSchema),
+  /** v14. Messages this account sent the admins, oldest first. */
+  feedback: z.array(exportFeedbackSchema),
 });
 
 export type AccountExport = z.infer<typeof accountExportSchema>;
@@ -272,6 +292,7 @@ export type ExportSymptomCheck = z.infer<typeof exportSymptomCheckSchema>;
 export type ExportChatThread = z.infer<typeof exportChatThreadSchema>;
 export type ExportChatMessage = z.infer<typeof exportChatMessageSchema>;
 export type ExportUsageEvent = z.infer<typeof exportUsageEventSchema>;
+export type ExportFeedback = z.infer<typeof exportFeedbackSchema>;
 
 // ---------------------------------------------------------------------------
 // DELETE /api/account

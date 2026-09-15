@@ -28,6 +28,7 @@ import { SymptomCheckPage } from "./pages/SymptomCheckPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { MorePage } from "./pages/MorePage.js";
+import { FeedbackPage } from "./pages/FeedbackPage.js";
 import { AdminMetricsPage } from "./pages/AdminMetricsPage.js";
 import { NotFoundPage } from "./pages/NotFoundPage.js";
 
@@ -113,6 +114,10 @@ export function App() {
         <Route path="/chat/:threadId" element={<ChatPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/more" element={<MorePage />} />
+        {/* Item 360. Reached from the More row it sits next to here, and
+            declared immediately after it so `ROUTE_PATTERNS` — which mirrors
+            this table exactly, in order — reads the same way. */}
+        <Route path="/feedback" element={<FeedbackPage />} />
         {/* Item 327. Declared last, immediately ahead of the catch-all, and
             inside the layout like every other screen: a non-admin who opens
             it renders the very same `NotFoundPage` the line below renders,

@@ -76,8 +76,13 @@ describe("isMoreTabPath (the More tab's active rule)", () => {
     expect(isMoreTabPath("/safety/choking")).toBe(true);
   });
 
+  it("keeps the More tab lit on Send feedback, which is only reachable from it (item 360)", () => {
+    expect(isMoreTabPath("/feedback")).toBe(true);
+  });
+
   it("does not spill onto unrelated paths that merely share a prefix", () => {
     expect(isMoreTabPath("/")).toBe(false);
+    expect(isMoreTabPath("/feedbackery")).toBe(false);
     expect(isMoreTabPath("/recipes")).toBe(false);
     expect(isMoreTabPath("/safetyville")).toBe(false);
     expect(isMoreTabPath("/moreish")).toBe(false);
@@ -90,7 +95,16 @@ describe("resolveActiveTab (one rule for highlight AND aria-current)", () => {
     expect(resolveActiveTab("/storage/abc/edit")).toBe("/storage");
     expect(resolveActiveTab("/foods/avocado")).toBe("/foods");
     expect(resolveActiveTab("/recipes/new")).toBe("/recipes");
-    for (const path of ["/more", "/safety", "/safety/choking", "/settings", "/favorites", "/chat/t1", "/symptom-check"]) {
+    for (const path of [
+      "/more",
+      "/safety",
+      "/safety/choking",
+      "/settings",
+      "/favorites",
+      "/chat/t1",
+      "/symptom-check",
+      "/feedback",
+    ]) {
       expect(resolveActiveTab(path), path).toBe("/more");
     }
     expect(resolveActiveTab("/log-meal")).toBeNull();

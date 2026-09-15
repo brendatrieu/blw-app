@@ -68,6 +68,9 @@ export const ROUTE_PATTERNS = [
   "/chat/:threadId",
   "/settings",
   "/more",
+  /** Send feedback, reached from More. A screen like any other — the send
+   * itself is `feedback_sent`, and the message never appears in either. */
+  "/feedback",
   /** Admin-only metrics dashboard. Everyone else gets the not-found page,
    * and the API behind it answers 404 to them, so this pattern can only ever
    * be reported by an admin's own browser. */
@@ -316,6 +319,12 @@ const eventProps = {
   /** The Privacy switch moved. The event for turning sharing OFF is sent
    * before the PATCH, since the PATCH wipes everything collected. */
   usage_sharing_changed: z.object({ enabled: z.boolean() }).strict(),
+
+  /** A message sent from Send feedback. No props, and that is the point: the
+   * message itself lives in one table an admin reads, and analytics only
+   * ever learns that a message happened — which is the only thing it needs
+   * to answer "does anybody use this". */
+  feedback_sent: z.object({}).strict(),
 } as const;
 
 /** Every P1 event name, in catalog order. Pinned against the union below. */
@@ -338,6 +347,7 @@ export const USAGE_EVENT_NAMES = [
   "offline_entered",
   "client_error",
   "usage_sharing_changed",
+  "feedback_sent",
 ] as const;
 
 export type UsageEventName = (typeof USAGE_EVENT_NAMES)[number];
@@ -471,6 +481,7 @@ export const usageEventSchema = z
     event("offline_entered"),
     event("client_error"),
     event("usage_sharing_changed"),
+    event("feedback_sent"),
   ])
   .superRefine(rejectPii);
 
@@ -527,6 +538,7 @@ export const usageEventEnvelopeSchema = z
     envelope("offline_entered"),
     envelope("client_error"),
     envelope("usage_sharing_changed"),
+    envelope("feedback_sent"),
   ])
   .superRefine((value, ctx) => {
     rejectPii(value, ctx);

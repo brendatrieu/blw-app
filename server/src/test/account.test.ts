@@ -543,13 +543,14 @@ describe("account export", () => {
         "storageItems",
         "preferences",
         "usageEvents",
+        "feedback",
         "profile",
         "meals",
         "symptomChecks",
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(13);
+    expect(bundle.exportVersion).toBe(14);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);

@@ -9,6 +9,7 @@ import {
 } from "@blw/shared";
 import { useAdminMetrics, useIsAdmin } from "../features/admin/hooks.js";
 import { AccessPanel } from "../features/admin/AccessPanel.js";
+import { FeedbackInbox } from "../features/admin/FeedbackInbox.js";
 import { Bars } from "../components/charts/Bars.js";
 import { ChartEmpty } from "../components/charts/ChartFrame.js";
 import { Donut } from "../components/charts/Donut.js";
@@ -48,10 +49,14 @@ import { NotFoundPage } from "./NotFoundPage.js";
  * before rendering anything at all rather than flashing one page then the
  * other.
  *
- * **Nothing on this page identifies a parent.** Not by construction of the
- * queries — by construction of the *types*: `AdminMetricsResponse` has
- * nowhere to put an id, an email or a name. The Access panel at the bottom
- * is the single exception, and it lists admins to admins.
+ * **Nothing between the Inbox and the Access panel identifies a parent.**
+ * Not by construction of the queries — by construction of the *types*:
+ * `AdminMetricsResponse` has nowhere to put an id, an email or a name. There
+ * are exactly two exceptions and both are deliberate: the Access panel at
+ * the bottom, which lists admins to admins, and the Inbox at the top (item
+ * 361), which shows one parent's own words and the address to answer them
+ * at — because that is what an inbox is for, and a suggestion box you cannot
+ * reply from is not one.
  */
 
 const TRIAGE_LABELS: Record<TriageLevel, string> = {
@@ -75,6 +80,10 @@ const RETENTION_ROWS = 8;
  * of regression a dashboard hides well.
  */
 export const METRICS_PANEL_TITLES = [
+  // First on the page and first in this list: a message from a parent is the
+  // only thing here that is waiting on a person, and a dashboard that buried
+  // it under twelve charts would be a dashboard nobody read it from.
+  "Inbox",
   "Weekly logging parents",
   "Signups",
   "Activation",
@@ -130,6 +139,14 @@ export function MetricsDashboard() {
         leading={<BackButton fallback="/more" />}
         description="Aggregates only — no names, no notes, nobody's baby."
       />
+
+      {/* Above the range picker, not just above the tiles: the inbox has its
+          own queries and its own tabs, so it renders while the metrics are
+          still loading (or have failed) — and a range control sitting above
+          it would look like it governed which messages were shown. */}
+      <Card as="section">
+        <FeedbackInbox />
+      </Card>
 
       <SegmentedControl options={RANGE_OPTIONS} value={range} onChange={setRange} aria-label="Range" />
 

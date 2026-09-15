@@ -81,6 +81,7 @@ describe("toRoutePattern", () => {
     ["/chat/6f1c0b1a-0000-4000-8000-000000000005", "/chat/:threadId"],
     ["/settings", "/settings"],
     ["/more", "/more"],
+    ["/feedback", "/feedback"],
     ["/admin/metrics", "/admin/metrics"],
   ];
 

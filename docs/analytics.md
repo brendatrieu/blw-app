@@ -72,6 +72,7 @@ six buckets is as much as it can ever carry.
 | `offline_entered` | the browser's `offline` event | `route_pattern` |
 | `client_error` | a render crash, an uncaught error or rejection, a 5xx or a dead request | `route_pattern`, `kind`, `status` |
 | `usage_sharing_changed` | the Privacy switch moves | `enabled` |
+| `feedback_sent` | a message sent from Send feedback (the message itself never leaves the database) | — |
 
 `via` is always DERIVED from the route and its query parameters — `/log-meal?food=`
 is `food_page`, `/storage/add` reached from Home is `home` — never wired to a
@@ -156,6 +157,10 @@ the client discards its queue as part of the delete.
 occurredAt), `preferences.shareUsageData` and `profile.role` to the JSON export
 from Settings → Account, so everything collected about an account — including
 whether it holds dashboard access — is downloadable by that account.
+
+Version 14 adds `feedback` (message, status, routePattern, createdAt): the
+messages this account sent the admins, in their own words, with what has been
+done about each — and nothing about which admin did it.
 
 ## Reading the data
 

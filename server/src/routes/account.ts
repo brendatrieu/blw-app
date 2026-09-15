@@ -27,6 +27,7 @@ import {
   chatMessages,
   chatThreads,
   favorites,
+  feedback,
   foodAllergens,
   foods,
   mealFoods,
@@ -377,6 +378,22 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       .where(eq(usageEvents.userId, userId))
       .orderBy(asc(usageEvents.occurredAt));
 
+    // Messages this account sent the admins (v14). Their own words back, with
+    // what has been done about each — and nothing about which admin did it,
+    // which is a fact about a member of staff rather than about this account.
+    // Archived rows are included: "Cleared" is a tab in the inbox, not a
+    // deletion, and the parent still sent them.
+    const feedbackRows = await db
+      .select({
+        message: feedback.message,
+        status: feedback.status,
+        routePattern: feedback.routePattern,
+        createdAt: feedback.createdAt,
+      })
+      .from(feedback)
+      .where(eq(feedback.userId, userId))
+      .orderBy(asc(feedback.createdAt));
+
     // Status only. `encryptedKey` is deliberately not selected: the column
     // never enters this process during an export, so it cannot leak from it.
     const [aiKeyRow] = await db
@@ -502,6 +519,12 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         appVersion: row.appVersion,
         occurredAt: row.occurredAt.toISOString(),
       })),
+      feedback: feedbackRows.map((row) => ({
+        message: row.message,
+        status: row.status,
+        routePattern: row.routePattern,
+        createdAt: row.createdAt.toISOString(),
+      })),
     };
 
     // Serialised once, by hand: returning the object would have Fastify
@@ -608,6 +631,10 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       //   user -> babies -> allergen_overrides
       //   user -> favorites, storage_items, user_ai_keys, user_preferences
       //   user -> usage_events                (anonymous, but still theirs)
+      //   user -> feedback                    (their messages to the admins;
+      //                                        `feedback.resolved_by` is SET
+      //                                        NULL, so deleting an ADMIN
+      //                                        never takes a parent's message)
       //   user -> foods, recipes (custom only) -> recipe_ingredients/variants
       //   user -> chat_threads -> chat_messages
       //   user -> session, account            (better-auth's own tables)

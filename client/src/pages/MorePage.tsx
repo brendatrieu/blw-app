@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { CardButton, CardLink } from "../components/ui/Card.js";
-import { useIsAdmin } from "../features/admin/hooks.js";
+import { useFeedbackSummary, useIsAdmin } from "../features/admin/hooks.js";
 import { useTour } from "../features/tour/TourProvider.js";
 
 interface MoreRow {
@@ -44,6 +44,16 @@ const moreLinks: MoreRow[] = [
     description: "Recipe help and ask-anything BLW questions.",
     emoji: "💬",
   },
+  // Item 360, and for everybody — no `adminOnly`. The whole point is that a
+  // parent who hits a bug has somewhere to say so from the screen they are
+  // already on; a feedback row only admins can see is a dashboard, not an
+  // inbox.
+  {
+    to: "/feedback",
+    label: "Send feedback",
+    description: "Found a bug or have an idea? Tell us.",
+    emoji: "💌",
+  },
   // Item 311: the tour's only other way in. It is a modal now, not a route,
   // so this row is a button wearing the same card as its neighbours — last of
   // the content rows and ahead of Settings, which stays the end of the list.
@@ -63,7 +73,13 @@ const moreLinks: MoreRow[] = [
   { to: "/settings", label: "Settings", description: "Babies, account, and app preferences.", emoji: "⚙️" },
 ];
 
-function ComingSoonChip({ children }: { children: ReactNode }) {
+/**
+ * The small trailing pill on a row. Renamed from `ComingSoonChip` in item
+ * 361 — the markup is byte-identical, only the name stopped lying: it has
+ * never been used for a "coming soon" label and its first real producer is
+ * the admin's unread-feedback count.
+ */
+function RowChip({ children }: { children: ReactNode }) {
   return (
     <span className="inline-flex flex-shrink-0 items-center rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-0.5 text-[11px] font-medium whitespace-nowrap text-[var(--color-text-muted)]">
       {children}
@@ -85,17 +101,35 @@ function RowContent({ row }: { row: MoreRow }) {
         <span className="text-sm font-semibold text-[var(--color-text)]">{row.label}</span>
         <span className="text-xs text-[var(--color-text-muted)]">{row.description}</span>
       </span>
-      {row.badge ? <ComingSoonChip>{row.badge}</ComingSoonChip> : null}
+      {row.badge ? <RowChip>{row.badge}</RowChip> : null}
     </>
   );
 }
 
 const ROW_CLASSES = "flex items-center gap-3";
 
+/** The Metrics row's chip, or nothing. Pure, so "only an admin, only when
+ * there is something unread" is one testable expression. */
+export function unreadFeedbackBadge(isAdmin: boolean, newCount: number | undefined): string | undefined {
+  if (!isAdmin) return undefined;
+  const count = newCount ?? 0;
+  return count > 0 ? `${count} new feedback` : undefined;
+}
+
 export function MorePage() {
   const { openTour } = useTour();
   const { isAdmin } = useIsAdmin();
-  const rows = moreLinks.filter((row) => !row.adminOnly || isAdmin);
+  // Called on every render (hooks cannot be conditional) but only ENABLED
+  // for an admin, so a parent's browser never asks — and their markup is
+  // byte for byte what it was before the inbox existed.
+  const feedback = useFeedbackSummary(isAdmin);
+  const badge = unreadFeedbackBadge(isAdmin, feedback.data?.new);
+
+  const rows = moreLinks
+    .filter((row) => !row.adminOnly || isAdmin)
+    // The count rides on the Metrics row as a chip; its description is
+    // untouched, so the row still says what the page is for.
+    .map((row) => (row.to === "/admin/metrics" && badge ? { ...row, badge } : row));
 
   return (
     <div className="flex flex-col gap-4 p-4">

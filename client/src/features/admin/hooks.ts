@@ -2,15 +2,45 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   METRICS_CACHE_TTL_MS,
   type AdminCollaboratorsResponse,
+  type AdminFeedbackListResponse,
+  type AdminFeedbackSummary,
   type AdminMetricsResponse,
+  type FeedbackFilter,
   type MetricsRange,
+  type UpdateFeedbackInput,
 } from "@blw/shared";
-import { fetchAdminMetrics, fetchCollaborators, fetchIsAdmin, grantCollaborator, revokeCollaborator } from "./api.js";
+import {
+  fetchAdminFeedback,
+  fetchAdminMetrics,
+  fetchCollaborators,
+  fetchFeedbackSummary,
+  fetchIsAdmin,
+  grantCollaborator,
+  revokeCollaborator,
+  updateFeedback,
+} from "./api.js";
 
+/**
+ * Every key here starts with "admin", and that prefix is deliberately absent
+ * from `PERSISTED_QUERY_KEY_PREFIXES` in main.tsx: nothing on the admin
+ * surface is written to IndexedDB. For the metrics that is hygiene; for the
+ * feedback inbox it is the rule that keeps parents' free text off an admin's
+ * disk after the tab is closed.
+ *
+ * `feedbackSummary` is a SIBLING of `feedback`, not a child of it, so that
+ * "invalidate the list and the summary" after a PATCH is two real
+ * invalidations rather than one plus a no-op — a prefix invalidation of
+ * `["admin", "feedback"]` would otherwise silently cover the counts too, and
+ * the day the keys were reshaped the counts would go stale without a word.
+ */
 export const adminKeys = {
   me: () => ["admin", "me"] as const,
   metrics: (range: MetricsRange) => ["admin", "metrics", range] as const,
   collaborators: () => ["admin", "collaborators"] as const,
+  /** Every tab of the inbox — the prefix a PATCH invalidates. */
+  feedbackAll: () => ["admin", "feedback"] as const,
+  feedback: (filter: FeedbackFilter) => ["admin", "feedback", filter] as const,
+  feedbackSummary: () => ["admin", "feedbackSummary"] as const,
 };
 
 export interface AdminStatus {
@@ -100,6 +130,64 @@ export function useRevokeCollaborator() {
     mutationFn: (userId: string) => revokeCollaborator(userId),
     onSuccess: (response) => {
       queryClient.setQueryData(adminKeys.collaborators(), response);
+    },
+  });
+}
+
+/**
+ * The inbox's four counts (item 361).
+ *
+ * `enabled` is how the More page asks this question at all: hooks cannot be
+ * called conditionally, so the page calls it on every render and passes
+ * `isAdmin` — a parent's browser therefore never sends the request, and
+ * their More page is byte-identical to what it was before this feature
+ * existed.
+ *
+ * `retry: false` for the same load-bearing reason as `useIsAdmin`: the
+ * negative answer is a 404, and retrying it three times turns an answer into
+ * a burst of traffic for a route that is supposed to look absent. A minute
+ * of `staleTime` keeps the chip and the tab counts from re-asking on every
+ * navigation back to More.
+ */
+export function useFeedbackSummary(enabled: boolean) {
+  return useQuery<AdminFeedbackSummary>({
+    queryKey: adminKeys.feedbackSummary(),
+    queryFn: fetchFeedbackSummary,
+    enabled,
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+/** One tab of the inbox. Only ever rendered inside the admin-gated page. */
+export function useAdminFeedback(filter: FeedbackFilter) {
+  return useQuery<AdminFeedbackListResponse>({
+    queryKey: adminKeys.feedback(filter),
+    queryFn: () => fetchAdminFeedback(filter),
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+/**
+ * Mark read / resolve / reopen / clear / restore.
+ *
+ * No optimistic write, deliberately: every action MOVES the item between
+ * tabs, and the server owns the transition (`readAt` is coalesced,
+ * `resolvedAt`/`resolvedBy` are set and cleared there). Patching a local copy
+ * would mean re-implementing those rules in the client and being wrong about
+ * them the first time one changes. Both the lists and the counts are
+ * invalidated, since an action that moves a row changes two tabs' contents
+ * and two tabs' numbers at once.
+ */
+export function useUpdateFeedback() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: UpdateFeedbackInput }) => updateFeedback(id, patch),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminKeys.feedbackAll() });
+      void queryClient.invalidateQueries({ queryKey: adminKeys.feedbackSummary() });
     },
   });
 }

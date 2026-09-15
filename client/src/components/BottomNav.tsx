@@ -88,8 +88,8 @@ function isWithin(pathname: string, base: string): boolean {
  * checker). Pure and exported so the rule is pinned by a test.
  */
 export function isMoreTabPath(pathname: string): boolean {
-  return ["/more", "/safety", "/settings", "/favorites", "/chat", "/symptom-check"].some((base) =>
-    isWithin(pathname, base),
+  return ["/more", "/safety", "/settings", "/favorites", "/chat", "/symptom-check", "/feedback"].some(
+    (base) => isWithin(pathname, base),
   );
 }
 

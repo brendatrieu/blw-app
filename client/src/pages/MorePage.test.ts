@@ -3,7 +3,12 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const h = vi.hoisted(() => ({ opens: { count: 0 }, admin: { is: false } }));
+const h = vi.hoisted(() => ({
+  opens: { count: 0 },
+  admin: { is: false },
+  feedback: { data: undefined as { new: number; read: number; resolved: number; archived: number } | undefined },
+  enabledWith: [] as boolean[],
+}));
 
 // The tour is a modal now: More reaches it through the provider's context,
 // not a route. Mocked so this page renders (and its row can be clicked)
@@ -22,10 +27,17 @@ vi.mock("../features/tour/TourProvider.js", () => ({
 // every pre-existing pin in this file describes the page a parent sees.
 vi.mock("../features/admin/hooks.js", () => ({
   useIsAdmin: () => ({ isAdmin: h.admin.is, isResolved: true }),
+  // Whole-module replacement: every hook the page calls has to be here or
+  // the page throws. `enabledWith` records the flag the page passes, which
+  // is what keeps "a parent's browser never asks for this" testable.
+  useFeedbackSummary: (enabled: boolean) => {
+    h.enabledWith.push(enabled);
+    return { data: enabled ? h.feedback.data : undefined };
+  },
 }));
 
 import { CardButton } from "../components/ui/Card.js";
-import { MorePage } from "./MorePage.js";
+import { MorePage, unreadFeedbackBadge } from "./MorePage.js";
 
 function render(): string {
   return renderToString(createElement(MemoryRouter, null, createElement(MorePage, null)));
@@ -52,6 +64,8 @@ function collectButtons(node: unknown, out: Rendered[] = []): Rendered[] {
 beforeEach(() => {
   h.opens.count = 0;
   h.admin.is = false;
+  h.feedback.data = undefined;
+  h.enabledWith = [];
 });
 
 describe("MorePage (item 274)", () => {
@@ -81,6 +95,7 @@ describe("MorePage (item 274)", () => {
       { tag: "a", href: "/favorites", emoji: "❤️", label: "Favorites" },
       { tag: "a", href: "/symptom-check", emoji: "🩺", label: "Symptom Check" },
       { tag: "a", href: "/chat", emoji: "💬", label: "Chat" },
+      { tag: "a", href: "/feedback", emoji: "💌", label: "Send feedback" },
       { tag: "button", href: null, emoji: "🧭", label: "Take the tour" },
       { tag: "a", href: "/settings", emoji: "⚙️", label: "Settings" },
     ];
@@ -148,6 +163,27 @@ describe("MorePage (item 274)", () => {
   });
 });
 
+describe("MorePage feedback row (item 360)", () => {
+  it("offers Send feedback to every parent, admin or not", () => {
+    for (const isAdmin of [false, true]) {
+      h.admin.is = isAdmin;
+      const html = render();
+      expect(html, `admin=${String(isAdmin)}`).toContain(">Send feedback<");
+      expect(html, `admin=${String(isAdmin)}`).toContain('href="/feedback"');
+      expect(html, `admin=${String(isAdmin)}`).toContain(">Found a bug or have an idea? Tell us.<");
+      expect(html, `admin=${String(isAdmin)}`).toContain(">💌</span>");
+    }
+  });
+
+  it("sits after Chat and ahead of the tour, so the content rows stay grouped", () => {
+    const html = render();
+    const feedback = html.indexOf(">Send feedback<");
+    expect(html.indexOf(">Chat<")).toBeLessThan(feedback);
+    expect(html.indexOf(">Take the tour<")).toBeGreaterThan(feedback);
+    expect(html.indexOf(">Settings<")).toBeGreaterThan(feedback);
+  });
+});
+
 describe("MorePage admin row (item 327)", () => {
   it("shows a Metrics row to an admin, between the tour and Settings", () => {
     h.admin.is = true;
@@ -173,11 +209,58 @@ describe("MorePage admin row (item 327)", () => {
     expect(html).not.toContain("admin");
   });
 
+  it("shows the unread count as a chip on the Metrics row, and leaves its description alone", () => {
+    h.admin.is = true;
+    h.feedback.data = { new: 3, read: 1, resolved: 2, archived: 4 };
+    const html = render();
+
+    expect(html).toContain(">3 new feedback<");
+    // The chip carries the count; the row still says what the page is.
+    expect(html).toContain(">How the app is actually being used.<");
+    // Only the unread ones — not read, resolved or archived.
+    expect(html).not.toContain(">10 new feedback<");
+  });
+
+  it("shows no chip when the admin's inbox has nothing unread", () => {
+    h.admin.is = true;
+    h.feedback.data = { new: 0, read: 5, resolved: 2, archived: 1 };
+    expect(render()).not.toContain("new feedback");
+  });
+
+  it("shows no chip before the summary has landed", () => {
+    h.admin.is = true;
+    h.feedback.data = undefined;
+    expect(render()).not.toContain("new feedback");
+  });
+
+  it("never asks for the summary as a parent, and never chips their page", () => {
+    // The hook is CALLED on every render — hooks cannot be conditional — but
+    // `enabled` is what decides whether a request is made at all, and a
+    // parent's must be false. A count planted in the fixture proves the page
+    // is reading `enabled` rather than the data.
+    h.admin.is = false;
+    h.feedback.data = { new: 9, read: 0, resolved: 0, archived: 0 };
+    const html = render();
+
+    expect(h.enabledWith).toEqual([false]);
+    expect(html).not.toContain("new feedback");
+    expect(html).not.toContain("admin");
+  });
+
   it("changes only that one row — the parent's list is the admin's minus Metrics", () => {
     h.admin.is = false;
     const parentRows = render().split(/<(?:a|button) /).length;
     h.admin.is = true;
     const adminRows = render().split(/<(?:a|button) /).length;
     expect(adminRows).toBe(parentRows + 1);
+  });
+});
+
+describe("unreadFeedbackBadge", () => {
+  it("guards on isAdmin even when a count is somehow present", () => {
+    expect(unreadFeedbackBadge(false, 3)).toBeUndefined();
+    expect(unreadFeedbackBadge(true, 3)).toBe("3 new feedback");
+    expect(unreadFeedbackBadge(true, 0)).toBeUndefined();
+    expect(unreadFeedbackBadge(true, undefined)).toBeUndefined();
   });
 });

@@ -1,12 +1,20 @@
 import {
   adminCollaboratorsResponseSchema,
+  adminFeedbackItemSchema,
+  adminFeedbackListResponseSchema,
+  adminFeedbackSummarySchema,
   adminMeResponseSchema,
   adminMetricsResponseSchema,
   type AdminCollaboratorsResponse,
+  type AdminFeedbackItem,
+  type AdminFeedbackListResponse,
+  type AdminFeedbackSummary,
   type AdminMetricsResponse,
+  type FeedbackFilter,
   type MetricsRange,
+  type UpdateFeedbackInput,
 } from "@blw/shared";
-import { ApiError, apiDelete, apiGet, apiPost } from "../../lib/api.js";
+import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from "../../lib/api.js";
 
 /**
  * The client half of the admin API.
@@ -58,5 +66,48 @@ export async function grantCollaborator(email: string): Promise<AdminCollaborato
 export async function revokeCollaborator(userId: string): Promise<AdminCollaboratorsResponse> {
   return adminCollaboratorsResponseSchema.parse(
     await apiDelete<unknown>(`/api/admin/collaborators/${encodeURIComponent(userId)}`),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The feedback inbox (item 361)
+// ---------------------------------------------------------------------------
+
+/**
+ * One tab of the inbox, newest first and capped server-side.
+ *
+ * The 404 rule above applies here exactly as it does to the rest of the
+ * admin surface — these three routes answer an anonymous caller and a
+ * signed-in parent byte for byte as `/api/admin/nonsense` does — which is
+ * why every hook that reads them sets `retry: false`.
+ *
+ * Note what this response carries that no other admin payload does: the
+ * parent's own words and their email address. That is the point of an inbox
+ * and it is the documented exception to the aggregates-only rule (see the
+ * preamble of `shared/src/feedback.ts`). It also never touches IndexedDB —
+ * `PERSISTED_QUERY_KEY_PREFIXES` in main.tsx deliberately omits "admin", so
+ * a message a parent wrote cannot be left behind on an admin's laptop.
+ */
+export async function fetchAdminFeedback(filter: FeedbackFilter): Promise<AdminFeedbackListResponse> {
+  return adminFeedbackListResponseSchema.parse(
+    await apiGet<unknown>(`/api/admin/feedback?filter=${encodeURIComponent(filter)}`),
+  );
+}
+
+/** The four counts the tabs and the More-page chip are built from. */
+export async function fetchFeedbackSummary(): Promise<AdminFeedbackSummary> {
+  return adminFeedbackSummarySchema.parse(await apiGet<unknown>("/api/admin/feedback/summary"));
+}
+
+/**
+ * Mark read / resolve / reopen / clear / restore — all one PATCH.
+ *
+ * The server owns the transitions (`readAt` is coalesced, `resolvedBy` is
+ * taken from the session) and answers with the whole updated item, so the
+ * caller writes the server's answer back rather than guessing at one.
+ */
+export async function updateFeedback(id: string, patch: UpdateFeedbackInput): Promise<AdminFeedbackItem> {
+  return adminFeedbackItemSchema.parse(
+    await apiPatch<unknown>(`/api/admin/feedback/${encodeURIComponent(id)}`, patch),
   );
 }
