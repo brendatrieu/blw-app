@@ -31,11 +31,8 @@ export const FEEDBACK_SEND_FAILED = "Couldn't send. Check your connection and tr
  * route PATTERN (never the real path), the app version, and the account the
  * session belongs to — which is where a reply would go.
  */
-export const FEEDBACK_DISCLOSURE =
-  "We attach which screen you're on and the app version, and we may reply to your account email.";
-
 /** The toast on a successful send. */
-export const FEEDBACK_CELEBRATION = { title: "Thanks, we read every message", emoji: "💌" } as const;
+export const FEEDBACK_CELEBRATION = { title: "Thank you for your feedback!", emoji: "💌" } as const;
 
 /**
  * The server answers in status codes; the page answers in sentences. 429 is

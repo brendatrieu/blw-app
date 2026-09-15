@@ -173,7 +173,7 @@ describe("sending", () => {
     type(page(), "Found a typo on the storage page");
     submit(page());
     expect(h.calls.celebrations).toEqual([FEEDBACK_CELEBRATION]);
-    expect(h.calls.celebrations).toEqual([{ title: "Thanks, we read every message", emoji: "💌" }]);
+    expect(h.calls.celebrations).toEqual([{ title: "Thank you for your feedback!", emoji: "💌" }]);
     expect(boxValue(page())).toBe("");
   });
 });
@@ -185,14 +185,15 @@ describe("a blank box", () => {
     // answer 400. `sends` staying empty is the whole point of this test.
     submit(page());
     expect(h.calls.sends).toEqual([]);
-    expect(fieldError(page())).toBe("Tell us a little more");
+    // No red line: the button simply stays disabled until there are words.
+    expect(fieldError(page())).toBeUndefined();
   });
 
   it("treats a box of spaces the same way", () => {
     type(page(), "     ");
     submit(page());
     expect(h.calls.sends).toEqual([]);
-    expect(fieldError(page())).toBe("Tell us a little more");
+    expect(fieldError(page())).toBeUndefined();
   });
 
   it("clears its own message as soon as something is typed", () => {

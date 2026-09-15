@@ -170,7 +170,7 @@ describe("MorePage feedback row (item 360)", () => {
       const html = render();
       expect(html, `admin=${String(isAdmin)}`).toContain(">Send feedback<");
       expect(html, `admin=${String(isAdmin)}`).toContain('href="/feedback"');
-      expect(html, `admin=${String(isAdmin)}`).toContain(">Found a bug or have an idea? Tell us.<");
+      expect(html, `admin=${String(isAdmin)}`).toContain(">Something could be better? Let us know.<");
       expect(html, `admin=${String(isAdmin)}`).toContain(">💌</span>");
     }
   });

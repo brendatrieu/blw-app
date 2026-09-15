@@ -3,7 +3,6 @@ import { useLocation } from "react-router-dom";
 import { FEEDBACK_MESSAGE_MAX } from "@blw/shared";
 import {
   FEEDBACK_CELEBRATION,
-  FEEDBACK_DISCLOSURE,
   feedbackErrorMessage,
 } from "../features/feedback/api.js";
 import { useSendFeedback } from "../features/feedback/hooks.js";
@@ -49,7 +48,7 @@ export function FeedbackPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const { errors, attemptSubmit } = useSubmitValidation(
+  const { attemptSubmit } = useSubmitValidation(
     { message },
     validateFeedback,
     FEEDBACK_FIELD_ORDER,
@@ -87,12 +86,12 @@ export function FeedbackPage() {
       <PageHeader title="Send feedback" emoji="💌" leading={<BackButton fallback="/more" />} />
 
       <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
-        <Field label="Your message" htmlFor="feedback-message" error={errors.message}>
+        <Field label="Your message" htmlFor="feedback-message">
           <Textarea
             id="feedback-message"
             rows={2}
             maxLength={FEEDBACK_MESSAGE_MAX}
-            placeholder="Found a bug? Missing something? Tell us."
+            placeholder="Something could be better? Let us know!"
             value={message}
             onChange={(event) => {
               setMessage(event.target.value);
@@ -109,12 +108,10 @@ export function FeedbackPage() {
           {`${message.length}/${FEEDBACK_MESSAGE_MAX}`}
         </p>
 
-        <p className="text-xs text-[var(--color-text-muted)]">{FEEDBACK_DISCLOSURE}</p>
-
         <div>
-          {/* Enabled even when the box is empty (item 235): the submit is
-              what asks for the message, and a dead button explains nothing. */}
-          <Button type="submit" disabled={send.isPending} className="w-full">
+          {/* Disabled until there is something to send: the owner wants no
+              red "say more" line here, so the button carries the rule. */}
+          <Button type="submit" disabled={send.isPending || message.trim().length === 0} className="w-full">
             {send.isPending ? "Sending…" : "Send"}
           </Button>
         </div>

@@ -21,7 +21,6 @@ vi.mock("../components/ui/Celebration.js", () => ({
   useCelebration: () => ({ celebrate: () => {} }),
 }));
 
-import { FEEDBACK_DISCLOSURE } from "../features/feedback/api.js";
 import { FeedbackPage } from "./FeedbackPage.js";
 
 function render(): string {
@@ -62,24 +61,16 @@ describe("FeedbackPage", () => {
     expect(html).toContain(">0/2000<");
   });
 
-  it("says what travels with the message, before the send rather than after it", () => {
+  it("carries no disclosure line and no error copy", () => {
     const html = render();
-    expect(html).toContain(
-      "We attach which screen you&#x27;re on and the app version, and we may reply to your account email.",
-    );
-    // The page renders the constant, not a second copy of the sentence.
-    expect(FEEDBACK_DISCLOSURE).toBe(
-      "We attach which screen you're on and the app version, and we may reply to your account email.",
-    );
+    expect(html).not.toContain("We attach");
+    expect(html).not.toContain("Tell us a little more");
   });
 
-  it("leaves the submit enabled on an empty box (item 235)", () => {
+  it("keeps Send disabled while the box is empty", () => {
     const html = render();
     expect(html).toContain(">Send<");
-    expect(html).toMatch(/<button[^>]*type="submit"/);
-    // Nothing on this screen starts out disabled — a dead button explains
-    // nothing; the submit is what asks for the message.
-    expect(html).not.toContain("disabled=");
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*disabled=""/);
   });
 
   it("shouts at nobody before they have tried to send", () => {

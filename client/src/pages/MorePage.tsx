@@ -51,7 +51,7 @@ const moreLinks: MoreRow[] = [
   {
     to: "/feedback",
     label: "Send feedback",
-    description: "Found a bug or have an idea? Tell us.",
+    description: "Something could be better? Let us know.",
     emoji: "💌",
   },
   // Item 311: the tour's only other way in. It is a modal now, not a route,
