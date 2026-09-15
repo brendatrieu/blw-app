@@ -171,6 +171,7 @@ function buildStorageTool(db: Database, userId: string) {
           recipeId: storageItems.recipeId,
           recipeTitle: recipes.title,
           preparedAt: storageItems.preparedAt,
+          bestBy: storageItems.bestBy,
           location: storageItems.location,
           recipeFridgeHoursOverride: recipes.fridgeHoursOverride,
           recipeFreezerOverride: recipes.freezerDaysOverride,
@@ -219,7 +220,10 @@ function buildStorageTool(db: Database, userId: string) {
         return {
           name: row.label ?? row.recipeTitle ?? (joinedFoodNames || "prepared item"),
           location: row.location,
-          expired: deriveFreshness(row.preparedAt, windowHours, now).expired,
+          // The parent's own best-by date, when set, overrides the window —
+          // exactly as it does on the card.
+          bestBy: row.bestBy ?? null,
+          expired: deriveFreshness(row.preparedAt, windowHours, now, row.bestBy ?? null).expired,
         };
       });
 

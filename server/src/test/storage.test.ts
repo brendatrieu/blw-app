@@ -915,7 +915,7 @@ describe("ownership", () => {
     // calendar date into a local day. The CLIENT prefers the best-by date
     // over them (item 333, `resolveFreshness`); this pins that the fallback
     // the client falls back TO is still computed and still honest.
-    it("leaves the derived expiry window alone — best-by is resolved client-side, not here", async () => {
+    it("lets a best-by date override the derived expiry window", async () => {
       const preparedAt = hoursAgoIso(0);
       const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
@@ -923,8 +923,12 @@ describe("ownership", () => {
         preparedAt,
         bestBy: "2030-01-01",
       });
-      // Still the banana/storage 72h window, not the best-by date.
-      expect(new Date(created.body.expiresAt).getTime()).toBe(new Date(preparedAt).getTime() + 72 * HOUR_MS);
+      // The parent's date wins over the banana/storage 72h window: the item
+      // expires at the end of that day (read as a UTC calendar day here; the
+      // card re-derives the same rule on the local calendar).
+      expect(created.body.expiresAt).toBe("2030-01-01T23:59:59.999Z");
+      expect(created.body.expired).toBe(false);
+      expect(created.body.useSoon).toBe(false);
     });
 
     // Item 333: the one combination that could only be a mis-tap on the
@@ -1558,16 +1562,55 @@ describe("ownership", () => {
   // it must not do is call a container something the screen does not.
   // -------------------------------------------------------------------------
 
+  describe("best-by overrides the default window on the server too", () => {
+    it("marks a container expired once its best-by day has passed, even inside the guideline window", async () => {
+      const yesterday = new Date(Date.now() - 24 * 3600 * 1000).toISOString().slice(0, 10);
+      const created = await postStorageItem(app, user.cookie, {
+        foodIds: [fixtures.banana.id],
+        location: "freezer", // 60-day window: the window alone would call this fresh
+        bestBy: yesterday,
+      });
+      expect(created.body.expired).toBe(true);
+      expect(created.body.useSoon).toBe(false);
+    });
+
+    it("keeps a container fresh until its best-by day, even past the guideline window", async () => {
+      const inTenDays = new Date(Date.now() + 10 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      const created = await postStorageItem(app, user.cookie, {
+        foodIds: [fixtures.chicken.id],
+        location: "fridge",
+        preparedAt: hoursAgoIso(20), // chicken's 24h fridge window would flag use-soon
+        bestBy: inTenDays,
+      });
+      expect(created.body.expired).toBe(false);
+      expect(created.body.useSoon).toBe(false);
+      expect(created.body.expiresAt.startsWith(inTenDays)).toBe(true);
+    });
+
+    it("flags use-soon on the best-by day and the day before", async () => {
+      const tomorrow = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+      const created = await postStorageItem(app, user.cookie, {
+        foodIds: [fixtures.banana.id],
+        location: "freezer",
+        bestBy: tomorrow,
+      });
+      expect(created.body.useSoon).toBe(true);
+      expect(created.body.expired).toBe(false);
+    });
+  });
+
   describe("get_storage tool", () => {
     async function currentUserId(): Promise<string> {
       const [row] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, user.email));
       return row!.id;
     }
 
-    async function storageToolItems(): Promise<{ name: string; location: string; expired: boolean }[]> {
+    async function storageToolItems(): Promise<
+      { name: string; location: string; bestBy: string | null; expired: boolean }[]
+    > {
       const tools = buildChatTools(db, await currentUserId(), null);
       const output = String(await tools.get_storage.run({}));
-      return JSON.parse(output).items as { name: string; location: string; expired: boolean }[];
+      return JSON.parse(output).items as { name: string; location: string; bestBy: string | null; expired: boolean }[];
     }
 
     it("names a container by its foods, joined in saved order, exactly as the card's title does", async () => {
@@ -1576,7 +1619,13 @@ describe("ownership", () => {
         location: "fridge",
       });
 
-      expect(await storageToolItems()).toEqual([{ name: "Rice, Banana", location: "fridge", expired: false }]);
+      expect(await storageToolItems()).toEqual([{ name: "Rice, Banana", location: "fridge", bestBy: null, expired: false }]);
+
+      // A best-by date the parent set overrides the window for the tool too.
+      const yesterday = new Date(Date.now() - 24 * 3600 * 1000).toISOString().slice(0, 10);
+      await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "freezer", bestBy: yesterday });
+      const items = await storageToolItems();
+      expect(items.find((item) => item.bestBy === yesterday)?.expired).toBe(true);
     });
 
     it("prefers a label, then the recipe title, and falls back to 'prepared item'", async () => {
@@ -1627,7 +1676,7 @@ describe("ownership", () => {
       expect(card?.foods.map((food) => food.name)).toEqual(["Rice", "Banana"]);
 
       const items = await storageToolItems();
-      expect(items).toEqual([{ name: "Banana Chicken Mash", location: "fridge", expired: false }]);
+      expect(items).toEqual([{ name: "Banana Chicken Mash", location: "fridge", bestBy: null, expired: false }]);
       expect(items[0]!.name).not.toBe("Rice, Banana");
     });
 
@@ -1640,7 +1689,7 @@ describe("ownership", () => {
         preparedAt: hoursAgoIso(25),
       });
 
-      expect(await storageToolItems()).toEqual([{ name: "Banana, Chicken", location: "fridge", expired: true }]);
+      expect(await storageToolItems()).toEqual([{ name: "Banana, Chicken", location: "fridge", bestBy: null, expired: true }]);
     });
   });
 

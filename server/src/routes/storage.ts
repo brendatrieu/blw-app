@@ -159,7 +159,7 @@ async function hydrateStorageItems(db: Database, rows: StorageRow[]): Promise<St
       },
       guidelineByCategory,
     );
-    const freshness = deriveFreshness(row.preparedAt, windowHours, now);
+    const freshness = deriveFreshness(row.preparedAt, windowHours, now, row.bestBy);
 
     const item: StorageItem = {
       id: row.id,

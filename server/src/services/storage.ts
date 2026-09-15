@@ -171,7 +171,29 @@ export interface StorageFreshness {
 
 /** The 0.75 rule: past the window is `expired`, three quarters through it is
  * `useSoon`, and an expired item is never also `useSoon`. */
-export function deriveFreshness(preparedAt: Date, windowHours: number, now: number): StorageFreshness {
+export function deriveFreshness(
+  preparedAt: Date,
+  windowHours: number,
+  now: number,
+  bestBy: string | null = null,
+): StorageFreshness {
+  if (bestBy) {
+    // A parent's own best-by date overrides the guideline window. The server
+    // has no timezone, so it reads the date as a UTC calendar day: expired
+    // once that day is over, use-soon on the day itself and the day before.
+    // The client re-derives the same rule on the LOCAL calendar for the
+    // screen (features/storage/freshness.ts); the two can disagree by at most
+    // a day around midnight, which is why the card, not this, is authoritative
+    // for what the parent sees.
+    const today = new Date(now).toISOString().slice(0, 10);
+    const tomorrow = new Date(now + 24 * HOUR_MS).toISOString().slice(0, 10);
+    const expired = today > bestBy;
+    return {
+      expiresAt: `${bestBy}T23:59:59.999Z`,
+      useSoon: !expired && bestBy <= tomorrow,
+      expired,
+    };
+  }
   const preparedMs = preparedAt.getTime();
   const expiresAtMs = preparedMs + windowHours * HOUR_MS;
   const expired = now > expiresAtMs;
