@@ -63,7 +63,7 @@ describe("useRecipes read policy", () => {
 
   // The whole point of an options bag rather than a second query key: one
   // cache entry, so the fresh reader's refetch also updates the browsing list
-  // instead of fetching the same 119 recipes into a second copy.
+  // instead of fetching the same 122 recipes into a second copy.
   it("keeps the SAME query key whether or not fresh is asked for", () => {
     useRecipes({ scope: "custom" });
     const cached = lastQueryOptions().queryKey;

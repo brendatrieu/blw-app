@@ -1291,6 +1291,43 @@ export const basicRecipes: RecipeSeed[] = [
     },
   },
   {
+    slug: 'simple-potato',
+    title: 'Simple potato',
+    minAgeMonths: 6,
+    prepMinutes: 25,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'potato', quantityNote: '1 medium potato' }],
+    variants: {
+      '6': {
+        textureNote: 'A thick finger-length wedge, peeled and cooked until it mashes easily between two fingers.',
+        steps: [
+          'Scrub the potato, cut away any green patches or sprouts, then peel it and cut it into thick, finger-length wedges.',
+          'Steam or boil the wedges for 15-20 minutes, or bake them at 400°F (200°C) for 30-40 minutes, until a wedge mashes easily between two fingers.',
+          'Test a wedge between your fingers before serving, and cook it 5 minutes more if it resists at all — potato is never served raw or firm.',
+          'Cool to just-warm, check the temperature, and serve with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'A loose, soft mash, or pea-to-bite-sized soft pieces baby can pick up.',
+        steps: [
+          'Scrub the potato, cut away any green patches or sprouts, and cut it into chunks — the skin can stay on once baby handles it well.',
+          'Steam or boil the chunks for 12-15 minutes, until a chunk mashes easily between two fingers.',
+          'Mash it loosely with a fork, or cut it into pea-to-bite-sized soft pieces for pincer-grasp self-feeding.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small bite-sized pieces, or a loose fork mash that is never beaten sticky.',
+        steps: [
+          'Scrub the potato and cut away any green patches or sprouts.',
+          'Steam or boil it in chunks for 12-15 minutes, or bake it whole at 400°F (200°C) for 45-55 minutes, until a skewer slides in with no resistance and the flesh mashes easily.',
+          'Serve it in small bite-sized pieces, or mash it loosely with a fork — broken up just enough to eat, never beaten until it turns gluey.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  {
     slug: 'simple-zucchini',
     title: 'Simple zucchini',
     minAgeMonths: 6,

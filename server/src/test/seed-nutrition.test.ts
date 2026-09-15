@@ -53,6 +53,11 @@ const EXPECTED_FIBER_LEVEL: Record<string, "high" | "moderate" | "low"> = {
   // here rather than ship a `moderate` badge on the whole nut.
   almonds: "high", // 12.5 g, whole nuts
   cashews: "high", // 3.3 g, raw
+  // Item 356, .workflow/scratch/catalog-expansion/sources.md §11 (fdcId 170093,
+  // baked flesh and skin without salt). 2.2 g is the one place potato parts
+  // company with the other roots: sweet potato (3.3 g) and carrot (3.0 g) are
+  // both `high`, and a row that copied either would fail here.
+  potato: "moderate", // 2.2 g, baked flesh and skin
 };
 
 describe("seeded fiber levels", () => {

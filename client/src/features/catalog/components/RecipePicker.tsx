@@ -13,7 +13,7 @@ import {
  *
  * The complaint this answers was "you can't look up custom recipes when you
  * log a meal" — they were always in the list, just sunk alphabetically among
- * 119 catalog titles with nothing marking them. Own recipes are the ones a
+ * 122 catalog titles with nothing marking them. Own recipes are the ones a
  * parent typed in themselves and therefore the ones they come looking for, so
  * they outrank even a favorite; a custom recipe that is ALSO favorited is
  * still a custom recipe and stays in the first group.

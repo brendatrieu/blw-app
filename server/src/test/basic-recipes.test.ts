@@ -41,7 +41,7 @@ const CURATED_SLUGS = [
 
 /**
  * Ledger item 266. Runs over the seeded catalog, which is every recipe file
- * (recipes.ts exports the curated 15, the 43 coverage recipes and the 61
+ * (recipes.ts exports the curated 15, the 45 coverage recipes and the 62
  * basics), so a step added to any of them is covered.
  */
 const COOKING_VERB = /\b(?:roast|bake|steam|boil|simmer|saut[eé]|fry|poach|scramble|toast|cook)\b/i;
@@ -104,6 +104,93 @@ const RAW_SERVED_FOODS: readonly string[] = [
  * simmered into sauce; egg is raw in the shell and always cooked through.
  */
 const COOKED_IN_RECIPES: readonly string[] = ["tomato", "egg"];
+
+/**
+ * Item 357. RAW_SERVED_FOODS above is only half a rule: it stops a recipe
+ * cooking a food the catalog serves raw, and nothing stopped the opposite —
+ * a food the catalog only ever serves cooked being handed over raw, either by
+ * deleting its cooking step or by adding a step that serves it straight from
+ * the board. Potato's own choking copy promises "never raw or firm cubes" and
+ * carrot's promises "never serve raw carrot under 12 months", so the two rules
+ * below make those promises testable rather than editorial.
+ *
+ * The cook-required set is DERIVED, not listed: every non-spice catalog food
+ * that is not raw-served has to be cooked, so a food added tomorrow lands
+ * under the rule by default instead of outside it.
+ *
+ * The stage check looks for a cooking METHOD, not for the word "cook". The
+ * first version of it matched a bare `cook`, and that let the whole cooking
+ * instruction be deleted from a stage as long as some *other* sentence used
+ * the word in passing: "test a wedge and cook it 5 minutes more if it
+ * resists" is a follow-up to a cooking step, not a cooking step, yet it kept
+ * the guard quiet while the 6-month stage handed over peeled raw potato.
+ * `simple-carrot` carries the same follow-up clause, so the hole was
+ * catalog-wide. A stage now has to NAME a method (steam, boil, bake, roast,
+ * simmer, ...) — or say `cook` together with an oven figure or a burner
+ * setting, which is how the porridges and the mince write it — and it has to
+ * say how long or how done somewhere in the same stage. The three mutants
+ * pinned in the test below are the exact copy this rule exists to reject.
+ */
+const COOKING_METHOD =
+  /\b(?:roast|bake|steam|boil|simmer|saut[eé]|fry|poach|scramble|toast|wilt|blanch|braise|griddle)(?:e?[sd]|ing)?\b/i;
+/** "Cook the oats over medium-low heat" / "Cook it ... at 400°F (200°C)". */
+const GENERIC_COOK = /\bcook(?:s|ed|ing)?\b/i;
+
+/**
+ * Does this step name a way of cooking? `toast` as a NOUN ("onto a soft toast
+ * finger") is stripped first, so a serving step cannot pose as a cooking one.
+ */
+function namesCookingMethod(step: string): boolean {
+  const text = step.replace(TOAST_AS_NOUN, " ");
+  return COOKING_METHOD.test(text) || (GENERIC_COOK.test(text) && TEMPERATURE.test(text));
+}
+
+/**
+ * A stage really cooks its food when one of its steps names a method and the
+ * stage says how long or how done. The per-step "temperature or a time" and
+ * oven/stovetop rules above still apply to each cooking step on its own; this
+ * one exists so a stage cannot lose its cooking step altogether.
+ */
+function stageCooks(steps: readonly string[]): boolean {
+  return steps.some(namesCookingMethod) && steps.some((step) => TIME.test(step));
+}
+
+/**
+ * Cook-required foods the catalog nevertheless offers raw at some age: apple
+ * and bell pepper as thin raw pieces once chewing is confident (12 months),
+ * ripe pear cooked only "if it is still firm", and tomato, which is either
+ * simmered soft or quartered raw. Every OTHER cook-required food is never
+ * offered raw, at any age, in any recipe.
+ */
+const SOMETIMES_RAW_FOODS: readonly string[] = ["apple", "bell_pepper", "pear", "tomato"];
+
+/** A step or texture note only says "raw" to hand it over if it also serves. */
+const OFFERS_SERVING =
+  /\b(?:serve|serves|served|serving|offer|offers|offered|give|gives|hand|hands|eat|eats|gnaw|gnaws|straight from)\b/i;
+/** …and a raw that is spoken against ("never served raw", "rather than raw") is a warning. */
+const NEGATED_BEFORE_RAW =
+  /\b(?:no|not|never|avoid\w*|without|skip|don'?t|rather than|instead of|hold off|beyond)\b[^.;!?]{0,30}$/i;
+
+/**
+ * Does this text OFFER the food raw? Same shape as `suggestsSweetener`: every
+ * "raw"/"uncooked" in a serving sentence counts unless the negation sits right
+ * in front of it, so "potato is never served raw or firm" passes and "Serve
+ * the raw wedges straight from the board" does not.
+ */
+function offersRawServing(text: string): string | undefined {
+  for (const sentence of text.split(/(?<=[.;!?])\s+/)) {
+    if (!OFFERS_SERVING.test(sentence)) continue;
+    const scan = /\b(?:raw|uncooked)\b/gi;
+    let match = scan.exec(sentence);
+    while (match !== null) {
+      if (!NEGATED_BEFORE_RAW.test(sentence.slice(Math.max(0, match.index - 34), match.index))) {
+        return sentence;
+      }
+      match = scan.exec(sentence);
+    }
+  }
+  return undefined;
+}
 
 /**
  * USDA/FSIS + FDA figures, recorded in .workflow/scratch/recipe-detail/sources.md
@@ -376,9 +463,9 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     expect(wrong).toEqual([]);
 
     // The exact row count, so deleting one stage of one recipe fails HERE even
-    // though the recipe count is untouched: 116 six-month recipes x 3 stages +
+    // though the recipe count is untouched: 119 six-month recipes x 3 stages +
     // 3 nine-month recipes (simple-shrimp and the two shrimp dishes) x 2.
-    expect(variantRows.length).toBe(354);
+    expect(variantRows.length).toBe(363);
   });
 
   it("gives every catalog variant 3-6 steps and a texture note", async () => {
@@ -422,10 +509,10 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
 
   it("gives every cooking step a temperature or a time", async () => {
     const variants = await catalogVariants();
-    // 119 recipes: the curated 15, the 43 coverage recipes added for the
-    // "3 recipes per food" rule (items 338-339, 343), and 61 basics (60 x 3
-    // stages + shrimp's 2) — one per non-spice food (item 331, item 342).
-    expect(new Set(variants.map((v) => v.slug)).size).toBe(119);
+    // 122 recipes: the curated 15, the 45 coverage recipes added for the
+    // "3 recipes per food" rule (items 338-339, 343, 357), and 62 basics (61 x 3
+    // stages + shrimp's 2) — one per non-spice food (item 331, items 342, 356).
+    expect(new Set(variants.map((v) => v.slug)).size).toBe(122);
 
     const cookingSteps = variants.flatMap((v) =>
       v.instructions
@@ -563,6 +650,130 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     // …and the reverse: a food listed as raw-served whose prep text has started
     // cooking it means the list, or the prep copy, has drifted.
     expect(RAW_SERVED_FOODS.filter((slug) => !neverCooked.includes(slug))).toEqual([]);
+  });
+
+  /** Every non-spice catalog food the catalog does not serve raw. */
+  async function cookRequiredFoods(): Promise<string[]> {
+    const foodRows = await db
+      .select({ slug: schema.foods.slug })
+      .from(schema.foods)
+      .where(and(isNull(schema.foods.ownerId), ne(schema.foods.category, "spice")));
+    return foodRows.map((f) => f.slug).filter((slug) => !RAW_SERVED_FOODS.includes(slug));
+  }
+
+  it("cooks a cook-required food at every stage of its own basic recipe", async () => {
+    // Guard the guard: the detector has to see a real cooking step, and has to
+    // stay blind to the copy a raw-serving rewrite would put in its place —
+    // otherwise deleting the cook step from a basic passes unnoticed.
+    expect(namesCookingMethod("Steam or boil the wedges for 15-20 minutes, until a wedge mashes.")).toBe(
+      true,
+    );
+    expect(namesCookingMethod("Cook the oats over medium-low heat for 5-6 minutes.")).toBe(true);
+    expect(namesCookingMethod("Bake them at 400°F (200°C) for 30-40 minutes.")).toBe(true);
+    expect(namesCookingMethod("Serve the raw wedges straight from the board - no cooking needed.")).toBe(
+      false,
+    );
+    expect(namesCookingMethod("Hand baby a firm raw wedge to gnaw on.")).toBe(false);
+    expect(namesCookingMethod("Spread the mash onto a soft toast finger.")).toBe(false);
+    // The follow-up clause that let the real cook step be deleted unnoticed:
+    // it says "cook" and it says "5 minutes", and it is still not an
+    // instruction to cook anything.
+    expect(
+      namesCookingMethod(
+        "Test a wedge between your fingers before serving, and cook it 5 minutes more if it resists at all — potato is never served raw or firm.",
+      ),
+    ).toBe(false);
+
+    // …and the same three mutants at stage level. Each is a real stage with
+    // only its cooking step swapped for a neutral prep line; every one of them
+    // hands baby a raw cook-required food, so every one has to fail.
+    expect(
+      stageCooks([
+        "Scrub the potato, cut away any green patches or sprouts, then peel it and cut it into thick, finger-length wedges.",
+        "Arrange the wedges on a board and pat them dry.",
+        "Test a wedge between your fingers before serving, and cook it 5 minutes more if it resists at all — potato is never served raw or firm.",
+        "Cool to just-warm, check the temperature, and serve with no added salt.",
+      ]),
+    ).toBe(false);
+    expect(
+      stageCooks([
+        "Wash and peel the carrot and cut it into finger-length spears.",
+        "Arrange the spears on a board and pat them dry.",
+        "Raw carrot is hard and can shear into a firm, airway-blocking chunk, so test a spear between your fingers first and cook it 3-5 minutes more if it resists.",
+        "Cool to just-warm, check the temperature, and serve.",
+      ]),
+    ).toBe(false);
+    expect(
+      stageCooks([
+        "Peel the potato and cut it into thick wedges — no cooking needed.",
+        "Cool to just-warm, check the temperature, and serve with no added salt.",
+      ]),
+    ).toBe(false);
+    // The unmutated stage still passes, so the rule is not simply always-false.
+    expect(
+      stageCooks([
+        "Scrub the potato, cut away any green patches or sprouts, then peel it and cut it into thick, finger-length wedges.",
+        "Steam or boil the wedges for 15-20 minutes, or bake them at 400°F (200°C) for 30-40 minutes, until a wedge mashes easily between two fingers.",
+        "Cool to just-warm, check the temperature, and serve with no added salt.",
+      ]),
+    ).toBe(true);
+
+    const cookRequired = await cookRequiredFoods();
+    expect(cookRequired.length).toBeGreaterThan(30);
+    expect(cookRequired).toContain("potato");
+
+    const basics = new Map(
+      (await catalogVariants())
+        .filter((v) => v.foodSlugs.length === 1)
+        .map((v) => [`${v.foodSlugs[0] ?? ""}/${v.ageStage}`, v]),
+    );
+    // A cook-required food whose basic has a stage that never names a cooking
+    // method is a stage that hands baby the food raw, whatever the copy says.
+    const inScope = [...basics.entries()].filter(([key]) =>
+      cookRequired.includes(key.split("/")[0] ?? ""),
+    );
+    // Guard the guard: the basics really are being read, so a lookup that
+    // started returning nothing would fail here instead of passing vacuously.
+    expect(inScope.length).toBeGreaterThan(90);
+    const uncooked = inScope.filter(([, v]) => !stageCooks(v.instructions)).map(([key]) => key);
+    expect(uncooked).toEqual([]);
+  });
+
+  it("never offers a cook-required food raw, in any recipe", async () => {
+    // Guard the guard, both ways.
+    expect(offersRawServing("Serve the raw wedges straight from the board - no cooking needed.")).toBe(
+      "Serve the raw wedges straight from the board - no cooking needed.",
+    );
+    expect(offersRawServing("Hand baby a firm raw wedge to gnaw on.")).toBe(
+      "Hand baby a firm raw wedge to gnaw on.",
+    );
+    expect(
+      offersRawServing("Cook it 5 minutes more if it resists — potato is never served raw or firm."),
+    ).toBeUndefined();
+    expect(
+      offersRawServing("Soften the garlic until it smells sweet rather than raw."),
+    ).toBeUndefined();
+
+    const cookRequired = await cookRequiredFoods();
+    // The exemptions have to name foods that are really cook-required, so a
+    // renamed or re-classified slug cannot leave a dead licence behind.
+    expect(SOMETIMES_RAW_FOODS.filter((slug) => !cookRequired.includes(slug))).toEqual([]);
+
+    const alwaysCooked = cookRequired.filter((slug) => !SOMETIMES_RAW_FOODS.includes(slug));
+    expect(alwaysCooked).toContain("potato");
+    expect(alwaysCooked).toContain("carrot");
+
+    const variants = await catalogVariants();
+    const inScope = variants.filter((v) => v.foodSlugs.some((slug) => alwaysCooked.includes(slug)));
+    expect(inScope.length).toBeGreaterThan(100);
+
+    const offenders = inScope.flatMap((v) =>
+      [v.textureNote, ...v.instructions].flatMap((text) => {
+        const sentence = offersRawServing(text);
+        return sentence === undefined ? [] : [{ slug: v.slug, stage: v.ageStage, sentence }];
+      }),
+    );
+    expect(offenders).toEqual([]);
   });
 
   it("cites the safe internal temperature in every stage of every recipe that cooks meat or fish", async () => {

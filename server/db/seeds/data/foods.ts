@@ -1,6 +1,6 @@
 import type { FoodSeed } from './types'
 
-// ~73 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
+// ~74 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
 // staples. minAgeMonths is 6 for nearly everything (BLW typically starts around 6 months when
 // baby shows readiness signs); shellfish is held to 9 months per the allergen ladder ordering.
 // Prep guidance is age-specific: 6-8m favors palmar-grasp finger shapes and thinned textures,
@@ -699,6 +699,30 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Cook until tender-soft and dice into small bite-sized pieces; hold off on raw carrot sticks until chewing is confident, well beyond 12 months.',
     chokingNotes: 'Raw carrot is hard and can shear into a firm, airway-blocking chunk — always cook until it mashes easily under 12 months.',
+    allergens: [],
+    storageCategory: 'produce_cooked_soft',
+  },
+  {
+    // Item 356. Levels from USDA FoodData Central 170093 (potatoes, baked, flesh and skin,
+    // without salt): iron 1.08 mg, vitamin C 9.6 mg, fiber 2.2 g per 100 g — and the peeled
+    // flesh the youngest babies get is 0.31-0.35 mg of iron. See
+    // .workflow/scratch/catalog-expansion/sources.md §11 for how each level was bucketed.
+    slug: 'potato',
+    name: 'Potato',
+    category: 'veg',
+    ironLevel: 'low',
+    vitaminCLevel: 'moderate',
+    fiberLevel: 'moderate',
+    chokingRisk: 'moderate',
+    minAgeMonths: 6,
+    prep6m:
+      'Peel, then steam, boil, or bake until it mashes easily between two fingers, and serve as a thick finger-length wedge or strip — never raw and never a firm cube.',
+    prep9m:
+      'Cook until it mashes easily between two fingers, then serve as a soft mash or in pea-to-bite-sized soft pieces; the skin can stay on once baby handles it well.',
+    prep12m:
+      'Cook until tender and serve in small bite-sized pieces, or as a soft mash stirred loose rather than beaten sticky.',
+    chokingNotes: 'Raw or under-cooked potato is hard and slippery and can shear into a firm, airway-blocking chunk — always cook until it mashes easily between two fingers, peel it for the youngest babies, and never serve raw or firm cubes. Stiff, gluey mash is hard to swallow too, so keep it loose and soft.',
+    notes: 'A gentle, filling everyday vegetable with more vitamin C than it gets credit for, especially cooked in its skin. Serve it with no added salt, and trim away any green patches or sprouts before cooking.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
