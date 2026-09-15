@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type {
   AllergenDetail,
@@ -143,12 +143,25 @@ describe("tracking routes", () => {
     return (await progressItems(user, babyId)).find((item) => item.allergenSlug === "egg");
   }
 
-  function putOverride(user: TestUser, babyId: string, key: string) {
+  /** No payload sends no body at all — the shape the pre-item-364 client uses. */
+  function putOverride(user: TestUser, babyId: string, key: string, payload?: Record<string, unknown>) {
     return app.inject({
       method: "PUT",
       url: `/api/babies/${babyId}/allergens/${key}/established`,
       headers: { cookie: user.cookie },
+      ...(payload === undefined ? {} : { payload }),
     });
+  }
+
+  /** The stored mark for one allergen, or undefined when there is none. */
+  async function markRow(babyId: string, key: string) {
+    const [row] = await db
+      .select()
+      .from(schema.allergenOverrides)
+      .where(
+        and(eq(schema.allergenOverrides.babyId, babyId), eq(schema.allergenOverrides.allergenKey, key)),
+      );
+    return row;
   }
 
   function deleteOverride(user: TestUser, babyId: string, key: string) {
@@ -905,6 +918,234 @@ describe("tracking routes", () => {
       });
       expect(del.statusCode).toBe(204);
       expect(await db.select().from(schema.allergenOverrides)).toHaveLength(0);
+    });
+
+    // -----------------------------------------------------------------------
+    // Item 364: the mark carries a date, and the countdown runs from it.
+    // -----------------------------------------------------------------------
+
+    it("defaults the mark to now when the body is absent or empty", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      // No body at all — what the pre-item-364 client (and any PWA still
+      // running that bundle) sends. It must keep meaning "now".
+      expect((await putOverride(user, babyId, "egg")).statusCode).toBe(204);
+      const noBody = await markRow(babyId, "egg");
+      expect(Math.abs(Date.now() - (noBody?.establishedAt.getTime() ?? 0))).toBeLessThan(60_000);
+
+      // An explicit empty object is the same thing.
+      expect((await putOverride(user, babyId, "peanut", {})).statusCode).toBe(204);
+      const emptyBody = await markRow(babyId, "peanut");
+      expect(Math.abs(Date.now() - (emptyBody?.establishedAt.getTime() ?? 0))).toBeLessThan(60_000);
+    });
+
+    it("stores the date the parent chose, without disturbing created_at", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      const marchISO = "2026-03-04T08:15:30.000Z";
+      expect((await putOverride(user, babyId, "egg", { establishedAt: marchISO })).statusCode).toBe(204);
+
+      const row = await markRow(babyId, "egg");
+      expect(row?.establishedAt.toISOString()).toBe(marchISO);
+      // `created_at` is when they TOLD us, which is now whatever date they
+      // claimed — the two are separate facts on purpose.
+      expect(Math.abs(Date.now() - (row?.createdAt.getTime() ?? 0))).toBeLessThan(60_000);
+    });
+
+    it("re-marking moves the date rather than conflicting or leaving a second row", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      const first = "2026-03-04T08:15:30.000Z";
+      const corrected = "2026-06-20T17:00:00.000Z";
+      expect((await putOverride(user, babyId, "egg", { establishedAt: first })).statusCode).toBe(204);
+      const before = await markRow(babyId, "egg");
+
+      expect((await putOverride(user, babyId, "egg", { establishedAt: corrected })).statusCode).toBe(204);
+
+      const after = await markRow(babyId, "egg");
+      expect(await db.select().from(schema.allergenOverrides)).toHaveLength(1);
+      // The same row, corrected — not a replacement.
+      expect(after?.id).toBe(before?.id);
+      expect(after?.establishedAt.toISOString()).toBe(corrected);
+      expect(after?.createdAt.toISOString()).toBe(before?.createdAt.toISOString());
+
+      // And the countdown follows it.
+      expect((await eggProgress(user, babyId))?.dueAt).toBe("2026-06-27T17:00:00.000Z");
+    });
+
+    it("400s a date beyond the future slack, writing nothing, and keeps a mark inside it", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      const far = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+      const bad = await putOverride(user, babyId, "egg", { establishedAt: far });
+      expect(bad.statusCode).toBe(400);
+      expect(bad.json()).toMatchObject({ error: "invalid_request" });
+      expect(await db.select().from(schema.allergenOverrides)).toHaveLength(0);
+
+      // Not a datetime at all, and a wrongly-typed one, fail the same way.
+      expect((await putOverride(user, babyId, "egg", { establishedAt: "2026-03-04" })).statusCode).toBe(400);
+      expect((await putOverride(user, babyId, "egg", { establishedAt: 1_772_000_000_000 })).statusCode).toBe(400);
+      expect(await db.select().from(schema.allergenOverrides)).toHaveLength(0);
+
+      // One day of slack stands: a parent east of UTC marking "today" is not
+      // making a typo.
+      const soon = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+      expect((await putOverride(user, babyId, "egg", { establishedAt: soon })).statusCode).toBe(204);
+    });
+
+    it("undo deletes the row outright, taking the date with it", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      await putOverride(user, babyId, "egg", { establishedAt: "2026-03-04T08:15:30.000Z" });
+      expect((await deleteOverride(user, babyId, "egg")).statusCode).toBe(204);
+
+      expect(await markRow(babyId, "egg")).toBeUndefined();
+      expect(await eggProgress(user, babyId)).toMatchObject({
+        status: "not_started",
+        overridden: false,
+        establishedAt: null,
+        lastExposureAt: null,
+        dueAt: null,
+      });
+
+      // Re-marking after an undo starts a fresh row at the new date, not the
+      // old one resurrected.
+      await putOverride(user, babyId, "egg", { establishedAt: "2026-06-20T17:00:00.000Z" });
+      expect((await markRow(babyId, "egg"))?.establishedAt.toISOString()).toBe("2026-06-20T17:00:00.000Z");
+    });
+
+    it("counts down from whichever came last, the serve or the mark", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      const oldMeal = "2026-03-01T12:00:00.000Z";
+      const recentMark = "2026-06-20T17:00:00.000Z";
+
+      // Mark newer than the meal: the mark is the last known exposure.
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: oldMeal });
+      await putOverride(user, babyId, "egg", { establishedAt: recentMark });
+      expect(await eggProgress(user, babyId)).toMatchObject({
+        status: "established",
+        overridden: true,
+        exposures: 1,
+        // The meal-log fact is untouched: the detail page's "Last served"
+        // line must never claim a meal that was not logged.
+        lastServedAt: oldMeal,
+        establishedAt: recentMark,
+        lastExposureAt: recentMark,
+        dueAt: "2026-06-27T17:00:00.000Z",
+      });
+
+      // Meal newer than the mark: the serve wins, and the countdown resets to
+      // it — which is what "log a meal and the countdown restarts" means.
+      const newMeal = "2026-08-15T09:30:00.000Z";
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: newMeal });
+      expect(await eggProgress(user, babyId)).toMatchObject({
+        exposures: 2,
+        lastServedAt: newMeal,
+        // The mark is no longer the latest exposure, but it is still a fact
+        // the parent gave us and the detail page still prints it — losing it
+        // here is what made "Marked established <date>" vanish on exactly
+        // the rows that have both.
+        establishedAt: recentMark,
+        lastExposureAt: newMeal,
+        dueAt: "2026-08-22T09:30:00.000Z",
+      });
+    });
+
+    it("counts down from the mark alone when no meal was ever logged", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      await putOverride(user, babyId, "egg", { establishedAt: "2026-03-04T08:15:30.000Z" });
+
+      expect(await eggProgress(user, babyId)).toMatchObject({
+        status: "established",
+        overridden: true,
+        exposures: 0,
+        firstAt: null,
+        // Still honestly empty — a mark is not a serve.
+        lastServedAt: null,
+        establishedAt: "2026-03-04T08:15:30.000Z",
+        lastExposureAt: "2026-03-04T08:15:30.000Z",
+        dueAt: "2026-03-11T08:15:30.000Z",
+      });
+    });
+
+    it("gives a ladder still being climbed no due date at all", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      // not_started: nothing to count, nothing to count from.
+      expect(await eggProgress(user, babyId)).toMatchObject({
+        status: "not_started",
+        lastServedAt: null,
+        establishedAt: null,
+        lastExposureAt: null,
+        dueAt: null,
+      });
+
+      // started: there IS an exposure, but the maintenance cadence does not
+      // apply until the allergen is established — the intro guidance paces
+      // this stretch instead.
+      const meal = "2026-03-01T12:00:00.000Z";
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: meal });
+      expect(await eggProgress(user, babyId)).toMatchObject({
+        status: "started",
+        exposures: 1,
+        lastServedAt: meal,
+        establishedAt: null,
+        lastExposureAt: meal,
+        dueAt: null,
+      });
+    });
+
+    it("counts down for a derived-established row, mark or no mark", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: "2026-03-01T12:00:00.000Z" });
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: "2026-03-08T12:00:00.000Z" });
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], servedAt: "2026-03-15T12:00:00.000Z" });
+
+      expect(await eggProgress(user, babyId)).toMatchObject({
+        status: "established",
+        overridden: false,
+        exposures: 3,
+        establishedAt: null,
+        lastExposureAt: "2026-03-15T12:00:00.000Z",
+        dueAt: "2026-03-22T12:00:00.000Z",
+      });
+
+      // A stray mark on a row the meals already establish does not flag
+      // `overridden` (that flag is about the STATUS), but it IS a parent
+      // asserting a later exposure, so the countdown moves to it.
+      await putOverride(user, babyId, "egg", { establishedAt: "2026-06-20T17:00:00.000Z" });
+      expect(await eggProgress(user, babyId)).toMatchObject({
+        status: "established",
+        overridden: false,
+        lastServedAt: "2026-03-15T12:00:00.000Z",
+        establishedAt: "2026-06-20T17:00:00.000Z",
+        lastExposureAt: "2026-06-20T17:00:00.000Z",
+        dueAt: "2026-06-27T17:00:00.000Z",
+      });
+    });
+
+    it("keeps the countdown per baby and per allergen", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user, "Robin");
+      const siblingId = await createBaby(app, user, "Sam");
+
+      await putOverride(user, babyId, "egg", { establishedAt: "2026-03-04T08:15:30.000Z" });
+
+      expect((await eggProgress(user, siblingId))?.dueAt).toBeNull();
+      const peanut = (await progressItems(user, babyId)).find((item) => item.allergenSlug === "peanut");
+      expect(peanut).toMatchObject({ establishedAt: null, lastExposureAt: null, dueAt: null });
     });
 
     it("feeds the same union into the AI baby-profile summary", async () => {

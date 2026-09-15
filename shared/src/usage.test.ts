@@ -92,6 +92,7 @@ const SAMPLE_PROPS: Record<UsageEventName, Record<string, unknown>> = {
   client_error: { route_pattern: "/chat/:threadId", kind: "api_5xx", status: "502" },
   usage_sharing_changed: { enabled: false },
   feedback_sent: {},
+  allergen_marked: { action: "mark", backdated: true },
 };
 
 function envelopeFor(name: UsageEventName, overrides: Record<string, unknown> = {}) {
@@ -108,7 +109,7 @@ function envelopeFor(name: UsageEventName, overrides: Record<string, unknown> = 
 }
 
 describe("the P1 catalog", () => {
-  it("is exactly the 19 events the plan lists, in order", () => {
+  it("is exactly the 20 events the plan lists, in order", () => {
     expect(USAGE_EVENT_NAMES).toEqual([
       "session_started",
       "screen_viewed",
@@ -129,6 +130,7 @@ describe("the P1 catalog", () => {
       "client_error",
       "usage_sharing_changed",
       "feedback_sent",
+      "allergen_marked",
     ]);
 
     // The exported list and the union it documents cannot drift apart.

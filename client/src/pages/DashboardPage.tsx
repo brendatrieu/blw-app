@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
+import { dueAllergens } from "../features/tracking/allergenRow.js";
 import { HOME_MEAL_LIMIT, ServeLogList } from "../features/tracking/components/ServeLogList.js";
 import { useStorageItems } from "../features/storage/hooks.js";
 import { StorageItemCard } from "../features/storage/components/StorageItemCard.js";
@@ -24,25 +25,43 @@ function AllergenProgressSummary({ babyId }: { babyId: string }) {
   const started = data.items.filter((item) => item.status === "started").length;
   const notStarted = data.items.length - established - started;
   const progressed = Math.min(established + started, ALLERGEN_TOTAL);
+  const due = dueAllergens(data.items).length;
+  const ladderPath = `/babies/${babyId}/allergens`;
 
   return (
-    <CardLink to={`/babies/${babyId}/allergens`} padding="sm" className="flex items-center gap-4">
-      <ProgressRing
-        value={progressed / ALLERGEN_TOTAL}
-        label={`${progressed} of ${ALLERGEN_TOTAL} allergens started or established`}
-      >
-        <span className="font-h2 text-[var(--color-text)]">
-          {progressed}/{ALLERGEN_TOTAL}
-        </span>
-      </ProgressRing>
-      <div className="flex flex-col gap-0.5 text-sm">
-        <span className="font-semibold text-[var(--color-text)]">🌟 Allergen ladder</span>
-        <span className="text-[var(--color-text-muted)]">
-          {established} established, {started} started
-        </span>
-        <span className="text-[var(--color-text-muted)]">{notStarted} not started yet</span>
-      </div>
-    </CardLink>
+    <>
+      <CardLink to={ladderPath} padding="sm" className="flex items-center gap-4">
+        <ProgressRing
+          value={progressed / ALLERGEN_TOTAL}
+          label={`${progressed} of ${ALLERGEN_TOTAL} allergens started or established`}
+        >
+          <span className="font-h2 text-[var(--color-text)]">
+            {progressed}/{ALLERGEN_TOTAL}
+          </span>
+        </ProgressRing>
+        <div className="flex flex-col gap-0.5 text-sm">
+          <span className="font-semibold text-[var(--color-text)]">🌟 Allergen ladder</span>
+          <span className="text-[var(--color-text-muted)]">
+            {established} established, {started} started
+          </span>
+          <span className="text-[var(--color-text-muted)]">{notStarted} not started yet</span>
+        </div>
+      </CardLink>
+
+      {/* One line, and only when there is something to say (item 365). It is
+          a SIBLING of the card, not a link inside it: `CardLink` is already
+          an anchor, and nesting a second one in it is invalid markup.
+          `min-h-11` keeps the tap target at 44px even though the text is
+          small. */}
+      {due > 0 && (
+        <Link
+          to={ladderPath}
+          className="inline-flex min-h-11 items-center text-xs font-medium text-[var(--color-accent)] underline"
+        >
+          {due === 1 ? "1 allergen due for a serve" : `${due} allergens due for a serve`}
+        </Link>
+      )}
+    </>
   );
 }
 

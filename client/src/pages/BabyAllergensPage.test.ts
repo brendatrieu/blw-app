@@ -3,7 +3,7 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { AllergenProgressItem } from "@blw/shared";
+import { ALLERGEN_MAINTENANCE_DAYS, type AllergenProgressItem } from "@blw/shared";
 import { trackingKeys } from "../features/tracking/hooks.js";
 import { BabyAllergensPage } from "./BabyAllergensPage.js";
 
@@ -17,10 +17,41 @@ function item(overrides: Partial<AllergenProgressItem>): AllergenProgressItem {
     exposures: 0,
     firstAt: null,
     lastServedAt: null,
+    establishedAt: null,
+    lastExposureAt: null,
+    dueAt: null,
     status: "not_started",
     overridden: false,
     ...overrides,
   };
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** ISO for `days` ago, and the `dueAt` the server would derive from it — the
+ * fixtures say "last met it then" and let the shared rule do the arithmetic. */
+function agoIso(days: number): string {
+  // Local date-field arithmetic, not raw milliseconds: a DST shift inside the
+  // window would otherwise move the calendar-day count the row prints.
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString();
+}
+
+function dueFrom(lastExposureIso: string): string {
+  return new Date(Date.parse(lastExposureIso) + ALLERGEN_MAINTENANCE_DAYS * MS_PER_DAY).toISOString();
+}
+
+/** An established row that last met the allergen `days` ago, via a meal. */
+function servedDaysAgo(days: number): AllergenProgressItem {
+  const last = agoIso(days);
+  return item({
+    status: "established",
+    exposures: 3,
+    lastServedAt: last,
+    lastExposureAt: last,
+    dueAt: dueFrom(last),
+  });
 }
 
 function renderAtAllergensRoute(babyId: string) {
@@ -67,43 +98,75 @@ describe("BabyAllergensPage row actions (item 136)", () => {
   });
 });
 
-describe("page-level backfill copy (single-tap flow)", () => {
+describe("page-level backfill copy", () => {
   it("shows the 'Already established?' line once at the top of the page", () => {
     const html = renderWithItems([item({ status: "not_started" })]);
     expect(html).toContain("Already established? Mark it so your progress reflects it.");
-    // Single-tap: the button acts directly — the old inline confirm step is gone.
+    // One control per row, and the explanation lives once at the top — the
+    // old inline confirm step is still gone (the sheet item 365 opens asks
+    // for a date, it does not re-ask for confirmation).
     expect(html).toContain("Mark as established");
     expect(html).not.toContain("Already established before the app?");
+    // The sheet is closed until tapped, so the row renders no When field.
+    expect(html).not.toContain("allergen-established-when");
   });
 });
 
-describe("BabyAllergensPage recency fact + hint (items 143/144)", () => {
+describe("BabyAllergensPage recency fact + countdown (items 143/365)", () => {
   it("shows no recency fact for a not_started row (nothing served, 0 exposures already says so)", () => {
     const html = renderWithItems([item({ status: "not_started" })]);
     expect(html).not.toContain("last served");
     expect(html).not.toContain("no serves logged yet");
-    expect(html).not.toContain("serving again soon");
+    expect(html).not.toContain("Serve again");
   });
 
-  it("shows a relative 'last served' fact for a started row served recently", () => {
+  it("shows a relative 'last served' fact for a started row, with no countdown yet", () => {
+    const now = new Date().toISOString();
     const html = renderWithItems([
-      item({ status: "started", exposures: 1, lastServedAt: new Date().toISOString() }),
+      item({ status: "started", exposures: 1, lastServedAt: now, lastExposureAt: now }),
     ]);
     expect(html).toContain("last served today");
-    expect(html).not.toContain("serving again soon");
+    expect(html).not.toContain("Serve again");
   });
 
-  it("shows 'no serves logged yet' for an override-established row with no exposures", () => {
-    const html = renderWithItems([item({ status: "established", overridden: true, exposures: 0, lastServedAt: null })]);
+  it("shows 'no serves logged yet' for a row with nothing behind it at all", () => {
+    const html = renderWithItems([item({ status: "established", overridden: true, exposures: 0 })]);
     expect(html).toContain("no serves logged yet");
   });
 
-  it("appends the muted 'serving again soon' hint once the last serve is 14+ days old", () => {
-    const stale = new Date();
-    stale.setDate(stale.getDate() - 20);
-    const html = renderWithItems([item({ status: "established", exposures: 4, lastServedAt: stale.toISOString() })]);
-    expect(html).toContain("last served 20d ago");
-    expect(html).toContain("Consider serving again soon to maintain tolerance.");
+  it("says 'marked Xd ago' when the parent's mark is the latest exposure", () => {
+    const marked = agoIso(3);
+    const html = renderWithItems([
+      item({
+        status: "established",
+        overridden: true,
+        exposures: 0,
+        establishedAt: marked,
+        lastExposureAt: marked,
+        dueAt: dueFrom(marked),
+      }),
+    ]);
+    expect(html).toContain("marked 3d ago");
+    expect(html).not.toContain("last served");
+  });
+
+  it("counts down to the day the maintenance week is up, while it is not up yet", () => {
+    const html = renderWithItems([servedDaysAgo(2)]);
+    expect(html).toContain("last served 2d ago");
+    expect(html).toContain("Serve again by ");
+    expect(html).not.toContain(">Serve again soon<");
+  });
+
+  it("swaps the countdown for a caution badge once the week is up, keeping the old sentence as its title", () => {
+    const html = renderWithItems([servedDaysAgo(ALLERGEN_MAINTENANCE_DAYS + 1)]);
+    expect(html).toContain("last served 8d ago");
+    expect(html).toContain("Serve again soon");
+    expect(html).not.toContain("Serve again by");
+    // The sentence the badge replaced is still reachable — tooltip + sr-only.
+    expect(html).toContain('title="Consider serving again soon to maintain tolerance."');
+    expect(html).toContain('<span class="sr-only"> — Consider serving again soon to maintain tolerance.</span>');
+    // Caution tokens, not a new color.
+    expect(html).toContain("bg-[var(--color-caution-soft)]");
   });
 });
 

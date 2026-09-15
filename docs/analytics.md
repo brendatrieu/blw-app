@@ -73,6 +73,7 @@ six buckets is as much as it can ever carry.
 | `client_error` | a render crash, an uncaught error or rejection, a 5xx or a dead request | `route_pattern`, `kind`, `status` |
 | `usage_sharing_changed` | the Privacy switch moves | `enabled` |
 | `feedback_sent` | a message sent from Send feedback (the message itself never leaves the database) | — |
+| `allergen_marked` | an allergen marked established by hand, or that mark undone | `action` (`mark` / `undo`), `backdated` (the chosen instant is >1h before the tap) |
 
 `via` is always DERIVED from the route and its query parameters — `/log-meal?food=`
 is `food_page`, `/storage/add` reached from Home is `home` — never wired to a
@@ -87,10 +88,23 @@ this property always says what the parent was actually looking at when they
 removed the container. The date itself never leaves the device; only the
 bucket (`fresh` / `use_soon` / `expired`) is sent.
 
-The plan's P2 events (`meal_deleted`, `custom_item_created`, `recipe_favorited`,
-`article_read_depth`, `allergen_marked`, `symptom_alarm_dismissed`,
+`backdated` on `allergen_marked` says only WHETHER the parent reached for the
+sheet's "When" picker — true when the instant they chose is **more than an
+hour before the tap** — never which date, never how far back, and never which
+allergen. It is deliberately NOT the `1d+` edge `meal_logged.backdated`
+buckets on: that one describes a meal's serve time, where this one asks
+whether the picker earns its place, and a parent who scrolled back to this
+morning used it just as much as one who scrolled back to March. The hour of
+slack covers a wheel nudged a few minutes and a device an hour of DST out of
+step with ours. The mark itself is a row in `allergen_overrides`; analytics
+only learns that the button gets used.
+
+The plan's remaining P2 events (`meal_deleted`, `custom_item_created`,
+`recipe_favorited`, `article_read_depth`, `symptom_alarm_dismissed`,
 `chat_failed`, `pwa_install_prompt_shown`, `account_deleted`) are deliberately
-not shipped yet; they join after the first monthly review.
+not shipped yet; they join after the first monthly review. `allergen_marked`
+was pulled forward with item 366, when the maintenance countdown gave it a
+question to answer.
 
 ## How consent works
 

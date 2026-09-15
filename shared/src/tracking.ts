@@ -9,23 +9,36 @@ import { foodCategorySchema } from "./catalog.js";
  * features/tracking/** query layer.
  */
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 /** One day of slack: a parent east of UTC can log "just now" on a calendar
  * day that has not started in UTC yet. Anything further out is a typo. */
-const FUTURE_SLACK_MS = 24 * 60 * 60 * 1000;
+const FUTURE_SLACK_MS = MS_PER_DAY;
 
-export const servedAtSchema = z
-  .string()
-  .datetime({ message: "servedAt must be an ISO datetime" })
-  .superRefine((value, ctx) => {
-    const ms = Date.parse(value);
-    if (Number.isNaN(ms)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "servedAt is not a real datetime" });
-      return;
-    }
-    if (ms > Date.now() + FUTURE_SLACK_MS) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "servedAt cannot be more than 24h in the future" });
-    }
-  });
+/**
+ * "A real ISO instant, in the past (give or take the slack)" — the rule
+ * behind every parent-entered "when did this happen" field in this file.
+ * Written once and named per field so a 400 says which key it is about;
+ * `storage.ts`/`symptom.ts` keep their own copies because their fields are
+ * their own contracts, but the two fields HERE are the same question asked
+ * twice and must never drift apart on the slack.
+ */
+const pastInstantSchema = (field: string) =>
+  z
+    .string()
+    .datetime({ message: `${field} must be an ISO datetime` })
+    .superRefine((value, ctx) => {
+      const ms = Date.parse(value);
+      if (Number.isNaN(ms)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${field} is not a real datetime` });
+        return;
+      }
+      if (ms > Date.now() + FUTURE_SLACK_MS) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${field} cannot be more than 24h in the future` });
+      }
+    });
+
+export const servedAtSchema = pastInstantSchema("servedAt");
 
 /** Empty string from a form field means "no note", not an empty string.
  * Exported so the storage serve endpoint takes the identical note field. */
@@ -203,7 +216,9 @@ export function deriveAllergenStatus(exposures: number): AllergenStatus {
  * An override can only ever promote: `started` never falls back to
  * `not_started`, and `established` is never downgraded, whatever the
  * overrides table says. `exposures`/`firstAt`/`lastServedAt` stay purely
- * derived — an override contributes a status, never a date.
+ * derived — an override contributes a status, and the only date it carries
+ * is its own `establishedAt`, which feeds `lastExposureAt`/`dueAt` and never
+ * the meal-log facts.
  */
 export function unionAllergenStatus(
   exposures: number,
@@ -213,6 +228,31 @@ export function unionAllergenStatus(
   if (derived === "established") return { status: "established", overridden: false };
   if (hasOverride) return { status: "established", overridden: true };
   return { status: derived, overridden: false };
+}
+
+/**
+ * How long an established allergen may go unserved before the app asks for
+ * another one. The Learn article ("Introducing allergens") advises serving an
+ * established allergen two to three times a week, so a week is the outer edge
+ * of that cadence rather than a nag on top of it.
+ *
+ * Exported so the server's `dueAt` and the client's countdown copy cannot
+ * disagree about the same date.
+ */
+export const ALLERGEN_MAINTENANCE_DAYS = 7;
+
+/**
+ * The single place the maintenance countdown is derived. `null` whenever
+ * there is nothing to count down from — a row that is not established yet, or
+ * an established one with no exposure behind it at all (which cannot happen
+ * today: every established row has either a serve or a mark, and both set
+ * `lastExposureAt`).
+ */
+export function allergenDueAt(lastExposureAt: string | null, status: AllergenStatus): string | null {
+  if (status !== "established" || !lastExposureAt) return null;
+  const ms = Date.parse(lastExposureAt);
+  if (Number.isNaN(ms)) return null;
+  return new Date(ms + ALLERGEN_MAINTENANCE_DAYS * MS_PER_DAY).toISOString();
 }
 
 export const allergenProgressItemSchema = z.object({
@@ -233,6 +273,41 @@ export const allergenProgressItemSchema = z.object({
    * logged yet" instead of inventing a recency it does not have.
    */
   lastServedAt: z.string().nullable(),
+  /**
+   * The date the parent's "we established this" mark claims
+   * (`allergen_overrides.established_at`), ISO, or null when this baby has no
+   * mark for this allergen at all.
+   *
+   * On the wire in its own right rather than inferred from `lastExposureAt`:
+   * the max hides the mark the moment a newer meal overtakes it, which is
+   * exactly when the detail page still owes the parent the "Marked
+   * established <date>" line it has always promised. Independent of
+   * `overridden` — a mark exists or it does not, where `overridden` answers
+   * the separate question of whether the STATUS needed it.
+   */
+  establishedAt: z.string().nullable(),
+  /**
+   * The most recent moment this baby is KNOWN to have met the allergen: the
+   * later of `lastServedAt` and the parent's "we established this" mark, ISO
+   * or null when neither exists.
+   *
+   * Deliberately a different fact from `lastServedAt`, which stays the
+   * meal-log-only answer the detail page prints under "Last served". A mark
+   * is not a serve — it is a parent saying the serves happened before the
+   * app existed — so folding the two into one field would make the detail
+   * page claim a meal that was never logged. The maintenance countdown reads
+   * THIS one, because "when did we last meet this allergen" is the question
+   * it is actually asking.
+   */
+  lastExposureAt: z.string().nullable(),
+  /**
+   * When this allergen is due for another serve: `lastExposureAt` plus
+   * `ALLERGEN_MAINTENANCE_DAYS`, and null for anything not yet established
+   * (a ladder still being climbed is paced by the intro guidance, not by a
+   * maintenance cadence). Server-computed so every surface counts down from
+   * the same instant — see `allergenDueAt`.
+   */
+  dueAt: z.string().nullable(),
   /** Derived status unioned with the parent's override — see `unionAllergenStatus`. */
   status: allergenStatusSchema,
   /**
@@ -272,6 +347,23 @@ export const allergenKeySchema = z
  */
 export const allergenKeyParamSchema = z.object({ key: allergenKeySchema });
 export type AllergenKeyParams = z.infer<typeof allergenKeyParamSchema>;
+
+/**
+ * The PUT's optional body. "We established this one months ago" is a claim
+ * about the past, so the parent may say WHEN — and the maintenance countdown
+ * starts from that instant rather than from the moment they tapped the
+ * button. Omitted (and an empty body, which is what the pre-item-364 client
+ * still sends) means now.
+ *
+ * Same past-only rule as `servedAt`, for the same reason: a date in the
+ * future is a typo, not an assertion, and the one day of slack keeps a parent
+ * east of UTC from being told "today" is the future.
+ */
+export const markAllergenEstablishedInputSchema = z.object({
+  /** When the parent says it was established; absent means now. Past only, with the same day of slack as servedAt. */
+  establishedAt: pastInstantSchema("establishedAt").optional(),
+});
+export type MarkAllergenEstablishedInput = z.input<typeof markAllergenEstablishedInputSchema>;
 
 // ---------------------------------------------------------------------------
 // GET /api/babies/:babyId/allergen-progress/:slug

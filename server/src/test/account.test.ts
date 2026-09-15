@@ -166,8 +166,12 @@ async function seedOneOfEverything(
 
   // A parent's manual "established before we started using the app" mark.
   // Non-empty on purpose: an export test where the array is [] either way
-  // cannot tell "covered" from "always empty".
-  await db.insert(schema.allergenOverrides).values({ babyId: baby!.id, allergenKey: "egg" });
+  // cannot tell "covered" from "always empty". Backdated (item 363), so the
+  // export test can tell `establishedAt` apart from `createdAt` rather than
+  // watching two copies of "now" agree by accident.
+  await db
+    .insert(schema.allergenOverrides)
+    .values({ babyId: baby!.id, allergenKey: "egg", establishedAt: new Date("2026-03-04T08:15:30Z") });
 
   await db.insert(schema.favorites).values({ userId, recipeId: catalog.recipe.id });
 
@@ -550,7 +554,7 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(14);
+    expect(bundle.exportVersion).toBe(15);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -645,11 +649,16 @@ describe("account export", () => {
     expect(bundle.allergenOverrides[0]).toMatchObject({
       babyId: seeded.babyId,
       allergenKey: "egg",
+      // v15 (item 363): the date the mark CLAIMS, which the fixture backdated
+      // — so this is demonstrably not just `createdAt` under another name.
+      establishedAt: "2026-03-04T08:15:30.000Z",
     });
     expect(bundle.allergenOverrides[0]?.createdAt).toBeTruthy();
-    // The status is the whole payload — an override carries no served date.
+    expect(bundle.allergenOverrides[0]?.createdAt).not.toBe(bundle.allergenOverrides[0]?.establishedAt);
+    // The status plus its own date is the whole payload — an override still
+    // carries no SERVED date, because it is not a meal.
     expect(Object.keys(bundle.allergenOverrides[0]!).sort()).toEqual(
-      ["allergenKey", "babyId", "createdAt"].sort(),
+      ["allergenKey", "babyId", "createdAt", "establishedAt"].sort(),
     );
 
   });

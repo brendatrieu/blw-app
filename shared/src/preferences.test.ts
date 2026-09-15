@@ -55,9 +55,9 @@ describe("updatePreferencesInputSchema", () => {
   });
 });
 
-describe("account export v14", () => {
+describe("account export v15", () => {
   it("bumped its version and carries usage events alongside the preferences", () => {
-    expect(ACCOUNT_EXPORT_VERSION).toBe(14);
+    expect(ACCOUNT_EXPORT_VERSION).toBe(15);
 
     const shape = accountExportSchema.shape;
     expect(shape.preferences.safeParse(null).success).toBe(true);
@@ -81,6 +81,36 @@ describe("account export v14", () => {
       ]).success,
     ).toBe(true);
     expect(shape.usageEvents.safeParse(undefined).success).toBe(false);
+  });
+
+  // v15 (item 363): an allergen mark now carries the date it CLAIMS, not just
+  // the date it was written. The two are the same for every mark taken at its
+  // default — including every mark that existed before the migration, which
+  // was backfilled from `created_at` — and differ only when a parent
+  // backdated one.
+  it("carries the date an allergen mark claims, alongside the date it was written", () => {
+    const shape = accountExportSchema.shape;
+    expect(
+      shape.allergenOverrides.safeParse([
+        {
+          babyId: "11111111-1111-4111-8111-111111111111",
+          allergenKey: "peanut",
+          establishedAt: "2026-03-01T09:00:00.000Z",
+          createdAt: "2026-09-13T10:00:00.000Z",
+        },
+      ]).success,
+    ).toBe(true);
+    // A v14 file's override row is not a v15 one — which is what the version
+    // bump is for.
+    expect(
+      shape.allergenOverrides.safeParse([
+        {
+          babyId: "11111111-1111-4111-8111-111111111111",
+          allergenKey: "peanut",
+          createdAt: "2026-09-13T10:00:00.000Z",
+        },
+      ]).success,
+    ).toBe(false);
   });
 
   // v14 (item 358): the messages this account sent the admins.

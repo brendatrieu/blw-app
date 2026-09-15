@@ -10,7 +10,7 @@
 // something else. Ownership is the caller's business here, exactly as in
 // `loadMeals`: these functions only read by id.
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
-import { unionAllergenStatus, type AllergenDetail, type AllergenProgressItem } from "@blw/shared";
+import { allergenDueAt, unionAllergenStatus, type AllergenDetail, type AllergenProgressItem } from "@blw/shared";
 import type { Database } from "../db/index.js";
 import {
   allergenLadderSteps,
@@ -67,15 +67,29 @@ export async function loadAllergenProgress(db: Database, babyId: string): Promis
   const exposuresByAllergenId = new Map(exposureRows.map((r) => [r.allergenId, r]));
 
   const overrideRows = await db
-    .select({ allergenKey: allergenOverrides.allergenKey })
+    .select({ allergenKey: allergenOverrides.allergenKey, establishedAt: allergenOverrides.establishedAt })
     .from(allergenOverrides)
     .where(eq(allergenOverrides.babyId, babyId));
-  const overriddenSlugs = new Set(overrideRows.map((row) => row.allergenKey));
+  // The mark's own date, by slug. A hit is the "is there an override row?"
+  // question `unionAllergenStatus` takes; the value answers the separate
+  // question of WHEN, which only the countdown reads.
+  const markedAtBySlug = new Map(overrideRows.map((row) => [row.allergenKey, row.establishedAt]));
 
   return allergenRows.map((a) => {
     const exposure = exposuresByAllergenId.get(a.id);
     const exposures = exposure?.exposures ?? 0;
-    const { status, overridden } = unionAllergenStatus(exposures, overriddenSlugs.has(a.slug));
+    const markedAt = markedAtBySlug.get(a.slug) ?? null;
+    const { status, overridden } = unionAllergenStatus(exposures, markedAt !== null);
+    const lastServed = exposure ? new Date(exposure.lastAt) : null;
+    const lastServedAt = lastServed ? lastServed.toISOString() : null;
+    // The later of the two ways this baby is known to have met the allergen.
+    // A mark counts here even on a derived-established row whose `overridden`
+    // flag reads false: the flag answers "is the STATUS only true because a
+    // parent said so?", where this asks "when did we last meet it?", and a
+    // parent asserting an exposure is an answer to that whichever way the
+    // status was already going to land.
+    const markIsLater = markedAt !== null && (lastServed === null || markedAt > lastServed);
+    const lastExposureAt = markIsLater ? markedAt.toISOString() : lastServedAt;
     return {
       allergenSlug: a.slug,
       allergenName: a.name,
@@ -84,7 +98,15 @@ export async function loadAllergenProgress(db: Database, babyId: string): Promis
       firstAt: exposure ? new Date(exposure.firstAt).toISOString() : null,
       // Null means "nothing logged", including for a row an override alone
       // established — see the schema's note on `lastServedAt`.
-      lastServedAt: exposure ? new Date(exposure.lastAt).toISOString() : null,
+      lastServedAt,
+      // The mark's own date, unreduced: `lastExposureAt` below hides it as
+      // soon as a newer meal wins, and the detail page still has to be able
+      // to say when the parent marked it.
+      establishedAt: markedAt ? markedAt.toISOString() : null,
+      lastExposureAt,
+      // One rule, in shared, so the client's countdown copy and this date can
+      // never disagree about when the week is up.
+      dueAt: allergenDueAt(lastExposureAt, status),
       status,
       overridden,
     };

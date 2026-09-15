@@ -171,6 +171,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
           .select({
             babyId: allergenOverrides.babyId,
             allergenKey: allergenOverrides.allergenKey,
+            establishedAt: allergenOverrides.establishedAt,
             createdAt: allergenOverrides.createdAt,
           })
           .from(allergenOverrides)
@@ -459,6 +460,9 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       allergenOverrides: allergenOverrideRows.map((row) => ({
         babyId: row.babyId,
         allergenKey: row.allergenKey,
+        // v15: the date the mark CLAIMS, which is `createdAt` for every mark
+        // taken at its default and differs only when the parent backdated one.
+        establishedAt: row.establishedAt.toISOString(),
         createdAt: row.createdAt.toISOString(),
       })),
       customFoods: customFoodRows.map((row) => ({

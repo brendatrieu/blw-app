@@ -53,6 +53,36 @@ export function backdatedBucket(servedAt: Date | string, now: Date = new Date())
   return "1d+";
 }
 
+/** The gap past which a chosen instant stops being "the moment I tapped". */
+const MARK_BACKDATE_SLACK_MS = 60 * 60_000;
+
+/**
+ * `allergen_marked.backdated` — whether the parent CHANGED the sheet's "When"
+ * field, expressed as "the chosen instant is more than an hour before the
+ * tap".
+ *
+ * The question this answers is "does the date picker earn its place?", so the
+ * cut has to be just past the width of an untouched field, not out at a whole
+ * day: the sheet defaults to the current minute, and a parent who scrolls
+ * back to yesterday evening, this morning, or two hours ago has used the
+ * feature exactly as much as one who scrolls back to March. Reusing
+ * `backdatedBucket`'s "1d+" edge (which exists to bucket a MEAL's serve time,
+ * a different question) would have counted every one of those as "now" and
+ * reported the picker as dead weight.
+ *
+ * An hour of slack, rather than a minute, because the field is a wheel of
+ * minutes over a clock the device only approximately shares with ours: a
+ * parent nudging it a few minutes, or a device an hour of DST out of step,
+ * is not making a claim about the past. Still the coarsest possible answer —
+ * one boolean, never the date, never how far back, never the allergen.
+ */
+export function isBackdatedMark(establishedAt: Date | string, now: Date = new Date()): boolean {
+  const at = typeof establishedAt === "string" ? Date.parse(establishedAt) : establishedAt.getTime();
+  // An unparseable date is not evidence the parent touched anything.
+  if (!Number.isFinite(at)) return false;
+  return now.getTime() - at > MARK_BACKDATE_SLACK_MS;
+}
+
 export function resultsBucket(count: number): Props<"catalog_filtered">["results"] {
   if (count <= 0) return "0";
   if (count <= 5) return "1-5";

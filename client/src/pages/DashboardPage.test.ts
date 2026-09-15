@@ -3,7 +3,7 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { Baby, StorageItem } from "@blw/shared";
+import { ALLERGEN_MAINTENANCE_DAYS, type AllergenProgressItem, type Baby, type StorageItem } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
 import { storageKeys } from "../features/storage/hooks.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
@@ -237,5 +237,87 @@ describe("DashboardPage storage ordering (item 333)", () => {
     // The five-day item is the one the HOME_STORAGE_LIMIT slice drops — it
     // would have survived under the cache's own order.
     expect(html).not.toContain("Five days of window");
+  });
+});
+
+// Item 365: one line under the allergen ring when an established allergen has
+// gone its maintenance week without a serve — and NOTHING when none has.
+describe("DashboardPage allergen due nudge (item 365)", () => {
+  const BABY: Baby = {
+    id: "baby-1",
+    name: "Baby",
+    birthDate: "2026-01-01",
+    notes: null,
+    archived: false,
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+
+  function agoIso(days: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return d.toISOString();
+  }
+
+  /** An established allergen last met `days` ago, with the `dueAt` the server
+   * derives from it — so "due" here means exactly what it means on the row. */
+  function allergen(slug: string, days: number): AllergenProgressItem {
+    const last = agoIso(days);
+    return {
+      allergenSlug: slug,
+      allergenName: slug,
+      introGuidance: "Guidance.",
+      exposures: 3,
+      firstAt: last,
+      lastServedAt: last,
+      establishedAt: null,
+      lastExposureAt: last,
+      dueAt: new Date(Date.parse(last) + ALLERGEN_MAINTENANCE_DAYS * 24 * 60 * 60 * 1000).toISOString(),
+      status: "established",
+      overridden: false,
+    };
+  }
+
+  function renderWithAllergens(items: AllergenProgressItem[]): string {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(babyKeys.list(false), [BABY]);
+    queryClient.setQueryData(storageKeys.list("active"), { items: [] });
+    queryClient.setQueryData(trackingKeys.allergenProgress(BABY.id), { items });
+    queryClient.setQueryData([...trackingKeys.meals(BABY.id), { limit: 100 }], { items: [] });
+    return renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(MemoryRouter, null, createElement(DashboardPage, null)),
+      ),
+    );
+  }
+
+  it("says nothing when nothing is due", () => {
+    const html = renderWithAllergens([allergen("peanut", 1), allergen("egg", ALLERGEN_MAINTENANCE_DAYS - 1)]);
+    expect(html).not.toContain("due for a serve");
+  });
+
+  it("uses the singular for exactly one due allergen", () => {
+    const html = renderWithAllergens([allergen("peanut", ALLERGEN_MAINTENANCE_DAYS), allergen("egg", 2)]);
+    expect(html).toContain("1 allergen due for a serve");
+    expect(html).not.toContain("allergens due for a serve");
+  });
+
+  it("counts and pluralizes when more than one is due, linking to that baby's ladder", () => {
+    const html = renderWithAllergens([
+      allergen("peanut", ALLERGEN_MAINTENANCE_DAYS + 3),
+      allergen("egg", ALLERGEN_MAINTENANCE_DAYS),
+      allergen("wheat", 0),
+    ]);
+    expect(html).toContain("2 allergens due for a serve");
+    expect(html).toMatch(
+      new RegExp(`<a [^>]*href="/babies/${BABY.id}/allergens"[^>]*>2 allergens due for a serve</a>`),
+    );
+  });
+
+  it("keeps the nudge OUTSIDE the ring card — a link may not nest in a link", () => {
+    const html = renderWithAllergens([allergen("peanut", ALLERGEN_MAINTENANCE_DAYS)]);
+    expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
   });
 });

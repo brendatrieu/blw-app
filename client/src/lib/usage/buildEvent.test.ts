@@ -87,6 +87,7 @@ const SAMPLES: { [N in UsageEvent["name"]]: Extract<UsageEvent, { name: N }>["pr
   client_error: { route_pattern: "/*", kind: "chunk_load", status: "none" },
   usage_sharing_changed: { enabled: false },
   feedback_sent: {},
+  allergen_marked: { action: "undo", backdated: false },
 };
 
 describe("buildEvent — every catalog entry round-trips", () => {

@@ -28,6 +28,7 @@ import {
   backdatedBucket,
   failureKind,
   foodCountBucket,
+  isBackdatedMark,
   isOffline,
   lookupRecipeKind,
   mealViaFromLocation,
@@ -83,6 +84,14 @@ export function useAllergenProgress(babyId: string | undefined) {
   });
 }
 
+export interface MarkAllergenEstablishedVariables {
+  allergenSlug: string;
+  /** ISO instant the parent says this allergen was established — the
+   * maintenance countdown runs from here, so it is required rather than
+   * optional: an omitted one would silently restart the clock at "now". */
+  establishedAt: string;
+}
+
 /**
  * PUT /api/babies/:babyId/allergens/:key/established — "we already
  * established this before the app" override; see `unionAllergenStatus` in
@@ -91,9 +100,15 @@ export function useAllergenProgress(babyId: string | undefined) {
 export function useMarkAllergenEstablished(babyId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (allergenSlug: string) => {
+    mutationFn: ({ allergenSlug, establishedAt }: MarkAllergenEstablishedVariables) => {
       if (!babyId) throw new Error("useMarkAllergenEstablished called with no active baby");
-      return putAllergenOverride(babyId, allergenSlug);
+      return putAllergenOverride(babyId, allergenSlug, { establishedAt });
+    },
+    onSuccess: (_result, variables) => {
+      // Never the date and never the allergen: how far back a parent had to
+      // reach is a product question ("is the When field earning its keep?"),
+      // and `backdated` is the whole answer.
+      track("allergen_marked", { action: "mark", backdated: isBackdatedMark(variables.establishedAt) });
     },
     onSettled: () => {
       if (!babyId) return;
@@ -109,6 +124,11 @@ export function useUndoAllergenEstablished(babyId: string | undefined) {
     mutationFn: (allergenSlug: string) => {
       if (!babyId) throw new Error("useUndoAllergenEstablished called with no active baby");
       return deleteAllergenOverride(babyId, allergenSlug);
+    },
+    onSuccess: () => {
+      // Undo carries no date at all — there is nothing to backdate, so the
+      // flag is false rather than "unknown".
+      track("allergen_marked", { action: "undo", backdated: false });
     },
     onSettled: () => {
       if (!babyId) return;

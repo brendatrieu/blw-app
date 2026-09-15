@@ -40,7 +40,12 @@ vi.mock("../../lib/usage/track.js", async (importOriginal) => {
 });
 
 import { ApiError } from "../../lib/api.js";
-import { useCreateMeal, useUpdateMeal } from "./hooks.js";
+import {
+  useCreateMeal,
+  useMarkAllergenEstablished,
+  useUndoAllergenEstablished,
+  useUpdateMeal,
+} from "./hooks.js";
 
 const fakeQueryClient = {
   getQueryData: () => undefined,
@@ -160,5 +165,52 @@ describe("meal_save_failed", () => {
     expect(tracked).toEqual([]);
     update.onError!(new ApiError(500, "internal_error") as never);
     expect(tracked.map(([name]) => name)).toEqual(["meal_save_failed"]);
+  });
+});
+
+describe("allergen_marked (item 365)", () => {
+  it("fires on a mark, with the date reduced to a single backdated flag", () => {
+    vi.setSystemTime(new Date("2026-09-13T12:00:00.000Z"));
+    const mark = optionsFor(() => useMarkAllergenEstablished("baby-1"));
+    // An untouched "When" is the sheet's default: the current minute.
+    mark.onSuccess!(undefined as never, { allergenSlug: "peanut", establishedAt: "2026-09-13T12:00:00.000Z" } as never);
+
+    expect(tracked).toEqual([["allergen_marked", { action: "mark", backdated: false }]]);
+    // Never the allergen, never the date.
+    expect(JSON.stringify(tracked)).not.toContain("peanut");
+    expect(JSON.stringify(tracked)).not.toContain("2026-09");
+    vi.useRealTimers();
+  });
+
+  // `backdated` answers "did the parent reach for the date picker", so the
+  // cut is an hour, not a day: a mark scrolled back to this morning is the
+  // picker earning its place exactly as much as one scrolled back to June.
+  it("flags a mark set more than an hour before the tap, not only one past a day", () => {
+    vi.setSystemTime(new Date("2026-09-13T12:00:00.000Z"));
+    const mark = optionsFor(() => useMarkAllergenEstablished("baby-1"));
+    mark.onSuccess!(undefined as never, { allergenSlug: "egg", establishedAt: "2026-09-13T08:00:00.000Z" } as never);
+    mark.onSuccess!(undefined as never, { allergenSlug: "egg", establishedAt: "2026-06-01T09:00:00.000Z" } as never);
+
+    expect(tracked.map(([, props]) => props)).toEqual([
+      { action: "mark", backdated: true },
+      { action: "mark", backdated: true },
+    ]);
+    vi.useRealTimers();
+  });
+
+  it("still reads an hour-old default-ish instant as now, inside the slack", () => {
+    vi.setSystemTime(new Date("2026-09-13T12:00:00.000Z"));
+    const mark = optionsFor(() => useMarkAllergenEstablished("baby-1"));
+    mark.onSuccess!(undefined as never, { allergenSlug: "egg", establishedAt: "2026-09-13T11:00:00.000Z" } as never);
+
+    expect(tracked[0]![1]).toEqual({ action: "mark", backdated: false });
+    vi.useRealTimers();
+  });
+
+  it("fires on an undo too, which can never be backdated", () => {
+    const undo = optionsFor(() => useUndoAllergenEstablished("baby-1"));
+    undo.onSuccess!(undefined as never, "peanut" as never);
+
+    expect(tracked).toEqual([["allergen_marked", { action: "undo", backdated: false }]]);
   });
 });

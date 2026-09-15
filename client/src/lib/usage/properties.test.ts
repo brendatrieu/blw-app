@@ -13,6 +13,7 @@ import {
   failureKind,
   foodCountBucket,
   freshnessAtChange,
+  isBackdatedMark,
   isChunkLoadError,
   isOffline,
   lookupRecipeKind,
@@ -81,6 +82,28 @@ describe("buckets — a count is never sent as a number", () => {
     // A clock a little ahead of ours is "now", not a negative age.
     expect(backdatedBucket(new Date(now.getTime() + 60_000), now)).toBe("now");
     expect(backdatedBucket("not a date", now)).toBe("now");
+  });
+
+  it("isBackdatedMark asks whether the chosen instant is more than an hour before the tap", () => {
+    const now = new Date("2026-09-13T12:00:00.000Z");
+    const ago = (ms: number) => isBackdatedMark(new Date(now.getTime() - ms), now);
+    // An untouched "When" is the current minute.
+    expect(ago(0)).toBe(false);
+    expect(ago(30_000)).toBe(false);
+    expect(ago(59 * 60_000)).toBe(false);
+    // The boundary itself is still "now" — the slack absorbs a device an
+    // hour of DST out of step, not a parent making a claim about the past.
+    expect(ago(60 * 60_000)).toBe(false);
+    expect(ago(60 * 60_000 + 1)).toBe(true);
+    // Deliberately NOT `backdatedBucket`'s 1d+ edge: a parent who scrolled
+    // back to this morning has used the picker just as much as one who
+    // scrolled back to March.
+    expect(ago(3 * 60 * 60_000)).toBe(true);
+    expect(backdatedBucket(new Date(now.getTime() - 3 * 60 * 60_000), now)).toBe("<1d");
+    expect(ago(90 * 24 * 60 * 60_000)).toBe(true);
+    // A clock a little ahead of ours is not a backdate, and neither is junk.
+    expect(isBackdatedMark(new Date(now.getTime() + 60 * 60_000), now)).toBe(false);
+    expect(isBackdatedMark("not a date", now)).toBe(false);
   });
 
   it("statusBucket keeps the codes we act on and collapses the rest", () => {

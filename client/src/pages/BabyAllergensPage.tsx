@@ -4,6 +4,8 @@ import { useAllergenProgress } from "../features/tracking/hooks.js";
 import {
   ALLERGEN_STATUS_LABEL,
   ALLERGEN_STATUS_TONE,
+  DUE_BADGE_LABEL,
+  RECENCY_HINT_COPY,
   formatAllergenDate,
   resolveAllergenRowAction,
   resolveAllergenRecency,
@@ -23,8 +25,8 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
   // Info-region pattern (ServeLogList / StorageItemCard): everything that
   // describes the allergen is one anchor to its detail page, and the
   // Mark/Undo controls are SIBLINGS outside it — so the row stays a
-  // single-tap open while marking stays a single tap too, with zero
-  // interactive elements nested inside a link.
+  // single-tap open, with zero interactive elements nested inside a link.
+  // (Mark now opens a sheet to ask WHEN, item 365; Undo is still one tap.)
   const info = (
     <div className="flex flex-1 flex-col gap-2">
       <div className="flex items-center gap-3">
@@ -45,7 +47,20 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
         {recency.fact && <span>{recency.fact}</span>}
       </div>
       <p className="text-sm text-[var(--color-text)]">{item.introGuidance}</p>
-      {recency.hint && <p className="text-xs text-[var(--color-text-muted)]">{recency.hint}</p>}
+      {/* Due is a chip, not a sentence (item 365): the whole point is that it
+          catches the eye in a list of nine rows. The sentence it replaced is
+          still here — as the chip's tooltip and its screen-reader text — so
+          nothing an assistive reader used to hear has been dropped. */}
+      {recency.due ? (
+        <span className="w-fit">
+          <Badge tone="sunshine" title={RECENCY_HINT_COPY}>
+            {DUE_BADGE_LABEL}
+            <span className="sr-only">{` — ${RECENCY_HINT_COPY}`}</span>
+          </Badge>
+        </span>
+      ) : (
+        recency.countdown && <p className="text-xs text-[var(--color-text-muted)]">{recency.countdown}</p>
+      )}
     </div>
   );
 

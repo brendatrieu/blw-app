@@ -20,7 +20,7 @@ import { userPreferencesSchema } from "./preferences.js";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 14;
+export const ACCOUNT_EXPORT_VERSION = 15;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -122,12 +122,19 @@ export const exportStorageItemSchema = z.object({
 /**
  * A parent's "we established this one before we started using the app" mark
  * (v4). Exported as the raw override row — `allergenKey` is the allergen
- * slug, and there is deliberately no served date: an override asserts a
- * status, never an exposure, so the meal log stays the only source of dates.
+ * slug, and there is still no SERVED date: an override asserts a status,
+ * never an exposure, so the meal log stays the only source of serve dates.
+ *
+ * `establishedAt` (v15) is the mark's own date — when the parent says the
+ * allergen was established, which is what the maintenance countdown runs
+ * from. It equals `createdAt` for every mark made before item 363 (the
+ * migration backfilled it) and for every mark taken with the default "now",
+ * and differs only when the parent backdated one.
  */
 export const exportAllergenOverrideSchema = z.object({
   babyId: z.string(),
   allergenKey: z.string(),
+  establishedAt: z.string(),
   createdAt: z.string(),
 });
 
@@ -255,7 +262,7 @@ export const accountExportSchema = z.object({
    * was `fridgeItemId`/`pantryItemId` in those versions. Nothing else about the
    * rows changed — `location` still reads "fridge" | "freezer" | "counter". */
   storageItems: z.array(exportStorageItemSchema),
-  /** v4. Per-baby manual allergen marks, ordered by `createdAt`. */
+  /** v4. Per-baby manual allergen marks, ordered by `createdAt`; `establishedAt` (v15) is the date the mark itself claims. */
   allergenOverrides: z.array(exportAllergenOverrideSchema),
   /** v5. Foods this account added itself, ordered by name. The `foods` table
    * carries no created-at column, so there is no date to export here. */

@@ -31,7 +31,7 @@ friction all improve, which is why it is the one number at the top.
 | Does the symptom check lead anywhere? | triage share from `symptom_checks`; started → completed | completion < 50% → shorten the survey. Alarm share > 30% → clinical review of the rules |
 | AI chat vs BYO-key friction | `/chat` locked views → `ai_key_saved.ok`; error share; messages per key holder | locked → key < 10% AND errors > 30% → guided setup or a hosted-key tier. < 2 messages/week → deprioritise chat |
 | Do the single-food basics earn their keep? | share of recipe-attributed meals using a one-ingredient catalog recipe | < 10% → stop generating basics. > 40% → make the basic the default suggestion on food pages |
-| Does the allergen recency hint work? | tables only: a ≥ 14-day gap followed by that allergen within 7 days | < 25% → the hint is invisible; consider a Home nudge instead |
+| Does the allergen maintenance nudge work? | tables only: a ≥ 7-day gap followed by that allergen within 7 days of the row going due | < 25% → the badge and the Home line are invisible; consider a notification |
 | Is the PWA worth it? | standalone share; sessions with `offline_entered`; `meal_save_failed.offline` | standalone < 25% → install hint on More. Any offline save failures → build a "saved, will sync" state |
 | Quality gate | `client_error` per 100 sessions; crash rate per route | > 2 per 100 → stop feature work until it is back under. Any route above 0.5% of its own views → hotfix the same week |
 

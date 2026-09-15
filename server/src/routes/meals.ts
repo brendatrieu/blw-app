@@ -13,6 +13,7 @@ import {
   allergenKeyParamSchema,
   babyIdRouteParamSchema,
   createMealInputSchema,
+  markAllergenEstablishedInputSchema,
   mealIdParamSchema,
   mealsQuerySchema,
   updateMealInputSchema,
@@ -312,10 +313,21 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
   // -----------------------------------------------------------------------
   // PUT /api/babies/:babyId/allergens/:key/established
   // -----------------------------------------------------------------------
-  // "We already established this one before we started using the app."
-  // Idempotent by the unique index: marking an already-marked allergen is a
-  // no-op 204, never a conflict. Nothing about the derived ladder is written
-  // or reset — the override is a separate row the progress route unions in.
+  // "We already established this one before we started using the app", with
+  // an optional WHEN (item 364) defaulting to now — the maintenance countdown
+  // runs from that date, so a parent who established peanut in March can say
+  // so instead of resetting the clock by telling us about it today.
+  //
+  // Idempotent by the unique index, and now an UPSERT rather than a
+  // do-nothing: marking an already-marked allergen is still a 204, and it
+  // MOVES `established_at` to the new date. That is the only sane reading of
+  // re-marking — the row is one fact per (baby, allergen), and a parent
+  // opening the sheet again to pick a different date is correcting it, not
+  // asking for a second row. `created_at` is left alone, so "when did they
+  // first tell us" survives every correction.
+  //
+  // Nothing about the derived ladder is written or reset — the override is a
+  // separate row the progress route unions in.
   app.put("/api/babies/:babyId/allergens/:key/established", { preHandler: app.requireAuth }, async (request, reply) => {
     const params = babyIdRouteParamSchema.safeParse(request.params);
     if (!params.success) return notFound(reply);
@@ -324,10 +336,21 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     const key = await validateAllergenKey(db, (request.params as { key?: unknown }).key);
     if (!key.ok) return badRequest(reply, key.details);
 
+    // The body is optional in every sense: the pre-item-364 client (and any
+    // PWA still running that bundle) sends no body at all, which must keep
+    // meaning "now" rather than becoming a 400.
+    const body = markAllergenEstablishedInputSchema.safeParse(request.body ?? {});
+    if (!body.success) return badRequest(reply, body.error.flatten());
+
+    const establishedAt = body.data.establishedAt ? new Date(body.data.establishedAt) : new Date();
+
     await db
       .insert(allergenOverrides)
-      .values({ babyId: params.data.babyId, allergenKey: key.value })
-      .onConflictDoNothing();
+      .values({ babyId: params.data.babyId, allergenKey: key.value, establishedAt })
+      .onConflictDoUpdate({
+        target: [allergenOverrides.babyId, allergenOverrides.allergenKey],
+        set: { establishedAt },
+      });
 
     return reply.code(204).send();
   });

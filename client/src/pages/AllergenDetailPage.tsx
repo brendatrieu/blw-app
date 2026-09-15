@@ -5,7 +5,10 @@ import { useAllergenDetail } from "../features/tracking/hooks.js";
 import {
   ALLERGEN_STATUS_LABEL,
   ALLERGEN_STATUS_TONE,
+  DUE_BADGE_LABEL,
+  RECENCY_HINT_COPY,
   formatAllergenDate,
+  markedEstablishedAt,
   resolveAllergenRecency,
   resolveAllergenRowAction,
 } from "../features/tracking/allergenRow.js";
@@ -82,6 +85,7 @@ function AllergenDetailBody({
   const { progress, foods, exposures } = detail;
   const recency = resolveAllergenRecency(progress);
   const action = resolveAllergenRowAction(progress);
+  const markedAt = markedEstablishedAt(progress);
 
   return (
     <>
@@ -95,17 +99,26 @@ function AllergenDetailBody({
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
         <span>{progress.exposures === 1 ? "1 exposure" : `${progress.exposures} exposures`}</span>
         <span>First: {formatAllergenDate(progress.firstAt)}</span>
-        {/* Exact date when there is one — a detail page can afford it where
-            the ladder row only has room for "last served 3d ago". With no
-            serve at all (an override-only row) the recency helper's own
+        {/* Exact dates when there are any — a detail page can afford them
+            where the ladder row only has room for "last served 3d ago". The
+            two are separate facts on purpose: a mark is a parent saying the
+            serves happened before the app existed, so it can never be
+            printed as a serve. With neither, the recency helper's own
             phrasing says more than "Last served: —". */}
-        {progress.lastServedAt ? (
-          <span>Last served: {formatAllergenDate(progress.lastServedAt)}</span>
-        ) : (
-          recency.fact && <span>{recency.fact}</span>
-        )}
+        {progress.lastServedAt && <span>Last served: {formatAllergenDate(progress.lastServedAt)}</span>}
+        {markedAt && <span>Marked established: {formatAllergenDate(markedAt)}</span>}
+        {!progress.lastServedAt && !markedAt && recency.fact && <span>{recency.fact}</span>}
       </div>
-      {recency.hint && <p className="text-xs text-[var(--color-text-muted)]">{recency.hint}</p>}
+      {recency.due ? (
+        <span className="w-fit">
+          <Badge tone="sunshine" title={RECENCY_HINT_COPY}>
+            {DUE_BADGE_LABEL}
+            <span className="sr-only">{` — ${RECENCY_HINT_COPY}`}</span>
+          </Badge>
+        </span>
+      ) : (
+        recency.countdown && <p className="text-xs text-[var(--color-text-muted)]">{recency.countdown}</p>
+      )}
 
       <p className="text-sm text-[var(--color-text)]">{progress.introGuidance}</p>
 

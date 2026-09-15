@@ -325,6 +325,19 @@ const eventProps = {
    * ever learns that a message happened — which is the only thing it needs
    * to answer "does anybody use this". */
   feedback_sent: z.object({}).strict(),
+
+  /** An allergen marked established by hand, or that mark undone (item 366).
+   * `backdated` says only WHETHER the parent chose a date other than now —
+   * never which date, and never how far back: the allergen is already a
+   * closed set, and a real date on a real child's ladder is exactly the kind
+   * of fact this catalog exists to keep out. The allergen itself is not sent
+   * either; "do parents use this button" is the whole question. */
+  allergen_marked: z
+    .object({
+      action: z.enum(["mark", "undo"]),
+      backdated: z.boolean(),
+    })
+    .strict(),
 } as const;
 
 /** Every P1 event name, in catalog order. Pinned against the union below. */
@@ -348,6 +361,7 @@ export const USAGE_EVENT_NAMES = [
   "client_error",
   "usage_sharing_changed",
   "feedback_sent",
+  "allergen_marked",
 ] as const;
 
 export type UsageEventName = (typeof USAGE_EVENT_NAMES)[number];
@@ -482,6 +496,7 @@ export const usageEventSchema = z
     event("client_error"),
     event("usage_sharing_changed"),
     event("feedback_sent"),
+    event("allergen_marked"),
   ])
   .superRefine(rejectPii);
 
@@ -539,6 +554,7 @@ export const usageEventEnvelopeSchema = z
     envelope("client_error"),
     envelope("usage_sharing_changed"),
     envelope("feedback_sent"),
+    envelope("allergen_marked"),
   ])
   .superRefine((value, ctx) => {
     rejectPii(value, ctx);

@@ -718,7 +718,7 @@ describe("feedback and the account it belongs to", () => {
       headers: { cookie: parent.cookie },
     });
     const bundle = accountExportSchema.parse(response.json());
-    expect(bundle.exportVersion).toBe(14);
+    expect(bundle.exportVersion).toBe(15);
     expect(bundle.feedback).toHaveLength(1);
     // Exactly these four keys: what they wrote, what has been done with it,
     // where they were — and nothing about which admin touched it.

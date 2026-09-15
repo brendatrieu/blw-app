@@ -20,12 +20,20 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
 interface BadgeProps {
   children: ReactNode;
   tone?: BadgeTone;
+  /**
+   * Native tooltip spelling out a chip whose label is deliberately short
+   * (the allergen "Serve again soon" badge, whose full sentence is too long
+   * for a pill). Pair it with `sr-only` text inside `children` — a `title`
+   * alone is not reliably announced.
+   */
+  title?: string;
 }
 
 /** Small pill label used for tags, counts, and status chips across the app. */
-export function Badge({ children, tone = "neutral" }: BadgeProps) {
+export function Badge({ children, tone = "neutral", title }: BadgeProps) {
   return (
     <span
+      title={title}
       className={`inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${TONE_CLASSES[tone]}`}
     >
       {children}

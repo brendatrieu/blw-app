@@ -407,6 +407,13 @@ export const allergenOverrides = pgTable(
       .notNull()
       .references(() => babies.id, { onDelete: "cascade" }),
     allergenKey: text("allergen_key").notNull(),
+    // WHEN the parent says the allergen was established, which is a different
+    // fact from when they told us (`created_at`, never rewritten). The
+    // maintenance countdown (item 364) runs from this, so re-marking an
+    // allergen moves it and backdating a mark starts the clock in the past.
+    // Backfilled from `created_at` for every row that predates it — see
+    // migration 0017.
+    establishedAt: timestamp("established_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("allergen_overrides_baby_key_idx").on(t.babyId, t.allergenKey)],
