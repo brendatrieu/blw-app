@@ -5,13 +5,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { StorageItem } from "@blw/shared";
 import { CelebrationProvider } from "../../../components/ui/Celebration.js";
-import { StorageItemCard } from "./StorageItemCard.js";
+import { StorageItemCard, storageItemCluster, storageItemEmoji } from "./StorageItemCard.js";
+
+/** A container food, as the server now sends them (item 347). */
+function itemFood(slug: string, name: string, emoji: string | null = null) {
+  return { id: `food-${slug}`, slug, name, emoji };
+}
 
 const BASE_ITEM: StorageItem = {
   id: "11111111-1111-1111-1111-111111111111",
   label: null,
-  foodSlug: "avocado",
-  foodName: "Avocado",
+  foods: [itemFood("avocado", "Avocado")],
   recipeId: null,
   recipeTitle: null,
   preparedAt: "2026-08-20T10:00:00.000Z",
@@ -87,7 +91,7 @@ describe("StorageItemCard (render)", () => {
   });
 
   it("hides the Serve action for a label-only item (nothing the serve endpoint could log)", () => {
-    const html = renderCard({ ...BASE_ITEM, foodSlug: null, foodName: null, label: "Leftover soup" }, {});
+    const html = renderCard({ ...BASE_ITEM, foods: [], label: "Leftover soup" }, {});
     expect(html).not.toMatch(/>Serve</);
   });
 
@@ -298,5 +302,74 @@ describe("StorageItemCard freshness chip (item 333)", () => {
     expect(html).toContain("Finished");
     expect(html).not.toContain(">Expired<");
     expect(html).not.toContain("Best by");
+  });
+});
+
+// Item 347: a storage container holds a whole meal, so its card reads like a
+// meal row — the emoji cluster and the comma-joined names, sharing
+// `emojiCluster` with `MealCard` rather than a second copy of the rule.
+describe("StorageItemCard food cluster (item 347)", () => {
+  const threeFoods = [itemFood("chicken", "Chicken"), itemFood("carrot", "Carrot"), itemFood("rice", "Rice")];
+
+  it("titles a multi-food container with every name, comma-joined in saved order", () => {
+    expect(renderCard({ ...BASE_ITEM, foods: threeFoods })).toContain("Chicken, Carrot, Rice");
+  });
+
+  it("renders one emoji per food as a single aria-hidden run, with no overflow count at three", () => {
+    const html = renderCard({ ...BASE_ITEM, foods: threeFoods });
+    const { emojis, overflow } = storageItemCluster({ ...BASE_ITEM, foods: threeFoods });
+    expect(emojis).toHaveLength(3);
+    expect(overflow).toBe(0);
+    expect(html).toMatch(new RegExp(`<span aria-hidden="true" class="[^"]*text-xl[^"]*">${emojis.join("")}`));
+    expect(html).not.toMatch(/\+(?:<!-- -->)?\d/);
+  });
+
+  it("caps the cluster at three and shows a +N for the rest", () => {
+    const foods = Array.from({ length: 5 }, (_, i) => itemFood("avocado", `Food ${i}`));
+    const html = renderCard({ ...BASE_ITEM, foods });
+    expect(storageItemCluster({ ...BASE_ITEM, foods }).emojis).toHaveLength(3);
+    expect(html).toMatch(/\+(?:<!-- -->)?2/);
+  });
+
+  it("renders a one-food container exactly as it always did: one emoji, one name", () => {
+    const html = renderCard(BASE_ITEM);
+    expect(html).toContain("Avocado");
+    expect(storageItemCluster(BASE_ITEM)).toEqual({ emojis: ["🥑"], overflow: 0 });
+    expect(html).not.toMatch(/\+(?:<!-- -->)?\d/);
+  });
+
+  it("prefers a custom food's own emoji over the slug map", () => {
+    const foods = [itemFood("made-up-thing", "Priya's mash", "🫐")];
+    expect(storageItemCluster({ ...BASE_ITEM, foods }).emojis).toEqual(["🫐"]);
+  });
+
+  it("uses the same markup the meal row does — a shrink-0 flex run, so a long title never squeezes it", () => {
+    const html = renderCard({ ...BASE_ITEM, foods: threeFoods });
+    expect(html).toContain('<span aria-hidden="true" class="flex shrink-0 items-center text-xl leading-none">');
+  });
+
+  it("falls back to one stand-in glyph for a recipe container and for a label-only one", () => {
+    const recipe = { ...BASE_ITEM, foods: [], recipeId: "r1", recipeTitle: "Iron-Rich Purée" };
+    expect(storageItemCluster(recipe)).toEqual({ emojis: ["🍲"], overflow: 0 });
+    expect(renderCard(recipe)).toContain("Iron-Rich Purée");
+
+    const labelOnly = { ...BASE_ITEM, foods: [], label: "Leftover soup" };
+    expect(storageItemCluster(labelOnly)).toEqual({ emojis: ["📝"], overflow: 0 });
+    expect(renderCard(labelOnly)).toContain("Leftover soup");
+  });
+});
+
+// The single-glyph form the detail page's PageHeader needs, which has room
+// for exactly one.
+describe("storageItemEmoji", () => {
+  it("is the first food's emoji for a food container", () => {
+    expect(storageItemEmoji({ ...BASE_ITEM, foods: [itemFood("chicken", "Chicken"), itemFood("rice", "Rice")] })).toBe(
+      "🍗",
+    );
+  });
+
+  it("is a pot for a recipe container and a note for a label-only one", () => {
+    expect(storageItemEmoji({ ...BASE_ITEM, foods: [], recipeTitle: "Iron-Rich Purée" })).toBe("🍲");
+    expect(storageItemEmoji({ ...BASE_ITEM, foods: [], label: "Leftover soup" })).toBe("📝");
   });
 });

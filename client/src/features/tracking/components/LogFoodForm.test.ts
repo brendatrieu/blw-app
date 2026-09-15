@@ -11,6 +11,8 @@ import {
   LogFoodForm,
   resolveLeftoverSource,
   resolveMealSubmit,
+  type LeftoverSourceKind,
+  type LeftoversFieldsProps,
   type MealSubmitInput,
   type ResolvedLeftoverSource,
   resolveSubmitAction,
@@ -116,7 +118,7 @@ describe("LogFoodForm (render)", () => {
     expect(html).toContain("Save leftovers to storage");
     expect(html).not.toContain("Total servings");
     expect(html).not.toContain("Best by");
-    expect(html).not.toContain("Which food?");
+    expect(html).not.toContain("Save as");
   });
 
   // Item 152: the toggle is create-mode only — edit mode (a `meal` prop
@@ -321,32 +323,34 @@ describe("resolveLeftoverSource", () => {
   });
 
   it("resolves to the single food when no recipe is selected and exactly one food is", () => {
-    expect(resolveLeftoverSource(null, ["food-1"])).toEqual({ kind: "food", foodId: "food-1" });
+    expect(resolveLeftoverSource(null, ["food-1"])).toEqual({ kind: "foods", foodIds: ["food-1"] });
   });
 
-  it("resolves to 'choose' when no recipe is selected and several foods are", () => {
-    expect(resolveLeftoverSource(null, ["food-1", "food-2"])).toEqual({ kind: "choose" });
+  // Item 348: several foods are no longer a question to answer — they are
+  // the container. The old "choose" branch (and the select behind it) is gone.
+  it("resolves to EVERY selected food when no recipe is selected and several are", () => {
+    expect(resolveLeftoverSource(null, ["food-1", "food-2", "food-3"])).toEqual({
+      kind: "foods",
+      foodIds: ["food-1", "food-2", "food-3"],
+    });
   });
 
-  // Edge case backing the toggle's disabled-at-zero-foods state: there is no
-  // sensible source to infer, so it falls through to "choose" (which the
-  // component never actually renders a picker for, since the toggle itself
-  // is disabled — see the LogFoodForm render test above).
-  it("resolves to 'choose' at zero selected foods and no recipe (the disabled-toggle edge case)", () => {
-    expect(resolveLeftoverSource(null, [])).toEqual({ kind: "choose" });
+  it("keeps the foods in the order they were picked", () => {
+    const result = resolveLeftoverSource(null, ["food-3", "food-1", "food-2"]);
+    expect(result).toEqual({ kind: "foods", foodIds: ["food-3", "food-1", "food-2"] });
+  });
+
+  // Edge case backing the toggle's disabled-at-zero-foods state: an empty
+  // list, which the component never actually submits (the toggle itself is
+  // disabled — see the LogFoodForm render test above).
+  it("resolves to an empty foods list at zero selected foods and no recipe (the disabled-toggle edge case)", () => {
+    expect(resolveLeftoverSource(null, [])).toEqual({ kind: "foods", foodIds: [] });
   });
 
   // Kills a mutant that ignores recipeId and branches on foodIds alone.
-  it("never resolves to 'food' or 'choose' when a recipe is selected, even with zero foods", () => {
+  it("never resolves to 'foods' when a recipe is selected, even with zero foods", () => {
     const result = resolveLeftoverSource("recipe-1", []);
     expect(result.kind).toBe("recipe");
-  });
-
-  // Kills a mutant that always returns "choose" regardless of foodIds.length.
-  it("never resolves to 'choose' when exactly one food is selected and no recipe", () => {
-    const result = resolveLeftoverSource(null, ["food-1"]);
-    expect(result.kind).not.toBe("choose");
-    expect(result).toEqual({ kind: "food", foodId: "food-1" });
   });
 });
 
@@ -355,7 +359,7 @@ describe("buildLeftoverStorageInput", () => {
 
   it("builds a recipe-sourced payload: recipeId present, foodIds absent", () => {
     const source: ResolvedLeftoverSource = { kind: "recipe", recipeId: "recipe-1" };
-    const result = buildLeftoverStorageInput(source, "freezer", "", "", preparedAt);
+    const result = buildLeftoverStorageInput(source, "freezer", "", "", false, preparedAt);
     expect(result).toEqual({
       recipeId: "recipe-1",
       location: "freezer",
@@ -364,11 +368,12 @@ describe("buildLeftoverStorageInput", () => {
       bestBy: undefined,
     });
     expect(result).not.toHaveProperty("foodIds");
+    expect(result).not.toHaveProperty("separateItems");
   });
 
-  it("builds a food-sourced payload: foodIds: [foodId] present, recipeId absent", () => {
-    const source: ResolvedLeftoverSource = { kind: "food", foodId: "food-1" };
-    const result = buildLeftoverStorageInput(source, "fridge", "", "", preparedAt);
+  it("builds a food-sourced payload: foodIds present, recipeId absent", () => {
+    const source: ResolvedLeftoverSource = { kind: "foods", foodIds: ["food-1"] };
+    const result = buildLeftoverStorageInput(source, "fridge", "", "", false, preparedAt);
     expect(result).toEqual({
       foodIds: ["food-1"],
       location: "fridge",
@@ -379,16 +384,47 @@ describe("buildLeftoverStorageInput", () => {
     expect(result).not.toHaveProperty("recipeId");
   });
 
+  // Item 348: the whole point — a three-food meal's leftovers carry all
+  // three ids, not the one the parent was once made to choose.
+  it("sends EVERY selected food id, in order, for a multi-food meal", () => {
+    const source: ResolvedLeftoverSource = { kind: "foods", foodIds: ["food-3", "food-1", "food-2"] };
+    const result = buildLeftoverStorageInput(source, "fridge", "", "", false, preparedAt);
+    expect(result.foodIds).toEqual(["food-3", "food-1", "food-2"]);
+  });
+
+  it("round-trips the separate-containers flag once two or more foods make it meaningful", () => {
+    const source: ResolvedLeftoverSource = { kind: "foods", foodIds: ["food-1", "food-2"] };
+    expect(buildLeftoverStorageInput(source, "fridge", "", "", true, preparedAt).separateItems).toBe(true);
+    expect(buildLeftoverStorageInput(source, "fridge", "", "", false, preparedAt).separateItems).toBe(false);
+  });
+
+  // The flag is gated on the same predicate that shows the control, so a
+  // choice made at two foods and then undone (by removing one) cannot leak.
+  it("omits the flag entirely below two foods, even when it is set", () => {
+    const one: ResolvedLeftoverSource = { kind: "foods", foodIds: ["food-1"] };
+    expect(buildLeftoverStorageInput(one, "fridge", "", "", true, preparedAt)).not.toHaveProperty("separateItems");
+  });
+
+  it("never sends the flag for a recipe container, which the server rejects it on", () => {
+    const source: ResolvedLeftoverSource = { kind: "recipe", recipeId: "recipe-1" };
+    expect(buildLeftoverStorageInput(source, "fridge", "", "", true, preparedAt)).not.toHaveProperty("separateItems");
+  });
+
+  it("defaults to one container when the caller passes no choice at all", () => {
+    const source: ResolvedLeftoverSource = { kind: "foods", foodIds: ["food-1", "food-2"] };
+    expect(buildLeftoverStorageInput(source, "fridge", "", "").separateItems).toBe(false);
+  });
+
   it("parses a non-blank servingsTotal to a number and passes bestBy through", () => {
-    const source: ResolvedLeftoverSource = { kind: "food", foodId: "food-1" };
-    const result = buildLeftoverStorageInput(source, "counter", "6", "2026-09-10", preparedAt);
+    const source: ResolvedLeftoverSource = { kind: "foods", foodIds: ["food-1"] };
+    const result = buildLeftoverStorageInput(source, "counter", "6", "2026-09-10", false, preparedAt);
     expect(result.servingsTotal).toBe(6);
     expect(result.bestBy).toBe("2026-09-10");
   });
 
   it("treats a blank/whitespace servingsTotal as omitted, not zero or NaN", () => {
-    const source: ResolvedLeftoverSource = { kind: "food", foodId: "food-1" };
-    const result = buildLeftoverStorageInput(source, "fridge", "   ", "", preparedAt);
+    const source: ResolvedLeftoverSource = { kind: "foods", foodIds: ["food-1"] };
+    const result = buildLeftoverStorageInput(source, "fridge", "   ", "", false, preparedAt);
     expect(result.servingsTotal).toBeUndefined();
   });
 
@@ -396,20 +432,16 @@ describe("buildLeftoverStorageInput", () => {
   // that sends them as "" or null instead of omitting the keys entirely.
   it("never includes notes or quantityNote", () => {
     const source: ResolvedLeftoverSource = { kind: "recipe", recipeId: "recipe-1" };
-    const result = buildLeftoverStorageInput(source, "fridge", "", "", preparedAt);
+    const result = buildLeftoverStorageInput(source, "fridge", "", "", false, preparedAt);
     expect(result).not.toHaveProperty("notes");
     expect(result).not.toHaveProperty("quantityNote");
   });
 });
 
 describe("LeftoversFields (render)", () => {
-  const baseProps = {
-    selectedFoodOptions: [
-      { value: "food-1", label: "Avocado", emoji: "🥑" },
-      { value: "food-2", label: "Chicken", emoji: "🍗" },
-    ],
-    chosenFoodId: "food-1",
-    onChosenFoodIdChange: () => {},
+  const baseProps: Omit<LeftoversFieldsProps, "source"> = {
+    containerChoice: "one",
+    onContainerChoiceChange: () => {},
     location: "fridge" as const,
     onLocationChange: () => {},
     servingsTotal: "",
@@ -418,30 +450,57 @@ describe("LeftoversFields (render)", () => {
     onBestByChange: () => {},
   };
 
+  const render = (source: LeftoverSourceKind, props: Partial<typeof baseProps> = {}) =>
+    renderToString(createElement(LeftoversFields, { ...baseProps, ...props, source }));
+
   it("renders the location segments, servings, and best-by fields for every source kind", () => {
-    const html = renderToString(createElement(LeftoversFields, { ...baseProps, source: { kind: "recipe" } }));
+    const html = render({ kind: "recipe" });
     expect(html).toContain("Location");
     expect(html).toMatch(/Total servings(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
     expect(html).toMatch(/Best by(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
   });
 
-  it("hides the 'Which food?' select when the source is a recipe", () => {
-    const html = renderToString(createElement(LeftoversFields, { ...baseProps, source: { kind: "recipe" } }));
-    expect(html).not.toContain("Which food?");
+  // Item 348: the select that made a parent throw away two of three foods is
+  // gone from every source kind, for good.
+  it("never asks 'Which food?' again — not for a recipe, one food, or several", () => {
+    const sources: LeftoverSourceKind[] = [
+      { kind: "recipe" },
+      { kind: "foods", foodIds: ["food-1"] },
+      { kind: "foods", foodIds: ["food-1", "food-2", "food-3"] },
+    ];
+    for (const source of sources) {
+      expect(render(source)).not.toContain("Which food?");
+    }
   });
 
-  it("hides the 'Which food?' select when the source is a single resolved food", () => {
-    const html = renderToString(
-      createElement(LeftoversFields, { ...baseProps, source: { kind: "food", foodId: "food-1" } }),
-    );
-    expect(html).not.toContain("Which food?");
-  });
+  describe("the 'Save as' choice (item 348)", () => {
+    it("is shown, as a radiogroup with both containers, from two foods up", () => {
+      const html = render({ kind: "foods", foodIds: ["food-1", "food-2"] });
+      expect(html).toContain("Save as");
+      expect(html).toMatch(/role="radiogroup"[^>]*aria-label="Save as"/);
+      expect(html).toContain("One container");
+      expect(html).toContain("Separate containers");
+    });
 
-  it("shows the 'Which food?' select, with each selected food's emoji and name, when the source is ambiguous", () => {
-    const html = renderToString(createElement(LeftoversFields, { ...baseProps, source: { kind: "choose" } }));
-    expect(html).toContain("Which food?");
-    expect(html).toMatch(/<option[^>]*value="food-1"[^>]*>🥑\s*(?:<!-- -->)?\s*Avocado</);
-    expect(html).toMatch(/<option[^>]*value="food-2"[^>]*>🍗\s*(?:<!-- -->)?\s*Chicken</);
+    it("defaults to One container — the segment checked before anyone touches it", () => {
+      const html = render({ kind: "foods", foodIds: ["food-1", "food-2"] });
+      expect(html).toMatch(/aria-checked="true"[^>]*>(?:<!-- -->)?\s*One container</);
+      expect(html).toMatch(/aria-checked="false"[^>]*>(?:<!-- -->)?\s*Separate containers</);
+    });
+
+    it("follows the caller's choice when it is 'separate'", () => {
+      const html = render({ kind: "foods", foodIds: ["food-1", "food-2"] }, { containerChoice: "separate" });
+      expect(html).toMatch(/aria-checked="true"[^>]*>(?:<!-- -->)?\s*Separate containers</);
+    });
+
+    it("is hidden at one food — one food is one container either way", () => {
+      expect(render({ kind: "foods", foodIds: ["food-1"] })).not.toContain("Save as");
+    });
+
+    it("is hidden at zero foods, and for a recipe container", () => {
+      expect(render({ kind: "foods", foodIds: [] })).not.toContain("Save as");
+      expect(render({ kind: "recipe" })).not.toContain("Save as");
+    });
   });
 });
 
@@ -459,7 +518,7 @@ describe("resolveSubmitAction (no-double-meal guard)", () => {
 
 describe("buildLeftoverStorageInput default preparedAt", () => {
   it("minute-truncates the default preparedAt (seconds and ms are zero)", () => {
-    const input = buildLeftoverStorageInput({ kind: "food", foodId: "f-1" }, "fridge", "", "");
+    const input = buildLeftoverStorageInput({ kind: "foods", foodIds: ["f-1"] }, "fridge", "", "");
     const prepared = new Date(input.preparedAt!);
     expect(prepared.getSeconds()).toBe(0);
     expect(prepared.getMilliseconds()).toBe(0);

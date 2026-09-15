@@ -20,7 +20,7 @@ import { userPreferencesSchema } from "./preferences.js";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 12;
+export const ACCOUNT_EXPORT_VERSION = 13;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -96,11 +96,15 @@ export const exportFavoriteSchema = z.object({
  * `status` plus `statusChangedAt` is the history, so nothing is filtered out.
  * v3 adds the optional servings-tracking pair, the packaging `bestBy` date,
  * and the free-form container `notes`.
+ *
+ * v13 replaces the single `foodId`/`foodName` pair with `foods`, an ordered
+ * list: a container holds a whole meal now (item 345), so a row that used to
+ * name one food can name several. A pre-migration single-food row exports as
+ * a one-element list, and a recipe or label-only row as an empty one.
  */
 export const exportStorageItemSchema = z.object({
   id: z.string(),
-  foodId: z.string().nullable(),
-  foodName: z.string().nullable(),
+  foods: z.array(z.object({ foodId: z.string(), foodName: z.string() })),
   recipeId: z.string().nullable(),
   recipeTitle: z.string().nullable(),
   label: z.string().nullable(),

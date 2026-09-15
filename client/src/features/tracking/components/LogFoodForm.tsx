@@ -1,21 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CreateStorageItemInput, MealItem, StorageLocation } from "@blw/shared";
 import { useFoods, useRecipe } from "../../catalog/hooks.js";
-import { FoodPicker, foodPickerOption } from "../../catalog/components/FoodPicker.js";
+import { FoodPicker } from "../../catalog/components/FoodPicker.js";
 import { RecipePicker } from "../../catalog/components/RecipePicker.js";
 import { useCreateMeal, useUpdateMeal } from "../hooks.js";
 import { applyRecipeIngredients, recipeIngredientFoodIds } from "../recipeChips.js";
 import { useCreateStorageItem } from "../../storage/hooks.js";
-import { LOCATIONS } from "../../storage/format.js";
+import { LOCATIONS, offersContainerChoice, type ContainerChoice } from "../../storage/format.js";
+import { ContainerChoiceField } from "../../storage/components/ContainerChoiceField.js";
 import { BEST_BY_BEFORE_PREPARED_MESSAGE, isBestByBeforePrepared } from "../../storage/freshness.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
-import { Select } from "../../../components/ui/Select.js";
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.js";
 import { DateField } from "../../../components/ui/DateField.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
 import { Switch } from "../../../components/ui/Switch.js";
-import { type MultiComboboxOption } from "../../../components/ui/MultiCombobox.js";
 import { Button } from "../../../components/ui/Button.js";
 import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 
@@ -48,45 +47,59 @@ export function resolveMealSubmit(mealId: string | undefined, input: MealSubmitI
 }
 
 /**
- * What the "+ Save leftovers to storage" toggle should show, inferred from
- * the meal being logged (item 152): a recipe wins outright when one is
- * selected (its ingredients are the leftovers, even if the user has also
- * tweaked the food chips); with no recipe, exactly one selected food is
- * unambiguous; two or more (or zero, though the toggle is disabled at zero
- * — see `LogFoodForm`) require the parent to pick which food the leftovers
- * came from via a compact select.
+ * What the "+ Save leftovers to storage" toggle saves, inferred from the meal
+ * being logged (item 152): a recipe wins outright when one is selected (its
+ * ingredients are the leftovers, even if the user has also tweaked the food
+ * chips); otherwise it is EVERY selected food.
+ *
+ * There is no third "which one?" branch any more (item 348). A container
+ * holds a whole meal now, so a three-food meal's leftovers are one container
+ * of three foods — the question the old "Which food?" select asked (and made
+ * the parent answer by throwing two of the three away) no longer has a
+ * reason to exist. What replaces it is a choice the parent may ignore: one
+ * container, or one per food.
  */
-export type LeftoverSourceKind = { kind: "recipe" } | { kind: "food"; foodId: string } | { kind: "choose" };
+export type LeftoverSourceKind = { kind: "recipe" } | { kind: "foods"; foodIds: string[] };
 
 export function resolveLeftoverSource(recipeId: string | null, foodIds: string[]): LeftoverSourceKind {
   if (recipeId) return { kind: "recipe" };
-  if (foodIds.length === 1) return { kind: "food", foodId: foodIds[0]! };
-  return { kind: "choose" };
+  return { kind: "foods", foodIds };
 }
 
-/** The leftover source once fully resolved (a "choose" kind picks a concrete
- * foodId before this point) — what `buildLeftoverStorageInput` actually needs. */
-export type ResolvedLeftoverSource = { kind: "recipe"; recipeId: string } | { kind: "food"; foodId: string };
+/** The leftover source once the recipe branch has its concrete id attached —
+ * what `buildLeftoverStorageInput` actually needs. */
+export type ResolvedLeftoverSource = { kind: "recipe"; recipeId: string } | { kind: "foods"; foodIds: string[] };
 
 /**
  * Builds the `createStorageItem` payload for a leftovers-from-this-meal save
- * (item 153): recipe-sourced carries `recipeId`, food-sourced carries
- * `foodIds: [foodId]` — never both. `notes`/`quantityNote` are deliberately
- * omitted (not auto-copied from the meal) rather than sent as `null`/`""`,
- * so the storage item starts with none of its own. Pure so the exact payload
- * shape — and the recipe/food branch split — is mutation-tested without a
- * DOM environment.
+ * (item 153): recipe-sourced carries `recipeId`, food-sourced carries EVERY
+ * selected food's id (item 348) — never both. `notes`/`quantityNote` are
+ * deliberately omitted (not auto-copied from the meal) rather than sent as
+ * `null`/`""`, so the storage item starts with none of its own. Pure so the
+ * exact payload shape — and the recipe/foods branch split — is
+ * mutation-tested without a DOM environment.
+ *
+ * `separateItems` rides along only where the control that sets it is
+ * actually shown (`offersContainerChoice`): with one food it is meaningless,
+ * and a flag left over from a food the parent has since removed must not
+ * reach the server.
  */
 export function buildLeftoverStorageInput(
   source: ResolvedLeftoverSource,
   location: StorageLocation,
   servingsTotal: string,
   bestBy: string,
+  separateItems = false,
   preparedAt: Date = nowAtMinute(),
 ): CreateStorageItemInput {
   const trimmedServings = servingsTotal.trim();
   return {
-    ...(source.kind === "recipe" ? { recipeId: source.recipeId } : { foodIds: [source.foodId] }),
+    ...(source.kind === "recipe"
+      ? { recipeId: source.recipeId }
+      : {
+          foodIds: source.foodIds,
+          ...(offersContainerChoice(source.foodIds) ? { separateItems } : {}),
+        }),
     location,
     preparedAt: preparedAt.toISOString(),
     servingsTotal: trimmedServings ? Number(trimmedServings) : undefined,
@@ -98,11 +111,10 @@ const LEFTOVER_LOCATION_OPTIONS = LOCATIONS.map((loc) => ({ value: loc.value, la
 
 export interface LeftoversFieldsProps {
   source: LeftoverSourceKind;
-  /** The meal's currently selected foods, for the "choose" select — same
-   * emoji + name idiom as the recipe select and the food combobox's chips. */
-  selectedFoodOptions: MultiComboboxOption[];
-  chosenFoodId: string;
-  onChosenFoodIdChange: (foodId: string) => void;
+  /** "One container" or "Separate containers" — only ever asked, and only
+   * ever read, when the source is two or more foods. */
+  containerChoice: ContainerChoice;
+  onContainerChoiceChange: (choice: ContainerChoice) => void;
   location: StorageLocation;
   onLocationChange: (location: StorageLocation) => void;
   servingsTotal: string;
@@ -115,18 +127,17 @@ export interface LeftoversFieldsProps {
 }
 
 /**
- * The expanded controls behind "+ Save leftovers to storage": a "Which
- * food?" select (only when the source is ambiguous — see
- * `resolveLeftoverSource`), the location segments, and the same optional
- * servings/best-by fields `AddStorageItemForm` uses. Exported standalone so
- * it can be render-tested directly (item 154) without needing DOM
- * interaction to expand the toggle first.
+ * The expanded controls behind "+ Save leftovers to storage": the "Save as"
+ * choice (only with two or more foods — see `offersContainerChoice`), the
+ * location segments, and the same optional servings/best-by fields
+ * `AddStorageItemForm` uses. Exported standalone so it can be render-tested
+ * directly (item 154) without needing DOM interaction to expand the toggle
+ * first.
  */
 export function LeftoversFields({
   source,
-  selectedFoodOptions,
-  chosenFoodId,
-  onChosenFoodIdChange,
+  containerChoice,
+  onContainerChoiceChange,
   location,
   onLocationChange,
   servingsTotal,
@@ -137,21 +148,12 @@ export function LeftoversFields({
 }: LeftoversFieldsProps) {
   return (
     <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
-      {source.kind === "choose" && (
-        <Field label="Which food?" htmlFor="log-food-leftover-source">
-          <Select
-            id="log-food-leftover-source"
-            value={chosenFoodId}
-            onChange={(e) => onChosenFoodIdChange(e.target.value)}
-          >
-            {selectedFoodOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.emoji ? `${option.emoji} ` : ""}
-                {option.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
+      {source.kind === "foods" && (
+        <ContainerChoiceField
+          foodIds={source.foodIds}
+          value={containerChoice}
+          onChange={onContainerChoiceChange}
+        />
       )}
 
       <div className="flex flex-col gap-1.5">
@@ -274,8 +276,8 @@ export function validateLogFood(values: {
 export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecipeId }: LogFoodFormProps) {
   // `FoodPicker` owns the food combobox (and its own `useFoods()` — the same
   // query key, so this shares one fetch with it). The list is still read here
-  // for the two things the picker doesn't own: mapping a recipe's ingredient
-  // slugs to food ids, and the leftovers "which food?" select's options.
+  // for the one thing the picker doesn't own: mapping a recipe's ingredient
+  // slugs to food ids.
   const { data: foodsData } = useFoods();
   const updateMeal = useUpdateMeal(babyId);
   const isEditing = Boolean(meal);
@@ -292,7 +294,10 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
   const [leftoverLocation, setLeftoverLocation] = useState<StorageLocation>("fridge");
   const [leftoverServingsTotal, setLeftoverServingsTotal] = useState("");
   const [leftoverBestBy, setLeftoverBestBy] = useState("");
-  const [chosenLeftoverFoodIdState, setChosenLeftoverFoodId] = useState("");
+  // Item 348: one container is the default — it is what a box of leftovers
+  // from one meal actually is, and the parent only has to touch this to say
+  // otherwise.
+  const [leftoverContainerChoice, setLeftoverContainerChoice] = useState<ContainerChoice>("one");
   const [storageFailure, setStorageFailure] = useState<CreateStorageItemInput | null>(null);
   const createStorageItem = useCreateStorageItem();
   // Declared here, below the leftovers switch, because `meal_logged` carries
@@ -308,19 +313,9 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
   const foods = foodsData?.foods ?? [];
   const { data: recipeDetail } = useRecipe(recipeId || undefined);
 
-  const foodOptions: MultiComboboxOption[] = useMemo(() => foods.map(foodPickerOption), [foods]);
   const slugToFoodId = useMemo(() => new Map(foods.map((food) => [food.slug, food.id])), [foods]);
 
   const leftoverSource = resolveLeftoverSource(recipeId || null, foodIds);
-  const selectedFoodOptions = useMemo(
-    () => foodOptions.filter((option) => foodIds.includes(option.value)),
-    [foodOptions, foodIds],
-  );
-  // The "choose" select's effective value: the user's own pick once made,
-  // else the first selected food (so the native <select> never opens on a
-  // blank/invalid value while still requiring a real user choice to submit
-  // anything other than that default).
-  const chosenLeftoverFoodId = chosenLeftoverFoodIdState || foodIds[0] || "";
 
   // Tracks which currently-selected foods came from the active recipe (so
   // clearing/switching removes exactly those, per `applyRecipeIngredients`)
@@ -372,13 +367,13 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
     { foods: "log-food-food", leftoverBestBy: "log-food-leftover-best-by" },
   );
 
-  /** Resolves `leftoverSource`'s "choose" branch to a concrete food, using
-   * the select's effective value — the only place a `LeftoverSourceKind`
-   * becomes a `ResolvedLeftoverSource` ready for `buildLeftoverStorageInput`. */
+  /** Attaches the recipe branch's concrete id — the only place a
+   * `LeftoverSourceKind` becomes a `ResolvedLeftoverSource` ready for
+   * `buildLeftoverStorageInput`. Null means there is nothing to save, which
+   * only the zero-food case can produce (and the toggle is disabled there). */
   function resolveFinalLeftoverSource(): ResolvedLeftoverSource | null {
     if (leftoverSource.kind === "recipe") return recipeId ? { kind: "recipe", recipeId } : null;
-    if (leftoverSource.kind === "food") return { kind: "food", foodId: leftoverSource.foodId };
-    return chosenLeftoverFoodId ? { kind: "food", foodId: chosenLeftoverFoodId } : null;
+    return leftoverSource.foodIds.length > 0 ? { kind: "foods", foodIds: leftoverSource.foodIds } : null;
   }
 
   /** Attempts the storage half of a leftovers save; both success and Retry
@@ -435,7 +430,15 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
               onDone();
               return;
             }
-            saveStorage(buildLeftoverStorageInput(finalSource, leftoverLocation, leftoverServingsTotal, leftoverBestBy));
+            saveStorage(
+              buildLeftoverStorageInput(
+                finalSource,
+                leftoverLocation,
+                leftoverServingsTotal,
+                leftoverBestBy,
+                leftoverContainerChoice === "separate",
+              ),
+            );
           },
         });
         break;
@@ -498,9 +501,8 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
           {leftoversOpen && (
             <LeftoversFields
               source={leftoverSource}
-              selectedFoodOptions={selectedFoodOptions}
-              chosenFoodId={chosenLeftoverFoodId}
-              onChosenFoodIdChange={setChosenLeftoverFoodId}
+              containerChoice={leftoverContainerChoice}
+              onContainerChoiceChange={setLeftoverContainerChoice}
               location={leftoverLocation}
               onLocationChange={setLeftoverLocation}
               servingsTotal={leftoverServingsTotal}

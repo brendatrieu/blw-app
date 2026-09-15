@@ -26,7 +26,7 @@ export const STORAGE_MENU_ROW_LABEL: Record<StorageMenuRow, string> = {
  * serve as, does this caller handle restoring — come in as flags.
  */
 export function storageMenuRows(
-  item: Pick<StorageItem, "status" | "foodSlug" | "recipeTitle">,
+  item: Pick<StorageItem, "status" | "foods" | "recipeTitle">,
   { hasBaby, canRestore }: { hasBaby: boolean; canRestore: boolean },
 ): StorageMenuRow[] {
   const actions = resolveStorageItemMenuActions(item);

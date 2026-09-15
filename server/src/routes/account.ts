@@ -31,6 +31,7 @@ import {
   foods,
   mealFoods,
   meals,
+  storageItemFoods,
   storageItems,
   recipeIngredients,
   recipeVariants,
@@ -42,6 +43,7 @@ import {
   userAiKeys,
   userPreferences,
 } from "../db/schema.js";
+import { loadStorageItemFoods } from "../services/storage.js";
 
 /**
  * Deletion verifies a password, which makes it a credential oracle. The
@@ -198,8 +200,6 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
     const storageRows = await db
       .select({
         id: storageItems.id,
-        foodId: storageItems.foodId,
-        foodName: foods.name,
         recipeId: storageItems.recipeId,
         recipeTitle: recipes.title,
         label: storageItems.label,
@@ -214,13 +214,19 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         notes: storageItems.notes,
       })
       .from(storageItems)
-      // Left joins: a storage row can be a free-text label with neither a
-      // catalog food nor a recipe behind it.
-      .leftJoin(foods, eq(storageItems.foodId, foods.id))
+      // Left join: a storage row can be a free-text label with no recipe
+      // behind it. What it HOLDS comes from `storage_item_foods` below — a
+      // container holds a whole meal (item 345), so it can name several
+      // foods, or none at all.
       .leftJoin(recipes, eq(storageItems.recipeId, recipes.id))
       .where(eq(storageItems.userId, userId))
       // Every row, `active` and closed alike — status history is the point.
       .orderBy(asc(storageItems.preparedAt));
+
+    const storageFoodsByItemId = await loadStorageItemFoods(
+      db,
+      storageRows.map((row) => row.id),
+    );
 
     // Foods this account added itself. Only the fields the parent chose:
     // the curated columns on a custom row are inert placeholders the app
@@ -417,8 +423,9 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       })),
       storageItems: storageRows.map((row) => ({
         id: row.id,
-        foodId: row.foodId,
-        foodName: row.foodName,
+        // v13: every food in the container, in saved order. A row created
+        // before migration 0015 has exactly one, which is what it always had.
+        foods: (storageFoodsByItemId.get(row.id) ?? []).map((food) => ({ foodId: food.id, foodName: food.name })),
         recipeId: row.recipeId,
         recipeTitle: row.recipeTitle,
         label: row.label,
@@ -606,14 +613,15 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       //   user -> session, account            (better-auth's own tables)
       //
       // The exception is the account's own custom foods. `meal_foods.food_id`
-      // and `storage_items.food_id` deliberately do NOT cascade — eaten
-      // history must survive a food being tidied away — and Postgres checks
-      // those references while the cascade is still running, so a lone
-      // `delete(user)` trips the constraint even though every referencing row
-      // is on its way out in the same statement. Clearing them first, inside
-      // one transaction, keeps the whole wipe atomic. Only this user's rows
-      // can reference their own custom foods: nobody else can see one, let
-      // alone log or stock it.
+      // and `storage_item_foods.food_id` deliberately do NOT cascade — eaten
+      // history must survive a food being tidied away, and a container must
+      // not silently empty itself — and Postgres checks those references
+      // while the cascade is still running, so a lone `delete(user)` trips
+      // the constraint even though every referencing row is on its way out in
+      // the same statement. Clearing them first, inside one transaction,
+      // keeps the whole wipe atomic. Only this user's rows can reference
+      // their own custom foods: nobody else can see one, let alone log or
+      // stock it.
       await db.transaction(async (tx) => {
         const ownFoodIds = tx.select({ id: foods.id }).from(foods).where(eq(foods.ownerId, userId));
         const ownRecipeIds = tx.select({ id: recipes.id }).from(recipes).where(eq(recipes.ownerId, userId));
@@ -629,9 +637,24 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
           );
         // `storage_items.recipe_id` has no action at all, so a storage row made
         // from an own recipe would block the recipe's cascade the same way.
-        await tx
-          .delete(storageItems)
-          .where(or(inArray(storageItems.foodId, ownFoodIds), inArray(storageItems.recipeId, ownRecipeIds)));
+        // A container holding an own custom food is now found through the
+        // join table rather than a `food_id` column — and since one container
+        // can hold several foods, ONE own food anywhere in it takes the whole
+        // container, exactly as it did when that food was the whole item.
+        // (`storage_item_foods` itself cascades from `storage_items`, so
+        // deleting the container clears its rows.)
+        await tx.delete(storageItems).where(
+          or(
+            inArray(
+              storageItems.id,
+              tx
+                .select({ id: storageItemFoods.storageItemId })
+                .from(storageItemFoods)
+                .where(inArray(storageItemFoods.foodId, ownFoodIds)),
+            ),
+            inArray(storageItems.recipeId, ownRecipeIds),
+          ),
+        );
         // Deleting rows that are already gone is a no-op, which is what makes
         // a retried request safe.
         await tx.delete(user).where(eq(user.id, userId));

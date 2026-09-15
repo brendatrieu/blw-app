@@ -12,8 +12,7 @@ import {
 const ITEM: StorageItem = {
   id: "11111111-1111-1111-1111-111111111111",
   label: null,
-  foodSlug: "avocado",
-  foodName: "Avocado",
+  foods: [{ id: "food-1", slug: "avocado", name: "Avocado", emoji: null }],
   recipeId: null,
   recipeTitle: null,
   preparedAt: "2026-08-20T10:00:00.000Z",

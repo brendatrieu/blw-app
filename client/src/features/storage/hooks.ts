@@ -61,20 +61,35 @@ export function useCreateStorageItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateStorageItemInput) => createStorageItem(input),
-    onSuccess: (_created, input) => {
+    onSuccess: (created, input) => {
       // `via` comes from the route the form is on (and, for the two bare
       // `/storage/add` entry points, from the route it was reached from), so
       // a new "Add to storage" button anywhere is measured the day it links
       // here. `source` comes from the payload's own shape — a label-only
       // container is the one with neither a food nor a recipe, and its text
       // is never read.
-      track("storage_item_added", {
-        location: input.location,
-        source: storageSourceFromInput(input),
-        via: storageAddViaFromLocation(),
-        has_servings: input.servingsTotal !== undefined && input.servingsTotal !== null,
-        has_best_by: Boolean(input.bestBy),
-      });
+      //
+      // ONE event per CONTAINER the submission actually created (item 347):
+      // the default is a single container holding every food (one event,
+      // `food_count` = how many went in), and "Separate containers" is N
+      // single-food containers (N events, each `food_count: "1"`, all
+      // `split: true`). Counting containers rather than submissions is what
+      // makes those two readings comparable at all.
+      const source = storageSourceFromInput(input);
+      const via = storageAddViaFromLocation();
+      for (const item of created) {
+        track("storage_item_added", {
+          location: input.location,
+          source,
+          via,
+          has_servings: input.servingsTotal !== undefined && input.servingsTotal !== null,
+          has_best_by: Boolean(input.bestBy),
+          split: Boolean(input.separateItems),
+          // A recipe or label container names no foods of its own, so the
+          // bucket is omitted entirely rather than sent as a hollow "1".
+          ...(source === "food" ? { food_count: foodCountBucket(item.foods.length) } : {}),
+        });
+      }
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["storage"] });

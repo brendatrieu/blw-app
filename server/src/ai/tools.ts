@@ -15,7 +15,7 @@
 // schema below is still a `.strict`-equivalent object (`additionalProperties:
 // false` + `required`), which is the wire-level guarantee the task brief
 // actually cares about. Flagged in the phase brief.
-import { and, asc, eq, ilike, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, asc, eq, ilike, isNull, lte, or } from "drizzle-orm";
 import { betaTool } from "@anthropic-ai/sdk/helpers/beta/json-schema";
 import { ageInMonths, formatExtraIngredient, unionAllergenStatus } from "@blw/shared";
 import type { Database } from "../db/index.js";
@@ -29,10 +29,16 @@ import {
   meals,
   storageItems,
   recipes,
-  storageGuidelines,
 } from "../db/schema.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import { deriveIronFocus, loadRecipeNutrition, nutritionFor } from "../services/recipeNutrition.js";
+import {
+  deriveFreshness,
+  loadRecipeIngredientCategories,
+  loadStorageGuidelines,
+  loadStorageItemFoods,
+  resolveStorageWindowHours,
+} from "../services/storage.js";
 
 // ---------------------------------------------------------------------------
 // get_baby_profile
@@ -151,12 +157,6 @@ function buildBabyProfileTool(db: Database, userId: string, babyId: string | nul
 // get_storage
 // ---------------------------------------------------------------------------
 
-/** Same fallback window server/src/routes/storage.ts uses for an item with no
- * resolvable storage category — kept in sync by hand since duplicating the
- * whole hydration pipeline here for a model-facing summary isn't worth it. */
-const STORAGE_TOOL_FALLBACK_WINDOW = { fridgeHours: 48, freezerDays: 60, roomTempHours: 2 };
-const HOUR_MS = 60 * 60 * 1000;
-
 function buildStorageTool(db: Database, userId: string) {
   return betaTool({
     name: "get_storage",
@@ -166,42 +166,60 @@ function buildStorageTool(db: Database, userId: string) {
     run: async () => {
       const rows = await db
         .select({
+          id: storageItems.id,
           label: storageItems.label,
-          foodName: foods.name,
+          recipeId: storageItems.recipeId,
           recipeTitle: recipes.title,
           preparedAt: storageItems.preparedAt,
           location: storageItems.location,
-          foodStorageCategory: foods.storageCategory,
           recipeFridgeHoursOverride: recipes.fridgeHoursOverride,
           recipeFreezerOverride: recipes.freezerDaysOverride,
         })
         .from(storageItems)
-        .leftJoin(foods, eq(storageItems.foodId, foods.id))
         .leftJoin(recipes, eq(storageItems.recipeId, recipes.id))
         .where(and(eq(storageItems.userId, userId), eq(storageItems.status, "active")));
 
       if (rows.length === 0) return "Storage is empty — nothing prepared right now.";
 
-      const categories = [...new Set(rows.map((r) => r.foodStorageCategory).filter((c): c is string => Boolean(c)))];
-      const guidelineRows =
-        categories.length > 0
-          ? await db.select().from(storageGuidelines).where(inArray(storageGuidelines.category, categories))
-          : [];
-      const guidelineByCategory = new Map(guidelineRows.map((g) => [g.category, g]));
+      // A container holds a whole meal, so its foods — and the window they
+      // imply — come from the join table. The window and freshness rules are
+      // `services/storage.ts`, the same ones the REST routes serve to the
+      // cards: this tool used to keep a hand-synced copy of both.
+      const foodsByItemId = await loadStorageItemFoods(
+        db,
+        rows.map((row) => row.id),
+      );
+      const categoryByRecipeId = await loadRecipeIngredientCategories(db, [
+        ...new Set(
+          rows.filter((row) => !foodsByItemId.has(row.id) && row.recipeId).map((row) => row.recipeId as string),
+        ),
+      ]);
+      const categoriesFor = (row: (typeof rows)[number]): string[] => {
+        const itemFoods = foodsByItemId.get(row.id);
+        if (itemFoods && itemFoods.length > 0) return itemFoods.map((food) => food.storageCategory);
+        const fromRecipe = row.recipeId ? categoryByRecipeId.get(row.recipeId) : undefined;
+        return fromRecipe ? [fromRecipe] : [];
+      };
+      const guidelineByCategory = await loadStorageGuidelines(db, [...new Set(rows.flatMap(categoriesFor))]);
 
       const now = Date.now();
       const items = rows.map((row) => {
-        const guideline = row.foodStorageCategory ? guidelineByCategory.get(row.foodStorageCategory) : undefined;
-        const fridgeHours = row.recipeFridgeHoursOverride ?? guideline?.fridgeHours ?? STORAGE_TOOL_FALLBACK_WINDOW.fridgeHours;
-        const freezerDays = row.recipeFreezerOverride ?? guideline?.freezerDays ?? STORAGE_TOOL_FALLBACK_WINDOW.freezerDays;
-        const roomTempHours = guideline?.roomTempHours ?? STORAGE_TOOL_FALLBACK_WINDOW.roomTempHours;
-        const windowHours = row.location === "fridge" ? fridgeHours : row.location === "freezer" ? freezerDays * 24 : roomTempHours;
-        const expired = now > row.preparedAt.getTime() + windowHours * HOUR_MS;
+        const windowHours = resolveStorageWindowHours(
+          {
+            location: row.location,
+            categories: categoriesFor(row),
+            recipeOverrides: { fridgeHours: row.recipeFridgeHoursOverride, freezerDays: row.recipeFreezerOverride },
+          },
+          guidelineByCategory,
+        );
+        // Same order, and the same joined name, the card's title uses — so
+        // the model and the screen call one container one thing.
+        const joinedFoodNames = (foodsByItemId.get(row.id) ?? []).map((food) => food.name).join(", ");
 
         return {
-          name: row.label ?? row.foodName ?? row.recipeTitle ?? "prepared item",
+          name: row.label ?? row.recipeTitle ?? (joinedFoodNames || "prepared item"),
           location: row.location,
-          expired,
+          expired: deriveFreshness(row.preparedAt, windowHours, now).expired,
         };
       });
 

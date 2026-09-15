@@ -22,8 +22,7 @@ const BABY: Baby = {
 const ITEM: StorageItem = {
   id: "11111111-1111-1111-1111-111111111111",
   label: null,
-  foodSlug: "avocado",
-  foodName: "Avocado",
+  foods: [{ id: "food-1", slug: "avocado", name: "Avocado", emoji: null }],
   recipeId: null,
   recipeTitle: null,
   preparedAt: "2026-08-20T10:00:00.000Z",
@@ -128,12 +127,12 @@ function titleOrder(html: string, titles: string[]): string[] {
 describe("StoragePage active ordering (item 333)", () => {
   it("re-sorts an out-of-order cache so the soonest thing to eat is first", () => {
     const html = renderWith([
-      item({ id: "a1", label: "Window in three days", foodSlug: null, foodName: null,
+      item({ id: "a1", label: "Window in three days", foods: [],
         expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString() }),
       // Best by TODAY ends at the next local midnight, so it is at most 24h
       // away whatever time this test runs — no time-of-day flake.
-      item({ id: "a2", label: "Best by today", foodSlug: null, foodName: null, bestBy: ymd(0) }),
-      item({ id: "a3", label: "Window in thirty hours", foodSlug: null, foodName: null,
+      item({ id: "a2", label: "Best by today", foods: [], bestBy: ymd(0) }),
+      item({ id: "a3", label: "Window in thirty hours", foods: [],
         expiresAt: new Date(Date.now() + 30 * 60 * 60 * 1000).toISOString() }),
     ]);
     expect(titleOrder(html, ["Window in three days", "Best by today", "Window in thirty hours"])).toEqual([

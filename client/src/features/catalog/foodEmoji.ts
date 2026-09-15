@@ -151,3 +151,40 @@ export function getFoodEmoji(slug: string, category?: FoodCategory | null, emoji
   if (category) return CATEGORY_FALLBACK_EMOJI[category];
   return DEFAULT_EMOJI;
 }
+
+/**
+ * The shape `emojiCluster` needs from one food: a slug, and optionally the
+ * two things that can beat it (its own emoji, its category). Structural
+ * rather than `MealFood`, because a storage container's `foods` carry no
+ * category at all (item 347) and a meal's do — one cluster renderer, two
+ * callers, neither importing the other's response type.
+ */
+export interface EmojiClusterFood {
+  slug: string;
+  category?: FoodCategory | null;
+  emoji?: string | null;
+}
+
+export interface EmojiCluster {
+  /** One emoji per food, capped at `max`. */
+  emojis: string[];
+  /** How many foods the cluster couldn't show (0 when nothing is hidden). */
+  overflow: number;
+}
+
+/**
+ * The leading emoji stack a row of several foods gets: at most `max` food
+ * emoji, plus a "+N" count for the rest so a big meal — or a big storage
+ * container — stays one compact glyph run instead of wrapping the row.
+ *
+ * Lived in `tracking/components/ServeLogList.tsx` until item 347 gave a
+ * storage container its own food list; it moved here (and is still
+ * re-exported there) so the meal card and the storage card cannot drift.
+ */
+export function emojiCluster(foods: readonly EmojiClusterFood[], max = 3): EmojiCluster {
+  const shown = foods.slice(0, Math.max(0, max));
+  return {
+    emojis: shown.map((food) => getFoodEmoji(food.slug, food.category, food.emoji)),
+    overflow: Math.max(0, foods.length - shown.length),
+  };
+}

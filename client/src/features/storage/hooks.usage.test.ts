@@ -68,8 +68,7 @@ const fakeQueryClient = {
 const ITEM = {
   id: "s1",
   label: "Leftovers",
-  foodSlug: "oats",
-  foodName: "Oats",
+  foods: [{ id: "f-oats", slug: "oats", name: "Oats", emoji: null }],
   recipeId: null,
   recipeTitle: null,
   preparedAt: "2026-09-08T12:00:00.000Z",
@@ -111,9 +110,16 @@ afterEach(() => {
 });
 
 describe("useCreateStorageItem — storage_item_added", () => {
-  function add(input: Record<string, unknown>) {
+  /**
+   * `created` is what the route answered with. It defaults to the ordinary
+   * case — ONE container holding every food the input named (item 347) — so
+   * only the tests that care about splitting have to spell it out.
+   */
+  function add(input: Record<string, unknown>, created?: Array<Record<string, unknown>>) {
     const options = firstOptions(() => useCreateStorageItem());
-    options.onSuccess!({ id: "s2" } as never, input as never);
+    const foodIds = (input.foodIds as string[] | undefined) ?? [];
+    const container = { id: "s2", foods: foodIds.map((id) => ({ id })) };
+    options.onSuccess!((created ?? [container]) as never, input as never);
     return tracked;
   }
 
@@ -123,16 +129,53 @@ describe("useCreateStorageItem — storage_item_added", () => {
     ).toEqual([
       [
         "storage_item_added",
-        { location: "freezer", source: "label", via: "storage_page", has_servings: true, has_best_by: true },
+        {
+          location: "freezer",
+          source: "label",
+          via: "storage_page",
+          has_servings: true,
+          has_best_by: true,
+          split: false,
+        },
       ],
     ]);
     expect(JSON.stringify(tracked)).not.toContain("Priya");
   });
 
+  // Item 347/348: the event counts CONTAINERS, not submissions, so the two
+  // ways of saving three foods are comparable.
+  it("sends ONE event carrying the whole container's food count by default", () => {
+    const events = add({ foodIds: ["f1", "f2", "f3"], location: "fridge" });
+    expect(events).toHaveLength(1);
+    expect(events[0]![1]).toMatchObject({ source: "food", food_count: "3", split: false });
+  });
+
+  it("sends one event PER container, each holding one food, when separate containers were asked for", () => {
+    const events = add(
+      { foodIds: ["f1", "f2", "f3"], separateItems: true, location: "fridge" },
+      [
+        { id: "s2", foods: [{ id: "f1" }] },
+        { id: "s3", foods: [{ id: "f2" }] },
+        { id: "s4", foods: [{ id: "f3" }] },
+      ],
+    );
+    expect(events).toHaveLength(3);
+    for (const [name, props] of events) {
+      expect(name).toBe("storage_item_added");
+      expect(props).toMatchObject({ source: "food", food_count: "1", split: true });
+    }
+  });
+
+  it("omits food_count for a recipe or label container, which names no foods of its own", () => {
+    expect(add({ recipeId: "r1", location: "fridge" })[0]![1]).not.toHaveProperty("food_count");
+    tracked.length = 0;
+    expect(add({ label: "Soup", location: "fridge" })[0]![1]).not.toHaveProperty("food_count");
+  });
+
   it("reads `source` off the payload", () => {
     expect(add({ recipeId: "r1", location: "fridge" })[0]![1]).toMatchObject({ source: "recipe" });
     tracked.length = 0;
-    expect(add({ foodIds: ["f1"], location: "fridge" })[0]![1]).toMatchObject({ source: "food" });
+    expect(add({ foodIds: ["f1"], location: "fridge" })[0]![1]).toMatchObject({ source: "food", food_count: "1" });
   });
 
   it("calls a leftovers save from the log form log_leftovers", () => {
@@ -245,6 +288,7 @@ describe("useStorageStatusChange — storage_item_closed", () => {
     const json = JSON.stringify(tracked);
     expect(json).not.toContain("Leftovers");
     expect(json).not.toContain("oats");
+    expect(json).not.toContain("Oats");
     expect(json).not.toContain("s1");
   });
 });

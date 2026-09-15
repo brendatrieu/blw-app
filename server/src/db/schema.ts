@@ -422,7 +422,10 @@ export const storageItems = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    foodId: uuid("food_id").references(() => foods.id),
+    // The foods are in `storage_item_foods` — a container holds a whole meal
+    // (item 345), so there is no single `food_id` here any more. Migration
+    // 0015 moved every existing value into that table before dropping the
+    // column.
     recipeId: uuid("recipe_id").references(() => recipes.id),
     label: text("label"),
     preparedAt: timestamp("prepared_at", { withTimezone: true }).notNull(),
@@ -452,6 +455,35 @@ export const storageItems = pgTable(
     index("storage_items_active_idx")
       .on(t.userId, t.status)
       .where(sql`${t.status} = 'active'`),
+  ],
+);
+
+// What is actually in a container. One storage item holds a whole prepared
+// meal, so "leftovers of chicken, carrot and rice" is ONE row in
+// `storage_items` with three rows here (item 345).
+//
+// `position` is the order the parent picked them in, and is what every read
+// orders by — the card's title and emoji cluster read left to right in the
+// order the meal was built. The PK makes the same food twice in one container
+// impossible, which is the same thing `meal_foods`' unique index does.
+//
+// `food_id` deliberately does NOT cascade, exactly like `meal_foods.food_id`:
+// a custom food being deleted must not silently empty a container. Account
+// delete clears these rows itself (see routes/account.ts).
+export const storageItemFoods = pgTable(
+  "storage_item_foods",
+  {
+    storageItemId: uuid("storage_item_id")
+      .notNull()
+      .references(() => storageItems.id, { onDelete: "cascade" }),
+    foodId: uuid("food_id")
+      .notNull()
+      .references(() => foods.id),
+    position: integer("position").notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.storageItemId, t.foodId] }),
+    index("storage_item_foods_food_id_idx").on(t.foodId),
   ],
 );
 

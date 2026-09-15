@@ -63,6 +63,9 @@ const SAMPLE_PROPS: Record<UsageEventName, Record<string, unknown>> = {
     via: "log_leftovers",
     has_servings: true,
     has_best_by: false,
+    // `food_count` is absent here on purpose: a recipe container names no
+    // foods of its own, and the prop is optional for exactly that case.
+    split: false,
   },
   storage_item_closed: {
     to: "finished",

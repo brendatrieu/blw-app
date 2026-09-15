@@ -1,9 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import type { Baby, MealsResponse, StorageItem, StorageResponse, ServeStorageItemResponse } from "@blw/shared";
+import type {
+  Baby,
+  CreateStorageItemResponse,
+  MealsResponse,
+  StorageItem,
+  StorageResponse,
+  ServeStorageItemResponse,
+} from "@blw/shared";
 import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
-import { STORAGE_FALLBACK_WINDOW } from "../routes/storage.js";
+import { STORAGE_FALLBACK_WINDOW } from "../services/storage.js";
+import { buildChatTools } from "../ai/tools.js";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
 
@@ -16,12 +24,17 @@ const UNKNOWN_ID = "00000000-0000-4000-8000-000000000000";
 // window, a recipe whose ingredient's category is overridden on storage but
 // not freezer, and a bare label with no food/recipe at all.
 async function seedFixtures(db: Database) {
+  // Three categories whose windows disagree in a DIFFERENT direction per
+  // location, so "shortest wins" cannot be passed by picking one food and
+  // sticking with it: chicken is shortest in the fridge (24h), rice in the
+  // freezer (30 days) and on the counter (1h).
   await db.insert(schema.storageGuidelines).values([
     { category: "produce_cooked_soft", fridgeHours: 72, freezerDays: 90, roomTempHours: 2, notes: "Steamed veg." },
     { category: "meat_poultry_cooked", fridgeHours: 24, freezerDays: 60, roomTempHours: 2, notes: "Cooked meat." },
+    { category: "grain_cooked", fridgeHours: 96, freezerDays: 30, roomTempHours: 1, notes: "Cooked grains." },
   ]);
 
-  const [banana, chicken] = await db
+  const [banana, chicken, rice] = await db
     .insert(schema.foods)
     .values([
       {
@@ -49,6 +62,19 @@ async function seedFixtures(db: Database) {
         prep9m: "chop",
         prep12m: "dice",
         storageCategory: "meat_poultry_cooked",
+      },
+      {
+        slug: "rice",
+        name: "Rice",
+        category: "grain",
+        ironLevel: "low",
+        vitaminCLevel: "low",
+        chokingRisk: "low",
+        minAgeMonths: 6,
+        prep6m: "mash",
+        prep9m: "spoon",
+        prep12m: "spoon",
+        storageCategory: "grain_cooked",
       },
     ])
     .returning();
@@ -95,16 +121,17 @@ async function seedFixtures(db: Database) {
   return {
     banana: banana!,
     chicken: chicken!,
+    rice: rice!,
     recipe: recipe!,
     twoFoodRecipe: twoFoodRecipe!,
     emptyRecipe: emptyRecipe!,
   };
 }
 
-/** POST /api/storage now returns an array (one row per batched food). Most
- * existing tests exercise a single food/recipe/label, so this unwraps that
- * one row for them; batch-specific behavior gets its own tests below using
- * `postStorageItemBatch` directly. */
+/** POST /api/storage always answers `{ items }` — one container by default,
+ * even for a submission with several foods, and one per food only when
+ * `separateItems` is set. Most tests here exercise a single container, so
+ * `postStorageItem` below unwraps that one element for them. */
 async function postStorageItemBatch(
   app: FastifyInstance,
   cookie: string,
@@ -116,7 +143,10 @@ async function postStorageItemBatch(
     headers: { cookie },
     payload,
   });
-  return { statusCode: response.statusCode, body: response.statusCode === 201 ? response.json<StorageItem[]>() : [] };
+  return {
+    statusCode: response.statusCode,
+    body: response.statusCode === 201 ? response.json<CreateStorageItemResponse>().items : [],
+  };
 }
 
 async function postStorageItem(
@@ -179,6 +209,48 @@ function dbWithFailingTransactionUpdate(db: Database): Database {
         if (prop === "update") {
           return () => {
             throw new Error("simulated storage write failure");
+          };
+        }
+        return passthrough(target, prop);
+      },
+    });
+
+  return new Proxy(db, {
+    get(target, prop) {
+      if (prop === "transaction") {
+        const run = passthrough(target, prop) as (
+          callback: (tx: object) => unknown,
+          ...rest: unknown[]
+        ) => unknown;
+        return (callback: (tx: object) => unknown, ...rest: unknown[]) =>
+          run((tx) => callback(wrapTx(tx)), ...rest);
+      }
+      return passthrough(target, prop);
+    },
+  });
+}
+
+/**
+ * A database view whose insert into `storage_item_foods` always throws, so a
+ * test can prove POST /api/storage is all-or-nothing: the items written a
+ * statement earlier, in the same transaction, must go back with it. Scoped to
+ * that one table so every other write in the harness — sign-up included —
+ * keeps working.
+ */
+function dbWithFailingJoinInsert(db: Database): Database {
+  const passthrough = (target: object, prop: string | symbol): unknown => {
+    const value = Reflect.get(target, prop) as unknown;
+    return typeof value === "function" ? (value as (...args: unknown[]) => unknown).bind(target) : value;
+  };
+
+  const wrapTx = (tx: object): object =>
+    new Proxy(tx, {
+      get(target, prop) {
+        if (prop === "insert") {
+          const insert = passthrough(target, prop) as (...args: unknown[]) => unknown;
+          return (table: unknown, ...rest: unknown[]) => {
+            if (table === schema.storageItemFoods) throw new Error("simulated join-row write failure");
+            return insert(table, ...rest);
           };
         }
         return passthrough(target, prop);
@@ -290,6 +362,53 @@ describe("storage routes", () => {
       expect(new Date(created.body.expiresAt).getTime()).toBe(expectedExpiry);
     });
 
+    // Several foods in one container: the MOST PERISHABLE one decides. The
+    // winner differs per location on purpose (chicken in the fridge, rice in
+    // the freezer and on the counter), so a implementation that picked "the
+    // first food" or "the smallest fridge number" would fail two of three.
+    describe("shortest window across the container's foods", () => {
+      const cases: { location: "fridge" | "freezer" | "counter"; expectedHours: number; why: string }[] = [
+        { location: "fridge", expectedHours: 24, why: "chicken (24h) over banana (72h) and rice (96h)" },
+        { location: "freezer", expectedHours: 30 * 24, why: "rice (30d) over chicken (60d) and banana (90d)" },
+        { location: "counter", expectedHours: 1, why: "rice (1h) over banana and chicken (2h)" },
+      ];
+
+      it.each(cases)("in the $location it is $expectedHours hours — $why", async ({ location, expectedHours }) => {
+        const preparedAt = hoursAgoIso(0);
+        const created = await postStorageItem(app, user.cookie, {
+          foodIds: [fixtures.banana.id, fixtures.chicken.id, fixtures.rice.id],
+          location,
+          preparedAt,
+        });
+        expect(created.statusCode).toBe(201);
+        expect(new Date(created.body.expiresAt).getTime()).toBe(new Date(preparedAt).getTime() + expectedHours * HOUR_MS);
+      });
+
+      it("expires a mixed container as soon as its most perishable food does", async () => {
+        // 25h old: past the chicken's 24h fridge window, nowhere near the
+        // banana's 72h. The container is expired, because the chicken is.
+        const created = await postStorageItem(app, user.cookie, {
+          foodIds: [fixtures.banana.id, fixtures.chicken.id],
+          location: "fridge",
+          preparedAt: hoursAgoIso(25),
+        });
+        expect(created.body.expired).toBe(true);
+
+        // The same foods in their own containers disagree, which is the whole
+        // point of the rule: only the chicken's has gone off.
+        const separate = await postStorageItemBatch(app, user.cookie, {
+          foodIds: [fixtures.banana.id, fixtures.chicken.id],
+          location: "fridge",
+          preparedAt: hoursAgoIso(25),
+          separateItems: true,
+        });
+        expect(separate.body.map((item) => [item.foods[0]?.slug, item.expired])).toEqual([
+          ["banana", false],
+          ["chicken", true],
+        ]);
+      });
+    });
+
     it("flags useSoon at the 75% mark and clears it once expired", async () => {
       // banana/storage window is 72h. 75% = 54h.
       const notYet = await postStorageItem(app, user.cookie, {
@@ -389,7 +508,28 @@ describe("storage routes", () => {
     });
   });
 
-  describe("ownership", () => {
+  describe("PATCH /api/storage/:id cannot change a container's source", () => {
+  it("rejects foodIds, recipeId and label on a patch", async () => {
+    const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+    for (const payload of [
+      { foodIds: [fixtures.chicken.id] },
+      { recipeId: "00000000-0000-0000-0000-000000000000" },
+      { label: "renamed" },
+    ]) {
+      const res = await app.inject({
+        method: "PATCH",
+        url: `/api/storage/${created.body.id}`,
+        headers: { cookie: user.cookie },
+        payload,
+      });
+      expect(res.statusCode, JSON.stringify(payload)).toBe(400);
+    }
+    const after = (await getStorage(app, user.cookie)).items.find((i) => i.id === created.body.id);
+    expect(after?.foods.map((f) => f.slug)).toEqual(["banana"]);
+  });
+});
+
+describe("ownership", () => {
     it("404s PATCH on another account's storage item and leaves it unchanged", async () => {
       const owner = user;
       const intruder = await signUpUser(app, "Intruder");
@@ -455,34 +595,163 @@ describe("storage routes", () => {
       const response = await postStorageItem(app, user.cookie, { foodIds: tooMany, location: "fridge" });
       expect(response.statusCode).toBe(400);
     });
+
+    // Foods XOR recipe: a recipe container names no foods of its own (its
+    // ingredients are derived when it is served), so the two can never
+    // describe the same container.
+    it("rejects foodIds together with a recipeId, and persists nothing", async () => {
+      const response = await postStorageItemBatch(app, user.cookie, {
+        foodIds: [fixtures.banana.id],
+        recipeId: fixtures.recipe.id,
+        location: "fridge",
+      });
+      expect(response.statusCode).toBe(400);
+      expect(await db.select().from(schema.storageItems)).toHaveLength(0);
+    });
+
+    it("still accepts a label beside foods, and a label beside a recipe", async () => {
+      const withFoods = await postStorageItem(app, user.cookie, {
+        foodIds: [fixtures.banana.id],
+        label: "Tuesday batch",
+        location: "fridge",
+      });
+      expect(withFoods.statusCode).toBe(201);
+      expect(withFoods.body.label).toBe("Tuesday batch");
+
+      const withRecipe = await postStorageItem(app, user.cookie, {
+        recipeId: fixtures.recipe.id,
+        label: "From Sunday",
+        location: "fridge",
+      });
+      expect(withRecipe.statusCode).toBe(201);
+      expect(withRecipe.body.label).toBe("From Sunday");
+      expect(withRecipe.body.foods).toEqual([]);
+    });
+
+    it("rejects separateItems together with a recipeId", async () => {
+      const response = await postStorageItemBatch(app, user.cookie, {
+        recipeId: fixtures.recipe.id,
+        location: "fridge",
+        separateItems: true,
+      });
+      expect(response.statusCode).toBe(400);
+      expect(await db.select().from(schema.storageItems)).toHaveLength(0);
+    });
   });
 
-  describe("batch create", () => {
-    it("creates one storage row per food sharing the other fields, deduping repeated ids", async () => {
+  // ---------------------------------------------------------------------
+  // One container, many foods (item 345) — and the "Separate containers"
+  // opt-out beside it.
+  // ---------------------------------------------------------------------
+
+  describe("one container, many foods", () => {
+    it("saves several foods as ONE container, in submitted order, deduping repeated ids", async () => {
       const preparedAt = hoursAgoIso(0);
       const created = await postStorageItemBatch(app, user.cookie, {
-        foodIds: [fixtures.banana.id, fixtures.chicken.id, fixtures.banana.id],
+        // Deliberately not alphabetical, and with a repeat: this pins the
+        // SUBMITTED order, not a sorted one, and one row per food.
+        foodIds: [fixtures.rice.id, fixtures.banana.id, fixtures.rice.id],
         location: "fridge",
         preparedAt,
       });
       expect(created.statusCode).toBe(201);
-      expect(created.body).toHaveLength(2);
-      expect(created.body.map((item) => item.foodSlug).sort()).toEqual(["banana", "chicken"]);
-      expect(created.body.every((item) => item.location === "fridge")).toBe(true);
+      expect(created.body).toHaveLength(1);
+      expect(created.body[0]?.foods.map((food) => food.slug)).toEqual(["rice", "banana"]);
+      expect(created.body[0]?.foods.map((food) => food.name)).toEqual(["Rice", "Banana"]);
+      // Catalog foods carry no emoji of their own; the client resolves one.
+      expect(created.body[0]?.foods.map((food) => food.emoji)).toEqual([null, null]);
 
+      // And it reads back the same way, in the same order, from the list.
       const active = await getStorage(app, user.cookie, "active");
-      expect(active.items).toHaveLength(2);
+      expect(active.items).toHaveLength(1);
+      expect(active.items[0]?.foods.map((food) => food.slug)).toEqual(["rice", "banana"]);
     });
 
-    it("rejects the whole batch and persists nothing when one foodId among several is unknown", async () => {
+    it("tracks servings once for the whole container, not once per food", async () => {
       const created = await postStorageItemBatch(app, user.cookie, {
-        foodIds: [fixtures.banana.id, "00000000-0000-4000-8000-000000000000"],
+        foodIds: [fixtures.banana.id, fixtures.chicken.id, fixtures.rice.id],
+        location: "fridge",
+        servingsTotal: 4,
+      });
+      expect(created.statusCode).toBe(201);
+      expect(created.body).toHaveLength(1);
+      expect(created.body[0]).toMatchObject({ servingsTotal: 4, servingsLeft: 4 });
+
+      // Three foods, one row — the count is of containers, not of foods.
+      expect(await db.select().from(schema.storageItems)).toHaveLength(1);
+      expect(await db.select().from(schema.storageItemFoods)).toHaveLength(3);
+    });
+
+    it("rejects the whole submission and persists nothing when one foodId among several is unknown", async () => {
+      const created = await postStorageItemBatch(app, user.cookie, {
+        foodIds: [fixtures.banana.id, UNKNOWN_ID],
         location: "fridge",
       });
       expect(created.statusCode).toBe(400);
 
       const active = await getStorage(app, user.cookie, "active");
       expect(active.items).toHaveLength(0);
+      expect(await db.select().from(schema.storageItemFoods)).toHaveLength(0);
+    });
+
+    it("creates one single-food container per food when separateItems is set", async () => {
+      const created = await postStorageItemBatch(app, user.cookie, {
+        foodIds: [fixtures.rice.id, fixtures.banana.id],
+        location: "fridge",
+        separateItems: true,
+        servingsTotal: 2,
+      });
+      expect(created.statusCode).toBe(201);
+      expect(created.body).toHaveLength(2);
+      // Each container holds exactly one food, in submitted order.
+      expect(created.body.map((item) => item.foods.map((food) => food.slug))).toEqual([["rice"], ["banana"]]);
+      // Every container is a full one — the servings are per container.
+      expect(created.body.every((item) => item.servingsTotal === 2 && item.servingsLeft === 2)).toBe(true);
+
+      const active = await getStorage(app, user.cookie, "active");
+      expect(active.items).toHaveLength(2);
+    });
+
+    it("leaves one food as one container whether separateItems is set or not", async () => {
+      const together = await postStorageItemBatch(app, user.cookie, {
+        foodIds: [fixtures.banana.id],
+        location: "fridge",
+      });
+      const split = await postStorageItemBatch(app, user.cookie, {
+        foodIds: [fixtures.banana.id],
+        location: "fridge",
+        separateItems: true,
+      });
+      expect(together.body).toHaveLength(1);
+      expect(split.body).toHaveLength(1);
+      expect(split.body[0]?.foods.map((food) => food.slug)).toEqual(["banana"]);
+    });
+
+    it("writes nothing at all when the join-row insert fails mid-transaction", async () => {
+      const failing = await createTestApp({}, {}, dbWithFailingJoinInsert);
+      try {
+        const localFixtures = await seedFixtures(failing.db);
+        const localUser = await signUpUser(failing.app);
+
+        const response = await failing.app.inject({
+          method: "POST",
+          url: "/api/storage",
+          headers: { cookie: localUser.cookie },
+          payload: {
+            foodIds: [localFixtures.banana.id, localFixtures.chicken.id],
+            location: "fridge",
+            separateItems: true,
+          },
+        });
+        expect(response.statusCode).toBe(500);
+
+        // The items were inserted a statement before the failure; the
+        // transaction has to take them back with it.
+        expect(await failing.db.select().from(schema.storageItems)).toHaveLength(0);
+        expect(await failing.db.select().from(schema.storageItemFoods)).toHaveLength(0);
+      } finally {
+        await failing.close();
+      }
     });
   });
 
@@ -506,14 +775,23 @@ describe("storage routes", () => {
       expect(listed?.servingsLeft).toBeNull();
     });
 
-    it("initializes servingsLeft to servingsTotal on create, for every row of a batch", async () => {
-      const created = await postStorageItemBatch(app, user.cookie, {
+    it("initializes servingsLeft to servingsTotal on create — for the container, and for every container of a split", async () => {
+      const oneContainer = await postStorageItemBatch(app, user.cookie, {
         foodIds: [fixtures.banana.id, fixtures.chicken.id],
         location: "fridge",
         servingsTotal: 4,
       });
-      expect(created.statusCode).toBe(201);
-      expect(created.body.map((item) => [item.servingsTotal, item.servingsLeft])).toEqual([
+      expect(oneContainer.statusCode).toBe(201);
+      expect(oneContainer.body.map((item) => [item.servingsTotal, item.servingsLeft])).toEqual([[4, 4]]);
+
+      // Split into one container per food, each of them full.
+      const split = await postStorageItemBatch(app, user.cookie, {
+        foodIds: [fixtures.banana.id, fixtures.chicken.id],
+        location: "fridge",
+        servingsTotal: 4,
+        separateItems: true,
+      });
+      expect(split.body.map((item) => [item.servingsTotal, item.servingsLeft])).toEqual([
         [4, 4],
         [4, 4],
       ]);
@@ -774,6 +1052,36 @@ describe("storage routes", () => {
       const meals = await listMeals(user.cookie, babyId);
       expect(meals.items).toHaveLength(1);
       expect(meals.items[0]?.foods[0]?.storageItemId).toBe(created.body.id);
+    });
+
+    it("logs ONE meal with every food in the container, all linked to it, and takes one serving", async () => {
+      const babyId = await createBaby(app, user);
+      const created = await postStorageItem(app, user.cookie, {
+        foodIds: [fixtures.rice.id, fixtures.chicken.id, fixtures.banana.id],
+        location: "fridge",
+        servingsTotal: 3,
+      });
+      expect(created.body.foods).toHaveLength(3);
+
+      const served = await serve(user.cookie, created.body.id, { babyId });
+      expect(served.statusCode).toBe(201);
+
+      // One meal, three foods — not three meals, and not one food with the
+      // rest silently dropped.
+      expect(await db.select().from(schema.meals)).toHaveLength(1);
+      expect(served.body?.meal.foods.map((food) => food.slug)).toEqual(["banana", "chicken", "rice"]);
+      expect(served.body?.meal.foods.map((food) => food.storageItemId)).toEqual([
+        created.body.id,
+        created.body.id,
+        created.body.id,
+      ]);
+
+      // Servings come off the CONTAINER once, however many foods were in it.
+      expect(served.body?.item).toMatchObject({ servingsTotal: 3, servingsLeft: 2, status: "active" });
+
+      const meals = await listMeals(user.cookie, babyId);
+      expect(meals.items).toHaveLength(1);
+      expect(meals.items[0]?.foods.every((food) => food.storageItemId === created.body.id)).toBe(true);
     });
 
     it("expands a recipe-sourced item into the recipe's ingredient foods, all linked to the item", async () => {
@@ -1241,6 +1549,98 @@ describe("storage routes", () => {
       const patched = await patchMeal(mealId, { foodIds: [fixtures.chicken.id] });
       expect(patched.foods.map((food) => [food.slug, food.storageItemId])).toEqual([["chicken", null]]);
       expect(await db.select().from(schema.mealFoods)).toHaveLength(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The AI `get_storage` tool reads the same containers these routes serve,
+  // and since item 346 it derives its freshness from the same service. What
+  // it must not do is call a container something the screen does not.
+  // -------------------------------------------------------------------------
+
+  describe("get_storage tool", () => {
+    async function currentUserId(): Promise<string> {
+      const [row] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, user.email));
+      return row!.id;
+    }
+
+    async function storageToolItems(): Promise<{ name: string; location: string; expired: boolean }[]> {
+      const tools = buildChatTools(db, await currentUserId(), null);
+      const output = String(await tools.get_storage.run({}));
+      return JSON.parse(output).items as { name: string; location: string; expired: boolean }[];
+    }
+
+    it("names a container by its foods, joined in saved order, exactly as the card's title does", async () => {
+      await postStorageItem(app, user.cookie, {
+        foodIds: [fixtures.rice.id, fixtures.banana.id],
+        location: "fridge",
+      });
+
+      expect(await storageToolItems()).toEqual([{ name: "Rice, Banana", location: "fridge", expired: false }]);
+    });
+
+    it("prefers a label, then the recipe title, and falls back to 'prepared item'", async () => {
+      await postStorageItem(app, user.cookie, {
+        foodIds: [fixtures.banana.id],
+        label: "Tuesday batch",
+        location: "fridge",
+      });
+      await postStorageItem(app, user.cookie, { recipeId: fixtures.twoFoodRecipe.id, location: "freezer" });
+      // Neither label nor recipe nor foods is impossible through the API (the
+      // create schema refuses it), so this one is written straight to the row.
+      await db.insert(schema.storageItems).values({
+        userId: await currentUserId(),
+        preparedAt: new Date(),
+        location: "counter",
+      });
+
+      const names = (await storageToolItems()).map((item) => item.name).sort();
+      expect(names).toEqual(["Banana Chicken Mash", "Tuesday batch", "prepared item"]);
+    });
+
+    // The ONE row where "label ?? recipeTitle ?? foods" and the order this
+    // tool used to carry, "label ?? foods ?? recipeTitle", disagree. It is
+    // not reachable through the API any more (item 345's foods-XOR-recipe
+    // refine), but it exists in every account that stocked a recipe before
+    // that: the old POST wrote `recipe_id` onto every food row it created.
+    // So it is written straight to the tables, the way those rows arrived.
+    it("names a legacy container that has BOTH foods and a recipe by its recipe, exactly as the card does", async () => {
+      const [legacy] = await db
+        .insert(schema.storageItems)
+        .values({
+          userId: await currentUserId(),
+          recipeId: fixtures.twoFoodRecipe.id,
+          preparedAt: new Date(),
+          location: "fridge",
+        })
+        .returning();
+      await db.insert(schema.storageItemFoods).values([
+        { storageItemId: legacy!.id, foodId: fixtures.rice.id, position: 0 },
+        { storageItemId: legacy!.id, foodId: fixtures.banana.id, position: 1 },
+      ]);
+
+      // The card is served BOTH the recipe title and the foods for this row,
+      // and `storageItemTitle` answers the recipe — so the tool must too, or
+      // the model and the screen call one container two different things.
+      const card = (await getStorage(app, user.cookie)).items.find((item) => item.id === legacy!.id);
+      expect(card?.recipeTitle).toBe("Banana Chicken Mash");
+      expect(card?.foods.map((food) => food.name)).toEqual(["Rice", "Banana"]);
+
+      const items = await storageToolItems();
+      expect(items).toEqual([{ name: "Banana Chicken Mash", location: "fridge", expired: false }]);
+      expect(items[0]!.name).not.toBe("Rice, Banana");
+    });
+
+    it("flags a mixed container expired as soon as its most perishable food is", async () => {
+      // 25h in the fridge: past the chicken's 24h window, well inside the
+      // banana's 72h. The same shortest-window rule the cards use.
+      await postStorageItem(app, user.cookie, {
+        foodIds: [fixtures.banana.id, fixtures.chicken.id],
+        location: "fridge",
+        preparedAt: hoursAgoIso(25),
+      });
+
+      expect(await storageToolItems()).toEqual([{ name: "Banana, Chicken", location: "fridge", expired: true }]);
     });
   });
 

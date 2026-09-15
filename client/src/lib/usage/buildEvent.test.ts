@@ -57,6 +57,10 @@ const SAMPLES: { [N in UsageEvent["name"]]: Extract<UsageEvent, { name: N }>["pr
     via: "log_leftovers",
     has_servings: true,
     has_best_by: false,
+    // Item 348: one event per created container, so "was this split into
+    // several?" is always answered. A recipe container names no foods of its
+    // own, so `food_count` is absent here by design.
+    split: false,
   },
   storage_item_closed: {
     to: "finished",

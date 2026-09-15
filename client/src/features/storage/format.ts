@@ -1,6 +1,13 @@
 import type { StorageLocation, StorageStatus } from "@blw/shared";
+import type { SegmentedControlOption } from "../../components/ui/SegmentedControl.js";
 
 const HOUR_MS = 60 * 60 * 1000;
+
+/** Just enough of a container's `foods` list for the display rules below —
+ * structural so both a real `StorageItem` and a hand-written fixture fit. */
+interface ContainerFoods {
+  foods: readonly { name: string }[];
+}
 
 export const LOCATION_LABEL: Record<StorageLocation, string> = {
   fridge: "Fridge",
@@ -14,9 +21,20 @@ export const LOCATIONS: { value: StorageLocation; label: string }[] = [
   { value: "counter", label: "Counter" },
 ];
 
-/** Display name for whatever the item was prepared from. */
-export function storageItemTitle(item: { label: string | null; foodName: string | null; recipeTitle: string | null }): string {
-  return item.label ?? item.recipeTitle ?? item.foodName ?? "Prepared food";
+/**
+ * Display name for whatever the item was prepared from. Since item 347 a
+ * container holds a whole meal, so the food line is every food's name
+ * comma-joined — the exact idiom `mealTitle` uses for a meal row, which is
+ * what a one-food container (a single name) already read as.
+ *
+ * The join is guarded with `||`, not `??`: an empty `foods` array joins to
+ * `""`, which is a value, not a missing one, and would otherwise render an
+ * empty title for a recipe/label-less row.
+ */
+export function storageItemTitle(
+  item: ContainerFoods & { label: string | null; recipeTitle: string | null },
+): string {
+  return item.label ?? item.recipeTitle ?? (item.foods.map((food) => food.name).join(", ") || "Prepared food");
 }
 
 /** "N of M servings left" label for a servings-tracked item. */
@@ -51,8 +69,8 @@ export function clampServings(value: number, max: number): number {
  * ("nothing to log"), so the client hides the Serve control rather than
  * surface an always-failing button.
  */
-export function isLabelOnly(item: { foodSlug: string | null; recipeTitle: string | null }): boolean {
-  return !item.foodSlug && !item.recipeTitle;
+export function isLabelOnly(item: { foods: readonly unknown[]; recipeTitle: string | null }): boolean {
+  return item.foods.length === 0 && !item.recipeTitle;
 }
 
 /**
@@ -66,7 +84,7 @@ export function isLabelOnly(item: { foodSlug: string | null; recipeTitle: string
  */
 export function resolveStorageItemMenuActions(item: {
   status: StorageStatus;
-  foodSlug: string | null;
+  foods: readonly unknown[];
   recipeTitle: string | null;
 }): { serve: boolean; edit: boolean; remove: boolean; restore: boolean } {
   const active = item.status === "active";
@@ -91,4 +109,36 @@ export function countdownLabel(expiresAt: string): string {
   }
   const days = Math.round(hours / 24);
   return `Use within ${days}d`;
+}
+
+// ---------------------------------------------------------------------------
+// "One container" vs "Separate containers" (item 348)
+// ---------------------------------------------------------------------------
+
+/**
+ * Which way a multi-food submission is saved: as ONE container holding every
+ * food (the default, matching what a leftovers box actually is), or as one
+ * single-food container per food.
+ */
+export type ContainerChoice = "one" | "separate";
+
+/** The control's own label, above the segments. */
+export const CONTAINER_CHOICE_LABEL = "Save as";
+
+export const CONTAINER_CHOICE_OPTIONS: SegmentedControlOption<ContainerChoice>[] = [
+  { value: "one", label: "One container", icon: null },
+  { value: "separate", label: "Separate containers", icon: null },
+];
+
+/**
+ * Whether the "Save as" choice is offered at all. One food is one container
+ * either way, so the control would be a question with one real answer —
+ * it appears only at two or more foods (item 348).
+ *
+ * The SAME predicate gates the payload: below it, `separateItems` is never
+ * sent, so a parent who picked "Separate containers" and then removed a food
+ * cannot leave a stale flag behind on a single-food save.
+ */
+export function offersContainerChoice(foodIds: readonly string[]): boolean {
+  return foodIds.length >= 2;
 }

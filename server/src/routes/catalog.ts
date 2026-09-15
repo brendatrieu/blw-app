@@ -37,7 +37,7 @@ import {
   foodPairings,
   foods,
   mealFoods,
-  storageItems,
+  storageItemFoods,
   recipeIngredients,
   recipes,
   storageGuidelines,
@@ -439,18 +439,22 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
     if (!existing) return notFound(reply);
 
     // Meal and storage rows reference foods without a cascade, on purpose:
-    // eaten history must not disappear because a food was tidied away. So a
-    // referenced food is a 409 the parent can act on, with the counts the UI
-    // needs to say what is in the way. (`food_allergens` DOES cascade, so an
-    // unreferenced food takes its allergen links with it.)
+    // eaten history must not disappear because a food was tidied away, and a
+    // container must not silently empty itself. So a referenced food is a 409
+    // the parent can act on, with the counts the UI needs to say what is in
+    // the way. (`food_allergens` DOES cascade, so an unreferenced food takes
+    // its allergen links with it.)
     const [mealRow] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(mealFoods)
       .where(eq(mealFoods.foodId, existing.id));
+    // Containers holding this food. One row per (container, food) — the join
+    // table's primary key — so this counts containers, which is what the
+    // parent is told is in the way.
     const [storageRow] = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(storageItems)
-      .where(eq(storageItems.foodId, existing.id));
+      .from(storageItemFoods)
+      .where(eq(storageItemFoods.foodId, existing.id));
     // `recipe_ingredients.food_id` has no cascade either, and since custom
     // recipes can be built out of custom foods, deleting the food underneath
     // one would otherwise trip the foreign key mid-request.

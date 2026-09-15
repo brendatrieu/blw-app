@@ -120,12 +120,14 @@ async function seedOneOfEverything(
 
   // Two storage rows: one live, one closed. The closed row is the "history"
   // half — an export that only carried active items would silently drop it.
+  // The live one holds TWO foods (item 345) — its contents are attached
+  // further down, once this account's own custom food exists, because one of
+  // them is that food.
   const [activeStorageItem] = await db
     .insert(schema.storageItems)
     .values([
       {
         userId,
-        foodId: catalog.food.id,
         preparedAt: new Date("2026-03-01T08:00:00Z"),
         location: "fridge",
         status: "active",
@@ -192,6 +194,15 @@ async function seedOneOfEverything(
     .returning();
 
   await db.insert(schema.foodAllergens).values({ foodId: customFood!.id, allergenId: catalog.peanut.id });
+
+  // What the live container holds: a catalog food and one of this account's
+  // OWN foods, in that order. The own food is the point — `storage_item_foods`
+  // has no cascade from `foods`, so deleting the account has to clear this
+  // container itself or the wipe trips the foreign key (see routes/account.ts).
+  await db.insert(schema.storageItemFoods).values([
+    { storageItemId: activeStorageItem!.id, foodId: catalog.food.id, position: 0 },
+    { storageItemId: activeStorageItem!.id, foodId: customFood!.id, position: 1 },
+  ]);
 
   // A recipe this account wrote itself (v6), built on its own custom food so
   // the delete sweep has to clear `recipe_ingredients` before either row can
@@ -303,6 +314,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     babies,
     favorites,
     storage,
+    storageFoods,
     threads,
     aiKeys,
     preferences,
@@ -321,6 +333,12 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
       db.select().from(schema.babies).where(eq(schema.babies.userId, seeded.userId)),
       db.select().from(schema.favorites).where(eq(schema.favorites.userId, seeded.userId)),
       db.select().from(schema.storageItems).where(eq(schema.storageItems.userId, seeded.userId)),
+      // The contents of this account's containers, reached through them.
+      db
+        .select()
+        .from(schema.storageItemFoods)
+        .innerJoin(schema.storageItems, eq(schema.storageItemFoods.storageItemId, schema.storageItems.id))
+        .where(eq(schema.storageItems.userId, seeded.userId)),
       db.select().from(schema.chatThreads).where(eq(schema.chatThreads.userId, seeded.userId)),
       db.select().from(schema.userAiKeys).where(eq(schema.userAiKeys.userId, seeded.userId)),
       db.select().from(schema.userPreferences).where(eq(schema.userPreferences.userId, seeded.userId)),
@@ -353,6 +371,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     mealFoods: mealFoods.length,
     favorites: favorites.length,
     storageItems: storage.length,
+    storageItemFoods: storageFoods.length,
     symptomChecks: symptomChecks.length,
     allergenOverrides: overrides.length,
     customFoods: customFoods.length,
@@ -374,6 +393,7 @@ const FULL_COUNTS = {
   mealFoods: 2,
   favorites: 1,
   storageItems: 2,
+  storageItemFoods: 2,
   symptomChecks: 1,
   allergenOverrides: 1,
   customFoods: 1,
@@ -394,6 +414,7 @@ const EMPTY_COUNTS = {
   mealFoods: 0,
   favorites: 0,
   storageItems: 0,
+  storageItemFoods: 0,
   symptomChecks: 0,
   allergenOverrides: 0,
   customFoods: 0,
@@ -409,6 +430,55 @@ const EMPTY_COUNTS = {
 
 function deletePayload(password: string | undefined, confirm: string = ACCOUNT_DELETE_CONFIRMATION) {
   return password === undefined ? { confirm } : { confirm, password };
+}
+
+/**
+ * A latch that makes `tx.delete(user)` a no-op inside the delete route's
+ * transaction, so the route's OWN storage sweep can be watched on its own.
+ *
+ * Why this is needed to test that sweep at all: `storage_items.user_id`
+ * cascades from `user`, so in an end-to-end delete every container the sweep
+ * targets is taken twice over — once by the sweep's predicate, once by the
+ * cascade a few statements later — and the final state cannot say which did
+ * it. (Postgres queues the `foods` NO ACTION checks behind the already-queued
+ * cascades, so even the foreign key the sweep exists to keep clear does not
+ * complain when the sweep is gone.) Holding the `user` row back leaves one
+ * actor in the room: whatever is missing afterwards, the sweep took it.
+ *
+ * Armed only between `arm()` and the assertions, so sign-up and seeding run
+ * against an untouched database — the same shape as the faulted-db proxy in
+ * observability.test.ts.
+ */
+function userDeleteLatch() {
+  let skipping = false;
+  const skipped = { where: () => Promise.resolve([]) };
+
+  const wrapTx = (tx: object): object =>
+    new Proxy(tx, {
+      get(target, prop, receiver) {
+        const value = Reflect.get(target, prop, receiver) as unknown;
+        if (prop !== "delete" || !skipping) return value;
+        return (table: unknown) =>
+          table === schema.user ? skipped : (value as (t: unknown) => unknown).call(receiver, table);
+      },
+    });
+
+  const wrapDb = (db: Database): Database =>
+    new Proxy(db, {
+      get(target, prop, receiver) {
+        const value = Reflect.get(target, prop, receiver) as unknown;
+        if (prop !== "transaction") return value;
+        return (callback: (tx: object) => unknown, ...rest: unknown[]) =>
+          (value as (...args: unknown[]) => unknown).call(receiver, (tx: object) => callback(wrapTx(tx)), ...rest);
+      },
+    }) as Database;
+
+  return {
+    wrapDb,
+    arm: () => {
+      skipping = true;
+    },
+  };
 }
 
 describe("account export", () => {
@@ -479,7 +549,7 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(12);
+    expect(bundle.exportVersion).toBe(13);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -520,7 +590,11 @@ describe("account export", () => {
 
     const active = bundle.storageItems.find((item) => item.status === "active");
     const finished = bundle.storageItems.find((item) => item.status === "finished");
-    expect(active?.foodName).toBe("Sweet potato");
+    // v13: every food in the container, in saved order, named not just id'd.
+    expect(active?.foods.map((food) => food.foodName)).toEqual(["Sweet potato", "Satay sauce"]);
+    expect(active?.foods.map((food) => food.foodId)).toEqual([catalog.food.id, seeded.customFoodId]);
+    // A recipe container names no foods of its own.
+    expect(finished?.foods).toEqual([]);
     expect(finished?.recipeTitle).toBe("Sweet Potato Strips");
   });
 
@@ -875,6 +949,10 @@ describe("account deletion", () => {
   });
 
   it("deletes the user and every owned row on a correct password", async () => {
+    // The seeded live container holds this account's own custom food, and
+    // `storage_item_foods.food_id` has no cascade — so a delete that did not
+    // clear that container first would fail the foreign key here, not merely
+    // leave a row behind.
     const response = await app.inject({
       method: "DELETE",
       url: "/api/account",
@@ -884,6 +962,8 @@ describe("account deletion", () => {
 
     expect(response.statusCode).toBe(204);
     expect(await ownedRowCounts(db, seeded)).toEqual(EMPTY_COUNTS);
+    // Nothing is left pointing at a container that no longer exists.
+    expect(await db.select().from(schema.storageItemFoods)).toHaveLength(0);
   });
 
   it("clears the session cookie and invalidates the session", async () => {
@@ -950,5 +1030,97 @@ describe("account deletion", () => {
     // The budget runs out before the correct password is even looked at, so
     // the account is still there.
     expect(await ownedRowCounts(db, seeded)).toEqual(FULL_COUNTS);
+  });
+});
+
+/**
+ * Item 345 moved the account delete's "own custom food" reach from a
+ * `storage_items.food_id` column to the `storage_item_foods` join, and one
+ * own food anywhere in a container now takes the whole container. That
+ * predicate is what this block pins — see `userDeleteLatch` for why the
+ * end-to-end delete above cannot: with the `user` row going too, the cascade
+ * removes the same rows and hides whatever the predicate does or does not
+ * match.
+ */
+describe("account deletion — the storage sweep's own reach", () => {
+  let app: FastifyInstance;
+  let db: Database;
+  let close: () => Promise<void>;
+  let catalog: Awaited<ReturnType<typeof seedCatalog>>;
+  let user: TestUser;
+  let seeded: SeededAccount;
+  let latch: ReturnType<typeof userDeleteLatch>;
+
+  beforeEach(async () => {
+    latch = userDeleteLatch();
+    ({ app, db, close } = await createTestApp({}, {}, latch.wrapDb));
+    catalog = await seedCatalog(db);
+    user = await signUpUser(app);
+    seeded = await seedOneOfEverything(db, user, catalog);
+  });
+
+  afterEach(async () => {
+    await close();
+  });
+
+  it("takes containers holding an own food or built from an own recipe, and leaves the rest", async () => {
+    // Three more containers beside the seeded one (which already holds a
+    // catalog food AND this account's own custom food, in that order):
+    const [ownRecipeItem, catalogOnlyItem, plainItem] = await db
+      .insert(schema.storageItems)
+      .values([
+        { userId: seeded.userId, recipeId: seeded.customRecipeId, preparedAt: new Date(), location: "freezer" },
+        { userId: seeded.userId, preparedAt: new Date(), location: "fridge" },
+        { userId: seeded.userId, label: "Sunday soup", preparedAt: new Date(), location: "fridge" },
+      ])
+      .returning();
+    await db.insert(schema.storageItemFoods).values([
+      { storageItemId: catalogOnlyItem!.id, foodId: catalog.food.id, position: 0 },
+      { storageItemId: catalogOnlyItem!.id, foodId: catalog.secondFood.id, position: 1 },
+    ]);
+    const ownFoodItemId = (
+      await db
+        .select({ id: schema.storageItemFoods.storageItemId })
+        .from(schema.storageItemFoods)
+        .where(eq(schema.storageItemFoods.foodId, seeded.customFoodId))
+    )[0]!.id;
+
+    const containerIds = async () =>
+      (await db.select({ id: schema.storageItems.id }).from(schema.storageItems)).map((row) => row.id).sort();
+    const before = await containerIds();
+    expect(before).toContain(ownFoodItemId);
+
+    latch.arm();
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/api/account",
+      headers: { cookie: user.cookie },
+      payload: deletePayload(user.password),
+    });
+    expect(response.statusCode).toBe(204);
+
+    // The latch held, so the cascade never ran: anything missing below was
+    // taken by the route's own predicate.
+    const survivors = await db.select({ id: schema.user.id }).from(schema.user);
+    expect(survivors.map((row) => row.id)).toEqual([seeded.userId]);
+
+    // Gone: the container with one own custom food among its two foods (the
+    // join clause), and the one built from an own recipe (the recipe clause).
+    // Kept: every other container, including one stocked from a CATALOG
+    // recipe and one from catalog foods. The sweep is a targeted clear of the
+    // foreign keys that block the wipe, not "delete every container I have" —
+    // the cascade is what does that.
+    expect(await containerIds()).toEqual(
+      before.filter((id) => id !== ownFoodItemId && id !== ownRecipeItem!.id),
+    );
+    expect(before).toContain(catalogOnlyItem!.id);
+    expect(before).toContain(plainItem!.id);
+    // And the emptied container took its join rows with it.
+    expect(
+      await db
+        .select({ id: schema.storageItemFoods.foodId })
+        .from(schema.storageItemFoods)
+        .where(eq(schema.storageItemFoods.foodId, seeded.customFoodId)),
+    ).toHaveLength(0);
   });
 });

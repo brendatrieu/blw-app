@@ -7,9 +7,11 @@ import { catalogKeys } from "../../catalog/hooks.js";
 import {
   ADD_STORAGE_ITEM_FIELD_ORDER,
   AddStorageItemForm,
+  buildStorageCreateInput,
   resolveStoragePrefill,
   validateAddStorageItem,
   type AddStorageItemValues,
+  type StorageCreateValues,
   type StoragePrefill,
 } from "./AddStorageItemForm.js";
 
@@ -259,5 +261,97 @@ describe("AddStorageItemForm (prefill, item 284)", () => {
     expect(html).toContain(">Location<");
     expect(html).toContain(">Prepared<");
     expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Add to storage</);
+  });
+});
+
+// Item 348: the payload the form submits, as a pure function — the form's own
+// state can only ever hold one prefilled food in a server render, so the
+// multi-food behaviour is pinned here rather than through the DOM.
+describe("buildStorageCreateInput", () => {
+  const preparedAt = new Date(2026, 8, 14, 10, 0);
+
+  function createValues(overrides: Partial<StorageCreateValues> = {}): StorageCreateValues {
+    return {
+      source: "food",
+      foodIds: ["food-1"],
+      containerChoice: "one",
+      recipeId: "",
+      label: "",
+      bestBy: "",
+      preparedAt,
+      location: "fridge",
+      quantityNote: "",
+      servingsTotal: "",
+      notes: "",
+      ...overrides,
+    };
+  }
+
+  it("sends every picked food, in the order they were picked", () => {
+    const input = buildStorageCreateInput(createValues({ foodIds: ["food-3", "food-1", "food-2"] }));
+    expect(input.foodIds).toEqual(["food-3", "food-1", "food-2"]);
+    expect(input.recipeId).toBeUndefined();
+    expect(input.label).toBeUndefined();
+  });
+
+  it("round-trips the separate-containers choice once two or more foods make it meaningful", () => {
+    const foodIds = ["food-1", "food-2"];
+    expect(buildStorageCreateInput(createValues({ foodIds, containerChoice: "separate" })).separateItems).toBe(true);
+    expect(buildStorageCreateInput(createValues({ foodIds, containerChoice: "one" })).separateItems).toBe(false);
+  });
+
+  // The flag is gated on the same predicate that shows the control, so a
+  // choice made at two foods and then undone (by removing one) cannot leak.
+  it("drops the flag below two foods, even when it is still set", () => {
+    expect(
+      buildStorageCreateInput(createValues({ foodIds: ["food-1"], containerChoice: "separate" })).separateItems,
+    ).toBeUndefined();
+  });
+
+  it("never sends the flag — or any food — from the recipe or free-form tab", () => {
+    const recipe = buildStorageCreateInput(
+      createValues({ source: "recipe", recipeId: "recipe-1", foodIds: ["food-1", "food-2"], containerChoice: "separate" }),
+    );
+    expect(recipe.separateItems).toBeUndefined();
+    expect(recipe.foodIds).toBeUndefined();
+    expect(recipe.recipeId).toBe("recipe-1");
+
+    const labelOnly = buildStorageCreateInput(
+      createValues({ source: "label", label: "  Lentil soup  ", foodIds: ["food-1", "food-2"] }),
+    );
+    expect(labelOnly.separateItems).toBeUndefined();
+    expect(labelOnly.foodIds).toBeUndefined();
+    expect(labelOnly.label).toBe("Lentil soup");
+  });
+
+  it("carries the rest of the form through, trimming the optional text fields to undefined when blank", () => {
+    const filled = buildStorageCreateInput(
+      createValues({ location: "freezer", quantityNote: " 6 cubes ", servingsTotal: "6", bestBy: "2026-09-20", notes: " batch " }),
+    );
+    expect(filled).toMatchObject({
+      location: "freezer",
+      preparedAt: preparedAt.toISOString(),
+      quantityNote: "6 cubes",
+      servingsTotal: 6,
+      bestBy: "2026-09-20",
+      notes: "batch",
+    });
+
+    const empty = buildStorageCreateInput(createValues({ quantityNote: "   ", servingsTotal: "  ", notes: "" }));
+    expect(empty.quantityNote).toBeUndefined();
+    expect(empty.servingsTotal).toBeUndefined();
+    expect(empty.bestBy).toBeUndefined();
+    expect(empty.notes).toBeUndefined();
+  });
+});
+
+describe("AddStorageItemForm 'Save as' choice (item 348)", () => {
+  it("asks nothing while the food tab holds fewer than two foods", () => {
+    expect(renderForm()).not.toContain("Save as");
+    expect(renderForm({ source: "food", foodId: FOOD.id })).not.toContain("Save as");
+  });
+
+  it("asks nothing on the recipe tab, which has no foods to split", () => {
+    expect(renderForm({ source: "recipe", recipeId: RECIPE.id })).not.toContain("Save as");
   });
 });

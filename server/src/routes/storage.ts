@@ -15,6 +15,7 @@
 // refuse the one combination that could only be a mis-tap: a best-by date
 // before the prepared date, on create (the schema's own refine) and on
 // PATCH (below, against the merged values).
+import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
@@ -25,26 +26,23 @@ import {
   storageQuerySchema,
   serveStorageItemInputSchema,
   updateStorageItemInputSchema,
+  type CreateStorageItemResponse,
   type StorageItem,
   type StorageResponse,
   type ServeStorageItemResponse,
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
-import { babies, foods, storageItems, recipeIngredients, recipes, storageGuidelines } from "../db/schema.js";
+import { babies, foods, storageItemFoods, storageItems, recipeIngredients, recipes } from "../db/schema.js";
 import { insertMealWithFoods, loadMeals, ownsBaby } from "../services/meals.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
-
-const HOUR_MS = 60 * 60 * 1000;
-const USE_SOON_THRESHOLD = 0.75;
-
-/**
- * Window used when an item has neither a catalog food nor a recipe to derive
- * a `storage_guidelines` category from (a pure free-form label). Mirrors the
- * seeded `soup_stew_curry` row — the closest "any cooked home meal" analog —
- * since no literal `cooked-meal` category exists in the seed data.
- */
-const FALLBACK_WINDOW = { fridgeHours: 48, freezerDays: 60, roomTempHours: 2 };
+import {
+  deriveFreshness,
+  loadRecipeIngredientCategories,
+  loadStorageGuidelines,
+  loadStorageItemFoods,
+  resolveStorageWindowHours,
+} from "../services/storage.js";
 
 function badRequest(reply: FastifyReply, details: unknown): FastifyReply {
   return reply.code(400).send({ error: "invalid_request", details });
@@ -76,14 +74,11 @@ function currentUserId(request: FastifyRequest): string {
   return id;
 }
 
+// No foods join: what a container holds lives in `storage_item_foods` and is
+// loaded per item by `loadStorageItemFoods` during hydration (item 345).
 const STORAGE_SELECTION = {
   id: storageItems.id,
   label: storageItems.label,
-  foodId: storageItems.foodId,
-  foodSlug: foods.slug,
-  foodName: foods.name,
-  foodEmoji: foods.emoji,
-  foodStorageCategory: foods.storageCategory,
   recipeId: storageItems.recipeId,
   recipeTitle: recipes.title,
   recipeFridgeHoursOverride: recipes.fridgeHoursOverride,
@@ -102,11 +97,6 @@ const STORAGE_SELECTION = {
 type StorageRow = {
   id: string;
   label: string | null;
-  foodId: string | null;
-  foodSlug: string | null;
-  foodName: string | null;
-  foodEmoji: string | null;
-  foodStorageCategory: string | null;
   recipeId: string | null;
   recipeTitle: string | null;
   recipeFridgeHoursOverride: number | null;
@@ -124,78 +114,74 @@ type StorageRow = {
 };
 
 /**
- * Resolves each row's storage window and derives `expiresAt`/`useSoon`/
- * `expired` from it. Batches the lookups it needs (recipe-only items' food
- * category via their first ingredient, and the `storage_guidelines` rows
- * themselves) so a list of N items costs at most two extra queries, not N.
+ * Loads each row's foods, resolves its storage window from them, and derives
+ * `expiresAt`/`useSoon`/`expired`. Batches every lookup it needs (the foods
+ * themselves, recipe-only items' food category via their first ingredient,
+ * and the `storage_guidelines` rows) so a list of N items costs three extra
+ * queries, not 3N.
+ *
+ * The window rule itself is `services/storage.ts` — shared with the AI tool,
+ * which used to keep its own copy.
  */
 async function hydrateStorageItems(db: Database, rows: StorageRow[]): Promise<StorageItem[]> {
-  // Rows with no direct food link but a recipe need that recipe's first
-  // ingredient's food category. "First" has no explicit ordering column in
-  // recipe_ingredients, so this orders by the join row's id for a
-  // deterministic (if arbitrary) pick.
-  const recipeIdsNeedingCategory = [
-    ...new Set(rows.filter((r) => !r.foodStorageCategory && r.recipeId).map((r) => r.recipeId as string)),
-  ];
-  const categoryByRecipeId = new Map<string, string>();
-  if (recipeIdsNeedingCategory.length > 0) {
-    const ingredientRows = await db
-      .select({ recipeId: recipeIngredients.recipeId, storageCategory: foods.storageCategory })
-      .from(recipeIngredients)
-      .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
-      .where(inArray(recipeIngredients.recipeId, recipeIdsNeedingCategory))
-      .orderBy(asc(recipeIngredients.id));
-    for (const row of ingredientRows) {
-      if (!categoryByRecipeId.has(row.recipeId)) categoryByRecipeId.set(row.recipeId, row.storageCategory);
-    }
-  }
+  const foodsByItemId = await loadStorageItemFoods(
+    db,
+    rows.map((row) => row.id),
+  );
 
-  const categoryFor = (row: StorageRow): string | undefined =>
-    row.foodStorageCategory ?? (row.recipeId ? categoryByRecipeId.get(row.recipeId) : undefined);
+  // Rows with no foods of their own but a recipe derive their category from
+  // that recipe's first ingredient.
+  const categoryByRecipeId = await loadRecipeIngredientCategories(db, [
+    ...new Set(
+      rows.filter((row) => !foodsByItemId.has(row.id) && row.recipeId).map((row) => row.recipeId as string),
+    ),
+  ]);
 
-  const categories = [...new Set(rows.map(categoryFor).filter((c): c is string => Boolean(c)))];
-  const guidelineRows =
-    categories.length > 0
-      ? await db.select().from(storageGuidelines).where(inArray(storageGuidelines.category, categories))
-      : [];
-  const guidelineByCategory = new Map(guidelineRows.map((g) => [g.category, g]));
+  // Every food in the container speaks: the shortest window among them is
+  // what the item gets (`resolveStorageWindowHours`).
+  const categoriesFor = (row: StorageRow): string[] => {
+    const itemFoods = foodsByItemId.get(row.id);
+    if (itemFoods && itemFoods.length > 0) return itemFoods.map((food) => food.storageCategory);
+    const fromRecipe = row.recipeId ? categoryByRecipeId.get(row.recipeId) : undefined;
+    return fromRecipe ? [fromRecipe] : [];
+  };
+
+  const guidelineByCategory = await loadStorageGuidelines(db, [...new Set(rows.flatMap(categoriesFor))]);
 
   const now = Date.now();
 
   return rows.map((row) => {
-    const guideline = guidelineByCategory.get(categoryFor(row) ?? "");
-
-    // Recipe overrides (fridge/freezer only — there is no room-temp override
-    // column) win over the category guideline, which wins over the fallback.
-    const fridgeHours = row.recipeFridgeHoursOverride ?? guideline?.fridgeHours ?? FALLBACK_WINDOW.fridgeHours;
-    const freezerDays = row.recipeFreezerOverride ?? guideline?.freezerDays ?? FALLBACK_WINDOW.freezerDays;
-    const roomTempHours = guideline?.roomTempHours ?? FALLBACK_WINDOW.roomTempHours;
-
-    const windowHours = row.location === "fridge" ? fridgeHours : row.location === "freezer" ? freezerDays * 24 : roomTempHours;
-
-    const preparedMs = row.preparedAt.getTime();
-    const expiresAtMs = preparedMs + windowHours * HOUR_MS;
-    const useSoonThresholdMs = preparedMs + windowHours * HOUR_MS * USE_SOON_THRESHOLD;
-    const expired = now > expiresAtMs;
-    const useSoon = !expired && now >= useSoonThresholdMs;
+    const windowHours = resolveStorageWindowHours(
+      {
+        location: row.location,
+        categories: categoriesFor(row),
+        recipeOverrides: { fridgeHours: row.recipeFridgeHoursOverride, freezerDays: row.recipeFreezerOverride },
+      },
+      guidelineByCategory,
+    );
+    const freshness = deriveFreshness(row.preparedAt, windowHours, now);
 
     const item: StorageItem = {
       id: row.id,
       label: row.label,
-      foodSlug: row.foodSlug,
-      foodName: row.foodName,
-      // Only ever set on a custom food; the client falls back to its own
-      // slug/category emoji table when it is null.
-      foodEmoji: row.foodEmoji,
+      // In the order the parent saved them. Empty for a recipe-sourced or
+      // label-only container. `emoji` is only ever set on a custom food; the
+      // client falls back to its own slug/category table when it is null.
+      foods: (foodsByItemId.get(row.id) ?? []).map((food) => ({
+        id: food.id,
+        slug: food.slug,
+        name: food.name,
+        emoji: food.emoji,
+      })),
       recipeId: row.recipeId,
       recipeTitle: row.recipeTitle,
       preparedAt: row.preparedAt.toISOString(),
       location: row.location,
       status: row.status,
       statusChangedAt: row.statusChangedAt.toISOString(),
-      expiresAt: new Date(expiresAtMs).toISOString(),
-      useSoon,
-      expired,
+      expiresAt: freshness.expiresAt,
+      useSoon: freshness.useSoon,
+      expired: freshness.expired,
       quantityNote: row.quantityNote,
       // Servings and best-by are stored, not derived: an untracked item
       // reports nulls, exactly as it did before these columns existed.
@@ -213,7 +199,6 @@ async function loadStorageItem(db: Database, id: string): Promise<StorageItem> {
   const rows = await db
     .select(STORAGE_SELECTION)
     .from(storageItems)
-    .leftJoin(foods, eq(storageItems.foodId, foods.id))
     .leftJoin(recipes, eq(storageItems.recipeId, recipes.id))
     .where(eq(storageItems.id, id))
     .limit(1);
@@ -239,7 +224,6 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     const rows = await db
       .select(STORAGE_SELECTION)
       .from(storageItems)
-      .leftJoin(foods, eq(storageItems.foodId, foods.id))
       .leftJoin(recipes, eq(storageItems.recipeId, recipes.id))
       .where(and(eq(storageItems.userId, currentUserId(request)), statusFilter));
 
@@ -291,37 +275,52 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     const userId = currentUserId(request);
     const preparedAt = body.data.preparedAt ? new Date(body.data.preparedAt) : new Date();
 
-    // One transaction so a batch is all-or-nothing: either every food gets a
-    // storage row, or none do. A non-food (recipe- or label-sourced) item is
-    // still exactly one row.
-    const insertedIds = await db.transaction(async (tx) => {
-      const rows = await tx
-        .insert(storageItems)
-        .values(
-          (foodIds ?? [null]).map((foodId) => ({
-            userId,
-            foodId,
-            recipeId: body.data.recipeId,
-            label: body.data.label,
-            preparedAt,
-            location: body.data.location,
-            quantityNote: body.data.quantityNote,
-            // A brand new container is full: servingsLeft starts at the
-            // total, and both stay null when tracking is off.
-            servingsTotal: body.data.servingsTotal,
-            servingsLeft: body.data.servingsTotal,
-            bestBy: body.data.bestBy,
-            notes: body.data.notes,
-          })),
-        )
-        .returning();
-      return rows.map((r) => r.id);
+    // What this submission becomes. A container holds the whole meal, so
+    // several foods are ONE item with one join row each, in the order they
+    // were submitted — unless the parent chose "Separate containers", which
+    // is one single-food item per food. A recipe- or label-sourced item is
+    // one item with no foods of its own, as before.
+    const groups: string[][] = foodIds ? (body.data.separateItems ? foodIds.map((id) => [id]) : [foodIds]) : [[]];
+
+    // Ids are minted here rather than read back from `returning()` so each
+    // group is paired with its own item by identity, never by relying on a
+    // multi-row insert handing its rows back in the order they went in.
+    const insertedIds = groups.map(() => randomUUID());
+
+    // One transaction so a submission is all-or-nothing: every item and every
+    // join row lands, or none of them do.
+    await db.transaction(async (tx) => {
+      await tx.insert(storageItems).values(
+        insertedIds.map((id) => ({
+          id,
+          userId,
+          recipeId: body.data.recipeId,
+          label: body.data.label,
+          preparedAt,
+          location: body.data.location,
+          quantityNote: body.data.quantityNote,
+          // A brand new container is full: servingsLeft starts at the
+          // total, and both stay null when tracking is off.
+          servingsTotal: body.data.servingsTotal,
+          servingsLeft: body.data.servingsTotal,
+          bestBy: body.data.bestBy,
+          notes: body.data.notes,
+        })),
+      );
+
+      const joinRows = groups.flatMap((group, groupIndex) =>
+        group.map((foodId, position) => ({
+          storageItemId: insertedIds[groupIndex] as string,
+          foodId,
+          position,
+        })),
+      );
+      if (joinRows.length > 0) await tx.insert(storageItemFoods).values(joinRows);
     });
 
     const rows = await db
       .select(STORAGE_SELECTION)
       .from(storageItems)
-      .leftJoin(foods, eq(storageItems.foodId, foods.id))
       .leftJoin(recipes, eq(storageItems.recipeId, recipes.id))
       .where(inArray(storageItems.id, insertedIds));
 
@@ -333,7 +332,9 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
       }
       return item;
     });
-    return reply.code(201).send(items);
+    // Always `{ items }`, whether that is one container or one per food, so a
+    // caller never has to branch on what it asked for.
+    return reply.code(201).send({ items } satisfies CreateStorageItemResponse);
   });
 
   // -----------------------------------------------------------------------
@@ -443,7 +444,7 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     // read and written inside the transaction below, so nothing computed out
     // here from a stale snapshot can reach the decrement.
     const [item] = await db
-      .select({ id: storageItems.id, foodId: storageItems.foodId, recipeId: storageItems.recipeId })
+      .select({ id: storageItems.id, recipeId: storageItems.recipeId })
       .from(storageItems)
       .where(and(eq(storageItems.id, params.data.id), eq(storageItems.userId, userId)))
       .limit(1);
@@ -475,12 +476,15 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
       babyId = only.id;
     }
 
-    // What was eaten. A food-sourced item is its own food; a recipe-sourced
-    // one expands to the recipe's ingredient foods (the only place the
-    // server expands a recipe — hand-logged meals send their own list).
+    // What was eaten. A food-sourced item is everything in it, in saved
+    // order — one meal with all of them, each linked back to this container;
+    // a recipe-sourced one expands to the recipe's ingredient foods (the only
+    // place the server expands a recipe — hand-logged meals send their own
+    // list).
+    const itemFoods = (await loadStorageItemFoods(db, [item.id])).get(item.id) ?? [];
     let foodIds: string[];
-    if (item.foodId) {
-      foodIds = [item.foodId];
+    if (itemFoods.length > 0) {
+      foodIds = itemFoods.map((food) => food.id);
     } else if (item.recipeId) {
       const ingredients = await db
         .select({ foodId: recipeIngredients.foodId })
@@ -596,7 +600,3 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     return reply.code(201).send({ meal, item: await loadStorageItem(db, item.id) } satisfies ServeStorageItemResponse);
   });
 }
-
-/** Exported for the test suite to assert against without duplicating the
- * fallback numbers. */
-export const STORAGE_FALLBACK_WINDOW = FALLBACK_WINDOW;

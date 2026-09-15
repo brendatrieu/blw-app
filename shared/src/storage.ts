@@ -152,6 +152,9 @@ export function isBestByBeforePreparedDay(
 
 export const createStorageItemInputSchema = z
   .object({
+    /** Every food in the container, in the order the parent picked them.
+     * One storage item holds the whole meal (item 345); `separateItems`
+     * below is the opt-out. */
     foodIds: z
       .array(z.string().uuid())
       .min(1)
@@ -163,6 +166,17 @@ export const createStorageItemInputSchema = z
       .uuid()
       .nullish()
       .transform((value) => value ?? null),
+    /**
+     * "Separate containers": each picked food becomes its own single-food
+     * storage item instead of one item holding all of them. Only meaningful
+     * with two or more `foodIds` (one food is one container either way), and
+     * meaningless for a recipe item — which is why it is rejected next to
+     * `recipeId` rather than quietly ignored.
+     */
+    separateItems: z
+      .boolean()
+      .nullish()
+      .transform((value) => value ?? false),
     label: optionalLabel,
     /** Defaults to now on the server when omitted. */
     preparedAt: preparedAtSchema.optional(),
@@ -177,6 +191,19 @@ export const createStorageItemInputSchema = z
   .refine((value) => Boolean(value.foodIds || value.recipeId || value.label), {
     message: "At least one of foodIds, recipeId, or label is required",
     path: ["foodIds"],
+  })
+  // Foods XOR recipe. A recipe item names no foods of its own — its
+  // ingredients are derived at serve time — so the two sources can never
+  // describe the same container. `label` stays allowed beside either (the
+  // Add form offers it, and pre-migration rows carry one); a label with
+  // neither is the label-only container.
+  .refine((value) => !(value.foodIds && value.recipeId), {
+    message: "A storage item holds either foods or a recipe, not both",
+    path: ["recipeId"],
+  })
+  .refine((value) => !(value.separateItems && value.recipeId), {
+    message: "separateItems only applies to a foods-based item",
+    path: ["separateItems"],
   })
   // Both fields are on this payload, so create can decide it here. PATCH
   // cannot — its answer depends on the row's stored values — so the route
@@ -215,15 +242,31 @@ export type UpdateStorageItemInput = z.input<typeof updateStorageItemInputSchema
 // Response shape
 // ---------------------------------------------------------------------------
 
+/**
+ * One food inside a container, carrying everything a card needs to render it
+ * without a second lookup. `emoji` is set only on a parent-added custom food;
+ * the client falls back to its own slug/category map when it is null, exactly
+ * as it does for `MealFood.emoji`.
+ */
+export const storageItemFoodSchema = z.object({
+  id: z.string().uuid(),
+  slug: z.string(),
+  name: z.string(),
+  emoji: z.string().nullable(),
+});
+export type StorageItemFood = z.infer<typeof storageItemFoodSchema>;
+
 export const storageItemSchema = z.object({
   id: z.string().uuid(),
   label: z.string().nullable(),
-  foodSlug: z.string().nullable(),
-  foodName: z.string().nullable(),
-  /** The food's own emoji when a parent picked one on a custom food; the
-   * client falls back to its slug/category map. Optional for the same reason
-   * as `MealFood.emoji` — only custom foods ever have one. */
-  foodEmoji: z.string().nullable().optional(),
+  /**
+   * Every food in this container, in the order it was saved (item 345). A
+   * container holds a whole meal, so this replaces the single
+   * `foodSlug`/`foodName`/`foodEmoji` trio — a one-food item is simply a
+   * one-element list and renders exactly as it did before. Empty for a
+   * recipe-sourced or label-only item.
+   */
+  foods: z.array(storageItemFoodSchema),
   recipeId: z.string().uuid().nullable(),
   recipeTitle: z.string().nullable(),
   preparedAt: z.string(),
@@ -256,6 +299,15 @@ export type StorageItem = z.infer<typeof storageItemSchema>;
 
 export const storageResponseSchema = z.object({ items: z.array(storageItemSchema) });
 export type StorageResponse = z.infer<typeof storageResponseSchema>;
+
+/**
+ * What POST /api/storage answers with. Always the same shape, whether the
+ * submission produced ONE container holding several foods (the default) or
+ * one container per food (`separateItems`) — a caller never has to branch on
+ * which it asked for, it just reads `items`.
+ */
+export const createStorageItemResponseSchema = storageResponseSchema;
+export type CreateStorageItemResponse = z.infer<typeof createStorageItemResponseSchema>;
 
 // ---------------------------------------------------------------------------
 // POST /api/storage/:id/serve

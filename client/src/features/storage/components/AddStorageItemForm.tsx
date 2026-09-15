@@ -1,9 +1,10 @@
 import { useState } from "react";
-import type { StorageLocation } from "@blw/shared";
+import type { CreateStorageItemInput, StorageLocation } from "@blw/shared";
 import { FoodPicker } from "../../catalog/components/FoodPicker.js";
 import { RecipePicker } from "../../catalog/components/RecipePicker.js";
 import { useCreateStorageItem } from "../hooks.js";
-import { LOCATIONS } from "../format.js";
+import { LOCATIONS, offersContainerChoice, type ContainerChoice } from "../format.js";
+import { ContainerChoiceField } from "./ContainerChoiceField.js";
 import { BEST_BY_BEFORE_PREPARED_MESSAGE, isBestByBeforePrepared } from "../freshness.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
@@ -63,6 +64,50 @@ export function validateAddStorageItem(values: AddStorageItemValues): AddStorage
   return errors;
 }
 
+/** Everything the submit payload is built from: the validated source fields
+ * plus the rest of the form's own state. */
+export interface StorageCreateValues extends AddStorageItemValues {
+  containerChoice: ContainerChoice;
+  location: StorageLocation;
+  /** "" when the optional field is unset. */
+  quantityNote: string;
+  servingsTotal: string;
+  notes: string;
+}
+
+/**
+ * The `createStorageItem` payload for one Add-to-storage submit — pure, so
+ * the exact shape (which source tab's field is sent, and which are dropped)
+ * is unit-testable without driving the form. The sibling of
+ * `buildLeftoverStorageInput` in the log form, which does the same job for
+ * leftovers.
+ *
+ * Only the VISIBLE tab's field is sent: a food id left behind by a tab the
+ * parent moved away from is not an error (`validateAddStorageItem` ignores
+ * it) and must not reach the server either, where foods and a recipe
+ * together are a 400.
+ *
+ * `separateItems` rides along only where the control that sets it is shown
+ * (`offersContainerChoice`) — with one food it is meaningless, and beside a
+ * recipe the server rejects it outright.
+ */
+export function buildStorageCreateInput(values: StorageCreateValues): CreateStorageItemInput {
+  const onFoodTab = values.source === "food";
+  return {
+    foodIds: onFoodTab ? values.foodIds : undefined,
+    separateItems:
+      onFoodTab && offersContainerChoice(values.foodIds) ? values.containerChoice === "separate" : undefined,
+    recipeId: values.source === "recipe" ? values.recipeId : undefined,
+    label: values.source === "label" ? values.label.trim() : undefined,
+    preparedAt: values.preparedAt.toISOString(),
+    location: values.location,
+    quantityNote: values.quantityNote.trim() || undefined,
+    servingsTotal: values.servingsTotal.trim() ? Number(values.servingsTotal) : undefined,
+    bestBy: values.bestBy || undefined,
+    notes: values.notes.trim() || undefined,
+  };
+}
+
 /**
  * What `/storage/add?food=<id>` / `?recipe=<id>` asks the form to open with
  * (item 284) — the same query-param idiom `/log-meal?food=<id>` uses, so
@@ -119,6 +164,10 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
   const [foodIds, setFoodIds] = useState<string[]>(prefill?.foodId ? [prefill.foodId] : []);
   const [recipeId, setRecipeId] = useState(prefill?.recipeId ?? "");
   const [label, setLabel] = useState("");
+  // Item 348: several foods go into ONE container unless the parent says
+  // otherwise. Only read while the food tab is open with two or more foods
+  // picked — see `offersContainerChoice`.
+  const [containerChoice, setContainerChoice] = useState<ContainerChoice>("one");
   const [location, setLocation] = useState<StorageLocation>("fridge");
   const [preparedAt, setPreparedAt] = useState(() => nowAtMinute());
   const [quantityNote, setQuantityNote] = useState("");
@@ -147,17 +196,19 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
     if (createItem.isPending) return;
     if (!attemptSubmit()) return;
     createItem.mutate(
-      {
-        foodIds: source === "food" ? foodIds : undefined,
-        recipeId: source === "recipe" ? recipeId : undefined,
-        label: source === "label" ? label.trim() : undefined,
-        preparedAt: preparedAt.toISOString(),
+      buildStorageCreateInput({
+        source,
+        foodIds,
+        containerChoice,
+        recipeId,
+        label,
+        preparedAt,
         location,
-        quantityNote: quantityNote.trim() || undefined,
-        servingsTotal: servingsTotal.trim() ? Number(servingsTotal) : undefined,
-        bestBy: bestBy || undefined,
-        notes: notes.trim() || undefined,
-      },
+        quantityNote,
+        servingsTotal,
+        bestBy,
+        notes,
+      }),
       { onSuccess: onDone },
     );
   }
@@ -188,6 +239,10 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
         <Field label="Food" htmlFor="storage-add-food" error={shownErrors.food}>
           <FoodPicker id="storage-add-food" value={foodIds} onChange={setFoodIds} />
         </Field>
+      )}
+
+      {source === "food" && (
+        <ContainerChoiceField foodIds={foodIds} value={containerChoice} onChange={setContainerChoice} />
       )}
 
       {/* The same searchable picker the log form uses, over EVERY recipe.

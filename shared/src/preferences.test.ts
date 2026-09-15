@@ -55,9 +55,9 @@ describe("updatePreferencesInputSchema", () => {
   });
 });
 
-describe("account export v12", () => {
+describe("account export v13", () => {
   it("bumped its version and carries usage events alongside the preferences", () => {
-    expect(ACCOUNT_EXPORT_VERSION).toBe(12);
+    expect(ACCOUNT_EXPORT_VERSION).toBe(13);
 
     const shape = accountExportSchema.shape;
     expect(shape.preferences.safeParse(null).success).toBe(true);
@@ -81,6 +81,38 @@ describe("account export v12", () => {
       ]).success,
     ).toBe(true);
     expect(shape.usageEvents.safeParse(undefined).success).toBe(false);
+  });
+
+  // v13 (item 345): a container holds a whole meal, so the single
+  // `foodId`/`foodName` pair became an ordered list. A v12 file — which named
+  // one food per row — is no longer a valid v13 storage row, which is exactly
+  // what the version bump is for.
+  it("lists every food in a storage row instead of naming one", () => {
+    const row = {
+      id: "s1",
+      recipeId: null,
+      recipeTitle: null,
+      label: null,
+      preparedAt: "2026-09-13T10:00:00.000Z",
+      location: "fridge",
+      status: "active",
+      statusChangedAt: "2026-09-13T10:00:00.000Z",
+      quantityNote: null,
+      servingsTotal: null,
+      servingsLeft: null,
+      bestBy: null,
+      notes: null,
+    };
+    const storageItems = accountExportSchema.shape.storageItems;
+
+    expect(storageItems.safeParse([{ ...row, foods: [] }]).success).toBe(true);
+    expect(
+      storageItems.safeParse([
+        { ...row, foods: [{ foodId: "f1", foodName: "Chicken" }, { foodId: "f2", foodName: "Rice" }] },
+      ]).success,
+    ).toBe(true);
+    // The v12 shape, which carried the food as two scalar fields.
+    expect(storageItems.safeParse([{ ...row, foodId: "f1", foodName: "Chicken" }]).success).toBe(false);
   });
 
   it("carries the account's role in the profile block", () => {

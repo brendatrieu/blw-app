@@ -4,10 +4,10 @@ import type { FastifyInstance } from "fastify";
 import type {
   AllergenProgressResponse,
   Baby,
+  CreateStorageItemResponse,
   FavoritesResponse,
   FoodDetail,
   MealItem,
-  StorageItem,
   RecipeDetail,
   RecipesResponse,
 } from "@blw/shared";
@@ -1406,7 +1406,7 @@ describe("custom recipes", () => {
         payload: { recipeId: mine.id, location: "freezer" },
       });
       expect(stocked.statusCode).toBe(201);
-      const item = stocked.json<StorageItem[]>()[0]!;
+      const item = stocked.json<CreateStorageItemResponse>().items[0]!;
       expect(item.recipeTitle).toBe("Banana oat fingers");
 
       const served = await app.inject({

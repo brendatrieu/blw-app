@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { MealFood, MealItem } from "@blw/shared";
 import { useDeleteMeal, useMeals } from "../hooks.js";
-import { getFoodEmoji } from "../../catalog/foodEmoji.js";
+import { emojiCluster, type EmojiCluster } from "../../catalog/foodEmoji.js";
 import { MealActionsMenu } from "./MealActionsMenu.js";
 import { Badge } from "../../catalog/components/Badge.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
@@ -43,23 +43,11 @@ export function mealTitle(foods: readonly MealFood[]): string {
   return foods.map((food) => food.name).join(", ");
 }
 
-export interface EmojiCluster {
-  /** One emoji per food, capped at `max`. */
-  emojis: string[];
-  /** How many foods the cluster couldn't show (0 when nothing is hidden). */
-  overflow: number;
-}
-
-/** The leading emoji stack, the meal-row answer to `storageItemEmoji`: at most
- * `max` food emoji, plus a "+N" count for the rest so a big meal stays one
- * compact glyph run instead of wrapping the row. */
-export function emojiCluster(foods: readonly MealFood[], max = 3): EmojiCluster {
-  const shown = foods.slice(0, Math.max(0, max));
-  return {
-    emojis: shown.map((food) => getFoodEmoji(food.slug, food.category, food.emoji)),
-    overflow: Math.max(0, foods.length - shown.length),
-  };
-}
+/** Re-exported from `catalog/foodEmoji.ts`, where it moved when a storage
+ * container grew its own food list (item 347) and needed the same stack.
+ * Meal rows still reach it through this module, which is where every caller
+ * — and this file's own tests — have always imported it from. */
+export { emojiCluster, type EmojiCluster };
 
 /** The muted "when" line that replaced the old day headers, e.g.
  * "Today · 2:05 PM" or "Wed, Aug 26 · 12:00 PM". */

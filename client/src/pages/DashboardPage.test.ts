@@ -39,8 +39,7 @@ describe("DashboardPage", () => {
     const item: StorageItem = {
       id: "11111111-1111-1111-1111-111111111111",
       label: null,
-      foodSlug: "avocado",
-      foodName: "Avocado",
+      foods: [{ id: "food-1", slug: "avocado", name: "Avocado", emoji: null }],
       recipeId: null,
       recipeTitle: null,
       preparedAt: "2026-08-20T10:00:00.000Z",
@@ -120,8 +119,7 @@ describe("DashboardPage", () => {
     const storageItem = (i: number): StorageItem => ({
       id: `storage-${i}`,
       label: null,
-      foodSlug: "avocado",
-      foodName: `Storage food ${i}`,
+      foods: [{ id: `food-${i}`, slug: "avocado", name: `Storage food ${i}`, emoji: null }],
       recipeId: null,
       recipeTitle: null,
       preparedAt: "2026-08-20T10:00:00.000Z",
@@ -193,8 +191,7 @@ describe("DashboardPage storage ordering (item 333)", () => {
       today.getDate(),
     ).padStart(2, "0")}`;
     const base: Omit<StorageItem, "id" | "label" | "expiresAt" | "bestBy"> = {
-      foodSlug: null,
-      foodName: null,
+      foods: [],
       recipeId: null,
       recipeTitle: null,
       preparedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),

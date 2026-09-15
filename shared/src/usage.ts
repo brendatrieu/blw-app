@@ -230,6 +230,15 @@ const eventProps = {
       via: z.enum(["storage_page", "home", "food_page", "recipe_page", "log_leftovers"]),
       has_servings: z.boolean(),
       has_best_by: z.boolean(),
+      /** How many foods went into THIS container (item 345 — a container
+       * holds a whole meal now). Same bucket `meal_logged` uses. Absent when
+       * `source` is not `food`, since a recipe or label item names none. */
+      food_count: foodCountBucketSchema.optional(),
+      /** Whether the parent chose "Separate containers" over the default
+       * "One container". One event per created item, so a split submission
+       * of three foods sends three events with `split: true`. */
+      // Optional so a PWA still running the pre-split bundle cannot poison a whole usage batch.
+      split: z.boolean().optional(),
     })
     .strict(),
 

@@ -6,8 +6,8 @@ import type {
   Baby,
   FoodDetail,
   FoodsResponse,
+  CreateStorageItemResponse,
   MealItem,
-  StorageItem,
   StorageResponse,
 } from "@blw/shared";
 import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
@@ -356,10 +356,12 @@ describe("custom foods", () => {
         headers: { cookie: owner.cookie },
         payload: { foodIds: [mine.id], location: "fridge" },
       });
-      expect(storage.json<StorageItem[]>()[0]?.foodEmoji).toBe("🍲");
+      // The emoji travels on the food inside the container, not on the
+      // container itself — one item can hold several foods (item 345).
+      expect(storage.json<CreateStorageItemResponse>().items[0]?.foods[0]?.emoji).toBe("🍲");
 
       const list = await app.inject({ method: "GET", url: "/api/storage?view=active", headers: { cookie: owner.cookie } });
-      expect(list.json<StorageResponse>().items[0]?.foodEmoji).toBe("🍲");
+      expect(list.json<StorageResponse>().items[0]?.foods[0]?.emoji).toBe("🍲");
     });
   });
 
