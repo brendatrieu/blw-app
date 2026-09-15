@@ -11,24 +11,39 @@ export type MultiComboboxOption = {
    * kit component: it renders what it is handed and knows nothing about the
    * catalog. Absent or empty renders nothing.
    */
-  markers?: string[];
+  markers?: MultiComboboxMarker[];
 };
+
+/**
+ * A marker is a short word beside the label. A plain string reads in the
+ * muted-danger tone (allergens); an object may pick "neutral" for an identity
+ * mark such as "Custom", which is information, not a warning.
+ */
+export type MultiComboboxMarker = string | { label: string; tone?: "danger" | "neutral" };
+
+function markerParts(marker: MultiComboboxMarker): { label: string; tone: "danger" | "neutral" } {
+  return typeof marker === "string" ? { label: marker, tone: "danger" } : { label: marker.label, tone: marker.tone ?? "danger" };
+}
 
 /**
  * One marker, in the muted-danger tone the Expired chip uses: a fact worth
  * noticing while scanning a list, not an alarm. Non-interactive, so it never
  * competes with the row's own hit target or the chip's remove button.
  */
-function MultiComboboxMarkers({ markers }: { markers: string[] | undefined }) {
+function MultiComboboxMarkers({ markers }: { markers: MultiComboboxMarker[] | undefined }) {
   if (!markers || markers.length === 0) return null;
   return (
     <>
-      {markers.map((marker) => (
+      {markers.map(markerParts).map(({ label, tone }) => (
         <span
-          key={marker}
-          className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-danger-soft)] px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-danger-soft-text)]"
+          key={label}
+          className={
+            tone === "neutral"
+              ? "inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-text-muted)]"
+              : "inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-danger-soft)] px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-danger-soft-text)]"
+          }
         >
-          {marker}
+          {label}
         </span>
       ))}
     </>

@@ -190,14 +190,14 @@ describe("useCreateStorageItem — storage_item_added", () => {
 });
 
 describe("useStorageServe — meal_logged from storage", () => {
-  function serve(itemAfter: Record<string, unknown>) {
+  function serve(itemAfter: Record<string, unknown>, servedAt?: string) {
     const options = firstOptions(() => useStorageServe("baby-1"));
     options.onSuccess!(
       {
         meal: { id: "m1", foods: [{ id: "f1" }], recipeId: null, notes: null, reactionNote: null },
         item: itemAfter,
       } as never,
-      {} as never,
+      { id: "s1", input: { babyId: "baby-1", servings: 1, servedAt } } as never,
       { hadAnyMeals: true } as never,
     );
     return tracked;
@@ -220,6 +220,11 @@ describe("useStorageServe — meal_logged from storage", () => {
         },
       ],
     ]);
+  });
+
+  it("buckets the sheet's When field, now that a serve can be backdated (item 354)", () => {
+    const servedAt = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    expect(serve({ ...ITEM, servingsLeft: 1 }, servedAt)[0]![1]).toMatchObject({ backdated: "<1d" });
   });
 
   it("also closes the container when the serve emptied it", () => {

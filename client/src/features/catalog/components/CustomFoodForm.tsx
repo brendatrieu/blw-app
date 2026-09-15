@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   CUSTOM_FOOD_NAME_MAX,
   CUSTOM_FOOD_NOTES_MAX,
@@ -148,6 +149,14 @@ export interface CustomFoodFormProps {
   initialName?: string;
   /** Distinguishes this form's control ids from any other on the page. */
   idPrefix?: string;
+  /**
+   * Called just before the name hint's "Add it as a recipe instead" link
+   * navigates. The picker renders this form inside a `Sheet` that would
+   * otherwise still be open — over `/recipes/new`, and over the page again on
+   * Back — so the sheet passes `() => setCreateQuery(null)` to close itself
+   * first. The full-screen page has nothing to tidy and passes nothing.
+   */
+  onNavigateAway?: () => void;
   onSaved: (food: FoodDetail) => void;
 }
 
@@ -161,7 +170,13 @@ export interface CustomFoodFormProps {
  * top-9 allergen checklist (required by product decision to be *asked*, not
  * to be non-empty: "nothing on this list" is a real answer), and free notes.
  */
-export function CustomFoodForm({ food, initialName = "", idPrefix = "custom-food", onSaved }: CustomFoodFormProps) {
+export function CustomFoodForm({
+  food,
+  initialName = "",
+  idPrefix = "custom-food",
+  onNavigateAway,
+  onSaved,
+}: CustomFoodFormProps) {
   const [values, setValues] = useState<CustomFoodValues>(() => initialCustomFoodValues(food, initialName));
   const createFood = useCreateCustomFood();
   const updateFood = useUpdateCustomFood();
@@ -216,7 +231,31 @@ export function CustomFoodForm({ food, initialName = "", idPrefix = "custom-food
     // `noValidate`: required fields are answered inline by this form, not by
     // the browser's native bubble (item 236).
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
-      <Field label="Name" htmlFor={`${idPrefix}-name`} error={shownErrors.name}>
+      {/* Item 352: a custom food is ONE ingredient with one category, its own
+          allergens and its own levels — that shape is what feeds the allergen
+          ladder and the Foods filters. A dish with several ingredients is a
+          custom recipe, whose allergens and nutrition derive from the foods in
+          it, so the hint names the difference and hands dish-makers the link
+          rather than letting the example ("Grandma's banana bread") teach the
+          wrong thing. */}
+      <Field
+        label="Name"
+        htmlFor={`${idPrefix}-name`}
+        error={shownErrors.name}
+        hint={
+          <>
+            {"One ingredient, like papaya or cottage cheese. Cooking something with several ingredients? "}
+            <Link
+              to="/recipes/new"
+              onClick={onNavigateAway}
+              className="font-medium text-[var(--color-accent)] underline"
+            >
+              Add it as a recipe instead
+            </Link>
+            .
+          </>
+        }
+      >
         <Input
           id={`${idPrefix}-name`}
           type="text"
@@ -224,7 +263,7 @@ export function CustomFoodForm({ food, initialName = "", idPrefix = "custom-food
           maxLength={CUSTOM_FOOD_NAME_MAX}
           value={values.name}
           onChange={(e) => setValue("name", e.target.value)}
-          placeholder="e.g. Grandma's banana bread"
+          placeholder="e.g. Papaya"
         />
       </Field>
 

@@ -31,6 +31,15 @@ describe("FoodCreatePage", () => {
     expect(html).not.toContain(">Cancel<");
   });
 
+  // Item 352: "Anything you make or buy" invited whole dishes. The page and
+  // the form now say the same thing — one ingredient — and the form's hint
+  // hands anyone cooking a dish the link to Recipes.
+  it("describes a custom food as a single ingredient", () => {
+    // React escapes the apostrophe in server markup.
+    expect(render("/foods/new")).toContain("A single ingredient you make or buy that isn&#x27;t in the catalog.");
+    expect(render("/foods/new")).not.toContain("Anything you make or buy");
+  });
+
   it("prefills the name from ?name=, the way the no-results empty state links here", () => {
     expect(render("/foods/new?name=Kale%20chips")).toContain('value="Kale chips"');
   });

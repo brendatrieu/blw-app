@@ -28,24 +28,53 @@ describe("recipePickerOptions", () => {
     expect(recipePickerOptions([recipe()])).toEqual([{ value: "recipe-1", label: "Banana porridge" }]);
   });
 
-  it("floats favorites to the top, keeping each group in the server's title order", () => {
+  // The ordering table (item 353). Input is in the server's title order, as it
+  // always is; the expectation is the three groups, each still alphabetical.
+  // "Beetroot mash" is the case that decides the rule: it is BOTH the parent's
+  // own recipe and a favorite, and own-recipes wins — a parent hunting for the
+  // thing they typed in should not have to remember whether they starred it.
+  it("orders own recipes first, then favorites, then the rest — alphabetical inside each group", () => {
     const options = recipePickerOptions([
-      recipe({ id: "a", title: "Apple mash" }),
-      recipe({ id: "b", title: "Beans on toast", isFavorite: true }),
-      recipe({ id: "c", title: "Carrot sticks" }),
-      recipe({ id: "d", title: "Dhal", isFavorite: true }),
+      recipe({ id: "apple", title: "Apple mash" }),
+      recipe({ id: "beans", title: "Beans on toast", isFavorite: true }),
+      recipe({ id: "beetroot", title: "Beetroot mash", isCustom: true, isFavorite: true }),
+      recipe({ id: "carrot", title: "Carrot sticks" }),
+      recipe({ id: "dhal", title: "Dhal", isFavorite: true }),
+      recipe({ id: "egg", title: "Egg fingers", isCustom: true }),
     ]);
-    expect(options.map((option) => option.value)).toEqual(["b", "d", "a", "c"]);
+    expect(options.map((option) => option.value)).toEqual([
+      "beetroot",
+      "egg", // own recipes, alphabetical
+      "beans",
+      "dhal", // favorites, alphabetical
+      "apple",
+      "carrot", // the rest, alphabetical
+    ]);
   });
 
-  it("marks exactly the favorited rows, so the reordering reads as intentional", () => {
-    const options = recipePickerOptions([recipe({ isFavorite: true }), recipe({ id: "recipe-2" })]);
-    expect(options[0]!.emoji).toBe("💛");
-    expect(options[1]!.emoji).toBeUndefined();
+  it("marks exactly the own recipes with a Custom chip", () => {
+    const options = recipePickerOptions([
+      recipe({ id: "mine", isCustom: true }),
+      recipe({ id: "starred", isFavorite: true }),
+      recipe({ id: "catalog" }),
+    ]);
+    expect(options.map((option) => option.markers)).toEqual([[{ label: "Custom", tone: "neutral" }], undefined, undefined]);
+  });
+
+  it("keeps 💛 on every favorite, including a favorited own recipe", () => {
+    const options = recipePickerOptions([
+      recipe({ id: "mine", isCustom: true, isFavorite: true }),
+      recipe({ id: "plain-mine", isCustom: true }),
+      recipe({ id: "starred", isFavorite: true }),
+      recipe({ id: "catalog" }),
+    ]);
+    expect(options.map((option) => option.emoji)).toEqual(["💛", undefined, "💛", undefined]);
+    // The two marks say two different things and both survive on one row.
+    expect(options[0]!.markers).toEqual([{ label: "Custom", tone: "neutral" }]);
   });
 
   it("never mutates the list it was given", () => {
-    const recipes = [recipe({ id: "a", title: "Apple mash" }), recipe({ id: "b", isFavorite: true })];
+    const recipes = [recipe({ id: "a", title: "Apple mash" }), recipe({ id: "b", isCustom: true })];
     recipePickerOptions(recipes);
     expect(recipes.map((r) => r.id)).toEqual(["a", "b"]);
   });
@@ -105,6 +134,22 @@ describe("RecipePicker (render)", () => {
     expect(html).toContain('aria-label="Remove Lentil mash"');
     expect(html).not.toContain("selected</span>");
     expect(html).not.toContain('aria-describedby="log-food-recipe-count"');
+  });
+
+  // Markers render on the menu row AND on the selected chip; a server render
+  // only ever produces the closed field, so the chip is where the Custom mark
+  // is visible to this suite.
+  it("carries the Custom mark onto the selected chip", () => {
+    const html = renderPicker(
+      [recipe({ id: "recipe-2", title: "Beef and bell pepper", isCustom: true })],
+      "recipe-2",
+    );
+    expect(html).toContain("Custom");
+  });
+
+  it("leaves a catalog recipe's chip unmarked", () => {
+    const html = renderPicker([recipe()], "recipe-1");
+    expect(html).not.toContain("Custom");
   });
 
   it("disables itself while the list is still loading", () => {

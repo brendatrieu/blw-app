@@ -128,7 +128,10 @@ describe("FoodPicker (render)", () => {
 
   it("keeps the create sheet closed until the create row is chosen", () => {
     // `Sheet` renders nothing while closed, so a static render is exactly the
-    // "before anyone typed" state: no form, no dialog.
+    // "before anyone typed" state: no form, no dialog. Which is also why the
+    // OPEN sheet's wiring — the form's item 352 recipe pointer, and the
+    // `onNavigateAway` closer this picker hands it — is pinned on the element
+    // tree in `CustomFoodForm.handlers.test.ts` instead of here.
     const html = renderPicker([food()]);
     expect(html).not.toContain('role="dialog"');
     expect(html).not.toContain("Add a custom food");

@@ -3,6 +3,8 @@ import type { StorageItem } from "@blw/shared";
 import { useStorageServe } from "../hooks.js";
 import { clampServings, storageItemTitle } from "../format.js";
 import { Button } from "../../../components/ui/Button.js";
+import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
+import { Field } from "../../../components/ui/Field.js";
 import { Textarea } from "../../../components/ui/Input.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
 
@@ -12,12 +14,25 @@ const UNTRACKED_SERVINGS_MAX = 99;
 
 /**
  * Builds the serve mutation's input — exported pure so tests pin the exact
- * payload shape (babyId explicit, notes trimmed to null) without a DOM env.
+ * payload shape (babyId explicit, notes trimmed to null, `servedAt` as an
+ * ISO string) without a DOM env.
+ *
+ * `servedAt` is a required argument rather than an optional one on purpose
+ * (item 354): the server defaults an omitted `servedAt` to now, so an
+ * optional parameter would let a caller silently drop the parent's chosen
+ * time and still look correct.
  */
-export function buildServeInput(babyId: string, servings: number, reactionNote: string, notes: string) {
+export function buildServeInput(
+  babyId: string,
+  servings: number,
+  reactionNote: string,
+  notes: string,
+  servedAt: Date,
+) {
   return {
     babyId,
     servings,
+    servedAt: servedAt.toISOString(),
     reactionNote: reactionNote.trim() || null,
     notes: notes.trim() || null,
   };
@@ -49,6 +64,10 @@ interface ServeControlProps {
 export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
   const maxServings = item.servingsLeft ?? UNTRACKED_SERVINGS_MAX;
   const [servings, setServings] = useState(1);
+  // Defaults to the current minute, so a parent who just fed the baby can
+  // ignore the field entirely and get the same "now" the sheet used to
+  // hard-code (item 354). The future-time guard is DateTimeField's own.
+  const [servedAt, setServedAt] = useState(() => nowAtMinute());
   const [reactionNote, setReactionNote] = useState("");
   const [notes, setNotes] = useState("");
   const serve = useStorageServe(babyId);
@@ -82,6 +101,13 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
         </div>
       </div>
 
+      {/* Serving from storage is usually a "that already happened" action —
+          the leftovers went out at lunch and the phone came out afterwards —
+          so the sheet asks when, above the notes (item 354). */}
+      <Field label="When" htmlFor="serve-when">
+        <DateTimeField id="serve-when" value={servedAt} onChange={setServedAt} disabled={serve.isPending} />
+      </Field>
+
       {/* Always visible, above the button (item 263) — the "+ Add a note"
           toggle that used to hide these is gone. Both fields are kept: the
           reaction note is what feeds allergen tracking, so hiding it behind
@@ -113,7 +139,7 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
         className="w-full"
         onClick={() =>
           serve.mutate(
-            { id: item.id, input: buildServeInput(babyId, servings, reactionNote, notes) },
+            { id: item.id, input: buildServeInput(babyId, servings, reactionNote, notes, servedAt) },
             { onSuccess: () => onServed?.() },
           )
         }

@@ -73,17 +73,38 @@ export function useRecipe(id: string | undefined) {
   });
 }
 
+/** Per-call read policy for `useRecipes` (item 353). */
+export interface UseRecipesOptions {
+  /**
+   * Always refetch when this caller mounts, and treat what is cached as
+   * already stale. For the pickers, where a recipe created moments ago — on
+   * another device, or on the Recipes tab in the same session — has to be
+   * selectable *now*; the five-minute `staleTime` below could otherwise hide
+   * it for five minutes, which is exactly the "I can't find my custom recipe"
+   * report item 353 came from.
+   */
+  fresh?: boolean;
+}
+
 /**
  * Every recipe the caller can see (catalog + their own), filtered server-side
  * (item 205). `isFavorite` comes back per-caller, so this one query backs both
- * the Recipes segment's Favorites scope and the log form's favorites-first
+ * the Recipes segment's Favorites scope and the log form's own-recipes-first
  * picker without a second favorites fetch.
+ *
+ * `fresh` changes only THIS observer's staleness policy — the query key is
+ * unchanged, so a fresh reader and a cached reader share one cache entry and
+ * one in-flight request, and the fresh reader's refetch updates the browsing
+ * list too. Splitting the key instead would have fetched the same list twice
+ * and let the two copies drift.
  */
-export function useRecipes(filters: RecipeFilters = {}) {
+export function useRecipes(filters: RecipeFilters = {}, options: UseRecipesOptions = {}) {
+  const fresh = options.fresh ?? false;
   return useQuery({
     queryKey: catalogKeys.recipesList(filters),
     queryFn: () => fetchRecipes(filters),
-    staleTime: 5 * 60 * 1000,
+    staleTime: fresh ? 0 : 5 * 60 * 1000,
+    refetchOnMount: fresh ? "always" : true,
   });
 }
 

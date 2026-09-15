@@ -1,5 +1,6 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
+import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { FoodDetail } from "@blw/shared";
@@ -44,14 +45,22 @@ function customFood(overrides: Partial<FoodDetail> = {}): FoodDetail {
   };
 }
 
+/** The form now carries a `Link` (item 352's recipe pointer), so it needs a
+ * router around it the same way every page that hosts it already provides. */
 function render(element: Parameters<typeof renderToString>[0]) {
   return renderToString(
     createElement(
       QueryClientProvider,
       { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) },
-      element,
+      createElement(MemoryRouter, null, element),
     ),
   );
+}
+
+/** The rendered sentence as a reader sees it: React's `<!-- -->` text
+ * separators and the anchor's own tags dropped. */
+function textOf(html: string): string {
+  return html.replace(/<!--\s*-->/g, "").replace(/<[^>]+>/g, "");
 }
 
 describe("validateCustomFood", () => {
@@ -217,6 +226,37 @@ describe("CustomFoodForm (render)", () => {
     expect((html.match(/aria-pressed="false"/g) ?? []).length).toBe(ALLERGEN_SLUGS.length - 2);
     expect(html).toContain('value="Banana bread"');
     expect(html).toContain("Cut into strips");
+  });
+
+  // Item 352. The old example, "Grandma's banana bread", taught the wrong
+  // shape: a custom food is ONE ingredient with one category, its own
+  // allergens and its own levels, which is what feeds the allergen ladder and
+  // the Foods filters. A dish belongs in Recipes, where allergens and
+  // nutrition derive from the ingredients.
+  it("offers a single-ingredient example, not a dish, as the name placeholder", () => {
+    const html = render(createElement(CustomFoodForm, { onSaved: () => {} }));
+    expect(html).toContain('placeholder="e.g. Papaya"');
+    expect(html).not.toContain("banana bread");
+  });
+
+  it("says what a custom food is and points dish-makers at Recipes, in one sentence", () => {
+    const html = render(createElement(CustomFoodForm, { onSaved: () => {} }));
+    expect(textOf(html)).toContain(
+      "One ingredient, like papaya or cottage cheese. Cooking something with several ingredients? Add it as a recipe instead.",
+    );
+  });
+
+  it("makes the last sentence a link to the custom-recipe form", () => {
+    const html = render(createElement(CustomFoodForm, { onSaved: () => {} }));
+    expect(html).toMatch(/<a[^>]*href="\/recipes\/new"[^>]*>Add it as a recipe instead<\/a>/);
+  });
+
+  // The hint is the Name field's, so it sits under that input and gives way to
+  // the field's own error message the way `Field` treats every hint.
+  it("hangs the hint on the Name field, after its input", () => {
+    const html = render(createElement(CustomFoodForm, { onSaved: () => {} }));
+    expect(html.indexOf('id="custom-food-name"')).toBeLessThan(html.indexOf("One ingredient, like papaya"));
+    expect(html.indexOf("One ingredient, like papaya")).toBeLessThan(html.indexOf(">Category<"));
   });
 
   it("uses `idPrefix` so two instances on one page never share a control id", () => {

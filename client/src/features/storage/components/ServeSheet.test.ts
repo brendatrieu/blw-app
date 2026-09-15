@@ -39,23 +39,32 @@ function render(element: ReturnType<typeof createElement>) {
   );
 }
 
+const SERVED_AT = new Date("2026-08-21T12:34:00.000Z");
+
 describe("buildServeInput (item 108)", () => {
   it("passes babyId and servings through and trims both notes to null when blank", () => {
-    expect(buildServeInput("baby-1", 3, "  ", "")).toEqual({
+    expect(buildServeInput("baby-1", 3, "  ", "", SERVED_AT)).toEqual({
       babyId: "baby-1",
       servings: 3,
+      servedAt: "2026-08-21T12:34:00.000Z",
       reactionNote: null,
       notes: null,
     });
   });
 
   it("keeps trimmed note text", () => {
-    expect(buildServeInput("baby-1", 1, " mild rash ", " froze the rest ")).toEqual({
+    expect(buildServeInput("baby-1", 1, " mild rash ", " froze the rest ", SERVED_AT)).toEqual({
       babyId: "baby-1",
       servings: 1,
+      servedAt: "2026-08-21T12:34:00.000Z",
       reactionNote: "mild rash",
       notes: "froze the rest",
     });
+  });
+
+  it("sends the chosen time as an ISO string, so the server takes it verbatim (item 354)", () => {
+    const chosen = new Date("2026-08-21T09:05:00.000Z");
+    expect(buildServeInput("baby-1", 1, "", "", chosen).servedAt).toBe(chosen.toISOString());
   });
 });
 
@@ -81,12 +90,23 @@ describe("ServeControl — the serve sheet's body (item 263)", () => {
     expect(html).toContain(">Serve<");
     expect(html.lastIndexOf("<textarea")).toBeLessThan(html.indexOf(">Serve<"));
     expect(html).not.toContain(">Cancel<");
-    // Stepper (2) + Serve (1) and nothing else.
-    expect((html.match(/<button/g) ?? []).length).toBe(3);
+    // Stepper (2) + When (1) + Serve (1) and nothing else.
+    expect((html.match(/<button/g) ?? []).length).toBe(4);
   });
 
   it("keeps every control at the 44px tap target", () => {
     expect((html.match(/h-11 w-11/g) ?? []).length).toBe(2);
+    // The When field is a full-width button, so it takes the height alone.
+    expect(html).toMatch(/id="serve-when"[^>]*class="[^"]*min-h-11/);
+  });
+
+  it("asks WHEN it was served, above the note fields (item 354)", () => {
+    expect(html).toContain(">When</label>");
+    expect(html).toContain('id="serve-when"');
+    expect(html).toContain('for="serve-when"');
+    // Its picker sheet only exists once the field is tapped.
+    expect(html).not.toContain('role="dialog"');
+    expect(html.indexOf('id="serve-when"')).toBeLessThan(html.indexOf("<textarea"));
   });
 });
 

@@ -26,7 +26,7 @@ export function FoodCreatePage() {
       <PageHeader
         title="Add food"
         emoji="🥣"
-        description="Anything you make or buy that isn't in the catalog."
+        description="A single ingredient you make or buy that isn't in the catalog."
         leading={<BackButton fallback="/foods" />}
       />
       <CustomFoodForm

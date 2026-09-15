@@ -18,6 +18,7 @@ import { celebrateForNewMeal, snapshotMealCelebrationContext, trackingKeys } fro
 import { track } from "../../lib/usage/track.js";
 import {
   ageDaysBucket,
+  backdatedBucket,
   daysBetween,
   failureKind,
   foodCountBucket,
@@ -153,7 +154,7 @@ export function useStorageServe(babyId: string | undefined) {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: ServeStorageItemInput }) => serveStorageItem(id, input),
     onMutate: () => snapshotMealCelebrationContext(queryClient, babyId),
-    onSuccess: ({ meal, item }, _variables, context) => {
+    onSuccess: ({ meal, item }, variables, context) => {
       // A serve IS a logged meal, so it sends the same event the log form
       // does — same props, `from_storage` true, `via: storage_serve`.
       track("meal_logged", {
@@ -164,8 +165,10 @@ export function useStorageServe(babyId: string | undefined) {
         leftovers_saved: false,
         has_notes: Boolean(meal.notes || meal.reactionNote),
         is_first_meal: context?.hadAnyMeals !== true,
-        // A serve is always "now" — the sheet has no when field.
-        backdated: "now",
+        // The Serve sheet asks when (item 354), so a serve is bucketed the
+        // same way a directly logged meal is — read off the input rather
+        // than hard-coded to "now".
+        backdated: backdatedBucket(variables.input.servedAt ?? new Date()),
         offline: isOffline(),
       });
       // A tracked container that hit zero servings flips to `finished`

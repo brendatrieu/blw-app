@@ -77,6 +77,11 @@ export function FoodPicker({ id, value, onChange }: FoodPickerProps) {
         <CustomFoodForm
           idPrefix={`${id}-custom`}
           initialName={createQuery ?? ""}
+          // The form's "add it as a recipe instead" link (item 352) is the one
+          // exit from this sheet that DOES navigate, so the sheet has to close
+          // itself: left open it would sit over /recipes/new, and over this
+          // page again on Back, still holding a half-typed food.
+          onNavigateAway={() => setCreateQuery(null)}
           onSaved={(food) => {
             setCreateQuery(null);
             // Additive, and guarded: a re-save of an already-selected food
