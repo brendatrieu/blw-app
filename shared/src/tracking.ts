@@ -364,7 +364,7 @@ export const allergenProgressItemSchema = z.object({
    *
    * On the wire in its own right rather than folded into `status`, because
    * the two answer different questions: the badge ("Reaction noted", with
-   * "Talk to your doctor before serving again.") is owed to a row whose
+   * "Consider talking to your doctor.") is owed to a row whose
    * three clean servings already established it just as much as to one still
    * climbing — see `allergenReactionPauses`, which is the only place the
    * reaction touches the status.

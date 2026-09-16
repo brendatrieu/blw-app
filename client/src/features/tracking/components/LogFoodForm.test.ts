@@ -80,7 +80,12 @@ describe("LogFoodForm (render)", () => {
     const html = renderWithProviders(createElement(LogFoodForm, { babyId: "baby-1", onDone: () => {} }));
     expect(html).toContain(">Food<");
     expect(html).toContain(">When<");
-    expect(html).toMatch(/Reaction note(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
+    expect(html).toMatch(/Reaction(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
+    // The guidance sits under the label, before the textarea, so it is read
+    // before anyone types "baby liked cheese" into a reaction field.
+    const guidance = html.indexOf("Only for hives, vomiting, rash or other reaction signs.");
+    expect(guidance).toBeGreaterThan(html.indexOf(">Reaction<!-- -->"));
+    expect(guidance).toBeLessThan(html.indexOf('id="log-food-note"'));
     expect(html).toMatch(/Notes(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
     expect(html).toContain(">Save<");
     // Item 257: no Cancel — LogFoodPage's header chevron (edit) or X

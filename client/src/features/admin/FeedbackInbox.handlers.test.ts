@@ -157,20 +157,20 @@ describe("the tabs", () => {
 });
 
 describe("the actions each tab offers", () => {
-  it("gives an unread message Mark read, Resolve and Clear", () => {
+  it("gives an unread message Mark read, Resolve and Archive", () => {
     h.data.items = [ITEM];
-    expect(actionLabels(panel())).toEqual(["Mark read", "Resolve", "Clear"]);
+    expect(actionLabels(panel())).toEqual(["Mark read", "Resolve", "Archive"]);
   });
 
   it("drops Mark read once the message has been read — an action that changes nothing is noise", () => {
     h.data.items = [{ ...ITEM, status: "read", readAt: "2026-09-13T16:00:00.000Z" }];
-    expect(actionLabels(panel())).toEqual(["Resolve", "Clear"]);
+    expect(actionLabels(panel())).toEqual(["Resolve", "Archive"]);
   });
 
-  it("offers Reopen and Clear on the Resolved tab", () => {
+  it("offers Reopen and Archive on the Resolved tab", () => {
     h.data.items = [{ ...ITEM, status: "resolved", resolvedAt: "2026-09-14T09:00:00.000Z" }];
     switchTo(panel(), "resolved");
-    expect(actionLabels(panel())).toEqual(["Reopen", "Clear"]);
+    expect(actionLabels(panel())).toEqual(["Reopen", "Archive"]);
   });
 
   it("offers only Restore on the Archived tab — the tab IS the undo", () => {
@@ -183,11 +183,11 @@ describe("the actions each tab offers", () => {
 });
 
 describe("what each action sends", () => {
-  it("marks read, resolves and clears with exactly one field each", () => {
+  it("marks read, resolves and archives with exactly one field each", () => {
     h.data.items = [ITEM];
     click(panel(), "Mark read");
     click(panel(), "Resolve");
-    click(panel(), "Clear");
+    click(panel(), "Archive");
     expect(h.calls.patches).toEqual([
       { id: "feedback-1", patch: { status: "read" } },
       { id: "feedback-1", patch: { status: "resolved" } },
@@ -229,7 +229,7 @@ describe("feedbackActions", () => {
     ]);
     expect(feedbackActions({ ...ITEM, status: "resolved" }, "resolved").map((action) => action.label)).toEqual([
       "Reopen",
-      "Clear",
+      "Archive",
     ]);
     expect(feedbackActions({ ...ITEM, archived: true }, "archived").map((action) => action.label)).toEqual([
       "Restore",

@@ -350,7 +350,7 @@ describe("servingsProgressLabel — 'N of 3 servings' (item 370)", () => {
 
   it("states the rule in the same words the count adds up to", () => {
     expect(ALLERGEN_RULE_COPY).toBe("Established after 3 servings without a reaction.");
-    expect(REACTION_HINT_COPY).toBe("Talk to your doctor before serving again.");
+    expect(REACTION_HINT_COPY).toBe("Consider talking to your doctor.");
   });
 });
 

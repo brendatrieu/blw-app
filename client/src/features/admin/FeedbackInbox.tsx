@@ -21,7 +21,7 @@ import { useAdminFeedback, useFeedbackSummary, useUpdateFeedback } from "./hooks
  * an inbox you cannot reply from is a suggestion box. Everything else on the
  * Metrics page is an aggregate with nowhere in its types to put a person.
  *
- * Nothing here is destructive. "Clear" archives; the Archived tab is the
+ * Nothing here is destructive. "Archive" moves a message to the Archived tab; that tab is the
  * undo, and Restore brings a message back. There is no delete, so a misread
  * tap costs a second, not a parent's report.
  */
@@ -73,13 +73,13 @@ export function feedbackActions(item: AdminFeedbackItem, filter: FeedbackFilter)
   if (filter === "resolved") {
     return [
       { label: "Reopen", patch: { status: "read" } },
-      { label: "Clear", patch: { archived: true } },
+      { label: "Archive", patch: { archived: true } },
     ];
   }
   return [
     ...(item.status === "new" ? [{ label: "Mark read", patch: { status: "read" as const } }] : []),
     { label: "Resolve", patch: { status: "resolved" } },
-    { label: "Clear", patch: { archived: true } },
+    { label: "Archive", patch: { archived: true } },
   ];
 }
 

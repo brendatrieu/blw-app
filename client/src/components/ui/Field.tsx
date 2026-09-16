@@ -4,7 +4,11 @@ interface FieldProps {
   label: ReactNode;
   htmlFor: string;
   error?: ReactNode;
+  /** Quiet guidance under the control (or replaced by `error`). */
   hint?: ReactNode;
+  /** Quiet guidance between the label and the control — for "what belongs
+   *  here" copy the user should read before typing. */
+  description?: ReactNode;
   children: ReactNode;
 }
 
@@ -27,7 +31,7 @@ export function splitOptionalLabel(label: ReactNode): { base: string; suffix: st
  * in a string label renders quiet — normal weight, muted color — so the
  * field name carries the visual emphasis, not the qualifier.
  */
-export function Field({ label, htmlFor, error, hint, children }: FieldProps) {
+export function Field({ label, htmlFor, error, hint, description, children }: FieldProps) {
   const optional = splitOptionalLabel(label);
   return (
     <div className="flex flex-col gap-1.5">
@@ -41,6 +45,7 @@ export function Field({ label, htmlFor, error, hint, children }: FieldProps) {
           label
         )}
       </label>
+      {description ? <p className="text-xs text-[var(--color-text-muted)]">{description}</p> : null}
       {children}
       {error ? (
         <p role="alert" className="text-xs font-medium text-[var(--color-danger)]">

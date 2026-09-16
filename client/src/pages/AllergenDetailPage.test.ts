@@ -293,7 +293,7 @@ describe("AllergenDetailPage servings count + reaction badge (item 370)", () => 
       }),
     );
     expect(html).toContain("Reaction noted");
-    expect(html).toContain("Talk to your doctor before serving again.");
+    expect(html).toContain("Consider talking to your doctor.");
     expect(html).toContain("bg-[var(--color-caution-soft)]");
     expect(html).toContain("Started");
     expect(html).not.toContain("of 3 servings");
@@ -315,7 +315,7 @@ describe("AllergenDetailPage servings count + reaction badge (item 370)", () => 
     );
     expect(html).toContain("Established");
     expect(html).toContain("Reaction noted");
-    expect(html).toContain("Talk to your doctor before serving again.");
+    expect(html).toContain("Consider talking to your doctor.");
   });
 
   it("drops the badge once the parent has marked the allergen themselves", () => {
@@ -334,7 +334,7 @@ describe("AllergenDetailPage servings count + reaction badge (item 370)", () => 
       }),
     );
     expect(html).not.toContain("Reaction noted");
-    expect(html).not.toContain("Talk to your doctor before serving again.");
+    expect(html).not.toContain("Consider talking to your doctor.");
   });
 });
 

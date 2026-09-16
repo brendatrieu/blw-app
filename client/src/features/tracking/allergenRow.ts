@@ -29,7 +29,7 @@ export const REACTION_BADGE_LABEL = "Reaction noted";
  * "serve again soon" is a nudge, this is the one line on the ladder that
  * sends a parent to a clinician, and a chip alone cannot carry it.
  */
-export const REACTION_HINT_COPY = "Talk to your doctor before serving again.";
+export const REACTION_HINT_COPY = "Consider talking to your doctor.";
 
 /** The one-sentence rule, stated on the ladder header and in the Learn
  * article ("Introducing allergens") in exactly these words. */
@@ -154,7 +154,7 @@ export function resolveAllergenRecency(
 ): AllergenRecency {
   if (item.status === "not_started") return { fact: null, countdown: null, due: false };
   // A row carrying the reaction badge is not also nudged to serve: "Serve
-  // again soon" under "Talk to your doctor before serving again." is the app
+  // again soon" under "Consider talking to your doctor." is the app
   // contradicting itself on one card, and the safety line is the one that
   // wins. Only the nudge stands down — `dueAt` is server truth and keeps
   // running, so nothing is lost once the parent marks the allergen.

@@ -81,7 +81,8 @@ describe("ServeControl — the serve sheet's body (item 263)", () => {
 
   it("shows both note fields inline — the '+ Add a note' toggle is gone", () => {
     expect(html).not.toContain("Add a note");
-    expect(html).toContain("Reaction note (optional)");
+    expect(html).toContain("Reaction (optional)");
+    expect(html).toContain("Only for hives, vomiting, rash or other reaction signs.");
     expect(html).toContain("Note (optional)");
     expect((html.match(/<textarea/g) ?? []).length).toBe(2);
   });

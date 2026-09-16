@@ -197,7 +197,7 @@ describe("BabyAllergensPage established rule + reaction pause (item 370)", () =>
       item({ status: "started", exposures: 3, lastServedAt: reacted, lastExposureAt: reacted, reactionNotedAt: reacted }),
     ]);
     expect(html).toContain("Reaction noted");
-    expect(html).toContain("Talk to your doctor before serving again.");
+    expect(html).toContain("Consider talking to your doctor.");
     // Caution tokens, the same chip the due nudge uses — no new color.
     expect(html).toContain("bg-[var(--color-caution-soft)]");
     // Still climbing, so the status chip stays Started...
@@ -220,7 +220,7 @@ describe("BabyAllergensPage established rule + reaction pause (item 370)", () =>
     ]);
     expect(html).toContain(">Established<");
     expect(html).toContain("Reaction noted");
-    expect(html).toContain("Talk to your doctor before serving again.");
+    expect(html).toContain("Consider talking to your doctor.");
   });
 
   it("drops the badge once the parent has marked the allergen themselves", () => {
@@ -239,7 +239,7 @@ describe("BabyAllergensPage established rule + reaction pause (item 370)", () =>
       }),
     ]);
     expect(html).not.toContain("Reaction noted");
-    expect(html).not.toContain("Talk to your doctor before serving again.");
+    expect(html).not.toContain("Consider talking to your doctor.");
     expect(html).toContain("Marked by you");
   });
 

@@ -461,7 +461,11 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
         <DateTimeField id="log-food-when" value={servedAt} onChange={setServedAt} />
       </Field>
 
-      <Field label="Reaction note (optional)" htmlFor="log-food-note">
+      <Field
+        label="Reaction (optional)"
+        htmlFor="log-food-note"
+        description="Only for hives, vomiting, rash or other reaction signs."
+      >
         <Textarea
           id="log-food-note"
           value={reactionNote}

@@ -479,7 +479,7 @@ describe("the feedback inbox on the dashboard (item 361)", () => {
 
   it("offers an unread message Mark read, Resolve and Clear", () => {
     const html = render();
-    for (const label of ["Mark read", "Resolve", "Clear"]) {
+    for (const label of ["Mark read", "Resolve", "Archive"]) {
       expect(html, label).toContain(`>${label}<`);
     }
     // Nothing here deletes: Clear archives, and Archived is the undo.
@@ -491,7 +491,7 @@ describe("the feedback inbox on the dashboard (item 361)", () => {
     const html = render();
     expect(html).not.toContain(">Mark read<");
     expect(html).toContain(">Resolve<");
-    expect(html).toContain(">Clear<");
+    expect(html).toContain(">Archive<");
   });
 
   it("says so plainly when a tab is empty", () => {
