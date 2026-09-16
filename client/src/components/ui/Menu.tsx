@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { Link, type LinkProps } from "react-router-dom";
 
 /**
@@ -17,6 +17,11 @@ export function getMenuTriggerAriaProps(open: boolean): { "aria-haspopup": "menu
   return { "aria-haspopup": "menu", "aria-expanded": open };
 }
 
+/** A little slack above the panel's own 4px visual margin, so a panel that
+ * would JUST clear the viewport edge by a hair isn't the one that decides
+ * to flip. */
+const MENU_GAP = 8;
+
 export interface MenuProps {
   /** Accessible name for the trigger button (e.g. "Actions"). */
   label: string;
@@ -30,7 +35,10 @@ export interface MenuProps {
 
 export function Menu({ label, disabled = false, className = "", children }: MenuProps) {
   const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<"down" | "up">("down");
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
 
   useEffect(() => {
@@ -52,9 +60,33 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
     };
   }, [open]);
 
+  // The panel always opens downward from the trigger UNLESS there isn't room
+  // for it before the bottom of the (visual) viewport, in which case it
+  // opens upward instead — a row near the end of a long list (Storage,
+  // the meal log) would otherwise have its lower items land off-screen with
+  // nothing able to scroll them into view. Decided once per open, from a
+  // real measurement, not a length/row-count guess: `visualViewport` is
+  // preferred over `innerHeight` because it tracks the space actually on
+  // screen (an on-screen keyboard or a collapsing mobile toolbar shrinks it
+  // without changing `innerHeight`). Guarded for environments with no
+  // `window` (the render-only test suite never opens a menu, so this never
+  // runs there; the interaction test suite supplies a fake `window`).
+  useLayoutEffect(() => {
+    if (!open) return;
+    const trigger = triggerRef.current;
+    const panel = panelRef.current;
+    if (!trigger || !panel || typeof window === "undefined") return;
+    const triggerRect = trigger.getBoundingClientRect();
+    const panelHeight = panel.getBoundingClientRect().height;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const fitsBelow = triggerRect.bottom + panelHeight + MENU_GAP <= viewportHeight;
+    setPlacement(fitsBelow ? "down" : "up");
+  }, [open]);
+
   return (
     <div ref={containerRef} className={`relative inline-block ${className}`}>
       <button
+        ref={triggerRef}
         type="button"
         aria-label={label}
         disabled={disabled}
@@ -71,7 +103,7 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
       </button>
 
       {open && (
-        <MenuPanel id={menuId} onClose={() => setOpen(false)}>
+        <MenuPanel id={menuId} panelRef={panelRef} placement={placement} onClose={() => setOpen(false)}>
           {children(() => setOpen(false))}
         </MenuPanel>
       )}
@@ -82,20 +114,31 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
 export interface MenuPanelProps {
   id?: string;
   onClose?: () => void;
+  /** Which side of the trigger the panel opens on — "down" (the default,
+   * and the only option a caller not doing its own measurement should
+   * pass) matches every existing render exactly; "up" is what `Menu`'s own
+   * viewport check switches to when there's no room below. */
+  placement?: "down" | "up";
+  /** Forwarded to the panel's root div so `Menu` can measure it before
+   * deciding `placement` — the same shape `SheetPanel`'s `panelRef` uses. */
+  panelRef?: Ref<HTMLDivElement>;
   children: ReactNode;
 }
 
 /**
  * The open panel's chrome, exported standalone (mirroring
  * `MultiComboboxPanel`) so a render test can assert its open-state markup
- * directly without needing a real click to get there.
+ * directly without needing a real click to get there. Kept purely
+ * presentational — `placement` is a prop, not something this component
+ * measures itself — so its own render tests need no DOM/layout to run.
  */
-export function MenuPanel({ id, children }: MenuPanelProps) {
+export function MenuPanel({ id, placement = "down", panelRef, children }: MenuPanelProps) {
   return (
     <div
+      ref={panelRef}
       id={id}
       role="menu"
-      className="absolute right-0 top-full z-20 mt-1 min-w-40 overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] py-1 shadow-[var(--shadow-lg)]"
+      className={`absolute right-0 z-20 min-w-40 max-h-[70vh] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] py-1 shadow-[var(--shadow-lg)] ${placement === "up" ? "bottom-full mb-1" : "top-full mt-1"}`}
     >
       {children}
     </div>

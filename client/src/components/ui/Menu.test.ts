@@ -43,6 +43,18 @@ describe("MenuPanel (render, standalone open state)", () => {
     expect(html).toContain('id="test-menu"');
     expect(html).toContain(">Serve<");
   });
+
+  it("opens downward by default", () => {
+    const html = renderToString(createElement(MenuPanel, { children: null }));
+    expect(html).toContain("top-full");
+    expect(html).not.toContain("bottom-full");
+  });
+
+  it("opens upward when placement is 'up' (no room below the trigger)", () => {
+    const html = renderToString(createElement(MenuPanel, { placement: "up", children: null }));
+    expect(html).toContain("bottom-full");
+    expect(html).not.toContain("top-full");
+  });
 });
 
 describe("MenuItem (render)", () => {
