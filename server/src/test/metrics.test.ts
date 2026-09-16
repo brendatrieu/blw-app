@@ -199,12 +199,22 @@ describe("an empty database", () => {
     expect(payload.weeklyLoggingParents.map((row) => row.parents)).toEqual([0, 0, 0, 0]);
     expect(payload.activeUsers).toEqual({ dau: 0, wau: 0, mau: 0 });
     expect(payload.activationFunnel).toHaveLength(4);
+    // The oldest week's 24- and 48-hour windows have closed for everybody who
+    // could have been in it; 28 days have not, so that stage is null rather
+    // than a zero.
     expect(payload.activationFunnel[0]).toEqual({
       weekStart: THREE_WEEKS_AGO,
       signups: 0,
       withBaby: 0,
       loggedMeal: 0,
-      threeLoggingDays: 0,
+      threeLoggingDays: null,
+    });
+    expect(payload.activationFunnel.at(-1)).toEqual({
+      weekStart: THIS_WEEK,
+      signups: 0,
+      withBaby: null,
+      loggedMeal: null,
+      threeLoggingDays: null,
     });
 
     // The oldest cohort's first two weeks have finished; the rest have not,
@@ -331,33 +341,66 @@ describe("weeklyLoggingParents", () => {
 });
 
 describe("activationFunnel", () => {
+  // Weeks old enough that all three windows have closed for the LAST person in
+  // them — the only weeks that can carry counts rather than nulls. A "4w" range
+  // reaches back three weeks, which is inside the 28-day window by
+  // construction, so these read the 12-week range.
+  const MATURE_WEEK = "2026-06-29";
+  const NEXT_WEEK = "2026-07-06";
+
   it("measures each step from that account's own signup instant", async () => {
-    const activated = await seedUser(at("2026-09-14T09:00:00.000Z"));
-    const babyId = await seedBaby(activated, at("2026-09-14T11:00:00.000Z")); // +2h
+    const activated = await seedUser(at("2026-06-29T09:00:00.000Z"));
+    const babyId = await seedBaby(activated, at("2026-06-29T11:00:00.000Z")); // +2h
     await seedMeals(babyId, [
-      at("2026-09-14T19:00:00.000Z"), // +10h -> first meal inside 48h
-      at("2026-09-15T19:00:00.000Z"),
-      at("2026-09-16T09:00:00.000Z"), // third distinct day
+      at("2026-06-29T19:00:00.000Z"), // +10h -> first meal inside 48h
+      at("2026-06-30T19:00:00.000Z"),
+      at("2026-07-01T09:00:00.000Z"), // third distinct day
     ]);
 
-    const slow = await seedUser(at("2026-09-07T09:00:00.000Z"));
-    const slowBaby = await seedBaby(slow, at("2026-09-08T21:00:00.000Z")); // +36h
-    await seedMeals(slowBaby, [at("2026-09-10T09:00:00.000Z")]); // +72h
+    const slow = await seedUser(at("2026-07-06T09:00:00.000Z"));
+    const slowBaby = await seedBaby(slow, at("2026-07-07T21:00:00.000Z")); // +36h
+    await seedMeals(slowBaby, [at("2026-07-09T09:00:00.000Z")]); // +72h
 
-    const funnel = await activationFunnel(db, "4w", NOW);
-    expect(funnel.find((row) => row.weekStart === THIS_WEEK)).toEqual({
-      weekStart: THIS_WEEK,
+    const funnel = await activationFunnel(db, "12w", NOW);
+    expect(funnel.find((row) => row.weekStart === MATURE_WEEK)).toEqual({
+      weekStart: MATURE_WEEK,
       signups: 1,
       withBaby: 1,
       loggedMeal: 1,
       threeLoggingDays: 1,
     });
-    expect(funnel.find((row) => row.weekStart === LAST_WEEK)).toEqual({
-      weekStart: LAST_WEEK,
+    expect(funnel.find((row) => row.weekStart === NEXT_WEEK)).toEqual({
+      weekStart: NEXT_WEEK,
       signups: 1,
       withBaby: 0,
       loggedMeal: 0,
       threeLoggingDays: 0,
+    });
+  });
+
+  it("reports nothing for a week whose windows are still open, and a zero is not that", async () => {
+    // Somebody who signed up an hour ago can still add a baby, so counting
+    // them as a miss would draw the newest week as a cliff every single week.
+    const fresh = await seedUser(at("2026-09-16T09:00:00.000Z"));
+    await seedBaby(fresh, at("2026-09-16T10:00:00.000Z"));
+
+    const funnel = await activationFunnel(db, "4w", NOW);
+    expect(funnel.find((row) => row.weekStart === THIS_WEEK)).toEqual({
+      weekStart: THIS_WEEK,
+      signups: 1,
+      withBaby: null,
+      loggedMeal: null,
+      threeLoggingDays: null,
+    });
+
+    // Two weeks back the 24- and 48-hour windows HAVE closed — an empty week
+    // is a real zero there — while 28 days still have not.
+    expect(funnel.find((row) => row.weekStart === TWO_WEEKS_AGO)).toEqual({
+      weekStart: TWO_WEEKS_AGO,
+      signups: 0,
+      withBaby: 0,
+      loggedMeal: 0,
+      threeLoggingDays: null,
     });
   });
 });
@@ -366,17 +409,17 @@ describe("activationFunnel (stages are cumulative)", () => {
   it("does not count a first meal for a parent whose baby missed the 24-hour step", async () => {
     // Baby at +30h, first meal at +40h, three logging days: the later stages
     // are met on their own, but the funnel can only narrow, so none count.
-    const user = await seedUser(at("2026-09-14T09:00:00.000Z"));
-    const babyId = await seedBaby(user, at("2026-09-15T15:00:00.000Z")); // +30h
+    const user = await seedUser(at("2026-06-29T09:00:00.000Z"));
+    const babyId = await seedBaby(user, at("2026-06-30T15:00:00.000Z")); // +30h
     await seedMeals(babyId, [
-      at("2026-09-16T01:00:00.000Z"), // +40h
-      at("2026-09-17T01:00:00.000Z"),
-      at("2026-09-18T01:00:00.000Z"),
+      at("2026-07-01T01:00:00.000Z"), // +40h
+      at("2026-07-02T01:00:00.000Z"),
+      at("2026-07-03T01:00:00.000Z"),
     ]);
 
-    const funnel = await activationFunnel(db, "4w", NOW);
-    expect(funnel.find((row) => row.weekStart === THIS_WEEK)).toEqual({
-      weekStart: THIS_WEEK,
+    const funnel = await activationFunnel(db, "12w", NOW);
+    expect(funnel.find((row) => row.weekStart === "2026-06-29")).toEqual({
+      weekStart: "2026-06-29",
       signups: 1,
       withBaby: 0,
       loggedMeal: 0,
@@ -611,13 +654,20 @@ describe("clientErrors", () => {
     for (let i = 0; i < 20; i += 1) {
       await seedEvent({ name: "session_started", occurredAt: ago(DAY) });
     }
-    for (let i = 0; i < 3; i += 1) {
+    for (const occurredAt of [ago(3 * DAY), ago(2 * DAY), ago(DAY)]) {
       await seedEvent({
         name: "client_error",
         props: { route_pattern: "/log-meal", kind: "api_5xx", status: "500" },
-        occurredAt: ago(DAY),
+        occurredAt,
       });
     }
+    // Same route, same kind, a different status: a 503 is a different failure
+    // from a 500 and reads as one, so it is its own row rather than folded in.
+    await seedEvent({
+      name: "client_error",
+      props: { route_pattern: "/log-meal", kind: "api_5xx", status: "503" },
+      occurredAt: ago(2 * HOUR),
+    });
     await seedEvent({
       name: "client_error",
       props: { route_pattern: "/foods/:slug", kind: "render_crash", status: "none" },
@@ -626,11 +676,33 @@ describe("clientErrors", () => {
 
     const panel = await clientErrors(db, "4w", NOW);
     expect(panel.sessions).toBe(20);
-    expect(panel.errors).toBe(4);
-    expect(panel.perHundredSessions).toBe(20);
+    expect(panel.errors).toBe(5);
+    expect(panel.perHundredSessions).toBe(25);
     expect(panel.topRoutes).toEqual([
-      { route: "/log-meal", kind: "api_5xx", count: 3, share: 0.75 },
-      { route: "/foods/:slug", kind: "render_crash", count: 1, share: 0.25 },
+      {
+        route: "/log-meal",
+        kind: "api_5xx",
+        status: "500",
+        count: 3,
+        share: 0.6,
+        lastAt: ago(DAY).toISOString(),
+      },
+      {
+        route: "/foods/:slug",
+        kind: "render_crash",
+        status: "none",
+        count: 1,
+        share: 0.2,
+        lastAt: ago(DAY).toISOString(),
+      },
+      {
+        route: "/log-meal",
+        kind: "api_5xx",
+        status: "503",
+        count: 1,
+        share: 0.2,
+        lastAt: ago(2 * HOUR).toISOString(),
+      },
     ]);
   });
 });
@@ -775,6 +847,11 @@ describe("the report CLI", () => {
   });
 
   it("renders the same payload as Markdown", async () => {
+    await seedEvent({
+      name: "client_error",
+      props: { route_pattern: "/log-meal", kind: "api_5xx", status: "500" },
+      occurredAt: ago(DAY),
+    });
     const payload = await collectMetrics(db, "4w", NOW);
     const markdown = renderMetricsMarkdown(payload);
 
@@ -798,5 +875,9 @@ describe("the report CLI", () => {
     }
     // An unfinished retention window is a dash, not a 0.0%.
     expect(markdown).toContain("| — |");
+    // And an activation window that has not closed for the whole week says so
+    // in words rather than printing a count nobody could act on.
+    expect(markdown).toContain("not yet");
+    expect(markdown).toContain("| Route | Kind | Status | Count | Share | Last seen |");
   });
 });

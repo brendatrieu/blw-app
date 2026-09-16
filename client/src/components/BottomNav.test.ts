@@ -69,6 +69,30 @@ describe("BottomNav", () => {
   });
 });
 
+describe("BottomNav position (item 379 — the Storage band)", () => {
+  it("is a sticky, in-flow bar at the end of the shell column, never a fixed overlay", () => {
+    const html = renderAt("/");
+
+    const navClass = html.match(/<nav class="([^"]+)"/)?.[1] ?? "";
+    expect(navClass.split(" ")).toEqual(
+      expect.arrayContaining(["sticky", "bottom-0", "mt-auto", "z-10", "max-w-lg"]),
+    );
+    // A fixed bar hangs off WebKit's layout viewport, which is what painted
+    // the band under the tab bar in the installed iOS app.
+    expect(navClass).not.toContain("fixed");
+    expect(navClass).not.toContain("inset-x-0");
+  });
+
+  it("keeps the same height, safe-area padding and stacking level it had while fixed", () => {
+    const html = renderAt("/");
+
+    expect(html).toContain("height:calc(var(--nav-height) + env(safe-area-inset-bottom))");
+    expect(html).toContain("padding-bottom:env(safe-area-inset-bottom)");
+    // Below the Sheet/Dialog overlays (z-30) and the Celebration toast (z-40).
+    expect(html).toMatch(/<nav class="[^"]*\bz-10\b/);
+  });
+});
+
 describe("isMoreTabPath (the More tab's active rule)", () => {
   it("covers /more and the safety library, nested articles included", () => {
     expect(isMoreTabPath("/more")).toBe(true);

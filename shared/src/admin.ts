@@ -164,17 +164,23 @@ export const weeklyLoggingParentsSchema = z.array(
  * Activation, per signup-week cohort. Every step is measured from each
  * account's own signup instant, so a Sunday signup is judged on the same
  * 24/48 hours as a Monday one.
+ *
+ * Every stage is **nullable**, and a null is never a zero: it means the
+ * stage's window has not closed yet for the whole week — somebody who signed
+ * up on the Sunday still has time to clear it — so the count would only ever
+ * go up. Painting that as a zero would draw a collapse that has not happened,
+ * the same rule the retention triangle is built on.
  */
 export const activationCohortSchema = z
   .object({
     weekStart,
     signups: z.number().int(),
-    /** Added a baby within 24 hours of signing up. Each later stage counts only parents who also cleared this one — the funnel can only narrow. */
-    withBaby: z.number().int(),
-    /** Also logged a first meal within 48 hours of signing up. */
-    loggedMeal: z.number().int(),
-    /** Logged meals on three or more distinct days within 28 days. */
-    threeLoggingDays: z.number().int(),
+    /** Added a baby within 24 hours of signing up. Each later stage counts only parents who also cleared this one — the funnel can only narrow. `null` until the 24-hour window has closed for the whole week. */
+    withBaby: z.number().int().nullable(),
+    /** Also logged a first meal within 48 hours of signing up. `null` until the 48-hour window has closed for the whole week. */
+    loggedMeal: z.number().int().nullable(),
+    /** Logged meals on three or more distinct days within 28 days. `null` until the 28-day window has closed for the whole week. */
+    threeLoggingDays: z.number().int().nullable(),
   })
   .strict();
 export const activationFunnelSchema = z.array(activationCohortSchema);
@@ -330,9 +336,13 @@ export const clientErrorsSchema = z
         .object({
           route: z.string(),
           kind: z.string(),
+          /** The HTTP status the failing request answered with, or `"none"` when the kind has no status (a render crash). Still never a message or a stack. */
+          status: z.string(),
           count: z.number().int(),
           /** Of all errors in range. */
           share: z.number(),
+          /** The most recent occurrence in the group — the timestamp to search the server logs around. */
+          lastAt: z.string().datetime(),
         })
         .strict(),
     ),

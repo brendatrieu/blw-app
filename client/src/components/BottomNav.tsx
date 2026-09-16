@@ -124,9 +124,16 @@ export function resolveActiveTab(pathname: string): string | null {
 export function BottomNav() {
   const { pathname } = useLocation();
 
+  // The bar is IN FLOW at the end of AppLayout's flex column and sticks to the
+  // bottom of the viewport, rather than `position: fixed` (item 379): a fixed
+  // bar hangs off WebKit's layout viewport, which in an installed iOS app
+  // stays shrunken after the keyboard has been up until something scrolls —
+  // painting a band under the bar on the one tab too short to scroll. `mt-auto`
+  // pins it to the bottom of a short column; z-index, height and the
+  // safe-area padding are unchanged.
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-10 mx-auto flex w-full max-w-lg items-stretch border-t px-1 pt-1"
+      className="sticky bottom-0 z-10 mx-auto mt-auto flex w-full max-w-lg items-stretch border-t px-1 pt-1"
       style={{
         backgroundColor: "var(--color-bg-elevated)",
         borderColor: "var(--color-border)",

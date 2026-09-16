@@ -9,11 +9,11 @@ import {
 } from "@blw/shared";
 import { useAdminMetrics, useIsAdmin } from "../features/admin/hooks.js";
 import { AccessPanel } from "../features/admin/AccessPanel.js";
+import { describeErrorKind } from "../features/admin/errorKinds.js";
 import { FeedbackInbox } from "../features/admin/FeedbackInbox.js";
 import { Bars } from "../components/charts/Bars.js";
 import { ChartEmpty } from "../components/charts/ChartFrame.js";
 import { Donut } from "../components/charts/Donut.js";
-import { Funnel } from "../components/charts/Funnel.js";
 import { HeatTable } from "../components/charts/HeatTable.js";
 import { Line, Sparkline, type LineMarker } from "../components/charts/Line.js";
 import {
@@ -66,10 +66,11 @@ const TRIAGE_LABELS: Record<TriageLevel, string> = {
   emergency: "Emergency",
 };
 
-const ACTIVATION_STAGES = ["Signed up", "Added a baby", "First meal", "3 logging days"] as const;
+/** The activation table's columns, in the order a parent clears them. */
+const ACTIVATION_COLUMNS = ["Baby \u226424h", "First meal \u226448h", "3 days \u226428d"] as const;
 
-/** How many signup cohorts the funnel shows — the plan's "last 4 cohorts". */
-const FUNNEL_COHORTS = 4;
+/** Rows in the activation table — the same depth the retention triangle shows. */
+const ACTIVATION_ROWS = 8;
 
 /** Rows in the retention triangle; older cohorts are in the data, not on screen. */
 const RETENTION_ROWS = 8;
@@ -298,24 +299,26 @@ function Panels({ data }: { data: AdminMetricsResponse }) {
 }
 
 function ActivationPanel({ data }: { data: AdminMetricsResponse }) {
-  const cohorts = data.activationFunnel.slice(-FUNNEL_COHORTS);
+  const cohorts = data.activationFunnel.slice(-ACTIVATION_ROWS);
 
   return (
     <Panel
       title="Activation"
-      description="Measured from each account's own signup: a baby within 24 hours, a first meal within 48, meals on three separate days within 28."
+      description="Each signup week read against its own signups: added a baby within 24 hours, a first meal within 48, meals on three separate days within 28. A dash is a window that has not closed for the whole week yet."
     >
       {cohorts.length === 0 ? (
         <ChartEmpty>No signup cohorts in this range yet.</ChartEmpty>
       ) : (
-        <Funnel
-          stages={[...ACTIVATION_STAGES]}
-          cohorts={cohorts.map((cohort) => ({
+        <HeatTable
+          columns={[...ACTIVATION_COLUMNS]}
+          rows={cohorts.map((cohort) => ({
             label: weekLabel(cohort.weekStart),
-            values: [cohort.signups, cohort.withBaby, cohort.loggedMeal, cohort.threeLoggingDays],
+            size: cohort.signups,
+            cells: [cohort.withBaby, cohort.loggedMeal, cohort.threeLoggingDays],
           }))}
-          title="Activation funnel by signup week"
-          summary={`The last ${cohorts.length} signup cohorts, each read against its own signups.`}
+          cellText="count-share"
+          title="Activation by signup week"
+          summary={`The last ${cohorts.length} signup weeks, each read against its own signups.`}
         />
       )}
     </Panel>
@@ -580,29 +583,67 @@ function SymptomPanel({ data }: { data: AdminMetricsResponse }) {
 
 function ErrorsPanel({ data }: { data: AdminMetricsResponse }) {
   const errors = data.clientErrors;
+  const rows = errors.topRoutes.map((route) => ({ ...route, ...describeErrorKind(route.kind, route.status) }));
+  const lastAt = errors.topRoutes.reduce<string | null>(
+    (latest, route) => (latest === null || route.lastAt > latest ? route.lastAt : latest),
+    null,
+  );
+  // One entry per kind actually PRESENT, in the order the rows introduce it.
+  // A key that explained every kind the app can emit would be a glossary, and
+  // the reader would have to work out which half of it applied to them. The
+  // key's own label drops the status (a 500 and a 503 are one explanation).
+  const kinds = [...new Set(errors.topRoutes.map((route) => route.kind))]
+    .map((kind) => ({ kind, ...describeErrorKind(kind, "none") }))
+    .filter((entry) => entry.meaning !== "");
 
   return (
     <Panel
       title="Errors"
-      description={`${formatCount(errors.errors)} client errors across ${formatCount(
-        errors.sessions,
-      )} sessions. Above two per hundred, feature work stops.`}
+      description={`${formatCount(errors.errors)} client errors across ${formatCount(errors.sessions)} sessions${
+        lastAt === null ? "" : `, the last on ${formatTimestamp(lastAt)}`
+      }. Above two per hundred, feature work stops. Only the route and kind are recorded — messages and stacks never leave the phone.`}
     >
       {errors.errors === 0 ? (
         <ChartEmpty>No client errors in this range.</ChartEmpty>
       ) : (
-        <Bars
-          orientation="row"
-          tone="critical"
-          bars={errors.topRoutes.map((route) => ({
-            label: `${route.route} · ${humanizeKey(route.kind)}`,
-            value: route.count,
-            valueLabel: `${formatCount(route.count)} · ${formatPercent(route.share)}`,
-          }))}
-          title="Top error routes"
-          summary={`Where the ${formatCount(errors.errors)} errors in range landed.`}
-          valueHeader="Errors"
-        />
+        <>
+          <Bars
+            orientation="row"
+            tone="critical"
+            bars={rows.map((route) => ({
+              label: `${route.route} · ${route.label}`,
+              value: route.count,
+              valueLabel: `${formatCount(route.count)} · ${formatPercent(route.share)}`,
+            }))}
+            title="Top error routes"
+            summary={`Where the ${formatCount(errors.errors)} errors in range landed.`}
+            valueHeader="Errors"
+            table={{
+              columns: ["Route and kind", "Errors", "Status", "Last seen"],
+              rows: rows.map((route) => ({
+                header: `${route.route} · ${route.label}`,
+                cells: [
+                  `${formatCount(route.count)} (${formatPercent(route.share)})`,
+                  route.status,
+                  formatTimestamp(route.lastAt),
+                ],
+              })),
+            }}
+          />
+          {kinds.length > 0 ? (
+            <div className="flex flex-col gap-1">
+              <h3 className="text-xs font-medium text-[var(--color-text)]">What these mean</h3>
+              <dl className="flex flex-col gap-1.5">
+                {kinds.map((entry) => (
+                  <div key={entry.kind} className="flex flex-col">
+                    <dt className="text-[11px] font-medium text-[var(--color-text)]">{entry.label}</dt>
+                    <dd className="text-[11px] text-[var(--color-text-muted)]">{`${entry.meaning} ${entry.action}`}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ) : null}
+        </>
       )}
     </Panel>
   );

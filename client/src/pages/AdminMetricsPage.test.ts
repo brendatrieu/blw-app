@@ -78,7 +78,9 @@ const FULL: AdminMetricsResponse = {
   ],
   activationFunnel: [
     { weekStart: "2026-08-31", signups: 4, withBaby: 3, loggedMeal: 2, threeLoggingDays: 1 },
-    { weekStart: "2026-09-07", signups: 8, withBaby: 6, loggedMeal: 4, threeLoggingDays: 2 },
+    // The newest week's 28-day window has not closed for everybody in it, so
+    // the last stage is null rather than a count that can still only go up.
+    { weekStart: "2026-09-07", signups: 8, withBaby: 6, loggedMeal: 4, threeLoggingDays: null },
   ],
   retentionTriangle: [
     {
@@ -134,7 +136,16 @@ const FULL: AdminMetricsResponse = {
     sessions: 200,
     errors: 3,
     perHundredSessions: 1.5,
-    topRoutes: [{ route: "/foods/:slug", kind: "render_crash", count: 3, share: 1 }],
+    topRoutes: [
+      {
+        route: "/foods/:slug",
+        kind: "render_crash",
+        status: "none",
+        count: 3,
+        share: 1,
+        lastAt: "2026-09-14T09:12:00.000Z",
+      },
+    ],
   },
   recentDeploys: [{ sha: "abc1234def56", deployedAt: "2026-09-08T10:00:00.000Z", note: null }],
 };
@@ -301,13 +312,23 @@ describe("panels", () => {
     expect(html).toContain('stroke-dasharray="3 3"');
   });
 
-  it("runs the activation funnel across the last cohorts, each on its own denominator", () => {
+  it("reads each signup week's activation against its own signups, and dashes an open window", () => {
     const html = render();
-    for (const stage of ["Signed up", "Added a baby", "First meal", "3 logging days"]) {
-      expect(html).toContain(`>${stage}<`);
+    for (const column of ["Baby ≤24h", "First meal ≤48h", "3 days ≤28d"]) {
+      expect(html).toContain(`>${column}<`);
     }
-    // Newest cohort: 2 of 8 reached three logging days.
-    expect(html).toContain("2 · 25%");
+    // Aug 31: 3 of its 4 signups added a baby inside 24 hours. The count comes
+    // first because these weeks are small — "75%" alone is three parents.
+    expect(html).toContain(">3 · 75%<");
+    expect(html).toContain(">2 · 50%<");
+    // The newest week's 28-day window is still open: a dash, never a zero.
+    // The dash glyph and the bare "not measured yet" both also come from the
+    // retention triangle's own nulls in this same HTML, so the pin that has to
+    // hold is the cell's own <title> — it names the week and the stage, and
+    // only the activation panel can produce it. Turn the null into a zero and
+    // this line reads "6 of 8" instead.
+    expect(html).toContain(">–<");
+    expect(html).toContain("Sep 7, 3 days ≤28d: not measured yet");
   });
 
   it("paints a finished retention window and leaves an unfinished one blank", () => {
@@ -363,9 +384,31 @@ describe("panels", () => {
     expect(html).toContain("checks");
   });
 
-  it("names the routes the errors land on", () => {
+  it("names the routes the errors land on, in words rather than in kind slugs", () => {
     const html = render();
-    expect(html).toContain("/foods/:slug · Render crash");
+    expect(html).toContain("/foods/:slug · Screen crashed");
+    expect(html).not.toContain("Render crash");
+  });
+
+  it("explains every kind that is present, and none that is not", () => {
+    const html = render();
+    expect(html).toContain("What these mean");
+    expect(html).toContain("A page hit a bug and showed the error screen.");
+    expect(html).toContain("A code bug: reproduce on that route and fix it.");
+    // No api_5xx row in this payload, so no api_5xx entry in the key.
+    expect(html).not.toContain("The server failed to answer the request.");
+    expect(html).not.toContain("Server error");
+  });
+
+  it("dates the most recent error and repeats the rule about what is stored", () => {
+    const html = render();
+    expect(html).toContain(`the last on ${formatTimestamp("2026-09-14T09:12:00.000Z")}`);
+    // renderToString escapes the apostrophe-free sentence as-is; the em dash
+    // and the promise are the pins.
+    expect(html).toContain("Only the route and kind are recorded");
+    expect(html).toContain("messages and stacks never leave the phone.");
+    // The status and the last-seen instant reach a screen reader too.
+    expect(html).toContain("<th scope=\"col\">Last seen</th>");
   });
 });
 

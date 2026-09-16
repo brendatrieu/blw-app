@@ -2,8 +2,9 @@ import { ChartFrame, type ChartTable } from "./ChartFrame.js";
 import { formatCount, formatPercent, heatStep, rampFill, rampInk, round } from "./helpers.js";
 
 /**
- * The retention triangle: one row per signup cohort, one cell per week since
- * signup, painted on the sequential ramp.
+ * One row per signup week, one cell per window measured against it, painted
+ * on the sequential ramp. Two panels read this way: the retention triangle
+ * (a cell per week since signup) and activation (a cell per stage).
  *
  * The load-bearing rule is what an EMPTY cell means. A window that has not
  * finished yet for the whole cohort comes back as `null`, and a null cell is
@@ -29,7 +30,7 @@ export interface HeatRow {
   label: string;
   /** The cohort's size — the denominator every cell in the row is read against. */
   size: number;
-  /** Retained counts, `null` where the window has not closed yet. */
+  /** One count per column, `null` where that window has not closed yet. */
   cells: Array<number | null>;
 }
 
@@ -38,9 +39,17 @@ interface HeatTableProps {
   rows: HeatRow[];
   title: string;
   summary: string;
+  /**
+   * What a painted cell prints. `"share"` (the default, and the retention
+   * triangle's own reading) prints the percentage alone; `"count-share"`
+   * prints "3 · 75%", for a table whose rows are small enough that the raw
+   * count is the number the reader wants first. The hidden table carries
+   * "75% (3)" either way — a screen reader has room for both.
+   */
+  cellText?: "share" | "count-share";
 }
 
-export function HeatTable({ columns, rows, title, summary }: HeatTableProps) {
+export function HeatTable({ columns, rows, title, summary, cellText = "share" }: HeatTableProps) {
   const cellW = (VIEW_W - LABEL_W) / Math.max(1, columns.length);
   const height = HEADER_H + rows.length * ROW_H;
 
@@ -102,7 +111,11 @@ export function HeatTable({ columns, rows, title, summary }: HeatTableProps) {
                     fontSize={8}
                     fill={step === null ? "var(--color-text-muted)" : rampInk(step)}
                   >
-                    {step === null ? "–" : formatPercent(value ?? 0)}
+                    {step === null
+                      ? "–"
+                      : cellText === "count-share"
+                        ? `${formatCount(cell ?? 0)} · ${formatPercent(value ?? 0)}`
+                        : formatPercent(value ?? 0)}
                   </text>
                 </g>
               );

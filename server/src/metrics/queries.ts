@@ -62,7 +62,8 @@ import { babies, deploys, meals, session, storageItems, symptomChecks, usageEven
 // Window arithmetic (pure — pinned by tests without a database)
 // ---------------------------------------------------------------------------
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 const WEEK_MS = 7 * DAY_MS;
 
 /** The WLP bar: meals in one week that make a parent a logging parent. */
@@ -248,6 +249,21 @@ export async function weeklyLoggingParents(
 }
 
 /**
+ * How long each activation stage gives an account, from its own signup
+ * instant. Defined once and used twice: inside the SQL as the interval each
+ * `filter` measures against, and outside it as the maturity test that decides
+ * whether a week's answer can be reported at all. Two copies of these numbers
+ * that drifted apart would report a window as closed while still counting
+ * against a different one.
+ */
+const ACTIVATION_WINDOW_HOURS = { withBaby: 24, loggedMeal: 48, threeLoggingDays: 28 * 24 } as const;
+
+/** One of those windows as a Postgres interval, built from the constant above rather than typed out again. */
+function hours(count: number): SQL {
+  return sql`interval '1 hour' * ${sql.raw(String(count))}`;
+}
+
+/**
  * Activation per signup-week cohort.
  *
  * Every step is measured from each account's own signup instant, not from
@@ -255,6 +271,11 @@ export async function weeklyLoggingParents(
  * hours as a Monday-morning one. The last step ("three logging days") is
  * counted over the first 28 days, so a cohort's answer stops changing a
  * month after it closes rather than drifting forever.
+ *
+ * A stage comes back **null** until its window has closed for the LAST person
+ * in the week (the Retention idiom: `cohortEnd = weekStart + 7d`, and the
+ * window runs from there). That is not a zero — the count can still only go
+ * up — and this week's row would otherwise read as a cliff every single week.
  */
 export async function activationFunnel(
   db: Database,
@@ -287,7 +308,7 @@ export async function activationFunnel(
         select c.uid,
           min(${meals.createdAt}) as first_meal,
           count(distinct (${meals.createdAt} at time zone 'UTC')::date)
-            filter (where ${meals.createdAt} < c.signed_up + interval '28 days') as logging_days
+            filter (where ${meals.createdAt} < c.signed_up + ${hours(ACTIVATION_WINDOW_HOURS.threeLoggingDays)}) as logging_days
         from cohort c
         join ${babies} on ${babies.userId} = c.uid
         join ${meals} on ${meals.babyId} = ${babies.id}
@@ -295,11 +316,11 @@ export async function activationFunnel(
       )
       select c.week,
         count(*)::int as signups,
-        (count(*) filter (where first_baby.at <= c.signed_up + interval '24 hours'))::int as with_baby,
-        (count(*) filter (where first_baby.at <= c.signed_up + interval '24 hours'
-                            and meal_facts.first_meal <= c.signed_up + interval '48 hours'))::int as logged_meal,
-        (count(*) filter (where first_baby.at <= c.signed_up + interval '24 hours'
-                            and meal_facts.first_meal <= c.signed_up + interval '48 hours'
+        (count(*) filter (where first_baby.at <= c.signed_up + ${hours(ACTIVATION_WINDOW_HOURS.withBaby)}))::int as with_baby,
+        (count(*) filter (where first_baby.at <= c.signed_up + ${hours(ACTIVATION_WINDOW_HOURS.withBaby)}
+                            and meal_facts.first_meal <= c.signed_up + ${hours(ACTIVATION_WINDOW_HOURS.loggedMeal)}))::int as logged_meal,
+        (count(*) filter (where first_baby.at <= c.signed_up + ${hours(ACTIVATION_WINDOW_HOURS.withBaby)}
+                            and meal_facts.first_meal <= c.signed_up + ${hours(ACTIVATION_WINDOW_HOURS.loggedMeal)}
                             and coalesce(meal_facts.logging_days, 0) >= 3))::int as three_days
       from cohort c
       left join first_baby on first_baby.uid = c.uid
@@ -308,26 +329,25 @@ export async function activationFunnel(
     `,
   );
 
-  const found = new Map<string, ActivationCohort>(
-    result.map((row) => [
-      row.week,
-      {
-        weekStart: row.week,
-        signups: row.signups,
-        withBaby: row.with_baby,
-        loggedMeal: row.logged_meal,
-        threeLoggingDays: row.three_days,
-      },
-    ]),
-  );
+  const found = new Map(result.map((row) => [row.week, row]));
 
-  return scaffoldWeeks(weekKeys, found, (weekStart) => ({
-    weekStart,
-    signups: 0,
-    withBaby: 0,
-    loggedMeal: 0,
-    threeLoggingDays: 0,
-  }));
+  return weekKeys.map((weekStart) => {
+    const row = found.get(weekStart);
+    // The window is only reportable once it has closed for the LAST person in
+    // the week, i.e. for somebody who signed up at the very end of it.
+    const cohortEnd = new Date(weekStart + "T00:00:00.000Z").getTime() + WEEK_MS;
+    const closed = (window: number): boolean => cohortEnd + window * HOUR_MS <= now.getTime();
+    const stage = (window: number, value: number | undefined): number | null =>
+      closed(window) ? (value ?? 0) : null;
+
+    return {
+      weekStart,
+      signups: row?.signups ?? 0,
+      withBaby: stage(ACTIVATION_WINDOW_HOURS.withBaby, row?.with_baby),
+      loggedMeal: stage(ACTIVATION_WINDOW_HOURS.loggedMeal, row?.logged_meal),
+      threeLoggingDays: stage(ACTIVATION_WINDOW_HOURS.threeLoggingDays, row?.three_days),
+    };
+  });
 }
 
 /**
@@ -772,16 +792,18 @@ export async function clientErrors(
     `,
   );
 
-  const topRoutes = await rows<{ route: string; kind: string; hits: number }>(
+  const topRoutes = await rows<{ route: string; kind: string; status: string; hits: number; last_at: Date }>(
     db,
     sql`
       select coalesce(${usageEvents.props}->>'route_pattern', '/*') as route,
         coalesce(${usageEvents.props}->>'kind', 'unknown') as kind,
-        count(*)::int as hits
+        coalesce(${usageEvents.props}->>'status', 'none') as status,
+        count(*)::int as hits,
+        max(${usageEvents.occurredAt}) as last_at
       from ${usageEvents}
       where ${usageEvents.name} = 'client_error' and ${inRange}
-      group by 1, 2
-      order by hits desc, route asc, kind asc
+      group by 1, 2, 3
+      order by hits desc, route asc, kind asc, status asc
       limit ${METRICS_TOP_N}
     `,
   );
@@ -796,8 +818,10 @@ export async function clientErrors(
     topRoutes: topRoutes.map((row) => ({
       route: row.route,
       kind: row.kind,
+      status: row.status,
       count: row.hits,
       share: ratio(row.hits, errors),
+      lastAt: new Date(row.last_at).toISOString(),
     })),
   };
 }

@@ -240,8 +240,8 @@ client renders the normal not-found page for them.
 ## The review ritual
 
 **Weekly, 20 minutes, Monday.** North-star sparkline (weekly logging parents,
-8 weeks), the activation funnel for the last two signup cohorts, feature
-adoption, the top five `client_error` by route and kind, zero-result filter
+8 weeks), the activation table for the last signup weeks, feature
+adoption, the top five `client_error` by route, kind and status, zero-result filter
 combinations, tour skips by slide. One line in `docs/decisions.md` — even when
 the line is "no change".
 

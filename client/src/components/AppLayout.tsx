@@ -161,10 +161,16 @@ export function AppLayout() {
           authenticated page, keep the chrome behind it, and leave the parent
           exactly where they were when it closes. */}
       <TourProvider>
-        <div
-          className="mx-auto flex min-h-full max-w-lg flex-col"
-          style={{ paddingBottom: "calc(var(--nav-height) + env(safe-area-inset-bottom))" }}
-        >
+        {/* The shell column is at least a viewport tall so the sticky nav at
+            its end sits on the bottom edge of even a short page. `min-h-screen`
+            (100vh) is the fallback; `min-h-[100dvh]` tracks the collapsing
+            mobile URL bar and wins where `dvh` is understood. The @supports
+            wrapper is what makes it win: Tailwind v4 emits the bare
+            `.min-h-[100dvh]` rule BEFORE `.min-h-screen`, so an unwrapped pair
+            would leave 100vh overriding the dvh one it is meant to back up.
+            No bottom padding reservation any more — the nav is in flow and
+            occupies its own space (item 379). */}
+        <div className="mx-auto flex min-h-screen supports-[height:100dvh]:min-h-[100dvh] max-w-lg flex-col">
           <header
             className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b px-4 py-2.5"
             style={{

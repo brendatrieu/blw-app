@@ -9,6 +9,12 @@ function pct(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+/** One activation cell: the count and its share, or "not yet" for a window still open. */
+function stage(value: number | null, signups: number): string {
+  if (value === null) return "not yet";
+  return `${value} (${pct(signups ? value / signups : 0)})`;
+}
+
 function table(headers: string[], rows: (string | number)[][]): string {
   const head = `| ${headers.join(" | ")} |`;
   const rule = `| ${headers.map(() => "---").join(" | ")} |`;
@@ -67,9 +73,11 @@ export function renderMetricsMarkdown(payload: AdminMetricsResponse): string {
         .map((row) => [
           row.weekStart,
           row.signups,
-          `${row.withBaby} (${pct(row.signups ? row.withBaby / row.signups : 0)})`,
-          `${row.loggedMeal} (${pct(row.signups ? row.loggedMeal / row.signups : 0)})`,
-          `${row.threeLoggingDays} (${pct(row.signups ? row.threeLoggingDays / row.signups : 0)})`,
+          // "not yet" is a window that has not closed for the whole week, not
+          // a zero — the same distinction the retention table's dash carries.
+          stage(row.withBaby, row.signups),
+          stage(row.loggedMeal, row.signups),
+          stage(row.threeLoggingDays, row.signups),
         ]),
     ),
   );
@@ -190,8 +198,15 @@ export function renderMetricsMarkdown(payload: AdminMetricsResponse): string {
   if (payload.clientErrors.topRoutes.length > 0) {
     out.push(
       table(
-        ["Route", "Kind", "Count", "Share"],
-        payload.clientErrors.topRoutes.map((row) => [row.route, row.kind, row.count, pct(row.share)]),
+        ["Route", "Kind", "Status", "Count", "Share", "Last seen"],
+        payload.clientErrors.topRoutes.map((row) => [
+          row.route,
+          row.kind,
+          row.status,
+          row.count,
+          pct(row.share),
+          row.lastAt,
+        ]),
       ),
     );
     out.push("");

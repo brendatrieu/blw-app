@@ -54,7 +54,7 @@ describe("AppLayout header", () => {
 });
 
 describe("AppLayout chrome (item 310 — the tour stopped being a route)", () => {
-  it("renders the header, the bottom nav and the nav-height padding on every route", () => {
+  it("renders the header and the bottom nav on every route", () => {
     // v1 had a chromeless branch for /tour. The tour is a dialog over the
     // app now, so there is no route left that hides the app's own chrome —
     // and /tour itself is just a Not found.
@@ -65,10 +65,47 @@ describe("AppLayout chrome (item 310 — the tour stopped being a route)", () =>
       expect(html, pathname).toContain("<nav");
       expect(html, pathname).toContain(">Home<");
       expect(html, pathname).toContain('aria-label="Settings"');
-      expect(html, pathname).toContain("--nav-height");
       // The outlet still renders under it.
       expect(html, pathname).toContain("content");
     }
+  });
+});
+
+describe("AppLayout shell column (item 379 — the nav stopped being fixed)", () => {
+  it("is at least a viewport tall, dvh preferred over the vh fallback, and reserves no bottom padding", () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const html = renderLayout(queryClient);
+
+    const column = html.match(/<div class="(mx-auto flex[^"]*max-w-lg flex-col)"/);
+    expect(column, html.slice(0, 400)).not.toBeNull();
+    const classes = column![1]!.split(" ");
+    expect(classes).toContain("min-h-screen");
+    // The dvh rule is wrapped in @supports, which is the only way round
+    // Tailwind v4 emitting a bare `.min-h-[100dvh]` BEFORE `.min-h-screen` —
+    // the fallback would otherwise override the thing it backs up.
+    expect(classes).toContain("supports-[height:100dvh]:min-h-[100dvh]");
+    expect(classes.indexOf("min-h-screen")).toBeLessThan(
+      classes.indexOf("supports-[height:100dvh]:min-h-[100dvh]"),
+    );
+
+    // The nav occupies its own space now, so nothing reserves room for it.
+    expect(html).not.toMatch(/padding-bottom:calc\(var\(--nav-height\)/);
+    expect(html).not.toContain("min-h-full");
+  });
+
+  it("renders the nav INSIDE the column, after <main>, not as a sibling overlay", () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const html = renderLayout(queryClient);
+
+    const main = html.indexOf("<main");
+    const mainEnd = html.indexOf("</main>");
+    const nav = html.indexOf("<nav");
+    expect(main).toBeGreaterThan(-1);
+    expect(nav).toBeGreaterThan(mainEnd);
+    // ...and still inside the shell column: the column's closing tag comes
+    // after the nav, so the nav is the column's last flex child.
+    expect(html.indexOf("</nav>")).toBeLessThan(html.lastIndexOf("</div>"));
+    expect(html).toMatch(/<nav class="sticky bottom-0 /);
   });
 });
 

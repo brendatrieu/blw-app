@@ -69,6 +69,14 @@ interface BarsProps {
   max?: number;
   /** Draw the full extent behind each row bar — right for shares, noise for counts. */
   showTrack?: boolean;
+  /**
+   * Replaces the default two-column table (label, value) behind the drawing.
+   * For a chart whose rows carry more than the bar can show — the errors
+   * panel's status and last-seen — where the sighted reader gets the extra
+   * columns from the panel's own key and the screen reader would otherwise
+   * get less, not more.
+   */
+  table?: ChartTable;
 }
 
 function toneFill(tone: BarTone): string {
@@ -84,8 +92,9 @@ export function Bars({
   tone = "series",
   max,
   showTrack = false,
+  table: tableOverride,
 }: BarsProps) {
-  const table: ChartTable = {
+  const table: ChartTable = tableOverride ?? {
     columns: ["Label", valueHeader],
     rows: bars.map((bar) => ({ header: bar.label, cells: [bar.valueLabel ?? formatCount(bar.value)] })),
   };

@@ -16,8 +16,6 @@ import {
   formatPercent,
   formatRate,
   formatTimestamp,
-  funnelSteps,
-  groupLayout,
   heatStep,
   humanizeKey,
   linePath,
@@ -56,6 +54,15 @@ describe("ticks", () => {
     expect(niceTicks(3)).toEqual([0, 1, 2, 3]);
     expect(niceTicks(7)).toEqual([0, 2, 4, 6, 8]);
     expect(niceTicks(250)).toEqual([0, 100, 200, 300]);
+  });
+
+  it("never steps below a whole number — every axis here counts things", () => {
+    // A max of 2 used to step by 0.5, and `formatCount` printed the ticks as
+    // 0, 1, 1, 2, 2: each label twice, on gridlines that meant nothing.
+    expect(niceTicks(1)).toEqual([0, 1]);
+    expect(niceTicks(2)).toEqual([0, 1, 2]);
+    expect(niceTicks(4)).toEqual([0, 1, 2, 3, 4]);
+    expect(axisMax(2)).toBe(2);
   });
 
   it("still draws an axis for an all-zero series", () => {
@@ -124,14 +131,6 @@ describe("band layout", () => {
 
   it("survives an empty series", () => {
     expect(bandLayout(0, 100)).toEqual({ band: 100, thickness: 0, offset: 0 });
-    expect(groupLayout(0, 30)).toEqual({ thickness: 0, offsets: [] });
-  });
-
-  it("stacks a group edge to edge minus the gap", () => {
-    const group = groupLayout(4, 30, 2);
-    expect(group.thickness).toBe(6);
-    expect(group.offsets).toEqual([0, 8, 16, 24]);
-    expect((group.offsets.at(-1) ?? 0) + group.thickness).toBe(30);
   });
 });
 
@@ -189,36 +188,6 @@ describe("paths", () => {
     const d = barPath(0, 46, 20, 4, 4, "up");
     expect(d).toContain("Q0 46 4 46");
     expect(d).not.toContain("NaN");
-  });
-});
-
-describe("funnel percentages", () => {
-  const stages = [
-    { label: "Signed up", value: 20 },
-    { label: "Added a baby", value: 15 },
-    { label: "First meal", value: 9 },
-    { label: "3 logging days", value: 3 },
-  ];
-
-  it("measures every stage against the cohort's own first stage", () => {
-    expect(funnelSteps(stages).map((step) => step.ofFirst)).toEqual([1, 0.75, 0.45, 0.15]);
-  });
-
-  it("also reports the step-to-step survival, which is where a leak shows", () => {
-    expect(funnelSteps(stages).map((step) => step.ofPrevious)).toEqual([1, 0.75, 0.6, 1 / 3]);
-  });
-
-  it("returns zeros for an empty cohort instead of NaN", () => {
-    const empty = funnelSteps([
-      { label: "Signed up", value: 0 },
-      { label: "Added a baby", value: 0 },
-    ]);
-    expect(empty.map((step) => step.ofFirst)).toEqual([0, 0]);
-    expect(empty.map((step) => step.ofPrevious)).toEqual([0, 0]);
-  });
-
-  it("handles no stages at all", () => {
-    expect(funnelSteps([])).toEqual([]);
   });
 });
 

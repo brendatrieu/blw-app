@@ -70,10 +70,17 @@ export function niceStep(raw: number): number {
  * Ticks from 0 up to at least `max`, on a round step. Always at least two
  * entries, so an all-zero series still draws a baseline and a "1" — an axis
  * that collapses to a single line reads as a rendering bug, not as no data.
+ *
+ * **The step never goes below 1.** Every axis in this folder counts things —
+ * parents, signups, skips, errors — and there is no such measurement as half
+ * a parent. A max of 2 used to produce a step of 0.5 and the ticks 0, 0.5, 1,
+ * 1.5, 2, which `formatCount` rounds to the labels 0, 1, 1, 2, 2: an axis
+ * with each of its numbers printed twice, on gridlines that mean nothing.
+ * Flooring the step at 1 gives 0, 1, 2 instead, and `axisMax` follows.
  */
 export function niceTicks(max: number, targetCount = 4): number[] {
   const safeMax = Number.isFinite(max) && max > 0 ? max : 0;
-  const step = niceStep(safeMax / Math.max(1, targetCount));
+  const step = Math.max(1, niceStep(safeMax / Math.max(1, targetCount)));
   const top = Math.max(step, Math.ceil(safeMax / step) * step);
   const ticks: number[] = [];
   for (let value = 0; value <= top + step / 2; value += step) ticks.push(Number(value.toFixed(10)));
@@ -142,18 +149,6 @@ export function bandStart(index: number, layout: BandLayout): number {
 }
 
 /**
- * Several marks stacked inside ONE slot (the funnel's cohort bars). Unlike
- * `bandLayout` these are deliberately edge-to-edge minus the surface gap:
- * they are a group, and the group's own air comes from the row around it.
- */
-export function groupLayout(count: number, extent: number, gap = 2): { thickness: number; offsets: number[] } {
-  if (count <= 0) return { thickness: 0, offsets: [] };
-  const thickness = Math.max(1, (extent - gap * (count - 1)) / count);
-  const offsets = Array.from({ length: count }, (_, index) => index * (thickness + gap));
-  return { thickness, offsets };
-}
-
-/**
  * Which x positions get a written label. Always the first and the last, then
  * as even a spread between them as the count allows — a 26-week axis with a
  * label under every column is unreadable at phone width.
@@ -201,43 +196,6 @@ export function areaPath(values: number[], box: PlotBox): string {
 /** Two decimals is plenty at these sizes, and keeps the DOM (and the test pins) small. */
 export function round(value: number): number {
   return Math.round(value * 100) / 100;
-}
-
-// ---------------------------------------------------------------------------
-// Funnel
-// ---------------------------------------------------------------------------
-
-export interface FunnelStage {
-  label: string;
-  value: number;
-}
-
-export interface FunnelStep extends FunnelStage {
-  /** Share of the FIRST stage — what the funnel's bar length encodes. */
-  ofFirst: number;
-  /** Share of the stage immediately before — where the drop actually happened. */
-  ofPrevious: number;
-}
-
-/**
- * Both percentages a funnel needs, and they answer different questions:
- * `ofFirst` is "how many of the cohort got this far", `ofPrevious` is "how
- * many survived THIS step". A funnel that shows only the first hides which
- * step is the leak.
- *
- * An empty cohort yields zeros rather than NaN — a signup week with nobody
- * in it is a real row in this data, not an error.
- */
-export function funnelSteps(stages: FunnelStage[]): FunnelStep[] {
-  const first = stages[0]?.value ?? 0;
-  return stages.map((stage, index) => {
-    const previous = index === 0 ? stage.value : (stages[index - 1]?.value ?? 0);
-    return {
-      ...stage,
-      ofFirst: first > 0 ? stage.value / first : 0,
-      ofPrevious: index === 0 ? (first > 0 ? 1 : 0) : previous > 0 ? stage.value / previous : 0,
-    };
-  });
 }
 
 // ---------------------------------------------------------------------------

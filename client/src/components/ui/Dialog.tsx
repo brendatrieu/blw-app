@@ -5,6 +5,22 @@ const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
+ * The WebKit re-sync nudge run after a modal unlocks background scroll (item
+ * 379). In an installed iOS app the layout viewport that fixed and sticky
+ * boxes hang from stays shrunken once the keyboard has been up — the note
+ * fields in the Serve sheet — until something scrolls the document. Scrolling
+ * to exactly where the page already is re-syncs it without moving anything.
+ * Deferred a frame so it lands after the restored `overflow` has taken effect.
+ * Guarded: the node-env test suite drives these components with no window.
+ */
+function nudgeViewportSync() {
+  if (typeof window === "undefined" || typeof window.requestAnimationFrame !== "function") return;
+  window.requestAnimationFrame(() => {
+    window.scrollTo(window.scrollX, window.scrollY);
+  });
+}
+
+/**
  * How a dialog was dismissed. The two ways OUT of a modal that are not a
  * button — a tap on the dimmed backdrop, and Escape — are different gestures
  * with different meanings ("I am done here" vs "get me out"), and the tour
@@ -89,6 +105,7 @@ export function Dialog({ open, onClose, ariaLabel, children }: DialogProps) {
       root.style.overflow = previousRootOverflow;
       document.body.style.overflow = previousBodyOverflow;
       previouslyFocused.current?.focus();
+      nudgeViewportSync();
     };
   }, [open, onClose]);
 
