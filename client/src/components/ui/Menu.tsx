@@ -100,6 +100,25 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
     setPlacement(fitsBelow ? "down" : "up");
   }, [open]);
 
+  // Belt and suspenders: whatever the flip decided, ask the browser to
+  // scroll the panel fully into view. This is a no-op whenever the panel is
+  // already fully visible — `scrollIntoView` only moves anything if some
+  // part of the target genuinely isn't on screen — so it costs nothing when
+  // the flip above already got it right. What it buys is a guarantee that
+  // doesn't depend on either of that effect's two measurements being
+  // correct: unlike a height comparison, `scrollIntoView` can't be fooled
+  // by a device disagreeing with its own reported viewport size, because it
+  // never asks "how tall is the screen" in the first place — it just moves
+  // whatever needs moving until the target is on screen, off the same
+  // layout the browser already committed to. Depends on `placement` too so
+  // it re-targets the settled position on the pass right after the flip
+  // effect corrects a first guess, not the guess itself; running twice in
+  // that case is harmless since neither pass paints before the other.
+  useLayoutEffect(() => {
+    if (!open) return;
+    panelRef.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [open, placement]);
+
   return (
     <div ref={containerRef} className={`relative inline-block ${className}`}>
       <button

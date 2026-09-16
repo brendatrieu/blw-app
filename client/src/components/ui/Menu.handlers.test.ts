@@ -100,9 +100,17 @@ function fakeWindow(innerHeight: number, visualViewportHeight?: number) {
 }
 
 /** A fake element good for exactly one measurement — the trigger's `bottom`
- * or the panel's `height` — matching what `Menu`'s layout effect reads. */
+ * or the panel's `height` — matching what `Menu`'s layout effect reads, plus
+ * a `scrollIntoView` spy every fake carries (harmless on the trigger fake,
+ * which nothing calls it on; the panel fake is the one tests inspect). */
 function fakeRect(rect: Partial<DOMRect>) {
-  return { getBoundingClientRect: () => rect as DOMRect };
+  return { getBoundingClientRect: () => rect as DOMRect, scrollIntoView: vi.fn() };
+}
+
+/** The panel fake `openMenu` installed, so a test can inspect its
+ * `scrollIntoView` spy after opening. */
+function panelFake() {
+  return h.store.refs[2]!.current as ReturnType<typeof fakeRect>;
 }
 
 function renderMenu() {
@@ -186,6 +194,37 @@ describe("Menu placement", () => {
     const tree = openMenu(200, 150);
     const [, panel] = tree.props.children as [Rendered, Rendered];
     expect(panel.props.placement).toBe("down");
+  });
+
+  it("scrolls the panel into view once it opens, and again after a flip correction settles it — the safety net that doesn't depend on either measurement above being right", () => {
+    h.reset();
+    fakeDocument(700);
+    fakeWindow(900, 900); // same lying-viewport setup as the flip test above
+
+    openMenu(650, 150);
+    const scrollIntoView = panelFake().scrollIntoView;
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
+    // Once for the first ("down") guess, once more after placement settles
+    // to "up" — both harmless, since neither pass paints before the other.
+    expect(scrollIntoView.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("does not scroll anything more once the menu is closed again", () => {
+    h.reset();
+    fakeDocument();
+    fakeWindow(800);
+
+    const opened = openMenu(200, 150);
+    const scrollIntoView = panelFake().scrollIntoView;
+    const callsWhileOpen = scrollIntoView.mock.calls.length;
+    expect(callsWhileOpen).toBeGreaterThan(0);
+
+    const [button] = opened.props.children as [Rendered, unknown];
+    button.props.onClick!(); // toggles `open` back to false
+    renderMenu(); // the layout effect re-runs, takes the `!open` branch
+
+    expect(scrollIntoView.mock.calls.length).toBe(callsWhileOpen);
   });
 
   it("stays at the default 'down' and never throws with no window to measure against", () => {
