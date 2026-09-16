@@ -61,16 +61,31 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
   }, [open]);
 
   // The panel always opens downward from the trigger UNLESS there isn't room
-  // for it before the bottom of the (visual) viewport, in which case it
-  // opens upward instead — a row near the end of a long list (Storage,
-  // the meal log) would otherwise have its lower items land off-screen with
-  // nothing able to scroll them into view. Decided once per open, from a
-  // real measurement, not a length/row-count guess: `visualViewport` is
-  // preferred over `innerHeight` because it tracks the space actually on
-  // screen (an on-screen keyboard or a collapsing mobile toolbar shrinks it
-  // without changing `innerHeight`). Guarded for environments with no
-  // `window` (the render-only test suite never opens a menu, so this never
-  // runs there; the interaction test suite supplies a fake `window`).
+  // for it before the bottom of the screen, in which case it opens upward
+  // instead — a row near the end of a long list (Storage, the meal log,
+  // Home's food log) would otherwise have its lower items land off-screen
+  // with nothing able to scroll them into view. Decided once per open, from
+  // real measurements, not a length/row-count guess.
+  //
+  // The ceiling is the SMALLER of two independently-measured signals, so
+  // either one alone catches what the other misses:
+  //  - `visualViewport.height`/`innerHeight` — the standard "how tall is
+  //    the visible area" APIs, which account for an on-screen keyboard or a
+  //    collapsing mobile toolbar shrinking the visible space without
+  //    changing the page's own layout.
+  //  - the app shell's own bottom tab bar, if one is rendered — read
+  //    straight off the SAME layout pass as the trigger, so it can never
+  //    disagree with what was actually painted the way a viewport-size API
+  //    can. This is the one that matters in practice: on a real iOS 26
+  //    device (item 386) `innerHeight`/`visualViewport.height` kept
+  //    reporting the full-screen height while the tab bar still visually
+  //    sat at the true bottom of the screen, so the size APIs alone said
+  //    "plenty of room" for a panel that would have opened right on top of
+  //    (and mostly behind) the bar.
+  //
+  // Guarded for environments with no `window` (the render-only test suite
+  // never opens a menu, so this never runs there; the interaction test
+  // suite supplies a fake `window`/`document`).
   useLayoutEffect(() => {
     if (!open) return;
     const trigger = triggerRef.current;
@@ -78,8 +93,10 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
     if (!trigger || !panel || typeof window === "undefined") return;
     const triggerRect = trigger.getBoundingClientRect();
     const panelHeight = panel.getBoundingClientRect().height;
-    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-    const fitsBelow = triggerRect.bottom + panelHeight + MENU_GAP <= viewportHeight;
+    const viewportCeiling = window.visualViewport?.height ?? window.innerHeight;
+    const navTop = document.querySelector("nav")?.getBoundingClientRect().top;
+    const ceiling = navTop === undefined ? viewportCeiling : Math.min(viewportCeiling, navTop);
+    const fitsBelow = triggerRect.bottom + panelHeight + MENU_GAP <= ceiling;
     setPlacement(fitsBelow ? "down" : "up");
   }, [open]);
 

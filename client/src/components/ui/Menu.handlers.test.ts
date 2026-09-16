@@ -78,9 +78,16 @@ interface Rendered {
 
 const globals = globalThis as unknown as { document?: unknown; window?: unknown };
 
-/** Just enough of `document` for the outside-click/Escape effect to not throw. */
-function fakeDocument() {
-  globals.document = { addEventListener: () => {}, removeEventListener: () => {} };
+/** Just enough of `document` for the outside-click/Escape effect to not
+ * throw, plus a `querySelector("nav")` stub — `undefined`/omitted means "no
+ * tab bar on this page", a rect means "the tab bar sits here". */
+function fakeDocument(navTop?: number) {
+  globals.document = {
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    querySelector: (selector: string) =>
+      selector === "nav" && navTop !== undefined ? fakeRect({ top: navTop }) : null,
+  };
 }
 
 /** `innerHeight` always; `visualViewport.height` only when given, so a test
@@ -159,6 +166,26 @@ describe("Menu placement", () => {
     const tree = openMenu(600, 150); // fits under 900, does not fit under 650
     const [, panel] = tree.props.children as [Rendered, Rendered];
     expect(panel.props.placement).toBe("up");
+  });
+
+  it("flips upward when the tab bar sits low even though the viewport-size APIs both claim there is room — the real iOS 26 case (item 386)", () => {
+    h.reset();
+    fakeDocument(700); // the bar's own top edge is the true, lower ceiling
+    fakeWindow(900, 900); // both APIs agree there's plenty of room below 700
+
+    const tree = openMenu(650, 150); // 650 + 150 fits under 900, not under 700
+    const [, panel] = tree.props.children as [Rendered, Rendered];
+    expect(panel.props.placement).toBe("up");
+  });
+
+  it("stays 'down' on a page with no tab bar, exactly as before — querySelector('nav') found nothing to disagree with the viewport size", () => {
+    h.reset();
+    fakeDocument(); // no nav
+    fakeWindow(800);
+
+    const tree = openMenu(200, 150);
+    const [, panel] = tree.props.children as [Rendered, Rendered];
+    expect(panel.props.placement).toBe("down");
   });
 
   it("stays at the default 'down' and never throws with no window to measure against", () => {
