@@ -197,7 +197,7 @@ describe("MealCard (render, storage-card styling — item 192)", () => {
   it("uses the same card chrome as StorageItemCard (relative li, rounded-lg, border, elevated bg, p-3)", () => {
     const html = renderMealCard(baseMeal);
     expect(html).toMatch(/<li class="relative [^"]*rounded-\[var\(--radius-lg\)\][^"]*"/);
-    expect(html).toMatch(/<li class="[^"]*border border-\[var\(--color-border\)\][^"]*"/);
+    expect(html).toMatch(/<li class="[^"]*border border-\[var\(--color-divider\)\][^"]*"/);
     expect(html).toMatch(/<li class="[^"]*bg-\[var\(--color-bg-elevated\)\][^"]*"/);
     expect(html).toMatch(/<li class="[^"]*\bp-3\b/);
   });

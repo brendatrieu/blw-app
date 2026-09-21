@@ -1,4 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref } from "react";
+import { createPortal } from "react-dom";
 import { Link, type LinkProps } from "react-router-dom";
 
 /**
@@ -8,6 +9,20 @@ import { Link, type LinkProps } from "react-router-dom";
  * `mousedown` listener, Escape closes) rather than pulling in a separate
  * primitive. Kept generic so any feature can compose a menu from these
  * pieces instead of forking the open/close/dismiss wiring.
+ *
+ * The panel is portaled to `document.body` and positioned with computed
+ * `fixed` coordinates (item 397) — NOT `position: absolute` anchored to a
+ * nearby ancestor, which is how it used to work and which cannot be made
+ * to reliably paint above a later sibling. An absolutely-positioned child
+ * can visually escape its parent's own BOX, but it can never escape its
+ * parent's PAINT-ORDER TURN relative to that parent's siblings: two list
+ * rows with no z-index of their own paint in tree order regardless of what
+ * z-index something deep inside the earlier one claims for itself, so a
+ * menu opening over the NEXT card in a list would have that card's own
+ * content (its badge, its own kebab) paint back over the open menu — which
+ * is exactly what a real user hit (item 397). `Sheet`/`Dialog` never had
+ * this problem because they already portal to `document.body`; this makes
+ * `Menu` consistent with that, rather than a second, weaker pattern.
  */
 
 /** aria-haspopup/aria-expanded pair for the trigger button, kept pure and
@@ -22,6 +37,10 @@ export function getMenuTriggerAriaProps(open: boolean): { "aria-haspopup": "menu
  * to flip. */
 const MENU_GAP = 8;
 
+/** Where the portaled panel's fixed box sits, in viewport pixels — `null`
+ * for the one render before anything has been measured yet. */
+type MenuPosition = { top: number; right: number } | { bottom: number; right: number } | null;
+
 export interface MenuProps {
   /** Accessible name for the trigger button (e.g. "Actions"). */
   label: string;
@@ -35,7 +54,7 @@ export interface MenuProps {
 
 export function Menu({ label, disabled = false, className = "", children }: MenuProps) {
   const [open, setOpen] = useState(false);
-  const [placement, setPlacement] = useState<"down" | "up">("down");
+  const [position, setPosition] = useState<MenuPosition>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -44,7 +63,13 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
   useEffect(() => {
     if (!open) return;
     function handlePointerDown(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+      // The trigger lives in `containerRef`; the panel is portaled out of
+      // it, so its own subtree is checked separately — a click landing
+      // anywhere inside the open menu is not an "outside" click.
+      const target = event.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
     }
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -52,23 +77,37 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
         setOpen(false);
       }
     }
+    // A portaled, fixed-position panel doesn't move with the page the way
+    // the old locally-anchored one did — closing on scroll avoids it
+    // visually detaching from a trigger that has since scrolled away.
+    function handleScroll() {
+      setOpen(false);
+    }
+    // Same guard the layout effect below uses — this component is also
+    // driven with no `window` at all by the interaction test suite.
+    const scrollTarget = typeof window === "undefined" ? null : window;
     document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
+    scrollTarget?.addEventListener("scroll", handleScroll, { passive: true, capture: true });
     return () => {
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
+      scrollTarget?.removeEventListener("scroll", handleScroll, { capture: true });
     };
   }, [open]);
 
-  // The panel always opens downward from the trigger UNLESS there isn't room
-  // for it before the bottom of the screen, in which case it opens upward
-  // instead — a row near the end of a long list (Storage, the meal log,
-  // Home's food log) would otherwise have its lower items land off-screen
-  // with nothing able to scroll them into view. Decided once per open, from
-  // real measurements, not a length/row-count guess.
+  // Where the panel goes: it always opens downward from the trigger UNLESS
+  // there isn't room for it before the bottom of the screen, in which case
+  // it opens upward instead — a row near the end of a long list (Storage,
+  // the meal log, Home's food log) would otherwise have its lower items
+  // land off-screen with nothing able to scroll them into view. Decided
+  // once per open, from real measurements, not a length/row-count guess,
+  // and expressed as exact `fixed` coordinates (rather than a `top-full` /
+  // `bottom-full` CSS-class toggle) because the panel is portaled — it no
+  // longer has a nearby positioned ancestor to anchor a relative offset to.
   //
-  // The ceiling is the SMALLER of two independently-measured signals, so
-  // either one alone catches what the other misses:
+  // The fits-below ceiling is the SMALLER of two independently-measured
+  // signals, so either one alone catches what the other misses:
   //  - `visualViewport.height`/`innerHeight` — the standard "how tall is
   //    the visible area" APIs, which account for an on-screen keyboard or a
   //    collapsing mobile toolbar shrinking the visible space without
@@ -82,6 +121,11 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
   //    sat at the true bottom of the screen, so the size APIs alone said
   //    "plenty of room" for a panel that would have opened right on top of
   //    (and mostly behind) the bar.
+  // The actual pixel math, once the direction is decided, uses only
+  // `window.innerHeight`/`innerWidth` — the LAYOUT viewport, the same
+  // coordinate space `getBoundingClientRect()` itself reports in — never
+  // `visualViewport`, which can genuinely disagree with that space and
+  // would throw the coordinates off by however much the two diverge.
   //
   // Guarded for environments with no `window` (the render-only test suite
   // never opens a menu, so this never runs there; the interaction test
@@ -97,27 +141,18 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
     const navTop = document.querySelector("nav")?.getBoundingClientRect().top;
     const ceiling = navTop === undefined ? viewportCeiling : Math.min(viewportCeiling, navTop);
     const fitsBelow = triggerRect.bottom + panelHeight + MENU_GAP <= ceiling;
-    setPlacement(fitsBelow ? "down" : "up");
+    const right = window.innerWidth - triggerRect.right;
+    // Clamped into [0, innerHeight - panelHeight] regardless of which way it
+    // opened: a guarantee that holds even if the fits-below decision itself
+    // was wrong (both of its signals disagreeing with reality at once,
+    // something no real device has shown — but the panel is portaled now,
+    // so unlike the old scrollIntoView safety net this clamp actually means
+    // something: a position obeys it, where a scroll offset could not have
+    // moved a `fixed` box at all).
+    const clampedTop = Math.max(0, Math.min(window.innerHeight - panelHeight, triggerRect.bottom + MENU_GAP));
+    const clampedBottom = Math.max(0, Math.min(window.innerHeight - panelHeight, window.innerHeight - triggerRect.top + MENU_GAP));
+    setPosition(fitsBelow ? { top: clampedTop, right } : { bottom: clampedBottom, right });
   }, [open]);
-
-  // Belt and suspenders: whatever the flip decided, ask the browser to
-  // scroll the panel fully into view. This is a no-op whenever the panel is
-  // already fully visible — `scrollIntoView` only moves anything if some
-  // part of the target genuinely isn't on screen — so it costs nothing when
-  // the flip above already got it right. What it buys is a guarantee that
-  // doesn't depend on either of that effect's two measurements being
-  // correct: unlike a height comparison, `scrollIntoView` can't be fooled
-  // by a device disagreeing with its own reported viewport size, because it
-  // never asks "how tall is the screen" in the first place — it just moves
-  // whatever needs moving until the target is on screen, off the same
-  // layout the browser already committed to. Depends on `placement` too so
-  // it re-targets the settled position on the pass right after the flip
-  // effect corrects a first guess, not the guess itself; running twice in
-  // that case is harmless since neither pass paints before the other.
-  useLayoutEffect(() => {
-    if (!open) return;
-    panelRef.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
-  }, [open, placement]);
 
   return (
     <div ref={containerRef} className={`relative inline-block ${className}`}>
@@ -138,11 +173,13 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
         </svg>
       </button>
 
-      {open && (
-        <MenuPanel id={menuId} panelRef={panelRef} placement={placement} onClose={() => setOpen(false)}>
-          {children(() => setOpen(false))}
-        </MenuPanel>
-      )}
+      {open &&
+        createPortal(
+          <MenuPanel id={menuId} panelRef={panelRef} position={position} onClose={() => setOpen(false)}>
+            {children(() => setOpen(false))}
+          </MenuPanel>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -150,13 +187,13 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
 export interface MenuPanelProps {
   id?: string;
   onClose?: () => void;
-  /** Which side of the trigger the panel opens on — "down" (the default,
-   * and the only option a caller not doing its own measurement should
-   * pass) matches every existing render exactly; "up" is what `Menu`'s own
-   * viewport check switches to when there's no room below. */
-  placement?: "down" | "up";
+  /** The panel's `fixed` position in viewport pixels, or `null` for the
+   * one render before `Menu`'s own effect has measured anything — that
+   * render stays invisible (never a guessed position that could flash
+   * somewhere wrong) rather than picking a default side. */
+  position?: MenuPosition;
   /** Forwarded to the panel's root div so `Menu` can measure it before
-   * deciding `placement` — the same shape `SheetPanel`'s `panelRef` uses. */
+   * deciding `position` — the same shape `SheetPanel`'s `panelRef` uses. */
   panelRef?: Ref<HTMLDivElement>;
   children: ReactNode;
 }
@@ -165,16 +202,21 @@ export interface MenuPanelProps {
  * The open panel's chrome, exported standalone (mirroring
  * `MultiComboboxPanel`) so a render test can assert its open-state markup
  * directly without needing a real click to get there. Kept purely
- * presentational — `placement` is a prop, not something this component
- * measures itself — so its own render tests need no DOM/layout to run.
+ * presentational — `position` is a prop, not something this component
+ * measures itself — so its own render tests need no DOM/layout to run, and
+ * it stays oblivious to the fact that `Menu` renders it through a portal.
  */
-export function MenuPanel({ id, placement = "down", panelRef, children }: MenuPanelProps) {
+export function MenuPanel({ id, position = null, panelRef, children }: MenuPanelProps) {
+  const style: CSSProperties = position
+    ? { position: "fixed", right: position.right, ...("top" in position ? { top: position.top } : { bottom: position.bottom }) }
+    : { position: "fixed", top: 0, right: 0, visibility: "hidden" };
   return (
     <div
       ref={panelRef}
       id={id}
       role="menu"
-      className={`absolute right-0 z-20 min-w-40 max-h-[70vh] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] py-1 shadow-[var(--shadow-lg)] ${placement === "up" ? "bottom-full mb-1" : "top-full mt-1"}`}
+      style={style}
+      className="z-20 min-w-40 max-h-[70vh] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] py-1 shadow-[var(--shadow-lg)]"
     >
       {children}
     </div>

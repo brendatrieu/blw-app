@@ -73,7 +73,7 @@ export function StorageItemCard({ item, actions, linkable = true }: StorageItemC
   );
 
   return (
-    <li className="relative flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+    <li className="relative flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-divider)] bg-[var(--color-bg-elevated)] p-3">
       <div className="flex items-start justify-between gap-2">
         {/* Stretched link: the anchor's ::after overlay covers the whole card
             so every edge is tappable, while the kebab/actions slot and the

@@ -44,16 +44,23 @@ describe("MenuPanel (render, standalone open state)", () => {
     expect(html).toContain(">Serve<");
   });
 
-  it("opens downward by default", () => {
+  it("stays hidden with no position yet — the one render before Menu's own effect has measured anything", () => {
     const html = renderToString(createElement(MenuPanel, { children: null }));
-    expect(html).toContain("top-full");
-    expect(html).not.toContain("bottom-full");
+    expect(html).toMatch(/style="[^"]*visibility:hidden/);
   });
 
-  it("opens upward when placement is 'up' (no room below the trigger)", () => {
-    const html = renderToString(createElement(MenuPanel, { placement: "up", children: null }));
-    expect(html).toContain("bottom-full");
-    expect(html).not.toContain("top-full");
+  it("renders below the trigger when given a top-based position", () => {
+    const html = renderToString(createElement(MenuPanel, { position: { top: 120, right: 16 }, children: null }));
+    expect(html).toMatch(/style="[^"]*top:120px/);
+    expect(html).not.toContain("bottom:");
+    expect(html).not.toContain("visibility:hidden");
+  });
+
+  it("renders above the trigger when given a bottom-based position (no room below)", () => {
+    const html = renderToString(createElement(MenuPanel, { position: { bottom: 84, right: 16 }, children: null }));
+    expect(html).toMatch(/style="[^"]*bottom:84px/);
+    expect(html).not.toContain("top:");
+    expect(html).not.toContain("visibility:hidden");
   });
 });
 

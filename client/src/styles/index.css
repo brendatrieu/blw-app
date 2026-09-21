@@ -63,6 +63,12 @@
   --color-text: #1f2a36;
   --color-text-muted: #5b6570;
   --color-border: #e6e3df;
+  /* A more visible hairline than `--color-border` for separating list rows
+   * from each other and their background — a translucent overlay (a soft
+   * ink tint here, the mirror-image white one in dark mode) rather than a
+   * second solid color, so it reads as "a bit more distinct" without
+   * fighting the flat, minimal-border look everywhere else uses. */
+  --color-divider: rgba(31, 42, 54, 0.14);
 
   /* ---- Brand: the one CTA fill, fixed across both themes (sky blue) ---- */
   --color-primary: #b4d4e6;
@@ -255,6 +261,7 @@
     --color-text: var(--_dark-color-text);
     --color-text-muted: var(--_dark-color-text-muted);
     --color-border: var(--_dark-color-border);
+    --color-divider: rgba(255, 255, 255, 0.14);
 
     --color-accent: var(--_dark-accent);
 
@@ -304,6 +311,7 @@
   --color-text: var(--_dark-color-text);
   --color-text-muted: var(--_dark-color-text-muted);
   --color-border: var(--_dark-color-border);
+  --color-divider: rgba(255, 255, 255, 0.14);
 
   --color-accent: var(--_dark-accent);
 
