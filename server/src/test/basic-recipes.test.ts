@@ -480,6 +480,98 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     expect(bad).toEqual([]);
   });
 
+  /*
+   * Items 428-445. A parent cooking at 9 or 12 months must be able to follow that
+   * age alone. Three ways that broke in practice, each now pinned:
+   *   1. a step literally saying "as above" / "as for the 6-month version";
+   *   2. a variant that silently dropped its own 6m's cool-before-serving or
+   *      supervision line — the owner's ruling is that a 12-month-old can still
+   *      burn their mouth and still choke, so both belong in every age band;
+   *   3. a curated recipe listing an ingredient no step in that variant uses
+   *      (tofu-nuggets listed garlic powder and never used it; beef listed cumin
+   *      and only the 6m seasoned with it).
+   * The regexes are deliberately loose on wording: "sitting with baby" and
+   * "sit with baby", "just warm" and "just-warm" all count. They pin the SIGNAL,
+   * not a phrasing, so an author can reword freely.
+   */
+  const BACK_REFERENCE = /as above|as (?:for|in) the (?:6|9|12)-month|as before|same as the/i;
+  const COOLING = /\bcool\b|\bcooled\b|just[ -]warm|check the temperature|serve (?:it )?(?:just )?warm|chilled|room temperature/i;
+  // Deliberately NOT matching "watch baby for the rest of the day": that is
+  // ALLERGEN observation after a first exposure, not mealtime supervision
+  // against choking. Counting it let ten nut/seed 6m variants read as
+  // supervised when they were not.
+  const SUPERVISION = /supervis|sit(?:ting)? with baby|stay(?:ing)? (?:with baby|close)|watch baby (?:throughout|through the meal|while)/i;
+
+  it("never tells the parent to look at another age band", async () => {
+    const variants = await catalogVariants();
+    expect(variants.length).toBeGreaterThan(300);
+    const offenders = variants
+      .filter((v) => v.instructions.some((s) => BACK_REFERENCE.test(s)))
+      .map((v) => ({ slug: v.slug, stage: v.ageStage, step: v.instructions.find((s) => BACK_REFERENCE.test(s)) }));
+    expect(offenders).toEqual([]);
+  });
+
+  it("keeps the cooling and supervision lines in every age band, not just six months", async () => {
+    const variants = await catalogVariants();
+    const bySlug = new Map<string, typeof variants>();
+    for (const v of variants) {
+      const list = bySlug.get(v.slug) ?? [];
+      list.push(v);
+      bySlug.set(v.slug, list);
+    }
+
+    // Guard the guard: if the stage literals ever change, this test must fail
+    // loudly rather than silently comparing nothing.
+    expect(variants.filter((v) => v.ageStage === "6").length).toBeGreaterThan(100);
+
+    const lost: { slug: string; stage: string; signal: string }[] = [];
+    for (const [slug, group] of bySlug) {
+      const six = group.find((v) => v.ageStage === "6");
+      if (!six) continue;
+      for (const v of group) {
+        if (v.ageStage === "6") continue;
+        for (const [signal, re] of [
+          ["cooling", COOLING],
+          ["supervision", SUPERVISION],
+        ] as const) {
+          const sixHasIt = six.instructions.some((s) => re.test(s));
+          const thisHasIt = v.instructions.some((s) => re.test(s));
+          if (sixHasIt && !thisHasIt) lost.push({ slug, stage: v.ageStage, signal });
+        }
+      }
+    }
+    expect(lost).toEqual([]);
+  });
+
+  it("uses every ingredient it lists, in every age band, for the curated recipes", async () => {
+    // Curated only: the single-food basics legitimately call their one food by a
+    // part ("the washed florets", "the trimmed breast"), which no word-match survives.
+    const variants = (await catalogVariants()).filter((v) => CURATED_SLUGS.includes(v.slug));
+    expect(variants.length).toBeGreaterThan(40);
+
+    const unused: { slug: string; stage: string; food: string }[] = [];
+    for (const v of variants) {
+      const steps = v.instructions.join(" ").toLowerCase();
+      for (const food of v.foodSlugs) {
+        // Any meaningful word of the slug counts ("iron_fortified_oats" is named
+        // in the steps as "oats"), but match on a WORD BOUNDARY with an optional
+        // plural/possessive: substring matching silently let "chickpeas" satisfy
+        // `peas` and "water" satisfy `watermelon`. Short names like `egg` and
+        // `cod` must be checked too, not filtered out for being under 4 letters.
+        const parts = food.split("_").filter((w) => w.length > 2);
+        const named = parts.some((w) => {
+          // berry -> berries, as well as the regular -s / -es / -'s plurals.
+          const body = w.endsWith("y") ? `${w.slice(0, -1)}(?:y|ies)` : `${w}(?:e?s|'s)?`;
+          return new RegExp(`\\b${body}\\b`, "i").test(steps);
+        });
+        if (parts.length > 0 && !named) {
+          unused.push({ slug: v.slug, stage: v.ageStage, food });
+        }
+      }
+    }
+    expect(unused).toEqual([]);
+  });
+
   /** Every seeded catalog variant, with its recipe slug, stage and foods. */
   async function catalogVariants() {
     const recipeRows = await catalogRecipes();

@@ -45,19 +45,20 @@ const curatedRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Pea-sized, soft pieces baby can pick up with a pincer grasp; beef finely chopped or shredded, sweet potato in small cubes.',
         steps: [
-          'Steam the sweet potato for 12-15 minutes, or roast it at 400°F (200°C) for 20-25 minutes, until fork-tender, then cut into pea-sized cubes.',
+          'Peel the sweet potato, then steam it for 12-15 minutes, or roast at 400°F (200°C) for 20-25 minutes, until fork-tender, and cut it into pea-sized cubes.',
           'Season the beef with a pinch of cumin (no added salt), then cook it through to 160°F (71°C) — about 4-5 minutes a side over medium heat — and finely chop or shred it into small, soft pieces, moistened with a little olive oil.',
           'Combine on a plate for baby to self-feed with fingers or a pre-loaded spoon.',
-          'Offer water in an open cup alongside the meal.',
+          'Cool to just-warm, check the temperature, and offer water in an open cup alongside the meal.',
+          'Sit with baby throughout the meal and supervise closely.',
         ],
       },
       '12': {
         textureNote: 'Small bite-sized pieces closer to family food, still soft and easy to chew with emerging molars.',
         steps: [
-          'Dice the sweet potato into small bite-sized pieces and roast at 400°F (200°C) for 20-25 minutes, or steam for 10-12 minutes, until fork-tender.',
-          'Season the beef with a pinch of cumin (no added salt), then cook it to 160°F (71°C) — a slow-cooked cut simmered gently for 2-3 hours goes especially tender — and dice it into small, tender bite-sized pieces.',
-          'Serve together, optionally with a soft grain on the side, no added salt.',
-          'Let baby practice using a fork or spoon alongside fingers.',
+          'Peel the sweet potato, dice it into small bite-sized pieces, and roast at 400°F (200°C) for 20-25 minutes, or steam for 10-12 minutes, until fork-tender.',
+          'Season the beef with a pinch of cumin (no added salt), then cook it to 160°F (71°C) — a slow-cooked cut simmered gently for 2-3 hours goes especially tender — and dice it into small, tender bite-sized pieces, moistened with a little olive oil or cooking liquid so they are not dry.',
+          'Cool to just-warm, check the temperature, then serve together, optionally with a soft grain on the side, no added salt.',
+          'Let baby practice using a fork or spoon alongside fingers, and sit with baby throughout the meal.',
         ],
       },
     },
@@ -102,7 +103,7 @@ const curatedRecipes: RecipeSeed[] = [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, or poach it for 8-10 minutes, until it is opaque and flakes easily at 145°F (63°C), then check thoroughly with your fingers for any bones and remove them all.',
           'Flake the salmon finely into a bowl, add the oats and beaten egg, mix until it holds together, and shape into small mini patties suited to little hands.',
           'Cook in a little olive oil over medium heat for about 3 minutes per side, until golden, firm, and 160°F (71°C) in the centre.',
-          'Cut into bite-sized pieces or serve whole for baby to bite pieces off with supervision.',
+          'Cool to just-warm, check the temperature, then cut into bite-sized pieces or serve whole for baby to bite pieces off with supervision.',
           'Pair with a vitamin-C side like steamed broccoli for extra iron absorption.',
         ],
       },
@@ -150,8 +151,8 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Simmer the lentils in unsalted water over low heat for 15-20 minutes, until they collapse and mash easily, then drain well.',
           'Squeeze excess water from the grated zucchini and carrot using a clean towel, mix the lentils, zucchini, carrot, and beaten egg together with a pinch of sweet paprika, and form slightly larger patty shapes.',
-          'Cook over medium-low heat for 3-4 minutes per side, until golden on both sides and set through at 160°F (71°C).',
-          'Cut into bite-sized pieces and serve with a fork for baby to practice.',
+          'Cook in olive oil over medium-low heat for 3-4 minutes per side, until golden on both sides and set through at 160°F (71°C).',
+          'Cool to just-warm, check the temperature, then cut into bite-sized pieces and serve with a fork for baby to practice.',
           'Great alongside a vitamin-C side like tomato wedges (quartered lengthwise) for iron absorption.',
         ],
       },
@@ -197,7 +198,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Blend the oats into a coarse flour, then thoroughly whisk the peanut butter with a tablespoon of warm water until smooth and runny — never serve peanut butter thick or straight from the jar.',
           'Mash the banana and mix with the egg, oat flour, thinned peanut butter, and a pinch of cinnamon into a smooth batter, then cook small silver-dollar-sized pancakes over medium-low heat for about 2 minutes per side, until set with no wet batter inside.',
-          'Cut into quarters or bite-sized strips.',
+          'Cool to just-warm, check the temperature, then cut into quarters or bite-sized strips.',
           'Serve with mashed banana on the side, no syrup or added sugar.',
         ],
       },
@@ -241,7 +242,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Finely dice the bell pepper and chop the spinach, then whisk the eggs and stir in the vegetables.',
           'Pour into a lightly oiled pan over low-medium heat and cook, covered, for 4-5 minutes, until fully set with no runny egg remaining and the centre reads 160°F (71°C), or scramble it soft over low heat for 3-4 minutes, until the egg is firm with no runny patches.',
-          'Cut into bite-sized pieces.',
+          'Cool to just-warm, check the temperature, then cut into bite-sized pieces.',
           'Serve alongside soft toast strips — toast the bread 1-2 minutes and moisten it so it bends — for a full meal.',
         ],
       },
@@ -284,7 +285,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Steam the broccoli for 8-10 minutes, until it mashes easily between two fingers, then finely chop it and whisk it into the beaten eggs with the grated cheese.',
           'Pour into a well-greased mini muffin tin and bake at 350°F (180°C) for 12-15 minutes, until fully set with no wobble in the centre — 160°F (71°C) on a thermometer.',
-          'Serve whole mini muffins or cut into halves for baby to hold and bite from with supervision.',
+          'Cool to just-warm, check the temperature, then serve whole mini muffins or cut into halves for baby to hold and bite from with supervision.',
           'Pair with fruit on the side for a balanced meal.',
         ],
       },
@@ -377,7 +378,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Peel, core, and finely grate the apple, then mix the ground chicken with the grated apple and herbs if using.',
           'Shape into small bite-sized meatballs and bake at 375°F (190°C) for 14-16 minutes, until they read 165°F (74°C) in the centre with no pink left.',
-          'Serve whole or halved alongside a soft grain and vegetable.',
+          'Cool to just-warm, check the temperature, then serve whole or halved alongside a soft grain and vegetable.',
           'Supervise closely while baby bites pieces off.',
         ],
       },
@@ -459,18 +460,19 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Pea-sized, soft tofu nugget pieces.',
         steps: [
           'Blend the oats into fine crumbs and season lightly with a pinch of salt-free garlic powder.',
-          'Cut the pressed tofu into smaller, pea-to-bite-sized cubes and press each cube into the oat crumbs to coat.',
+          'Press the tofu to remove excess water, then cut it into smaller, pea-to-bite-sized cubes and press each cube into the oat crumbs to coat.',
           'Pan-fry in olive oil over medium heat for 2-3 minutes per side, until lightly golden and cooked through.',
-          'Cool and serve for pincer-grasp self-feeding.',
+          'Cool and serve for pincer-grasp self-feeding, supervising closely throughout.',
         ],
       },
       '12': {
         textureNote: 'Small bite-sized tofu nuggets, family-style.',
         steps: [
           'Blend the oats into fine crumbs and season lightly with a pinch of salt-free garlic powder.',
-          'Cut the tofu into small bite-sized cubes and coat in the oat crumbs.',
+          'Press the tofu to remove excess water, then cut it into small bite-sized cubes and coat them in the oat crumbs.',
           'Pan-fry in olive oil over medium heat for 2-3 minutes per side, or bake at 400°F (200°C) for 18-20 minutes, until golden on the outside.',
-          'Serve with a dipping side like plain yogurt.',
+          'Cool slightly and check a cube is not hot before serving.',
+          'Serve with a dipping side like plain yogurt, and supervise closely while baby dips and bites.',
         ],
       },
     },
@@ -501,7 +503,7 @@ const curatedRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Chunkier mashed sardine and avocado on toast, cut into small pieces.',
         steps: [
-          'Mash the sardines and avocado together, leaving a slightly chunkier texture.',
+          'Mash the sardines and avocado together with a squeeze of lemon juice, leaving a slightly chunkier texture.',
           'Toast a slice for 1-2 minutes, moisten it until it bends, and spread the mash on top.',
           'Cut into small squares for pincer-grasp self-feeding.',
         ],
@@ -560,7 +562,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Sauté a pinch each of cumin, turmeric, and ground coriander in olive oil over medium heat for 30-60 seconds, until they smell fragrant, then add the sweet potato, chickpeas, tomato, and coconut milk.',
           'Simmer covered over low heat for 15-20 minutes, until tender, without mashing, keeping the sweet potato and chickpeas in soft bite-sized pieces.',
-          'Serve with soft rice on the side.',
+          'Cool to just-warm, check the temperature, and serve with soft rice on the side.',
           'Let baby practice self-feeding with a spoon and fingers.',
         ],
       },
@@ -604,7 +606,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Squeeze excess water from the grated zucchini using a clean towel, then mix the cooked quinoa, zucchini, beaten egg, and cheese together.',
           'Shape the mixture into small patties and cook in olive oil over medium-low heat for 3-4 minutes per side, until set through at 160°F (71°C).',
-          'Cut into bite-sized pieces.',
+          'Cool to just-warm, check the temperature, then cut into bite-sized pieces.',
           'Serve with a vitamin-C side like orange segments (membrane removed) for iron absorption.',
         ],
       },
@@ -685,7 +687,7 @@ const curatedRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Yogurt with quartered berries, family-style.',
         steps: [
-          "Quarter the blueberries and strawberries lengthwise so they can't form a round, airway-blocking shape.",
+          "Hull the strawberries, then quarter them and the blueberries lengthwise so they can't form a round, airway-blocking shape.",
           'Stir through or serve on top of the yogurt.',
           'Offer a spoon for baby to practice self-feeding.',
         ],
