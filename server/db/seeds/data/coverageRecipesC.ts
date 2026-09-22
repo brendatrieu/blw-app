@@ -196,7 +196,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Blend the soaked meal with the garlic, a squeeze of lemon juice, and a tiny pinch of finely ground black pepper into a completely smooth, pourable cream with no grit or fleck left in it.',
           'Steam the broccoli florets for 8-10 minutes, until the stems mash easily between two fingers, then mash most of it and keep two florets whole as finger food.',
           'Cook the pasta for 10-12 minutes, well past al dente, until very soft, keeping larger shapes whole for baby to hold.',
-          'Stir the cream through the warm pasta and mashed broccoli off the heat, and serve with a whole floret alongside.',
+          'Stir the cream through the warm pasta and mashed broccoli off the heat, then let it cool and test a piece on your wrist before serving with a whole floret alongside.',
         ],
       },
       '9': {
@@ -207,7 +207,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Soften the minced garlic in a little olive oil over medium-low heat for 2-3 minutes, until fragrant.',
           'Blend the soaked meal with the garlic, a squeeze of lemon juice, and a tiny pinch of finely ground black pepper to a completely smooth, pourable cream.',
           'Steam the broccoli for 8-10 minutes, until soft, and chop it into pea-sized pieces; cook the small pasta shapes for 10-12 minutes, past al dente, until soft.',
-          'Toss the pasta and broccoli through the cream off the heat and serve on the tray for self-feeding.',
+          'Toss the pasta and broccoli through the cream off the heat, let it cool to warm rather than hot, and serve on the tray for self-feeding.',
         ],
       },
       '12': {
@@ -216,7 +216,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Soften the minced garlic in a little olive oil over medium-low heat for 2-3 minutes, until fragrant — garlic is always cooked, never raw.',
           'Grind the cashews to a fine meal, soak it in warm water for 10 minutes, then blend it with the garlic, a squeeze of lemon juice, and a pinch of finely ground black pepper to a smooth, pourable cream — ground meal only, since nut pieces stay off the menu until age 4-5.',
           'Steam the broccoli for 8-10 minutes, until tender, and cook the pasta for 10-12 minutes, until soft.',
-          'Toss everything through the cream off the heat and serve family-style, with no added salt in the pan.',
+          'Toss everything through the cream off the heat, give it a few minutes to cool, and serve family-style, with no added salt in the pan.',
         ],
       },
     },

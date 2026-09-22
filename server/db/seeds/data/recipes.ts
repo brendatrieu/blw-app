@@ -118,7 +118,7 @@ const curatedRecipes: RecipeSeed[] = [
     fridgeHoursOverride: 48,
     freezerDaysOverride: 60,
     ingredients: [
-      { foodSlug: 'lentils', quantityNote: '1/2 cup cooked red lentils' },
+      { foodSlug: 'lentils', quantityNote: '1/4 cup dried red lentils (about 1/2 cup cooked)' },
       { foodSlug: 'zucchini', quantityNote: '1/2 small zucchini, grated' },
       { foodSlug: 'carrot', quantityNote: '1 small carrot, grated' },
       { foodSlug: 'egg', quantityNote: '1 egg, beaten' },
@@ -409,7 +409,7 @@ const curatedRecipes: RecipeSeed[] = [
           'Mash the avocado until smooth.',
           'Toast the bread lightly, 1-2 minutes, then moisten it slightly with water or extra olive oil so it is not dry or hard.',
           'Spread a thin layer of hummus and avocado on top, then cut into finger-length strips.',
-          'Check that each strip bends without snapping into hard shards before serving.',
+          'Let the toast cool until it is only just warm, then check that each strip bends without snapping into hard shards before serving.',
         ],
       },
       '9': {
@@ -417,7 +417,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Blend the chickpeas, tahini, a squeeze of lemon juice, and a drizzle of olive oil with a splash of water, stopping while it is still slightly thicker and chunkier than a smooth hummus but still spreadable, not sticky.',
           'Toast the bread for 1-2 minutes, moisten it until it bends, and spread hummus and mashed avocado on top.',
-          'Cut into small, pea-to-bite-sized squares for pincer-grasp self-feeding.',
+          'Once it is cool enough to handle, cut into small, pea-to-bite-sized squares for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -426,7 +426,7 @@ const curatedRecipes: RecipeSeed[] = [
           'Blend the chickpeas, tahini, a squeeze of lemon juice, and a drizzle of olive oil with a splash of water until smooth, thinning further with water if needed so it is not sticky or thick.',
           'Toast the bread for 1-2 minutes, soften it, and spread the hummus with mashed or sliced avocado on top.',
           'Cut into small bite-sized squares or triangles.',
-          'Serve as finger food alongside a piece of fruit.',
+          'Serve as finger food once cooled, alongside a piece of fruit.',
         ],
       },
     },
@@ -497,7 +497,7 @@ const curatedRecipes: RecipeSeed[] = [
           'Check the sardines carefully and remove any remaining small bones, then mash well with a fork.',
           'Mash the avocado with a squeeze of lemon juice and combine with the sardines.',
           'Toast the bread lightly, 1-2 minutes, then moisten it slightly so it is not dry or hard.',
-          'Spread a thin layer of the sardine-avocado mash on top and cut into finger-length strips.',
+          'Let the toast cool until only just warm, spread a thin layer of the sardine-avocado mash on top, and cut into finger-length strips.',
         ],
       },
       '9': {
@@ -505,7 +505,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Mash the sardines and avocado together with a squeeze of lemon juice, leaving a slightly chunkier texture.',
           'Toast a slice for 1-2 minutes, moisten it until it bends, and spread the mash on top.',
-          'Cut into small squares for pincer-grasp self-feeding.',
+          'Wait until the toast is cool enough to hold, then cut it into small squares for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -513,7 +513,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Combine mashed sardines and avocado with a squeeze of lemon juice.',
           'Toast a slice for 1-2 minutes, spread the mash on top, and cut into small bite-sized pieces or triangles.',
-          'Serve alongside vegetable sticks.',
+          'Serve once cooled, alongside vegetable sticks.',
         ],
       },
     },
@@ -633,23 +633,25 @@ const curatedRecipes: RecipeSeed[] = [
           'Simmer the diced apple in a little water over low heat for 5-7 minutes, until completely soft and squishable between two fingers.',
           'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, until soft, then blend or mash until mostly smooth.',
           'Stir in the softened apple, a thin swirl of tahini fully mixed through (never a thick glob), and a pinch of cinnamon.',
-          'Thin with extra liquid to a smooth, drippy consistency and serve on a pre-loaded spoon.',
+          'Thin with extra liquid to a smooth, drippy consistency, cool to just-warm, and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote: 'Thicker, spoonable porridge with small soft apple pieces.',
         steps: [
-          'Cook the oats over medium-low heat for 4-5 minutes, to a thicker consistency than the 6-month version.',
+          'Simmer the diced apple in a little water over low heat for 5-7 minutes, until completely soft and squishable between two fingers.',
+          'Cook the oats over medium-low heat for 4-5 minutes, to a thick, spoonable consistency.',
           'Stir in the softened diced apple, tahini mixed in thoroughly, and cinnamon.',
-          'Serve with a pre-loaded spoon for self-feeding, checking apple pieces are soft.',
+          'Cool to just-warm, then serve with a pre-loaded spoon for self-feeding, checking apple pieces are soft.',
         ],
       },
       '12': {
         textureNote: 'Thick, family-style porridge with soft diced apple.',
         steps: [
+          'Simmer the diced apple in a little water over low heat for 5-7 minutes, until completely soft and squishable between two fingers.',
           'Cook the oats over medium-low heat for 5-6 minutes, to a thick, family-style porridge consistency.',
           'Stir in the softened apple and tahini, mixed evenly through so no thick pockets remain.',
-          'Stir a pinch of cinnamon through the porridge — never sprinkled on dry — and serve with a spoon.',
+          'Stir a pinch of cinnamon through the porridge — never sprinkled on dry — then cool to just-warm and serve with a spoon.',
         ],
       },
     },

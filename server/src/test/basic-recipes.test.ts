@@ -494,8 +494,10 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
    * "sit with baby", "just warm" and "just-warm" all count. They pin the SIGNAL,
    * not a phrasing, so an author can reword freely.
    */
-  const BACK_REFERENCE = /as above|as (?:for|in) the (?:6|9|12)-month|as before|same as the/i;
-  const COOLING = /\bcool\b|\bcooled\b|just[ -]warm|check the temperature|serve (?:it )?(?:just )?warm|chilled|room temperature/i;
+  const BACK_REFERENCE = /as above|(?:as|than|like) (?:for |in )?the (?:6|9|12)[- ]month|as before|same as the|see the (?:6|9|12)/i;
+  // NOT plain "serve warm": that instructs you to serve it hot, and accepting it
+  // hid the only real gap left (pear-sunflower-flax-porridge 12m). "just warm" still counts.
+  const COOLING = /\bcool\b|\bcooled\b|just[ -]warm|check the temperature|chilled|room temperature/i;
   // Deliberately NOT matching "watch baby for the rest of the day": that is
   // ALLERGEN observation after a first exposure, not mealtime supervision
   // against choking. Counting it let ten nut/seed 6m variants read as
@@ -541,6 +543,23 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
       }
     }
     expect(lost).toEqual([]);
+  });
+
+  it("gives every variant that cooks a cue to cool the food down", async () => {
+    // Item 447: the owner's ruling. Parity was not enough — 17 recipes cooked at
+    // every age and never once told the parent to let it cool. Burn risk does not
+    // depend on which age tab is open.
+    const COOKS = /\bbake|\bboil|\bsimmer|\bsteam|\broast|\bpan-?fry|\bsaut|\bpoach|\bgrill|\bcook\b|\btoast/i;
+    const variants = await catalogVariants();
+    expect(variants.length).toBeGreaterThan(300);
+
+    const hot = variants.filter((v) => v.instructions.some((s) => COOKS.test(s)));
+    expect(hot.length).toBeGreaterThan(100);
+
+    const noCue = hot
+      .filter((v) => !v.instructions.some((s) => COOLING.test(s)))
+      .map((v) => ({ slug: v.slug, stage: v.ageStage }));
+    expect(noCue).toEqual([]);
   });
 
   it("uses every ingredient it lists, in every age band, for the curated recipes", async () => {

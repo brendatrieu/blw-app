@@ -806,7 +806,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Smooth peanut butter thinned until runny, on a spoon or in a very thin layer on a soft toast finger — never a thick spoonful.',
         steps: [
           'Measure 1-2 teaspoons of smooth peanut butter into a small bowl.',
-          'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky.',
+          'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky, and let it cool to just-warm before offering.',
           'Thick or sticky peanut butter is a serious choking hazard, so never serve a spoonful straight, and never whole or chopped peanuts.',
           'Offer the thinned mixture on a pre-loaded spoon, in a small amount, at home when you can watch baby for the next couple of hours.',
           'Stay with baby through the meal.',
@@ -815,7 +815,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Runny thinned peanut butter stirred through food, or spread very thinly.',
         steps: [
-          'Thin smooth peanut butter with warm water, breast milk, or formula until it is runny.',
+          'Thin smooth peanut butter with warm water, breast milk, or formula until it is runny, and let it cool to just-warm.',
           'Stir it into oatmeal or yogurt, or spread a very thin layer on banana or on a toast finger — toast the bread lightly, 1-2 minutes, and moisten it so it bends without snapping.',
           'Keep the layer thin — never a thick glob, and never a spoonful straight.',
           'Serve and stay with baby through the meal.',
@@ -824,7 +824,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Thinned peanut butter used as a spread or dip, still never a thick layer.',
         steps: [
-          'Thin smooth peanut butter until runny before using it as a spread or a dip base.',
+          'Thin smooth peanut butter with warm water until runny, let it cool to just-warm, then use it as a spread or a dip base.',
           'Keep any spread layer thin; thick spoonfuls and globs remain a choking hazard.',
           'Never offer whole or chopped nuts, at any age.',
           'Stay with baby through the meal.',
@@ -845,7 +845,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Smooth almond butter thinned until runny, on a spoon or in a very thin layer on a soft toast finger — never a thick spoonful.',
         steps: [
           'Measure 1-2 teaspoons of smooth almond butter into a small bowl.',
-          'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky.',
+          'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky. Test the temperature and let it cool to just-warm.',
           'Thick or sticky nut butter is a serious choking hazard, so never serve a spoonful straight, and never whole or chopped nuts.',
           'Offer the thinned mixture on a pre-loaded spoon, in a small amount, at home when you can watch baby for the next couple of hours.',
           'Stay with baby through the meal.',
@@ -854,7 +854,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Runny thinned almond butter stirred through food, or spread very thinly.',
         steps: [
-          'Thin smooth almond butter with warm water, breast milk, or formula until it is runny.',
+          'Thin smooth almond butter with warm water, breast milk, or formula until it is runny, and give it a minute to cool to just-warm.',
           'Stir it into oatmeal or yogurt, or spread a very thin layer on soft fruit or on a toast finger — toast the bread lightly, 1-2 minutes, and moisten it so it bends without snapping.',
           'Keep the layer thin — never a thick glob, and never a spoonful straight.',
           'Serve and stay with baby through the meal.',
@@ -863,7 +863,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Thinned almond butter used as a spread or dip, still never a thick layer.',
         steps: [
-          'Thin smooth almond butter until runny before using it as a spread or a dip base.',
+          'Thin smooth almond butter with warm water until runny, let it cool to just-warm, then use it as a spread or a dip base.',
           'Keep any spread layer thin; thick spoonfuls and globs remain a choking hazard.',
           'Never offer whole or chopped nuts, at any age.',
           'Stay with baby through the meal.',
@@ -883,7 +883,7 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'A teaspoon of tahini thinned until runny and drizzled in a light layer.',
         steps: [
-          'Stir 1 teaspoon of tahini with warm water, breast milk, or formula until it is runny.',
+          'Stir 1 teaspoon of tahini with warm water, breast milk, or formula until it is runny, then let it cool to just-warm.',
           'A thick layer of tahini can stick in the mouth, so thin it well and keep the layer light.',
           'Drizzle it thinly over a soft food baby is already eating, or spread it very thin on a toast finger — toast the bread lightly, 1-2 minutes, and moisten it until it bends.',
           'Offer it in a small amount, at home, when you can watch baby afterwards.',
@@ -893,7 +893,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Thinned tahini stirred through food, or spread in a thin layer.',
         steps: [
-          'Thin the tahini with warm water, breast milk, or formula until it is runny.',
+          'Thin the tahini with warm water, breast milk, or formula until it is runny, and let it cool to just-warm before serving.',
           'Stir it through porridge, yogurt, or vegetables, or spread it thinly on a toast finger toasted for 1-2 minutes and softened.',
           'Keep the layer thin rather than a thick paste.',
           'Serve and stay with baby through the meal.',
@@ -902,7 +902,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Thinned tahini used as a dressing or dip base, kept thin rather than a paste.',
         steps: [
-          'Thin the tahini until it pours, then use it as a dressing or a dip base.',
+          'Thin the tahini with warm water until it pours, let it cool to just-warm, then use it as a dressing or a dip base.',
           'Keep the layer thin rather than a thick paste, which can stick in the mouth.',
           'Serve alongside soft vegetables or grains.',
           'Stay with baby through the meal.',
