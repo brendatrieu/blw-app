@@ -227,7 +227,7 @@ export const coverageRecipesB: RecipeSeed[] = [
       '12': {
         textureNote: 'Small bite-sized pieces of a soft chilled finger, or a whole finger to bite from.',
         steps: [
-          'Make the mixture as before — half the rolled oats blitzed to a flour, the seed butter whisked runny, the banana mashed in with cinnamon, and the pecans ground to a fine meal.',
+          'Blitz half the rolled oats to a flour and leave the rest whole, whisk the sunflower seed butter runny with a splash of warm water, mash in the very ripe banana and a pinch of cinnamon, and stir in the pecans ground to a fine meal.',
           'Stand it for 15 minutes so the oats soften, press it into a lined tin, and chill for 1-2 hours until firm enough to cut.',
           'Cut into small bite-sized pieces, or hand over a whole finger to bite from with supervision.',
           'Pair with a vitamin-C side such as orange segments with the membrane removed.',
