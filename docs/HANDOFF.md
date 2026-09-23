@@ -16,7 +16,7 @@ What a parent can do today:
 
 - **Log meals** for a baby: one or more foods, optional recipe, a time (backdating allowed, future refused), a reaction field, and notes. Meals can save leftovers straight to Storage.
 - **Storage**: containers of prepped food with a location (Fridge / Freezer / Counter), freshness window, optional best-by date that overrides the window, optional servings tracking, and a Serve action that logs a meal from the container. One container can hold a whole multi-food meal, or the parent can split it into separate containers.
-- **Foods** catalog (74 foods incl. a Spices & herbs category) with iron / vitamin C / fiber levels, choking risk, allergens, and filters; parents can add custom foods.
+- **Foods** catalog (75 foods incl. a Spices & herbs category) with iron / vitamin C / fiber levels, choking risk, allergens, and filters; parents can add custom foods.
 - **Recipes** (catalog + per-user custom), with nutrition derived from ingredients, timed and temperatured steps, and at least three recipes per food.
 - **Allergen ladder** per baby: nine allergens; "Established after 3 servings without a reaction" with visible "N of 3" progress; a reaction note pauses auto-establishment; parents can mark established by hand with an optional past date; established allergens count down 7 days to "Serve again soon", and Home nudges when any are due.
 - **Learn** (safety library, 9 MDX articles, readable offline), **symptom check**, **AI chat / recipe chat** on the user's own Anthropic API key, favorites, a first-run **tour**, settings with data export and a privacy switch.

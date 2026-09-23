@@ -23,7 +23,7 @@ async function loadRunSeeds(): Promise<(db: Database) => Promise<void>> {
 }
 
 /** Catalog size after the spices batch (329-332) and the plain nuts (item 342). */
-const CATALOG_FOOD_COUNT = 74;
+const CATALOG_FOOD_COUNT = 75;
 
 /** The 12 spice/herb rows, in seed order. */
 const SPICE_SLUGS = [
@@ -300,7 +300,7 @@ describe("seeded catalog after the spices expansion", () => {
     await close();
   });
 
-  it("seeds exactly 74 catalog foods, 12 of them spices", async () => {
+  it("seeds exactly 75 catalog foods, 12 of them spices", async () => {
     const rows = await db
       .select({ slug: schema.foods.slug, category: schema.foods.category })
       .from(schema.foods)
@@ -509,7 +509,7 @@ describe("seeded catalog after the spices expansion", () => {
     expect(secondPass.counts).toEqual(firstPass.counts);
     expect(secondPass.digest).toBe(firstPass.digest);
     expect(firstPass.counts.foods).toBe(CATALOG_FOOD_COUNT);
-    // 15 curated + 45 coverage (items 338-339, 343, 357) + 62 single-food basics.
-    expect(firstPass.counts.recipes).toBe(122);
+    // 15 curated + 45 coverage (items 338-339, 343, 357) + 63 single-food basics (lemon, item 470).
+    expect(firstPass.counts.recipes).toBe(123);
   });
 });

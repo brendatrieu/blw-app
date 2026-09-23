@@ -52,16 +52,16 @@ export const basicRecipes: RecipeSeed[] = [
           'Rest it for 3-5 minutes, then cut a finger-length strip along the grain so it holds together, or mince it very finely.',
           'Moisten the strip or the mince with a little olive oil or cooking liquid so it is never dry or stringy.',
           'Dense or dry meat is hard to gum into a swallowable piece, so keep it moist and tender and shred it finely against the grain if it feels tough.',
-          'Cool to just-warm, check the temperature, and serve with baby sitting upright and supervised.',
+          'Cool to just-warm, check the temperature, and serve.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized pieces of finely chopped or shredded well-done beef.',
+        textureNote: 'Finger-length strips of well-done beef cut along the grain, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Cook the beef well-done over medium heat, about 4-5 minutes a side, until it reads 160°F (71°C) with no pink left, then rest it for 3-5 minutes until it is cool enough to handle.',
-          'Finely chop or shred it into soft, pea-sized pieces baby can pick up with a pincer grasp.',
+          'Cut it into finger-length strips along the grain, or finely chop or shred it into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Stir through a little olive oil or cooking liquid so the pieces stay moist rather than dry and stringy.',
-          'Serve just-warm on a plate and supervise baby through the meal.',
+          'Serve just-warm on a plate.',
         ],
       },
       '12': {
@@ -70,7 +70,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Choose a cut that goes tender when slow-cooked and simmer it covered over low heat for 2-3 hours, or bake it at 325°F (160°C) for the same, until it is well past 160°F (71°C) and pulls apart easily with a fork.',
           'Dice it into small, soft bite-sized pieces baby can chew with emerging molars.',
           'Spoon over a little cooking liquid so nothing is dry, and discard any tough or gristly bits.',
-          'Serve just-warm, supervised, and let baby practice with fingers or a fork.',
+          'Serve just-warm and let baby practice with fingers or a fork.',
         ],
       },
     },
@@ -91,16 +91,16 @@ export const basicRecipes: RecipeSeed[] = [
           'Cook it thoroughly with no added salt — bake at 400°F (200°C) for 18-22 minutes, or poach at a bare simmer for 12-15 minutes — until a thermometer in the thickest part reads 165°F (74°C) and the juices run clear.',
           'Rest it for 5 minutes, then cut a finger-length strip of the dark meat, or shred it finely, and moisten with a little olive oil or cooking liquid.',
           'Check once more for small bones as you plate it.',
-          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+          'Cool to just-warm, check the temperature, and serve.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized shredded or chopped pieces for pincer-grasp practice.',
+        textureNote: 'Finger-length strips, or small bite-sized shredded or chopped pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Bake the trimmed thigh at 400°F (200°C) for 18-22 minutes, until it reads 165°F (74°C) all the way through, then rest it for 5 minutes until it is cool enough to handle.',
-          'Shred or chop it into soft, pea-sized pieces, feeling for any small bones as you go.',
+          'Cut it into finger-length strips, or shred or chop it into small bite-sized pieces (no bigger than ½ inch) for pincer practice, feeling for any small bones as you go.',
           'Moisten with a little olive oil or cooking liquid so the pieces are not dry.',
-          'Serve just-warm and supervise baby as they self-feed.',
+          'Serve just-warm for baby to self-feed.',
         ],
       },
       '12': {
@@ -109,7 +109,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Bake the trimmed thigh at 400°F (200°C) for 18-22 minutes, until it reads 165°F (74°C) with clear juices, and rest it for 5 minutes.',
           'Dice it into small, soft bite-sized pieces, discarding any tough skin, fat, or gristle.',
           'Check the pieces for small bones one last time before they reach the plate.',
-          'Serve just-warm with no added salt, supervised.',
+          'Serve just-warm with no added salt.',
         ],
       },
     },
@@ -128,15 +128,15 @@ export const basicRecipes: RecipeSeed[] = [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, or poach it at a bare simmer for 8-10 minutes, until it is opaque right through and flakes under gentle pressure — 145°F (63°C) on a thermometer.',
           'Run your fingers through every flake to feel for pin bones and remove them all — a missed bone is a real hazard, even in a pre-deboned fillet.',
           'Press the checked flakes gently back together into a soft, finger-length piece baby can hold.',
-          'Cool to just-warm, check the temperature, and serve with baby sitting upright and supervised.',
+          'Cool to just-warm, check the temperature, and serve.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized flakes of cooked salmon.',
+        textureNote: 'A soft finger-length piece of flaked salmon, or small bite-sized flakes (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Bake the salmon at 375°F (190°C) for 10-12 minutes, until it is opaque and separates easily with a fork at 145°F (63°C), then flake it into soft, pea-sized pieces.',
-          'Re-check every flake by feel for stray pin bones before it reaches the plate.',
-          'Cool to just-warm and serve for pincer-grasp self-feeding, supervised.',
+          'Bake the salmon at 375°F (190°C) for 10-12 minutes, until it is opaque and separates easily with a fork at 145°F (63°C), then flake it.',
+          'Re-check every flake by feel for stray pin bones, then press some into a soft finger-length piece, or leave small bite-sized flakes (no bigger than ½ inch) for pincer practice.',
+          'Cool to just-warm and serve for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -145,7 +145,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then let it cool to just-warm.',
           'Flake it into small bite-sized pieces, or leave a small piece of fillet for baby to pick apart.',
           'Feel through the fish for pin bones one last time — always check, even from a deboned fillet.',
-          'Serve with no added salt, supervised.',
+          'Serve with no added salt.',
         ],
       },
     },
@@ -164,14 +164,14 @@ export const basicRecipes: RecipeSeed[] = [
           'Choose boneless sardines canned in water — already cooked in the can, so nothing here needs heat — and drain them well.',
           'Check by feel for any remaining small, soft bones — boneless varieties can still hide one.',
           'Mash thoroughly with a fork until no lumps or firm pieces remain.',
-          'Serve as a soft mashed pile for dipping, or pre-load a spoon and hand it to baby, sitting with them throughout.',
+          'Serve as a soft mashed pile for dipping, or pre-load a spoon and hand it to baby.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized mashed or flaked pieces.',
+        textureNote: 'Soft, small bite-sized flakes (no bigger than ½ inch) of sardine.',
         steps: [
           'Drain boneless sardines and double-check them by feel for any small bones.',
-          'Mash or flake them into soft, pea-sized pieces.',
+          'Flake them into soft, small bite-sized pieces (no bigger than ½ inch).',
           'Serve on a plate for pincer-grasp self-feeding.',
         ],
       },
@@ -204,10 +204,10 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soft scrambled pieces, or firm omelet cut into pea-sized pieces.',
+        textureNote: 'Soft scrambled pieces, or firm omelet cut into strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Cook the egg fully: scramble it over low heat for 3-4 minutes, or set a thin omelet in a lightly oiled pan over medium-low heat for 2-3 minutes a side, until the yolk and white are firm and the centre reads 160°F (71°C).',
-          'Cut or break it into pea-sized pieces for pincer-grasp self-feeding.',
+          'Cut the omelet into strips, or cut or break the egg into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Cool to just-warm and serve on a plate.',
         ],
       },
@@ -353,9 +353,9 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soft pea-to-bite-sized cubes, pan-fried or baked for grip.',
+        textureNote: 'Finger-length strips, or small bite-sized cubes (no bigger than ½ inch) for pincer practice, pan-fried or baked for grip.',
         steps: [
-          'Drain and pat the tofu dry, then cut it into pea-to-bite-sized cubes.',
+          'Drain and pat the tofu dry, then cut it into finger-length strips, or small bite-sized cubes (no bigger than ½ inch) for pincer practice.',
           'Pan-fry them in a little oil over medium heat for 2-3 minutes a side, or bake at 400°F (200°C) for 15-18 minutes, until the outside is dry and firm rather than slippery to hold.',
           'Cool to just-warm and serve for pincer-grasp self-feeding.',
         ],
@@ -496,10 +496,10 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Small pea-to-bite-sized florets, steamed until soft.',
+        textureNote: 'Whole soft florets with a bit of stem to hold, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Steam the washed florets for 8-10 minutes, until they mash easily between two fingers.',
-          'Cut them into smaller, pea-to-bite-sized pieces for pincer-grasp self-feeding.',
+          'Serve them whole with a bit of stem to hold, or cut some into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Cool to just-warm and serve.',
         ],
       },
@@ -531,10 +531,10 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Small, soft pea-to-bite-sized pieces of cooked pepper.',
+        textureNote: 'Soft finger-length strips of cooked pepper, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Roast deseeded pepper strips at 425°F (220°C) for 15-20 minutes, or steam them for 8-10 minutes, until soft, then peel off any tough skin.',
-          'Cut them into small, pea-to-bite-sized pieces.',
+          'Serve the strips, or cut some into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Cool to just-warm and serve for pincer-grasp self-feeding.',
         ],
       },
@@ -562,7 +562,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Wash the strawberries and pull off the green hull — ripe strawberries are served raw, with no cooking at all.',
           'Quarter each berry lengthwise, or mash it well — a whole or halved strawberry can be round enough to block an airway.',
           'Check that no round or half-berry shape is left on the plate.',
-          'Serve at room temperature with baby sitting upright and supervised.',
+          'Serve at room temperature.',
         ],
       },
       '9': {
@@ -570,7 +570,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Wash and hull the strawberries.',
           'Quarter them lengthwise or dice them finely so no round or half-berry shape remains.',
-          'Serve at room temperature for pincer-grasp self-feeding, supervised.',
+          'Serve at room temperature for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -578,7 +578,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Wash and hull the strawberries.',
           'Quarter them lengthwise or slice them thinly, always avoiding a whole round berry shape.',
-          'Serve at room temperature, supervised.',
+          'Serve at room temperature.',
         ],
       },
     },
@@ -597,7 +597,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Peel the orange and pull the segments apart — orange is served raw, so no cooking is needed.',
           'Strip every bit of peel, white pith, and membrane off one segment and pick out any seeds — tough membrane and seeds are the main hazard.',
           'Split the bare segment in half lengthwise so baby can hold it.',
-          'Serve at room temperature with baby upright and supervised.',
+          'Serve at room temperature.',
         ],
       },
       '9': {
@@ -605,7 +605,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Peel the orange and strip the membrane off each segment down to the juicy flesh.',
           'Pick out any seeds and cut the flesh into small pieces.',
-          'Serve at room temperature for pincer-grasp self-feeding, supervised.',
+          'Serve at room temperature for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -613,7 +613,42 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Peel each segment down to the flesh and remove all seeds.',
           'Cut the flesh into smaller bite-sized pieces.',
-          'Serve at room temperature, supervised.',
+          'Serve at room temperature.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-lemon',
+    title: 'Simple lemon',
+    minAgeMonths: 6,
+    prepMinutes: 5,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'lemon', quantityNote: '1 lemon, cut into wedges (1 wedge per serving)' }],
+    variants: {
+      '6': {
+        textureNote: 'A large, seedless lemon wedge for baby to lick, suck, and gum — not a piece meant to be bitten off and swallowed.',
+        steps: [
+          'Cut the lemon in half lengthwise, then cut a large wedge — big enough that baby cannot fit the whole thing in their mouth.',
+          'Pick out every seed from the wedge; a missed seed is the main hazard here.',
+          'Hand baby the wedge to lick, suck, or gum — lemon is served raw, with nothing to prepare beyond cutting and de-seeding.',
+          'Squeeze a little juice from another wedge over other foods on the tray if you like.',
+        ],
+      },
+      '9': {
+        textureNote: 'A large, seedless lemon wedge, too big for baby to fit in their mouth, to lick and suck on, or juice squeezed over other foods.',
+        steps: [
+          'Cut the lemon in half and cut a large wedge — big enough that baby cannot fit the whole thing in their mouth — removing every seed.',
+          'Double-check the wedge by feel for any seed you missed.',
+          'Offer the wedge for baby to lick and suck, or squeeze the juice over whatever else is on the tray.',
+        ],
+      },
+      '12': {
+        textureNote: 'A seedless lemon wedge for baby to squeeze over food themselves, or suck on directly.',
+        steps: [
+          'Cut the lemon into wedges and remove every seed.',
+          'Show baby how to squeeze a wedge over their food, or let them suck on it directly.',
+          'Wipe the mouth and chin afterward — the acidity can redden the skin around the mouth, which is a normal reaction, not an allergy.',
         ],
       },
     },
@@ -632,15 +667,15 @@ export const basicRecipes: RecipeSeed[] = [
           'Choose a ripe kiwi that yields to gentle pressure, and wash the skin before cutting it.',
           'Peel it and cut it into finger-length wedges baby can hold, or halve it and let baby scoop with a spoon.',
           'Ripe kiwi needs no cooking — just check the flesh mashes easily between two fingers before serving.',
-          'Serve at room temperature with baby sitting upright and supervised.',
+          'Serve at room temperature.',
         ],
       },
       '9': {
-        textureNote: 'Soft pea-to-bite-sized dice of ripe kiwi.',
+        textureNote: 'Finger-length wedges of ripe kiwi, or small bite-sized dice (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Wash and peel the ripe kiwi.',
-          'Dice it into pea-to-bite-sized soft pieces.',
-          'Serve at room temperature for pincer-grasp self-feeding, supervised, with water in an open cup alongside.',
+          'Cut it into finger-length wedges, or dice it into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+          'Serve at room temperature for pincer-grasp self-feeding, with water in an open cup alongside.',
         ],
       },
       '12': {
@@ -648,7 +683,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Wash and peel the ripe kiwi.',
           'Dice it into small bite-sized pieces.',
-          'Serve at room temperature and supervise baby as they practice with a fork.',
+          'Serve at room temperature for baby to practice with a fork.',
         ],
       },
     },
@@ -667,15 +702,15 @@ export const basicRecipes: RecipeSeed[] = [
           'Choose a fully ripe mango — firm, underripe pieces can be slippery and harder to gum.',
           'Wash and peel it, then cut the flesh away from the stone; ripe mango is served raw.',
           'Cut the flesh into finger-length strips baby can hold and gnaw on.',
-          'Serve at room temperature with baby upright and supervised.',
+          'Serve at room temperature.',
         ],
       },
       '9': {
-        textureNote: 'Soft pea-to-bite-sized dice of fully ripe mango.',
+        textureNote: 'Finger-length strips of fully ripe mango, or small bite-sized dice (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Peel a fully ripe mango and cut the flesh off the stone.',
-          'Dice it into pea-to-bite-sized soft pieces.',
-          'Serve at room temperature for pincer-grasp self-feeding, supervised.',
+          'Cut it into finger-length strips, or dice it into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+          'Serve at room temperature for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -683,7 +718,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Peel a fully ripe mango and cut it off the stone.',
           'Dice it into small bite-sized pieces.',
-          'Serve at room temperature, supervised.',
+          'Serve at room temperature.',
         ],
       },
     },
@@ -741,10 +776,11 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soft pea-to-bite-sized cubes of cooked sweet potato.',
+        textureNote: 'Finger-length wedges, or small bite-sized cubes (no bigger than ½ inch) for pincer practice, cooked until they mash easily between two fingers.',
         steps: [
-          'Peel and cube the sweet potato, then steam or boil it for 10-12 minutes, until a cube mashes easily between two fingers.',
-          'Cut it into pea-to-bite-sized soft cubes for pincer-grasp self-feeding.',
+          'Peel the sweet potato and cut it into finger-length wedges, or into small cubes (no bigger than ½ inch) for pincer practice.',
+          'Steam or boil wedges for 12-15 minutes, or cubes for 10-12 minutes, until a piece mashes easily between two fingers.',
+          'Test one piece between your fingers before serving; if it resists, cook it for 5 minutes more.',
           'Cool to just-warm and serve.',
         ],
       },
@@ -776,10 +812,11 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soft pea-to-bite-sized cubes of cooked squash.',
+        textureNote: 'Finger-length wedges, or small bite-sized cubes (no bigger than ½ inch) for pincer practice, cooked until they mash easily between two fingers.',
         steps: [
-          'Peel, deseed, and cube the squash, then steam it for 10-12 minutes, until a cube mashes easily between two fingers.',
-          'Cut it into pea-to-bite-sized soft cubes for pincer-grasp self-feeding.',
+          'Peel and deseed the squash and cut it into finger-length wedges, or into small cubes (no bigger than ½ inch) for pincer practice.',
+          'Steam wedges for 12-15 minutes, or cubes for 10-12 minutes, until a piece mashes easily between two fingers.',
+          'Test one piece between your fingers before serving; if it resists, cook it for 5 minutes more.',
           'Cool to just-warm and serve.',
         ],
       },
@@ -808,8 +845,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Measure 1-2 teaspoons of smooth peanut butter into a small bowl.',
           'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky, and let it cool to just-warm before offering.',
           'Thick or sticky peanut butter is a serious choking hazard, so never serve a spoonful straight, and never whole or chopped peanuts.',
-          'Offer the thinned mixture on a pre-loaded spoon, in a small amount, at home when you can watch baby for the next couple of hours.',
-          'Stay with baby through the meal.',
+          'Offer the thinned mixture on a pre-loaded spoon, in a small amount.',
         ],
       },
       '9': {
@@ -818,7 +854,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Thin smooth peanut butter with warm water, breast milk, or formula until it is runny, and let it cool to just-warm.',
           'Stir it into oatmeal or yogurt, or spread a very thin layer on banana or on a toast finger — toast the bread lightly, 1-2 minutes, and moisten it so it bends without snapping.',
           'Keep the layer thin — never a thick glob, and never a spoonful straight.',
-          'Serve and stay with baby through the meal.',
+          'Serve it to baby.',
         ],
       },
       '12': {
@@ -827,7 +863,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Thin smooth peanut butter with warm water until runny, let it cool to just-warm, then use it as a spread or a dip base.',
           'Keep any spread layer thin; thick spoonfuls and globs remain a choking hazard.',
           'Never offer whole or chopped nuts, at any age.',
-          'Stay with baby through the meal.',
         ],
       },
     },
@@ -847,8 +882,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Measure 1-2 teaspoons of smooth almond butter into a small bowl.',
           'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky. Test the temperature and let it cool to just-warm.',
           'Thick or sticky nut butter is a serious choking hazard, so never serve a spoonful straight, and never whole or chopped nuts.',
-          'Offer the thinned mixture on a pre-loaded spoon, in a small amount, at home when you can watch baby for the next couple of hours.',
-          'Stay with baby through the meal.',
+          'Offer the thinned mixture on a pre-loaded spoon, in a small amount.',
         ],
       },
       '9': {
@@ -857,7 +891,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Thin smooth almond butter with warm water, breast milk, or formula until it is runny, and give it a minute to cool to just-warm.',
           'Stir it into oatmeal or yogurt, or spread a very thin layer on soft fruit or on a toast finger — toast the bread lightly, 1-2 minutes, and moisten it so it bends without snapping.',
           'Keep the layer thin — never a thick glob, and never a spoonful straight.',
-          'Serve and stay with baby through the meal.',
+          'Serve it to baby.',
         ],
       },
       '12': {
@@ -866,7 +900,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Thin smooth almond butter with warm water until runny, let it cool to just-warm, then use it as a spread or a dip base.',
           'Keep any spread layer thin; thick spoonfuls and globs remain a choking hazard.',
           'Never offer whole or chopped nuts, at any age.',
-          'Stay with baby through the meal.',
         ],
       },
     },
@@ -886,8 +919,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Stir 1 teaspoon of tahini with warm water, breast milk, or formula until it is runny, then let it cool to just-warm.',
           'A thick layer of tahini can stick in the mouth, so thin it well and keep the layer light.',
           'Drizzle it thinly over a soft food baby is already eating, or spread it very thin on a toast finger — toast the bread lightly, 1-2 minutes, and moisten it until it bends.',
-          'Offer it in a small amount, at home, when you can watch baby afterwards.',
-          'Stay with baby through the meal.',
+          'Offer it in a small amount.',
         ],
       },
       '9': {
@@ -896,7 +928,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Thin the tahini with warm water, breast milk, or formula until it is runny, and let it cool to just-warm before serving.',
           'Stir it through porridge, yogurt, or vegetables, or spread it thinly on a toast finger toasted for 1-2 minutes and softened.',
           'Keep the layer thin rather than a thick paste.',
-          'Serve and stay with baby through the meal.',
+          'Serve it to baby.',
         ],
       },
       '12': {
@@ -905,7 +937,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Thin the tahini with warm water until it pours, let it cool to just-warm, then use it as a dressing or a dip base.',
           'Keep the layer thin rather than a thick paste, which can stick in the mouth.',
           'Serve alongside soft vegetables or grains.',
-          'Stay with baby through the meal.',
         ],
       },
     },
@@ -924,7 +955,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Spoon plain, unsweetened, pasteurized whole-milk yogurt into a small bowl — no added sugar, and no honey before 12 months.',
           'Serve it cold, or let it sit until it comes to room temperature, whichever baby prefers; yogurt needs no cooking.',
           'Pre-load a spoon and hand it over, or let baby dip fingers straight into the bowl.',
-          'Sit with baby through the meal.',
         ],
       },
       '9': {
@@ -932,7 +962,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Spoon plain, unsweetened whole-milk yogurt into a bowl.',
           'Stir through a little mashed fruit for flavor if you like.',
-          'Serve cold or at room temperature, give baby the spoon, supervised, and let them practice scooping.',
+          'Serve cold or at room temperature, give baby the spoon, and let them practice scooping.',
         ],
       },
       '12': {
@@ -940,7 +970,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Spoon plain whole-milk yogurt into a bowl.',
           'Stir through soft diced fruit if you like, keeping any round fruit quartered lengthwise.',
-          'Serve cold or at room temperature with a spoon, unsweetened, supervised.',
+          'Serve cold or at room temperature with a spoon, unsweetened.',
         ],
       },
     },
@@ -959,15 +989,15 @@ export const basicRecipes: RecipeSeed[] = [
           'Choose a mild, pasteurized cheese such as mild cheddar or mozzarella — avoid unpasteurized and soft-ripened cheeses.',
           'Grate it finely, or cut a very thin, soft strip; firm cheese cubes are a choking hazard.',
           'Sprinkle the grated cheese over a food baby is already eating, or hand over the thin strip.',
-          'Keep the portion small — cheese is salty — and sit with baby through the meal.',
+          'Keep the portion small — cheese is salty.',
         ],
       },
       '9': {
-        textureNote: 'Grated cheese, or small soft pea-sized pieces.',
+        textureNote: 'Grated cheese, thin flat strips, or small bite-sized pieces (no bigger than ½ inch) torn from a thin slice — never cubes.',
         steps: [
-          'Grate a mild pasteurized cheese, or cut it into small, soft pea-sized pieces.',
+          'Grate a mild pasteurized cheese, cut a thin slice into flat strips, or tear small bite-sized pieces (no bigger than ½ inch) from a thin slice.',
           'Never serve firm cubes — grate, shred, or cut thin strips instead.',
-          'Serve a small amount for pincer-grasp self-feeding, supervised.',
+          'Serve a small amount for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -975,7 +1005,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Cut a mild pasteurized cheese into small bite-sized soft pieces or thin slices.',
           'Stay away from firm cubes, which remain a choking hazard.',
-          'Serve a small portion alongside the rest of the meal, supervised.',
+          'Serve a small portion alongside the rest of the meal.',
         ],
       },
     },
@@ -999,10 +1029,10 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Small softened toast squares for pincer-grasp practice.',
+        textureNote: 'Soft toast strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Toast the bread lightly, 1-2 minutes, then moisten it so it is soft rather than dry and hard.',
-          'Cut it into small squares.',
+          'Cut it into finger-length strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice.',
           'Serve just-warm for pincer-grasp self-feeding.',
         ],
       },
@@ -1062,12 +1092,12 @@ export const basicRecipes: RecipeSeed[] = [
       // Shellfish is held to 9 months and introduced last on the allergen
       // ladder, so this recipe has no 6-month variant at all.
       '9': {
-        textureNote: 'Small, pea-sized pieces of thoroughly cooked shrimp — never a whole shrimp.',
+        textureNote: 'Finely chopped, small bite-sized pieces (no bigger than ½ inch) of thoroughly cooked shrimp — never a whole shrimp.',
         steps: [
           'Peel and devein the shrimp and rinse them well.',
           'Cook them thoroughly — simmer or pan-fry over medium heat for 3-4 minutes, turning once — until they are pearly and opaque right through, 145°F (63°C).',
-          'Chop them finely into small, pea-sized pieces — a whole or large shrimp piece is rubbery and hard to bite through.',
-          'Cool to just-warm and serve fresh, in a small amount at home when you can watch baby afterwards.',
+          'Chop them finely into small bite-sized pieces (no bigger than ½ inch) — a whole or large shrimp piece is rubbery and hard to bite through.',
+          'Cool to just-warm and serve fresh, in a small amount.',
         ],
       },
       '12': {
@@ -1095,16 +1125,16 @@ export const basicRecipes: RecipeSeed[] = [
           'Halve a ripe avocado, remove the stone, and cut a finger-length wedge — ripe avocado is served raw, with no cooking.',
           'Leave a little skin on one side of the wedge as a grip, or serve the flesh mashed on a spoon.',
           'A very ripe avocado can be slippery, so if the wedge keeps sliding out of baby\'s hand, roll it in a thin coating of oat flour for grip.',
-          'Serve at room temperature with baby sitting upright and supervised.',
+          'Serve at room temperature.',
         ],
       },
       '9': {
-        textureNote: 'Soft pea-to-bite-sized dice of ripe avocado.',
+        textureNote: 'Finger-length wedges of ripe avocado, or small bite-sized dice (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Halve a ripe avocado and scoop the flesh out of the skin.',
-          'Dice it into pea-to-bite-sized soft pieces.',
+          'Cut it into finger-length wedges, or dice it into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'If the pieces are slippery, dust them lightly with oat flour so little fingers can hold them.',
-          'Serve at room temperature for pincer-grasp self-feeding, supervised.',
+          'Serve at room temperature for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -1112,7 +1142,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Halve a ripe avocado, remove the stone, and scoop out the flesh.',
           'Dice or slice it into small bite-sized pieces.',
-          'Serve at room temperature and supervise baby as they practice with a fork.',
+          'Serve at room temperature for baby to practice with a fork.',
         ],
       },
     },
@@ -1131,15 +1161,15 @@ export const basicRecipes: RecipeSeed[] = [
           'Peel back one side of the banana and cut the flesh into finger-length spears — ripe banana is served raw, with no cooking.',
           'Leave a strip of peel at one end as a grip if that helps baby hold it.',
           'Do not serve whole round coin-shaped slices — they are a choking hazard; cut spears instead.',
-          'Serve at room temperature with baby upright and supervised.',
+          'Serve at room temperature.',
         ],
       },
       '9': {
-        textureNote: 'Half-moons or small pea-to-bite-sized pieces.',
+        textureNote: 'Finger-length spears, or half-moons or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Peel the banana and cut it into half-moons, or into small pea-to-bite-sized pieces.',
+          'Peel the banana and cut it into finger-length spears, or into half-moons or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Keep away from whole round coin slices, which are a choking hazard.',
-          'Serve at room temperature for pincer-grasp self-feeding, supervised.',
+          'Serve at room temperature for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -1147,7 +1177,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Peel the banana and slice it into small bite-sized rounds or pieces.',
           'Keep every piece small — a large round coin slice remains a choking hazard.',
-          'Serve at room temperature, supervised.',
+          'Serve at room temperature.',
         ],
       },
     },
@@ -1170,10 +1200,10 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soft cooked apple in pea-to-bite-sized dice; still no raw apple.',
+        textureNote: 'Soft cooked apple in finger-length wedges, or small bite-sized dice (no bigger than ½ inch) for pincer practice; still no raw apple.',
         steps: [
-          'Wash, peel, and core the apple, then steam or simmer it for 8-12 minutes, until it mashes easily between two fingers.',
-          'Dice it into pea-to-bite-sized soft pieces.',
+          'Wash, peel, and core the apple, cut it into thick, finger-length wedges, then steam or simmer them for 8-12 minutes, until they mash easily between two fingers.',
+          'Serve the wedges, or dice some into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Still avoid raw apple at this age — it can shear off into a hard, airway-blocking chunk.',
           'Cool to just-warm and serve for pincer-grasp self-feeding.',
         ],
@@ -1207,10 +1237,10 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soft pea-to-bite-sized dice of ripe or lightly cooked pear.',
+        textureNote: 'Finger-length wedges of ripe or lightly cooked pear, or small bite-sized dice (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Wash and peel a ripe pear, poaching it at a bare simmer for 5-8 minutes first if it is still firm.',
-          'Dice it into pea-to-bite-sized soft pieces.',
+          'Cut it into finger-length wedges, or dice it into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Cool to just-warm if poached, then serve for pincer-grasp self-feeding.',
         ],
       },
@@ -1277,10 +1307,10 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soft cooked carrot in pea-to-bite-sized cubes; still no raw carrot.',
+        textureNote: 'Soft cooked carrot in finger-length spears, or small bite-sized cubes (no bigger than ½ inch) for pincer practice; still no raw carrot.',
         steps: [
-          'Wash, peel, and cut the carrot, then steam or boil it for 12-15 minutes, until it mashes easily between two fingers.',
-          'Cut it into pea-to-bite-sized soft cubes.',
+          'Wash and peel the carrot and cut it into finger-length spears, then steam or boil them for 12-15 minutes, until they mash easily between two fingers.',
+          'Serve the spears, or cut some into small bite-sized cubes (no bigger than ½ inch) for pincer practice.',
           'Keep avoiding raw carrot, which can shear into a firm, airway-blocking chunk.',
           'Cool to just-warm and serve for pincer-grasp self-feeding.',
         ],
@@ -1314,11 +1344,11 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'A loose, soft mash, or pea-to-bite-sized soft pieces baby can pick up.',
+        textureNote: 'Finger-length wedges, a loose soft mash, or small bite-sized soft pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Scrub the potato, cut away any green patches or sprouts, and cut it into chunks — the skin can stay on once baby handles it well.',
-          'Steam or boil the chunks for 12-15 minutes, until a chunk mashes easily between two fingers.',
-          'Mash it loosely with a fork, or cut it into pea-to-bite-sized soft pieces for pincer-grasp self-feeding.',
+          'Scrub the potato, cut away any green patches or sprouts, and cut it into finger-length wedges or chunks — the skin can stay on once baby handles it well.',
+          'Steam or boil wedges for 15-20 minutes, or chunks for 12-15 minutes, until a piece mashes easily between two fingers.',
+          'Serve the wedges as they are, or mash the chunks loosely with a fork or cut them into small bite-sized soft pieces (no bigger than ½ inch) for pincer practice.',
           'Cool to just-warm and serve with no added salt.',
         ],
       },
@@ -1351,10 +1381,10 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soft pea-to-bite-sized pieces of cooked zucchini.',
+        textureNote: 'Soft cooked zucchini in finger-length spears, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Wash and cut the zucchini, then steam it for 6-8 minutes, until it mashes easily between two fingers.',
-          'Dice it into pea-to-bite-sized soft pieces.',
+          'Wash the zucchini and cut it into finger-length spears, then steam them for 6-8 minutes, until they mash easily between two fingers.',
+          'Serve the spears, or dice some into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Cool to just-warm and serve for pincer-grasp self-feeding.',
         ],
       },
@@ -1386,10 +1416,10 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soft pea-to-bite-sized pieces of steamed green bean.',
+        textureNote: 'Whole soft steamed pods, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Wash and trim the beans, then steam them for 8-10 minutes, until they mash easily between two fingers.',
-          'Cut them into pea-to-bite-sized pieces.',
+          'Serve them whole, or cut some into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Cool to just-warm and serve for pincer-grasp self-feeding.',
         ],
       },
@@ -1490,15 +1520,15 @@ export const basicRecipes: RecipeSeed[] = [
           'Cut the rind away completely and pick out every seed; watermelon is served raw, with no cooking.',
           'Cut the flesh into finger-length wedges or sticks that are not too thin to grip.',
           'Watermelon is slippery and can slide toward the throat in large pieces, so keep every piece a manageable, gummable size.',
-          'Serve chilled or at room temperature with baby sitting upright and supervised.',
+          'Serve chilled or at room temperature.',
         ],
       },
       '9': {
-        textureNote: 'Seed-free, rind-free pea-to-bite-sized pieces.',
+        textureNote: 'Seed-free, rind-free finger-length sticks, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Remove all rind and check the flesh thoroughly for seeds.',
-          'Dice it into pea-to-bite-sized pieces, keeping them a size baby can gum.',
-          'Serve chilled or at room temperature for pincer-grasp self-feeding, supervised.',
+          'Cut it into finger-length sticks, or dice it into small bite-sized pieces (no bigger than ½ inch) for pincer practice, keeping every piece a size baby can gum.',
+          'Serve chilled or at room temperature for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -1506,7 +1536,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Remove all rind and check for seeds once more.',
           'Dice the flesh into small bite-sized pieces rather than large slippery chunks.',
-          'Serve chilled or at room temperature, supervised.',
+          'Serve chilled or at room temperature.',
         ],
       },
     },
@@ -1529,16 +1559,16 @@ export const basicRecipes: RecipeSeed[] = [
           'Cook it thoroughly with no added salt — bake at 400°F (200°C) for 18-20 minutes, or poach at a bare simmer for 10-12 minutes — until a thermometer in the thickest part reads 165°F (74°C) and the juices run clear.',
           'Rest it for 5 minutes, then cut a finger-length strip along the grain, or shred it finely.',
           'Moisten the strip or the shreds with a little olive oil or cooking liquid — breast meat dries out fast and turns stringy when it does.',
-          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+          'Cool to just-warm, check the temperature, and serve.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized shredded or chopped pieces for pincer-grasp practice.',
+        textureNote: 'Finger-length strips, or small bite-sized shredded or chopped pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Bake the trimmed breast at 400°F (200°C) for 18-20 minutes, until it reads 165°F (74°C) all the way through, then rest it for 5 minutes.',
-          'Shred or chop it into soft, pea-sized pieces, feeling for any small bones as you go.',
+          'Cut it into finger-length strips, or shred or chop it into small bite-sized pieces (no bigger than ½ inch) for pincer practice, feeling for any small bones as you go.',
           'Stir through a little olive oil or cooking liquid so the pieces stay moist rather than crumbly.',
-          'Serve just-warm and supervise baby as they self-feed.',
+          'Serve just-warm for baby to self-feed.',
         ],
       },
       '12': {
@@ -1547,7 +1577,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Bake the trimmed breast at 400°F (200°C) for 18-20 minutes, until it reads 165°F (74°C) with clear juices, and rest it for 5 minutes.',
           'Dice it into small, soft bite-sized pieces.',
           'Moisten the dice with a little cooking liquid or olive oil, and check once more for small bones.',
-          'Serve just-warm with no added salt, supervised.',
+          'Serve just-warm with no added salt.',
         ],
       },
     },
@@ -1571,16 +1601,16 @@ export const basicRecipes: RecipeSeed[] = [
           'Cook it through with no added salt — pan-fry over medium heat for 4-5 minutes a side, or bake at 375°F (190°C) for 18-20 minutes — until a thermometer in the centre reads 165°F (74°C) and no pink remains.',
           'Rest it for 3-5 minutes, then cut the patty into finger-length strips, or shred slow-cooked thigh meat finely instead.',
           'Moisten with a little olive oil or cooking liquid so nothing is dry or crumbly.',
-          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+          'Cool to just-warm, check the temperature, and serve.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized pieces of mince or shredded thigh, or a small meatball squashed completely flat.',
+        textureNote: 'Finger-length strips of thin turkey patty, or small bite-sized pieces (no bigger than ½ inch) for pincer practice, or a small meatball squashed completely flat.',
         steps: [
-          'Cook the turkey through — pan-fry over medium heat for 4-5 minutes a side, or bake at 375°F (190°C) for 18-20 minutes — until it reads 165°F (74°C) with no pink left.',
-          'Rest it for 3-5 minutes, then break or shred it into soft, pea-sized pieces, or squash a small meatball completely flat.',
+          'Shape the turkey into a thin patty or small meatballs and cook it through — pan-fry over medium heat for 4-5 minutes a side, or bake at 375°F (190°C) for 18-20 minutes — until it reads 165°F (74°C) with no pink left.',
+          'Rest it for 3-5 minutes, then cut the patty into finger-length strips, or break it into small bite-sized pieces (no bigger than ½ inch) for pincer practice, and squash any small meatball completely flat.',
           'Stir through a little olive oil or cooking liquid so the pieces are not dry.',
-          'Serve just-warm, supervised, for pincer-grasp practice, never as a firm round meatball.',
+          'Serve just-warm for pincer-grasp practice, never as a firm round meatball.',
         ],
       },
       '12': {
@@ -1589,7 +1619,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Bake the turkey at 375°F (190°C) for 18-20 minutes, until it reads 165°F (74°C), then rest it for 3-5 minutes.',
           'Dice or shred it into small, soft bite-sized pieces.',
           'Moisten with a little cooking liquid or olive oil.',
-          'Serve just-warm with no added salt, supervised.',
+          'Serve just-warm with no added salt.',
         ],
       },
     },
@@ -1610,16 +1640,16 @@ export const basicRecipes: RecipeSeed[] = [
           'Cook it well-done with no added salt — roast at 400°F (200°C) for 20-25 minutes, or pan-fry over medium heat for 5-6 minutes a side — until a thermometer in the thickest part reads 160°F (71°C).',
           'Rest it for 5 minutes, then cut a finger-length strip along the grain.',
           'Moisten the strip with a little olive oil or cooking liquid so it is not dry or chewy.',
-          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+          'Cool to just-warm, check the temperature, and serve.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized shredded or finely chopped pieces of well-done pork.',
+        textureNote: 'Finger-length strips of well-done pork cut along the grain, or small bite-sized shredded or chopped pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Roast the trimmed pork at 400°F (200°C) for 20-25 minutes, until it reads 160°F (71°C), then rest it for 5 minutes.',
-          'Shred it finely against the grain, or chop it into soft, pea-sized pieces.',
+          'Cut it into finger-length strips along the grain, or shred or chop it into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Stir through a little olive oil or cooking liquid so the pieces stay moist.',
-          'Serve just-warm and supervise baby as they self-feed.',
+          'Serve just-warm for baby to self-feed.',
         ],
       },
       '12': {
@@ -1628,7 +1658,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Roast the trimmed pork at 400°F (200°C) for 20-25 minutes, until it reads 160°F (71°C), and rest it for 5 minutes — or slow-cook it for 2-3 hours until it falls apart.',
           'Dice it into small, soft bite-sized pieces, or shred it.',
           'Moisten with a little cooking liquid so nothing is dry or chewy.',
-          'Serve just-warm with no added salt, supervised.',
+          'Serve just-warm with no added salt.',
         ],
       },
     },
@@ -1649,16 +1679,16 @@ export const basicRecipes: RecipeSeed[] = [
           'Cook it well-done with no added salt: brown the mince over medium heat for 6-8 minutes, or slow-cook the shoulder for 2-3 hours until it falls apart, in either case until a thermometer reads 160°F (71°C).',
           'Drain off the fat, rest it for 3-5 minutes, and moisten with a little olive oil or cooking liquid.',
           'Serve as a soft pile of fine mince, or pull a finger-length shred from the shoulder.',
-          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+          'Cool to just-warm, check the temperature, and serve.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized pieces of well-done mince or shredded slow-cooked shoulder.',
+        textureNote: 'A finger-length shred of slow-cooked shoulder, or small bite-sized pieces of well-done mince or shoulder (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Brown lamb mince over medium heat for 6-8 minutes, or slow-cook boneless shoulder until it falls apart, until it reads 160°F (71°C) with no pink left.',
-          'Drain the fat, then break the meat into soft, pea-sized pieces, or shred the shoulder finely.',
+          'Drain the fat, then pull a finger-length shred from the shoulder, or break the meat into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Stir through a little olive oil or cooking liquid so the pieces are not dry.',
-          'Serve just-warm, supervised, for pincer-grasp practice.',
+          'Serve just-warm for pincer-grasp practice.',
         ],
       },
       '12': {
@@ -1667,7 +1697,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Slow-cook boneless lamb shoulder for 2-3 hours until it is falling apart, or brown the mince over medium heat for 6-8 minutes, until it reads 160°F (71°C).',
           'Drain the fat, then dice or shred the meat into small, soft bite-sized pieces.',
           'Moisten with a little cooking liquid or olive oil.',
-          'Serve just-warm with no added salt, supervised, checking once more for bone fragments.',
+          'Serve just-warm with no added salt, checking once more for bone fragments.',
         ],
       },
     },
@@ -1690,16 +1720,16 @@ export const basicRecipes: RecipeSeed[] = [
           'Bake it at 400°F (200°C) for 10-12 minutes, or poach it at a bare simmer for 6-8 minutes, until it is opaque right through and flakes under gentle pressure — 145°F (63°C) on a thermometer.',
           'Flake a soft finger-length piece, running your fingers through the flakes for bones once more.',
           'Moisten it with a little cooking liquid or olive oil — cod flakes dry quickly.',
-          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+          'Cool to just-warm, check the temperature, and serve.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized flakes, re-checked for stray bones.',
+        textureNote: 'A soft finger-length piece of flaked cod, or small bite-sized flakes (no bigger than ½ inch) for pincer practice, re-checked for stray bones.',
         steps: [
           'Bake the cod at 400°F (200°C) for 10-12 minutes, until it is opaque and separates easily with a fork at 145°F (63°C).',
-          'Flake it into soft, pea-sized pieces, feeling through every flake for bones.',
+          'Flake it, feeling through every flake for bones, then press some into a soft finger-length piece, or leave small bite-sized flakes (no bigger than ½ inch) for pincer practice.',
           'Moisten the flakes with a little cooking liquid or olive oil.',
-          'Serve just-warm for pincer-grasp self-feeding, supervised.',
+          'Serve just-warm for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -1708,7 +1738,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Bake the cod at 400°F (200°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then let it cool to just-warm.',
           'Flake it into small bite-sized pieces, or leave a small piece of fillet for baby to pick apart.',
           'Check by feel for bones one last time before it reaches the plate.',
-          'Serve with no added salt, supervised, alongside whatever else is on the tray.',
+          'Serve with no added salt, alongside whatever else is on the tray.',
         ],
       },
     },
@@ -1729,16 +1759,16 @@ export const basicRecipes: RecipeSeed[] = [
           'Bake it at 375°F (190°C) for 10-12 minutes, or poach it at a bare simmer for 6-8 minutes, until it is opaque right through and flakes under gentle pressure — 145°F (63°C) on a thermometer.',
           'Flake a soft finger-length piece, then check the flakes by feel for pin bones a second time.',
           'Moisten with a little cooking liquid or olive oil.',
-          'Cool to just-warm, check the temperature, and serve with baby upright and supervised.',
+          'Cool to just-warm, check the temperature, and serve.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized flakes, checked twice for pin bones.',
+        textureNote: 'A soft finger-length piece of flaked trout, or small bite-sized flakes (no bigger than ½ inch) for pincer practice, checked twice for pin bones.',
         steps: [
           'Bake the trout at 375°F (190°C) for 10-12 minutes, until it is opaque and separates easily with a fork at 145°F (63°C).',
-          'Flake it into soft, pea-sized pieces, checking by feel for pin bones twice as you go.',
+          'Flake it, checking by feel for pin bones twice, then press some into a soft finger-length piece, or leave small bite-sized flakes (no bigger than ½ inch) for pincer practice.',
           'Moisten the flakes with a little cooking liquid or olive oil.',
-          'Serve just-warm for pincer-grasp self-feeding, supervised.',
+          'Serve just-warm for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -1746,7 +1776,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Bake the trout at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then let it cool to just-warm.',
           'Flake it into small bite-sized pieces, checking twice for pin bones.',
-          'Serve with no added salt, supervised, alongside whatever else is on the tray.',
+          'Serve with no added salt, alongside whatever else is on the tray.',
         ],
       },
     },
@@ -1765,15 +1795,15 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Choose skipjack ("light") tuna canned in water, ideally with no salt added — never albacore, white, or bigeye tuna, which carry far more mercury.',
           'Drain it well and mash it thoroughly with plain yogurt, mashed avocado, or a little olive oil until no dry, crumbly lumps remain.',
-          'Serve as a soft mashed pile, or pre-load a spoon and hand it over, sitting with baby throughout.',
+          'Serve as a soft mashed pile, or pre-load a spoon and hand it over.',
           'Keep tuna to about one small serving a week while baby is under two.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized dollops of mashed tuna, or tuna stirred through a mash.',
+        textureNote: 'Soft, small bite-sized dollops (no bigger than ½ inch) of mashed tuna, or tuna stirred through a mash.',
         steps: [
           'Drain skipjack ("light") tuna canned in water and mash it smooth with yogurt or a little olive oil.',
-          'Serve it as soft, pea-sized dollops, or stir it through soft pasta or a vegetable mash, sitting with baby throughout.',
+          'Serve it as soft, small bite-sized dollops (no bigger than ½ inch), or stir it through soft pasta or a vegetable mash.',
           'Never offer it dry and crumbly — on its own it packs into a dense ball in the mouth.',
           'Keep tuna to about one small serving a week while baby is under two.',
         ],
@@ -1783,7 +1813,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Drain skipjack ("light") tuna canned in water, keeping to a no-salt-added can.',
           'Mash or flake it into small bite-sized pieces, moistened with yogurt or olive oil.',
-          'Stir it through pasta or spread it thinly, still never in a dry pile, and sit with baby throughout the meal.',
+          'Stir it through pasta or spread it thinly, still never in a dry pile.',
           'Keep tuna to about one small serving a week while baby is under two.',
         ],
       },
@@ -1843,8 +1873,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Grind the seeds to a fine meal if you want them to disappear completely, or leave them whole.',
           'Sprinkle a pinch over a wet food — porridge, yogurt, or a soft vegetable mash — so the seeds cling rather than scatter.',
           'Stir them through, and never hand over a spoonful or a pile of dry seeds: any dry seed is easy to inhale.',
-          'Sesame is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
-          'Stay with baby through the meal.',
         ],
       },
       '9': {
@@ -1853,7 +1881,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Sprinkle a pinch of whole or ground sesame seeds over yogurt, porridge, hummus, or soft vegetables.',
           'Stir them through a mash so they cling rather than scatter across the tray.',
           'Keep it to a pinch, never a spoonful of dry seeds.',
-          'Stay with baby through the meal.',
         ],
       },
       '12': {
@@ -1862,7 +1889,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Sprinkle a pinch of sesame seeds over family food, or stir them into a dip or a mash.',
           'Ground seeds disappear into the food; whole seeds cling to anything wet.',
           'It stays a pinch — a spoonful of dry seeds is still a hazard at this age.',
-          'Stay with baby through the meal.',
         ],
       },
     },
@@ -2024,7 +2050,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Measure 1-2 teaspoons of smooth, unsalted, unsweetened sunflower seed butter into a small bowl.',
           'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky.',
           'Thick or sticky seed butter is a serious choking hazard, so never serve a spoonful straight, and never whole sunflower seeds.',
-          'Offer the thinned mixture on a pre-loaded spoon, in a small amount, and stay with baby through the meal.',
+          'Offer the thinned mixture on a pre-loaded spoon, in a small amount.',
         ],
       },
       '9': {
@@ -2032,7 +2058,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Thin smooth sunflower seed butter with warm water, breast milk, or formula until it is runny.',
           'Stir it into porridge or yogurt, or spread a very thin layer on soft fruit.',
-          'Keep the layer thin — never a thick glob, and never a spoonful straight, and stay with baby through the meal.',
+          'Keep the layer thin — never a thick glob, and never a spoonful straight.',
         ],
       },
       '12': {
@@ -2041,7 +2067,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Thin smooth sunflower seed butter until runny before using it as a spread or a dip base.',
           'Keep any spread layer thin; thick spoonfuls and globs remain a choking hazard.',
           'Check the label for added salt and sugar — sunflower seed butter is not a nut butter, but it is often sweetened.',
-          'Stay with baby through the meal.',
         ],
       },
     },
@@ -2063,8 +2088,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Measure 1-2 teaspoons of smooth, unsalted cashew butter into a small bowl.',
           'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky.',
           'Thick or sticky nut butter is a serious choking hazard, so never serve a spoonful straight, and never whole or chopped cashews.',
-          'Tree nut is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
-          'Stay with baby through the meal.',
         ],
       },
       '9': {
@@ -2073,7 +2096,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Thin smooth cashew butter with warm water, breast milk, or formula until it is runny.',
           'Stir it into porridge or yogurt, or spread a very thin layer on soft fruit.',
           'Keep the layer thin — never a thick glob, and never a spoonful straight.',
-          'Stay with baby through the meal.',
         ],
       },
       '12': {
@@ -2082,7 +2104,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Thin smooth cashew butter until runny before using it as a spread or a dip base.',
           'Keep any spread layer thin; thick spoonfuls and globs remain a choking hazard.',
           'Whole and chopped nuts stay off the menu until age 4-5, at every stage.',
-          'Stay with baby through the meal.',
         ],
       },
     },
@@ -2100,9 +2121,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Grind shelled walnuts to a fine, flour-like meal — whole nuts and nut pieces are a serious choking hazard and stay off the menu until age 4-5.',
           'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash until nothing crunchy is left.',
-          'Tree nut is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
           'Keep the rest of the meal in the fridge — walnut meal turns rancid quickly.',
-          'Stay with baby through the meal.',
         ],
       },
       '9': {
@@ -2111,7 +2130,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Grind shelled walnuts to a fine meal, in a small batch.',
           'Stir it through porridge, yogurt, soft fruit, or a fritter mix.',
           'Pieces and halves stay off the menu — it is the grinding that makes this safe.',
-          'Stay with baby through the meal.',
         ],
       },
       '12': {
@@ -2120,7 +2138,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Keep to finely ground walnut meal stirred into food, or a smooth walnut butter thinned until runny.',
           'Pieces, halves, and whole nuts stay off the menu until age 4-5.',
           'Grind small batches and keep the meal in the fridge.',
-          'Stay with baby through the meal.',
         ],
       },
     },
@@ -2141,8 +2158,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Use shelled, unsalted pistachios — salted ones carry far too much sodium for a baby — and grind them to a fine, flour-like meal.',
           'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash.',
           'Whole and chopped pistachios are a serious choking hazard and stay off the menu until age 4-5.',
-          'Tree nut is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
-          'Stay with baby through the meal.',
         ],
       },
       '9': {
@@ -2151,7 +2166,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Grind shelled, unsalted pistachios to a fine meal, in a small batch.',
           'Stir it through porridge, yogurt, soft fruit, or a mash.',
           'Never serve them in the shell, and never in pieces.',
-          'Stay with baby through the meal.',
         ],
       },
       '12': {
@@ -2160,7 +2174,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Keep to finely ground pistachio meal stirred into food.',
           'Whole and chopped nuts stay off the menu until age 4-5.',
           'Cashew and pistachio are closely related, so a reaction to one means taking care with the other.',
-          'Stay with baby through the meal.',
         ],
       },
     },
@@ -2215,9 +2228,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Grind shelled pecans to a fine, flour-like meal — halves and pieces are a serious choking hazard and stay off the menu until age 4-5.',
           'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash until nothing crunchy is left.',
-          'Tree nut is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
           'Keep the rest in the fridge — pecan meal is oily and turns rancid quickly.',
-          'Stay with baby through the meal.',
         ],
       },
       '9': {
@@ -2226,7 +2237,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Grind shelled pecans to a fine meal, in a small batch.',
           'Stir it through porridge, yogurt, soft fruit, or a mash.',
           'Halves and pieces stay off the menu — grinding is what makes this safe.',
-          'Stay with baby through the meal.',
         ],
       },
       '12': {
@@ -2235,7 +2245,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Keep to finely ground pecan meal stirred into food.',
           'Halves, pieces, and whole nuts stay off the menu until age 4-5.',
           'Grind small batches and keep the meal in the fridge.',
-          'Stay with baby through the meal.',
         ],
       },
     },
@@ -2255,9 +2264,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Grind shelled almonds to a fine, flour-like meal — whole and chopped almonds are a serious choking hazard and stay off the menu until age 4-5.',
           'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash until nothing hard is left.',
-          'Tree nut is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
           'Plain almond flour from a bag is the same thing, as long as nothing has been added to it.',
-          'Stay with baby through the meal.',
         ],
       },
       '9': {
@@ -2266,7 +2273,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Grind shelled almonds to a fine meal, in a small batch.',
           'Stir it through porridge, yogurt, soft fruit, or a mash.',
           'Pieces and halves stay off the menu — the grinding is what makes this safe.',
-          'Stay with baby through the meal.',
         ],
       },
       '12': {
@@ -2275,7 +2281,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Keep to finely ground almond meal stirred into food, or a smooth almond butter thinned until runny.',
           'Pieces, halves, and whole nuts stay off the menu until age 4-5.',
           'Grind small batches and keep the meal in the fridge.',
-          'Stay with baby through the meal.',
         ],
       },
     },
@@ -2293,9 +2298,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Grind plain, unsalted cashews to a fine, flour-like meal — whole and chopped cashews are a serious choking hazard and stay off the menu until age 4-5.',
           'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash until nothing hard is left.',
-          'Tree nut is a top-9 allergen, so offer it on its own at home, in the morning, and watch baby for the rest of the day.',
           'Buy the plain kernels rather than the salted ones, which carry far too much sodium for a baby.',
-          'Stay with baby through the meal.',
         ],
       },
       '9': {
@@ -2305,7 +2308,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Stir it through porridge, yogurt, soft fruit, or a mash.',
           'Pieces and halves stay off the menu — the grinding is what makes this safe.',
           'Cashew and pistachio are closely related, so a reaction to one means taking care with the other.',
-          'Stay with baby through the meal.',
         ],
       },
       '12': {
@@ -2314,7 +2316,6 @@ export const basicRecipes: RecipeSeed[] = [
           'Keep to finely ground cashew meal stirred into food, or a smooth cashew butter thinned until runny.',
           'Pieces, halves, and whole nuts stay off the menu until age 4-5.',
           'Grind small batches and keep the meal in the fridge.',
-          'Stay with baby through the meal.',
         ],
       },
     },

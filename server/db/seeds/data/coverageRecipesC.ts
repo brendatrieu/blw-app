@@ -49,12 +49,12 @@ export const coverageRecipesC: RecipeSeed[] = [
       },
       '9': {
         textureNote:
-          'Mashed rather than blended, with pea-sized pieces of soft squash on the tray for pincer-grasp practice.',
+          'Mashed rather than blended, with small bite-sized pieces of soft squash (no bigger than ½ inch) on the tray for pincer-grasp practice.',
         steps: [
           'Toss the squash chunks with a little olive oil and a pinch of ground cumin, and roast them with the garlic clove in its skin at 400°F (200°C) for 25-30 minutes, until the squash is fork-tender and the garlic is soft.',
           'Squeeze the garlic out of its skin, mash the squash rather than blending it so some texture is left, and loosen it with a little water or no-salt-added stock.',
           'Stir the finely ground almond meal through off the heat, until nothing hard is left in the bowl.',
-          'Cool to a safe temperature and serve thick in a bowl with a spoon, with a few pea-sized pieces of soft squash on the tray.',
+          'Cool to a safe temperature and serve thick in a bowl with a spoon, with a few small bite-sized pieces of soft squash (no bigger than ½ inch) on the tray.',
         ],
       },
       '12': {
@@ -95,10 +95,10 @@ export const coverageRecipesC: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Thick, creamy pudding with pea-sized pieces of soft banana on the tray.',
+        textureNote: 'Thick, creamy pudding with small bite-sized pieces of soft banana (no bigger than ½ inch) on the tray.',
         steps: [
           'Simmer the rice with water, breast milk, or formula and a pinch of ground cinnamon over low heat for 20-25 minutes, until the grains are soft and creamy.',
-          'Cool the pudding to just warm, then mash half the banana through it and dice the rest into pea-sized pieces.',
+          'Cool the pudding to just warm, then mash half the banana through it and dice the rest into small bite-sized pieces (no bigger than ½ inch).',
           'Stir the finely ground almond meal through off the heat, so nothing hard is left.',
           'Serve thick in a bowl with the banana pieces on the tray for pincer-grasp practice.',
         ],
@@ -180,11 +180,11 @@ export const coverageRecipesC: RecipeSeed[] = [
       { foodSlug: 'cashews', quantityNote: '3 tablespoons plain, unsalted cashews, ground to a fine meal' },
       { foodSlug: 'garlic', quantityNote: '1 clove, minced and cooked in' },
       { foodSlug: 'black_pepper', quantityNote: 'a tiny pinch, finely ground' },
+      { foodSlug: 'lemon', quantityNote: 'a squeeze of juice' },
     ],
     extraIngredients: [
       { name: 'olive oil', quantityNote: 'a drizzle of' },
       { name: 'warm water, to soak and blend the ground cashew meal' },
-      { name: 'lemon juice', quantityNote: 'a squeeze of' },
     ],
     variants: {
       '6': {
@@ -201,12 +201,12 @@ export const coverageRecipesC: RecipeSeed[] = [
       },
       '9': {
         textureNote:
-          'Small soft pasta shapes and pea-sized broccoli pieces in a smooth cream, for pincer-grasp self-feeding.',
+          'Small soft pasta shapes and small bite-sized broccoli pieces (no bigger than ½ inch) in a smooth cream, for pincer-grasp self-feeding.',
         steps: [
           'Grind the cashews to a fine meal, cover it with warm water, and leave it to soak for 10 minutes.',
           'Soften the minced garlic in a little olive oil over medium-low heat for 2-3 minutes, until fragrant.',
           'Blend the soaked meal with the garlic, a squeeze of lemon juice, and a tiny pinch of finely ground black pepper to a completely smooth, pourable cream.',
-          'Steam the broccoli for 8-10 minutes, until soft, and chop it into pea-sized pieces; cook the small pasta shapes for 10-12 minutes, past al dente, until soft.',
+          'Steam the broccoli for 8-10 minutes, until soft, and chop it into small bite-sized pieces (no bigger than ½ inch); cook the small pasta shapes for 10-12 minutes, past al dente, until soft.',
           'Toss the pasta and broccoli through the cream off the heat, let it cool to warm rather than hot, and serve on the tray for self-feeding.',
         ],
       },
@@ -251,11 +251,11 @@ export const coverageRecipesC: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'A rougher mash, with pea-to-bite-sized soft pieces of potato on the tray for pincer practice.',
+        textureNote: 'A rougher mash, with small bite-sized soft pieces of potato (no bigger than ½ inch) on the tray for pincer practice.',
         steps: [
           'Scrub and chunk the potato, cutting away any green patches or sprouts — the skin can stay on once baby handles it well.',
           'Steam or boil the chunks for 12-15 minutes, until they mash easily between two fingers, cooking the peas with them for the last 3-4 minutes, until soft.',
-          'Mash most of it roughly with a drizzle of olive oil, squashing every pea flat, and cut a little of the potato into pea-to-bite-sized soft pieces for the tray.',
+          'Mash most of it roughly with a drizzle of olive oil, squashing every pea flat, and cut a little of the potato into small bite-sized soft pieces (no bigger than ½ inch) for the tray.',
           'Stir the finely snipped dill through off the heat, then serve just warm, with no added salt.',
         ],
       },
@@ -303,12 +303,12 @@ export const coverageRecipesC: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'A rougher mash with soft, pea-sized pieces of beef and pea-to-bite-sized potato on the tray.',
+        textureNote: 'A rougher mash with soft, small bite-sized pieces of beef and potato (no bigger than ½ inch) on the tray.',
         steps: [
           'Soften the minced garlic in a little olive oil over medium-low heat for 2-3 minutes, until fragrant.',
           'Brown the minced beef with it over medium heat for 5-7 minutes, until no pink is left and it reads 160°F (71°C) on a thermometer.',
-          'Add the skinned, deseeded tomato and a little water or no-salt-added stock, then simmer over low heat for 12-15 minutes, until the beef is soft and shreds easily into pea-sized pieces.',
-          'Steam or boil the potato and carrot for 12-15 minutes, until they mash easily between two fingers, then mash most of it roughly and keep a few pea-to-bite-sized soft pieces for the tray.',
+          'Add the skinned, deseeded tomato and a little water or no-salt-added stock, then simmer over low heat for 12-15 minutes, until the beef is soft and shreds easily into small bite-sized pieces (no bigger than ½ inch).',
+          'Steam or boil the potato and carrot for 12-15 minutes, until they mash easily between two fingers, then mash most of it roughly and keep a few small bite-sized soft pieces (no bigger than ½ inch) for the tray.',
           'Spoon the beef over the mash, cool to just-warm, and serve with no added salt.',
         ],
       },

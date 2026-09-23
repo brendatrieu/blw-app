@@ -9,7 +9,7 @@ import { clampStageToAvailable, stageForAge } from "../features/catalog/stage.js
 import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../features/catalog/basicRecipe.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
-import { RECIPES_TAB_PATH, customRecipeConflictMessage } from "../features/catalog/constants.js";
+import { RECIPES_TAB_PATH, allergenLabel, customRecipeConflictMessage } from "../features/catalog/constants.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
 import { BackButton } from "../components/ui/BackButton.js";
@@ -277,6 +277,31 @@ export function RecipeDetailPage() {
           ))}
         </ul>
       </section>
+
+      {/* Item 334 follow-up: the ingredient rows say WHICH food brought an
+          allergen, but a parent skimming straight to prep steps never saw
+          that the dish carries one at all. One line, above the steps so it
+          shows on every age tab and for a custom recipe's own Steps
+          section — same role="note" callout SafetyPage uses, labelled
+          through the shared allergenLabel helper so the wording can never
+          drift from the badges above. */}
+      {recipe.allergens.length > 0 && (
+        <div
+          role="note"
+          className="flex gap-2 rounded-lg border border-[var(--color-callout-border)] bg-[var(--color-callout-bg)] p-3"
+        >
+          <span aria-hidden="true" className="text-base leading-none text-[var(--color-callout-icon)]">
+            {"⚠️"}
+          </span>
+          <p className="text-sm text-[var(--color-text)]">
+            {recipe.allergens.length === 1 ? "Contains a common allergen: " : "Contains common allergens: "}
+            {recipe.allergens.map(allergenLabel).join(", ")}.{" "}
+            <Link to="/safety/allergen-introduction" className="font-medium text-[var(--color-accent)] underline">
+              Learn more
+            </Link>
+          </p>
+        </div>
+      )}
 
       {recipe.isCustom ? (
         // A custom recipe carries exactly ONE variant (item 203): the parent

@@ -554,7 +554,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
           <span className="font-normal text-[var(--color-text-muted)]">(optional)</span>
         </span>
         <p className="text-xs text-[var(--color-text-muted)]">
-          Store-cupboard bits with no food of their own — oil, herbs, a squeeze of lemon.
+          Store-cupboard bits with no food of their own — oil, water, a pinch of dried herbs.
         </p>
         {values.extraIngredients.length > 0 && (
           <ul className="flex flex-col gap-2" aria-labelledby={`${idPrefix}-extra-label`}>

@@ -1,10 +1,10 @@
 import type { FoodSeed } from './types'
 
-// ~74 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
+// ~75 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
 // staples. minAgeMonths is 6 for nearly everything (BLW typically starts around 6 months when
 // baby shows readiness signs); shellfish is held to 9 months per the allergen ladder ordering.
 // Prep guidance is age-specific: 6-8m favors palmar-grasp finger shapes and thinned textures,
-// 9-11m favors pea-sized pincer-grasp pieces, 12m+ moves toward family bite-sized textures.
+// 9-11m favors small bite-sized pieces (no bigger than ½ inch) for pincer-grasp practice, 12m+ moves toward family bite-sized textures.
 // The one exception is `category: 'spice'` (item 329): a spice is never the thing on the tray,
 // so its three prep fields answer "how do I use this at this age" instead of naming a cut, and
 // it is the one category with no `Simple <food>` basic recipe.
@@ -22,7 +22,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Cook well-done and serve as a finger-length strip along the grain, or mince very finely and moisten with cooking liquid or olive oil so it is not dry or stringy.',
     prep9m:
-      'Cook well-done and finely chop or shred into soft, pea-sized pieces baby can pick up with a pincer grasp.',
+      'Cook well-done and cut into finger-length strips along the grain, or finely chop or shred into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Cook until tender (a slow-cooked cut works well) and dice into small, soft bite-sized pieces baby can chew with emerging molars.',
     chokingNotes: 'Dense or dry meat can be hard to gum into a swallowable piece — keep it moist, tender, and cut with (not against) or shredded finely against the grain.',
@@ -42,7 +42,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Cook thoroughly and serve as a finger-length strip of dark meat, or shred finely and moisten with a little olive oil or cooking liquid.',
     prep9m:
-      'Cook thoroughly and shred or chop into soft, pea-sized pieces for pincer-grasp self-feeding.',
+      'Cook thoroughly and cut into finger-length strips, or shred or chop into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Cook thoroughly and dice into small, soft bite-sized pieces.',
     chokingNotes: 'Trim any tough skin, fat, or gristle, and check carefully for small bones before serving.',
@@ -62,7 +62,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Bake or poach until just cooked through, then flake into a soft finger-length piece, checking thoroughly with your fingers for bones.',
     prep9m:
-      'Cook through and flake into soft, pea-sized pieces, re-checking for stray bones.',
+      'Cook through, re-check every flake for stray bones, and serve a soft finger-length piece of pressed flakes, or small bite-sized flakes (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Cook through and flake into small bite-sized pieces or serve as a small whole fillet piece to pick apart.',
     chokingNotes: 'Always run fingers through cooked flakes to feel for pin bones, even from pre-deboned fillets — a missed bone is a real hazard.',
@@ -82,7 +82,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Use boneless, canned-in-water sardines; mash well and spread thinly on a soft toast finger, or serve as a soft mashed pile for dipping.',
     prep9m:
-      'Mash or flake into soft, pea-sized pieces, double-checking for any small bones.',
+      'Flake into soft, small bite-sized pieces (no bigger than ½ inch), double-checking for any small bones.',
     prep12m:
       'Flake into small bite-sized pieces or mash onto toast cut into bite-sized squares.',
     chokingNotes: 'Choose boneless varieties and still check by feel for any remaining small, soft bones.',
@@ -102,7 +102,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Serve well-cooked, mashed whole egg (yolk and white) mixed with a little breast milk, formula, or water to loosen it, or as a soft scrambled-egg pile.',
     prep9m:
-      'Serve as soft scrambled egg pieces or a slice of firm omelet cut into pea-sized pieces for pincer-grasp self-feeding.',
+      'Serve as soft scrambled egg pieces, or firm omelet cut into strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Serve as bite-sized omelet pieces, a halved hard-boiled egg, or scrambled egg alongside toast fingers.',
     notes: 'A useful iron source alongside its role as the first step on the allergen ladder — always cook whole eggs fully for babies.',
@@ -180,7 +180,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Use firm tofu, pat dry, and cut into finger-length strips; pan-fry lightly in a little oil for a texture that grips easily without being slippery.',
     prep9m:
-      'Cut into pea-to-bite-sized soft cubes, pan-fried or baked lightly for grip.',
+      'Cut into finger-length strips, or small bite-sized cubes (no bigger than ½ inch) for pincer practice, pan-fried or baked lightly for grip.',
     prep12m:
       'Cut into small bite-sized cubes, pan-fried, baked, or coated lightly in crumbs for a soft-inside, lightly crisp-outside nugget.',
     chokingNotes: 'Raw or unfried tofu cubes can be slippery — a light pan-fry or coating helps little hands grip it.',
@@ -261,7 +261,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Steam whole florets until soft enough to mash easily between two fingers, keeping a bit of stem as a handle.',
     prep9m:
-      'Steam until soft and cut into smaller, pea-to-bite-sized florets for pincer-grasp self-feeding.',
+      'Steam until soft and serve whole florets with a bit of stem to hold, or cut into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Steam or roast until tender and cut into small bite-sized florets.',
     chokingNotes: 'Raw or under-cooked broccoli is fibrous and hard to chew — always steam until it mashes easily before serving.',
@@ -281,7 +281,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Roast or steam strips until soft and the skin wrinkles, removing any tough or papery skin before serving as a finger-length strip.',
     prep9m:
-      'Roast or steam until soft and cut into small, pea-to-bite-sized pieces.',
+      'Roast or steam until soft and serve as finger-length strips, or cut into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Serve roasted or steamed and softened, or thin raw strips once baby is confidently chewing, cut into small pieces.',
     chokingNotes: 'Raw bell pepper skin is tough and can be hard to bite through — cook until soft, especially before confident chewing develops.',
@@ -330,6 +330,26 @@ export const foods: FoodSeed[] = [
     storageCategory: 'produce_raw_cut',
   },
   {
+    slug: 'lemon',
+    name: 'Lemon',
+    category: 'fruit',
+    ironLevel: 'low',
+    vitaminCLevel: 'high',
+    fiberLevel: 'low',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Cut a large, seedless lemon wedge, big enough that baby cannot fit the whole thing in their mouth, and offer it to lick, suck, or gum — not to eat whole — or squeeze a little juice over other foods.',
+    prep9m:
+      'Offer a large, seedless lemon wedge, too big for baby to fit in their mouth, to lick and suck, or squeeze the juice over food.',
+    prep12m:
+      'Offer a seedless lemon wedge for baby to squeeze onto their own food, or to suck on.',
+    chokingNotes: 'Remove every seed before serving — lemon is offered as a wedge to suck on, not a piece to bite off and swallow.',
+    notes: 'Not iron-rich itself, but the vitamin C helps the body absorb iron from a plant-based food eaten in the same meal. The juice can redden the skin around the mouth on contact — a normal reaction to the acidity, not an allergy.',
+    allergens: [],
+    storageCategory: 'produce_raw_cut',
+  },
+  {
     slug: 'kiwi',
     name: 'Kiwi',
     category: 'fruit',
@@ -341,7 +361,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Peel and cut into finger-length wedges or halve and let baby scoop with a spoon; the soft, ripe flesh mashes easily.',
     prep9m:
-      'Peel and dice into pea-to-bite-sized soft pieces.',
+      'Peel and cut into finger-length wedges, or dice into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Peel and dice into small bite-sized pieces.',
     notes: 'One of the highest vitamin-C foods on this list — an easy pairing for spinach or other iron-rich foods.',
@@ -360,7 +380,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Peel and cut ripe mango into finger-length strips baby can hold and gnaw.',
     prep9m:
-      'Peel and dice into pea-to-bite-sized soft pieces.',
+      'Peel and cut into finger-length strips, or dice into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Peel and dice into small bite-sized pieces.',
     chokingNotes: 'Choose fully ripe mango — firm, underripe pieces can be slippery and harder to gum.',
@@ -400,7 +420,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Steam, boil, or roast until it mashes easily between two fingers, then cut into a finger-length wedge.',
     prep9m:
-      'Cook until soft and cut into pea-to-bite-sized soft cubes.',
+      'Cook until soft, then serve as a finger-length wedge, or cut into small bite-sized soft cubes (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Cook until tender and dice into small bite-sized pieces, roasted or mashed.',
     notes: 'A gentle, well-tolerated vitamin-C pairing for beef or chicken thigh.',
@@ -419,7 +439,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Steam or roast until it mashes easily between two fingers, then cut into a finger-length wedge.',
     prep9m:
-      'Cook until soft and cut into pea-to-bite-sized soft cubes.',
+      'Cook until soft, then serve as a finger-length wedge, or cut into small bite-sized soft cubes (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Cook until tender and dice into small bite-sized pieces.',
     notes: 'A mild, naturally sweet vitamin-C pairing for chicken thigh or another iron-rich protein.',
@@ -519,7 +539,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Serve finely grated or as a very thin, soft strip of a mild, pasteurized cheese — never a firm cube.',
     prep9m:
-      'Serve grated or in small, soft, pea-sized pieces of a mild pasteurized cheese.',
+      'Serve a mild pasteurized cheese grated, as thin flat strips, or as small bite-sized pieces (no bigger than ½ inch) torn from a thin slice — never cubes.',
     prep12m:
       'Serve in small bite-sized soft pieces or thin slices of a mild pasteurized cheese.',
     chokingNotes: 'Firm cheese cubes are a choking hazard — always grate, shred, or cut into thin strips rather than cubes.',
@@ -539,7 +559,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Toast lightly, then moisten with a little water, milk, or a thin spread so it is soft and bends without snapping; cut into finger-length strips.',
     prep9m:
-      'Toast and moisten, then cut into small squares for pincer-grasp self-feeding.',
+      'Toast and moisten, then cut into finger-length strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Toast and cut into small bite-sized squares or triangles, plain or lightly topped.',
     chokingNotes: 'Dry, hard toast can crumble into shards or feel scratchy going down — always soften or moisten before serving.',
@@ -578,7 +598,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Not recommended before 9 months — shellfish is introduced later on the allergen ladder.',
     prep9m:
-      'Cook thoroughly and finely chop into small, pea-sized pieces; avoid serving a whole shrimp, which can be tough and round.',
+      'Cook thoroughly and finely chop into small bite-sized pieces (no bigger than ½ inch); avoid serving a whole shrimp, which can be tough and round.',
     prep12m:
       'Cook thoroughly and chop into small bite-sized pieces.',
     chokingNotes: 'Whole or large shrimp pieces can be rubbery and hard to bite through — always chop finely.',
@@ -600,7 +620,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Cut a ripe avocado into a finger-length wedge, leaving a little skin on one side as a grip, or serve mashed on a spoon.',
     prep9m:
-      'Dice ripe avocado into pea-to-bite-sized soft pieces.',
+      'Cut ripe avocado into finger-length wedges, or dice into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Dice or slice ripe avocado into small bite-sized pieces.',
     chokingNotes: 'A very ripe avocado can be slippery — a thin coating of a dry food like oat flour on a wedge can help with grip if needed.',
@@ -619,7 +639,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Cut into finger-length spears (not round coins), leaving a strip of peel at one end as a grip if helpful.',
     prep9m:
-      'Cut into half-moons or small pea-to-bite-sized pieces for pincer-grasp self-feeding.',
+      'Cut into finger-length spears, or half-moons or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Slice into small bite-sized rounds or pieces.',
     chokingNotes: 'Whole round coin-shaped slices can be a choking hazard — cut into spears or half-moons instead.',
@@ -638,7 +658,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Cook (steam, bake, or simmer) until it mashes easily between two fingers — never serve raw apple under 12 months. Cut cooked apple into a soft finger-length wedge.',
     prep9m:
-      'Cook until soft and dice into pea-to-bite-sized soft pieces; still avoid raw apple.',
+      'Cook until soft and serve as finger-length wedges, or dice into small bite-sized pieces (no bigger than ½ inch) for pincer practice; still avoid raw apple.',
     prep12m:
       'Once chewing is confident, thin raw slices can be offered alongside cooked options — grate raw apple finely or cook until softened for a safer first try.',
     chokingNotes: 'Raw apple is firm and can shear off in a hard, airway-blocking chunk — always cook until squishable before 12 months, and introduce raw with caution afterward.',
@@ -657,7 +677,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Choose a very ripe, soft pear and cut into a finger-length wedge; if firm, steam or poach first until it mashes easily.',
     prep9m:
-      'Dice ripe (or lightly cooked, if firm) pear into pea-to-bite-sized soft pieces.',
+      'Cut ripe (or lightly cooked, if firm) pear into finger-length wedges, or dice into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Dice ripe pear into small bite-sized pieces, cooking first if the pear is still firm.',
     chokingNotes: 'A firm, underripe pear behaves like raw apple — cook it until soft if it does not yield easily to gentle pressure.',
@@ -695,7 +715,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Steam or boil until it mashes easily between two fingers — never serve raw carrot under 12 months. Cut into a finger-length spear.',
     prep9m:
-      'Cook until soft and cut into pea-to-bite-sized soft cubes; still avoid raw carrot.',
+      'Cook until soft and serve as finger-length spears, or cut into small bite-sized cubes (no bigger than ½ inch) for pincer practice; still avoid raw carrot.',
     prep12m:
       'Cook until tender-soft and dice into small bite-sized pieces; hold off on raw carrot sticks until chewing is confident, well beyond 12 months.',
     chokingNotes: 'Raw carrot is hard and can shear into a firm, airway-blocking chunk — always cook until it mashes easily under 12 months.',
@@ -718,7 +738,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Peel, then steam, boil, or bake until it mashes easily between two fingers, and serve as a thick finger-length wedge or strip — never raw and never a firm cube.',
     prep9m:
-      'Cook until it mashes easily between two fingers, then serve as a soft mash or in pea-to-bite-sized soft pieces; the skin can stay on once baby handles it well.',
+      'Cook until it mashes easily between two fingers, then serve as a finger-length wedge, a soft mash, or small bite-sized soft pieces (no bigger than ½ inch); the skin can stay on once baby handles it well.',
     prep12m:
       'Cook until tender and serve in small bite-sized pieces, or as a soft mash stirred loose rather than beaten sticky.',
     chokingNotes: 'Raw or under-cooked potato is hard and slippery and can shear into a firm, airway-blocking chunk — always cook until it mashes easily between two fingers, peel it for the youngest babies, and never serve raw or firm cubes. Stiff, gluey mash is hard to swallow too, so keep it loose and soft.',
@@ -738,7 +758,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Steam or roast until soft and cut into a finger-length spear, skin on or off.',
     prep9m:
-      'Cook until soft and dice into pea-to-bite-sized soft pieces.',
+      'Cook until soft and serve as finger-length spears, or dice into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Cook until tender and dice into small bite-sized pieces.',
     allergens: [],
@@ -756,7 +776,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Steam until very soft and serve whole, trimmed pods as a finger food that mashes easily between two fingers.',
     prep9m:
-      'Steam until soft and cut into pea-to-bite-sized pieces.',
+      'Steam until soft and serve whole pods, or cut into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Steam until tender and cut into small bite-sized pieces.',
     chokingNotes: 'Under-cooked green beans are stringy and fibrous — cook until they mash easily before serving.',
@@ -814,7 +834,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Remove all seeds and rind, and cut into a finger-length wedge or stick that is not too thin to grip.',
     prep9m:
-      'Remove all seeds and rind, and dice into pea-to-bite-sized pieces.',
+      'Remove all seeds and rind, and cut into finger-length sticks, or dice into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Remove all seeds and rind, and dice into small bite-sized pieces.',
     chokingNotes: 'Watermelon is slippery and can slide toward the throat in large pieces — check thoroughly for seeds and keep pieces a manageable, gummable size.',
@@ -835,7 +855,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Cook breast meat thoroughly and serve as a finger-length strip cut along the grain, or shred it finely and moisten with cooking liquid or olive oil so it is never dry or stringy.',
     prep9m:
-      'Cook thoroughly and shred or chop into soft, pea-sized pieces for pincer-grasp self-feeding, moistened so they do not crumble apart.',
+      'Cook thoroughly and cut into finger-length strips along the grain, or shred or chop into small bite-sized pieces (no bigger than ½ inch) for pincer practice, moistened so they do not crumble apart.',
     prep12m:
       'Cook thoroughly and dice into small, soft bite-sized pieces.',
     chokingNotes: 'Breast meat dries out faster than thigh and turns stringy or crumbly when it does — keep it moist, trim any gristle, and check carefully for small bones before serving.',
@@ -855,7 +875,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Shape ground turkey into a thin, moist patty and cut it into finger-length strips, or slow-cook thigh meat and shred it finely, moistened with cooking liquid.',
     prep9m:
-      'Cook thoroughly and serve as soft, pea-sized pieces of mince or shredded thigh, or as a small meatball squashed flat.',
+      'Cook thoroughly and serve as finger-length strips of thin patty, or small bite-sized pieces of mince or shredded thigh (no bigger than ½ inch) for pincer practice, or as a small meatball squashed flat.',
     prep12m:
       'Cook thoroughly and dice or shred into small, soft bite-sized pieces.',
     chokingNotes: 'Ground turkey is very lean and cooks dry and crumbly — bind it with grated vegetable or a little oil, and never serve a firm, round meatball whole.',
@@ -875,7 +895,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Choose a tender cut such as loin or tenderloin, cook it well-done, and serve a finger-length strip cut along the grain, moistened with cooking liquid or olive oil.',
     prep9m:
-      'Cook well-done and shred or finely chop into soft, pea-sized pieces.',
+      'Cook well-done and cut into finger-length strips along the grain, or shred or finely chop into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Cook until tender and dice into small, soft bite-sized pieces, or slow-cook and shred.',
     chokingNotes: 'Pork firms up and turns chewy the moment it is overcooked — keep it moist, shred it finely against the grain, and trim every piece of fat, rind, and gristle first.',
@@ -895,7 +915,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Use lamb mince cooked well-done and moistened into a soft pile, or slow-cook shoulder until it falls apart and serve a finger-length shred.',
     prep9m:
-      'Cook well-done and serve soft, pea-sized pieces of mince or shredded slow-cooked shoulder.',
+      'Cook well-done and serve a finger-length shred of slow-cooked shoulder, or small bite-sized pieces of mince or shoulder (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Slow-cook until tender and dice or shred into small, soft bite-sized pieces.',
     chokingNotes: 'Chops and any cut on the bone are not a baby food — serve mince or slow-cooked shoulder only, and check by feel for bone fragments before every serving.',
@@ -917,7 +937,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Bake or poach until it flakes, then serve a soft finger-length piece, running your fingers through it for bones first.',
     prep9m:
-      'Cook through and flake into soft, pea-sized pieces, re-checking for stray bones.',
+      'Cook through, re-check every flake for stray bones, and serve a soft finger-length piece of pressed flakes, or small bite-sized flakes (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Cook through and flake into small bite-sized pieces, or serve a small piece of fillet to pick apart.',
     chokingNotes: 'Cod is a low-bone fish, not a boneless one — run your fingers through every flake before serving, and moisten dry flakes with a little cooking liquid or olive oil.',
@@ -937,7 +957,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Bake or poach until just cooked through, then flake into a soft finger-length piece, feeling carefully for pin bones.',
     prep9m:
-      'Cook through and flake into soft, pea-sized pieces, checking for pin bones twice.',
+      'Cook through, check every flake for pin bones twice, and serve a soft finger-length piece of pressed flakes, or small bite-sized flakes (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Cook through and flake into small bite-sized pieces.',
     chokingNotes: 'Trout carries a row of fine pin bones that survive cooking — check every flake by feel, twice, even from a fillet sold as deboned.',
@@ -957,7 +977,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Drain skipjack ("light") tuna canned in water and mash it smooth with plain yogurt, mashed avocado, or olive oil so it is not dry and crumbly, then serve as a soft mashed pile or spread a thin layer on a soft toast finger.',
     prep9m:
-      'Mash drained light tuna smooth with yogurt or olive oil and serve as soft, pea-sized dollops, or stir it through soft pasta or a vegetable mash.',
+      'Mash drained light tuna smooth with yogurt or olive oil and serve as soft, small bite-sized dollops (no bigger than ½ inch), or stir it through soft pasta or a vegetable mash.',
     prep12m:
       'Mash or flake drained light tuna into small bite-sized pieces, stirred through pasta or spread thinly.',
     chokingNotes: 'Drained tuna is dry and crumbly on its own and packs into a dense ball in the mouth — always mash it with something wet, such as plain yogurt, mashed avocado, or a little olive oil.',

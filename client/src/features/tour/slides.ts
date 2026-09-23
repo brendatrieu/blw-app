@@ -34,7 +34,7 @@ export const TOUR_SLIDES: readonly TourSlide[] = [
   },
   {
     title: "Help when you need it",
-    body: "Learn has short guides on choking, allergies, and tummy changes. Symptom check helps you decide if you should seek care. Find both under More.",
+    body: "Learn has short guides on choking, allergies, and tummy changes. Symptom check helps you decide if you should seek care. Find both under More. Always stay with baby and keep them sitting upright while they eat.",
     emoji: "🛟",
   },
   {

@@ -32,7 +32,7 @@ export const coverageRecipesA: RecipeSeed[] = [
       { foodSlug: 'strawberry', quantityNote: '3 strawberries, hulled and finely mashed' },
       {
         foodSlug: 'almond_butter',
-        quantityNote: '1 tablespoon smooth almond butter, whisked runny with warm water',
+        quantityNote: '1 tablespoon smooth almond butter, whisked with warm water until runny',
       },
       { foodSlug: 'chia_seeds', quantityNote: '1 teaspoon chia seeds' },
     ],
@@ -46,17 +46,17 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Leave them in the fridge overnight, or at least 10 minutes if you are in a hurry, until every chia seed has swelled into a soft gel with no dry grit left.',
           'Hull the strawberries and mash them completely flat, so no round or half-berry shape remains, then stir them through.',
           'Whisk the almond butter with a little warm water until it is runny, never thick or straight from the jar, and swirl it through the oats.',
-          'Thin with extra milk or water to a smooth, drippy consistency and serve on a pre-loaded spoon, with baby sitting upright and supervised.',
+          'Thin with extra milk or water to a smooth, drippy consistency and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote:
-          'Thicker, spoonable oats with finely diced strawberry in pea-sized pieces for pincer-grasp practice.',
+          'Thicker, spoonable oats with strawberry finely diced into small bite-sized pieces (no bigger than ½ inch) for pincer-grasp practice.',
         steps: [
           'Soak the oats and chia seeds in a little less liquid, so the texture ends up thicker than a drizzly consistency, overnight or for at least 10 minutes, until the chia has gelled and nothing is still dry.',
-          'Hull the strawberries and dice them finely so no round or half-berry shape remains, then fold them in.',
-          'Whisk the almond butter runny with warm water and stir it through, so no thick pocket is left anywhere.',
-          'Serve with a spoon for self-feeding, with a few strawberry pieces on the tray for fingers, and sit with baby throughout.',
+          'Hull the strawberries and dice them finely into small bite-sized pieces (no bigger than ½ inch) so no round or half-berry shape remains, then fold them in.',
+          'Whisk the almond butter with warm water until runny and stir it through, so no thick pocket is left anywhere.',
+          'Serve with a spoon for self-feeding, with a few strawberry pieces on the tray for fingers.',
         ],
       },
       '12': {
@@ -64,8 +64,8 @@ export const coverageRecipesA: RecipeSeed[] = [
         steps: [
           'Soak the oats and chia seeds overnight in enough milk or water for a thick, family-style porridge, long enough that every seed has swelled soft.',
           'Hull and quarter the strawberries lengthwise, never leaving a whole round berry, and stir most of them through.',
-          'Whisk the almond butter runny and ripple it over the top, keeping the layer thin rather than a glob.',
-          'Serve cold with a spoon and let baby scoop for themselves, with baby sitting upright and supervised.',
+          'Whisk the almond butter until runny and ripple it over the top, keeping the layer thin rather than a glob.',
+          'Serve cold with a spoon and let baby scoop for themselves.',
         ],
       },
     },
@@ -100,17 +100,17 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, with a pinch of cinnamon stirred in as they go, until soft and smooth.',
           'Take the pan off the heat, then stir in the softened pear and the ground flaxseed until it disappears into the porridge.',
           'Whisk the sunflower seed butter with a little warm water until it is runny, then swirl it through so no thick pocket is left.',
-          'Thin with extra liquid to a drippy consistency, cool to a safe temperature, and serve on a pre-loaded spoon, with baby sitting upright and supervised.',
+          'Thin with extra liquid to a drippy consistency, cool to a safe temperature, and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote:
-          'Thicker, spoonable porridge with small soft pieces of pear left in for pincer-grasp practice.',
+          'Thicker, spoonable porridge with small bite-sized pieces of soft pear (no bigger than ½ inch) left in for pincer-grasp practice.',
         steps: [
-          'Simmer the diced pear in a splash of water over low heat for 5-7 minutes, until it squashes easily between two fingers, leaving some pea-to-bite-sized pieces whole.',
+          'Simmer the diced pear in a splash of water over low heat for 5-7 minutes, until it squashes easily between two fingers, leaving the pieces whole rather than mashing them.',
           'Cook the oats over medium-low heat for 4-5 minutes with a pinch of cinnamon, until thick enough to sit on a spoon.',
-          'Off the heat, stir through the pear, the ground flaxseed, and the sunflower seed butter whisked runny with warm water.',
-          'Cool to just warm, then serve with a spoon for self-feeding, checking the pear pieces squash easily first, and sit with baby throughout.',
+          'Off the heat, stir through the pear, the ground flaxseed, and the sunflower seed butter whisked with warm water until runny.',
+          'Cool to just warm, then serve with a spoon for self-feeding, checking the pear pieces squash easily first.',
         ],
       },
       '12': {
@@ -118,8 +118,8 @@ export const coverageRecipesA: RecipeSeed[] = [
         steps: [
           'Cook the oats over medium-low heat for 5-6 minutes with a pinch of cinnamon, until thick and family-style.',
           'Dice a ripe pear into small bite-sized pieces, softening it first over low heat for 5-7 minutes if it is still firm, then fold it in.',
-          'Stir in the ground flaxseed and a swirl of sunflower seed butter whisked runny, mixed evenly so no thick pockets remain.',
-          'Cool to just-warm, then serve with a spoon, with baby sitting upright and supervised.',
+          'Stir in the ground flaxseed and a swirl of sunflower seed butter, whisked with warm water until runny and mixed evenly so no thick pockets remain.',
+          'Cool to just-warm, then serve with a spoon.',
         ],
       },
     },
@@ -147,17 +147,17 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Smash each blueberry flat with a fork, so no whole, round berry shape remains.',
           'Mash the banana smooth and fold it through the yogurt.',
           'Grind the pecans to a fine, flour-like meal — never a half or a piece — and stir a teaspoon of it through until it disappears.',
-          'Fold in the smashed blueberries and serve on a pre-loaded spoon, with baby sitting upright and supervised.',
+          'Fold in the smashed blueberries and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote:
-          'Thick yogurt with pea-sized pieces of banana and quartered blueberries baby can pick up between finger and thumb.',
+          'Thick yogurt with small bite-sized pieces of banana (no bigger than ½ inch) and quartered blueberries baby can pick up between finger and thumb.',
         steps: [
           'Smash the blueberries flat or quarter them lengthwise, so no round or half-berry shape is left.',
-          'Cut the banana into half-moons or small pea-to-bite-sized pieces and stir most of them into the yogurt.',
+          'Cut the banana into half-moons or small bite-sized pieces (no bigger than ½ inch) and stir most of them into the yogurt.',
           'Stir in the finely ground pecan meal so nothing crunchy remains.',
-          'Serve with a spoon, keeping a few pieces of fruit on the tray for pincer-grasp practice, and stay close and supervised.',
+          'Serve with a spoon, keeping a few pieces of fruit on the tray for pincer-grasp practice.',
         ],
       },
       '12': {
@@ -167,7 +167,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Quarter the blueberries lengthwise rather than serving them whole, even now that chewing is improving.',
           'Slice the banana into small bite-sized pieces and add them to the yogurt.',
           'Stir a teaspoon of finely ground pecan meal through the bowl — halves and pieces stay off the menu.',
-          'Serve cold with a spoon and let baby scoop for themselves, with baby sitting upright and supervised.',
+          'Serve cold with a spoon and let baby scoop for themselves.',
         ],
       },
     },
@@ -196,17 +196,17 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Peel the kiwi and mash it with the banana until smooth.',
           'Fold the fruit through the gelled chia.',
           'Thin with a little more milk or water to a smooth, drippy consistency and serve on a pre-loaded spoon.',
-          'Keep the portion small — chia is very high in fiber, so a teaspoon of seed a serving is plenty — and offer water in an open cup alongside, with baby sitting upright and supervised.',
+          'Keep the portion small — chia is very high in fiber, so a teaspoon of seed a serving is plenty — and offer water in an open cup alongside.',
         ],
       },
       '9': {
         textureNote:
-          'Soft, spoonable pudding with the fruit in pea-to-bite-sized pieces baby can pick up.',
+          'Soft, spoonable pudding with the fruit in small bite-sized pieces (no bigger than ½ inch) baby can pick up.',
         steps: [
           'Soak the chia seeds in milk or water for at least 10 minutes, or overnight, until they have swelled into a soft gel and nothing is still dry.',
-          'Peel and dice the kiwi into pea-to-bite-sized soft pieces and cut the banana into half-moons.',
+          'Peel and dice the kiwi into small bite-sized soft pieces (no bigger than ½ inch) and cut the banana into half-moons.',
           'Stir most of the fruit through the gelled chia, keeping a few pieces back for the tray.',
-          'Serve with a spoon for self-feeding, with water alongside, and sit with baby throughout.',
+          'Serve with a spoon for self-feeding, with water alongside.',
         ],
       },
       '12': {
@@ -215,7 +215,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soak the chia seeds in milk or water overnight — never stirred in dry — until the gel is thick and spoonable.',
           'Peel and dice the kiwi into small bite-sized pieces and slice the banana into small rounds.',
           'Fold the fruit through and serve cold with a spoon.',
-          'Keep the portion small and offer water alongside, since a spoonful of chia carries a lot of fiber, and serve with baby sitting upright and supervised.',
+          'Keep the portion small and offer water alongside, since a spoonful of chia carries a lot of fiber.',
         ],
       },
     },
@@ -243,17 +243,17 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Remove all the seeds and rind from the watermelon and cut a thick finger-length strip that is not too thin to grip.',
           'Peel the kiwi and cut a finger-length wedge from the soft, ripe flesh.',
           'Spoon the yogurt into a small bowl and sprinkle a pinch of hulled hemp hearts over it, so they cling to the wet surface rather than scattering.',
-          'Serve the fruit strips alongside for dipping, and load a spoon with yogurt for baby to take, with baby sitting upright and supervised.',
+          'Serve the fruit strips alongside for dipping, and load a spoon with yogurt for baby to take.',
         ],
       },
       '9': {
         textureNote:
-          'Pea-to-bite-sized pieces of melon and kiwi for pincer-grasp practice, with hemp hearts stirred through the yogurt.',
+          'A finger-length strip of melon and a wedge of kiwi, or small bite-sized pieces (no bigger than ½ inch) for pincer practice, with hemp hearts stirred through the yogurt.',
         steps: [
-          'Remove every seed and all the rind from the watermelon and dice it into pea-to-bite-sized pieces.',
-          'Peel the kiwi and dice it the same size.',
+          'Remove every seed and all the rind from the watermelon strip, and serve it whole or dice it into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+          'Peel the kiwi and cut a finger-length wedge, or dice it the same way.',
           'Stir a pinch of hulled hemp hearts through the yogurt so they soften into it.',
-          'Serve the fruit on the tray with the yogurt in a bowl for dipping and scooping, and sit with baby throughout — melon can be slippery.',
+          'Serve the fruit on the tray with the yogurt in a bowl for dipping and scooping — melon can be slippery.',
         ],
       },
       '12': {
@@ -262,7 +262,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Dice the deseeded, derinded watermelon and the peeled kiwi into small bite-sized pieces.',
           'Spoon the yogurt into a bowl and fold the fruit through.',
           'Sprinkle a pinch of hulled hemp hearts over the top, onto the wet yogurt so they cling.',
-          'Serve cold with a spoon, with baby sitting upright and supervised.',
+          'Serve cold with a spoon.',
         ],
       },
     },
@@ -280,7 +280,7 @@ export const coverageRecipesA: RecipeSeed[] = [
       { foodSlug: 'wheat_toast', quantityNote: '1 slice bread' },
       {
         foodSlug: 'almond_butter',
-        quantityNote: '1 tablespoon smooth almond butter, whisked runny with warm water',
+        quantityNote: '1 tablespoon smooth almond butter, whisked with warm water until runny',
       },
       { foodSlug: 'banana', quantityNote: '1/2 ripe banana, mashed' },
       { foodSlug: 'flax_seeds', quantityNote: '1 teaspoon flaxseed, ground to a meal' },
@@ -295,18 +295,18 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cut it into finger-length strips.',
           'Whisk the almond butter with warm water until it is runny, never thick or straight from the jar, and spread a very thin layer over each strip.',
           'Mash the banana smooth, smooth it over the top, and dust the ground flaxseed over so it disappears into the banana.',
-          'Let the strips cool a minute so they are comfortable to hold, then serve while they are still soft, with baby sitting upright and supervised.',
+          'Let the strips cool a minute so they are comfortable to hold, then serve while they are still soft.',
         ],
       },
       '9': {
         textureNote:
-          'Small soft squares for pincer-grasp self-feeding, with banana in pea-sized pieces on top.',
+          'Soft strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice, with banana on top.',
         steps: [
-          'Toast and moisten the bread for 1-2 minutes, until it is soft, then cut it into small squares.',
-          'Whisk the almond butter runny with warm water and spread it thinly over each square.',
-          'Cut the banana into half-moons or small pea-sized pieces and press a few onto each square.',
+          'Toast and moisten the bread for 1-2 minutes, until it is soft, then cut it into strips, or small squares (no bigger than ½ inch) for pincer practice.',
+          'Whisk the almond butter with warm water until it is runny, and spread it thinly over each piece.',
+          'Cut the banana into half-moons or small bite-sized pieces (no bigger than ½ inch) and press a few onto each piece.',
           'Sprinkle the ground flaxseed over the wet nut butter so it sticks rather than scattering.',
-          'Let it cool for a minute so it is comfortable to hold, then serve on the tray for self-feeding, with baby sitting upright and supervised.',
+          'Let it cool for a minute so it is comfortable to hold, then serve on the tray for self-feeding.',
         ],
       },
       '12': {
@@ -314,9 +314,9 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Small bite-sized squares or triangles, family-style, with a thin nut-butter layer and soft banana.',
         steps: [
           'Toast the bread for 1-2 minutes, until golden, and cut it into small bite-sized squares or triangles.',
-          'Whisk the almond butter runny for spreading — still no thick spoonfuls or globs — and spread a thin layer on each piece.',
+          'Whisk the almond butter until runny for spreading — still no thick spoonfuls or globs — and spread a thin layer on each piece.',
           'Slice the banana into small bite-sized rounds and add them on top with a sprinkle of ground flaxseed.',
-          'Let it cool briefly, then serve with a vitamin-C side like orange segments with the membrane removed, with baby sitting upright and supervised.',
+          'Let it cool briefly, then serve with a vitamin-C side like orange segments with the membrane removed.',
         ],
       },
     },
@@ -337,11 +337,9 @@ export const coverageRecipesA: RecipeSeed[] = [
       { foodSlug: 'walnuts', quantityNote: '2 tablespoons walnuts, ground to a fine meal' },
       { foodSlug: 'wheat_toast', quantityNote: '1 slice bread, for dipping fingers' },
       { foodSlug: 'cumin', quantityNote: 'a pinch, warmed in a little oil and blended into the dip' },
+      { foodSlug: 'lemon', quantityNote: 'a squeeze of juice' },
     ],
-    extraIngredients: [
-      { name: 'olive oil', quantityNote: 'a drizzle of' },
-      { name: 'lemon juice', quantityNote: 'a squeeze of' },
-    ],
+    extraIngredients: [{ name: 'olive oil', quantityNote: 'a drizzle of' }],
     variants: {
       '6': {
         textureNote:
@@ -352,7 +350,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Warm a pinch of cumin in a little olive oil over medium heat for 30-60 seconds, until it smells fragrant, then take the pan off the heat.',
           'Grind the walnuts to a fine, flour-like meal — never a half or a piece — and blend them raw into the peeled pepper with the cumin oil and a squeeze of lemon juice, until smooth with nothing crunchy left.',
           'Toast the bread for 1-2 minutes and moisten it until it bends without snapping, then cut it into finger-length strips.',
-          'Spread a thin layer of the dip along each strip and serve, with baby sitting upright and supervised.',
+          'Spread a thin layer of the dip along each strip and serve.',
         ],
       },
       '9': {
@@ -363,7 +361,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Warm the cumin in a little olive oil over medium heat for 30-60 seconds, until fragrant.',
           'Blend the peeled pepper with the finely ground walnut meal, the cumin oil, and a squeeze of lemon juice, until smooth.',
           'Toast and moisten the bread for 1-2 minutes, until soft, then cut it into small squares for pincer-grasp self-feeding.',
-          'Serve the dip in a shallow bowl with the squares alongside, with baby sitting upright and supervised.',
+          'Serve the dip in a shallow bowl with the squares alongside.',
         ],
       },
       '12': {
@@ -374,7 +372,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Warm the cumin in a little olive oil over medium heat for 30-60 seconds, until it smells fragrant.',
           'Blend it with the finely ground walnut meal and lemon juice until smooth — the meal stays ground, since nut pieces are off the menu until age 4-5.',
           'Toast the bread for 1-2 minutes, until golden, and cut it into small bite-sized triangles.',
-          'Serve as part of a plate with soft vegetables, with no added salt anywhere, and with baby sitting upright and supervised.',
+          'Serve as part of a plate with soft vegetables, with no added salt anywhere.',
         ],
       },
     },
@@ -414,18 +412,18 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Add the rinsed black beans and warm them through over medium heat for 3-4 minutes, then mash them well so no bean keeps its round shape.',
           'Mash the sweet potato in and take the pan off the heat.',
           'Grind the pumpkin seeds to a fine meal and stir a couple of teaspoons through off the heat, with a little very finely chopped cilantro.',
-          'Cool to a safe temperature and serve thick and scoopable on a pre-loaded spoon, with baby sitting upright and supervised.',
+          'Cool to a safe temperature and serve thick and scoopable on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote:
-          'Soft smash with pea-to-bite-sized cubes of sweet potato and pepper, and every bean squashed flat.',
+          'Soft smash with small bite-sized cubes of sweet potato and pepper (no bigger than ½ inch), and every bean squashed flat.',
         steps: [
-          'Steam the cubed sweet potato for 12-15 minutes, until soft, then cut it into pea-to-bite-sized cubes.',
+          'Steam the cubed sweet potato for 12-15 minutes, until soft, then cut it into small bite-sized cubes (no bigger than ½ inch).',
           'Soften the finely diced bell pepper in a little olive oil over medium heat for 4-5 minutes, until tender all the way through.',
           'Warm the beans through over medium heat for 3-4 minutes and squash each one flat between your fingers, leaving some soft texture.',
           'Off the heat, stir in the finely ground pumpkin seed meal and a little very finely chopped cilantro.',
-          'Cool and serve on the tray for pincer-grasp self-feeding, with a spoon alongside, staying close and supervised.',
+          'Cool and serve on the tray for pincer-grasp self-feeding, with a spoon alongside.',
         ],
       },
       '12': {
@@ -436,7 +434,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soften the diced pepper in a little olive oil over medium heat for 4-5 minutes, until tender.',
           'Warm the beans through over medium heat for 3-4 minutes and squash any that are still firm, so each one gives easily between two fingers.',
           'Stir it all together off the heat with the finely ground pumpkin seed meal and finely chopped cilantro leaves, keeping the stringy stalks out.',
-          'Cool to a safe temperature, then serve as part of a family plate, with no added salt, and baby sitting upright and supervised.',
+          'Cool to a safe temperature, then serve as part of a family plate, with no added salt.',
         ],
       },
     },
@@ -472,18 +470,18 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Brown the ground beef over medium heat for 5-6 minutes, breaking it up as it goes, until no pink is left on the outside.',
           'Add the skinned, diced tomatoes and the rinsed beans, then simmer covered over low heat for 20-25 minutes, until the beef is well-done at 160°F (71°C) with no pink left and the tomato has broken down.',
           'Mash the beans so none keeps its round shape, and mince or shred the beef very finely so nothing tough or stringy is left.',
-          'Moisten it all with the sauce so it is never dry, cool to a safe temperature, and serve thick on a pre-loaded spoon, with baby sitting upright and supervised.',
+          'Moisten it all with the sauce so it is never dry, cool to a safe temperature, and serve thick on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote:
-          'Soft, pea-sized pieces of beef and squashed beans in a thick sauce baby can pick up or scoop.',
+          'Soft, small bite-sized pieces of beef (no bigger than ½ inch) and squashed beans in a thick sauce baby can pick up or scoop.',
         steps: [
           'Warm a pinch of cumin and sweet paprika in a little olive oil over medium heat for 30-60 seconds, until fragrant.',
           'Brown the beef over medium heat for 5-6 minutes, then add the skinned, diced tomato and the rinsed beans.',
           'Simmer covered over low heat for 20-25 minutes, until the beef reads 160°F (71°C) with no pink left and the sauce is thick.',
-          'Finely chop or shred the beef into soft, pea-sized pieces and squash each bean flat.',
-          'Cool and serve on the tray for pincer-grasp self-feeding, with a spoon for the sauce, staying close throughout.',
+          'Finely chop or shred the beef into soft, small bite-sized pieces (no bigger than ½ inch) and squash each bean flat.',
+          'Cool and serve on the tray for pincer-grasp self-feeding, with a spoon for the sauce.',
         ],
       },
       '12': {
@@ -493,7 +491,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Warm the cumin and sweet paprika in a little olive oil over medium heat for 30-60 seconds — sweet paprika only, never hot, smoked hot, or chili powder.',
           'Brown the beef over medium heat for 5-6 minutes, then add the diced tomato and beans.',
           'Simmer covered over low heat for 25-30 minutes, until the beef is tender and well past 160°F (71°C) and the beans squash easily between two fingers.',
-          'Dice or shred the beef into small, soft bite-sized pieces, cool to a safe temperature, and serve with soft rice on the side, with baby sitting upright and supervised.',
+          'Dice or shred the beef into small, soft bite-sized pieces, cool to a safe temperature, and serve with soft rice on the side.',
         ],
       },
     },
@@ -528,18 +526,18 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cook the chicken thigh in the same pan over medium heat for about 6-7 minutes a side, until it is cooked through to 165°F (74°C) with no pink left, then rest it and shred it finely.',
           'Steam the broccoli florets for 8-10 minutes, keeping a bit of stem as a handle, until they mash easily between two fingers.',
           'Stir the cooked quinoa through the garlicky pan juices and press it into a soft patty shape, since loose grains are hard to pick up.',
-          'Cool the patty and the chicken until just warm, then serve with a floret to hold and a small pile of shredded thigh moistened with a little olive oil so it is not dry, with baby sitting upright and supervised.',
+          'Cool the patty and the chicken until just warm, then serve with a floret to hold and a small pile of shredded thigh moistened with a little olive oil so it is not dry.',
         ],
       },
       '9': {
         textureNote:
-          'Loose soft quinoa for pincer-grasp practice with pea-sized pieces of thigh meat and small florets.',
+          'Loose soft quinoa for pincer-grasp practice with small bite-sized pieces of thigh meat and florets (no bigger than ½ inch).',
         steps: [
           'Soften the minced garlic in a little olive oil over medium heat for 30-60 seconds, until fragrant.',
-          'Cook the thigh through to 165°F (74°C) — about 6-7 minutes a side over medium heat — until no pink is left, then chop or shred it into soft, pea-sized pieces.',
-          'Steam the broccoli for 8-10 minutes, until soft, and cut it into small pea-to-bite-sized florets.',
+          'Cook the thigh through to 165°F (74°C) — about 6-7 minutes a side over medium heat — until no pink is left, then chop or shred it into soft, small bite-sized pieces (no bigger than ½ inch).',
+          'Steam the broccoli for 8-10 minutes, until soft, and cut it into small bite-sized florets (no bigger than ½ inch).',
           'Fold the cooked quinoa through the pan juices and serve it loose for pincer-grasp practice.',
-          'Let everything cool to just warm before combining on the tray, with the chicken moistened so it does not crumble apart, and sit with baby throughout.',
+          'Let everything cool to just warm before combining on the tray, with the chicken moistened so it does not crumble apart.',
         ],
       },
       '12': {
@@ -549,7 +547,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soften the minced garlic in a little olive oil over medium heat for 30-60 seconds.',
           'Cook the thigh to 165°F (74°C) — about 6-7 minutes a side over medium heat — until no pink is left, then rest it and dice it into small, soft bite-sized pieces.',
           'Roast the broccoli at 400°F (200°C) for 15-18 minutes, until tender, and cut it into small bite-sized florets.',
-          'Check the quinoa and chicken have cooled to a safe temperature, then stir it all through and serve with a fork and fingers together, with baby sitting upright and supervised.',
+          'Check the quinoa and chicken have cooled to a safe temperature, then stir it all through and serve with a fork and fingers together.',
         ],
       },
     },
@@ -572,7 +570,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         foodSlug: 'green_beans',
         quantityNote: 'a handful of green beans, topped, tailed, and cut small',
       },
-      { foodSlug: 'rice', quantityNote: '1/3 cup rice, cooked fresh to serve' },
+      { foodSlug: 'rice', quantityNote: '1/3 cup freshly cooked rice, very soft' },
       { foodSlug: 'black_pepper', quantityNote: 'a small pinch, finely ground, cooked in' },
     ],
     extraIngredients: [
@@ -588,17 +586,17 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cover with water or a no-salt-added stock, add a small pinch of finely ground black pepper, and simmer covered over low heat for 25-30 minutes, until the carrot is fork-tender and the chicken reads 165°F (74°C) with no pink left.',
           'Lift the chicken out and shred it finely, moistening it with the cooking liquid so it is never dry or stringy.',
           'Mash the carrot and green beans until they give easily between two fingers, then stir the chicken back in.',
-          'Press the soft, sticky rice into a small ball or patty, cool the stew to just warm and check its temperature, then serve the stew alongside on a pre-loaded spoon, with baby sitting upright and supervised.',
+          'Press the soft, sticky rice into a small ball or patty, cool the stew to just warm and check its temperature, then serve the stew alongside on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote:
-          'Soft stew with pea-to-bite-sized carrot and green bean pieces and pea-sized chicken, with loose soft rice.',
+          'Soft stew with the chicken, carrot, and green beans in small bite-sized pieces (no bigger than ½ inch), with loose soft rice.',
         steps: [
           'Simmer the diced chicken, carrot, and green beans in water or no-salt-added stock over low heat for 25-30 minutes, with a small pinch of finely ground black pepper, until the carrot is soft and the chicken reads 165°F (74°C).',
-          'Shred or chop the chicken into soft, pea-sized pieces, moistened so they do not crumble apart.',
-          'Cut the carrot and green beans into pea-to-bite-sized pieces.',
-          'Cool the stew until it is only just warm, then serve the soft rice loose for pincer-grasp practice, with the stew spooned over, and stay close and supervised.',
+          'Shred or chop the chicken into soft, small bite-sized pieces (no bigger than ½ inch), moistened so they do not crumble apart.',
+          'Cut any larger carrot or green bean pieces down to small bite-sized pieces (no bigger than ½ inch).',
+          'Cool the stew until it is only just warm, then serve the soft rice loose for pincer-grasp practice, with the stew spooned over.',
         ],
       },
       '12': {
@@ -607,7 +605,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Simmer the chicken, carrot, and green beans over low heat for 25-30 minutes, with a pinch of finely ground pepper, until everything is tender and the chicken is 165°F (74°C) throughout.',
           'Dice the chicken into small, soft bite-sized pieces and cut the vegetables the same size.',
           'Cool the stew and check the temperature before serving over soft rice, reheating leftover rice only once and discarding anything left after that.',
-          'Let baby practice with a spoon and fingers, with no added salt in the pot, and baby sitting upright and supervised.',
+          'Let baby practice with a spoon and fingers, with no added salt in the pot.',
         ],
       },
     },
@@ -626,14 +624,14 @@ export const coverageRecipesA: RecipeSeed[] = [
       { foodSlug: 'chicken', quantityNote: '1 chicken breast (about 150g/5oz), diced' },
       {
         foodSlug: 'cashew_butter',
-        quantityNote: '1 tablespoon smooth cashew butter, whisked runny with warm water',
+        quantityNote: '1 tablespoon smooth cashew butter, whisked with warm water until runny',
       },
       { foodSlug: 'butternut_squash', quantityNote: '1 cup butternut squash, peeled and cubed' },
       {
         foodSlug: 'curry_powder',
         quantityNote: 'a pinch of mild, salt-free, chili-free curry powder, cooked in',
       },
-      { foodSlug: 'rice', quantityNote: '1/3 cup rice, cooked fresh to serve' },
+      { foodSlug: 'rice', quantityNote: '1/3 cup freshly cooked rice, very soft' },
     ],
     extraIngredients: [
       { name: 'unsweetened coconut milk' },
@@ -648,18 +646,18 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Add the diced chicken, the cubed butternut squash, and the coconut milk, then simmer covered over low heat for 20-25 minutes, until the squash falls apart under a fork and the chicken reads 165°F (74°C) with no pink left.',
           'Shred the chicken finely and mash the squash, so nothing needs chewing.',
           'Take the pan off the heat, whisk the cashew butter with a little warm water until runny, and stir it through so no thick pocket is left anywhere.',
-          'Press the soft rice into a small ball, cool the curry to just warm and check the temperature, then serve the curry alongside on a pre-loaded spoon, with baby sitting upright and supervised.',
+          'Press the soft rice into a small ball, cool the curry to just warm and check the temperature, then serve the curry alongside on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote:
-          'Soft curry with pea-sized chicken and small soft cubes of squash, with loose rice for pincer-grasp practice.',
+          'Soft curry with the chicken and squash in small bite-sized pieces (no bigger than ½ inch), with loose rice for pincer-grasp practice.',
         steps: [
           'Warm the mild curry powder in a little olive oil over medium heat for 30-60 seconds, until fragrant.',
           'Simmer the diced chicken and cubed squash in coconut milk over low heat for 20-25 minutes, until the squash is soft and the chicken reads 165°F (74°C).',
-          'Chop the chicken into soft, pea-sized pieces and cut the squash into pea-to-bite-sized cubes.',
-          'Off the heat, stir through the cashew butter whisked runny with warm water.',
-          'Cool the curry down before serving with soft rice for pincer-grasp practice and a spoon for the sauce, with baby sitting upright and supervised.',
+          'Chop the chicken and squash into soft, small bite-sized pieces (no bigger than ½ inch).',
+          'Off the heat, stir through the cashew butter whisked with warm water until runny.',
+          'Cool the curry down before serving with soft rice for pincer-grasp practice and a spoon for the sauce.',
         ],
       },
       '12': {
@@ -669,7 +667,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Warm the mild curry powder in a little olive oil over medium heat for 30-60 seconds — a blend with no salt and no chili in it.',
           'Simmer the chicken and squash in coconut milk over low heat for 20-25 minutes, until tender and the chicken is 165°F (74°C) throughout.',
           'Dice both into small bite-sized pieces and stir the runny cashew butter through off the heat, never as a thick glob.',
-          'Let the curry cool and check the temperature before serving over soft rice with a spoon and fingers, with baby sitting upright and supervised.',
+          'Let the curry cool and check the temperature before serving over soft rice with a spoon and fingers.',
         ],
       },
     },
@@ -711,18 +709,18 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Bake the logs at 375°F (190°C) for 16-18 minutes, until they read 165°F (74°C) in the centre with no pink left.',
           'Simmer the skinned, diced tomatoes over low heat for 15-20 minutes, until they collapse into a soft sauce, then mash it smooth.',
           'Cook the pasta for 10-12 minutes, well past al dente, until it is soft enough to squash against the roof of the mouth.',
-          'Spoon the sauce over the pasta, moisten the turkey logs with it so they are never dry, cool everything to just warm, and serve, with baby sitting upright and supervised.',
+          'Spoon the sauce over the pasta, moisten the turkey logs with it so they are never dry, cool everything to just warm, and serve.',
         ],
       },
       '9': {
         textureNote:
-          'Soft, pea-sized pieces of turkey and small pasta shapes for pincer-grasp self-feeding.',
+          'Soft, small bite-sized pieces of turkey meatball (no bigger than ½ inch) and small pasta shapes for pincer-grasp self-feeding.',
         steps: [
           'Wilt the spinach for 2-3 minutes, chop it very finely, squeeze the water out, and mix it into the turkey with a little olive oil and a pinch of finely rubbed oregano.',
           'Bake small meatballs at 375°F (190°C) for 14-16 minutes, until they read 165°F (74°C) in the centre, then squash each one flat rather than serving it round.',
           'Simmer the skinned, diced tomato over low heat for 15-20 minutes, until it breaks down into a soft sauce.',
           'Cook the small pasta shapes for 10-12 minutes, past al dente, until soft.',
-          'Let the meatballs cool to just warm, break them into soft, pea-sized pieces, and serve them through the pasta and sauce, staying close and supervised.',
+          'Let the meatballs cool to just warm, break them into soft, small bite-sized pieces (no bigger than ½ inch), and serve them through the pasta and sauce.',
         ],
       },
       '12': {
@@ -733,7 +731,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Bake the meatballs at 375°F (190°C) for 16-18 minutes, until they are 165°F (74°C) in the centre.',
           'Simmer the tomato sauce over low heat for 15-20 minutes, until thick, and stir a little more oregano through.',
           'Cook the pasta for 10-12 minutes, until tender, and toss it through the sauce.',
-          'Let the meatballs cool and check the temperature before cutting them into small bite-sized pieces — never a whole round meatball — and serve with no added salt, with baby sitting upright and supervised.',
+          'Let the meatballs cool and check the temperature before cutting them into small bite-sized pieces — never a whole round meatball — and serve with no added salt.',
         ],
       },
     },
@@ -765,18 +763,18 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Steam the cubed sweet potato for 12-15 minutes and the peas for 4-5 minutes, until both mash easily between two fingers.',
           'Mash the sweet potato, squash every pea flat so none keeps its round shape, and fold in the flaked cod with the beaten egg and a little finely snipped dill.',
           'Shape finger-length cakes and pan-fry them in a little olive oil over medium heat for about 3 minutes a side, until firm and set through to 160°F (71°C) in the centre.',
-          'Cool until just warm, check a cake mashes easily, and serve whole or torn into strips, with baby sitting upright and supervised.',
+          'Cool until just warm, check a cake mashes easily, and serve whole or torn into strips.',
         ],
       },
       '9': {
         textureNote:
-          'Pea-sized, soft crumbled pieces of fish cake baby can pick up between finger and thumb.',
+          'Soft finger-length cakes, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Bake the cod at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), checking every flake for bones by feel.',
           'Steam the sweet potato for 12-15 minutes and the peas for 4-5 minutes, until soft, then squash each pea flat.',
-          'Mix with the beaten egg and finely snipped dill fronds, and shape small cakes.',
-          'Pan-fry in a little olive oil over medium heat for about 3 minutes a side, until set to 160°F (71°C), then cool and break into soft, pea-sized pieces.',
-          'Serve on the tray for pincer-grasp self-feeding, staying close and supervised.',
+          'Mix with the beaten egg and finely snipped dill fronds, and shape finger-length cakes.',
+          'Pan-fry in a little olive oil over medium heat for about 3 minutes a side, until set to 160°F (71°C), then cool and serve whole, or break into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+          'Serve on the tray for pincer-grasp self-feeding.',
         ],
       },
       '12': {
@@ -785,7 +783,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Bake the cod at 375°F (190°C) for 10-12 minutes, until it flakes at 145°F (63°C), then flake it and check thoroughly for bones.',
           'Steam the sweet potato and peas for 12-15 minutes, until tender, and mash them together.',
           'Bind with the beaten egg and finely snipped dill, shape mini cakes, and pan-fry in a little olive oil over medium heat for about 3 minutes a side, until golden and 160°F (71°C) in the centre.',
-          'Cool until just warm, cut into small bite-sized pieces, and serve with soft vegetables on the side, with baby sitting upright and supervised.',
+          'Cool until just warm, cut into small bite-sized pieces, and serve with soft vegetables on the side.',
         ],
       },
     },
@@ -824,18 +822,18 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Add the skinned, diced tomatoes and simmer over low heat for 10-12 minutes, until they collapse into a soft sauce.',
           'Spoon the sauce over the cod and bake at 375°F (190°C) for 12-15 minutes, until the fish is opaque and flakes easily at 145°F (63°C).',
           'Steam the trimmed green beans for 8-10 minutes, until they mash easily between two fingers, and serve them whole as a finger food.',
-          'Run your fingers through every flake of cod for bones, stir the very finely chopped basil through the sauce off the heat, let it cool to just warm, and spoon it over, with baby sitting upright and supervised.',
+          'Run your fingers through every flake of cod for bones, stir the very finely chopped basil through the sauce off the heat, let it cool to just warm, and spoon it over.',
         ],
       },
       '9': {
         textureNote:
-          'Pea-sized flakes of cod with pea-to-bite-sized green beans for pincer-grasp self-feeding.',
+          'A soft finger-length piece of flaked cod, or small bite-sized flakes for pincer practice, with green beans in small bite-sized pieces (no bigger than ½ inch).',
         steps: [
           'Soften the minced garlic in a little olive oil over medium heat for 30-60 seconds, then simmer the skinned, diced tomato over low heat for 10-12 minutes, until soft.',
           'Bake the cod under the sauce at 375°F (190°C) for 12-15 minutes, until opaque and flaking at 145°F (63°C).',
-          'Flake it into soft, pea-sized pieces, re-checking for stray bones as you go.',
-          'Steam the green beans for 8-10 minutes, until soft, and cut them into pea-to-bite-sized pieces.',
-          'Stir the finely chopped basil in off the heat, cool to just warm, and serve on the tray, staying close and supervised.',
+          'Flake it, re-checking for stray bones as you go, then press some into a soft finger-length piece, or leave small bite-sized flakes (no bigger than ½ inch) for pincer practice.',
+          'Steam the green beans for 8-10 minutes, until soft, and cut any larger pieces down to small bite-sized pieces (no bigger than ½ inch).',
+          'Stir the finely chopped basil in off the heat, cool to just warm, and serve on the tray.',
         ],
       },
       '12': {
@@ -844,7 +842,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soften the minced garlic in a little olive oil over medium heat for 30-60 seconds and simmer the diced tomato over low heat for 10-12 minutes, until thick.',
           'Bake the cod at 375°F (190°C) for 12-15 minutes, until it flakes at 145°F (63°C), then check it for bones and break it into small bite-sized pieces.',
           'Steam the green beans for 8-10 minutes, until tender, and cut them into small bite-sized pieces.',
-          'Chop the basil very finely, stir it in at the end so the flavour stays bright, let the dish cool to a safe temperature, and serve with no added salt, with baby sitting upright and supervised.',
+          'Chop the basil very finely, stir it in at the end so the flavour stays bright, let the dish cool to a safe temperature, and serve with no added salt.',
         ],
       },
     },
@@ -862,7 +860,7 @@ export const coverageRecipesA: RecipeSeed[] = [
     ingredients: [
       { foodSlug: 'salmon', quantityNote: '115g (4oz) salmon fillet' },
       { foodSlug: 'broccoli', quantityNote: '1 cup broccoli florets' },
-      { foodSlug: 'rice', quantityNote: '1/3 cup rice' },
+      { foodSlug: 'rice', quantityNote: '1/3 cup freshly cooked rice, very soft' },
       {
         foodSlug: 'sesame_seeds',
         quantityNote: 'a pinch of sesame seeds, sprinkled onto the wet rice',
@@ -878,17 +876,17 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Steam the broccoli florets for 8-10 minutes, keeping a bit of stem as a handle, until they mash easily between two fingers.',
           'Press the soft, sticky rice into a small ball or patty rather than serving loose grains.',
           'Flake the salmon into a soft finger-length piece and moisten it with a little olive oil so it is not dry.',
-          'Sprinkle a pinch of sesame seeds over the wet rice so they cling rather than scatter, cool everything to just warm, and serve, with baby sitting upright and supervised.',
+          'Sprinkle a pinch of sesame seeds over the wet rice so they cling rather than scatter, cool everything to just warm, and serve.',
         ],
       },
       '9': {
         textureNote:
-          'Loose soft rice for pincer-grasp practice with pea-sized salmon flakes and small florets.',
+          'Loose soft rice for pincer-grasp practice with small bite-sized salmon flakes and florets (no bigger than ½ inch).',
         steps: [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then re-check every flake for stray bones.',
-          'Steam the broccoli for 8-10 minutes, until soft, and cut it into pea-to-bite-sized florets.',
+          'Steam the broccoli for 8-10 minutes, until soft, and cut it into small bite-sized florets (no bigger than ½ inch).',
           'Serve the soft rice loose for pincer-grasp practice.',
-          'Flake the salmon into soft, pea-sized pieces over the top, sprinkle a pinch of sesame seeds onto the wet rice, let it cool to just warm, and sit with baby throughout.',
+          'Flake the salmon into soft, small bite-sized pieces (no bigger than ½ inch) over the top, sprinkle a pinch of sesame seeds onto the wet rice, and let it cool to just warm.',
         ],
       },
       '12': {
@@ -898,7 +896,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, until it reads 145°F (63°C), then check for bones and flake it into small bite-sized pieces.',
           'Roast the broccoli at 400°F (200°C) for 15-18 minutes, until tender, and cut it into small bite-sized florets.',
           'Spoon it all over soft rice and finish with a pinch of sesame seeds on the wet grains.',
-          'Let the bowl cool to a safe temperature, then serve with a fork, keeping the sesame a pinch rather than a spoonful, with baby sitting upright and supervised.',
+          'Let the bowl cool to a safe temperature, then serve with a fork, keeping the sesame a pinch rather than a spoonful.',
         ],
       },
     },
@@ -933,7 +931,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Add the skinned, diced tomatoes and simmer over low heat for 12-15 minutes, until they break down into a soft sauce.',
           'Cook the pasta for 10-12 minutes, well past al dente, until it is very soft, and keep larger shapes whole as a finger food.',
           'Drain the boneless sardines, check them by feel for any small soft bones, and mash them well.',
-          'Fold the mashed sardines through the sauce off the heat, stir in the very finely chopped basil, let it cool to just warm, and spoon it over the pasta, with baby sitting upright and supervised.',
+          'Fold the mashed sardines through the sauce off the heat, stir in the very finely chopped basil, let it cool to just warm, and spoon it over the pasta.',
         ],
       },
       '9': {
@@ -942,8 +940,8 @@ export const coverageRecipesA: RecipeSeed[] = [
         steps: [
           'Soften the minced garlic in a little olive oil over medium heat for 30-60 seconds, then simmer the skinned, diced tomato over low heat for 12-15 minutes, until soft.',
           'Cook the small pasta shapes for 10-12 minutes, past al dente, until they squash easily.',
-          'Mash or flake the drained, boneless sardines into soft, pea-sized pieces, double-checking for any small bones.',
-          'Fold them through the sauce off the heat with the finely chopped basil, cool to just warm, then toss it with the pasta, staying close and supervised.',
+          'Mash or flake the drained, boneless sardines into soft, small bite-sized pieces (no bigger than ½ inch), double-checking for any small bones.',
+          'Fold them through the sauce off the heat with the finely chopped basil, cool to just warm, then toss it with the pasta.',
         ],
       },
       '12': {
@@ -952,7 +950,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soften the minced garlic in a little olive oil over medium heat for 30-60 seconds and simmer the diced tomato over low heat for 12-15 minutes, until thick.',
           'Cook the pasta for 10-12 minutes, until tender, and drain it.',
           'Flake the drained sardines into small bite-sized pieces, checking by feel for bones, and fold them through the sauce off the heat.',
-          'Chop the basil finely, stir it in at the end, let the sauce cool to a safe temperature, and serve with no added salt, with baby sitting upright and supervised.',
+          'Chop the basil finely, stir it in at the end, let the sauce cool to a safe temperature, and serve with no added salt.',
         ],
       },
     },
@@ -987,7 +985,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Mash the sauce smooth, so nothing needs chewing.',
           'Grind the walnuts to a fine, flour-like meal — never a half or a piece — and stir it through the finished sauce off the heat, until nothing crunchy is left.',
           'Cook the pasta for 10-12 minutes, well past al dente, until very soft, and keep larger shapes whole as a finger food.',
-          'Cool the sauce to just warm, then spoon it over and serve, loosening it with a little olive oil if it is stiff, with baby sitting upright and supervised.',
+          'Cool the sauce to just warm, then spoon it over and serve, loosening it with a little olive oil if it is stiff.',
         ],
       },
       '9': {
@@ -997,7 +995,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Simmer the lentils and skinned, diced tomato with a pinch of finely rubbed oregano over low heat for 20-25 minutes, until the lentils are soft with a little texture left.',
           'Stir the finely ground walnut meal through off the heat, so nothing crunchy remains.',
           'Cook the small pasta shapes for 10-12 minutes, past al dente, until soft.',
-          'Let the sauce cool to just warm, toss the pasta through it, and serve on the tray for self-feeding, with baby sitting upright and supervised.',
+          'Let the sauce cool to just warm, toss the pasta through it, and serve on the tray for self-feeding.',
         ],
       },
       '12': {
@@ -1006,7 +1004,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Simmer the lentils, diced tomato, and finely rubbed oregano over low heat for 20-25 minutes, until thick.',
           'Stir the finely ground walnut meal through off the heat — ground meal only, since nut pieces stay off the menu until age 4-5.',
           'Cook the pasta for 10-12 minutes, until tender, and toss it through the sauce.',
-          'Let the bolognese cool to a safe temperature, then serve with a fork and let baby practice twirling, with no added salt in the pan, and with baby sitting upright and supervised.',
+          'Let the bolognese cool to a safe temperature, then serve with a fork and let baby practice twirling, with no added salt in the pan.',
         ],
       },
     },
@@ -1023,13 +1021,13 @@ export const coverageRecipesA: RecipeSeed[] = [
     fridgeHoursOverride: 24,
     freezerDaysOverride: 30,
     ingredients: [
-      { foodSlug: 'tofu', quantityNote: '200g (7oz) firm tofu, pressed and cubed' },
+      { foodSlug: 'tofu', quantityNote: '200g (7oz) firm tofu, pressed' },
       {
         foodSlug: 'peanut_butter',
         quantityNote: '1 tablespoon smooth peanut butter, whisked with warm water until runny',
       },
       { foodSlug: 'broccoli', quantityNote: '1 cup broccoli florets' },
-      { foodSlug: 'rice', quantityNote: '1/3 cup rice' },
+      { foodSlug: 'rice', quantityNote: '1/3 cup freshly cooked rice, very soft' },
       { foodSlug: 'ginger', quantityNote: 'a small pinch, peeled and finely grated, cooked in' },
     ],
     extraIngredients: [
@@ -1041,35 +1039,32 @@ export const coverageRecipesA: RecipeSeed[] = [
         textureNote:
           'Finger-length strips of lightly pan-fried tofu, florets that mash easily between two fingers, and sticky rice pressed into a soft ball, all under a runny sauce.',
         steps: [
-          'Rinse the rice, then simmer it covered over low heat with plenty of water for 15-18 minutes, until every grain is very soft and sticky.',
           'Press the firm tofu dry, cut it into finger-length strips, and pan-fry them in a little olive oil over medium heat for 2-3 minutes a side, until lightly golden and still soft inside.',
           'Soften a small pinch of finely grated ginger in the same pan over medium heat for 30-60 seconds, until it smells warm rather than raw.',
           'Steam the broccoli florets for 8-10 minutes, keeping a bit of stem as a handle, until they mash easily between two fingers.',
           'Whisk the peanut butter with warm water until it is completely runny — never thick or straight from the jar — and stir the cooked ginger through it off the heat.',
-          'Press the soft, sticky rice into a small ball, arrange the tofu strips and florets alongside, cool everything to just warm, and spoon the thin sauce over, with baby sitting upright and supervised.',
+          'Press the soft, sticky rice into a small ball, arrange the tofu strips and florets alongside, cool everything to just warm, and spoon the thin sauce over.',
         ],
       },
       '9': {
         textureNote:
-          'Pea-to-bite-sized cubes of tofu and small florets for pincer-grasp practice, with loose soft rice.',
+          'Small bite-sized cubes of tofu and florets (no bigger than ½ inch) for pincer-grasp practice, with loose soft rice.',
         steps: [
-          'Rinse the rice, then simmer it covered over low heat with plenty of water for 15-18 minutes, until every grain is very soft and sticky.',
-          'Cut the pressed tofu into pea-to-bite-sized cubes and pan-fry them in a little olive oil over medium heat for 2-3 minutes a side, until lightly golden and easy for little fingers to grip.',
+          'Cut the pressed tofu into small bite-sized cubes (no bigger than ½ inch) and pan-fry them in a little olive oil over medium heat for 2-3 minutes a side, until lightly golden and easy for little fingers to grip.',
           'Soften the finely grated ginger in the pan over medium heat for 30-60 seconds, until fragrant.',
-          'Steam the broccoli for 8-10 minutes, until soft, and cut it into pea-to-bite-sized florets.',
+          'Steam the broccoli for 8-10 minutes, until soft, and cut it into small bite-sized florets (no bigger than ½ inch).',
           'Whisk the peanut butter with warm water until it is runny, stir the ginger through, and spoon the sauce over the rice, tofu, and broccoli.',
-          'Cool to just-warm, then serve the soft rice loose on the tray with the tofu and broccoli for pincer-grasp self-feeding, with baby sitting upright and supervised.',
+          'Cool to just-warm, then serve the soft rice loose on the tray with the tofu and broccoli for pincer-grasp self-feeding.',
         ],
       },
       '12': {
         textureNote:
           'Family-style bowl of soft rice with small bite-sized tofu and tender broccoli under a thin peanut sauce.',
         steps: [
-          'Rinse the rice, then simmer it covered over low heat with plenty of water for 15-18 minutes, until every grain is very soft and sticky.',
           'Cut the tofu into small bite-sized cubes and pan-fry in a little olive oil over medium heat for 2-3 minutes a side, until soft inside and lightly crisp outside.',
           'Soften the grated ginger in the pan over medium heat for 30-60 seconds, until fragrant.',
           'Roast the broccoli at 400°F (200°C) for 15-18 minutes, until tender, and cut it into small bite-sized florets.',
-          'Whisk the peanut butter with warm water until it is runny — still no thick spoonfuls or globs — cool everything to a safe temperature, and spoon it, with the tofu and broccoli, over a family-style bowl of soft rice, with a fork alongside and baby sitting upright and supervised.',
+          'Whisk the peanut butter with warm water until it is runny — still no thick spoonfuls or globs — cool everything to a safe temperature, and spoon it, with the tofu and broccoli, over a family-style bowl of soft rice, with a fork alongside.',
         ],
       },
     },
@@ -1110,18 +1105,18 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Add the peeled, diced carrot and the red lentils with water or a no-salt-added stock, then simmer covered over low heat for 20-25 minutes, until the lentils have collapsed and the carrot is fork-tender.',
           'Blend until completely smooth, so nothing needs chewing.',
           'Take the pan off the heat and stir in the juice and finely grated zest of half an orange, which keeps the vitamin C that helps the lentils along.',
-          'Thin with a little more liquid to a drippy consistency, cool to a safe temperature, and serve on a pre-loaded spoon, with baby sitting upright and supervised.',
+          'Thin with a little more liquid to a drippy consistency, cool to a safe temperature, and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote:
-          'Thicker soup with pea-to-bite-sized pieces of carrot, plus membrane-free orange segments on the tray.',
+          'Thicker soup with small bite-sized pieces of carrot (no bigger than ½ inch), plus membrane-free orange segments on the tray.',
         steps: [
           'Warm the mild curry powder in a little olive oil over medium heat for 30-60 seconds, until fragrant.',
           'Simmer the diced carrot and lentils in water or no-salt-added stock over low heat for 20-25 minutes, until the carrot is soft and the lentils have broken down.',
-          'Mash rather than blending, leaving pea-to-bite-sized pieces of carrot with some texture.',
+          'Mash rather than blending, leaving small bite-sized pieces of carrot (no bigger than ½ inch) with some texture.',
           'Stir the orange juice and finely grated zest in off the heat.',
-          'Cool to a safe temperature and serve with a spoon, with a few small membrane-free orange segment pieces alongside for pincer-grasp practice, staying close and supervised.',
+          'Cool to a safe temperature and serve with a spoon, with a few small membrane-free orange segment pieces alongside for pincer-grasp practice.',
         ],
       },
       '12': {
@@ -1130,7 +1125,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Warm the mild curry powder in a little olive oil over medium heat for 30-60 seconds — a blend with no salt and no chili in it.',
           'Simmer the diced carrot and lentils over low heat for 20-25 minutes, until tender.',
           'Stir the juice and finely grated zest of half an orange in off the heat, so the flavour and the vitamin C both survive.',
-          'Cool to a safe temperature and serve in a bowl with a spoon, with membrane-free orange segments cut into small bite-sized pieces on the side, and baby sitting upright and supervised.',
+          'Cool to a safe temperature and serve in a bowl with a spoon, with membrane-free orange segments cut into small bite-sized pieces on the side.',
         ],
       },
     },

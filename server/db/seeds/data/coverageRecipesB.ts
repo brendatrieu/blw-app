@@ -25,8 +25,8 @@ export const coverageRecipesB: RecipeSeed[] = [
     fridgeHoursOverride: 24,
     ingredients: [
       { foodSlug: 'yogurt', quantityNote: '1/2 cup plain whole-milk yogurt' },
-      { foodSlug: 'mango', quantityNote: '1/2 ripe mango, peeled and mashed or finely diced' },
-      { foodSlug: 'cashew_butter', quantityNote: '1 tablespoon smooth unsalted cashew butter, whisked runny with warm water' },
+      { foodSlug: 'mango', quantityNote: '1/2 ripe mango, peeled' },
+      { foodSlug: 'cashew_butter', quantityNote: '1 tablespoon smooth unsalted cashew butter, whisked with warm water until runny' },
       { foodSlug: 'hemp_seeds', quantityNote: '1 teaspoon hulled hemp hearts' },
     ],
     extraIngredients: [{ name: 'warm water, breast milk, or formula, to thin the cashew butter', quantityNote: 'a splash of' }],
@@ -42,10 +42,10 @@ export const coverageRecipesB: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Thick yogurt with pea-to-bite-sized soft mango pieces baby can pick up with a pincer grasp.',
+        textureNote: 'Thick yogurt with small bite-sized soft mango pieces (no bigger than ½ inch) baby can pick up with a pincer grasp.',
         steps: [
           'Whisk the cashew butter with a splash of warm water until it is runny enough to drip off the spoon.',
-          'Peel the mango and dice it into pea-to-bite-sized soft pieces, choosing fruit that is fully ripe rather than firm and slippery.',
+          'Peel the mango and dice it into small bite-sized soft pieces (no bigger than ½ inch), choosing fruit that is fully ripe rather than firm and slippery.',
           'Stir the runny cashew butter right through the yogurt, then fold the mango pieces in.',
           'Stir the hemp hearts through so they soften, and serve with a spoon for self-feeding.',
         ],
@@ -91,7 +91,7 @@ export const coverageRecipesB: RecipeSeed[] = [
           'Remove all membrane and seeds from the orange and cut the flesh into small pieces baby can pick up between finger and thumb.',
           'Stir the finely ground pistachio meal and a pinch of cinnamon through the yogurt until both are evenly mixed in.',
           'Fold half the orange through and leave the rest loose on the tray for pincer practice.',
-          'Serve with a spoon alongside, sitting with baby through the meal.',
+          'Serve with a spoon alongside.',
         ],
       },
       '12': {
@@ -124,16 +124,16 @@ export const coverageRecipesB: RecipeSeed[] = [
           'Cut the rind off the watermelon, check it over carefully for seeds, and cut it into finger-length sticks that are not too thin to grip.',
           'Hull the strawberries and quarter them lengthwise, so no whole or halved round berry shape remains, or mash them if baby prefers a spoon.',
           'Chop the basil as finely as you can and scatter it over the wet fruit — a whole leaf is slippery enough to fold over the airway, so never serve one.',
-          'Pile the fruit into a small cup and sit with baby throughout: melon is slippery, so keep every piece a size that can be gummed.',
+          'Pile the fruit into a small cup: melon is slippery, so keep every piece a size that can be gummed.',
         ],
       },
       '9': {
-        textureNote: 'Pea-to-bite-sized watermelon pieces with finely diced strawberry, loose in a cup for pincer-grasp practice.',
+        textureNote: 'Finger-length watermelon sticks, or small bite-sized pieces (no bigger than ½ inch) for pincer practice, with finely diced strawberry.',
         steps: [
-          'Remove all rind and seeds from the watermelon and dice it into pea-to-bite-sized pieces.',
+          'Remove all rind and seeds from the watermelon and cut it into finger-length sticks, or dice it into small bite-sized pieces (no bigger than ½ inch) for pincer practice — melon is slippery.',
           'Hull the strawberries and quarter or finely dice them so no round or half-berry shape is left.',
           'Toss the fruit with the very finely chopped basil, never a whole leaf.',
-          'Serve in a shallow cup for pincer-grasp self-feeding, sitting with baby throughout.',
+          'Serve on the tray or in a shallow cup for self-feeding.',
         ],
       },
       '12': {
@@ -141,7 +141,7 @@ export const coverageRecipesB: RecipeSeed[] = [
         steps: [
           'Remove the rind and seeds and dice the watermelon into small bite-sized pieces.',
           'Hull the strawberries and quarter or thinly slice them, still avoiding a whole round berry.',
-          'Toss everything with the finely chopped basil and serve with a fork or fingers, sitting with baby throughout — melon stays slippery at this age too.',
+          'Toss everything with the finely chopped basil and serve with a fork or fingers — melon stays slippery at this age too.',
         ],
       },
     },
@@ -170,9 +170,9 @@ export const coverageRecipesB: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Yogurt with soft, pea-to-bite-sized pear pieces that squash easily between two fingers.',
+        textureNote: 'Yogurt with soft, small bite-sized pear pieces (no bigger than ½ inch) that squash easily between two fingers.',
         steps: [
-          'Peel, core, and dice the pear into pea-to-bite-sized pieces, then simmer them with a splash of water and a pinch of cinnamon over low heat for 5-6 minutes, until they squash easily between two fingers but still hold their shape.',
+          'Peel, core, and dice the pear into small bite-sized pieces (no bigger than ½ inch), then simmer them with a splash of water and a pinch of cinnamon over low heat for 5-6 minutes, until they squash easily between two fingers but still hold their shape.',
           'Cool to just-warm, then stir in a teaspoon of hazelnuts ground to a fine meal.',
           'Spoon the yogurt into a bowl and fold the pear through it.',
           'Serve with a spoon, leaving a few pear pieces loose on the tray for pincer-grasp practice.',
@@ -212,24 +212,24 @@ export const coverageRecipesB: RecipeSeed[] = [
           'Whisk the sunflower seed butter with a splash of warm water until it is completely runny, then mash the very ripe banana into it with a pinch of cinnamon.',
           'Grind the pecans to a fine, flour-like meal, stir them in with both lots of oats, and leave the mixture to stand for 15 minutes so the oats swell and go soft rather than staying dry.',
           'Press the mixture firmly into a small lined tin and chill it for 1-2 hours, until it is firm enough to cut cleanly.',
-          'Cut into finger-length fingers, check one squishes easily between two fingers, and serve with baby sitting upright and supervised throughout.',
+          'Cut into finger-length fingers, check one squishes easily between two fingers, and serve.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized pieces broken from a chilled finger, easy to pick up with a pincer grasp.',
+        textureNote: 'Soft chilled fingers, or small bite-sized pieces (no bigger than ½ inch) broken from them for a pincer grasp.',
         steps: [
           'Blitz half the rolled oats to a flour and leave the rest whole, using rolled or quick oats only.',
-          'Whisk the sunflower seed butter runny with warm water, mash in the very ripe banana and a pinch of cinnamon, and stir through the oats and the finely ground pecan meal.',
+          'Whisk the sunflower seed butter with warm water until runny, mash in the very ripe banana and a pinch of cinnamon, and stir through the oats and the finely ground pecan meal.',
           'Let the mixture stand for 15 minutes so the oats soften, then press it into a lined tin and chill for 1-2 hours until firm.',
-          'Break a finger into soft, pea-sized pieces and serve them loose on the tray for self-feeding, sitting with baby throughout.',
+          'Cut into fingers, or break them into soft, small bite-sized pieces (no bigger than ½ inch), and serve on the tray for self-feeding.',
         ],
       },
       '12': {
         textureNote: 'Small bite-sized pieces of a soft chilled finger, or a whole finger to bite from.',
         steps: [
-          'Blitz half the rolled oats to a flour and leave the rest whole, whisk the sunflower seed butter runny with a splash of warm water, mash in the very ripe banana and a pinch of cinnamon, and stir in the pecans ground to a fine meal.',
+          'Blitz half the rolled oats to a flour and leave the rest whole, whisk the sunflower seed butter with a splash of warm water until runny, mash in the very ripe banana and a pinch of cinnamon, and stir in the pecans ground to a fine meal.',
           'Stand it for 15 minutes so the oats soften, press it into a lined tin, and chill for 1-2 hours until firm enough to cut.',
-          'Cut into small bite-sized pieces, or hand over a whole finger to bite from with supervision.',
+          'Cut into small bite-sized pieces, or hand over a whole finger to bite from.',
           'Pair with a vitamin-C side such as orange segments with the membrane removed.',
         ],
       },
@@ -260,11 +260,11 @@ export const coverageRecipesB: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Small moistened bread squares topped with a thin layer of mash, sized for a pincer grasp.',
+        textureNote: 'Moistened bread strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice, topped with a thin layer of mash.',
         steps: [
           'Drain skipjack ("light") tuna canned in water — never albacore, white, or bigeye — and mash it smooth with the ripe avocado.',
-          'Toast the bread for 1-2 minutes, until lightly golden, moisten it, then let it cool enough to handle and cut it into small squares.',
-          'Spread a thin layer of the mash over each square and stir or sprinkle the hemp hearts through it.',
+          'Toast the bread for 1-2 minutes, until lightly golden, moisten it, then let it cool enough to handle and cut it into finger-length strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice.',
+          'Spread a thin layer of the mash over each piece and stir or sprinkle the hemp hearts through it.',
           'Serve for pincer-grasp self-feeding, keeping tuna to about one small serving a week while baby is under two.',
         ],
       },
@@ -306,9 +306,9 @@ export const coverageRecipesB: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized pieces of vegetable and mince, loose on the tray for a pincer grasp.',
+        textureNote: 'Soft, small bite-sized pieces of vegetable and mince (no bigger than ½ inch), loose on the tray for a pincer grasp.',
         steps: [
-          'Peel the tough skin from the bell pepper and dice it and the peeled sweet potato into pea-sized pieces.',
+          'Peel the tough skin from the bell pepper and dice it and the peeled sweet potato into small bite-sized pieces (no bigger than ½ inch).',
           'Cook them in a little olive oil over medium heat for 8-10 minutes with a pinch of sweet (mild) paprika, until the pepper is completely tender.',
           'Add the ground turkey and cook over medium heat for 7-8 minutes more, until the sweet potato squashes easily between two fingers and the turkey reads 165°F (74°C) with no pink left.',
           'Stir in a little olive oil to keep the mince moist, cool to just-warm, and serve loose on the tray for self-feeding.',
@@ -352,12 +352,12 @@ export const coverageRecipesB: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Pea-to-bite-sized cubes of soft squash and apple with pea-sized pieces of shredded pork.',
+        textureNote: 'Finger-length wedges of soft squash, or small bite-sized pieces (no bigger than ½ inch) for pincer practice, with soft apple and shredded pork.',
         steps: [
-          'Peel and cube the butternut squash, peel, core, and dice the apple, and toss both with a little olive oil and a pinch of cinnamon.',
+          'Peel the butternut squash and cut it into finger-length wedges, peel, core, and dice the apple, and toss both with a little olive oil and a pinch of cinnamon.',
           'Trim the pork of all fat and gristle and roast everything together at 400°F (200°C) for 25-30 minutes, until the squash is fork-tender and the pork reads 160°F (71°C) with no pink left.',
-          'Finely chop or shred the pork into soft, pea-sized pieces and moisten it with the pan juices.',
-          'Cut the squash and apple into pea-to-bite-sized soft cubes, cool to just-warm, and serve everything loose for pincer-grasp self-feeding.',
+          'Finely chop or shred the pork into soft, small bite-sized pieces (no bigger than ½ inch) and moisten it with the pan juices.',
+          'Cool to just-warm and serve the squash wedges, or cut them into small bite-sized pieces (no bigger than ½ inch) for pincer practice, with the soft apple and pork alongside.',
         ],
       },
       '12': {
@@ -399,7 +399,7 @@ export const coverageRecipesB: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Small soft pasta shapes in a ragu with pea-sized pieces of mince, sized for a pincer grasp.',
+        textureNote: 'Small soft pasta shapes in a ragu with the mince in small bite-sized pieces (no bigger than ½ inch), sized for a pincer grasp.',
         steps: [
           'Brown the ground pork in a little olive oil over medium heat for 5-6 minutes, breaking it up finely.',
           'Add the grated carrot, the skinned and diced tomato, and a pinch of finely rubbed dried oregano, then simmer covered over low heat for 25-30 minutes, until the carrot has melted in and the pork is well past 160°F (71°C) and soft enough to squash.',
@@ -446,11 +446,11 @@ export const coverageRecipesB: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized pieces of shredded lamb and squash with the chickpeas squashed flat.',
+        textureNote: 'Soft, small bite-sized pieces of shredded lamb and squash (no bigger than ½ inch), with the chickpeas squashed flat.',
         steps: [
           'Warm a pinch each of cumin and cinnamon in a little olive oil over medium heat for 30-60 seconds, until fragrant.',
           'Add the lamb and water to cover and simmer covered over low heat for 1½-2 hours, until the lamb shreds under a fork and is well past 160°F (71°C), adding the squash and chickpeas for the last 20-25 minutes, until the squash is soft enough to squash between two fingers.',
-          'Squash each chickpea flat between your fingers, shred the lamb into soft, pea-sized pieces, and check by feel for bone fragments.',
+          'Squash each chickpea flat between your fingers, shred the lamb into soft, small bite-sized pieces (no bigger than ½ inch), and check by feel for bone fragments.',
           'Mash lightly so some soft texture is left, cool to just-warm, and serve for pincer-grasp self-feeding.',
         ],
       },
@@ -477,7 +477,7 @@ export const coverageRecipesB: RecipeSeed[] = [
       { foodSlug: 'lamb', quantityNote: '225g (8oz) ground lamb' },
       { foodSlug: 'peas', quantityNote: '1/2 cup peas' },
       { foodSlug: 'tomato', quantityNote: '2 tomatoes, skinned and diced' },
-      { foodSlug: 'rice', quantityNote: '1/3 cup rice, to serve' },
+      { foodSlug: 'rice', quantityNote: '1/3 cup freshly cooked rice, very soft' },
       { foodSlug: 'turmeric', quantityNote: 'a small pinch, cooked in with the lamb' },
     ],
     extraIngredients: [{ name: 'olive oil' }],
@@ -488,17 +488,17 @@ export const coverageRecipesB: RecipeSeed[] = [
           'Warm a small pinch of ground turmeric in a little olive oil over medium heat for 30-60 seconds, then add the ground lamb and brown it over medium heat for 5-6 minutes, breaking it up as it goes.',
           'Stir in the skinned, diced tomato and simmer over low heat for 20-25 minutes, until the tomato has broken down and the lamb is well past 160°F (71°C) and soft enough to mash.',
           'Add the peas for the last 5 minutes, then squash each one flat between your fingers so no whole round pea is left.',
-          'Cook the rice over low heat for 15-18 minutes, until it is very soft and sticky, then press it into a soft patty rather than serving loose grains.',
+          'Press the rice into a soft patty rather than serving loose grains.',
           'Mash the keema well, cool to just-warm, and serve it spooned beside the rice patty, feeling through the lamb for bone fragments first.',
         ],
       },
       '9': {
-        textureNote: 'Soft, pea-sized pieces of mince with squashed peas and loose rice grains for pincer practice.',
+        textureNote: 'Soft, small bite-sized pieces of mince (no bigger than ½ inch) with squashed peas and loose rice grains for pincer practice.',
         steps: [
           'Warm a small pinch of turmeric in a little olive oil over medium heat for 30-60 seconds, then brown the ground lamb over medium heat for 5-6 minutes.',
           'Stir in the skinned, diced tomato and simmer over low heat for 20-25 minutes, until the lamb is well past 160°F (71°C) and the sauce is thick, adding the peas for the last 5 minutes.',
           'Squash each pea flat between finger and thumb and check the mince by feel for bone fragments.',
-          'Cook the rice over low heat for 15-18 minutes, until soft, then cool everything to just-warm before serving the rice as loose grains beside the keema for pincer-grasp practice.',
+          'Cool everything to just-warm before serving the rice as loose grains beside the keema for pincer-grasp practice.',
         ],
       },
       '12': {
@@ -507,7 +507,7 @@ export const coverageRecipesB: RecipeSeed[] = [
           'Warm a small pinch of turmeric in a little olive oil over medium heat for 30-60 seconds, then brown the ground lamb over medium heat for 5-6 minutes.',
           'Add the skinned, diced tomato and simmer over low heat for 20-25 minutes, until thick and well past 160°F (71°C), adding the peas for the last 5 minutes.',
           'Squash the peas flat before serving — whole soft peas are fine in small amounts now, but squashing stays the safer default.',
-          'Cook the rice over low heat for 15-18 minutes, until soft, cool everything to just-warm, spoon the keema over it, and reheat any leftovers only once.',
+          'Cool everything to just-warm, spoon the keema over the rice, and reheat any leftovers only once.',
         ],
       },
     },
@@ -533,16 +533,16 @@ export const coverageRecipesB: RecipeSeed[] = [
           'Flake it into a bowl and run your fingers through every flake twice — trout carries a row of fine pin bones that survive cooking, even in a fillet sold as deboned.',
           'Let the fish cool, then mash it smooth with the yogurt and a little finely snipped dill, using the soft fronds only and none of the stringy stalks.',
           'Toast the bread for 1-2 minutes, until lightly golden, then moisten it with a little water so it bends without snapping and cut it into finger-length strips.',
-          'Spread a thin layer of the smash over each strip and serve, sitting with baby throughout.',
+          'Spread a thin layer of the smash over each strip and serve.',
         ],
       },
       '9': {
-        textureNote: 'Small moistened bread squares under a thin layer of smash, sized for a pincer grasp.',
+        textureNote: 'Moistened bread strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice, under a thin layer of smash.',
         steps: [
           'Bake the trout at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then flake it and check every flake by feel for pin bones, twice.',
           'Cool the fish and mash it with the yogurt and finely snipped dill fronds into a soft, spreadable smash.',
-          'Toast the bread for 1-2 minutes, until lightly golden, moisten it, and cut it into small squares.',
-          'Spread the smash thinly over each square and serve for pincer-grasp self-feeding, sitting with baby throughout.',
+          'Toast the bread for 1-2 minutes, until lightly golden, moisten it, and cut it into finger-length strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice.',
+          'Spread the smash thinly over each piece and serve.',
         ],
       },
       '12': {
@@ -551,7 +551,7 @@ export const coverageRecipesB: RecipeSeed[] = [
           'Bake the trout at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then flake it and feel through it twice for pin bones.',
           'Cool the fish and mash it with the yogurt and finely snipped dill fronds, keeping the tough stalks out.',
           'Toast the bread for 1-2 minutes, until golden, cut it into small bite-sized squares, and spread the smash thinly over each one.',
-          'Pair with a vitamin-C side such as tomato quartered lengthwise, or orange segments with the membrane removed, and sit with baby throughout.',
+          'Pair with a vitamin-C side such as tomato quartered lengthwise, or orange segments with the membrane removed.',
         ],
       },
     },
@@ -567,7 +567,7 @@ export const coverageRecipesB: RecipeSeed[] = [
     ingredients: [
       { foodSlug: 'trout', quantityNote: '115g (4oz) trout fillet' },
       { foodSlug: 'carrot', quantityNote: '1 carrot, peeled and finely grated' },
-      { foodSlug: 'rice', quantityNote: '1/3 cup rice' },
+      { foodSlug: 'rice', quantityNote: '1/3 cup freshly cooked rice, very soft' },
       { foodSlug: 'ginger', quantityNote: 'a small pinch, peeled and finely grated, cooked in' },
       { foodSlug: 'cilantro', quantityNote: 'a small amount, chopped very finely and stirred in at the end' },
     ],
@@ -579,16 +579,16 @@ export const coverageRecipesB: RecipeSeed[] = [
           'Peel and finely grate the carrot, and grate a small pinch of fresh ginger on the fine side of a grater — never a slice, a coin, or a chunk, which stay stringy.',
           'Soften the carrot and ginger in a little olive oil over medium heat for 5-6 minutes, until the carrot is completely tender and mashes easily between two fingers.',
           'Bake the trout at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then flake it and feel through it twice for fine pin bones.',
-          'Cook the rice over low heat for 15-18 minutes, until it is very soft and sticky, then stir the carrot through it and press it into a soft patty.',
+          'Stir the carrot through the rice and press it into a soft patty.',
           'Fold the flaked trout in, stir a little very finely chopped cilantro through off the heat, and serve cooled to just-warm.',
         ],
       },
       '9': {
-        textureNote: 'Loose, soft rice grains with pea-sized flakes of trout and tender grated carrot.',
+        textureNote: 'Loose, soft rice grains with small bite-sized flakes of trout (no bigger than ½ inch) and tender grated carrot.',
         steps: [
           'Finely grate the peeled carrot and a small pinch of fresh ginger, and soften them in a little olive oil over medium heat for 5-6 minutes, until the carrot is completely tender.',
-          'Bake the trout at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then flake it into soft, pea-sized pieces, checking for pin bones twice.',
-          'Cook the rice over low heat for 15-18 minutes, until soft, and stir the carrot through it.',
+          'Bake the trout at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then flake it into soft, small bite-sized pieces (no bigger than ½ inch), checking for pin bones twice.',
+          'Stir the carrot through the rice.',
           'Fold the trout in, stir very finely chopped cilantro through off the heat, cool to just-warm, and serve as loose grains for pincer-grasp practice.',
         ],
       },
@@ -597,7 +597,7 @@ export const coverageRecipesB: RecipeSeed[] = [
         steps: [
           'Finely grate the peeled carrot and a small pinch of ginger and soften them in a little olive oil over medium heat for 5-6 minutes, until tender.',
           'Bake the trout at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then flake it into small bite-sized pieces and check for pin bones twice.',
-          'Cook the rice over low heat for 15-18 minutes, until soft, stir the carrot through, and fold in the trout with very finely chopped cilantro off the heat.',
+          'Stir the carrot through the rice and fold in the trout with very finely chopped cilantro off the heat.',
           'Cool to just-warm and pair with a vitamin-C side such as orange segments with the membrane removed, reheating any leftover rice only once.',
         ],
       },
@@ -614,7 +614,7 @@ export const coverageRecipesB: RecipeSeed[] = [
     ingredients: [
       { foodSlug: 'shrimp', quantityNote: '115g (4oz) raw peeled shrimp, deveined' },
       { foodSlug: 'peas', quantityNote: '1/2 cup peas' },
-      { foodSlug: 'rice', quantityNote: '1/3 cup rice' },
+      { foodSlug: 'rice', quantityNote: '1/3 cup freshly cooked rice, very soft' },
       { foodSlug: 'garlic', quantityNote: '1/2 small clove, finely minced and softened in the pan' },
     ],
     extraIngredients: [{ name: 'olive oil' }],
@@ -622,13 +622,13 @@ export const coverageRecipesB: RecipeSeed[] = [
       // Shellfish is held to 9 months and introduced last on the allergen
       // ladder, so this recipe carries no 6-month variant.
       '9': {
-        textureNote: 'Soft rice with squashed peas and small, pea-sized pieces of thoroughly cooked shrimp.',
+        textureNote: 'Soft rice with squashed peas and finely chopped, thoroughly cooked shrimp in small bite-sized pieces (no bigger than ½ inch).',
         steps: [
           'Soften half a small clove of finely minced garlic in a little olive oil over medium heat for 30-60 seconds, until it smells sweet rather than raw — garlic is never served raw.',
           'Peel, devein, and rinse the shrimp, then cook them in the garlicky oil over medium heat for 3-4 minutes, turning once, until they are pink, opaque, and curled right through at 145°F (63°C).',
-          'Chop the shrimp finely into small, pea-sized pieces — a whole shrimp is rubbery and hard to bite through.',
+          'Chop the shrimp finely into small bite-sized pieces (no bigger than ½ inch) — a whole shrimp is rubbery and hard to bite through.',
           'Steam the peas for 4-5 minutes, until soft, then squash each one flat between finger and thumb so no whole round pea is left.',
-          'Cook the rice over low heat for 15-18 minutes, until soft, fold the peas and shrimp through, and serve cooled to just-warm.',
+          'Fold the peas and shrimp through the rice and serve cooled to just-warm.',
         ],
       },
       '12': {
@@ -637,7 +637,7 @@ export const coverageRecipesB: RecipeSeed[] = [
           'Soften the finely minced garlic in a little olive oil over medium heat for 30-60 seconds, until fragrant.',
           'Cook the peeled, deveined shrimp in the garlicky oil over medium heat for 3-4 minutes, until pink, opaque, and curled at 145°F (63°C), then chop them into small bite-sized pieces.',
           'Steam the peas for 4-5 minutes, until tender, squashing them flat as the safer default.',
-          'Cook the rice over low heat for 15-18 minutes, until soft, fold everything through, then cool to just-warm and serve fresh with no added salt.',
+          'Fold everything through the rice, then cool to just-warm and serve fresh with no added salt.',
         ],
       },
     },
@@ -661,12 +661,12 @@ export const coverageRecipesB: RecipeSeed[] = [
       // Shellfish is held to 9 months and introduced last on the allergen
       // ladder, so this recipe carries no 6-month variant.
       '9': {
-        textureNote: 'Small soft pasta shapes in melted zucchini, with pea-sized pieces of shrimp through them.',
+        textureNote: 'Small soft pasta shapes in melted zucchini, with finely chopped shrimp in small bite-sized pieces (no bigger than ½ inch) through them.',
         steps: [
           'Boil small pasta shapes over medium heat for 12-14 minutes, well past al dente, until a shape squashes easily between two fingers.',
           'Grate the zucchini and soften it in a little olive oil over medium heat for 4-5 minutes with a small pinch of finely ground black pepper, until it has collapsed and turned completely tender.',
           'Peel, devein, and rinse the shrimp, then cook them over medium heat for 3-4 minutes, until pink, opaque, and curled at 145°F (63°C).',
-          'Chop the shrimp finely into small, pea-sized pieces rather than serving a whole one, which is rubbery and hard to bite through.',
+          'Chop the shrimp finely into small bite-sized pieces (no bigger than ½ inch) rather than serving a whole one, which is rubbery and hard to bite through.',
           'Turn the pasta through the zucchini with the shrimp, cool to just-warm, and serve loose on the tray for self-feeding.',
         ],
       },
@@ -692,7 +692,7 @@ export const coverageRecipesB: RecipeSeed[] = [
       { foodSlug: 'tuna', quantityNote: '2 tablespoons skipjack ("light") tuna canned in water, drained' },
       { foodSlug: 'wheat_pasta', quantityNote: '60g pasta shapes' },
       { foodSlug: 'peas', quantityNote: '1/2 cup peas' },
-      { foodSlug: 'tomato', quantityNote: '1 tomato, skinned and diced, or quartered lengthwise if served as pieces' },
+      { foodSlug: 'tomato', quantityNote: '1 tomato, skinned' },
       { foodSlug: 'basil', quantityNote: '2 leaves, chopped very finely' },
     ],
     extraIngredients: [{ name: 'olive oil' }],
@@ -708,7 +708,7 @@ export const coverageRecipesB: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Cool small pasta shapes with squashed peas and pea-sized dollops of mashed tuna, sized for a pincer grasp.',
+        textureNote: 'Cool small pasta shapes with squashed peas and small bite-sized dollops of mashed tuna (no bigger than ½ inch), sized for a pincer grasp.',
         steps: [
           'Boil small pasta shapes over medium heat for 12-14 minutes, past al dente, until they squash easily between two fingers, then drain and cool them.',
           'Steam the peas for 4-5 minutes, until soft, and squash each one flat between finger and thumb.',
@@ -802,12 +802,12 @@ export const coverageRecipesB: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Pea-to-bite-sized soft squash cubes with a fine dukkah clinging to them.',
+        textureNote: 'Soft finger-length wedges, or small bite-sized cubes (no bigger than ½ inch) for pincer practice, with a fine dukkah clinging to them.',
         steps: [
-          'Peel and cube the butternut squash and toss it with a little olive oil and a pinch of ground cumin.',
-          'Roast at 400°F (200°C) for 20-25 minutes, until the cubes are fork-tender and squash easily between two fingers.',
+          'Peel the butternut squash, cut it into finger-length wedges or small cubes (no bigger than ½ inch), and toss with a little olive oil and a pinch of ground cumin.',
+          'Roast at 400°F (200°C), wedges for 25-30 minutes or cubes for 20-25 minutes, until fork-tender and they squash easily between two fingers.',
           'Grind the hazelnuts and hulled pumpkin seeds to a fine meal and stir the sesame seeds through, leaving the mix raw.',
-          'Cut the squash into pea-to-bite-sized soft cubes, sprinkle the dukkah over while they are still oily so it clings, cool to just-warm, and serve for pincer-grasp self-feeding.',
+          'Sprinkle the dukkah over the squash while it is still oily so it clings, cool to just-warm, and serve for self-feeding.',
         ],
       },
       '12': {
@@ -830,8 +830,8 @@ export const coverageRecipesB: RecipeSeed[] = [
     fridgeHoursOverride: 24,
     ingredients: [
       { foodSlug: 'black_beans', quantityNote: '1/2 cup cooked no-salt-added black beans, rinsed' },
-      { foodSlug: 'mango', quantityNote: '1/2 ripe mango, peeled and finely diced' },
-      { foodSlug: 'rice', quantityNote: '1/3 cup rice' },
+      { foodSlug: 'mango', quantityNote: '1/2 ripe mango' },
+      { foodSlug: 'rice', quantityNote: '1/3 cup freshly cooked rice, very soft' },
       { foodSlug: 'cilantro', quantityNote: 'a small amount, chopped very finely and stirred in at the end' },
     ],
     extraIngredients: [{ name: 'olive oil' }],
@@ -839,7 +839,7 @@ export const coverageRecipesB: RecipeSeed[] = [
       '6': {
         textureNote: 'A soft, sticky rice ball with mashed beans and mango through it, plus a finger-length strip of ripe mango to hold.',
         steps: [
-          'Cook the rice over low heat for 15-18 minutes, until it is very soft and sticky, then press it into a soft ball rather than serving loose grains.',
+          'Press the rice into a soft ball rather than serving loose grains.',
           'Rinse the black beans well and warm them through in a little olive oil over medium heat for 4-5 minutes, until they are soft enough to squash, then mash every one flat so none keeps its round shape.',
           'Peel the mango, mash half of it smooth, and cut the rest into a finger-length strip baby can hold and gnaw.',
           'Stir the mashed beans, the mashed mango, and a little very finely chopped cilantro through the rice off the heat, so the mango stays fresh and cool.',
@@ -847,18 +847,16 @@ export const coverageRecipesB: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Loose, soft rice grains with squashed beans and pea-to-bite-sized mango pieces for a pincer grasp.',
+        textureNote: 'Loose, soft rice grains with squashed beans and small bite-sized mango pieces (no bigger than ½ inch) for a pincer grasp.',
         steps: [
-          'Cook the rice over low heat for 15-18 minutes, until soft, and serve it as loose grains for pincer-grasp practice.',
           'Rinse the beans and warm them through in a little olive oil over medium heat for 4-5 minutes, until soft, then squash each one flat between your fingers.',
-          'Peel the mango and dice it into pea-to-bite-sized soft pieces, choosing fruit that is fully ripe rather than firm and slippery.',
-          'Fold the beans and mango through the rice off the heat with a little very finely chopped cilantro, and serve cooled to just-warm.',
+          'Peel the mango and dice it into small bite-sized soft pieces (no bigger than ½ inch), choosing fruit that is fully ripe rather than firm and slippery.',
+          'Fold the beans and mango through the rice off the heat with a little very finely chopped cilantro, keep the rice as loose grains for pincer-grasp practice, and serve cooled to just-warm.',
         ],
       },
       '12': {
         textureNote: 'Family-style soft rice with whole soft beans and small bite-sized mango pieces.',
         steps: [
-          'Cook the rice over low heat for 15-18 minutes, until soft.',
           'Rinse the beans and warm them through in a little olive oil over medium heat for 4-5 minutes, until they squash easily between two fingers.',
           'Peel the mango and dice it into small bite-sized pieces, then fold it through the rice and beans off the heat with finely chopped cilantro.',
           'Cool to just-warm and serve with no added salt, reheating any leftover rice only once.',

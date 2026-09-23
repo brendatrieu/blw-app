@@ -372,6 +372,33 @@ describe("RecipeDetailPage actions pair on a custom recipe (item 283)", () => {
   });
 });
 
+// Items 462-463: allergen advice left the recipe steps; the page states it once,
+// only when the recipe carries a top-9 allergen. renderToString separates adjacent
+// text nodes with <!-- -->, so the sentence is asserted with those stripped.
+const text = (html: string) => html.replace(/<!-- -->/g, "");
+describe("RecipeDetailPage allergen tagline", () => {
+  it("names the one allergen and links to the allergen-introduction safety article", () => {
+    const html = renderRecipe(catalogRecipe({ allergens: ["egg"] }));
+    // The whole sentence: the header chips also print "Egg", so the name alone proves nothing.
+    expect(text(html)).toContain("Contains a common allergen: Egg.");
+    expect(html).toContain('href="/safety/allergen-introduction"');
+    // Above the steps, where the parent is reading while they cook.
+    expect(html.indexOf("Contains a common allergen")).toBeLessThan(html.indexOf("<ol"));
+  });
+
+  it("shows no tagline when the recipe carries no allergens", () => {
+    const html = renderRecipe(catalogRecipe({ allergens: [] }));
+    expect(html).not.toContain("Contains a common allergen");
+    expect(html).not.toContain("Contains common allergens");
+    expect(html).not.toContain('href="/safety/allergen-introduction"');
+  });
+
+  it("uses the plural form and names both allergens for two", () => {
+    const html = renderRecipe(catalogRecipe({ allergens: ["egg", "peanut"] }));
+    expect(text(html)).toContain("Contains common allergens: Egg, Peanut.");
+  });
+});
+
 // Item 334: the header said "Fish" about the whole dish; the ingredient rows
 // said nothing, so which food brought it was never on screen.
 describe("RecipeDetailPage ingredient allergen rows (item 334)", () => {

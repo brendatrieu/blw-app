@@ -6,8 +6,8 @@ import type { RecipeSeed } from './types'
 
 // 15 starter recipes, each with 6/9/12-month variants. No added salt or sugar anywhere, and no
 // honey at any age (baked or otherwise). foodSlug references resolve against foods.ts;
-// extraIngredients cover cupboard staples (oils, spices, chia, lemon) not tracked in the food
-// catalog.
+// extraIngredients cover cupboard staples (oils, spices, chia) not tracked in the food catalog;
+// lemon is a catalog food.
 //
 // Cook detail (ledger item 265): every cooking step names the method, a temperature (ovens in °F
 // with °C in parentheses; stovetop as "over medium heat" style), a time RANGE, and the doneness
@@ -39,17 +39,15 @@ const curatedRecipes: RecipeSeed[] = [
           'Season the beef with a pinch of cumin (no added salt), then pan-fry a thin steak over medium heat for 4-5 minutes a side, or shape ground beef into a thin patty and bake it at 350°F (180°C) for 20-25 minutes, until well-done at 160°F (71°C) with no pink left.',
           'Once cool enough to handle, mince or finely shred the beef so no tough or stringy pieces remain, and toss the sweet potato wedges with a drizzle of olive oil.',
           'Serve the wedges alongside a small pile of minced beef, moistened with a little olive oil or cooking liquid so it is not dry.',
-          'Sit with baby throughout the meal and supervise closely.',
         ],
       },
       '9': {
-        textureNote: 'Pea-sized, soft pieces baby can pick up with a pincer grasp; beef finely chopped or shredded, sweet potato in small cubes.',
+        textureNote: 'Soft finger-length strips of sweet potato, or small bite-sized cubes (no bigger than ½ inch) for pincer practice, with finely chopped or shredded beef.',
         steps: [
-          'Peel the sweet potato, then steam it for 12-15 minutes, or roast at 400°F (200°C) for 20-25 minutes, until fork-tender, and cut it into pea-sized cubes.',
+          'Peel the sweet potato, then steam it for 12-15 minutes, or roast at 400°F (200°C) for 20-25 minutes, until fork-tender, and cut it into finger-length strips, or small bite-sized cubes (no bigger than ½ inch) for pincer practice.',
           'Season the beef with a pinch of cumin (no added salt), then cook it through to 160°F (71°C) — about 4-5 minutes a side over medium heat — and finely chop or shred it into small, soft pieces, moistened with a little olive oil.',
           'Combine on a plate for baby to self-feed with fingers or a pre-loaded spoon.',
           'Cool to just-warm, check the temperature, and offer water in an open cup alongside the meal.',
-          'Sit with baby throughout the meal and supervise closely.',
         ],
       },
       '12': {
@@ -58,7 +56,7 @@ const curatedRecipes: RecipeSeed[] = [
           'Peel the sweet potato, dice it into small bite-sized pieces, and roast at 400°F (200°C) for 20-25 minutes, or steam for 10-12 minutes, until fork-tender.',
           'Season the beef with a pinch of cumin (no added salt), then cook it to 160°F (71°C) — a slow-cooked cut simmered gently for 2-3 hours goes especially tender — and dice it into small, tender bite-sized pieces, moistened with a little olive oil or cooking liquid so they are not dry.',
           'Cool to just-warm, check the temperature, then serve together, optionally with a soft grain on the side, no added salt.',
-          'Let baby practice using a fork or spoon alongside fingers, and sit with baby throughout the meal.',
+          'Let baby practice using a fork or spoon alongside fingers.',
         ],
       },
     },
@@ -88,12 +86,12 @@ const curatedRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Pea-sized, soft crumbled pieces of patty baby can pick up between finger and thumb.',
+        textureNote: 'Soft patty strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, or poach it for 8-10 minutes, until it is opaque and flakes easily at 145°F (63°C), then check thoroughly with your fingers for any bones and remove them all.',
           'Flake the salmon finely into a bowl, add the oats and beaten egg, and mix until it holds together.',
           'Shape into smaller patties, or one larger patty to slice after cooking.',
-          'Cook in a little olive oil over medium heat, about 3 minutes per side, until firm and set to 160°F (71°C), then cool and break into pea-sized, soft pieces.',
+          'Cook in a little olive oil over medium heat, about 3 minutes per side, until firm and set to 160°F (71°C), then cool and cut into strips, or break into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Serve on a plate for baby to self-feed.',
         ],
       },
@@ -103,7 +101,7 @@ const curatedRecipes: RecipeSeed[] = [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, or poach it for 8-10 minutes, until it is opaque and flakes easily at 145°F (63°C), then check thoroughly with your fingers for any bones and remove them all.',
           'Flake the salmon finely into a bowl, add the oats and beaten egg, mix until it holds together, and shape into small mini patties suited to little hands.',
           'Cook in a little olive oil over medium heat for about 3 minutes per side, until golden, firm, and 160°F (71°C) in the centre.',
-          'Cool to just-warm, check the temperature, then cut into bite-sized pieces or serve whole for baby to bite pieces off with supervision.',
+          'Cool to just-warm, check the temperature, then cut into bite-sized pieces or serve whole for baby to bite pieces off.',
           'Pair with a vitamin-C side like steamed broccoli for extra iron absorption.',
         ],
       },
@@ -118,7 +116,7 @@ const curatedRecipes: RecipeSeed[] = [
     fridgeHoursOverride: 48,
     freezerDaysOverride: 60,
     ingredients: [
-      { foodSlug: 'lentils', quantityNote: '1/4 cup dried red lentils (about 1/2 cup cooked)' },
+      { foodSlug: 'lentils', quantityNote: '1/2 cup cooked red lentils, soft enough to mash' },
       { foodSlug: 'zucchini', quantityNote: '1/2 small zucchini, grated' },
       { foodSlug: 'carrot', quantityNote: '1 small carrot, grated' },
       { foodSlug: 'egg', quantityNote: '1 egg, beaten' },
@@ -129,28 +127,25 @@ const curatedRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'Soft, finger-length fritters that squish easily between two fingers.',
         steps: [
-          'Simmer the lentils in unsalted water over low heat for 15-20 minutes, until they collapse and mash easily, then drain well.',
           'Squeeze excess water from the grated zucchini and carrot using a clean towel.',
-          'Mix the lentils, zucchini, carrot, and beaten egg together with a pinch of sweet paprika.',
+          'Mash the lentils, then mix them with the zucchini, carrot, beaten egg, and a pinch of sweet paprika, with no added salt.',
           'Spoon into finger-length oval shapes and pan-fry in olive oil over medium-low heat, about 3-4 minutes per side, until set, golden, and cooked through to 160°F (71°C).',
           'Cool until warm and check a fritter mashes easily between your fingers before serving.',
         ],
       },
       '9': {
-        textureNote: 'Pea-sized, soft crumbled pieces.',
+        textureNote: 'Soft finger-length fritters, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Simmer the lentils in unsalted water over low heat for 15-20 minutes, until they collapse and mash easily, then drain well.',
-          'Squeeze excess water from the grated zucchini and carrot using a clean towel, then mix the lentils, zucchini, carrot, and beaten egg together with a pinch of sweet paprika.',
-          'Cook small spoonfuls in olive oil over medium-low heat for 3-4 minutes per side, until firm and set through at 160°F (71°C).',
-          'Cool and break into pea-sized, soft pieces for pincer-grasp self-feeding.',
+          'Squeeze excess water from the grated zucchini and carrot using a clean towel, then mash the lentils and mix them with the zucchini, carrot, beaten egg, and a pinch of sweet paprika, with no added salt.',
+          'Spoon into finger-length oval shapes and cook in olive oil over medium-low heat for 3-4 minutes per side, until firm and set through at 160°F (71°C).',
+          'Cool and serve whole, or break into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Serve with a spoon nearby for baby to practice self-feeding.',
         ],
       },
       '12': {
         textureNote: 'Small bite-sized fritter pieces, family-style.',
         steps: [
-          'Simmer the lentils in unsalted water over low heat for 15-20 minutes, until they collapse and mash easily, then drain well.',
-          'Squeeze excess water from the grated zucchini and carrot using a clean towel, mix the lentils, zucchini, carrot, and beaten egg together with a pinch of sweet paprika, and form slightly larger patty shapes.',
+          'Squeeze excess water from the grated zucchini and carrot using a clean towel, mash the lentils and mix them with the zucchini, carrot, beaten egg, and a pinch of sweet paprika, with no added salt, and form slightly larger patty shapes.',
           'Cook in olive oil over medium-low heat for 3-4 minutes per side, until golden on both sides and set through at 160°F (71°C).',
           'Cool to just-warm, check the temperature, then cut into bite-sized pieces and serve with a fork for baby to practice.',
           'Great alongside a vitamin-C side like tomato wedges (quartered lengthwise) for iron absorption.',
@@ -185,11 +180,11 @@ const curatedRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Pea-sized, soft pieces of pancake.',
+        textureNote: 'Soft pancake strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Blend the oats into a coarse flour, then thoroughly whisk the peanut butter with a tablespoon of warm water until smooth and runny — never serve peanut butter thick or straight from the jar.',
           'Mash the banana and mix with the egg, oat flour, thinned peanut butter, and a pinch of cinnamon into a smooth batter, then cook small, thin pancakes over medium-low heat, about 2 minutes per side, until set right through.',
-          'Cool and tear into small, pea-sized pieces.',
+          'Cool and tear into strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Serve on a plate for baby to self-feed with fingers.',
         ],
       },
@@ -229,11 +224,11 @@ const curatedRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Pea-sized, soft pieces of omelet.',
+        textureNote: 'Soft omelet strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Finely dice the bell pepper and chop the spinach, then whisk the eggs and stir in the vegetables.',
           'Pour into a lightly oiled pan over low-medium heat and cook, covered, for 4-5 minutes, until fully set with no runny egg remaining and the centre reads 160°F (71°C).',
-          'Cool and cut into small, pea-sized pieces.',
+          'Cool and cut into strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Serve for pincer-grasp self-feeding.',
         ],
       },
@@ -272,11 +267,11 @@ const curatedRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Pea-sized, soft muffin pieces.',
+        textureNote: 'Soft muffin quarters or strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Steam the broccoli for 8-10 minutes, until it mashes easily between two fingers, then finely chop it and whisk it into the beaten eggs with the grated cheese.',
           'Pour into a well-greased mini muffin tin and bake at 350°F (180°C) for 12-15 minutes, until fully set with no wobble in the centre — 160°F (71°C) on a thermometer.',
-          'Cool and break into pea-sized pieces.',
+          'Cool and cut into quarters or strips, or break into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Serve for pincer-grasp self-feeding.',
         ],
       },
@@ -285,7 +280,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Steam the broccoli for 8-10 minutes, until it mashes easily between two fingers, then finely chop it and whisk it into the beaten eggs with the grated cheese.',
           'Pour into a well-greased mini muffin tin and bake at 350°F (180°C) for 12-15 minutes, until fully set with no wobble in the centre — 160°F (71°C) on a thermometer.',
-          'Cool to just-warm, check the temperature, then serve whole mini muffins or cut into halves for baby to hold and bite from with supervision.',
+          'Cool to just-warm, check the temperature, then serve whole mini muffins or cut into halves for baby to hold and bite from.',
           'Pair with fruit on the side for a balanced meal.',
         ],
       },
@@ -300,7 +295,7 @@ const curatedRecipes: RecipeSeed[] = [
     fridgeHoursOverride: 48,
     ingredients: [
       { foodSlug: 'iron_fortified_oats', quantityNote: '1/3 cup rolled oats' },
-      { foodSlug: 'pear', quantityNote: '1/2 ripe pear, grated or finely diced' },
+      { foodSlug: 'pear', quantityNote: '1/2 ripe pear' },
       { foodSlug: 'yogurt', quantityNote: '1/4 cup plain whole-milk yogurt' },
       {
         foodSlug: 'chia_seeds',
@@ -313,7 +308,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Smooth, thinned porridge-like texture loose enough to drip slowly off a spoon.',
         steps: [
           'Combine the oats, chia seeds, yogurt, and enough breast milk, formula, or water to make a loose, smooth mixture.',
-          'Stir in the grated pear.',
+          'Finely grate the pear and stir it in.',
           'Cover and refrigerate overnight, or at least 2 hours, until the oats and chia have softened and thickened slightly.',
           'Stir in a little extra liquid before serving to loosen it to a smooth, drippy consistency for a pre-loaded spoon.',
         ],
@@ -322,7 +317,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Thicker, lumpier porridge with soft, small pear pieces baby can self-feed with a spoon.',
         steps: [
           'Combine the oats, chia seeds, and yogurt with just enough breast milk, formula, or water to moisten them, keeping the mixture thick and spoonable rather than pourable.',
-          'Leave the pear in small, soft, finely diced pieces rather than grating, and stir it through.',
+          'Finely dice the pear into small, soft pieces and stir it through.',
           'Cover and refrigerate overnight, or at least 2 hours, until the oats and chia have softened and thickened, then stir well before serving.',
           "Offer a pre-loaded spoon for baby to bring to their own mouth.",
         ],
@@ -366,11 +361,11 @@ const curatedRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Pea-sized, soft meatball pieces.',
+        textureNote: 'Soft finger-length logs, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Peel, core, and finely grate the apple, then mix the ground chicken with the grated apple and herbs if using, and shape it into small meatballs.',
-          'Bake at 375°F (190°C) for 14-16 minutes, until they reach 165°F (74°C) all the way through, then cool and cut or shred into pea-sized, soft pieces.',
-          'Serve for pincer-grasp self-feeding.',
+          'Peel, core, and finely grate the apple, then mix the ground chicken with the grated apple and herbs if using, and shape it into finger-length logs rather than round balls.',
+          'Bake at 375°F (190°C) for 18-20 minutes, until no pink remains and a thermometer in the centre reads 165°F (74°C).',
+          'Cool, then serve the logs whole or cut a few into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         ],
       },
       '12': {
@@ -379,7 +374,6 @@ const curatedRecipes: RecipeSeed[] = [
           'Peel, core, and finely grate the apple, then mix the ground chicken with the grated apple and herbs if using.',
           'Shape into small bite-sized meatballs and bake at 375°F (190°C) for 14-16 minutes, until they read 165°F (74°C) in the centre with no pink left.',
           'Cool to just-warm, check the temperature, then serve whole or halved alongside a soft grain and vegetable.',
-          'Supervise closely while baby bites pieces off.',
         ],
       },
     },
@@ -396,9 +390,9 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'tahini', quantityNote: '1 tablespoon tahini' },
       { foodSlug: 'avocado', quantityNote: '1/4 ripe avocado' },
       { foodSlug: 'wheat_toast', quantityNote: '1 slice bread, toasted' },
+      { foodSlug: 'lemon', quantityNote: 'a squeeze of juice' },
     ],
     extraIngredients: [
-      { name: 'lemon juice', quantityNote: 'squeeze of' },
       { name: 'olive oil', quantityNote: 'drizzle of' },
     ],
     variants: {
@@ -413,11 +407,11 @@ const curatedRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Chunkier mashed hummus and avocado on toast, cut into small pieces.',
+        textureNote: 'Chunkier mashed hummus and avocado on toast, cut into strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Blend the chickpeas, tahini, a squeeze of lemon juice, and a drizzle of olive oil with a splash of water, stopping while it is still slightly thicker and chunkier than a smooth hummus but still spreadable, not sticky.',
           'Toast the bread for 1-2 minutes, moisten it until it bends, and spread hummus and mashed avocado on top.',
-          'Once it is cool enough to handle, cut into small, pea-to-bite-sized squares for pincer-grasp self-feeding.',
+          'Once it is cool enough to handle, cut into strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice.',
         ],
       },
       '12': {
@@ -457,22 +451,24 @@ const curatedRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Pea-sized, soft tofu nugget pieces.',
+        textureNote: 'Soft finger-length tofu strips, or small bite-sized nuggets (no bigger than ½ inch) for pincer practice.',
         steps: [
+          'Press the tofu to remove excess water, then cut it into finger-length strips, or small bite-sized cubes (no bigger than ½ inch) for pincer practice.',
           'Blend the oats into fine crumbs and season lightly with a pinch of salt-free garlic powder.',
-          'Press the tofu to remove excess water, then cut it into smaller, pea-to-bite-sized cubes and press each cube into the oat crumbs to coat.',
+          'Press each piece into the oat crumbs to coat.',
           'Pan-fry in olive oil over medium heat for 2-3 minutes per side, until lightly golden and cooked through.',
-          'Cool and serve for pincer-grasp self-feeding, supervising closely throughout.',
+          'Cool and serve for pincer-grasp self-feeding.',
         ],
       },
       '12': {
         textureNote: 'Small bite-sized tofu nuggets, family-style.',
         steps: [
+          'Press the tofu to remove excess water, then cut it into small bite-sized cubes.',
           'Blend the oats into fine crumbs and season lightly with a pinch of salt-free garlic powder.',
-          'Press the tofu to remove excess water, then cut it into small bite-sized cubes and coat them in the oat crumbs.',
+          'Coat the cubes in the oat crumbs.',
           'Pan-fry in olive oil over medium heat for 2-3 minutes per side, or bake at 400°F (200°C) for 18-20 minutes, until golden on the outside.',
           'Cool slightly and check a cube is not hot before serving.',
-          'Serve with a dipping side like plain yogurt, and supervise closely while baby dips and bites.',
+          'Serve with a dipping side like plain yogurt.',
         ],
       },
     },
@@ -488,8 +484,8 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'sardines', quantityNote: '1 can (about 90g) boneless sardines in water, drained' },
       { foodSlug: 'avocado', quantityNote: '1/4 ripe avocado' },
       { foodSlug: 'wheat_toast', quantityNote: '1 slice bread, toasted' },
+      { foodSlug: 'lemon', quantityNote: 'a squeeze of juice' },
     ],
-    extraIngredients: [{ name: 'lemon juice', quantityNote: 'squeeze of' }],
     variants: {
       '6': {
         textureNote: 'Soft mashed sardine and avocado spread thinly on soft toast fingers.',
@@ -501,11 +497,11 @@ const curatedRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Chunkier mashed sardine and avocado on toast, cut into small pieces.',
+        textureNote: 'Chunkier mashed sardine and avocado on toast, cut into strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Mash the sardines and avocado together with a squeeze of lemon juice, leaving a slightly chunkier texture.',
           'Toast a slice for 1-2 minutes, moisten it until it bends, and spread the mash on top.',
-          'Wait until the toast is cool enough to hold, then cut it into small squares for pincer-grasp self-feeding.',
+          'Wait until the toast is cool enough to hold, then cut it into strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice.',
         ],
       },
       '12': {
@@ -594,11 +590,11 @@ const curatedRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Pea-sized, soft crumbled pieces.',
+        textureNote: 'Soft finger-length bites, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Squeeze excess water from the grated zucchini using a clean towel, then mix the cooked quinoa, zucchini, beaten egg, and cheese together.',
-          'Cook small spoonfuls in olive oil over medium-low heat for about 3 minutes per side, until firm and set through at 160°F (71°C).',
-          'Cool and break into pea-sized pieces for pincer-grasp self-feeding.',
+          'Spoon into finger-length shapes and cook in olive oil over medium-low heat for about 3 minutes per side, until firm and set through at 160°F (71°C).',
+          'Cool and serve whole, or break into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         ],
       },
       '12': {
@@ -698,11 +694,11 @@ const curatedRecipes: RecipeSeed[] = [
   },
 ]
 
-// The seeded catalog, 122 recipes: the 15 curated multi-ingredient recipes FIRST, in
+// The seeded catalog, 123 recipes: the 15 curated multi-ingredient recipes FIRST, in
 // their original order, then the 45 coverage recipes (items 338-339 wrote 39 across two
 // files purely so two authors could write them in parallel; item 343 added batch C for
 // the two plain tree nuts, and item 357 appended two more to it for potato), then the
-// 62 single-food
+// 63 single-food
 // "Simple <food>" basics (one per non-spice food — spices have none, see
 // basicRecipes.ts). Order matters only for readability of a fresh seed — every row
 // upserts by slug — but keeping the curated block first means the original 15 are
