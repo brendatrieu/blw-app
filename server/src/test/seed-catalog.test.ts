@@ -509,7 +509,7 @@ describe("seeded catalog after the spices expansion", () => {
     expect(secondPass.counts).toEqual(firstPass.counts);
     expect(secondPass.digest).toBe(firstPass.digest);
     expect(firstPass.counts.foods).toBe(CATALOG_FOOD_COUNT);
-    // 15 curated + 45 coverage (items 338-339, 343, 357) + 63 single-food basics (lemon, item 470).
-    expect(firstPass.counts.recipes).toBe(123);
+    // 15 curated + 45 coverage (items 338-339, 343, 357) + 62 single-food basics (lemon has none, item 484).
+    expect(firstPass.counts.recipes).toBe(122);
   });
 });

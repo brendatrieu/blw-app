@@ -619,41 +619,6 @@ export const basicRecipes: RecipeSeed[] = [
     },
   },
   {
-    slug: 'simple-lemon',
-    title: 'Simple lemon',
-    minAgeMonths: 6,
-    prepMinutes: 5,
-    ironFocus: false,
-    ingredients: [{ foodSlug: 'lemon', quantityNote: '1 lemon, cut into wedges (1 wedge per serving)' }],
-    variants: {
-      '6': {
-        textureNote: 'A large, seedless lemon wedge for baby to lick, suck, and gum — not a piece meant to be bitten off and swallowed.',
-        steps: [
-          'Cut the lemon in half lengthwise, then cut a large wedge — big enough that baby cannot fit the whole thing in their mouth.',
-          'Pick out every seed from the wedge; a missed seed is the main hazard here.',
-          'Hand baby the wedge to lick, suck, or gum — lemon is served raw, with nothing to prepare beyond cutting and de-seeding.',
-          'Squeeze a little juice from another wedge over other foods on the tray if you like.',
-        ],
-      },
-      '9': {
-        textureNote: 'A large, seedless lemon wedge, too big for baby to fit in their mouth, to lick and suck on, or juice squeezed over other foods.',
-        steps: [
-          'Cut the lemon in half and cut a large wedge — big enough that baby cannot fit the whole thing in their mouth — removing every seed.',
-          'Double-check the wedge by feel for any seed you missed.',
-          'Offer the wedge for baby to lick and suck, or squeeze the juice over whatever else is on the tray.',
-        ],
-      },
-      '12': {
-        textureNote: 'A seedless lemon wedge for baby to squeeze over food themselves, or suck on directly.',
-        steps: [
-          'Cut the lemon into wedges and remove every seed.',
-          'Show baby how to squeeze a wedge over their food, or let them suck on it directly.',
-          'Wipe the mouth and chin afterward — the acidity can redden the skin around the mouth, which is a normal reaction, not an allergy.',
-        ],
-      },
-    },
-  },
-  {
     slug: 'simple-kiwi',
     title: 'Simple kiwi',
     minAgeMonths: 6,

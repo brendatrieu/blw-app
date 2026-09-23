@@ -26,7 +26,8 @@ async function loadRunSeeds(): Promise<(db: Database) => Promise<void>> {
  * Every catalog food that is not a spice has to be an ingredient of at least
  * THREE seeded recipes, and every spice of at least TWO. The food's own
  * "Simple <food>" basic counts as one of the three; spices have no basic
- * (item 331), which is why their floor is lower.
+ * (item 331), which is why their floor is lower. Lemon has no basic either
+ * (item 484) but keeps the fruit floor, so all three of its uses are composite.
  *
  * Counted over `recipe_ingredients` links, never over `extra_ingredients`
  * free text: a recipe that merely mentions cumin in a step or lists it as a

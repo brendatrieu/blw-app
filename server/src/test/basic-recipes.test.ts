@@ -41,7 +41,7 @@ const CURATED_SLUGS = [
 
 /**
  * Ledger item 266. Runs over the seeded catalog, which is every recipe file
- * (recipes.ts exports the curated 15, the 45 coverage recipes and the 63
+ * (recipes.ts exports the curated 15, the 45 coverage recipes and the 62
  * basics), so a step added to any of them is covered.
  */
 const COOKING_VERB = /\b(?:roast|bake|steam|boil|simmer|saut[eé]|fry|poach|scramble|toast|cook)\b/i;
@@ -351,6 +351,29 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     return recipeRows.map((r) => ({ ...r, foodSlugs: foodSlugsByRecipeId.get(r.id) ?? [] }));
   }
 
+  /*
+   * Item 484, owner's decision: some foods are only ever an INGREDIENT — lemon is
+   * squeezed into hummus or a pasta, and a "Simple lemon" recipe read as odd. They
+   * keep their real category (lemon stays a fruit, so its vitamin C still counts)
+   * but, like spices, get no basic recipe of their own.
+   */
+  const NO_BASIC_RECIPE_FOODS: readonly string[] = ["lemon"];
+
+  it("keeps the no-basic-recipe exemption honest", async () => {
+    const foods = await db
+      .select({ slug: schema.foods.slug, category: schema.foods.category })
+      .from(schema.foods)
+      .where(isNull(schema.foods.ownerId));
+    const recipes = await catalogRecipes();
+    for (const slug of NO_BASIC_RECIPE_FOODS) {
+      const food = foods.find((f) => f.slug === slug);
+      expect(food, `${slug} must be a catalog food`).toBeDefined();
+      expect(food?.category, `${slug} must not be a spice (spices are exempt already)`).not.toBe("spice");
+      expect(recipes.some((r) => r.slug === `simple-${slug.replace(/_/g, "-")}`), `${slug} must have no basic`).toBe(false);
+      expect(recipes.filter((r) => r.foodSlugs.includes(slug)).length, `${slug} must still be used`).toBeGreaterThanOrEqual(3);
+    }
+  });
+
   it("gives every non-spice catalog food exactly one single-ingredient recipe of its own", async () => {
     // Spices are exempt (item 331): a pinch of cinnamon is a seasoning, not a
     // serving, so "Simple cinnamon" would be a recipe for nothing. The
@@ -358,7 +381,8 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     const foodRows = await db
       .select({ slug: schema.foods.slug, minAgeMonths: schema.foods.minAgeMonths })
       .from(schema.foods)
-      .where(and(isNull(schema.foods.ownerId), ne(schema.foods.category, "spice")));
+      .where(and(isNull(schema.foods.ownerId), ne(schema.foods.category, "spice")))
+      .then((rows) => rows.filter((row) => !NO_BASIC_RECIPE_FOODS.includes(row.slug)));
     expect(foodRows.length).toBeGreaterThan(0);
 
     const recipes = await catalogRecipes();
@@ -397,7 +421,8 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     const foodRows = await db
       .select({ slug: schema.foods.slug, name: schema.foods.name, minAgeMonths: schema.foods.minAgeMonths })
       .from(schema.foods)
-      .where(and(isNull(schema.foods.ownerId), ne(schema.foods.category, "spice")));
+      .where(and(isNull(schema.foods.ownerId), ne(schema.foods.category, "spice")))
+      .then((rows) => rows.filter((row) => !NO_BASIC_RECIPE_FOODS.includes(row.slug)));
 
     const bySlug = new Map((await catalogRecipes()).map((r) => [r.slug, r]));
 
@@ -464,9 +489,9 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     expect(wrong).toEqual([]);
 
     // The exact row count, so deleting one stage of one recipe fails HERE even
-    // though the recipe count is untouched: 120 six-month recipes x 3 stages +
+    // though the recipe count is untouched: 119 six-month recipes x 3 stages +
     // 3 nine-month recipes (simple-shrimp and the two shrimp dishes) x 2.
-    expect(variantRows.length).toBe(366);
+    expect(variantRows.length).toBe(363);
   });
 
   it("gives every catalog variant 3-6 steps and a texture note", async () => {
@@ -638,11 +663,11 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
 
   it("gives every cooking step a temperature or a time", async () => {
     const variants = await catalogVariants();
-    // 123 recipes: the curated 15, the 45 coverage recipes added for the
-    // "3 recipes per food" rule (items 338-339, 343, 357), and 63 basics (62 x 3
-    // stages + shrimp's 2) — one per non-spice food (item 331, items 342, 356;
-    // lemon, item 470).
-    expect(new Set(variants.map((v) => v.slug)).size).toBe(123);
+    // 122 recipes: the curated 15, the 45 coverage recipes added for the
+    // "3 recipes per food" rule (items 338-339, 343, 357), and 62 basics (61 x 3
+    // stages + shrimp's 2) — one per non-spice food except lemon (items 331,
+    // 342, 356, 484).
+    expect(new Set(variants.map((v) => v.slug)).size).toBe(122);
 
     const cookingSteps = variants.flatMap((v) =>
       v.instructions
