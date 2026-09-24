@@ -9,6 +9,7 @@ import {
   REACTION_BADGE_LABEL,
   REACTION_HINT_COPY,
   RECENCY_HINT_COPY,
+  dueAllergens,
   formatAllergenDate,
   resolveAllergenRowAction,
   resolveAllergenRecency,
@@ -108,6 +109,11 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
 export function BabyAllergensPage() {
   const { id: babyId } = useParams<{ id: string }>();
   const { data, isLoading, isError } = useAllergenProgress(babyId);
+  // Due rows lead, so Home's "N allergens due" line lands on them without a
+  // scroll through nine rows. Same rule as Home's count (reaction-paused rows
+  // are not due); ladder order is kept within each group.
+  const due = dueAllergens(data?.items ?? []);
+  const rest = (data?.items ?? []).filter((item) => !due.includes(item));
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -127,11 +133,23 @@ export function BabyAllergensPage() {
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't find that baby's allergen progress.</p>}
 
       {data && (
-        <ul className="flex flex-col gap-2">
-          {data.items.map((item) => (
-            <AllergenRow key={item.allergenSlug} item={item} babyId={babyId} />
-          ))}
-        </ul>
+        <div className="flex flex-col gap-3">
+          {due.length > 0 && (
+            <ul aria-label="Due for a serve" className="flex flex-col gap-2">
+              {due.map((item) => (
+                <AllergenRow key={item.allergenSlug} item={item} babyId={babyId} />
+              ))}
+            </ul>
+          )}
+          {due.length > 0 && rest.length > 0 && <hr className="border-[var(--color-divider)]" />}
+          {rest.length > 0 && (
+            <ul className="flex flex-col gap-2">
+              {rest.map((item) => (
+                <AllergenRow key={item.allergenSlug} item={item} babyId={babyId} />
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );
