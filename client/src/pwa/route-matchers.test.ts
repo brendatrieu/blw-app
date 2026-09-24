@@ -99,6 +99,12 @@ describe("isNetworkOnlyRoute", () => {
     expect(isNetworkOnlyRoute(args("https://evil.example.com/api/usage"))).toBe(false);
   });
 
+  it("matches /api/version, so the deploy check never reads a cached build", () => {
+    expect(isNetworkOnlyRoute(args(`${ORIGIN}/api/version`))).toBe(true);
+    expect(isCatalogRoute(args(`${ORIGIN}/api/version`))).toBe(false);
+    expect(isNetworkOnlyRoute(args("https://evil.example.com/api/version"))).toBe(false);
+  });
+
   it("does not accidentally swallow a neighbouring path", () => {
     expect(isNetworkOnlyRoute(args(`${ORIGIN}/api/usages`))).toBe(false);
   });

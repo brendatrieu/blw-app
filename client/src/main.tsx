@@ -1,11 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { QueryClient } from "@tanstack/react-query";
+import { focusManager, QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { ApiError } from "./lib/api.js";
+import { createCatalogVersionChecker, createCatalogVersionDeps } from "./lib/catalogVersion.js";
 import { createIdbPersister } from "./lib/persister.js";
 import { UsageProvider } from "./lib/usage/UsageProvider.js";
 import { initTheme } from "./theme.js";
@@ -25,6 +26,19 @@ const queryClient = new QueryClient({
 });
 
 const persister = createIdbPersister();
+
+// Module scope, so StrictMode's double render cannot subscribe twice. Launch
+// runs it from the persist provider below, AFTER the IndexedDB restore: run
+// earlier, a late hydrate would put the stale catalog back over the refresh.
+// The provider is handed a void callback, never the promise: it would hold
+// every query back until /api/version answered.
+const checkCatalogVersion = createCatalogVersionChecker(createCatalogVersionDeps(queryClient));
+const checkCatalogVersionInBackground = () => {
+  void checkCatalogVersion();
+};
+focusManager.subscribe((focused) => {
+  if (focused) checkCatalogVersionInBackground();
+});
 
 // Only the read-mostly catalog/user-data query families are worth restoring
 // offline. Auth/session and AI-key queries are deliberately never persisted
@@ -51,6 +65,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <ErrorBoundary>
       <PersistQueryClientProvider
         client={queryClient}
+        onSuccess={checkCatalogVersionInBackground}
+        onError={checkCatalogVersionInBackground}
         persistOptions={{
           persister,
           maxAge: 24 * 60 * 60 * 1000,

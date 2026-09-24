@@ -176,6 +176,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       }
     });
 
+    // The build now serving. The client compares it with the last one it saw
+    // and, on a change, drops the service worker's catalog cache — so it must
+    // never itself be answered from a cache. `null` in dev and test (no deploy).
+    app.get("/api/version", async (_request, reply) =>
+      reply.header("cache-control", "no-store").send({ version: env.APP_VERSION ?? null }),
+    );
+
     // Must come before any /api/ai/* route: it installs the shared per-user
     // AI budget through an onRoute hook, which only sees routes declared
     // after it.

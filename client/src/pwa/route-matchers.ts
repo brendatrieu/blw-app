@@ -29,7 +29,11 @@ export function isUserDataRoute({ url, sameOrigin }: RouteMatcherArgs): boolean 
 }
 
 /**
- * NetworkOnly, never cached: /api/auth, /api/ai, /api/account, /api/usage.
+ * NetworkOnly, never cached: /api/auth, /api/ai, /api/account, /api/usage,
+ * /api/version.
+ *
+ * `version` is here because a cached answer would report the old build and
+ * so hide the very deploy the catalog-freshness check exists to notice.
  *
  * `usage` is here so the service worker treats analytics as traffic it has
  * no business in: never cached (a cached 204 would make a flush look like it
@@ -39,7 +43,7 @@ export function isUserDataRoute({ url, sameOrigin }: RouteMatcherArgs): boolean 
  * uuid primary key is what makes a replay safe.
  */
 export function isNetworkOnlyRoute({ url, sameOrigin }: RouteMatcherArgs): boolean {
-  return sameOrigin && /^\/api\/(auth|ai|account|usage)(\/|$|\?)/.test(url.pathname);
+  return sameOrigin && /^\/api\/(auth|ai|account|usage|version)(\/|$|\?)/.test(url.pathname);
 }
 
 /** Meal-log POSTs, queued via BackgroundSync when offline. */
