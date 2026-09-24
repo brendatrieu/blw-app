@@ -16,6 +16,10 @@ import type { RecipeSeed } from './types'
 //
 // Item 357 appends two more, under the same rules: `potato` arrived with item 356 and its
 // own `Simple potato` basic counts as one of its three, so two real dishes are the floor.
+//
+// Item 510 appends two more for `cauliflower` (item 508), the same way: its `Simple cauliflower`
+// basic is the third. Every cooking time is copied from a basic — cauliflower's own steam and
+// roast times, and simple-lentils' simmer — so nothing here is timed from scratch.
 export const coverageRecipesC: RecipeSeed[] = [
   {
     slug: 'butternut-squash-almond-soup',
@@ -319,6 +323,96 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Brown the minced beef over medium heat for 5-7 minutes, until it reads 160°F (71°C) on a thermometer, then add the skinned, deseeded tomato and a little no-salt-added stock.',
           'Simmer over low heat for 15-20 minutes, until thick and tender, while you steam or boil the potato and carrot for 12-15 minutes, until fork-tender.',
           'Mash the potato and carrot loosely with a drizzle of olive oil — never beaten until it turns gluey — spoon the beef over the top, cool to just-warm, and serve family-style in small bite-sized pieces, with no added salt in the pan.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'red-lentil-cauliflower-mash',
+    title: 'Red Lentil & Cauliflower Mash',
+    minAgeMonths: 6,
+    prepMinutes: 25,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'lentils', quantityNote: '1/4 cup dried red lentils (about 1/2 cup cooked)' },
+      { foodSlug: 'cauliflower', quantityNote: '3-4 cauliflower florets' },
+    ],
+    extraIngredients: [{ name: 'water, for cooking and thinning' }],
+    variants: {
+      '6': {
+        textureNote:
+          'A soft, scoopable mash of red lentils and cauliflower, with one whole steamed floret to hold.',
+        steps: [
+          'Rinse the lentils, then simmer them in plenty of unsalted water over low heat for 15-20 minutes, until they collapse and mash easily against the side of the pan.',
+          'Meanwhile, wash the cauliflower, cut it into florets, and steam them over boiling water for 8-10 minutes, until a floret mashes easily between two fingers — raw or under-cooked cauliflower is firm and hard to chew.',
+          'Set one whole floret aside, with a bit of stem as a handle, for baby to hold.',
+          'Drain the lentils and mash them with the rest of the cauliflower until smooth, thinning with a little of the cooking water until it is scoopable rather than stiff.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon with the floret alongside, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'A rougher lentil and cauliflower mash, with small bite-sized soft pieces of cauliflower (no bigger than ½ inch) on the tray.',
+        steps: [
+          'Rinse the lentils and simmer them in unsalted water over low heat for 15-20 minutes, until they squash easily between two fingers, then drain them well.',
+          'Wash the cauliflower, cut it into florets, and steam them over boiling water for 8-10 minutes, until they mash easily between two fingers.',
+          'Mash the lentils with most of the cauliflower, leaving some texture, and cut the rest into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+          'Cool to just-warm and serve the mash with a spoon for baby to practice with and the soft pieces on the tray, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Soft red lentils stirred through small bite-sized cauliflower florets, family-style.',
+        steps: [
+          'Rinse the lentils and simmer them in unsalted water over low heat for 15-20 minutes, until soft, then drain them.',
+          'Wash the cauliflower, cut it into florets, and steam them for 8-10 minutes, until fork-tender.',
+          'Cut the cauliflower into small bite-sized florets and stir them through the lentils, or pre-load a fork with a soft piece for baby to practice with.',
+          'Cool to just-warm and serve in small spoonfuls, with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'cauliflower-cheese-mash',
+    title: 'Cauliflower Cheese Mash',
+    minAgeMonths: 6,
+    prepMinutes: 15,
+    ironFocus: false,
+    fridgeHoursOverride: 48,
+    ingredients: [
+      { foodSlug: 'cauliflower', quantityNote: '4-5 cauliflower florets' },
+      { foodSlug: 'cheese', quantityNote: '1 tablespoon finely grated mild, pasteurized cheese, such as mild cheddar' },
+    ],
+    extraIngredients: [{ name: 'breast milk, formula, or water, to loosen' }],
+    variants: {
+      '6': {
+        textureNote:
+          'A smooth, loose cauliflower mash with finely grated cheese stirred through, plus one whole soft floret to hold.',
+        steps: [
+          'Wash the cauliflower, cut it into florets, and steam them over boiling water for 8-10 minutes, until a floret mashes easily between two fingers — raw or under-cooked cauliflower is firm and hard to chew.',
+          'Set one whole floret aside, with a bit of stem as a handle, for baby to hold.',
+          'Mash the rest until smooth and stir the finely grated cheese through it off the heat, so the cheese melts in rather than sitting in firm shreds.',
+          'Loosen the mash with a little breast milk, formula, or water until it is soft and spoonable.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon with the floret alongside, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'A rougher cheesy mash, with small bite-sized soft pieces of cauliflower (no bigger than ½ inch) on the tray.',
+        steps: [
+          'Wash the cauliflower, cut it into florets, and steam them over boiling water for 8-10 minutes, until they mash easily between two fingers.',
+          'Mash most of it roughly and stir the finely grated cheese through off the heat, then cut the rest into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+          'Loosen the mash with a little breast milk, formula, or water if it is stiff.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small bite-sized florets tossed with grated cheese, or a looser family-style mash.',
+        steps: [
+          'Wash the cauliflower and cut it into florets, then steam them for 8-10 minutes, or roast them at 400°F (200°C) for 25-30 minutes, until fork-tender and just golden on top.',
+          'Trim off any crispy or burnt edges from roasted florets, then cut them into small bite-sized florets and toss them with the finely grated cheese while hot, or mash them loosely with the cheese and a little breast milk, formula, or water.',
+          'Cool to just-warm and serve with no added salt.',
         ],
       },
     },

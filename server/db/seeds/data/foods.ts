@@ -1,6 +1,6 @@
 import type { FoodSeed } from './types'
 
-// ~75 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
+// ~76 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
 // staples. minAgeMonths is 6 for nearly everything (BLW typically starts around 6 months when
 // baby shows readiness signs); shellfish is held to 9 months per the allergen ladder ordering.
 // Prep guidance is age-specific: 6-8m favors palmar-grasp finger shapes and thinned textures,
@@ -266,6 +266,31 @@ export const foods: FoodSeed[] = [
       'Steam or roast until tender and cut into small bite-sized florets.',
     chokingNotes: 'Raw or under-cooked broccoli is fibrous and hard to chew — always steam until it mashes easily before serving.',
     notes: 'A great vitamin-C pairing partner for iron-rich foods like beef, lentils, or tofu.',
+    allergens: [],
+    storageCategory: 'produce_cooked_soft',
+  },
+  {
+    // Item 508. Prep and choking copy from Solid Starts' cauliflower page; levels from USDA
+    // FoodData Central 170397 (cauliflower, boiled, without salt): iron 0.32 mg, vitamin C
+    // 44.3 mg, fiber 2.3 g per 100 g — low / high / moderate on the catalog's thresholds.
+    // Solid Starts gives no cook times; simple-cauliflower's (steam 8-10 minutes, roast at
+    // 400°F for 25-30 minutes) are Sarah Remmer RD's baby-led-weaning cauliflower page.
+    slug: 'cauliflower',
+    name: 'Cauliflower',
+    category: 'veg',
+    ironLevel: 'low',
+    vitaminCLevel: 'high',
+    fiberLevel: 'moderate',
+    chokingRisk: 'moderate',
+    minAgeMonths: 6,
+    prep6m:
+      'Steam large whole florets until soft enough to mash easily between two fingers, keeping a bit of stem as a handle; halve any small, round floret lengthwise so it is not ball-shaped.',
+    prep9m:
+      'Steam until soft and serve whole florets with a bit of stem to hold, or cut into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+    prep12m:
+      'Steam or roast until tender and cut into small bite-sized florets, or pre-load a fork with a soft piece for utensil practice.',
+    chokingNotes: 'Raw or under-cooked cauliflower is firm and hard to chew — always steam until it mashes easily before serving.',
+    notes: 'Rich in vitamin C, which helps baby absorb iron — pair it with lentils, beef, or another iron-rich food.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },

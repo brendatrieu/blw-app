@@ -514,6 +514,41 @@ export const basicRecipes: RecipeSeed[] = [
     },
   },
   {
+    slug: 'simple-cauliflower',
+    title: 'Simple cauliflower',
+    minAgeMonths: 6,
+    prepMinutes: 15,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'cauliflower', quantityNote: '2-3 large cauliflower florets' }],
+    variants: {
+      '6': {
+        textureNote: 'Large whole steamed florets soft enough to mash between two fingers, with a bit of stem as a handle.',
+        steps: [
+          'Wash the cauliflower and cut it into large florets, keeping a bit of stem on each as a handle.',
+          'Steam over boiling water for 8-10 minutes, until a floret mashes easily between two fingers — raw or under-cooked cauliflower is firm and hard to chew.',
+          'Test one floret between your fingers before serving, and keep steaming until it mashes easily if it resists; halve any small, round floret lengthwise so it is not ball-shaped.',
+          'Cool to just-warm and hand baby a whole floret to hold by the stem.',
+        ],
+      },
+      '9': {
+        textureNote: 'Whole soft florets with a bit of stem to hold, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+        steps: [
+          'Wash the cauliflower, cut it into florets, and steam them over boiling water for 8-10 minutes, until they mash easily between two fingers.',
+          'Serve them whole with a bit of stem to hold, or cut some into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+          'Cool to just-warm and serve.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small bite-sized florets, steamed or roasted tender.',
+        steps: [
+          'Wash the cauliflower and cut it into florets, then steam them for 8-10 minutes, or roast them at 400°F (200°C) for 25-30 minutes, until fork-tender and just golden on top.',
+          'Trim off any crispy or burnt edges from roasted florets, then cut them into small bite-sized florets, or pre-load a fork with a soft piece for baby to practice with.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  {
     slug: 'simple-bell-pepper',
     title: 'Simple bell pepper',
     minAgeMonths: 6,

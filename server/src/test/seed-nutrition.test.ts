@@ -58,6 +58,9 @@ const EXPECTED_FIBER_LEVEL: Record<string, "high" | "moderate" | "low"> = {
   // company with the other roots: sweet potato (3.3 g) and carrot (3.0 g) are
   // both `high`, and a row that copied either would fail here.
   potato: "moderate", // 2.2 g, baked flesh and skin
+  // Item 508 (fdcId 170397, boiled without salt). Broccoli beside it is `high`,
+  // and a row that copied broccoli's would fail here.
+  cauliflower: "moderate", // 2.3 g, boiled
 };
 
 describe("seeded fiber levels", () => {
