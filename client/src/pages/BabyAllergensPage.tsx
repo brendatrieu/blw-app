@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import type { AllergenProgressItem } from "@blw/shared";
+import type { AllergenProgressItem, AllergenStatus } from "@blw/shared";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
 import {
   ALLERGEN_RULE_COPY,
@@ -106,14 +106,28 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
   );
 }
 
+/** The status sections after "Due for a serve", in page order. A Record, so a
+ * new ladder status fails typecheck here instead of dropping off the page. */
+const STATUS_SECTIONS: Record<AllergenStatus, true> = { started: true, not_started: true, established: true };
+
 export function BabyAllergensPage() {
   const { id: babyId } = useParams<{ id: string }>();
   const { data, isLoading, isError } = useAllergenProgress(babyId);
-  // Due rows lead, so Home's "N allergens due" line lands on them without a
-  // scroll through nine rows. Same rule as Home's count (reaction-paused rows
-  // are not due); ladder order is kept within each group.
-  const due = dueAllergens(data?.items ?? []);
-  const rest = (data?.items ?? []).filter((item) => !due.includes(item));
+  // Sectioned by what the parent does next: serve the due ones, keep going
+  // with the started ones, introduce the rest, and nothing for the done ones.
+  // "Due" is Home's rule (reaction-paused rows are not due, so they stay in
+  // their status section); ladder order is kept within each section.
+  const items = data?.items ?? [];
+  const due = dueAllergens(items);
+  const notDue = items.filter((item) => !due.includes(item));
+  const sections = [
+    { key: "due", title: "Due for a serve", items: due },
+    ...(Object.keys(STATUS_SECTIONS) as AllergenStatus[]).map((status) => ({
+      key: status,
+      title: ALLERGEN_STATUS_LABEL[status],
+      items: notDue.filter((item) => item.status === status),
+    })),
+  ].filter((section) => section.items.length > 0);
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -133,22 +147,19 @@ export function BabyAllergensPage() {
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't find that baby's allergen progress.</p>}
 
       {data && (
-        <div className="flex flex-col gap-3">
-          {due.length > 0 && (
-            <ul aria-label="Due for a serve" className="flex flex-col gap-2">
-              {due.map((item) => (
-                <AllergenRow key={item.allergenSlug} item={item} babyId={babyId} />
-              ))}
-            </ul>
-          )}
-          {due.length > 0 && rest.length > 0 && <hr className="border-[var(--color-divider)]" />}
-          {rest.length > 0 && (
-            <ul className="flex flex-col gap-2">
-              {rest.map((item) => (
-                <AllergenRow key={item.allergenSlug} item={item} babyId={babyId} />
-              ))}
-            </ul>
-          )}
+        <div className="flex flex-col gap-5">
+          {sections.map((section) => (
+            <section key={section.key} aria-labelledby={`ladder-${section.key}`} className="flex flex-col gap-2">
+              <h2 id={`ladder-${section.key}`} className="text-sm font-semibold text-[var(--color-text)]">
+                {section.title}
+              </h2>
+              <ul className="flex flex-col gap-2">
+                {section.items.map((item) => (
+                  <AllergenRow key={item.allergenSlug} item={item} babyId={babyId} />
+                ))}
+              </ul>
+            </section>
+          ))}
         </div>
       )}
     </div>

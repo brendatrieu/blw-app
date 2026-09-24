@@ -281,57 +281,91 @@ describe("BabyAllergensPage rows open the allergen detail page (item 188)", () =
   });
 });
 
-describe("BabyAllergensPage due rows first", () => {
+describe("BabyAllergensPage sections", () => {
   /** A named row, so the rendered order can be read off the page. */
   function named(slug: string, name: string, row: AllergenProgressItem): AllergenProgressItem {
     return { ...row, allergenSlug: slug, allergenName: name };
   }
 
-  /** Row names in the order the page renders them. */
-  function renderedOrder(html: string, names: string[]): string[] {
-    return names.filter((name) => html.includes(`>${name}<`)).sort((a, b) => html.indexOf(`>${a}<`) - html.indexOf(`>${b}<`));
+  /** Each section's heading with the row names under it, in page order. */
+  function sectionsOf(html: string): { title: string; rows: string[] }[] {
+    return [...html.matchAll(/<section[^>]*>(.*?)<\/section>/gs)].map(([, body]) => ({
+      title: /<h2[^>]*>(.*?)<\/h2>/s.exec(body!)![1]!,
+      rows: [...body!.matchAll(/text-sm font-semibold text-\[var\(--color-text\)\]">([^<]+)<\/span>/g)].map((m) => m[1]!),
+    }));
   }
 
-  const NAMES = ["Milk", "Egg", "Peanut", "Wheat", "Fish"];
-
-  it("moves due rows above the rest, keeping ladder order within each group, with a divider between", () => {
-    const html = renderWithItems([
-      named("milk", "Milk", servedDaysAgo(2)),
-      named("egg", "Egg", servedDaysAgo(10)),
+  it("groups rows by what to do next, in ladder order within each section", () => {
+    // Every field a sort could use (dates, counts, names) differs between the
+    // rows of each section, so a section's order can only come from the input.
+    const started = (exposures: number, days: number, firstDays: number): AllergenProgressItem =>
+      item({ status: "started", exposures, lastServedAt: agoIso(days), lastExposureAt: agoIso(days), firstAt: agoIso(firstDays) });
+    // Marked established after an older reaction: the mark answers it, so the
+    // row is due like any other (showsReactionBadge), not paused.
+    const markedAfterReaction: AllergenProgressItem = {
+      ...item({ status: "established", overridden: true, exposures: 1, firstAt: agoIso(50) }),
+      lastServedAt: agoIso(25),
+      reactionNotedAt: agoIso(20),
+      establishedAt: agoIso(12),
+      lastExposureAt: agoIso(12),
+      dueAt: dueFrom(agoIso(12)),
+    };
+    const rows = [
+      named("tree_nut", "Tree nut", { ...servedDaysAgo(1), exposures: 4, firstAt: agoIso(60) }),
+      named("wheat", "Wheat", { ...servedDaysAgo(9), firstAt: agoIso(40) }),
       named("peanut", "Peanut", item({ status: "not_started" })),
-      named("wheat", "Wheat", servedDaysAgo(9)),
-      named("fish", "Fish", item({ status: "started", exposures: 1 })),
+      named("fish", "Fish", started(1, 6, 6)),
+      // Due today: the boundary day counts as due.
+      named("egg", "Egg", { ...servedDaysAgo(ALLERGEN_MAINTENANCE_DAYS), exposures: 5, firstAt: agoIso(30) }),
+      named("soy", "Soy", item({ status: "not_started" })),
+      named("sesame", "Sesame", started(2, 4, 20)),
+      named("shellfish", "Shellfish", markedAfterReaction),
+      // Due tomorrow: not yet.
+      named("milk", "Milk", { ...servedDaysAgo(ALLERGEN_MAINTENANCE_DAYS - 1), firstAt: agoIso(45) }),
+    ];
+    const html = renderWithItems(rows);
+    expect(sectionsOf(html)).toEqual([
+      { title: "Due for a serve", rows: ["Wheat", "Egg", "Shellfish"] },
+      { title: "Started", rows: ["Fish", "Sesame"] },
+      { title: "Not started", rows: ["Peanut", "Soy"] },
+      { title: "Established", rows: ["Tree nut", "Milk"] },
     ]);
-    expect(renderedOrder(html, NAMES)).toEqual(["Egg", "Wheat", "Milk", "Peanut", "Fish"]);
-    const hr = html.indexOf("<hr");
-    expect(hr).toBeGreaterThan(html.indexOf(">Wheat<"));
-    expect(hr).toBeLessThan(html.indexOf(">Milk<"));
-    expect(html).toContain('aria-label="Due for a serve"');
+    // The same rows in reverse must reverse every section. With every sortable
+    // field distinct inside a section, any sort gives one output for both input
+    // orders, so only order-preserving code can pass both assertions.
+    expect(sectionsOf(renderWithItems([...rows].reverse()))).toEqual([
+      { title: "Due for a serve", rows: ["Shellfish", "Egg", "Wheat"] },
+      { title: "Started", rows: ["Sesame", "Fish"] },
+      { title: "Not started", rows: ["Soy", "Peanut"] },
+      { title: "Established", rows: ["Milk", "Tree nut"] },
+    ]);
+    expect(html).not.toContain("<hr");
+    for (const key of ["due", "started", "not_started", "established"]) {
+      expect(html).toMatch(new RegExp(`<section aria-labelledby="ladder-${key}"[^>]*><h2 id="ladder-${key}"`));
+    }
   });
 
-  it("leaves a row paused for a reaction in place, however overdue", () => {
-    const paused = { ...servedDaysAgo(10), reactionNotedAt: agoIso(10) };
+  it("keeps a row paused for a reaction in its status section, however overdue", () => {
+    const pausedEstablished = { ...servedDaysAgo(10), reactionNotedAt: agoIso(10) };
+    const pausedStarted = item({ status: "started", exposures: 1, reactionNotedAt: agoIso(3) });
     const html = renderWithItems([
-      named("milk", "Milk", servedDaysAgo(2)),
-      named("egg", "Egg", paused),
+      named("egg", "Egg", pausedEstablished),
+      named("fish", "Fish", pausedStarted),
       named("wheat", "Wheat", servedDaysAgo(9)),
     ]);
-    expect(renderedOrder(html, NAMES)).toEqual(["Wheat", "Milk", "Egg"]);
+    expect(sectionsOf(html)).toEqual([
+      { title: "Due for a serve", rows: ["Wheat"] },
+      { title: "Started", rows: ["Fish"] },
+      { title: "Established", rows: ["Egg"] },
+    ]);
   });
 
-  it("draws no divider when nothing is due, and keeps the ladder order", () => {
+  it("shows only the sections that have rows", () => {
     const html = renderWithItems([
-      named("milk", "Milk", servedDaysAgo(2)),
+      named("milk", "Milk", item({ status: "not_started" })),
       named("egg", "Egg", item({ status: "not_started" })),
     ]);
-    expect(renderedOrder(html, NAMES)).toEqual(["Milk", "Egg"]);
-    expect(html).not.toContain("<hr");
+    expect(sectionsOf(html)).toEqual([{ title: "Not started", rows: ["Milk", "Egg"] }]);
     expect(html).not.toContain("Due for a serve");
-  });
-
-  it("draws no divider when every row is due", () => {
-    const html = renderWithItems([named("milk", "Milk", servedDaysAgo(9)), named("egg", "Egg", servedDaysAgo(10))]);
-    expect(renderedOrder(html, NAMES)).toEqual(["Milk", "Egg"]);
-    expect(html).not.toContain("<hr");
   });
 });
