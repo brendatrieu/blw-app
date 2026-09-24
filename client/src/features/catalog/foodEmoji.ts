@@ -155,6 +155,45 @@ export function getFoodEmoji(slug: string, category?: FoodCategory | null, emoji
 }
 
 /**
+ * Emoji per keyword for a recipe's free-text extras ("water, breast milk, or
+ * formula", "olive oil for the pan"). Never 🧂 — this is a no-added-salt app,
+ * and salt was the old hardcoded glyph for every extra.
+ */
+const EXTRA_INGREDIENT_EMOJI: Record<string, string> = {
+  water: "💧",
+  "coconut milk": "🥥",
+  "breast milk": "🍼",
+  formula: "🍼",
+  milk: "🍼",
+  // Its own keyword so the "milk" inside it can't claim the extra as 🍼.
+  "whole-milk yogurt": "🥛",
+  yogurt: "🥛",
+  "olive oil": "🫒",
+  oil: "🫒",
+  flour: "🌾",
+  thyme: "🌿",
+  sage: "🌿",
+  coriander: "🌿",
+  vegetable: "🥕",
+};
+
+// Longest keyword first, so at one start index "coconut milk" beats "milk";
+// the regex's leftmost match then makes the EARLIEST keyword in the name win.
+// Word boundaries keep "oil" out of "boil" and "sage" out of "sausage".
+const EXTRA_INGREDIENT_PATTERN = new RegExp(
+  `\\b(${Object.keys(EXTRA_INGREDIENT_EMOJI)
+    .sort((a, b) => b.length - a.length)
+    .join("|")})\\b`,
+  "i",
+);
+
+/** The emoji for a recipe extra, by the first keyword its name mentions; a spoon otherwise. */
+export function getExtraIngredientEmoji(name: string): string {
+  const keyword = EXTRA_INGREDIENT_PATTERN.exec(name)?.[1]?.toLowerCase();
+  return (keyword && EXTRA_INGREDIENT_EMOJI[keyword]) || "🥄";
+}
+
+/**
  * The shape `emojiCluster` needs from one food: a slug, and optionally the
  * two things that can beat it (its own emoji, its category). Structural
  * rather than `MealFood`, because a storage container's `foods` carry no

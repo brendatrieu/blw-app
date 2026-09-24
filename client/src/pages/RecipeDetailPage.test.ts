@@ -285,6 +285,12 @@ describe("RecipeDetailPage ingredients", () => {
     expect(html).not.toContain("olive oil — ");
   });
 
+  it("marks each extra with its own emoji, never the old salt shaker", () => {
+    const html = renderRecipe(catalogRecipe({ extraIngredients: [{ name: "water", quantityNote: "" }] }));
+    expect(html).toContain("💧");
+    expect(html).not.toContain("🧂");
+  });
+
   it("keeps extras in the muted tone a real ingredient's quantity note gets", () => {
     const html = renderRecipe(catalogRecipe());
     const row = /<li[^>]*>(?:(?!<\/li>).)*a drizzle olive oil/s.exec(html)?.[0] ?? "";

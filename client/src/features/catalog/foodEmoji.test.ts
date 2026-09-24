@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getCategoryEmoji, getFoodEmoji } from "./foodEmoji.js";
+import { getCategoryEmoji, getExtraIngredientEmoji, getFoodEmoji } from "./foodEmoji.js";
 
 describe("getFoodEmoji", () => {
   it("prefers the food's OWN emoji over everything else (item 177)", () => {
@@ -85,5 +85,68 @@ describe("emoji coverage for the seeded catalog", () => {
     expect(getFoodEmoji("turkey")).toBe("🦃");
     expect(getFoodEmoji("tuna")).toBe("🥫");
     expect(getFoodEmoji("pumpkin_seeds")).toBe("🎃");
+  });
+});
+
+describe("getExtraIngredientEmoji", () => {
+  it("picks the keyword that appears EARLIEST in the name, case-insensitively", () => {
+    expect(getExtraIngredientEmoji("water or olive oil")).toBe("💧");
+    expect(getExtraIngredientEmoji("breast milk, formula, or water")).toBe("🍼");
+    expect(getExtraIngredientEmoji("Olive Oil for the pan")).toBe("🫒");
+  });
+
+  it("lets the longer keyword win where two overlap", () => {
+    expect(getExtraIngredientEmoji("unsweetened coconut milk")).toBe("🥥");
+    expect(getExtraIngredientEmoji("olive oil")).toBe("🫒");
+    expect(getExtraIngredientEmoji("plain whole-milk yogurt, mashed avocado, or olive oil, to moisten")).toBe("🥛");
+  });
+
+  it("matches whole words only", () => {
+    // "oil" inside "boil", "sage" inside "sausage" must not count.
+    expect(getExtraIngredientEmoji("sausage to boil")).toBe("🥄");
+  });
+
+  it("falls back to a spoon, and never shows salt", () => {
+    expect(getExtraIngredientEmoji("mashed fruit")).toBe("🥄");
+    expect(getExtraIngredientEmoji("salt")).not.toBe("🧂");
+  });
+
+  it("gives every seeded extra a real emoji, not the spoon", () => {
+    // Every distinct `extraIngredients[].name` in server/db/seeds/data/*.ts as
+    // of writing — hardcoded because a client test cannot import server seeds.
+    const seededExtras = [
+      "breast milk, formula, or water",
+      "breast milk, formula, or water to soak",
+      "breast milk, formula, or water to thin",
+      "breast milk, formula, or water, to loosen",
+      "dried thyme or sage (optional)",
+      "grated vegetable, to bind the mince",
+      "ground coriander",
+      "milk, water, or mashed fruit, to soak",
+      "oat flour for grip (optional)",
+      "oil for the pan",
+      "olive oil",
+      "olive oil for the pan",
+      "olive oil or a spoonful of the cooking liquid, to moisten",
+      "plain whole-milk yogurt, mashed avocado, or olive oil, to moisten",
+      "unsweetened coconut milk",
+      "warm water to thin the peanut butter",
+      "warm water, breast milk, or formula, to thin",
+      "warm water, breast milk, or formula, to thin the cashew butter",
+      "warm water, breast milk, or formula, to thin the seed butter",
+      "warm water, to soak and blend the ground cashew meal",
+      "water or milk to moisten the bread",
+      "water or no-salt-added stock",
+      "water or olive oil, to loosen",
+      "water, breast milk, or formula",
+      "water, for cooking",
+      "water, for cooking and thinning",
+      "water, to loosen the mash",
+      "water, whole milk, or a thin smooth spread, to moisten",
+    ];
+    for (const name of seededExtras) {
+      expect(getExtraIngredientEmoji(name), name).not.toBe("🥄");
+      expect(getExtraIngredientEmoji(name), name).not.toBe("🧂");
+    }
   });
 });

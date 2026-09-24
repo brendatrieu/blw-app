@@ -10,7 +10,7 @@ import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../features/catalog/basicReci
 import { Badge } from "../features/catalog/components/Badge.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
 import { RECIPES_TAB_PATH, allergenLabel, customRecipeConflictMessage } from "../features/catalog/constants.js";
-import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
+import { getExtraIngredientEmoji, getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
@@ -270,7 +270,7 @@ export function RecipeDetailPage() {
               className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text-muted)]"
             >
               <span aria-hidden="true" className="text-lg leading-none">
-                🧂
+                {getExtraIngredientEmoji(extra.name)}
               </span>
               {formatExtraIngredient(extra)}
             </li>
