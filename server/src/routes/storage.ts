@@ -348,7 +348,7 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     if (!body.success) return badRequest(reply, body.error.flatten());
 
     // Servings edits are relative to what the row already holds (a new total
-    // re-clamps the existing remainder), so the current row is read first.
+    // keeps the servings already served), so the current row is read first.
     const [existing] = await db
       .select({
         servingsTotal: storageItems.servingsTotal,
@@ -391,8 +391,14 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
         patch.servingsTotal = null;
         patch.servingsLeft = null;
       } else {
-        // Turning tracking on with no explicit remainder fills the container.
-        const requested = body.data.servingsLeft ?? existing.servingsLeft ?? total;
+        // With no explicit remainder, a resize keeps what has been SERVED, not
+        // what is left: 6 with 1 served, resized to 7, leaves 6. Turning
+        // tracking on fills the container.
+        const served =
+          existing.servingsTotal !== null && existing.servingsLeft !== null
+            ? existing.servingsTotal - existing.servingsLeft
+            : 0;
+        const requested = body.data.servingsLeft ?? total - served;
         patch.servingsTotal = total;
         patch.servingsLeft = Math.min(Math.max(requested, 0), total);
       }

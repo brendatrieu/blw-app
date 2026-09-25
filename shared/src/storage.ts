@@ -223,8 +223,9 @@ export const updateStorageItemInputSchema = z
     status: storageStatusSchema.optional(),
     /**
      * `null` turns servings tracking off, clearing `servingsLeft` with it.
-     * A number turns it on (or resizes it); `servingsLeft` is then clamped
-     * into `[0, servingsTotal]` by the route, never rejected.
+     * A number turns it on (filling the container) or resizes it, keeping the
+     * servings already served; `servingsLeft` is then clamped into
+     * `[0, servingsTotal]` by the route, never rejected.
      */
     servingsTotal: servingsTotalSchema.nullable().optional(),
     /** Only meaningful while tracking is on — see `servingsTotal`. */

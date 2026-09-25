@@ -820,7 +820,7 @@ describe("ownership", () => {
       expect(shrunk.body).toMatchObject({ servingsTotal: 2, servingsLeft: 2 });
     });
 
-    it("keeps the remaining count when PATCH grows servingsTotal, and clamps an over-large servingsLeft", async () => {
+    it("keeps the servings already served when PATCH resizes servingsTotal", async () => {
       const created = await postStorageItem(app, user.cookie, {
         foodIds: [fixtures.banana.id],
         location: "fridge",
@@ -829,8 +829,26 @@ describe("ownership", () => {
       const partlyUsed = await patchItem(user.cookie, created.body.id, { servingsLeft: 1 });
       expect(partlyUsed.body).toMatchObject({ servingsTotal: 3, servingsLeft: 1 });
 
+      // Two served: growing to 8 leaves 6, shrinking to 4 leaves 2.
       const grown = await patchItem(user.cookie, created.body.id, { servingsTotal: 8 });
-      expect(grown.body).toMatchObject({ servingsTotal: 8, servingsLeft: 1 });
+      expect(grown.body).toMatchObject({ servingsTotal: 8, servingsLeft: 6 });
+      const shrunk = await patchItem(user.cookie, created.body.id, { servingsTotal: 4 });
+      expect(shrunk.body).toMatchObject({ servingsTotal: 4, servingsLeft: 2 });
+
+      // At or below what was served there is nothing left; the item stays
+      // active, since only serving finishes an item.
+      const belowServed = await patchItem(user.cookie, created.body.id, { servingsTotal: 1 });
+      expect(belowServed.body).toMatchObject({ servingsTotal: 1, servingsLeft: 0, status: "active" });
+    });
+
+    it("lets an explicit servingsLeft win over the resize, clamped to the total", async () => {
+      const created = await postStorageItem(app, user.cookie, {
+        foodIds: [fixtures.banana.id],
+        location: "fridge",
+        servingsTotal: 3,
+      });
+      const both = await patchItem(user.cookie, created.body.id, { servingsTotal: 8, servingsLeft: 5 });
+      expect(both.body).toMatchObject({ servingsTotal: 8, servingsLeft: 5 });
 
       const clamped = await patchItem(user.cookie, created.body.id, { servingsLeft: 99 });
       expect(clamped.body).toMatchObject({ servingsTotal: 8, servingsLeft: 8 });
@@ -1026,6 +1044,20 @@ describe("ownership", () => {
       const response = await app.inject({ method: "GET", url: `/api/babies/${babyId}/meals`, headers: { cookie } });
       return response.json<MealsResponse>();
     }
+
+    it("keeps a real serve when the total is edited afterwards (6, serve 1, resize to 7 -> 6 left)", async () => {
+      const babyId = await createBaby(app, user);
+      const created = await postStorageItem(app, user.cookie, {
+        foodIds: [fixtures.banana.id],
+        location: "fridge",
+        servingsTotal: 6,
+      });
+      const served = await serve(user.cookie, created.body.id, { babyId });
+      expect(served.body?.item).toMatchObject({ servingsTotal: 6, servingsLeft: 5 });
+
+      const resized = await patchItem(user.cookie, created.body.id, { servingsTotal: 7 });
+      expect(resized.body).toMatchObject({ servingsTotal: 7, servingsLeft: 6 });
+    });
 
     it("logs a meal for a food-sourced item, links it to the storage item, and takes one serving", async () => {
       const babyId = await createBaby(app, user);
