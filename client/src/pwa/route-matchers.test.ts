@@ -6,7 +6,7 @@ import {
   isUserDataRoute,
 } from "./route-matchers.js";
 
-const ORIGIN = "https://150.230.179.103.sslip.io";
+const ORIGIN = "https://app.example.test";
 
 function args(href: string, origin = ORIGIN) {
   const url = new URL(href);

@@ -71,7 +71,7 @@ The owner does not want the Browser preview pane opened unasked, so UI is checke
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { writeFileSync, mkdirSync } from "node:fs";
-const require = createRequire("/Users/stallenvp/Desktop/blw-app/client/package.json"); // borrows the repo's `ws`
+const require = createRequire(`${process.env.HOME}/Desktop/blw-app/client/package.json`); // finds `ws` in the nearest node_modules above the repo (`npm i ws` in your home folder if missing)
 const WebSocket = require("ws");
 const CH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const port = 9333;
