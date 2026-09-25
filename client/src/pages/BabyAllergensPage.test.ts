@@ -114,7 +114,7 @@ describe("page-level backfill copy", () => {
 });
 
 describe("BabyAllergensPage recency fact + countdown (items 143/365)", () => {
-  it("shows no recency fact for a not_started row (nothing served, 0 exposures already says so)", () => {
+  it("shows no recency fact for a not_started row (nothing served, '0 of 3 servings' already says so)", () => {
     const html = renderWithItems([item({ status: "not_started" })]);
     expect(html).not.toContain("last served");
     expect(html).not.toContain("no serves logged yet");
@@ -181,20 +181,46 @@ describe("BabyAllergensPage established rule + reaction pause (item 370)", () =>
     expect(html).toContain("Already established? Mark it so your progress reflects it.");
   });
 
-  it("counts a started row's servings toward the rule", () => {
-    expect(renderWithItems([item({ status: "started", exposures: 1 })])).toContain("1 of 3 servings");
-    expect(renderWithItems([item({ status: "started", exposures: 2 })])).toContain("2 of 3 servings");
+  // One count per row (item 518): "N of 3 servings" until established, then
+  // nothing — one wording or none, never "exposures".
+  it("prints one 'N of 3 servings' count on every row short of established", () => {
+    const rows: AllergenProgressItem[] = [
+      item({ status: "not_started", exposures: 0 }),
+      item({ status: "started", exposures: 1 }),
+      item({ status: "started", exposures: 2 }),
+    ];
+    for (const row of rows) {
+      const html = renderWithItems([row]);
+      expect(html.split(`${row.exposures} of 3 servings`).length - 1).toBe(1);
+      expect(html).not.toMatch(/\d(?:<!-- -->)? exposures?\b/);
+    }
   });
 
-  it("counts nothing on a not_started or established row", () => {
-    expect(renderWithItems([item({ status: "not_started" })])).not.toContain("of 3 servings");
-    expect(renderWithItems([item({ status: "established", exposures: 3 })])).not.toContain("of 3 servings");
+  it("prints no count on a row the parent marked on one serve, just 'Marked by you'", () => {
+    const html = renderWithItems([item({ status: "established", overridden: true, exposures: 1 })]);
+    expect(html).toContain("Marked by you");
+    expect(html).not.toContain("of 3 servings");
+    expect(html).not.toMatch(/\d(?:<!-- -->)? exposures?\b/);
   });
 
-  it("badges a paused row with the caution chip and the doctor sentence, and drops the count", () => {
+  it("prints no count once the log has established it", () => {
+    const html = renderWithItems([item({ status: "established", exposures: 7 })]);
+    expect(html).toContain(">Established<");
+    expect(html).not.toContain("of 3 servings");
+    expect(html).not.toMatch(/\d(?:<!-- -->)? exposures?\b/);
+  });
+
+  it("stops a paused row's count at 3 of 3", () => {
+    const reacted = agoIso(2);
+    const html = renderWithItems([item({ status: "started", exposures: 4, reactionNotedAt: reacted })]);
+    expect(html).toContain("3 of 3 servings");
+    expect(html).toContain("Reaction noted");
+  });
+
+  it("badges a paused row with the caution chip and the doctor sentence, and keeps the count", () => {
     const reacted = agoIso(2);
     const html = renderWithItems([
-      item({ status: "started", exposures: 3, lastServedAt: reacted, lastExposureAt: reacted, reactionNotedAt: reacted }),
+      item({ status: "started", exposures: 1, lastServedAt: reacted, lastExposureAt: reacted, reactionNotedAt: reacted }),
     ]);
     expect(html).toContain("Reaction noted");
     expect(html).toContain("Consider talking to your doctor.");
@@ -202,8 +228,9 @@ describe("BabyAllergensPage established rule + reaction pause (item 370)", () =>
     expect(html).toContain("bg-[var(--color-caution-soft)]");
     // Still climbing, so the status chip stays Started...
     expect(html).toContain(">Started<");
-    // ...and the progress count steps aside for the badge.
-    expect(html).not.toContain("of 3 servings");
+    // ...and the count stays: the owner reversed item 370's suppression
+    // (item 519), so the log's fact sits above the badge.
+    expect(html).toContain("1 of 3 servings");
   });
 
   it("badges an established row whose log holds a later reaction, without downgrading it", () => {
@@ -221,6 +248,7 @@ describe("BabyAllergensPage established rule + reaction pause (item 370)", () =>
     expect(html).toContain(">Established<");
     expect(html).toContain("Reaction noted");
     expect(html).toContain("Consider talking to your doctor.");
+    expect(html).not.toContain("of 3 servings");
   });
 
   it("drops the badge once the parent has marked the allergen themselves", () => {

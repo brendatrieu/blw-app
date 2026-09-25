@@ -13,7 +13,7 @@ import {
   markedEstablishedAt,
   resolveAllergenRecency,
   resolveAllergenRowAction,
-  servingsProgressLabel,
+  servingCountLabel,
   showsReactionBadge,
 } from "../features/tracking/allergenRow.js";
 import { allergenEmoji } from "../features/tracking/allergenEmoji.js";
@@ -88,9 +88,9 @@ function AllergenDetailBody({
 }) {
   const { progress, foods, exposures } = detail;
   const recency = resolveAllergenRecency(progress);
+  const servings = servingCountLabel(progress);
   const action = resolveAllergenRowAction(progress);
   const markedAt = markedEstablishedAt(progress);
-  const servings = servingsProgressLabel(progress);
 
   return (
     <>
@@ -102,10 +102,8 @@ function AllergenDetailBody({
       />
 
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
-        <span>{progress.exposures === 1 ? "1 exposure" : `${progress.exposures} exposures`}</span>
-        <span>First: {formatAllergenDate(progress.firstAt)}</span>
-        {/* Same count the ladder row prints, from the same helper. */}
         {servings && <span>{servings}</span>}
+        <span>First: {formatAllergenDate(progress.firstAt)}</span>
         {/* Exact dates when there are any — a detail page can afford them
             where the ladder row only has room for "last served 3d ago". The
             two are separate facts on purpose: a mark is a parent saying the
@@ -159,7 +157,7 @@ function AllergenDetailBody({
         {exposures.length === 0 ? (
           <EmptyState
             icon={allergenEmoji(progress.allergenSlug)}
-            title="No exposures logged yet"
+            title="No servings logged yet"
             description={progress.introGuidance}
           />
         ) : (

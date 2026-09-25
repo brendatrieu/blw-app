@@ -130,7 +130,7 @@ export function serveAgainByLabel(dueAt: string | null, now: Date = new Date()):
 
 export interface AllergenRecency {
   /** Muted fact line, or null to render nothing (a not-yet-started row has
-   * no recency worth stating — "0 exposures" already covers it). */
+   * no recency worth stating — "0 of 3 servings" already covers it). */
   fact: string | null;
   /** Muted countdown ("Serve again by Monday") while an established allergen
    * is still inside its maintenance week; null once it is due, and null for
@@ -168,23 +168,19 @@ export function resolveAllergenRecency(
 }
 
 /**
- * "2 of 3 servings" — how far up the ladder a started row has climbed, so
- * the rule the header states in words is visible as a count on the row
- * itself. Null for anything not started: a not-yet-started row has nothing
- * to count, and an established one has finished counting.
+ * The one count a row prints (item 518): "N of 3 servings" until the allergen
+ * is established, then nothing — the Established badge says it, and a number
+ * beside it only invites "why only 1?" on a row the parent marked. One wording
+ * or none, never two (OWNER CALL 2026-09-24: "N exposures" at 3+ read as a
+ * different, unintended label).
  *
- * Also null once a reaction has paused the row. "3 of 3 servings" next to a
- * Started chip would be a contradiction, and even "1 of 3" would read as
- * "two more to go" directly above a badge asking the parent to talk to a
- * doctor before serving again — the badge is the state of that row, not a
- * countdown.
+ * Shown while a reaction is noted too (OWNER CALL 2026-09-24, item 519): the
+ * badge and its doctor sentence sit right under it and are the row's state.
+ * A paused row can hold more serves than the rule, so the count stops at
+ * "3 of 3" rather than reading "4 of 3".
  */
-export function servingsProgressLabel(
-  item: Pick<AllergenProgressItem, "status" | "exposures" | "reactionNotedAt">,
-): string | null {
-  if (item.status !== "started" || item.reactionNotedAt) return null;
-  // A started row without a pause holds fewer servings than the threshold by
-  // construction; the clamp only keeps the copy sane if that ever changes.
+export function servingCountLabel(item: Pick<AllergenProgressItem, "status" | "exposures">): string | null {
+  if (item.status === "established") return null;
   const served = Math.min(item.exposures, ALLERGEN_ESTABLISHED_SERVINGS);
   return `${served} of ${ALLERGEN_ESTABLISHED_SERVINGS} servings`;
 }

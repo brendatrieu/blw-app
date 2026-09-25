@@ -14,7 +14,7 @@ import {
   resolveAllergenRecency,
   resolveAllergenRowAction,
   serveAgainByLabel,
-  servingsProgressLabel,
+  servingCountLabel,
   showsReactionBadge,
 } from "./allergenRow.js";
 
@@ -324,28 +324,27 @@ describe("markedEstablishedAt — the date the detail page can name", () => {
   });
 });
 
-// The two facts item 370 adds to a row: how far up the ladder it is, and
-// whether the log holds a reaction the parent should act on.
-describe("servingsProgressLabel — 'N of 3 servings' (item 370)", () => {
-  it("counts a started row toward the rule the header states", () => {
-    expect(servingsProgressLabel(progress({ status: "started", exposures: 1 }))).toBe("1 of 3 servings");
-    expect(servingsProgressLabel(progress({ status: "started", exposures: 2 }))).toBe("2 of 3 servings");
+// The one count a row prints (item 518), and whether the log holds a
+// reaction the parent should act on (item 370).
+describe("servingCountLabel — 'N of 3 servings' until established (item 518)", () => {
+  it("counts toward the rule for every status short of established", () => {
+    expect(servingCountLabel(progress({ status: "not_started", exposures: 0 }))).toBe("0 of 3 servings");
+    expect(servingCountLabel(progress({ status: "started", exposures: 1 }))).toBe("1 of 3 servings");
+    expect(servingCountLabel(progress({ status: "started", exposures: 2 }))).toBe("2 of 3 servings");
   });
 
-  it("says nothing for a row with nothing to count or nothing left to count", () => {
-    expect(servingsProgressLabel(progress({ status: "not_started", exposures: 0 }))).toBeNull();
-    expect(servingsProgressLabel(progress({ status: "established", exposures: 3 }))).toBeNull();
-    // Marked-established, no serves at all: the count would be "0 of 3"
-    // under a row that already reads Established.
-    expect(servingsProgressLabel(progress({ status: "established", overridden: true, exposures: 0 }))).toBeNull();
+  it("keeps the count while a reaction is noted, stopping at 3 of 3 (owner call, item 519)", () => {
+    const paused = progress({ status: "started", exposures: 1, reactionNotedAt: iso(daysAgo(2)) });
+    expect(servingCountLabel(paused)).toBe("1 of 3 servings");
+    expect(servingCountLabel({ ...paused, exposures: 3 })).toBe("3 of 3 servings");
+    expect(servingCountLabel({ ...paused, exposures: 4 })).toBe("3 of 3 servings");
   });
 
-  it("drops the count once a reaction has paused the row", () => {
-    // "3 of 3 servings" next to a Started chip is a contradiction, and even
-    // "1 of 3" reads as "two more to go" under advice to call a doctor.
-    const paused = progress({ status: "started", exposures: 3, reactionNotedAt: iso(daysAgo(2)) });
-    expect(servingsProgressLabel(paused)).toBeNull();
-    expect(servingsProgressLabel({ ...paused, exposures: 1 })).toBeNull();
+  it("prints nothing once established, by the log or by the parent's mark", () => {
+    expect(servingCountLabel(progress({ status: "established", exposures: 3 }))).toBeNull();
+    expect(servingCountLabel(progress({ status: "established", exposures: 7 }))).toBeNull();
+    expect(servingCountLabel(progress({ status: "established", overridden: true, exposures: 0 }))).toBeNull();
+    expect(servingCountLabel(progress({ status: "established", overridden: true, exposures: 1 }))).toBeNull();
   });
 
   it("states the rule in the same words the count adds up to", () => {

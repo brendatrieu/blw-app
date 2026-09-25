@@ -150,7 +150,7 @@ describe("AllergenDetailPage header + facts (item 187)", () => {
     expect(html).toContain("🥚");
     expect(html).toContain("Egg");
     expect(html).toContain("Started");
-    expect(html).toMatch(/2(?:<!-- -->)? exposures/);
+    expect(html).toContain("2 of 3 servings");
     expect(html).toMatch(new RegExp(`First: (?:<!-- -->)?${formatAllergenDate("2026-08-01T09:00:00.000Z")}`));
     expect(html).toMatch(new RegExp(`Last served: (?:<!-- -->)?${formatAllergenDate("2026-08-20T09:00:00.000Z")}`));
     expect(html).toContain("Offer well-cooked egg in the morning at home.");
@@ -278,25 +278,49 @@ describe("AllergenDetailPage header + facts (item 187)", () => {
 });
 
 // The detail page mirrors the ladder row it opens from — same helpers, same
-// copy — so the progress count and the reaction badge show up here too.
-describe("AllergenDetailPage servings count + reaction badge (item 370)", () => {
-  it("counts the servings behind a started row", () => {
+// copy — so the one count and the reaction badge show up here too.
+describe("AllergenDetailPage serving count + reaction badge (items 370, 518)", () => {
+  it("prints the count once, with no 'exposures' count below the rule", () => {
     // The fixture is a started row with two exposures.
-    expect(renderWithDetail(detail())).toContain("2 of 3 servings");
+    const html = renderWithDetail(detail());
+    expect(html.split("2 of 3 servings").length - 1).toBe(1);
+    expect(html).not.toMatch(/\d(?:<!-- -->)? exposures?\b/);
   });
 
-  it("badges a paused row with the chip and the doctor sentence, and drops the count", () => {
+  it("counts a not-started allergen as 0 of 3", () => {
+    const html = renderWithDetail(
+      detail({ progress: { ...detail().progress, status: "not_started", exposures: 0, firstAt: null, lastServedAt: null, lastExposureAt: null } }),
+    );
+    expect(html.split("0 of 3 servings").length - 1).toBe(1);
+  });
+
+  it("prints no count on a row the parent marked on one serve, just 'Marked by you'", () => {
+    const html = renderWithDetail(
+      detail({ progress: { ...detail().progress, status: "established", overridden: true, exposures: 1 } }),
+    );
+    expect(html).toContain("Marked by you");
+    expect(html).not.toContain("of 3 servings");
+    expect(html).not.toMatch(/\d(?:<!-- -->)? exposures?\b/);
+  });
+
+  it("prints no count once the log has established it", () => {
+    const html = renderWithDetail(detail({ progress: { ...detail().progress, status: "established", exposures: 7 } }));
+    expect(html).not.toContain("of 3 servings");
+    expect(html).not.toMatch(/\d(?:<!-- -->)? exposures?\b/);
+  });
+
+  it("badges a paused row with the chip and the doctor sentence, and keeps the count (item 519)", () => {
     const reacted = agoIso(2);
     const html = renderWithDetail(
       detail({
-        progress: { ...detail().progress, exposures: 3, reactionNotedAt: reacted },
+        progress: { ...detail().progress, exposures: 1, reactionNotedAt: reacted },
       }),
     );
     expect(html).toContain("Reaction noted");
     expect(html).toContain("Consider talking to your doctor.");
     expect(html).toContain("bg-[var(--color-caution-soft)]");
     expect(html).toContain("Started");
-    expect(html).not.toContain("of 3 servings");
+    expect(html).toContain("1 of 3 servings");
   });
 
   it("badges an established row whose log holds a later reaction, without downgrading it", () => {
@@ -316,6 +340,15 @@ describe("AllergenDetailPage servings count + reaction badge (item 370)", () => 
     expect(html).toContain("Established");
     expect(html).toContain("Reaction noted");
     expect(html).toContain("Consider talking to your doctor.");
+    expect(html).not.toContain("of 3 servings");
+  });
+
+  it("stops a paused row's count at 3 of 3", () => {
+    const html = renderWithDetail(
+      detail({ progress: { ...detail().progress, exposures: 4, reactionNotedAt: agoIso(2) } }),
+    );
+    expect(html.split("3 of 3 servings").length - 1).toBe(1);
+    expect(html).toContain("Reaction noted");
   });
 
   it("drops the badge once the parent has marked the allergen themselves", () => {
@@ -395,7 +428,7 @@ describe("AllergenDetailPage exposure history (item 187)", () => {
 
   it("shows the empty state with the guidance nudge when nothing has been logged", () => {
     const html = renderWithDetail(detail({ exposures: [] }));
-    expect(html).toContain("No exposures logged yet");
+    expect(html).toContain("No servings logged yet");
     expect(html).toContain("Offer well-cooked egg in the morning at home.");
     expect(html).not.toContain("/log-meal?edit=");
   });

@@ -13,7 +13,7 @@ import {
   formatAllergenDate,
   resolveAllergenRowAction,
   resolveAllergenRecency,
-  servingsProgressLabel,
+  servingCountLabel,
   showsReactionBadge,
 } from "../features/tracking/allergenRow.js";
 import { allergenEmoji } from "../features/tracking/allergenEmoji.js";
@@ -27,7 +27,7 @@ import { SkeletonList } from "../components/ui/Skeleton.js";
 function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: string | undefined }) {
   const action = resolveAllergenRowAction(item);
   const recency = resolveAllergenRecency(item);
-  const servings = servingsProgressLabel(item);
+  const servings = servingCountLabel(item);
   const reaction = showsReactionBadge(item);
 
   // Info-region pattern (ServeLogList / StorageItemCard): everything that
@@ -50,10 +50,8 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
             lists should read alike. */}
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
-        <span>{item.exposures === 1 ? "1 exposure" : `${item.exposures} exposures`}</span>
-        <span>First: {formatAllergenDate(item.firstAt)}</span>
-        {/* The rule the header states, counted out on the row it applies to. */}
         {servings && <span>{servings}</span>}
+        <span>First: {formatAllergenDate(item.firstAt)}</span>
         {recency.fact && <span>{recency.fact}</span>}
       </div>
       <p className="text-sm text-[var(--color-text)]">{item.introGuidance}</p>
