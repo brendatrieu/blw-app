@@ -55,9 +55,27 @@ describe("updatePreferencesInputSchema", () => {
   });
 });
 
-describe("account export v15", () => {
+describe("account export v16", () => {
+  // v16 (ledger 541): a custom food carries when its owner deleted it — null
+  // for a live one. A v15 row, without the key, is not a v16 row.
+  it("carries a custom food's deletedAt, null or a time, and requires the key", () => {
+    const shape = accountExportSchema.shape;
+    const food = {
+      id: "22222222-2222-4222-8222-222222222222",
+      slug: "banana-bread-k3f9q1",
+      name: "Banana bread",
+      category: "grain",
+      emoji: null,
+      allergenSlugs: [],
+      notes: null,
+    };
+    expect(shape.customFoods.safeParse([{ ...food, deletedAt: null }]).success).toBe(true);
+    expect(shape.customFoods.safeParse([{ ...food, deletedAt: "2026-09-25T10:00:00.000Z" }]).success).toBe(true);
+    expect(shape.customFoods.safeParse([food]).success).toBe(false);
+  });
+
   it("bumped its version and carries usage events alongside the preferences", () => {
-    expect(ACCOUNT_EXPORT_VERSION).toBe(15);
+    expect(ACCOUNT_EXPORT_VERSION).toBe(16);
 
     const shape = accountExportSchema.shape;
     expect(shape.preferences.safeParse(null).success).toBe(true);

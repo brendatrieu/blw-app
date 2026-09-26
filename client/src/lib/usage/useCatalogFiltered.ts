@@ -43,6 +43,7 @@ const FILTER_KEY_BY_FIELD: Readonly<Record<string, CatalogFilterKey>> = {
   vitaminCHigh: "vitamin_c_high",
   fiberHigh: "fiber_high",
   ingredientFoodId: "ingredient_food_id",
+  deleted: "deleted",
 };
 
 /** Ceiling from the shared schema — more keys than either page has controls. */

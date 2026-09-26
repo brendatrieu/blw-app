@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import type { MealItem } from "@blw/shared";
 import { useMeals } from "../features/tracking/hooks.js";
 import { MealDeleteControl } from "../features/tracking/components/ServeLogList.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { useFoods } from "../features/catalog/hooks.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
+import { DeletedMark, FoodNames } from "../features/catalog/components/DeletedMark.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { BackButton, useBackNavigate } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
@@ -14,11 +14,11 @@ import { Card } from "../components/ui/Card.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 /** Header title for a meal: its recipe title when logged from one, otherwise
- * a comma-joined summary of the foods served — the same "best available
- * name" idiom `storageItemTitle` uses for a storage item. Exported so the
- * title text is pinnable without a DOM render. */
-export function mealTitle(meal: MealItem): string {
-  return meal.recipeTitle ?? meal.foods.map((food) => food.name).join(", ");
+ * a comma-joined summary of the foods served (a deleted one marked, muted) —
+ * the same "best available name" idiom `storageItemTitle` uses for a storage
+ * item. */
+function MealTitle({ meal }: { meal: MealItem }) {
+  return meal.recipeTitle ?? <FoodNames foods={meal.foods} />;
 }
 
 /** Full weekday/date plus time, e.g. "Wednesday, August 26 · 2:05 PM" — more
@@ -50,17 +50,9 @@ export function MealDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
   const { data, isLoading: mealsLoading } = useMeals(activeBaby?.id, { limit: 100 });
-  // Item 334: a meal food row carries no allergens (and `mealFoodSchema`
-  // stays that way — every meal fixture in the app would otherwise need
-  // rewriting for a fact the catalog already knows). They are resolved by id
-  // from the foods list the app has cached anyway: the same query key the
-  // pickers use, so this page adds no fetch of its own on a warm cache, and
-  // simply shows nothing extra on a cold one.
-  const { data: foodsData } = useFoods();
-  const allergensByFoodId = useMemo(
-    () => new Map((foodsData?.foods ?? []).map((food) => [food.id, food.allergens])),
-    [foodsData],
-  );
+  // Item 334 / ledger 554: each meal food carries its own allergen slugs.
+  // History must not depend on the foods LIST, which hides a deleted food —
+  // a past meal keeps that food's allergen chips.
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const goBack = useBackNavigate("/");
 
@@ -84,7 +76,7 @@ export function MealDetailPage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <PageHeader
-        title={mealTitle(meal)}
+        title={<MealTitle meal={meal} />}
         emoji={meal.recipeTitle ? "🍳" : getFoodEmoji(meal.foods[0]!.slug, meal.foods[0]!.category, meal.foods[0]!.emoji)}
         leading={<BackButton fallback="/" />}
       />
@@ -100,7 +92,8 @@ export function MealDetailPage() {
             >
               <span aria-hidden="true">{getFoodEmoji(food.slug, food.category, food.emoji)}</span>
               {food.name}
-              <AllergenChips allergens={allergensByFoodId.get(food.id) ?? []} />
+              <DeletedMark deleted={food.deleted} />
+              <AllergenChips allergens={food.allergens ?? []} />
               {food.storageItemId && (
                 <Link
                   to={`/storage/${food.storageItemId}`}

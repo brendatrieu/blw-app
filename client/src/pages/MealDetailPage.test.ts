@@ -7,7 +7,7 @@ import type { Baby, FoodListItem, MealItem } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
 import { catalogKeys } from "../features/catalog/hooks.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
-import { MealDetailPage, mealTitle } from "./MealDetailPage.js";
+import { MealDetailPage } from "./MealDetailPage.js";
 
 // `MealDetailPage` reads `:id` via `useParams`, which only resolves inside a
 // matching `<Route>` — see `StorageDetailPage.test.ts` for the same idiom.
@@ -50,13 +50,38 @@ function seededClient(meals: MealItem[]) {
   return queryClient;
 }
 
-describe("mealTitle", () => {
+function renderMeal(meal: MealItem, foodsList?: FoodListItem[]) {
+  const queryClient = seededClient([meal]);
+  if (foodsList) queryClient.setQueryData(catalogKeys.foodsList({}), { foods: foodsList });
+  return renderToString(createElement(QueryClientProvider, { client: queryClient }, renderAtMealDetailRoute(meal.id)));
+}
+
+/** The page header's h1, React's SSR text separators removed. */
+function headingOf(html: string): string {
+  return /<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]!.replace(/<!-- -->/g, "");
+}
+
+const MUTED_MARK = '<span class="font-normal text-[var(--color-text-muted)]">\u00a0(deleted)</span>';
+
+describe("MealDetailPage title", () => {
   it("uses the recipe title when the meal has one", () => {
-    expect(mealTitle({ ...MEAL, recipeId: "r1", recipeTitle: "Iron-Rich Purée" })).toBe("Iron-Rich Purée");
+    expect(headingOf(renderMeal({ ...MEAL, recipeId: "r1", recipeTitle: "Iron-Rich Purée" }))).toContain(
+      "Iron-Rich Purée",
+    );
   });
 
   it("falls back to a comma-joined foods summary otherwise", () => {
-    expect(mealTitle(MEAL)).toBe("Avocado, Chicken");
+    expect(headingOf(renderMeal(MEAL))).toContain("Avocado, Chicken");
+  });
+
+  // Ledger 555: the title and the food chip carry the ONE muted mark.
+  it("marks a deleted food, muted, in the title and on its chip", () => {
+    const meal: MealItem = { ...MEAL, foods: [{ ...MEAL.foods[0]!, deleted: true }, MEAL.foods[1]!] };
+    const html = renderMeal(meal);
+    expect(headingOf(html)).toContain(`Avocado${MUTED_MARK}, Chicken`);
+    const chipRow = html.slice(html.indexOf('class="flex flex-wrap items-center gap-1.5"')).replace(/<!-- -->/g, "");
+    expect(chipRow).toContain(`Avocado${MUTED_MARK}`);
+    expect(chipRow).not.toContain(`Chicken${MUTED_MARK}`);
   });
 });
 
@@ -141,47 +166,19 @@ describe("MealDetailPage", () => {
 
 // Item 334: the report was "salmon isn't triggering the fish badge", and the
 // person who made it had "added it to a meal" — this page (and the picker)
-// is where they would have looked. `mealFoodSchema` is deliberately NOT
-// widened: the allergens are resolved from the foods list the app already
-// caches, so every meal fixture in the suite stays as it was.
-describe("MealDetailPage allergen marks (item 334)", () => {
+// is where they would have looked. Ledger 554: the allergens ride on the
+// meal's own foods, NOT the foods list, which hides a deleted food.
+describe("MealDetailPage allergen marks (item 334, ledger 554)", () => {
   const FISH_MEAL: MealItem = {
     ...MEAL,
     foods: [
-      { id: "food-1", slug: "salmon", name: "Salmon", category: "protein", storageItemId: null },
-      { id: "food-2", slug: "pear", name: "Pear", category: "fruit", storageItemId: null },
+      { id: "food-1", slug: "salmon", name: "Salmon", category: "protein", storageItemId: null, allergens: ["fish"] },
+      { id: "food-2", slug: "pear", name: "Pear", category: "fruit", storageItemId: null, allergens: [] },
     ],
   };
 
-  function foodRow(overrides: Partial<FoodListItem>): FoodListItem {
-    return {
-      id: "food-1",
-      slug: "salmon",
-      name: "Salmon",
-      category: "protein",
-      ironLevel: "moderate",
-      vitaminCLevel: "low",
-      fiberLevel: "low",
-      chokingRisk: "moderate",
-      minAgeMonths: 6,
-      allergens: [],
-      isCustom: false,
-      emoji: null,
-      ...overrides,
-    };
-  }
-
-  function renderWithFoods(foods: FoodListItem[] | null) {
-    const queryClient = seededClient([FISH_MEAL]);
-    if (foods) queryClient.setQueryData(catalogKeys.foodsList({}), { foods });
-    return renderToString(createElement(QueryClientProvider, { client: queryClient }, renderAtMealDetailRoute(MEAL.id)));
-  }
-
   it("marks the food that carries an allergen, and only that one", () => {
-    const html = renderWithFoods([
-      foodRow({ allergens: ["fish"] }),
-      foodRow({ id: "food-2", slug: "pear", name: "Pear", category: "fruit" }),
-    ]);
+    const html = renderMeal(FISH_MEAL);
     // Scoped to the food-chip row: the page title is "Salmon, Pear" too, so
     // a whole-document index comparison would be meaningless.
     const chipRow = html.slice(html.indexOf('class="flex flex-wrap items-center gap-1.5"'));
@@ -193,18 +190,32 @@ describe("MealDetailPage allergen marks (item 334)", () => {
     expect((html.match(/var\(--color-danger-contrast\)/g) ?? []).length).toBe(1);
   });
 
-  it("shows the meal exactly as before when the foods list has not loaded yet", () => {
-    const html = renderWithFoods(null);
+  it("shows the meal exactly as before when an older cached body carries no allergens", () => {
+    const html = renderMeal({ ...FISH_MEAL, foods: FISH_MEAL.foods.map(({ allergens: _a, ...food }) => food) });
     expect(html).toContain("Salmon");
     expect(html).toContain("Pear");
     expect(html).not.toContain("var(--color-danger-contrast)");
     expect(html).not.toContain("Fish");
   });
 
-  it("marks a custom food by the allergens the parent ticked on it", () => {
-    const html = renderWithFoods([
-      foodRow({ slug: "satay-sauce-k3f9q1", name: "Salmon", isCustom: true, allergens: ["peanut"] }),
-    ]);
-    expect(html).toContain("Peanut");
+  it("keeps a DELETED food's allergen chip, though the foods list no longer has it", () => {
+    const meal: MealItem = {
+      ...MEAL,
+      foods: [
+        {
+          id: "food-9",
+          slug: "nans-omelette-k3f9q1",
+          name: "Nan's omelette",
+          category: "protein",
+          storageItemId: null,
+          deleted: true,
+          allergens: ["egg"],
+        },
+      ],
+    };
+    // The cached list is what the pickers see: the deleted food is absent.
+    const html = renderMeal(meal, []);
+    const chipRow = html.slice(html.indexOf('class="flex flex-wrap items-center gap-1.5"'));
+    expect(chipRow).toContain("Egg");
   });
 });

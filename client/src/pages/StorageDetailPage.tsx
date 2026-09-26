@@ -1,10 +1,9 @@
 import { Navigate, useParams } from "react-router-dom";
 import { useStorageItems, useStorageStatusChange } from "../features/storage/hooks.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { StorageItemCard, storageItemEmoji } from "../features/storage/components/StorageItemCard.js";
+import { StorageItemCard, StorageItemTitle, storageItemEmoji } from "../features/storage/components/StorageItemCard.js";
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
 import { StorageStatusBanner } from "../features/storage/components/StorageStatusBanner.js";
-import { storageItemTitle } from "../features/storage/format.js";
 import { MealsFromBatch } from "../features/tracking/components/MealsFromBatch.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
@@ -54,7 +53,7 @@ export function StorageDetailPage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <PageHeader
-        title={storageItemTitle(item)}
+        title={<StorageItemTitle item={item} />}
         emoji={storageItemEmoji(item)}
         leading={<BackButton fallback="/storage" />}
       />

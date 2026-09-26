@@ -16,7 +16,7 @@
 // before the prepared date, on create (the schema's own refine) and on
 // PATCH (below, against the merged values).
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   BEST_BY_BEFORE_PREPARED_ERROR,
@@ -34,6 +34,7 @@ import {
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
 import { babies, foods, storageItemFoods, storageItems, recipeIngredients, recipes } from "../db/schema.js";
+import { choosableFoodsCondition } from "../services/foods.js";
 import { insertMealWithFoods, loadMeals, ownsBaby } from "../services/meals.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import {
@@ -172,6 +173,7 @@ async function hydrateStorageItems(db: Database, rows: StorageRow[]): Promise<St
         slug: food.slug,
         name: food.name,
         emoji: food.emoji,
+        deleted: food.deleted,
       })),
       recipeId: row.recipeId,
       recipeTitle: row.recipeTitle,
@@ -252,12 +254,14 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     const foodIds = body.data.foodIds ? [...new Set(body.data.foodIds)] : null;
 
     if (foodIds) {
-      // Visible to THIS user — the catalog plus their own custom foods.
-      // Another account's custom food reads as an unknown id.
+      // Choosable by THIS user — the catalog plus their own custom foods,
+      // not deleted ones. Another account's custom food reads as an unknown
+      // id. Create-only (an edit never resends foods), so a deleted food can
+      // only arrive from a stale picker and is refused like any unknown one.
       const foodRows = await db
         .select({ id: foods.id })
         .from(foods)
-        .where(and(inArray(foods.id, foodIds), or(isNull(foods.ownerId), eq(foods.ownerId, currentUserId(request)))));
+        .where(and(inArray(foods.id, foodIds), choosableFoodsCondition(currentUserId(request))));
       const knownFoodIds = new Set(foodRows.map((f) => f.id));
       const unknownFoodIds = foodIds.filter((id) => !knownFoodIds.has(id));
       if (unknownFoodIds.length > 0) return badRequest(reply, { foodIds: "unknown food", unknownFoodIds });

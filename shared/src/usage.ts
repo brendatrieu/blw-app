@@ -170,6 +170,7 @@ export const catalogFilterKeySchema = z.enum([
   "vitamin_c_high",
   "fiber_high",
   "ingredient_food_id",
+  "deleted",
 ]);
 export type CatalogFilterKey = z.infer<typeof catalogFilterKeySchema>;
 

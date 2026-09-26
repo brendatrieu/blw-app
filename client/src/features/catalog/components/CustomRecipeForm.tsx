@@ -14,7 +14,7 @@ import {
   type ExtraIngredient,
   type RecipeDetail,
 } from "@blw/shared";
-import { CUSTOM_RECIPE_AGE_OPTIONS } from "../constants.js";
+import { CUSTOM_RECIPE_AGE_OPTIONS, withDeletedMark } from "../constants.js";
 import { useCreateCustomRecipe, useFoods, useUpdateCustomRecipe } from "../hooks.js";
 import { FoodPicker } from "./FoodPicker.js";
 import { Field } from "../../../components/ui/Field.js";
@@ -391,6 +391,20 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
     () => new Map((foodsData?.foods ?? []).map((food) => [food.id, food])),
     [foodsData],
   );
+  // Ingredients the parent has since deleted: the foods list no longer
+  // carries them, so the picker and the quantity labels get them from here.
+  const keptFoods = useMemo(
+    () =>
+      (recipe?.ingredients ?? [])
+        .filter((ingredient) => ingredient.deleted)
+        .map((ingredient) => ({
+          id: ingredient.foodId,
+          slug: ingredient.foodSlug,
+          name: ingredient.foodName,
+          emoji: ingredient.foodEmoji,
+        })),
+    [recipe],
+  );
 
   /* Item 300: the step boxes grow with their own text, but the list is keyed
    * by index — removing a step hands an EXISTING <textarea> the next step's
@@ -512,6 +526,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
           id={`${idPrefix}-ingredients`}
           value={values.foodIds}
           onChange={(next) => setValue("foodIds", next)}
+          keptFoods={keptFoods}
         />
       </Field>
 
@@ -519,7 +534,8 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
         <div className="flex flex-col gap-2">
           {values.foodIds.map((foodId) => {
             const food = foodsById.get(foodId);
-            const label = food?.name ?? "Ingredient";
+            const kept = keptFoods.find((candidate) => candidate.id === foodId);
+            const label = food?.name ?? (kept ? withDeletedMark(kept.name, true) : "Ingredient");
             return (
               <Field
                 key={foodId}

@@ -7,7 +7,7 @@
 // own copy of the fallback window and its own hand-rolled expiry maths, with
 // a comment admitting it was "kept in sync by hand". It is not duplicated any
 // more; there is one window rule and one freshness rule, here.
-import { asc, eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import type { StorageItemFood, StorageLocation } from "@blw/shared";
 import type { Database } from "../db/index.js";
 import { foods, recipeIngredients, storageGuidelines, storageItemFoods } from "../db/schema.js";
@@ -57,6 +57,8 @@ export async function loadStorageItemFoods(
       name: foods.name,
       emoji: foods.emoji,
       storageCategory: foods.storageCategory,
+      // A deleted food stays in its container, marked.
+      deleted: sql<boolean>`${foods.deletedAt} is not null`,
     })
     .from(storageItemFoods)
     .innerJoin(foods, eq(storageItemFoods.foodId, foods.id))

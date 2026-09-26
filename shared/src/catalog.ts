@@ -19,6 +19,15 @@ export type AgeStage = z.infer<typeof ageStageSchema>;
 // GET /api/foods
 // ---------------------------------------------------------------------------
 
+/**
+ * A flag arriving as a query string. `"true"`/`"1"` is on, `"false"`/`"0"` is
+ * off — an ABSENT key means "don't filter on this at all", which is what a
+ * client whose toggle is off should send.
+ */
+const queryFlag = z
+  .union([z.boolean(), z.enum(["true", "false", "1", "0"])])
+  .transform((value) => value === true || value === "true" || value === "1");
+
 export const foodsQuerySchema = z.object({
   category: foodCategorySchema.optional(),
   allergen: z.string().min(1).optional(),
@@ -27,6 +36,10 @@ export const foodsQuerySchema = z.object({
   fiberLevel: levelSchema.optional(),
   q: z.string().min(1).optional(),
   maxAgeMonths: z.coerce.number().int().nonnegative().optional(),
+  /** On: ONLY the caller's own deleted custom foods (Foods › Deleted), so
+   * they can be opened and restored. Off or absent: deleted foods are hidden,
+   * as from every other choosing or browsing read. */
+  deleted: queryFlag.optional(),
 });
 export type FoodsQuery = z.infer<typeof foodsQuerySchema>;
 
@@ -90,6 +103,19 @@ export const foodRecipeRefSchema = z.object({
 });
 export type FoodRecipeRef = z.infer<typeof foodRecipeRefSchema>;
 
+/**
+ * How many of the owner's meals, storage items and custom recipes name a
+ * custom food. DELETE no longer refuses a used food (it is soft: history
+ * keeps it, marked "(deleted)"), so these counts ride on the food detail for
+ * the prompt to say where it is used, and on a replace to say what moved.
+ */
+export const foodUsageSchema = z.object({
+  mealCount: z.number().int(),
+  storageCount: z.number().int(),
+  recipeCount: z.number().int(),
+});
+export type FoodUsage = z.infer<typeof foodUsageSchema>;
+
 export const foodDetailSchema = foodListItemSchema.extend({
   prep6m: z.string(),
   prep9m: z.string(),
@@ -99,6 +125,13 @@ export const foodDetailSchema = foodListItemSchema.extend({
   imageUrl: z.string().nullable(),
   pairings: z.array(foodPairingSchema),
   recipes: z.array(foodRecipeRefSchema),
+  /** ISO time the owner deleted this custom food, else null. A deleted food
+   * still loads by slug so history can link to it; its page is read-only.
+   * Optional so a body from before soft delete still parses. */
+  deletedAt: z.string().nullable().optional(),
+  /** Where the owner's own custom food is used — what the delete prompt
+   * names. Absent on catalog foods (and for anyone but the owner). */
+  usage: foodUsageSchema.optional(),
 });
 export type FoodDetail = z.infer<typeof foodDetailSchema>;
 
@@ -190,20 +223,17 @@ export const updateCustomFoodSchema = z
   });
 export type UpdateCustomFoodInput = z.input<typeof updateCustomFoodSchema>;
 
-/**
- * DELETE /api/foods/:id when the food is still referenced. The counts are
- * what the UI needs to say "used in N meals and N storage items" instead of a
- * bare "can't delete this".
- */
-export const customFoodConflictSchema = z.object({
-  error: z.literal("conflict"),
-  mealCount: z.number().int(),
-  storageCount: z.number().int(),
-  /** Custom recipes this food is an ingredient of. Optional so a body from
-   * before custom recipes still parses; the server always sends it. */
-  recipeCount: z.number().int().optional(),
+/** POST /api/foods/:id/replace — move every use onto another visible food,
+ * then delete this one for good. */
+export const replaceCustomFoodSchema = z.object({ replacementId: z.string().uuid() });
+export type ReplaceCustomFoodInput = z.infer<typeof replaceCustomFoodSchema>;
+
+export const replaceCustomFoodResponseSchema = z.object({
+  replacement: z.object({ id: z.string().uuid(), slug: z.string(), name: z.string() }),
+  /** Entries now on the replacement, counting ones that already held it. */
+  moved: foodUsageSchema,
 });
-export type CustomFoodConflict = z.infer<typeof customFoodConflictSchema>;
+export type ReplaceCustomFoodResponse = z.infer<typeof replaceCustomFoodResponseSchema>;
 
 // ---------------------------------------------------------------------------
 // GET /api/recipes/:id
@@ -229,6 +259,9 @@ export const recipeIngredientSchema = z.object({
    * Empty for an ingredient with none.
    */
   allergens: z.array(z.string()),
+  /** True when the parent has since deleted this custom food — the recipe
+   * keeps it and says "(deleted)". Optional so older bodies still parse. */
+  deleted: z.boolean().optional(),
 });
 export type RecipeIngredient = z.infer<typeof recipeIngredientSchema>;
 
@@ -317,15 +350,6 @@ export type RecipeDetail = z.infer<typeof recipeDetailSchema>;
 export const recipeScopeSchema = z.enum(["all", "favorites", "custom"]);
 export type RecipeScope = z.infer<typeof recipeScopeSchema>;
 
-/**
- * A flag arriving as a query string. `"true"`/`"1"` is on, `"false"`/`"0"` is
- * off — an ABSENT key means "don't filter on this at all", which is what a
- * client whose toggle is off should send.
- */
-const queryFlag = z
-  .union([z.boolean(), z.enum(["true", "false", "1", "0"])])
-  .transform((value) => value === true || value === "true" || value === "1");
-
 export const recipesQuerySchema = z.object({
   /** Substring match on the title. */
   q: z.string().min(1).optional(),
@@ -370,6 +394,10 @@ export const recipeListItemSchema = z.object({
   isFavorite: z.boolean(),
   /** Ingredient food names, alphabetical, for a subtitle line. */
   ingredientNames: z.array(z.string()),
+  /** Aligned with `ingredientNames`: true where the parent has since deleted
+   * that custom food, so the card marks it "(deleted)". Optional so an older
+   * cached body still parses. */
+  ingredientDeleted: z.array(z.boolean()).optional(),
 });
 export type RecipeListItem = z.infer<typeof recipeListItemSchema>;
 

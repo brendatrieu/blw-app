@@ -22,6 +22,8 @@ import {
   fetchFoods,
   fetchRecipe,
   fetchRecipes,
+  replaceCustomFood,
+  restoreCustomFood,
   updateCustomFood,
   updateCustomRecipe,
   type RecipeFilters,
@@ -151,10 +153,16 @@ export function removeFoodFromList(data: FoodsResponse, foodId: string): FoodsRe
  * list) and `/foods/:slug` (which reads the detail) are correct on the very
  * next render. This is the "insert into the cache so the picker can select
  * it without a refetch" helper item 180 asks for.
+ *
+ * A deleted food belongs only in the Foods › Deleted variant and a live one
+ * everywhere but, so the same write serves delete and restore too.
  */
 export function writeCustomFoodToCache(queryClient: QueryClient, food: FoodDetail): void {
   for (const [key, data] of queryClient.getQueriesData<FoodsResponse>({ queryKey: catalogKeys.foods })) {
-    if (data) queryClient.setQueryData(key, upsertFoodInList(data, food));
+    if (!data) continue;
+    const deletedVariant = Boolean((key[1] as FoodsQuery | undefined)?.deleted);
+    const belongs = deletedVariant === Boolean(food.deletedAt);
+    queryClient.setQueryData(key, belongs ? upsertFoodInList(data, food) : removeFoodFromList(data, food.id));
   }
   queryClient.setQueryData(catalogKeys.food(food.slug), food);
 }
@@ -191,18 +199,57 @@ export function useUpdateCustomFood() {
 }
 
 /**
- * Deleting a custom food can legitimately fail with a 409 (it's still
- * referenced by meals or storage items — see `asCustomFoodConflict`), so the
- * cache is only touched on success. Meals and storage aren't invalidated:
- * a food that could be deleted was, by definition, in neither.
+ * Everything that renders a food by name from history — meals, storage,
+ * recipes, allergen pages — so a delete or restore shows or drops the
+ * "(deleted)" mark, and a replace shows the new food. Literal prefixes: the
+ * per-baby keys have no baby-free builder, and a prefix matches every baby.
+ */
+function invalidateFoodHistory(queryClient: QueryClient): void {
+  for (const prefix of ["meals", "storage", "recipe", "recipes", "allergen-detail", "allergen-progress", "favorites"]) {
+    void queryClient.invalidateQueries({ queryKey: [prefix] });
+  }
+}
+
+/**
+ * Deleting a custom food is soft (ledger 537): it leaves every list and
+ * picker, but its page stays, read-only with a Restore, so the detail cache
+ * is updated rather than dropped.
  */
 export function useDeleteCustomFood() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (food: Pick<FoodDetail, "id" | "slug">) => deleteCustomFood(food.id),
-    onSuccess: (_result, food) => removeCustomFoodFromCache(queryClient, food),
+    mutationFn: (food: FoodDetail) => deleteCustomFood(food.id),
+    onSuccess: (_result, food) =>
+      writeCustomFoodToCache(queryClient, { ...food, deletedAt: new Date().toISOString() }),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: catalogKeys.foods });
+      invalidateFoodHistory(queryClient);
+    },
+  });
+}
+
+export function useRestoreCustomFood() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (food: Pick<FoodDetail, "id">) => restoreCustomFood(food.id),
+    onSuccess: (restored) => writeCustomFoodToCache(queryClient, restored),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.foods });
+      invalidateFoodHistory(queryClient);
+    },
+  });
+}
+
+/** Replace deletes the food for good, so its cache entries go entirely. */
+export function useReplaceCustomFood() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ food, replacementId }: { food: Pick<FoodDetail, "id" | "slug">; replacementId: string }) =>
+      replaceCustomFood(food.id, replacementId),
+    onSuccess: (_result, { food }) => removeCustomFoodFromCache(queryClient, food),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: catalogKeys.foods });
+      invalidateFoodHistory(queryClient);
     },
   });
 }
@@ -239,6 +286,7 @@ export function recipeListItemFromDetail(recipe: RecipeDetail, isFavorite: boole
     isCustom: recipe.isCustom,
     isFavorite,
     ingredientNames: recipe.ingredients.map((ingredient) => ingredient.foodName),
+    ingredientDeleted: recipe.ingredients.map((ingredient) => ingredient.deleted ?? false),
   };
 }
 

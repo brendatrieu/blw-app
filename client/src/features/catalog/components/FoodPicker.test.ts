@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { FoodListItem } from "@blw/shared";
 import { catalogKeys } from "../hooks.js";
 import { addCustomFoodLabel } from "../constants.js";
-import { FoodPicker, SingleFoodPicker, foodPickerOption } from "./FoodPicker.js";
+import { FoodPicker, SingleFoodPicker, foodPickerOption, foodPickerOptions } from "./FoodPicker.js";
 
 function food(overrides: Partial<FoodListItem> = {}): FoodListItem {
   return {
@@ -146,14 +146,14 @@ describe("addCustomFoodLabel", () => {
   });
 });
 
-function renderSingle(foods: FoodListItem[], value = "", placeholder?: string) {
+function renderSingle(foods: FoodListItem[], value = "", placeholder?: string, excludeId?: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(catalogKeys.foodsList({}), { foods });
   return renderToString(
     createElement(
       QueryClientProvider,
       { client: queryClient },
-      createElement(SingleFoodPicker, { id: "recipes-ingredient", value, onChange: () => {}, placeholder }),
+      createElement(SingleFoodPicker, { id: "recipes-ingredient", value, onChange: () => {}, placeholder, excludeId }),
     ),
   );
 }
@@ -192,6 +192,16 @@ describe("SingleFoodPicker (item 210's 'contains ingredient' filter)", () => {
     expect(html).not.toContain('aria-describedby="recipes-ingredient-count"');
   });
 
+  // Ledger 542/556: "Replace with…" must never offer the food itself. A
+  // closed render shows only the chip, and the combobox drops a selected id
+  // with no option — so an excluded food can't even be held as the pick.
+  it("never offers the excluded food (Replace with… never offers the food itself)", () => {
+    expect(renderSingle([food(), CUSTOM], CUSTOM.id)).toContain(`aria-label="Remove ${CUSTOM.name}"`);
+    const html = renderSingle([food(), CUSTOM], CUSTOM.id, undefined, CUSTOM.id);
+    expect(html).not.toContain(`aria-label="Remove ${CUSTOM.name}"`);
+    expect(renderSingle([food(), CUSTOM], "food-1", undefined, CUSTOM.id)).toContain('aria-label="Remove Banana"');
+  });
+
   it("takes a caller's placeholder, falling back to the picker's own", () => {
     expect(renderSingle([food()], "", "Any food…")).toContain('placeholder="Any food…"');
     expect(renderSingle([food()])).toContain('placeholder="Search foods…"');
@@ -214,5 +224,26 @@ describe("FoodPicker allergen markers (item 334)", () => {
     const chipRow = html.slice(html.indexOf("mt-1.5 flex flex-wrap"));
     expect(chipRow).toContain("Banana");
     expect(chipRow).not.toContain("color-danger-soft");
+  });
+});
+
+// Ledger 543: editing a meal or recipe that holds a food its owner has since
+// deleted. The list no longer carries it, and the combobox drops any selected
+// id without an option — the chip vanished while the id was still saved.
+describe("foodPickerOptions — an entry's own deleted foods", () => {
+  const KEPT = { id: "food-9", slug: "banana-bread-k3f9q1", name: "Banana bread", category: "grain" as const, emoji: "🍞" };
+
+  it("offers a kept food the list lacks, marked (deleted), after the listed foods", () => {
+    const options = foodPickerOptions([food()], [KEPT]);
+    expect(options.map((o) => o.value)).toEqual(["food-1", "food-9"]);
+    expect(options[1]).toEqual({ value: "food-9", label: "Banana bread\u00a0(deleted)", emoji: "🍞" });
+  });
+
+  it("never doubles a food the list still has (restored meanwhile)", () => {
+    expect(foodPickerOptions([food({ id: "food-9" })], [KEPT]).map((o) => o.value)).toEqual(["food-9"]);
+  });
+
+  it("is just the list when nothing is kept", () => {
+    expect(foodPickerOptions([food()])).toEqual([foodPickerOption(food())]);
   });
 });

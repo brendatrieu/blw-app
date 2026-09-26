@@ -531,6 +531,30 @@ describe("CustomRecipeForm (render)", () => {
     expect(renderForm()).toMatch(/Steps(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
   });
 
+  // Ledger 543/556: an ingredient the parent has since deleted is gone from
+  // the foods list; the form names it from the recipe itself, marked.
+  it("names a deleted ingredient, marked, in its quantity label and picker chip — never 'Ingredient'", () => {
+    const html = renderForm({
+      recipe: recipe({
+        ingredients: [
+          {
+            foodId: "food-9",
+            foodSlug: "banana-bread-k3f9q1",
+            foodName: "Banana bread",
+            isCustom: true,
+            foodEmoji: null,
+            quantityNote: "",
+            allergens: [],
+            deleted: true,
+          },
+        ],
+      }),
+    });
+    expect(html).toContain("Banana bread\u00a0(deleted) — quantity");
+    expect(html).not.toContain("Ingredient — quantity");
+    expect(html).toContain('aria-label="Remove Banana bread\u00a0(deleted)"');
+  });
+
   it("renders steps as textareas — never a candidate for implicit submission", () => {
     const html = renderForm();
     // Still a <textarea>, so Enter can never save the recipe; what Enter does

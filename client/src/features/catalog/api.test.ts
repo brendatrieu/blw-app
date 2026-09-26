@@ -12,6 +12,7 @@ describe("buildFoodsQueryString", () => {
       fiberLevel: "low",
       q: "beef",
       maxAgeMonths: 9,
+      deleted: true,
     };
     const params = new URLSearchParams(buildFoodsQueryString(full).slice(1));
     for (const key of Object.keys(foodsQuerySchema.shape)) {
@@ -22,6 +23,8 @@ describe("buildFoodsQueryString", () => {
   it("omits unset filters and returns an empty string for none", () => {
     expect(buildFoodsQueryString({})).toBe("");
     expect(buildFoodsQueryString({ vitaminCLevel: "low" })).toBe("?vitaminCLevel=low");
+    // Off is absent, never `deleted=false` (ledger 544).
+    expect(buildFoodsQueryString({ deleted: false })).toBe("");
   });
 });
 

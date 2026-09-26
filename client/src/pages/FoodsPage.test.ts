@@ -14,6 +14,7 @@ import {
   EMPTY_EXTRA_FILTERS,
   FoodFilterGroups,
   initialExtraFiltersFromSearch,
+  type ExtraFoodFilters,
 } from "./FoodsPage.js";
 
 /** React's SSR escaping — the create label contains apostrophes. */
@@ -180,9 +181,17 @@ describe("activeExtraFilters (funnel count + pill row share this)", () => {
       vitaminCLevel: "moderate",
       fiberLevel: "high",
       maxAgeMonths: 6,
+      deleted: true,
     });
-    expect(pills.map((p) => p.key)).toEqual(["allergen", "ironLevel", "vitaminCLevel", "fiberLevel", "maxAgeMonths"]);
-    expect(pills.map((p) => p.label)).toEqual(["Egg", "High iron", "Moderate vitamin C", "High fiber", "6m+"]);
+    expect(pills.map((p) => p.key)).toEqual([
+      "allergen",
+      "ironLevel",
+      "vitaminCLevel",
+      "fiberLevel",
+      "maxAgeMonths",
+      "deleted",
+    ]);
+    expect(pills.map((p) => p.label)).toEqual(["Egg", "High iron", "Moderate vitamin C", "High fiber", "6m+", "Deleted"]);
   });
 
   it("counts vitamin C on its own", () => {
@@ -249,6 +258,41 @@ describe("FoodFilterGroups (the sheet's chip groups, rendered open)", () => {
   });
 });
 
+// Ledger 544: Foods › Deleted is the first chip of a "Show" group at the end
+// of the sheet — the category row has no room at 390 px.
+describe("FoodFilterGroups — Show › Deleted", () => {
+  it("renders a Show group after Age with a Deleted chip, pressed only when on", () => {
+    const off = renderToString(createElement(FoodFilterGroups, { ...EMPTY_EXTRA_FILTERS, onChange: () => {} }));
+    expect(off.indexOf(">Show<")).toBeGreaterThan(off.indexOf(">Age<"));
+    expect(off).toMatch(/aria-pressed="false"[^>]*>Deleted</);
+    const on = renderToString(
+      createElement(FoodFilterGroups, { ...EMPTY_EXTRA_FILTERS, deleted: true, onChange: () => {} }),
+    );
+    expect(on).toMatch(/aria-pressed="true"[^>]*>Deleted</);
+  });
+
+  it("toggles the filter on, then off again", () => {
+    const changes: ExtraFoodFilters[] = [];
+    const chipIn = (filters: ExtraFoodFilters) => {
+      const tree = FoodFilterGroups({ ...filters, onChange: (next) => changes.push(next) });
+      const found: Array<{ props: { label?: string; onClick?: () => void } }> = [];
+      const walk = (node: unknown) => {
+        if (Array.isArray(node)) return node.forEach(walk);
+        if (typeof node !== "object" || node === null || !("props" in node)) return;
+        const element = node as { props: { label?: string; children?: unknown; onClick?: () => void } };
+        if (element.props.label === "Deleted") found.push(element);
+        walk(element.props.children);
+      };
+      walk(tree);
+      return found[0]!;
+    };
+    chipIn(EMPTY_EXTRA_FILTERS).props.onClick!();
+    expect(changes.at(-1)).toEqual({ ...EMPTY_EXTRA_FILTERS, deleted: true });
+    chipIn({ ...EMPTY_EXTRA_FILTERS, deleted: true }).props.onClick!();
+    expect(changes.at(-1)).toEqual(EMPTY_EXTRA_FILTERS);
+  });
+});
+
 // Item 280: an article can link straight at a filtered catalog
 // (`/foods?fiberLevel=high` from the tummy article's constipation section).
 describe("initialExtraFiltersFromSearch (what a link into /foods presets)", () => {
@@ -298,6 +342,7 @@ describe("buildFoodsFilters (what the grid actually requests)", () => {
       vitaminCLevel: "low",
       fiberLevel: "high",
       maxAgeMonths: 9,
+      deleted: true,
     });
     expect(filters).toEqual({
       q: "beef",
@@ -307,6 +352,7 @@ describe("buildFoodsFilters (what the grid actually requests)", () => {
       vitaminCLevel: "low",
       fiberLevel: "high",
       maxAgeMonths: 9,
+      deleted: true,
     });
     expect(buildFoodsFilters("   ", undefined, EMPTY_EXTRA_FILTERS).q).toBeUndefined();
   });
@@ -314,6 +360,7 @@ describe("buildFoodsFilters (what the grid actually requests)", () => {
   it("Clear all's payload switches every funnel filter off", () => {
     expect(Object.keys(EMPTY_EXTRA_FILTERS).sort()).toEqual([
       "allergen",
+      "deleted",
       "fiberLevel",
       "ironLevel",
       "maxAgeMonths",

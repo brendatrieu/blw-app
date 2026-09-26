@@ -159,6 +159,13 @@ export const mealFoodSchema = z.object({
    * /api/babies/:babyId/meals never links to (or decrements) a storage item.
    */
   storageItemId: z.string().uuid().nullable(),
+  /** True when the parent has since deleted this custom food; the meal keeps
+   * it and says "(deleted)". Optional so an older cached body still parses. */
+  deleted: z.boolean().optional(),
+  /** This food's allergen slugs, carried on the meal itself so a past meal
+   * keeps its allergen chips even after the food is deleted (and so hidden
+   * from the foods list). Optional so an older cached body still parses. */
+  allergens: z.array(z.string()).optional(),
 });
 export type MealFood = z.infer<typeof mealFoodSchema>;
 
@@ -458,6 +465,10 @@ export const allergenDetailFoodSchema = z.object({
   category: foodCategorySchema,
   emoji: z.string().nullable(),
   isCustom: z.boolean(),
+  /** A custom food the parent deleted. Still listed, because meals that
+   * served it still count toward this allergen; the page marks it and offers
+   * no "Log meal". Optional so an older cached body still parses. */
+  deleted: z.boolean().optional(),
 });
 export type AllergenDetailFood = z.infer<typeof allergenDetailFoodSchema>;
 
@@ -475,6 +486,7 @@ export const allergenDetailExposureSchema = z.object({
       id: z.string().uuid(),
       name: z.string(),
       emoji: z.string().nullable(),
+      deleted: z.boolean().optional(),
     }),
   ),
   /** `meals.reactionNote` under the name this page reads it by. */

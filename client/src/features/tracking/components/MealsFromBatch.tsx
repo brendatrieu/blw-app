@@ -3,6 +3,7 @@ import { useMeals } from "../hooks.js";
 import { mealsFromStorageItem } from "../mealsFromBatch.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
 import { SkeletonList } from "../../../components/ui/Skeleton.js";
+import { FoodNames } from "../../catalog/components/DeletedMark.js";
 
 interface MealsFromBatchProps {
   babyId: string | undefined;
@@ -52,7 +53,7 @@ export function MealsFromBatch({ babyId, storageItemId }: MealsFromBatchProps) {
               >
                 <span className="text-sm font-medium text-[var(--color-text)]">{mealTimingLabel(meal.servedAt)}</span>
                 <span className="text-xs text-[var(--color-text-muted)]">
-                  {meal.foods.map((food) => food.name).join(", ")}
+                  <FoodNames foods={meal.foods} />
                 </span>
                 {meal.notes && <span className="text-xs text-[var(--color-text-muted)]">{meal.notes}</span>}
                 {meal.reactionNote && (

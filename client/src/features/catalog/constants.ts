@@ -132,32 +132,45 @@ export function addCustomFoodLabel(query: string): string {
 export const CUSTOM_FOOD_SOFT_NOTE =
   "Added by you — there's no curated prep or choking guidance for this food. Check serving safety with your pediatrician.";
 
+/** A custom recipe's 409 has no `recipeCount`; a food's usage does. */
+type UsageCounts = { mealCount: number; storageCount: number; recipeCount?: number };
+
 /**
- * Why a custom food couldn't be deleted, from the server's 409 counts. Pure
- * so the copy is pinned by a test — deleting a food that meals point at
- * would leave those meals (and their allergen exposures) dangling, so the
- * message has to name both places to go clean up.
+ * Where a custom food or recipe is used — "Used in 2 meals and 1 storage
+ * item" — naming only the places that hold it, so "0 meals" never appears.
+ * Null when nothing does. Pure so the copy is pinned by a test.
  */
-export function customFoodConflictMessage(conflict: {
-  mealCount: number;
-  storageCount: number;
-  /** Custom recipes this food is an ingredient of. Absent on a 409 body
-   * from before custom recipes existed; omitted from the sentence at 0. */
-  recipeCount?: number;
-}): string {
-  const parts = [countPhrase(conflict.mealCount, "meal"), countPhrase(conflict.storageCount, "storage item")];
-  if (conflict.recipeCount) parts.push(countPhrase(conflict.recipeCount, "recipe"));
-  return usedInMessage(parts);
+export function usedInPhrase(counts: UsageCounts): string | null {
+  const list = countList(counts);
+  return list ? `Used in ${list}` : null;
+}
+
+/**
+ * What a replace will move, for its confirm line: "1 storage item will switch
+ * to Cauliflower". Null when nothing uses the food.
+ */
+export function replaceSummary(counts: UsageCounts, replacementName: string): string | null {
+  const list = countList(counts);
+  return list ? `${list} will switch to ${replacementName}` : null;
 }
 
 /**
  * Why a custom recipe couldn't be deleted, from the server's 409 counts
- * (item 212) — the recipe-side twin of `customFoodConflictMessage`, with the
- * same wording and the same singular/plural care. Favorites never appear
- * here: they're removed with the recipe rather than blocking it.
+ * (item 212). Favorites never appear here: they're removed with the recipe
+ * rather than blocking it.
  */
 export function customRecipeConflictMessage(conflict: { mealCount: number; storageCount: number }): string {
-  return usedInMessage([countPhrase(conflict.mealCount, "meal"), countPhrase(conflict.storageCount, "storage item")]);
+  return `${usedInPhrase(conflict) ?? "Still in use"} — remove those first.`;
+}
+
+/** Appended to a food name wherever history shows one its owner deleted. */
+export const DELETED_FOOD_MARK = "(deleted)";
+
+/** "Banana bread (deleted)" for a deleted food, the plain name otherwise —
+ * for the places a name is only ever a string (titles, joined lists). */
+export function withDeletedMark(name: string, deleted: boolean | undefined): string {
+  // No-break space, as in DeletedMark: the mark wraps with its name.
+  return deleted ? `${name}\u00a0${DELETED_FOOD_MARK}` : name;
 }
 
 /** "3 meals" / "1 storage item" — the count with its noun pluralized. */
@@ -165,10 +178,14 @@ function countPhrase(count: number, noun: string): string {
   return `${count} ${count === 1 ? noun : `${noun}s`}`;
 }
 
-/** "Used in A and B — remove those first.", or "A, B and C" for three. */
-function usedInMessage(parts: string[]): string {
+/** "A and B", or "A, B and C" for three — the non-zero counts only. */
+function countList({ mealCount, storageCount, recipeCount = 0 }: UsageCounts): string | null {
+  const parts: string[] = [];
+  if (mealCount > 0) parts.push(countPhrase(mealCount, "meal"));
+  if (storageCount > 0) parts.push(countPhrase(storageCount, "storage item"));
+  if (recipeCount > 0) parts.push(countPhrase(recipeCount, "recipe"));
+  if (parts.length === 0) return null;
   const last = parts[parts.length - 1]!;
   const head = parts.slice(0, -1);
-  const list = head.length === 0 ? last : `${head.join(", ")} and ${last}`;
-  return `Used in ${list} — remove those first.`;
+  return head.length === 0 ? last : `${head.join(", ")} and ${last}`;
 }

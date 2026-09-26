@@ -395,6 +395,34 @@ describe("AllergenDetailPage foods section (item 187)", () => {
   });
 });
 
+// Ledger 540/543: a deleted food still counts (its meals are exposures), so it
+// stays listed — marked, and with nothing to log it again from.
+describe("AllergenDetailPage — a deleted food", () => {
+  const withDeleted = () => {
+    const base = detail();
+    return detail({
+      foods: base.foods.map((food) => (food.id === CUSTOM_FOOD_ID ? { ...food, deleted: true } : food)),
+      exposures: [{ ...base.exposures[0]!, foods: [{ id: CUSTOM_FOOD_ID, name: "Nan's omelette", emoji: null, deleted: true }] }],
+    });
+  };
+
+  it("marks it (deleted) and offers no Log meal for it", () => {
+    const html = renderWithDetail(withDeleted());
+    expect(html).toContain('href="/foods/nans-omelette"');
+    expect(html).toMatch(/Nan&#x27;s omelette(?:<!-- -->)?<span[^>]*>\u00a0(?:<!-- -->)?\(deleted\)/);
+    expect(html).not.toContain(`href="/log-meal?food=${CUSTOM_FOOD_ID}"`);
+    expect(html).toContain(`href="/log-meal?food=${CATALOG_FOOD_ID}"`);
+  });
+
+  it("marks it in the exposure history too, with the same muted mark as its row (ledger 555)", () => {
+    const marks = renderWithDetail(withDeleted()).match(
+      /Nan&#x27;s omelette<span class="font-normal text-\[var\(--color-text-muted\)\]">\u00a0(?:<!-- -->)?\(deleted\)<\/span>/g,
+    );
+    // The food row and the exposure line.
+    expect(marks).toHaveLength(2);
+  });
+});
+
 describe("AllergenDetailPage exposure history (item 187)", () => {
   it("lists each exposure with its foods and reaction, linking the row to the meal editor", () => {
     const html = renderWithDetail(detail());

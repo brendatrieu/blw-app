@@ -66,6 +66,18 @@ describe("StorageDetailPage", () => {
     expect(html).not.toContain(`href="/storage/${ITEM.id}"`);
   });
 
+  it("marks a deleted food, muted, in the page title (ledger 555)", () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const item: StorageItem = { ...ITEM, foods: [{ ...ITEM.foods[0]!, deleted: true }] };
+    queryClient.setQueryData(storageKeys.list("active"), { items: [item] });
+    queryClient.setQueryData(storageKeys.list("history"), { items: [] });
+    const html = renderToString(
+      createElement(QueryClientProvider, { client: queryClient }, renderAtStorageDetailRoute(ITEM.id)),
+    );
+    const heading = /<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]!;
+    expect(heading).toContain('Avocado<span class="font-normal text-[var(--color-text-muted)]">\u00a0<!-- -->(deleted)</span>');
+  });
+
   it("finds a finished item from the history view and offers Restore instead of Remove/Edit", () => {
     const finished: StorageItem = { ...ITEM, status: "finished" };
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });

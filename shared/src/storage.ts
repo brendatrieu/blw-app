@@ -254,6 +254,9 @@ export const storageItemFoodSchema = z.object({
   slug: z.string(),
   name: z.string(),
   emoji: z.string().nullable(),
+  /** True when the parent has since deleted this custom food; the item keeps
+   * it and says "(deleted)". Optional so an older cached body still parses. */
+  deleted: z.boolean().optional(),
 });
 export type StorageItemFood = z.infer<typeof storageItemFoodSchema>;
 

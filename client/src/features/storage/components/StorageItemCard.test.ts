@@ -315,6 +315,13 @@ describe("StorageItemCard food cluster (item 347)", () => {
     expect(renderCard({ ...BASE_ITEM, foods: threeFoods })).toContain("Chicken, Carrot, Rice");
   });
 
+  it("marks a deleted food in the title with the one muted mark (ledger 555)", () => {
+    const foods = [{ ...itemFood("chicken", "Chicken"), deleted: true }, itemFood("rice", "Rice")];
+    expect(renderCard({ ...BASE_ITEM, foods })).toContain(
+      'Chicken<span class="font-normal text-[var(--color-text-muted)]">\u00a0<!-- -->(deleted)</span>, Rice',
+    );
+  });
+
   it("renders one emoji per food as a single aria-hidden run, with no overflow count at three", () => {
     const html = renderCard({ ...BASE_ITEM, foods: threeFoods });
     const { emojis, overflow } = storageItemCluster({ ...BASE_ITEM, foods: threeFoods });

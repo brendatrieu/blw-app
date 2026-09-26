@@ -222,6 +222,30 @@ describe("LogFoodForm (render)", () => {
   });
 });
 
+// Ledger 543/556: editing a meal that holds a food its owner has since
+// deleted. The foods list no longer has it, so only the form handing the
+// meal's deleted foods to the picker keeps its chip on screen.
+describe("LogFoodForm edit mode — a deleted food on the meal", () => {
+  it("keeps the deleted food's chip, marked, though the foods list lacks it", () => {
+    const meal: MealItem = {
+      id: "meal-1",
+      babyId: "baby-1",
+      servedAt: new Date(2026, 7, 20, 8, 30).toISOString(),
+      reactionNote: null,
+      notes: null,
+      recipeId: null,
+      recipeTitle: null,
+      foods: [
+        { id: "food-9", slug: "banana-bread-k3f9q1", name: "Banana bread", category: "grain", storageItemId: null, deleted: true },
+      ],
+    };
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(["foods", {}], { foods: [] });
+    const html = renderWithProviders(createElement(LogFoodForm, { babyId: "baby-1", meal, onDone: () => {} }), queryClient);
+    expect(html).toContain('aria-label="Remove Banana bread\u00a0(deleted)"');
+  });
+});
+
 /** A recipes-list row standing in for a favorited recipe. */
 function recipeRow(favorite: FavoriteItem, overrides: Partial<RecipeListItem> = {}): RecipeListItem {
   return {

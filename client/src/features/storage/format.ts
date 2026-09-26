@@ -1,12 +1,13 @@
 import type { StorageLocation, StorageStatus } from "@blw/shared";
 import type { SegmentedControlOption } from "../../components/ui/SegmentedControl.js";
+import { withDeletedMark } from "../catalog/constants.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 
 /** Just enough of a container's `foods` list for the display rules below —
  * structural so both a real `StorageItem` and a hand-written fixture fit. */
 interface ContainerFoods {
-  foods: readonly { name: string }[];
+  foods: readonly { name: string; deleted?: boolean }[];
 }
 
 export const LOCATION_LABEL: Record<StorageLocation, string> = {
@@ -34,7 +35,11 @@ export const LOCATIONS: { value: StorageLocation; label: string }[] = [
 export function storageItemTitle(
   item: ContainerFoods & { label: string | null; recipeTitle: string | null },
 ): string {
-  return item.label ?? item.recipeTitle ?? (item.foods.map((food) => food.name).join(", ") || "Prepared food");
+  return (
+    item.label ??
+    item.recipeTitle ??
+    (item.foods.map((food) => withDeletedMark(food.name, food.deleted)).join(", ") || "Prepared food")
+  );
 }
 
 /** "N of M servings left" label for a servings-tracked item. */

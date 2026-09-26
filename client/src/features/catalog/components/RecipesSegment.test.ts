@@ -57,6 +57,16 @@ describe("RecipeCard", () => {
     expect(html).toContain("Banana, Oats");
   });
 
+  // Ledger 553/555: a recipe holding an ingredient its owner deleted keeps
+  // it on the card, with the one muted mark.
+  it("marks a deleted ingredient on the card, and only that one", () => {
+    const html = renderCard(recipe({ ingredientNames: ["Banana bread", "Oats"], ingredientDeleted: [true, false] }));
+    expect(html).toContain('Banana bread<span class="font-normal text-[var(--color-text-muted)]">\u00a0<!-- -->(deleted)</span>, Oats');
+    expect(html.match(/\(deleted\)/g)).toHaveLength(1);
+    // An older cached body with no flags renders plain.
+    expect(renderCard(recipe({ ingredientNames: ["Banana bread", "Oats"] }))).toContain("Banana bread, Oats");
+  });
+
   it("always carries the minimum-age badge", () => {
     // SSR splits the interpolation with a comment node.
     expect(renderCard(recipe({ minAgeMonths: 9 }))).toMatch(/>9(?:<!-- -->)?m\+</);

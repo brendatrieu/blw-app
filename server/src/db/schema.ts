@@ -179,6 +179,11 @@ export const foods = pgTable(
     // Parent-picked emoji on a custom food. Catalog rows leave it null and
     // keep resolving their emoji from the client's slug/category table.
     emoji: text("emoji"),
+    // Set when a parent deletes their own custom food. The row stays so past
+    // meals, storage items and recipes keep a valid link (and can say
+    // "(deleted)"); choosing/browsing reads filter it out. Only ever set on a
+    // custom food — the catalog cannot be deleted.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
     index("foods_iron_level_idx").on(t.ironLevel),

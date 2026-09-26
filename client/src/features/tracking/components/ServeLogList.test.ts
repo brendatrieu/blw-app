@@ -12,7 +12,6 @@ import {
   HOME_MEAL_LIMIT,
   limitMeals,
   MealCard,
-  mealTitle,
   ServeLogList,
   servedLine,
   timeLabel,
@@ -102,17 +101,26 @@ describe("timeLabel", () => {
   });
 });
 
-describe("mealTitle (item 192)", () => {
+// The card's title line (item 192): every food's name, comma-joined, never
+// the recipe title. `<!-- -->` is React's text-node separator in SSR output.
+describe("MealCard title (item 192, ledger 555)", () => {
+  const titleOf = (foods: MealFood[]) => {
+    const html = renderMealCard({ ...baseMeal, recipeId: "r1", recipeTitle: "Iron-Rich Purée", foods });
+    return /<span class="text-sm font-semibold text-\[var\(--color-text\)\]">([\s\S]*?)<\/span><span/.exec(html)![1]!.replace(/<!-- -->/g, "");
+  };
+
   it("comma-joins every food name", () => {
-    expect(mealTitle([food({ name: "Avocado" }), food({ id: "f2", name: "Chicken" })])).toBe("Avocado, Chicken");
+    expect(titleOf([food({ name: "Avocado" }), food({ id: "f2", name: "Chicken" })])).toBe("Avocado, Chicken");
   });
 
   it("is just the name for a single food", () => {
-    expect(mealTitle([food({ name: "Avocado" })])).toBe("Avocado");
+    expect(titleOf([food({ name: "Avocado" })])).toBe("Avocado");
   });
 
-  it("is empty for no foods (defensive — the API always sends at least one)", () => {
-    expect(mealTitle([])).toBe("");
+  it("marks a food its owner deleted with the one muted mark (ledger 543/555)", () => {
+    expect(titleOf([food({ name: "Banana bread", deleted: true }), food({ id: "f2", name: "Chicken" })])).toBe(
+      '<span>Banana bread<span class="font-normal text-[var(--color-text-muted)]">\u00a0(deleted)</span>, Chicken</span>',
+    );
   });
 });
 

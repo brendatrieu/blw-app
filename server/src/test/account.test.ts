@@ -554,7 +554,7 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(15);
+    expect(bundle.exportVersion).toBe(16);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -683,11 +683,32 @@ describe("account export", () => {
     // The parent's own answers only — the stored iron/prep/choking columns on
     // a custom row are inert placeholders and have no business in an export.
     expect(Object.keys(bundle.customFoods[0]!).sort()).toEqual(
-      ["allergenSlugs", "category", "emoji", "id", "name", "notes", "slug"].sort(),
+      ["allergenSlugs", "category", "deletedAt", "emoji", "id", "name", "notes", "slug"].sort(),
     );
+    expect(bundle.customFoods[0]?.deletedAt).toBeNull();
 
     // Seeded catalog foods are nobody's export.
     expect(bundle.customFoods.map((food) => food.name)).not.toContain("Sweet potato");
+  });
+
+  // v16 (ledger 541): a deleted custom food is still the parent's data — the
+  // meals and containers that name it are in the same file — so it is
+  // exported, carrying when it was deleted.
+  it("keeps a deleted custom food in the export, with when it was deleted", async () => {
+    const before = accountExportSchema.parse(
+      (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: user.cookie } })).json(),
+    );
+    const food = before.customFoods[0]!;
+    const deleted = await app.inject({ method: "DELETE", url: `/api/foods/${food.id}`, headers: { cookie: user.cookie } });
+    expect(deleted.statusCode).toBe(204);
+
+    const bundle = accountExportSchema.parse(
+      (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: user.cookie } })).json(),
+    );
+    expect(bundle.exportVersion).toBe(16);
+    expect(bundle.customFoods).toHaveLength(1);
+    expect(bundle.customFoods[0]).toMatchObject({ id: food.id, name: "Satay sauce" });
+    expect(Date.parse(bundle.customFoods[0]!.deletedAt!)).not.toBeNaN();
   });
 
   it("round-trips the custom recipes added in v6", async () => {

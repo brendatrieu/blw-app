@@ -9,6 +9,7 @@ import { clampStageToAvailable, stageForAge } from "../features/catalog/stage.js
 import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../features/catalog/basicRecipe.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
+import { DeletedMark } from "../features/catalog/components/DeletedMark.js";
 import { RECIPES_TAB_PATH, allergenLabel, customRecipeConflictMessage } from "../features/catalog/constants.js";
 import { getExtraIngredientEmoji, getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
@@ -246,6 +247,7 @@ export function RecipeDetailPage() {
                 </span>
                 <span className="flex-1">
                   <span className="font-medium">{ingredient.foodName}</span>
+                  <DeletedMark deleted={ingredient.deleted} />
                   {ingredient.quantityNote ? (
                     <span className="text-[var(--color-text-muted)]"> — {ingredient.quantityNote}</span>
                   ) : null}

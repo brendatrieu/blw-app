@@ -8,26 +8,33 @@
 // custom food is absent from the list and 404 on detail, exactly like a row
 // that does not exist.
 //
-// The write routes (POST/PATCH/DELETE /api/foods) only ever touch custom
-// foods: a catalog row has no owner, so it can never match the ownership
-// filter and is reported as not found like anybody else's.
-import { and, asc, eq, ilike, inArray, lte, or, sql } from "drizzle-orm";
+// The write routes (POST/PATCH/DELETE /api/foods, restore, replace) only ever
+// touch custom foods: a catalog row has no owner, so it can never match the
+// ownership filter and is reported as not found like anybody else's.
+//
+// Deleting a custom food is SOFT (`deleted_at`): choosing and browsing reads
+// hide it, history keeps it. Only a replace removes a food for good, and only
+// after every row naming it has moved to the replacement.
+import { and, asc, eq, ilike, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   createCustomFoodSchema,
   foodDetailSchema,
   foodIdParamSchema,
   foodsQuerySchema,
+  replaceCustomFoodSchema,
   updateCustomFoodSchema,
   type FoodDetail,
   type FoodListItem,
   type FoodPairing,
   type FoodRecipeRef,
   type FoodsResponse,
+  type FoodUsage,
+  type ReplaceCustomFoodResponse,
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
-import { visibleFoodsCondition } from "../services/foods.js";
+import { choosableFoodsCondition, visibleFoodsCondition } from "../services/foods.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import { buildCandidateSlug, isUniqueViolation, SLUG_ATTEMPTS } from "../services/slugs.js";
 import type { Transaction } from "../services/meals.js";
@@ -135,6 +142,33 @@ async function writeFoodAllergens(tx: Transaction, foodId: string, allergenIds: 
 type FoodRow = typeof foods.$inferSelect;
 
 /**
+ * Where a custom food is used: meals, containers and custom recipes naming
+ * it. Only its owner can reference a custom food (every write validates food
+ * ids against the visibility rule), so these counts are all theirs.
+ */
+async function loadFoodUsage(db: Database | Transaction, foodId: string): Promise<FoodUsage> {
+  const [mealRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(mealFoods)
+    .where(eq(mealFoods.foodId, foodId));
+  // One row per (container, food) — the join table's primary key — so this
+  // counts containers, which is what the parent is told.
+  const [storageRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(storageItemFoods)
+    .where(eq(storageItemFoods.foodId, foodId));
+  const [recipeRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(recipeIngredients)
+    .where(eq(recipeIngredients.foodId, foodId));
+  return {
+    mealCount: mealRow?.count ?? 0,
+    storageCount: storageRow?.count ?? 0,
+    recipeCount: recipeRow?.count ?? 0,
+  };
+}
+
+/**
  * The full detail payload for one already-authorised food row. Shared by GET
  * /api/foods/:slug and the two write routes, so a food reads back the same
  * way however the caller reached it. `userId` scopes the "recipes with this
@@ -221,13 +255,17 @@ async function loadFoodDetail(db: Database, food: FoodRow, userId: string | null
     imageUrl: food.imageUrl,
     pairings,
     recipes: recipeRows,
+    deletedAt: food.deletedAt?.toISOString() ?? null,
+    // The owner's own food only: what the delete prompt names.
+    ...(userId !== null && food.ownerId === userId ? { usage: await loadFoodUsage(db, food.id) } : {}),
   };
 
   return foodDetailSchema.parse(detail);
 }
 
 /** This user's own food by id, or undefined — a catalog row (no owner) can
- * never match, which is what makes editing one a 404 rather than a 403. */
+ * never match, which is what makes editing one a 404 rather than a 403.
+ * Deleted foods DO match: restore and a repeat delete need them. */
 async function loadOwnedFood(db: Database, id: string, userId: string): Promise<FoodRow | undefined> {
   const [row] = await db
     .select()
@@ -247,10 +285,19 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
       reply.code(400);
       return { error: "invalid_query", details: parsed.error.flatten() };
     }
-    const { category, allergen, ironLevel, vitaminCLevel, fiberLevel, q, maxAgeMonths } = parsed.data;
+    const { category, allergen, ironLevel, vitaminCLevel, fiberLevel, q, maxAgeMonths, deleted } = parsed.data;
+    const userId = request.user?.id ?? null;
+    // Anonymous callers own nothing, so they have nothing deleted either.
+    if (deleted && !userId) return { foods: [] } satisfies FoodsResponse;
 
     // Unconditional, and first: every other filter narrows what this allows.
-    const conditions = [visibleFoodsCondition(request.user?.id ?? null)];
+    // This list feeds browsing, search and every food picker, so a deleted
+    // food is hidden — unless the caller asked for exactly their deleted ones.
+    const conditions = [
+      deleted && userId
+        ? and(eq(foods.ownerId, userId), isNotNull(foods.deletedAt))
+        : choosableFoodsCondition(userId),
+    ];
     if (category) conditions.push(eq(foods.category, category));
     if (ironLevel) conditions.push(eq(foods.ironLevel, ironLevel));
     if (vitaminCLevel) conditions.push(eq(foods.vitaminCLevel, vitaminCLevel));
@@ -317,6 +364,8 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
   app.get("/api/foods/:slug", { preHandler: app.resolveOptionalUser }, async (request, reply) => {
     const { slug } = request.params as { slug: string };
 
+    // Deleted foods still load here (read-only page with Restore): meals,
+    // storage items and recipes keep linking to them.
     const [food] = await db
       .select()
       .from(foods)
@@ -394,6 +443,8 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
     const userId = currentUserId(request);
     const existing = await loadOwnedFood(db, params.data.id, userId);
     if (!existing) return notFound(reply);
+    // A deleted food's page is read-only: restore it first.
+    if (existing.deletedAt) return reply.code(409).send({ error: "deleted" });
 
     const allergenIds = body.data.allergenSlugs
       ? await resolveAllergenIds(db, body.data.allergenSlugs)
@@ -438,39 +489,161 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
     const existing = await loadOwnedFood(db, params.data.id, userId);
     if (!existing) return notFound(reply);
 
-    // Meal and storage rows reference foods without a cascade, on purpose:
-    // eaten history must not disappear because a food was tidied away, and a
-    // container must not silently empty itself. So a referenced food is a 409
-    // the parent can act on, with the counts the UI needs to say what is in
-    // the way. (`food_allergens` DOES cascade, so an unreferenced food takes
-    // its allergen links with it.)
-    const [mealRow] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(mealFoods)
-      .where(eq(mealFoods.foodId, existing.id));
-    // Containers holding this food. One row per (container, food) — the join
-    // table's primary key — so this counts containers, which is what the
-    // parent is told is in the way.
-    const [storageRow] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(storageItemFoods)
-      .where(eq(storageItemFoods.foodId, existing.id));
-    // `recipe_ingredients.food_id` has no cascade either, and since custom
-    // recipes can be built out of custom foods, deleting the food underneath
-    // one would otherwise trip the foreign key mid-request.
-    const [recipeRow] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(recipeIngredients)
-      .where(eq(recipeIngredients.foodId, existing.id));
-
-    const mealCount = mealRow?.count ?? 0;
-    const storageCount = storageRow?.count ?? 0;
-    const recipeCount = recipeRow?.count ?? 0;
-    if (mealCount > 0 || storageCount > 0 || recipeCount > 0) {
-      return reply.code(409).send({ error: "conflict", mealCount, storageCount, recipeCount });
+    // Soft, whether or not anything uses it: meal and storage rows reference
+    // foods without a cascade on purpose (eaten history must not disappear,
+    // a container must not silently empty itself), so the row stays and
+    // history marks it "(deleted)". Repeating the delete keeps the first time.
+    if (!existing.deletedAt) {
+      await db
+        .update(foods)
+        .set({ deletedAt: new Date() })
+        .where(and(eq(foods.id, existing.id), eq(foods.ownerId, userId)));
     }
-
-    await db.delete(foods).where(and(eq(foods.id, existing.id), eq(foods.ownerId, userId)));
     return reply.code(204).send();
+  });
+
+  // ---------------------------------------------------------------------
+  // POST /api/foods/:id/restore
+  // ---------------------------------------------------------------------
+  app.post("/api/foods/:id/restore", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = foodIdParamSchema.safeParse(request.params);
+    if (!params.success) return notFound(reply);
+
+    const userId = currentUserId(request);
+    const existing = await loadOwnedFood(db, params.data.id, userId);
+    if (!existing) return notFound(reply);
+
+    const [row] = await db
+      .update(foods)
+      .set({ deletedAt: null })
+      .where(and(eq(foods.id, existing.id), eq(foods.ownerId, userId)))
+      .returning();
+    if (!row) throw new Error("Custom food restore returned no row");
+    return await loadFoodDetail(db, row, userId);
+  });
+
+  // ---------------------------------------------------------------------
+  // POST /api/foods/:id/replace — move every use onto another food, then
+  // delete this one for good
+  // ---------------------------------------------------------------------
+  app.post("/api/foods/:id/replace", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = foodIdParamSchema.safeParse(request.params);
+    if (!params.success) return notFound(reply);
+
+    const body = replaceCustomFoodSchema.safeParse(request.body);
+    if (!body.success) return badRequest(reply, body.error.flatten());
+
+    const userId = currentUserId(request);
+    // The checks run INSIDE the transaction, and lock both rows, so neither
+    // food can be deleted, restored or replaced between the check and the
+    // move (a concurrent replace of the same food waits, then 404s).
+    const result = await db.transaction(async (tx) => {
+      // Deleted or not: "Replace" is offered on an in-use food either way.
+      const [existing] = await tx
+        .select({ id: foods.id })
+        .from(foods)
+        .where(and(eq(foods.id, params.data.id), eq(foods.ownerId, userId)))
+        .limit(1)
+        .for("update");
+      if (!existing) return { status: 404 } as const;
+      if (body.data.replacementId === existing.id) return { status: 400 } as const;
+      // Something the parent could pick: the catalog or their own, not deleted.
+      const [replacement] = await tx
+        .select({ id: foods.id, slug: foods.slug, name: foods.name })
+        .from(foods)
+        .where(and(eq(foods.id, body.data.replacementId), choosableFoodsCondition(userId)))
+        .limit(1)
+        .for("update");
+      if (!replacement) return { status: 404 } as const;
+
+      // Counted first: every one of these ends up on the replacement, either
+      // re-pointed or merged into a row that already held it.
+      const usage = await loadFoodUsage(tx, existing.id);
+
+      // A meal that already holds the replacement keeps that row; if only
+      // this food's row said which storage item it was served from, the kept
+      // row inherits that, so the serve provenance survives the merge.
+      const servedFrom = await tx
+        .select({ mealId: mealFoods.mealId, storageItemId: mealFoods.storageItemId })
+        .from(mealFoods)
+        .where(and(eq(mealFoods.foodId, existing.id), isNotNull(mealFoods.storageItemId)));
+      for (const row of servedFrom) {
+        await tx
+          .update(mealFoods)
+          .set({ storageItemId: row.storageItemId })
+          .where(
+            and(
+              eq(mealFoods.mealId, row.mealId),
+              eq(mealFoods.foodId, replacement.id),
+              isNull(mealFoods.storageItemId),
+            ),
+          );
+      }
+
+      // Each table has a unique (parent, food) key, so where the parent row
+      // already holds the replacement the old row is dropped rather than
+      // re-pointed. Every statement is keyed on this food's id, and only its
+      // owner can reference it, so nobody else's rows are touched.
+      await tx
+        .delete(mealFoods)
+        .where(
+          and(
+            eq(mealFoods.foodId, existing.id),
+            inArray(
+              mealFoods.mealId,
+              tx.select({ id: mealFoods.mealId }).from(mealFoods).where(eq(mealFoods.foodId, replacement.id)),
+            ),
+          ),
+        );
+      await tx.update(mealFoods).set({ foodId: replacement.id }).where(eq(mealFoods.foodId, existing.id));
+
+      // A merged container keeps the replacement where it already sat; a
+      // re-pointed one keeps this food's position, so the order is unchanged.
+      await tx
+        .delete(storageItemFoods)
+        .where(
+          and(
+            eq(storageItemFoods.foodId, existing.id),
+            inArray(
+              storageItemFoods.storageItemId,
+              tx
+                .select({ id: storageItemFoods.storageItemId })
+                .from(storageItemFoods)
+                .where(eq(storageItemFoods.foodId, replacement.id)),
+            ),
+          ),
+        );
+      await tx
+        .update(storageItemFoods)
+        .set({ foodId: replacement.id })
+        .where(eq(storageItemFoods.foodId, existing.id));
+
+      await tx
+        .delete(recipeIngredients)
+        .where(
+          and(
+            eq(recipeIngredients.foodId, existing.id),
+            inArray(
+              recipeIngredients.recipeId,
+              tx
+                .select({ id: recipeIngredients.recipeId })
+                .from(recipeIngredients)
+                .where(eq(recipeIngredients.foodId, replacement.id)),
+            ),
+          ),
+        );
+      await tx
+        .update(recipeIngredients)
+        .set({ foodId: replacement.id })
+        .where(eq(recipeIngredients.foodId, existing.id));
+
+      // Nothing names it any more; `food_allergens` cascades with it.
+      await tx.delete(foods).where(and(eq(foods.id, existing.id), eq(foods.ownerId, userId)));
+      return { status: 200, replacement, moved: usage } as const;
+    });
+
+    if (result.status === 404) return notFound(reply);
+    if (result.status === 400) return badRequest(reply, { replacementId: "must be a different food" });
+    return { replacement: result.replacement, moved: result.moved } satisfies ReplaceCustomFoodResponse;
   });
 }

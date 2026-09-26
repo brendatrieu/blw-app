@@ -312,6 +312,9 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
 
   const foods = foodsData?.foods ?? [];
   const { data: recipeDetail } = useRecipe(recipeId || undefined);
+  // Editing a meal that holds a food its owner has since deleted: the list no
+  // longer offers it, so the picker is handed it to keep showing its chip.
+  const keptFoods = useMemo(() => meal?.foods.filter((food) => food.deleted), [meal]);
 
   const slugToFoodId = useMemo(() => new Map(foods.map((food) => [food.slug, food.id])), [foods]);
 
@@ -450,7 +453,7 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
     // `noValidate`: this form answers its own required field inline (item 236).
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
       <Field label="Food" htmlFor="log-food-food" error={shownErrors.foods}>
-        <FoodPicker id="log-food-food" value={foodIds} onChange={setFoodIds} />
+        <FoodPicker id="log-food-food" value={foodIds} onChange={setFoodIds} keptFoods={keptFoods} />
       </Field>
 
       <Field label="Recipe (optional)" htmlFor="log-food-recipe">

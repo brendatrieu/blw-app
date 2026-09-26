@@ -1,9 +1,7 @@
 import {
-  customFoodConflictSchema,
   customRecipeConflictSchema,
   type CreateCustomFoodInput,
   type CreateCustomRecipeInput,
-  type CustomFoodConflict,
   type CustomRecipeConflict,
   type FoodDetail,
   type FoodsQuery,
@@ -11,6 +9,7 @@ import {
   type RecipeDetail,
   type RecipeScope,
   type RecipesResponse,
+  type ReplaceCustomFoodResponse,
   type UpdateCustomFoodInput,
   type UpdateCustomRecipeInput,
 } from "@blw/shared";
@@ -30,6 +29,7 @@ export function buildFoodsQueryString(filters: FoodsQuery): string {
   if (filters.fiberLevel) params.set("fiberLevel", filters.fiberLevel);
   if (filters.q) params.set("q", filters.q);
   if (filters.maxAgeMonths !== undefined) params.set("maxAgeMonths", String(filters.maxAgeMonths));
+  if (filters.deleted) params.set("deleted", "true");
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
@@ -61,22 +61,18 @@ export function updateCustomFood(id: string, input: UpdateCustomFoodInput): Prom
   return apiPatch<FoodDetail>(`/api/foods/${encodeURIComponent(id)}`, input);
 }
 
+/** Soft: the food stays for the history that names it (ledger 537). */
 export function deleteCustomFood(id: string): Promise<void> {
   return apiDelete<void>(`/api/foods/${encodeURIComponent(id)}`);
 }
 
-/**
- * The `{ error: "conflict", mealCount, storageCount }` body behind a 409 from
- * `deleteCustomFood`, or null for any other failure. Pure and exported so
- * the food page's inline "used in N meals…" message is unit-testable without
- * a network layer: it takes the thrown value as `unknown` (that's what a
- * mutation's `error` is typed as at the call site) and narrows it here, so
- * no caller has to hand-check `instanceof ApiError` plus the shape.
- */
-export function asCustomFoodConflict(error: unknown): CustomFoodConflict | null {
-  if (!(error instanceof ApiError) || error.status !== 409) return null;
-  const parsed = customFoodConflictSchema.safeParse(error.body);
-  return parsed.success ? parsed.data : null;
+export function restoreCustomFood(id: string): Promise<FoodDetail> {
+  return apiPost<FoodDetail>(`/api/foods/${encodeURIComponent(id)}/restore`);
+}
+
+/** Moves every use onto `replacementId`, then deletes the food for good. */
+export function replaceCustomFood(id: string, replacementId: string): Promise<ReplaceCustomFoodResponse> {
+  return apiPost<ReplaceCustomFoodResponse>(`/api/foods/${encodeURIComponent(id)}/replace`, { replacementId });
 }
 
 // ---------------------------------------------------------------------------
@@ -144,8 +140,10 @@ export function deleteCustomRecipe(id: string): Promise<void> {
 
 /**
  * The `{ error: "conflict", mealCount, storageCount }` body behind a 409 from
- * `deleteCustomRecipe`, or null for any other failure — the recipe-side twin
- * of `asCustomFoodConflict`, and narrowed here for the same reason.
+ * `deleteCustomRecipe`, or null for any other failure. Pure and exported so
+ * the recipe page's inline "used in N meals…" message is unit-testable: it
+ * takes the thrown value as `unknown` (a mutation's `error` type) and narrows
+ * it here, so no caller has to hand-check `instanceof ApiError` plus the shape.
  * Favorites are never a block: the server just deletes the caller's own
  * favorite row along with the recipe.
  */

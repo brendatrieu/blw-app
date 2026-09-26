@@ -63,3 +63,18 @@ describe("MealsFromBatch tap-through link (item 164)", () => {
     expect(html).toContain('href="/meals/meal-7"');
   });
 });
+
+describe("MealsFromBatch deleted food (ledger 543/555)", () => {
+  it("marks a food its owner deleted with the one muted mark, and only that one", () => {
+    const html = renderWithMeals([
+      meal({
+        foods: [
+          { id: "food-9", slug: "banana-bread-k3f9q1", name: "Banana bread", category: "grain", storageItemId: STORAGE_ITEM_ID, deleted: true },
+          { id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", storageItemId: STORAGE_ITEM_ID },
+        ],
+      }),
+    ]).replace(/<!-- -->/g, "");
+    expect(html).toContain('Banana bread<span class="font-normal text-[var(--color-text-muted)]">\u00a0(deleted)</span>, Avocado');
+    expect(html.match(/\(deleted\)/g)).toHaveLength(1);
+  });
+});

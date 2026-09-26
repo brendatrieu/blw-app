@@ -318,6 +318,20 @@ describe("CustomRecipeActions", () => {
   });
 });
 
+// Ledger 543: a recipe keeps an ingredient its owner deleted, marked.
+describe("RecipeDetailPage — deleted ingredient", () => {
+  it("marks it (deleted), muted, and still links to its read-only page", () => {
+    const [salmon] = catalogRecipe().ingredients;
+    const html = renderRecipe(catalogRecipe({ ingredients: [{ ...salmon!, deleted: true }] }));
+    expect(html).toMatch(/Salmon<\/span><span class="font-normal text-\[var\(--color-text-muted\)\]">\u00a0(?:<!-- -->)?\(deleted\)/);
+    expect(html).toContain('href="/foods/salmon"');
+  });
+
+  it("says nothing for a live ingredient", () => {
+    expect(renderRecipe(catalogRecipe())).not.toContain("(deleted)");
+  });
+});
+
 describe("customRecipeConflictMessage", () => {
   it("names both places the recipe is still referenced (the 409 body's counts)", () => {
     expect(customRecipeConflictMessage({ mealCount: 3, storageCount: 2 })).toBe(
@@ -331,10 +345,12 @@ describe("customRecipeConflictMessage", () => {
     );
   });
 
-  it("still names a zero count rather than dropping the clause", () => {
+  // Ledger 542: "0 meals" is never said — a zero count drops its clause.
+  it("leaves a zero count out of the sentence", () => {
     expect(customRecipeConflictMessage({ mealCount: 0, storageCount: 4 })).toBe(
-      "Used in 0 meals and 4 storage items — remove those first.",
+      "Used in 4 storage items — remove those first.",
     );
+    expect(customRecipeConflictMessage({ mealCount: 2, storageCount: 0 })).toBe("Used in 2 meals — remove those first.");
   });
 });
 

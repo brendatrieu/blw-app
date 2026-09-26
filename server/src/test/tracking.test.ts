@@ -204,7 +204,17 @@ describe("tracking routes", () => {
       expect(created.foods).toEqual([
         // `emoji` is null for every catalog food — only a parent-added food
         // ever carries one.
-        { id: fixtures.egg.id, slug: "egg", name: "Egg", category: "protein", emoji: null, storageItemId: null },
+        {
+          id: fixtures.egg.id,
+          slug: "egg",
+          name: "Egg",
+          category: "protein",
+          emoji: null,
+          storageItemId: null,
+          deleted: false,
+          // The food's allergens ride on the meal (ledger 554).
+          allergens: ["egg"],
+        },
       ]);
 
       const listBody = await listMeals(user, babyId);
@@ -1398,6 +1408,7 @@ describe("tracking routes", () => {
         category: "protein",
         emoji: "🥘",
         isCustom: true,
+        deleted: false,
       });
       // The catalog row reads as catalog: no owner, no parent-picked emoji.
       expect(detail.foods.find((f) => f.slug === "egg")).toMatchObject({ isCustom: false, emoji: null });
@@ -1433,7 +1444,12 @@ describe("tracking routes", () => {
       // Only the allergen-carrying foods of the meal: the banana served
       // alongside is not what this page is about.
       expect(detail.exposures[0]!.foods.map((f) => f.name)).toEqual(["Egg", "Nana's frittata"]);
-      expect(detail.exposures[0]!.foods).toContainEqual({ id: custom.id, name: "Nana's frittata", emoji: "🥘" });
+      expect(detail.exposures[0]!.foods).toContainEqual({
+        id: custom.id,
+        name: "Nana's frittata",
+        emoji: "🥘",
+        deleted: false,
+      });
       expect(detail.exposures[1]).toMatchObject({
         mealId: older.id,
         servedAt: "2026-03-01T08:00:00.000Z",

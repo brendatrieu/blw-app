@@ -2,12 +2,17 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import type {
+  AllergenDetail,
   AllergenProgressResponse,
   Baby,
   FoodDetail,
   FoodsResponse,
   CreateStorageItemResponse,
   MealItem,
+  MealsResponse,
+  RecipeDetail,
+  RecipesResponse,
+  ReplaceCustomFoodResponse,
   StorageResponse,
 } from "@blw/shared";
 import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
@@ -486,58 +491,208 @@ describe("custom foods", () => {
   // -----------------------------------------------------------------------
   // DELETE /api/foods/:id
   // -----------------------------------------------------------------------
-  describe("DELETE /api/foods/:id", () => {
-    it("deletes an unreferenced food and its allergen links", async () => {
-      const mine = await createFood(owner, {
-        name: "Banana bread",
-        category: "grain",
-        allergenSlugs: ["peanut"],
-      });
+  // Ledger 537-545: every delete of an own custom food is SOFT.
+  describe("DELETE /api/foods/:id (soft)", () => {
+    async function del(user: TestUser, id: string) {
+      return app.inject({ method: "DELETE", url: `/api/foods/${id}`, headers: { cookie: user.cookie } });
+    }
+    async function detailOf(user: TestUser | null, slug: string) {
+      return app.inject({ method: "GET", url: `/api/foods/${slug}`, headers: user ? { cookie: user.cookie } : {} });
+    }
 
-      const response = await app.inject({
-        method: "DELETE",
-        url: `/api/foods/${mine.id}`,
-        headers: { cookie: owner.cookie },
-      });
-      expect(response.statusCode).toBe(204);
+    it("hides an unused food from the list, search and filters, but still loads it by slug, marked", async () => {
+      const mine = await createFood(owner, { name: "Banana bread", category: "grain", allergenSlugs: ["peanut"] });
+      expect((await del(owner, mine.id)).statusCode).toBe(204);
 
-      const detail = await app.inject({
-        method: "GET",
-        url: `/api/foods/${mine.slug}`,
-        headers: { cookie: owner.cookie },
-      });
-      expect(detail.statusCode).toBe(404);
+      for (const query of ["", "?q=bread", "?category=grain", "?allergen=peanut"]) {
+        expect((await listFoods(owner, query)).foods.map((f) => f.slug), query).not.toContain(mine.slug);
+      }
 
+      const detail = await detailOf(owner, mine.slug);
+      expect(detail.statusCode).toBe(200);
+      const body = detail.json<FoodDetail>();
+      expect(body.deletedAt).toEqual(expect.any(String));
+      expect(body.usage).toEqual({ mealCount: 0, storageCount: 0, recipeCount: 0 });
+      // The row and its allergen links stay — a restore brings it all back.
       const links = await db.select().from(schema.foodAllergens).where(eq(schema.foodAllergens.foodId, mine.id));
-      expect(links).toHaveLength(0);
+      expect(links).toHaveLength(1);
     });
 
-    it("409s with the reference counts while a meal or storage item still uses it", async () => {
+    it("is idempotent: a repeat delete is a 204 that keeps the first time", async () => {
       const mine = await createFood(owner, { name: "Banana bread", category: "grain" });
+      await del(owner, mine.id);
+      const first = (await detailOf(owner, mine.slug)).json<FoodDetail>().deletedAt;
+      expect((await del(owner, mine.id)).statusCode).toBe(204);
+      expect((await detailOf(owner, mine.slug)).json<FoodDetail>().deletedAt).toBe(first);
+    });
+
+    it("keeps every meal, storage and recipe row that names it, marked deleted, and leaves allergen progress alone", async () => {
+      const mine = await createFood(owner, { name: "Satay sauce", category: "protein", allergenSlugs: ["peanut"] });
       const babyId = await createBaby(owner);
-      await postMeal(owner, babyId, [mine.id]);
+      const meal = (await postMeal(owner, babyId, [mine.id, fixtures.banana.id])).json<MealItem>();
       await app.inject({
         method: "POST",
         url: "/api/storage",
         headers: { cookie: owner.cookie },
         payload: { foodIds: [mine.id], location: "fridge" },
       });
+      const recipe = await app.inject({
+        method: "POST",
+        url: "/api/recipes",
+        headers: { cookie: owner.cookie },
+        payload: { title: "Satay noodles", minAgeMonths: 6, ingredients: [{ foodId: mine.id }] },
+      });
+      const progressUrl = `/api/babies/${babyId}/allergen-progress`;
+      const before = (await app.inject({ method: "GET", url: progressUrl, headers: { cookie: owner.cookie } })).json();
 
-      const blocked = await app.inject({
-        method: "DELETE",
+      expect((await del(owner, mine.id)).statusCode).toBe(204);
+
+      const meals = await app.inject({ method: "GET", url: `/api/babies/${babyId}/meals`, headers: { cookie: owner.cookie } });
+      const foods = meals.json<MealsResponse>().items[0]!.foods;
+      // Its allergen chip rides on the meal itself, so it outlives the food.
+      expect(foods.find((f) => f.id === mine.id)).toMatchObject({ name: "Satay sauce", deleted: true, allergens: ["peanut"] });
+      expect(foods.find((f) => f.id === fixtures.banana.id)).toMatchObject({ deleted: false });
+
+      const storage = await app.inject({ method: "GET", url: "/api/storage?view=active", headers: { cookie: owner.cookie } });
+      expect(storage.json<StorageResponse>().items[0]!.foods).toEqual([
+        expect.objectContaining({ id: mine.id, deleted: true }),
+      ]);
+
+      const recipeDetail = await app.inject({
+        method: "GET",
+        url: `/api/recipes/${recipe.json<RecipeDetail>().id}`,
+        headers: { cookie: owner.cookie },
+      });
+      expect(recipeDetail.json<RecipeDetail>().ingredients[0]).toMatchObject({ foodId: mine.id, deleted: true });
+      const recipeList = await app.inject({ method: "GET", url: "/api/recipes?scope=custom", headers: { cookie: owner.cookie } });
+      expect(recipeList.json<RecipesResponse>().recipes[0]).toMatchObject({
+        ingredientNames: ["Satay sauce"],
+        ingredientDeleted: [true],
+      });
+
+      // History still counts it: the ladder is unchanged, and the allergen
+      // page still lists the food (marked) and the meal that exposed.
+      const after = (await app.inject({ method: "GET", url: progressUrl, headers: { cookie: owner.cookie } })).json();
+      expect(after).toEqual(before);
+      const allergen = await app.inject({
+        method: "GET",
+        url: `${progressUrl}/peanut`,
+        headers: { cookie: owner.cookie },
+      });
+      const peanut = allergen.json<AllergenDetail>();
+      expect(peanut.foods).toEqual([expect.objectContaining({ id: mine.id, deleted: true })]);
+      expect(peanut.exposures.map((e) => e.mealId)).toEqual([meal.id]);
+      expect(peanut.exposures[0]!.foods).toEqual([expect.objectContaining({ id: mine.id, deleted: true })]);
+
+      // The owner's usage counts ride on the detail for the delete prompt.
+      expect((await detailOf(owner, mine.slug)).json<FoodDetail>().usage).toEqual({
+        mealCount: 1,
+        storageCount: 1,
+        recipeCount: 1,
+      });
+
+      // Editing the old meal resends the deleted food and still saves; a NEW
+      // container can't be made from it (only a stale picker would try).
+      const edit = await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${meal.id}`,
+        headers: { cookie: owner.cookie },
+        payload: { foodIds: [mine.id, fixtures.banana.id], notes: "loved it" },
+      });
+      expect(edit.statusCode).toBe(200);
+      const stock = await app.inject({
+        method: "POST",
+        url: "/api/storage",
+        headers: { cookie: owner.cookie },
+        payload: { foodIds: [mine.id], location: "fridge" },
+      });
+      expect(stock.statusCode).toBe(400);
+
+      // Nothing was removed.
+      expect(await db.select().from(schema.mealFoods).where(eq(schema.mealFoods.foodId, mine.id))).toHaveLength(1);
+      expect(
+        await db.select().from(schema.storageItemFoods).where(eq(schema.storageItemFoods.foodId, mine.id)),
+      ).toHaveLength(1);
+    });
+
+    it("refuses a deleted food in a NEW meal or recipe, and as an addition to one, but keeps it where it already is", async () => {
+      const kept = await createFood(owner, { name: "Satay sauce", category: "protein" });
+      const later = await createFood(owner, { name: "Banana bread", category: "grain" });
+      const babyId = await createBaby(owner);
+      const meal = (await postMeal(owner, babyId, [kept.id, fixtures.banana.id])).json<MealItem>();
+      const recipe = (
+        await app.inject({
+          method: "POST",
+          url: "/api/recipes",
+          headers: { cookie: owner.cookie },
+          payload: { title: "Satay noodles", minAgeMonths: 6, ingredients: [{ foodId: kept.id }] },
+        })
+      ).json<RecipeDetail>();
+      await del(owner, kept.id);
+      await del(owner, later.id);
+
+      const patchMeal = (foodIds: string[]) =>
+        app.inject({ method: "PATCH", url: `/api/meals/${meal.id}`, headers: { cookie: owner.cookie }, payload: { foodIds } });
+      const recipeWrite = (method: "POST" | "PATCH", url: string, foodIds: string[]) =>
+        app.inject({
+          method,
+          url,
+          headers: { cookie: owner.cookie },
+          payload: { title: "Satay noodles", minAgeMonths: 6, ingredients: foodIds.map((foodId) => ({ foodId })) },
+        });
+
+      // New entries: a deleted food reads as unknown.
+      expect((await postMeal(owner, babyId, [later.id])).statusCode).toBe(400);
+      expect((await postMeal(owner, babyId, [kept.id])).statusCode).toBe(400);
+      expect((await recipeWrite("POST", "/api/recipes", [later.id])).statusCode).toBe(400);
+      // Adding one to an existing entry is refused too.
+      expect((await patchMeal([kept.id, fixtures.banana.id, later.id])).statusCode).toBe(400);
+      expect((await recipeWrite("PATCH", `/api/recipes/${recipe.id}`, [kept.id, later.id])).statusCode).toBe(400);
+      // Editing an entry that already holds it resends it, and that stands.
+      expect((await patchMeal([kept.id])).statusCode).toBe(200);
+      expect((await recipeWrite("PATCH", `/api/recipes/${recipe.id}`, [kept.id, fixtures.banana.id])).statusCode).toBe(200);
+      expect(await db.select().from(schema.mealFoods).where(eq(schema.mealFoods.foodId, later.id))).toEqual([]);
+      expect(await db.select().from(schema.recipeIngredients).where(eq(schema.recipeIngredients.foodId, later.id))).toEqual([]);
+    });
+
+    it("keeps a deleted food out of the AI prep-guidance tool", async () => {
+      const mine = await createFood(owner, { name: "Banana bread", category: "grain" });
+      await del(owner, mine.id);
+      const tools = buildChatTools(db, await userId(owner), null);
+      const answer = await tools.get_food_prep_guidance.run({ foodSlug: mine.slug, ageStage: "9" });
+      expect(String(answer)).toContain("No catalog food found");
+    });
+
+    it("refuses to edit a deleted food — its page is read-only until restored", async () => {
+      const mine = await createFood(owner, { name: "Banana bread", category: "grain" });
+      await del(owner, mine.id);
+      const response = await app.inject({
+        method: "PATCH",
         url: `/api/foods/${mine.id}`,
         headers: { cookie: owner.cookie },
+        payload: { name: "Zucchini bread" },
       });
-      expect(blocked.statusCode).toBe(409);
-      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 1, storageCount: 1, recipeCount: 0 });
+      expect(response.statusCode).toBe(409);
+      expect((await detailOf(owner, mine.slug)).json<FoodDetail>().name).toBe("Banana bread");
+    });
 
-      // Still there — a refused delete changes nothing.
-      const stillThere = await app.inject({
-        method: "GET",
-        url: `/api/foods/${mine.slug}`,
-        headers: { cookie: owner.cookie },
+    it("never blocks creating a new food with the same name", async () => {
+      const first = await createFood(owner, { name: "Banana bread", category: "grain" });
+      await del(owner, first.id);
+      const second = await createFood(owner, { name: "Banana bread", category: "grain" });
+      expect(second.slug).not.toBe(first.slug);
+      expect((await listFoods(owner, "?q=bread")).foods.map((f) => f.id)).toEqual([second.id]);
+    });
+
+    it("shows usage only to the owner, and never on a catalog food", async () => {
+      const mine = await createFood(owner, { name: "Banana bread", category: "grain" });
+      expect((await detailOf(owner, mine.slug)).json<FoodDetail>().usage).toEqual({
+        mealCount: 0,
+        storageCount: 0,
+        recipeCount: 0,
       });
-      expect(stillThere.statusCode).toBe(200);
+      expect((await detailOf(owner, "banana")).json<FoodDetail>().usage).toBeUndefined();
+      expect((await detailOf(null, "banana")).json<FoodDetail>().usage).toBeUndefined();
     });
 
     it("404s another user's food, a catalog food and an unknown id", async () => {
@@ -552,9 +707,249 @@ describe("custom foods", () => {
         expect(response.statusCode, `${id}`).toBe(404);
       }
 
-      // Neither food went anywhere.
+      // Neither food went anywhere, and neither is marked.
       const rows = await db.select().from(schema.foods);
       expect(rows.map((row) => row.slug).sort()).toEqual(["banana", mine.slug].sort());
+      expect(rows.every((row) => row.deletedAt === null)).toBe(true);
+    });
+  });
+
+  describe("GET /api/foods?deleted=1 (Foods › Deleted)", () => {
+    it("lists only the caller's own deleted foods", async () => {
+      const gone = await createFood(owner, { name: "Banana bread", category: "grain" });
+      const live = await createFood(owner, { name: "Oat bars", category: "grain" });
+      const theirs = await createFood(intruder, { name: "Papa's lentil stew", category: "legume" });
+      for (const [user, id] of [
+        [owner, gone.id],
+        [intruder, theirs.id],
+      ] as const) {
+        await app.inject({ method: "DELETE", url: `/api/foods/${id}`, headers: { cookie: user.cookie } });
+      }
+
+      for (const query of ["?deleted=1", "?deleted=true"]) {
+        expect((await listFoods(owner, query)).foods.map((f) => f.id), query).toEqual([gone.id]);
+      }
+      expect((await listFoods(owner, "?deleted=1&q=bread")).foods.map((f) => f.id)).toEqual([gone.id]);
+      expect((await listFoods(owner, "?deleted=1&q=oat")).foods).toEqual([]);
+      expect((await listFoods(intruder, "?deleted=1")).foods.map((f) => f.id)).toEqual([theirs.id]);
+      expect((await listFoods(null, "?deleted=1")).foods).toEqual([]);
+      // Off is the plain list: live foods, no deleted ones.
+      const plain = (await listFoods(owner, "?deleted=0")).foods.map((f) => f.id);
+      expect(plain).toContain(live.id);
+      expect(plain).not.toContain(gone.id);
+    });
+  });
+
+  describe("POST /api/foods/:id/restore", () => {
+    it("brings a deleted food back into the lists and clears the mark on its history", async () => {
+      const mine = await createFood(owner, { name: "Banana bread", category: "grain" });
+      const babyId = await createBaby(owner);
+      await postMeal(owner, babyId, [mine.id]);
+      await app.inject({ method: "DELETE", url: `/api/foods/${mine.id}`, headers: { cookie: owner.cookie } });
+
+      const restored = await app.inject({
+        method: "POST",
+        url: `/api/foods/${mine.id}/restore`,
+        headers: { cookie: owner.cookie },
+      });
+      expect(restored.statusCode).toBe(200);
+      expect(restored.json<FoodDetail>()).toMatchObject({ id: mine.id, deletedAt: null });
+      expect((await listFoods(owner)).foods.map((f) => f.id)).toContain(mine.id);
+      expect((await listFoods(owner, "?deleted=1")).foods).toEqual([]);
+      const meals = await app.inject({ method: "GET", url: `/api/babies/${babyId}/meals`, headers: { cookie: owner.cookie } });
+      expect(meals.json<MealsResponse>().items[0]!.foods[0]).toMatchObject({ id: mine.id, deleted: false });
+    });
+
+    it("404s another user's food, a catalog food and an unknown id; 401s anonymously", async () => {
+      const mine = await createFood(owner, { name: "Banana bread", category: "grain" });
+      await app.inject({ method: "DELETE", url: `/api/foods/${mine.id}`, headers: { cookie: owner.cookie } });
+
+      for (const [cookie, id] of [
+        [intruder.cookie, mine.id],
+        [owner.cookie, fixtures.banana.id],
+        [owner.cookie, UNKNOWN_ID],
+      ] as const) {
+        const response = await app.inject({ method: "POST", url: `/api/foods/${id}/restore`, headers: { cookie } });
+        expect(response.statusCode, `${id}`).toBe(404);
+      }
+      const anonymous = await app.inject({ method: "POST", url: `/api/foods/${mine.id}/restore` });
+      expect(anonymous.statusCode).toBe(401);
+
+      // Still deleted: nobody but the owner can undo it.
+      const [row] = await db.select().from(schema.foods).where(eq(schema.foods.id, mine.id));
+      expect(row!.deletedAt).not.toBeNull();
+    });
+  });
+
+  describe("POST /api/foods/:id/replace", () => {
+    async function insertCatalogFood(slug: string, name: string) {
+      const [row] = await db
+        .insert(schema.foods)
+        .values({
+          slug,
+          name,
+          category: "veg",
+          ironLevel: "low",
+          vitaminCLevel: "high",
+          chokingRisk: "low",
+          minAgeMonths: 6,
+          prep6m: "steam",
+          prep9m: "florets",
+          prep12m: "bites",
+          storageCategory: "produce_cooked",
+        })
+        .returning();
+      return row!;
+    }
+
+    async function replace(user: TestUser | null, id: string, replacementId: unknown) {
+      return app.inject({
+        method: "POST",
+        url: `/api/foods/${id}/replace`,
+        headers: user ? { cookie: user.cookie } : {},
+        payload: { replacementId },
+      });
+    }
+
+    async function stock(user: TestUser, foodIds: string[]): Promise<string> {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/storage",
+        headers: { cookie: user.cookie },
+        payload: { foodIds, location: "fridge" },
+      });
+      return response.json<CreateStorageItemResponse>().items[0]!.id;
+    }
+
+    async function recipeWith(user: TestUser, ingredients: { foodId: string; quantityNote?: string }[]): Promise<string> {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/recipes",
+        headers: { cookie: user.cookie },
+        payload: { title: "Mash", minAgeMonths: 6, ingredients },
+      });
+      return response.json<RecipeDetail>().id;
+    }
+
+    const rowsOf = async (foodId: string) => ({
+      meals: await db.select().from(schema.mealFoods).where(eq(schema.mealFoods.foodId, foodId)),
+      storage: await db.select().from(schema.storageItemFoods).where(eq(schema.storageItemFoods.foodId, foodId)),
+      recipes: await db.select().from(schema.recipeIngredients).where(eq(schema.recipeIngredients.foodId, foodId)),
+    });
+
+    it("re-points meals, containers and recipes in one go, merging where the entry already held the replacement", async () => {
+      const cauliflower = await insertCatalogFood("cauliflower", "Cauliflower");
+      const mine = await createFood(owner, { name: "cauliflower", category: "veg", allergenSlugs: ["egg"] });
+      const babyId = await createBaby(owner);
+      const onlyMine = (await postMeal(owner, babyId, [mine.id])).json<MealItem>().id;
+      const both = (await postMeal(owner, babyId, [mine.id, cauliflower.id])).json<MealItem>().id;
+      const boxMineFirst = await stock(owner, [mine.id, fixtures.banana.id]);
+      const boxBoth = await stock(owner, [cauliflower.id, mine.id]);
+      const recipeMine = await recipeWith(owner, [{ foodId: mine.id, quantityNote: "1 cup" }]);
+      const recipeBoth = await recipeWith(owner, [
+        { foodId: mine.id, quantityNote: "a handful" },
+        { foodId: cauliflower.id, quantityNote: "2 florets" },
+      ]);
+
+      const response = await replace(owner, mine.id, cauliflower.id);
+      expect(response.statusCode).toBe(200);
+      expect(response.json<ReplaceCustomFoodResponse>()).toEqual({
+        replacement: { id: cauliflower.id, slug: "cauliflower", name: "Cauliflower" },
+        // Every entry that now carries the replacement, merged ones included.
+        moved: { mealCount: 2, storageCount: 2, recipeCount: 2 },
+      });
+
+      // Nothing names the old food, and it is gone for good with its links.
+      expect(await rowsOf(mine.id)).toEqual({ meals: [], storage: [], recipes: [] });
+      expect(await db.select().from(schema.foods).where(eq(schema.foods.id, mine.id))).toEqual([]);
+      expect(
+        await db.select().from(schema.foodAllergens).where(eq(schema.foodAllergens.foodId, mine.id)),
+      ).toEqual([]);
+
+      const moved = await rowsOf(cauliflower.id);
+      expect(moved.meals.map((row) => row.mealId).sort()).toEqual([onlyMine, both].sort());
+      // A merged container keeps one row; a re-pointed one keeps its order.
+      expect(moved.storage.filter((row) => row.storageItemId === boxBoth)).toHaveLength(1);
+      const box = await app.inject({ method: "GET", url: "/api/storage?view=active", headers: { cookie: owner.cookie } });
+      const boxFoods = box.json<StorageResponse>().items.find((item) => item.id === boxMineFirst)!.foods;
+      expect(boxFoods.map((f) => f.id)).toEqual([cauliflower.id, fixtures.banana.id]);
+      // A re-pointed ingredient keeps its quantity; a merged one keeps the
+      // replacement's own row.
+      expect(moved.recipes.map((row) => [row.recipeId, row.quantityNote]).sort()).toEqual(
+        [
+          [recipeMine, "1 cup"],
+          [recipeBoth, "2 florets"],
+        ].sort(),
+      );
+    });
+
+    it("carries a merged meal row's storage provenance onto the kept replacement row", async () => {
+      const cauliflower = await insertCatalogFood("cauliflower", "Cauliflower");
+      const mine = await createFood(owner, { name: "cauliflower", category: "veg" });
+      const babyId = await createBaby(owner);
+      const both = (await postMeal(owner, babyId, [mine.id, cauliflower.id])).json<MealItem>().id;
+      const box = await stock(owner, [mine.id]);
+      await db
+        .update(schema.mealFoods)
+        .set({ storageItemId: box })
+        .where(and(eq(schema.mealFoods.mealId, both), eq(schema.mealFoods.foodId, mine.id)));
+
+      expect((await replace(owner, mine.id, cauliflower.id)).statusCode).toBe(200);
+
+      expect((await rowsOf(cauliflower.id)).meals).toEqual([expect.objectContaining({ mealId: both, storageItemId: box })]);
+    });
+
+    it("works on a food that was already deleted, and leaves another user's rows untouched", async () => {
+      const cauliflower = await insertCatalogFood("cauliflower", "Cauliflower");
+      const mine = await createFood(owner, { name: "cauliflower", category: "veg" });
+      const babyId = await createBaby(owner);
+      await postMeal(owner, babyId, [mine.id]);
+      await app.inject({ method: "DELETE", url: `/api/foods/${mine.id}`, headers: { cookie: owner.cookie } });
+
+      const theirBaby = await createBaby(intruder);
+      const theirFood = await createFood(intruder, { name: "cauliflower", category: "veg" });
+      await postMeal(intruder, theirBaby, [theirFood.id, cauliflower.id]);
+      await stock(intruder, [theirFood.id]);
+      await recipeWith(intruder, [{ foodId: theirFood.id }]);
+      const theirsBefore = await rowsOf(theirFood.id);
+      const cauliBefore = await rowsOf(cauliflower.id);
+
+      expect((await replace(owner, mine.id, cauliflower.id)).statusCode).toBe(200);
+
+      expect(await rowsOf(theirFood.id)).toEqual(theirsBefore);
+      const cauliAfter = await rowsOf(cauliflower.id);
+      // Exactly the owner's one meal joined the intruder's existing row.
+      expect(cauliAfter.meals).toHaveLength(cauliBefore.meals.length + 1);
+      expect(cauliAfter.meals).toEqual(expect.arrayContaining(cauliBefore.meals));
+    });
+
+    it("refuses what it must: someone else's food, a catalog food, itself, a deleted or foreign replacement", async () => {
+      const cauliflower = await insertCatalogFood("cauliflower", "Cauliflower");
+      const mine = await createFood(owner, { name: "cauliflower", category: "veg" });
+      const myDeleted = await createFood(owner, { name: "Old cauliflower", category: "veg" });
+      await app.inject({ method: "DELETE", url: `/api/foods/${myDeleted.id}`, headers: { cookie: owner.cookie } });
+      const theirs = await createFood(intruder, { name: "Their cauliflower", category: "veg" });
+      const babyId = await createBaby(owner);
+      await postMeal(owner, babyId, [mine.id]);
+
+      const cases: Array<[TestUser | null, string, unknown, number]> = [
+        [intruder, mine.id, cauliflower.id, 404], // not their food
+        [owner, fixtures.banana.id, cauliflower.id, 404], // a catalog food is nobody's to replace
+        [owner, UNKNOWN_ID, cauliflower.id, 404],
+        [owner, mine.id, mine.id, 400], // itself
+        [owner, mine.id, myDeleted.id, 404], // a deleted replacement
+        [owner, mine.id, theirs.id, 404], // someone else's custom food
+        [owner, mine.id, UNKNOWN_ID, 404],
+        [owner, mine.id, "not-a-uuid", 400],
+        [null, mine.id, cauliflower.id, 401],
+      ];
+      for (const [user, id, replacementId, status] of cases) {
+        expect((await replace(user, id, replacementId)).statusCode, `${id} -> ${String(replacementId)}`).toBe(status);
+      }
+
+      // Every refusal changed nothing.
+      expect((await rowsOf(mine.id)).meals).toHaveLength(1);
+      expect(await db.select().from(schema.foods).where(eq(schema.foods.id, mine.id))).toHaveLength(1);
     });
   });
 

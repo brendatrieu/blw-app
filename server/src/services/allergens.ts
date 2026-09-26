@@ -175,9 +175,12 @@ export async function loadAllergenDetail(
       category: foods.category,
       emoji: foods.emoji,
       ownerId: foods.ownerId,
+      deletedAt: foods.deletedAt,
     })
     .from(foods)
     // Visibility first: every other condition narrows what this allows.
+    // Deleted foods stay: these ids are what exposures are matched on, and a
+    // meal that served one still counts in `progress` above.
     .where(and(visibleFoodsCondition(userId), inArray(foods.id, matchingFoodIds)))
     .orderBy(asc(foods.name));
 
@@ -190,6 +193,7 @@ export async function loadAllergenDetail(
     // slug/category emoji table for those.
     emoji: f.emoji,
     isCustom: f.ownerId !== null,
+    deleted: f.deletedAt !== null,
   }));
 
   // No food carries this allergen (or none this caller can see), so no meal
@@ -224,6 +228,7 @@ export async function loadAllergenDetail(
             id: foods.id,
             name: foods.name,
             emoji: foods.emoji,
+            deleted: sql<boolean>`${foods.deletedAt} is not null`,
           })
           .from(mealFoods)
           .innerJoin(foods, eq(mealFoods.foodId, foods.id))
@@ -231,10 +236,10 @@ export async function loadAllergenDetail(
           .orderBy(asc(foods.name))
       : [];
 
-  const foodsByMealId = new Map<string, { id: string; name: string; emoji: string | null }[]>();
+  const foodsByMealId = new Map<string, { id: string; name: string; emoji: string | null; deleted: boolean }[]>();
   for (const row of exposureFoodRows) {
     const list = foodsByMealId.get(row.mealId);
-    const food = { id: row.id, name: row.name, emoji: row.emoji };
+    const food = { id: row.id, name: row.name, emoji: row.emoji, deleted: row.deleted };
     if (list) {
       list.push(food);
     } else {

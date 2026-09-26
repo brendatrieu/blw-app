@@ -324,6 +324,7 @@ describe("custom recipes", () => {
           // Item 334: the per-ingredient breakdown, empty for a food that
           // carries no allergen.
           allergens: [],
+          deleted: false,
         },
         {
           foodId: fixtures.oats.id,
@@ -334,6 +335,7 @@ describe("custom recipes", () => {
           // An omitted quantity is "" — a real answer, not a missing field.
           quantityNote: "",
           allergens: [],
+          deleted: false,
         },
       ]);
 
@@ -536,6 +538,7 @@ describe("custom recipes", () => {
           quantityNote: "1 tbsp",
           // The custom food was created with no allergen tags.
           allergens: [],
+          deleted: false,
         },
       ]);
     });
@@ -1647,17 +1650,40 @@ describe("custom recipes", () => {
       expect(items.find((i) => i.recipeId === fixtures.catalogRecipe.id)?.vitaminCHigh).toBe(false);
     });
 
-    it("blocks deleting a custom food that a custom recipe is built on", async () => {
+    // Ledger 537: deleting the food is soft now, so the recipe built on it
+    // keeps the ingredient — marked, and still editable as it stands.
+    it("keeps a deleted custom food in the custom recipe built on it, marked deleted", async () => {
       const food = await createFood(owner, { name: "My satay", category: "protein" });
-      await createRecipe(owner, recipePayload({ ingredients: [{ foodId: food.id, quantityNote: "1 tbsp" }] }));
+      const recipe = await createRecipe(
+        owner,
+        recipePayload({ ingredients: [{ foodId: food.id, quantityNote: "1 tbsp" }] }),
+      );
 
-      const blocked = await app.inject({
+      const deleted = await app.inject({
         method: "DELETE",
         url: `/api/foods/${food.id}`,
         headers: { cookie: owner.cookie },
       });
-      expect(blocked.statusCode).toBe(409);
-      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 0, storageCount: 0, recipeCount: 1 });
+      expect(deleted.statusCode).toBe(204);
+
+      const detail = await app.inject({
+        method: "GET",
+        url: `/api/recipes/${recipe.id}`,
+        headers: { cookie: owner.cookie },
+      });
+      expect(detail.json<RecipeDetail>().ingredients).toEqual([
+        expect.objectContaining({ foodId: food.id, foodName: "My satay", quantityNote: "1 tbsp", deleted: true }),
+      ]);
+
+      // An edit resends the ingredients it already has; the deleted one must
+      // not turn that into a 400.
+      const edit = await app.inject({
+        method: "PATCH",
+        url: `/api/recipes/${recipe.id}`,
+        headers: { cookie: owner.cookie },
+        payload: { title: "Satay noodles", ingredients: [{ foodId: food.id, quantityNote: "2 tbsp" }] },
+      });
+      expect(edit.statusCode).toBe(200);
     });
   });
 });

@@ -9,7 +9,7 @@ import type {
   RecipesResponse,
 } from "@blw/shared";
 import { ApiError } from "../../lib/api.js";
-import { asCustomFoodConflict, asCustomRecipeConflict, buildRecipesQueryString } from "./api.js";
+import { asCustomRecipeConflict, buildRecipesQueryString } from "./api.js";
 import {
   catalogKeys,
   isUnfilteredRecipeVariant,
@@ -131,18 +131,24 @@ describe("removeCustomFoodFromCache", () => {
   });
 });
 
-describe("asCustomFoodConflict", () => {
-  it("reads the counts out of a 409 body", () => {
-    const error = new ApiError(409, "conflict", { error: "conflict", mealCount: 3, storageCount: 1 });
-    expect(asCustomFoodConflict(error)).toEqual({ error: "conflict", mealCount: 3, storageCount: 1 });
-  });
+describe("writeCustomFoodToCache — deleted foods (ledger 544)", () => {
+  it("moves a deleted food out of every list into Foods › Deleted, and a restored one back", () => {
+    const queryClient = new QueryClient();
+    const food = detail();
+    queryClient.setQueryData(catalogKeys.foodsList({}), { foods: [listItem(), food] });
+    queryClient.setQueryData(catalogKeys.foodsList({ deleted: true }), { foods: [] });
+    const ids = (filters: object) =>
+      queryClient.getQueryData<FoodsResponse>(catalogKeys.foodsList(filters))!.foods.map((f) => f.id);
 
-  it("is null for every other failure — a 500, a 404, a plain Error, or a 409 with no counts", () => {
-    expect(asCustomFoodConflict(new ApiError(500, "boom"))).toBeNull();
-    expect(asCustomFoodConflict(new ApiError(404, "not_found", { error: "not_found" }))).toBeNull();
-    expect(asCustomFoodConflict(new ApiError(409, "conflict", { error: "conflict" }))).toBeNull();
-    expect(asCustomFoodConflict(new Error("offline"))).toBeNull();
-    expect(asCustomFoodConflict(undefined)).toBeNull();
+    writeCustomFoodToCache(queryClient, { ...food, deletedAt: "2026-09-25T10:00:00.000Z" });
+    expect(ids({})).toEqual(["food-1"]);
+    expect(ids({ deleted: true })).toEqual(["food-9"]);
+    // The page stays, now read-only: its detail entry carries the stamp.
+    expect(queryClient.getQueryData<FoodDetail>(catalogKeys.food(food.slug))!.deletedAt).toBe("2026-09-25T10:00:00.000Z");
+
+    writeCustomFoodToCache(queryClient, { ...food, deletedAt: null });
+    expect(ids({})).toEqual(["food-1", "food-9"]);
+    expect(ids({ deleted: true })).toEqual([]);
   });
 });
 
@@ -214,7 +220,23 @@ describe("recipeListItemFromDetail", () => {
       isCustom: true,
       isFavorite: true,
       ingredientNames: ["Lentils"],
+      ingredientDeleted: [false],
     });
+  });
+
+  it("carries each ingredient's deleted flag into the row, in ingredient order", () => {
+    const base = recipeDetail().ingredients[0]!;
+    const row = recipeListItemFromDetail(
+      recipeDetail({
+        ingredients: [
+          { ...base, foodName: "Lentils" },
+          { ...base, foodId: "food-2", foodSlug: "mash-mix", foodName: "Mash mix", deleted: true },
+        ],
+      }),
+      false,
+    );
+    expect(row.ingredientNames).toEqual(["Lentils", "Mash mix"]);
+    expect(row.ingredientDeleted).toEqual([false, true]);
   });
 
   // Ledger 241/243: a custom recipe's `ironFocus` is derived from its

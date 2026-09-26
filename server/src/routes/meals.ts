@@ -57,18 +57,26 @@ type Validated<T> = { ok: true; value: T } | { ok: false; details: unknown };
  * "Exists" means visible to THIS user: the seeded catalog plus their own
  * custom foods. Another account's custom food reads as an unknown id, so it
  * can never be logged into a meal (and the 400 says nothing about whether it
- * exists elsewhere).
+ * exists elsewhere). A food its owner DELETED passes only when it is
+ * already on THIS meal (`keptFoodIds`): editing an old meal resends the foods
+ * it already has, but a deleted food can never be added to a new or edited
+ * meal — it reads as unknown, like any food the caller cannot choose.
  */
-async function validateFoodIds(db: Database, rawFoodIds: string[], userId: string): Promise<Validated<string[]>> {
+async function validateFoodIds(
+  db: Database,
+  rawFoodIds: string[],
+  userId: string,
+  keptFoodIds: ReadonlySet<string> = new Set(),
+): Promise<Validated<string[]>> {
   // Dedupe so the same food twice in one submission is one row, not a
   // unique-index violation.
   const foodIds = [...new Set(rawFoodIds)];
 
   const foodRows = await db
-    .select({ id: foods.id })
+    .select({ id: foods.id, deletedAt: foods.deletedAt })
     .from(foods)
     .where(and(inArray(foods.id, foodIds), or(isNull(foods.ownerId), eq(foods.ownerId, userId))));
-  const known = new Set(foodRows.map((row) => row.id));
+  const known = new Set(foodRows.filter((row) => !row.deletedAt || keptFoodIds.has(row.id)).map((row) => row.id));
   const unknownFoodIds = foodIds.filter((id) => !known.has(id));
   if (unknownFoodIds.length > 0) {
     return { ok: false, details: { foodIds: "unknown food", unknownFoodIds } };
@@ -205,7 +213,12 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
 
     let foodIds: string[] | null = null;
     if (body.data.foodIds) {
-      const children = await validateFoodIds(db, body.data.foodIds, currentUserId(request));
+      const onMeal = await db
+        .select({ foodId: mealFoods.foodId })
+        .from(mealFoods)
+        .where(eq(mealFoods.mealId, existing.id));
+      const kept = new Set(onMeal.map((row) => row.foodId));
+      const children = await validateFoodIds(db, body.data.foodIds, currentUserId(request), kept);
       if (!children.ok) return badRequest(reply, children.details);
       foodIds = children.value;
     }

@@ -20,7 +20,7 @@ import { userPreferencesSchema } from "./preferences.js";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 15;
+export const ACCOUNT_EXPORT_VERSION = 16;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -152,6 +152,9 @@ export const exportCustomFoodSchema = z.object({
   emoji: z.string().nullable(),
   allergenSlugs: z.array(z.string()),
   notes: z.string().nullable(),
+  /** v16. When the parent deleted it, else null. A deleted food is kept so
+   * the meals, storage items and recipes that name it still resolve. */
+  deletedAt: z.string().nullable(),
 });
 
 /**

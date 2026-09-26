@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { MealFood, MealItem } from "@blw/shared";
 import { useDeleteMeal, useMeals } from "../hooks.js";
 import { emojiCluster, type EmojiCluster } from "../../catalog/foodEmoji.js";
+import { FoodNames } from "../../catalog/components/DeletedMark.js";
 import { MealActionsMenu } from "./MealActionsMenu.js";
 import { Badge } from "../../catalog/components/Badge.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
@@ -33,14 +34,6 @@ export function dayLabel(key: string): string {
 
 export function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-}
-
-/** The card's title line: every food's name, comma-joined. Deliberately NOT
- * `MealDetailPage`'s meal-level `mealTitle` (which prefers the recipe title) —
- * in the list the recipe gets its own line underneath, so the title always
- * answers "what did baby eat?". */
-export function mealTitle(foods: readonly MealFood[]): string {
-  return foods.map((food) => food.name).join(", ");
 }
 
 /** Re-exported from `catalog/foodEmoji.ts`, where it moved when a storage
@@ -172,7 +165,12 @@ export function MealCard({
         {overflow > 0 && <span className="ml-0.5 text-xs font-medium text-[var(--color-text-muted)]">+{overflow}</span>}
       </span>
       <div className="flex flex-col">
-        <span className="text-sm font-semibold text-[var(--color-text)]">{mealTitle(meal.foods)}</span>
+        {/* Every food's name, comma-joined, a deleted one marked. Deliberately
+            NOT the recipe title: that gets its own line underneath, so the
+            title always answers "what did baby eat?". */}
+        <span className="text-sm font-semibold text-[var(--color-text)]">
+          <FoodNames foods={meal.foods} />
+        </span>
         {meal.recipeTitle && (
           <span className="text-xs font-medium text-[var(--color-text-muted)]">🍳 {meal.recipeTitle}</span>
         )}

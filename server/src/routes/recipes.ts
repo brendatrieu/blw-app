@@ -98,7 +98,10 @@ interface IngredientInput {
  * Deduped, visibility-checked ingredients. "Exists" means visible to THIS
  * user: the seeded catalog plus their own custom foods. Another account's
  * custom food reads as an unknown id, so it can never be written into a
- * recipe (and the 400 says nothing about whether it exists elsewhere).
+ * recipe (and the 400 says nothing about whether it exists elsewhere). A
+ * food its owner DELETED passes only when it is already in THIS recipe
+ * (`keptFoodIds`): editing a recipe resends the ingredients it already has,
+ * but a deleted food can never be added — it reads as unknown.
  *
  * Deduped because `recipe_ingredients` is unique on (recipe_id, food_id):
  * the same food twice in one submission is one row, not a 500. The first
@@ -108,6 +111,7 @@ async function validateIngredients(
   db: Database,
   raw: IngredientInput[],
   userId: string,
+  keptFoodIds: ReadonlySet<string> = new Set(),
 ): Promise<Validated<IngredientInput[]>> {
   const byFoodId = new Map<string, IngredientInput>();
   for (const ingredient of raw) {
@@ -116,10 +120,10 @@ async function validateIngredients(
   const deduped = [...byFoodId.values()];
 
   const rows = await db
-    .select({ id: foods.id })
+    .select({ id: foods.id, deletedAt: foods.deletedAt })
     .from(foods)
     .where(and(inArray(foods.id, [...byFoodId.keys()]), visibleFoodsCondition(userId)));
-  const known = new Set(rows.map((row) => row.id));
+  const known = new Set(rows.filter((row) => !row.deletedAt || keptFoodIds.has(row.id)).map((row) => row.id));
   const unknownFoodIds = deduped.map((i) => i.foodId).filter((id) => !known.has(id));
   if (unknownFoodIds.length > 0) {
     return { ok: false, details: { ingredients: "unknown food", unknownFoodIds } };
@@ -184,6 +188,8 @@ async function loadRecipeDetail(db: Database, recipe: RecipeRow): Promise<Recipe
       isCustom: sql<boolean>`${foods.ownerId} is not null`,
       foodEmoji: foods.emoji,
       quantityNote: recipeIngredients.quantityNote,
+      // A deleted food stays in the recipe, marked.
+      deleted: sql<boolean>`${foods.deletedAt} is not null`,
     })
     .from(recipeIngredients)
     .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
@@ -362,7 +368,11 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     const ingredientRows =
       recipeIds.length > 0
         ? await db
-            .select({ recipeId: recipeIngredients.recipeId, name: foods.name })
+            .select({
+              recipeId: recipeIngredients.recipeId,
+              name: foods.name,
+              deleted: sql<boolean>`${foods.deletedAt} is not null`,
+            })
             .from(recipeIngredients)
             .innerJoin(foods, eq(recipeIngredients.foodId, foods.id))
             .where(inArray(recipeIngredients.recipeId, recipeIds))
@@ -371,10 +381,15 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
             .orderBy(asc(foods.name))
         : [];
     const ingredientNamesByRecipeId = new Map<string, string[]>();
+    const ingredientDeletedByRecipeId = new Map<string, boolean[]>();
     for (const row of ingredientRows) {
       const names = ingredientNamesByRecipeId.get(row.recipeId) ?? [];
       names.push(row.name);
       ingredientNamesByRecipeId.set(row.recipeId, names);
+      // Kept (marked) rather than dropped: the recipe still holds it.
+      const deleted = ingredientDeletedByRecipeId.get(row.recipeId) ?? [];
+      deleted.push(row.deleted);
+      ingredientDeletedByRecipeId.set(row.recipeId, deleted);
     }
 
     const favoriteRows =
@@ -398,6 +413,7 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
       isCustom: r.ownerId !== null,
       isFavorite: favoritedIds.has(r.id),
       ingredientNames: ingredientNamesByRecipeId.get(r.id) ?? [],
+      ingredientDeleted: ingredientDeletedByRecipeId.get(r.id) ?? [],
     }));
 
     return { recipes: items } satisfies RecipesResponse;
@@ -485,8 +501,18 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     const existing = await loadOwnedRecipe(db, params.data.id, userId);
     if (!existing) return notFound(reply);
 
+    const kept = body.data.ingredients
+      ? new Set(
+          (
+            await db
+              .select({ foodId: recipeIngredients.foodId })
+              .from(recipeIngredients)
+              .where(eq(recipeIngredients.recipeId, existing.id))
+          ).map((row) => row.foodId),
+        )
+      : undefined;
     const ingredients = body.data.ingredients
-      ? await validateIngredients(db, body.data.ingredients, userId)
+      ? await validateIngredients(db, body.data.ingredients, userId, kept)
       : null;
     if (ingredients && !ingredients.ok) return badRequest(reply, ingredients.details);
 

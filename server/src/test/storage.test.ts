@@ -1079,6 +1079,8 @@ describe("ownership", () => {
           // Null for a catalog food; only a parent-added food carries one.
           emoji: null,
           storageItemId: created.body.id,
+          deleted: false,
+          allergens: [],
         },
       ]);
       // Default servings is 1.

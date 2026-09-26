@@ -32,8 +32,8 @@ Node 24 via nvm — every shell needs: `export PATH=~/.nvm/versions/node/v24.19.
 - **Anything that floats over the page must portal to `document.body`** (`Sheet`, `Dialog`, `Menu` all do). An absolutely-positioned popover cannot out-paint a later sibling, whatever its z-index.
 - **Never trust `window.innerHeight` / `visualViewport` alone on iOS.** Compare against a rendered element's own `getBoundingClientRect()` (see `Menu.tsx`). Never use `position: fixed` for page chrome: the bottom nav is `sticky` in flow on purpose.
 - Styling is CSS custom properties in `client/src/styles/index.css` (theme "Seaside"), used as `text-[var(--color-x)]`. A new token must be declared in `:root`, the `prefers-color-scheme: dark` block, AND `:root[data-theme="dark"]` — a test enforces the two dark blocks match. `contrast.test.ts` is a WCAG gate on declared pairings.
-- `shared/` holds the zod schemas both sides use. Changing an export shape means bumping `ACCOUNT_EXPORT_VERSION` (now 15).
-- Migrations are in `server/drizzle/` (latest 0017). **The app has real users: migrations must preserve data.** Any destructive schema change needs the owner's explicit go.
+- `shared/` holds the zod schemas both sides use. Changing an export shape means bumping `ACCOUNT_EXPORT_VERSION` (now 16).
+- Migrations are in `server/drizzle/` (latest 0018). **The app has real users: migrations must preserve data.** Any destructive schema change needs the owner's explicit go.
 - Seeds (`server/db/seeds/`) sit outside `tsc`; the test suite exercises them. Guards: every food ≥3 recipes, every spice ≥2; cooked recipes state times and temperatures.
 - Analytics is first-party and stores no messages or stacks, ever (`docs/analytics.md`). Do not weaken that for debuggability.
 - Commit messages: write to a file and `git commit -F` (shell quoting has eaten trailers before).

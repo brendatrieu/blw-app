@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { StorageItem } from "@blw/shared";
 import { Badge } from "../../catalog/components/Badge.js";
+import { FoodNames } from "../../catalog/components/DeletedMark.js";
 import { emojiCluster, getFoodEmoji, type EmojiCluster } from "../../catalog/foodEmoji.js";
 import { bestByLabel, countdownLabel, LOCATION_LABEL, storageItemTitle, servingsLabel } from "../format.js";
 import { resolveFreshness } from "../freshness.js";
@@ -29,6 +30,17 @@ export function storageItemEmoji(item: StorageItem): string {
 export function storageItemCluster(item: StorageItem, max = 3): EmojiCluster {
   if (item.foods.length > 0) return emojiCluster(item.foods, max);
   return { emojis: [storageItemEmoji(item)], overflow: 0 };
+}
+
+/** `storageItemTitle` as a node: when the title IS the food list, each
+ * deleted food carries the muted "(deleted)" mark. The card and the detail
+ * page's header render this; the string stays for the serve sheet's title
+ * (its dialog aria-label) and the undo banner. */
+export function StorageItemTitle({ item }: { item: StorageItem }) {
+  if (item.label === null && item.recipeTitle === null && item.foods.length > 0) {
+    return <FoodNames foods={item.foods} />;
+  }
+  return storageItemTitle(item);
 }
 
 interface StorageItemCardProps {
@@ -60,7 +72,9 @@ export function StorageItemCard({ item, actions, linkable = true }: StorageItemC
         {overflow > 0 && <span className="ml-0.5 text-xs font-medium text-[var(--color-text-muted)]">+{overflow}</span>}
       </span>
       <div className="flex flex-col">
-        <span className="text-sm font-semibold text-[var(--color-text)]">{storageItemTitle(item)}</span>
+        <span className="text-sm font-semibold text-[var(--color-text)]">
+          <StorageItemTitle item={item} />
+        </span>
         <span className="text-xs text-[var(--color-text-muted)]">
           Prepared {preparedLabel}
           {item.quantityNote ? ` · ${item.quantityNote}` : ""}

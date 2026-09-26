@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import type { FoodListItem } from "@blw/shared";
-import { addCustomFoodLabel, allergenLabel } from "../constants.js";
+import type { FoodCategory, FoodListItem } from "@blw/shared";
+import { addCustomFoodLabel, allergenLabel, withDeletedMark } from "../constants.js";
 import { getFoodEmoji } from "../foodEmoji.js";
 import { useFoods } from "../hooks.js";
 import { CustomFoodForm } from "./CustomFoodForm.js";
@@ -33,10 +33,42 @@ export function foodPickerOption(food: FoodListItem): MultiComboboxOption {
   };
 }
 
+/**
+ * A food the entry being edited already holds but the foods list no longer
+ * offers, because its owner deleted it. Without an option of its own the
+ * combobox drops its chip while the id stays selected and is saved anyway —
+ * so it is offered back, marked "(deleted)", for this entry only.
+ */
+export interface KeptFood {
+  id: string;
+  slug: string;
+  name: string;
+  category?: FoodCategory;
+  emoji?: string | null;
+}
+
+/** The picker's options: every listed food, then any kept food the list
+ * lacks. Pure and exported so the kept-chip fix is pinned by a test. */
+export function foodPickerOptions(foods: FoodListItem[], keptFoods: KeptFood[] = []): MultiComboboxOption[] {
+  const listed = new Set(foods.map((food) => food.id));
+  return [
+    ...foods.map(foodPickerOption),
+    ...keptFoods
+      .filter((food) => !listed.has(food.id))
+      .map((food) => ({
+        value: food.id,
+        label: withDeletedMark(food.name, true),
+        emoji: getFoodEmoji(food.slug, food.category, food.emoji),
+      })),
+  ];
+}
+
 interface FoodPickerProps {
   id: string;
   value: string[];
   onChange: (next: string[]) => void;
+  /** The entry's own deleted foods — see `KeptFood`. */
+  keptFoods?: KeptFood[];
 }
 
 /**
@@ -52,14 +84,14 @@ interface FoodPickerProps {
  * `useFoods()` here reads — so appending its id to `value` selects a food the
  * option list can already resolve to a chip, with no refetch in between.
  */
-export function FoodPicker({ id, value, onChange }: FoodPickerProps) {
+export function FoodPicker({ id, value, onChange, keptFoods }: FoodPickerProps) {
   const { data, isLoading } = useFoods();
   // null = the sheet is closed; a string (possibly "") = it's open with that
   // name prefilled. Not a boolean + separate query, so the two can't disagree.
   const [createQuery, setCreateQuery] = useState<string | null>(null);
 
   const foods = data?.foods ?? [];
-  const options = useMemo(() => foods.map(foodPickerOption), [foods]);
+  const options = useMemo(() => foodPickerOptions(foods, keptFoods), [foods, keptFoods]);
 
   return (
     <>
@@ -100,19 +132,25 @@ interface SingleFoodPickerProps {
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
+  /** A food not to offer — the one a replace is moving away from. */
+  excludeId?: string;
 }
 
 /**
  * The same searchable food list as `FoodPicker`, holding at most ONE food —
- * the Recipes segment's "Contains ingredient" filter (item 210). There's no
+ * the Recipes segment's "Contains ingredient" filter (item 210), and the
+ * custom-food page's "Replace with…". There's no
  * create row here on purpose: filtering by a food that doesn't exist yet
  * could only ever match nothing. `mode="single"` so a pick fills the field and
  * closes the menu, rather than staying open for a second food (item 230).
  */
-export function SingleFoodPicker({ id, value, onChange, placeholder }: SingleFoodPickerProps) {
+export function SingleFoodPicker({ id, value, onChange, placeholder, excludeId }: SingleFoodPickerProps) {
   const { data, isLoading } = useFoods();
   const foods = data?.foods ?? [];
-  const options = useMemo(() => foods.map(foodPickerOption), [foods]);
+  const options = useMemo(
+    () => foods.filter((food) => food.id !== excludeId).map(foodPickerOption),
+    [foods, excludeId],
+  );
 
   return (
     <MultiCombobox

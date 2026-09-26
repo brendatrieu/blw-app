@@ -242,6 +242,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         category: foods.category,
         emoji: foods.emoji,
         notes: foods.notes,
+        deletedAt: foods.deletedAt,
       })
       .from(foods)
       .where(eq(foods.ownerId, userId))
@@ -473,6 +474,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         emoji: row.emoji,
         allergenSlugs: allergenSlugsByFoodId.get(row.id) ?? [],
         notes: row.notes,
+        deletedAt: row.deletedAt?.toISOString() ?? null,
       })),
       customRecipes: customRecipeRows.map((row) => ({
         id: row.id,

@@ -6,10 +6,10 @@
 // Keeping both flows on one insert helper is what guarantees a served meal
 // is byte-for-byte the same kind of row as a hand-logged one — the only
 // difference is `meal_foods.storage_item_id`.
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import type { MealItem } from "@blw/shared";
 import type { Database } from "../db/index.js";
-import { babies, foods, mealFoods, meals, recipes } from "../db/schema.js";
+import { allergens, babies, foodAllergens, foods, mealFoods, meals, recipes } from "../db/schema.js";
 
 /**
  * The transaction handle `db.transaction()` hands its callback. Named here so
@@ -100,11 +100,30 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
       category: foods.category,
       emoji: foods.emoji,
       storageItemId: mealFoods.storageItemId,
+      // A deleted food stays in the meal it was eaten in, marked.
+      deleted: sql<boolean>`${foods.deletedAt} is not null`,
     })
     .from(mealFoods)
     .innerJoin(foods, eq(mealFoods.foodId, foods.id))
     .where(inArray(mealFoods.mealId, mealIds))
     .orderBy(asc(foods.name));
+
+  // One batch query for every food's allergens, deleted foods included: a
+  // past meal keeps its chips whatever became of the food since.
+  const foodIds = [...new Set(foodRows.map((row) => row.id))];
+  const allergenRows =
+    foodIds.length === 0
+      ? []
+      : await db
+          .select({ foodId: foodAllergens.foodId, slug: allergens.slug })
+          .from(foodAllergens)
+          .innerJoin(allergens, eq(foodAllergens.allergenId, allergens.id))
+          .where(inArray(foodAllergens.foodId, foodIds))
+          .orderBy(asc(allergens.slug));
+  const allergensByFoodId = new Map<string, string[]>();
+  for (const row of allergenRows) {
+    allergensByFoodId.set(row.foodId, [...(allergensByFoodId.get(row.foodId) ?? []), row.slug]);
+  }
 
   const byMealId = new Map<string, MealItem>(
     mealRows.map((row) => [
@@ -132,6 +151,8 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
       // slug/category emoji table for those.
       emoji: row.emoji,
       storageItemId: row.storageItemId,
+      deleted: row.deleted,
+      allergens: allergensByFoodId.get(row.id) ?? [],
     });
   }
 

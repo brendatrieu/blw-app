@@ -20,6 +20,7 @@ import { allergenEmoji } from "../features/tracking/allergenEmoji.js";
 import { MarkEstablishedAction, OverriddenHint } from "../features/tracking/components/AllergenActions.js";
 import { servedLine } from "../features/tracking/components/ServeLogList.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
+import { DeletedMark, FoodNames } from "../features/catalog/components/DeletedMark.js";
 import { Badge } from "../components/ui/Badge.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { BackButton } from "../components/ui/BackButton.js";
@@ -42,14 +43,20 @@ function FoodRow({ food }: { food: AllergenDetailFood }) {
         <span aria-hidden="true" className="text-lg leading-none">
           {getFoodEmoji(food.slug, food.category, food.emoji)}
         </span>
-        <span className="flex-1 text-sm font-medium text-[var(--color-text)]">{food.name}</span>
+        <span className="flex-1 text-sm font-medium text-[var(--color-text)]">
+          {food.name}
+          <DeletedMark deleted={food.deleted} />
+        </span>
         {food.isCustom && <Badge tone="neutral">Custom</Badge>}
       </Link>
-      <div className="flex shrink-0 items-center gap-1">
-        <ButtonLink to={`/log-meal?food=${food.id}`} size="sm">
-          Log meal
-        </ButtonLink>
-      </div>
+      {/* A deleted food can't be picked for a new meal, so no CTA for one. */}
+      {!food.deleted && (
+        <div className="flex shrink-0 items-center gap-1">
+          <ButtonLink to={`/log-meal?food=${food.id}`} size="sm">
+            Log meal
+          </ButtonLink>
+        </div>
+      )}
     </Card>
   );
 }
@@ -65,7 +72,12 @@ function ExposureRow({ exposure }: { exposure: AllergenDetailExposure }) {
           {servedLine(exposure.servedAt)}
         </span>
         <span className="text-xs text-[var(--color-text-muted)]">
-          {exposure.foods.map((food) => (food.emoji ? `${food.emoji} ${food.name}` : food.name)).join(", ")}
+          <FoodNames
+            foods={exposure.foods.map((food) => ({
+              name: food.emoji ? `${food.emoji} ${food.name}` : food.name,
+              deleted: food.deleted,
+            }))}
+          />
         </span>
         {exposure.reaction && (
           <span className="w-fit">

@@ -2,7 +2,7 @@
 // rows. It lives here rather than beside the catalog routes because the
 // allergen detail reads foods too, and a second copy of this condition is
 // exactly how one read would eventually forget it.
-import { eq, isNull, or, type SQL } from "drizzle-orm";
+import { and, eq, isNull, or, type SQL } from "drizzle-orm";
 import { foods } from "../db/schema.js";
 
 /**
@@ -13,4 +13,15 @@ import { foods } from "../db/schema.js";
  */
 export function visibleFoodsCondition(userId: string | null): SQL | undefined {
   return userId ? or(isNull(foods.ownerId), eq(foods.ownerId, userId)) : isNull(foods.ownerId);
+}
+
+/**
+ * `visibleFoodsCondition` minus the foods their owner has deleted. Every
+ * CHOOSING or BROWSING read (the Foods list and search every picker loads,
+ * the AI's food lookup) uses this; HISTORY reads (a meal, a storage item, a
+ * recipe's ingredients, a food opened by slug) keep the plain rule, so what
+ * already happened still resolves and can say "(deleted)".
+ */
+export function choosableFoodsCondition(userId: string | null): SQL | undefined {
+  return and(visibleFoodsCondition(userId), isNull(foods.deletedAt));
 }

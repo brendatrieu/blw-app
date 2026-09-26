@@ -8,6 +8,7 @@ import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../basicRecipe.js";
 import { ActiveFilterPill, FilterChip, FunnelButton } from "./filters.js";
 import { SingleFoodPicker } from "./FoodPicker.js";
 import { Badge } from "./Badge.js";
+import { FoodNames } from "./DeletedMark.js";
 import { Button, ButtonLink } from "../../../components/ui/Button.js";
 import { CardLink } from "../../../components/ui/Card.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
@@ -36,7 +37,11 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
         )}
       </div>
       {recipe.ingredientNames.length > 0 && (
-        <p className="truncate text-xs text-[var(--color-text-muted)]">{recipe.ingredientNames.join(", ")}</p>
+        <p className="truncate text-xs text-[var(--color-text-muted)]">
+          <FoodNames
+            foods={recipe.ingredientNames.map((name, index) => ({ name, deleted: recipe.ingredientDeleted?.[index] }))}
+          />
+        </p>
       )}
       <div className="flex flex-wrap items-center gap-1.5">
         <Badge tone="neutral">{recipe.minAgeMonths}m+</Badge>

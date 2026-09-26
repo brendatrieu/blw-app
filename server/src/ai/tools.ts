@@ -15,12 +15,13 @@
 // schema below is still a `.strict`-equivalent object (`additionalProperties:
 // false` + `required`), which is the wire-level guarantee the task brief
 // actually cares about. Flagged in the phase brief.
-import { and, asc, eq, ilike, isNull, lte, or } from "drizzle-orm";
+import { and, asc, eq, ilike, lte } from "drizzle-orm";
 import { betaTool } from "@anthropic-ai/sdk/helpers/beta/json-schema";
 import { ageInMonths, formatExtraIngredient } from "@blw/shared";
 import type { Database } from "../db/index.js";
 import { babies, foods, mealFoods, meals, storageItems, recipes } from "../db/schema.js";
 import { loadAllergenProgress } from "../services/allergens.js";
+import { choosableFoodsCondition } from "../services/foods.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import { deriveIronFocus, loadRecipeNutrition, nutritionFor } from "../services/recipeNutrition.js";
 import {
@@ -314,12 +315,13 @@ function buildFoodPrepGuidanceTool(db: Database, userId: string) {
     description: "Get the choking-safe prep instructions for one catalog food at a given age stage.",
     inputSchema: FOOD_PREP_INPUT_SCHEMA,
     run: async ({ foodSlug, ageStage }) => {
-      // Same visibility rule as GET /api/foods/:slug: the seeded catalog
-      // plus this user's own custom foods, never anybody else's.
+      // The same rule as the Foods list: the seeded catalog plus this user's
+      // own custom foods, never anybody else's — and not one they deleted,
+      // which is no longer something to suggest.
       const [food] = await db
         .select()
         .from(foods)
-        .where(and(eq(foods.slug, foodSlug), or(isNull(foods.ownerId), eq(foods.ownerId, userId))))
+        .where(and(eq(foods.slug, foodSlug), choosableFoodsCondition(userId)))
         .limit(1);
       if (!food) return `No catalog food found with slug "${foodSlug}".`;
 

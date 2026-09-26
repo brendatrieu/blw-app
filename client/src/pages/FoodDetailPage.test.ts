@@ -3,12 +3,12 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { Baby, FoodDetail, MealItem } from "@blw/shared";
+import type { Baby, FoodDetail, FoodListItem, MealItem } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
 import { catalogKeys } from "../features/catalog/hooks.js";
-import { CUSTOM_FOOD_SOFT_NOTE, customFoodConflictMessage } from "../features/catalog/constants.js";
-import { CustomFoodActions, FoodDetailPage } from "./FoodDetailPage.js";
+import { CUSTOM_FOOD_SOFT_NOTE, replaceSummary, usedInPhrase } from "../features/catalog/constants.js";
+import { CustomFoodActions, FoodDetailPage, RESTORE_HINT, sameNameFood } from "./FoodDetailPage.js";
 
 /** React's SSR escaping, so a copy assertion can be made against the exact
  * constant rather than a hand-escaped copy of it that could drift. */
@@ -266,40 +266,95 @@ describe("CustomFoodActions", () => {
   });
 });
 
-describe("customFoodConflictMessage", () => {
-  it("names both places the food is still referenced (the 409 body's counts)", () => {
-    expect(customFoodConflictMessage({ mealCount: 3, storageCount: 1 })).toBe(
-      "Used in 3 meals and 1 storage item — remove those first.",
+// Ledger 542: the delete prompt names where a food is used, never "0 meals".
+describe("usedInPhrase", () => {
+  it("names only the places that hold the food, singular at one", () => {
+    expect(usedInPhrase({ mealCount: 0, storageCount: 1, recipeCount: 0 })).toBe("Used in 1 storage item");
+    expect(usedInPhrase({ mealCount: 3, storageCount: 1, recipeCount: 0 })).toBe("Used in 3 meals and 1 storage item");
+    expect(usedInPhrase({ mealCount: 2, storageCount: 1, recipeCount: 3 })).toBe(
+      "Used in 2 meals, 1 storage item and 3 recipes",
     );
-    expect(customFoodConflictMessage({ mealCount: 0, storageCount: 2 })).toBe(
-      "Used in 0 meals and 2 storage items — remove those first.",
-    );
+    expect(usedInPhrase({ mealCount: 0, storageCount: 0, recipeCount: 1 })).toBe("Used in 1 recipe");
   });
 
-  it("uses the singular at exactly one", () => {
-    expect(customFoodConflictMessage({ mealCount: 1, storageCount: 1 })).toBe(
-      "Used in 1 meal and 1 storage item — remove those first.",
+  it("is null when nothing uses it — the plain-confirm branch", () => {
+    expect(usedInPhrase({ mealCount: 0, storageCount: 0, recipeCount: 0 })).toBeNull();
+    expect(usedInPhrase({ mealCount: 0, storageCount: 0 })).toBeNull();
+  });
+});
+
+describe("replaceSummary", () => {
+  it("says what will switch to the replacement, without zero counts", () => {
+    expect(replaceSummary({ mealCount: 0, storageCount: 1, recipeCount: 0 }, "Cauliflower")).toBe(
+      "1 storage item will switch to Cauliflower",
+    );
+    expect(replaceSummary({ mealCount: 2, storageCount: 0, recipeCount: 1 }, "Cauliflower")).toBe(
+      "2 meals and 1 recipe will switch to Cauliflower",
     );
   });
+});
 
-  // Custom recipes can hold a custom food as an ingredient, so the server's
-  // 409 gained a third count — named only when there is one to name.
-  it("names the custom recipes the food is an ingredient of, when there are any", () => {
-    expect(customFoodConflictMessage({ mealCount: 2, storageCount: 1, recipeCount: 3 })).toBe(
-      "Used in 2 meals, 1 storage item and 3 recipes — remove those first.",
-    );
-    expect(customFoodConflictMessage({ mealCount: 0, storageCount: 0, recipeCount: 1 })).toBe(
-      "Used in 0 meals, 0 storage items and 1 recipe — remove those first.",
-    );
+describe("sameNameFood (Replace with… preselect)", () => {
+  const listed = (overrides: Partial<FoodListItem>): FoodListItem => ({
+    id: "33333333-3333-4333-8333-333333333333",
+    slug: "cauliflower",
+    name: "Cauliflower",
+    category: "veg",
+    ironLevel: "low",
+    vitaminCLevel: "high",
+    fiberLevel: "moderate",
+    chokingRisk: "low",
+    minAgeMonths: 6,
+    allergens: [],
+    isCustom: false,
+    emoji: null,
+    ...overrides,
+  });
+  const mine = { id: "22222222-2222-4222-8222-222222222222", name: "cauliflower " };
+
+  it("picks the catalog food of the same name, ignoring case and stray spaces", () => {
+    const own = listed({ id: "44444444-4444-4444-8444-444444444444", slug: "cauliflower-x1", isCustom: true });
+    expect(sameNameFood([own, listed({})], mine)?.slug).toBe("cauliflower");
   });
 
-  it("keeps the two-clause sentence when no recipe references it (or an older body omits the count)", () => {
-    expect(customFoodConflictMessage({ mealCount: 1, storageCount: 0, recipeCount: 0 })).toBe(
-      "Used in 1 meal and 0 storage items — remove those first.",
-    );
-    expect(customFoodConflictMessage({ mealCount: 1, storageCount: 0 })).toBe(
-      "Used in 1 meal and 0 storage items — remove those first.",
-    );
+  it("falls back to another own food of that name, never the food itself, else nothing", () => {
+    const own = listed({ id: "44444444-4444-4444-8444-444444444444", slug: "cauliflower-x1", isCustom: true });
+    expect(sameNameFood([own], mine)?.slug).toBe("cauliflower-x1");
+    expect(sameNameFood([listed({ id: mine.id, isCustom: true })], mine)).toBeUndefined();
+    expect(sameNameFood([listed({ name: "Broccoli" })], mine)).toBeUndefined();
+  });
+});
+
+describe("FoodDetailPage — a deleted food (ledger 543)", () => {
+  const DELETED = { ...CUSTOM_FOOD, deletedAt: "2026-09-25T10:00:00.000Z" };
+
+  it("is read-only: no Log meal, Add to storage, Edit or Delete", () => {
+    const html = renderFood(DELETED);
+    expect(html).not.toContain(">Log meal<");
+    expect(html).not.toContain(">Add to storage<");
+    expect(html).not.toContain(">Edit<");
+    expect(html).not.toContain(">Delete<");
+  });
+
+  it("says so in one line and offers Restore", () => {
+    const html = renderFood(DELETED);
+    expect(html).toContain("You deleted this food.");
+    expect(html).toContain(">Restore<");
+    // Still the food's own page: its name and notes are history too.
+    expect(html).toContain("Banana bread");
+    expect(html).toContain("Cut into finger strips");
+  });
+
+  it("keeps a live custom food's actions (deletedAt null)", () => {
+    const html = renderFood({ ...CUSTOM_FOOD, deletedAt: null });
+    expect(html).toContain(">Delete<");
+    expect(html).not.toContain("You deleted this food.");
+  });
+});
+
+describe("RESTORE_HINT", () => {
+  it("points at the Deleted filter in the agreed wording", () => {
+    expect(RESTORE_HINT).toBe("You can restore it from Foods › Deleted.");
   });
 });
 

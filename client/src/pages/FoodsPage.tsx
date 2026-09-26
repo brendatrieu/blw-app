@@ -57,6 +57,9 @@ export interface ExtraFoodFilters {
   vitaminCLevel: Level | undefined;
   fiberLevel: Level | undefined;
   maxAgeMonths: number | undefined;
+  /** Foods › Deleted: ONLY the parent's own deleted custom foods, each
+   * opening its read-only page with Restore (ledger 544). */
+  deleted: boolean | undefined;
 }
 
 export type ExtraFoodFilterKey = keyof ExtraFoodFilters;
@@ -68,6 +71,7 @@ export const EMPTY_EXTRA_FILTERS: ExtraFoodFilters = {
   vitaminCLevel: undefined,
   fiberLevel: undefined,
   maxAgeMonths: undefined,
+  deleted: undefined,
 };
 
 const LEVEL_VALUES = ["high", "moderate", "low"] as const;
@@ -113,6 +117,7 @@ export function buildFoodsFilters(q: string, category: FoodCategory | undefined,
     vitaminCLevel: extra.vitaminCLevel,
     fiberLevel: extra.fiberLevel,
     maxAgeMonths: extra.maxAgeMonths,
+    deleted: extra.deleted,
   };
 }
 
@@ -147,6 +152,7 @@ export function activeExtraFilters(filters: ExtraFoodFilters): Array<{ key: Extr
     const ageLabel = AGE_THRESHOLDS.find((a) => a.value === filters.maxAgeMonths)?.label;
     if (ageLabel) pills.push({ key: "maxAgeMonths", label: ageLabel });
   }
+  if (filters.deleted) pills.push({ key: "deleted", label: "Deleted" });
   return pills;
 }
 
@@ -213,6 +219,19 @@ export function FoodFilterGroups({ onChange, ...filters }: FoodFilterGroupsProps
           })}
         </div>
       </div>
+
+      {/* Always offered, rather than only once something is deleted: that
+          would cost a second query just to decide whether to show a chip. */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-[var(--color-text-muted)]">Show</span>
+        <div className="flex flex-wrap gap-1.5">
+          <FilterChip
+            label="Deleted"
+            active={Boolean(filters.deleted)}
+            onClick={() => set({ deleted: filters.deleted ? undefined : true })}
+          />
+        </div>
+      </div>
     </>
   );
 }
@@ -236,11 +255,12 @@ export function FoodsPage() {
   const [vitaminCLevel, setVitaminCLevel] = useState<Level | undefined>(initial.vitaminCLevel);
   const [fiberLevel, setFiberLevel] = useState<Level | undefined>(initial.fiberLevel);
   const [maxAgeMonths, setMaxAgeMonths] = useState<number | undefined>(initial.maxAgeMonths);
+  const [deleted, setDeleted] = useState<boolean | undefined>(initial.deleted);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const extraFilters = useMemo<ExtraFoodFilters>(
-    () => ({ allergen, ironLevel, vitaminCLevel, fiberLevel, maxAgeMonths }),
-    [allergen, ironLevel, vitaminCLevel, fiberLevel, maxAgeMonths],
+    () => ({ allergen, ironLevel, vitaminCLevel, fiberLevel, maxAgeMonths, deleted }),
+    [allergen, ironLevel, vitaminCLevel, fiberLevel, maxAgeMonths, deleted],
   );
   const filters = useMemo(() => buildFoodsFilters(q, category, extraFilters), [q, category, extraFilters]);
 
@@ -257,6 +277,7 @@ export function FoodsPage() {
     setVitaminCLevel(next.vitaminCLevel);
     setFiberLevel(next.fiberLevel);
     setMaxAgeMonths(next.maxAgeMonths);
+    setDeleted(next.deleted);
   }
   const clearExtra = (key: ExtraFoodFilterKey) => applyExtra({ ...extraFilters, [key]: undefined });
 

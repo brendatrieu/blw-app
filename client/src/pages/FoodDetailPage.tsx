@@ -1,11 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import type { FoodDetail } from "@blw/shared";
-import { useDeleteCustomFood, useFood } from "../features/catalog/hooks.js";
-import { asCustomFoodConflict } from "../features/catalog/api.js";
+import type { FoodDetail, FoodListItem } from "@blw/shared";
+import {
+  useDeleteCustomFood,
+  useFood,
+  useFoods,
+  useReplaceCustomFood,
+  useRestoreCustomFood,
+} from "../features/catalog/hooks.js";
 import { FoodBadges } from "../features/catalog/components/FoodBadges.js";
 import { Badge } from "../features/catalog/components/Badge.js";
-import { CUSTOM_FOOD_SOFT_NOTE, customFoodConflictMessage, levelLabel } from "../features/catalog/constants.js";
+import { SingleFoodPicker } from "../features/catalog/components/FoodPicker.js";
+import { CUSTOM_FOOD_SOFT_NOTE, levelLabel, replaceSummary, usedInPhrase } from "../features/catalog/constants.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe, sortBasicRecipesFirst } from "../features/catalog/basicRecipe.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
@@ -14,6 +20,7 @@ import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { CardLink } from "../components/ui/Card.js";
 import { DeleteConfirmActions } from "../components/ui/DeleteConfirmActions.js";
+import { Field } from "../components/ui/Field.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
 const PREP_STAGES = [
@@ -77,17 +84,32 @@ interface CustomFoodActionsProps {
   food: FoodDetail;
 }
 
+/** Where a deleted food can be found again — said before and after deleting. */
+export const RESTORE_HINT = "You can restore it from Foods › Deleted.";
+
+/**
+ * The food "Replace with…" starts on: the catalog food named exactly like
+ * this one, ignoring case (a parent who typed "cauliflower" before the
+ * catalog had it), else another of their own foods of that name. Pure.
+ */
+export function sameNameFood(foods: FoodListItem[], food: Pick<FoodDetail, "id" | "name">): FoodListItem | undefined {
+  const name = food.name.trim().toLowerCase();
+  const matches = foods.filter((candidate) => candidate.id !== food.id && candidate.name.trim().toLowerCase() === name);
+  return matches.find((candidate) => !candidate.isCustom) ?? matches[0];
+}
+
 /**
  * Edit + Delete for a food the parent owns (item 181). Delete is a two-step
  * inline confirm — the same idiom the meal log's delete uses — rather than a
  * dialog: it's a destructive action on a row, and a `window.confirm` would
  * be the only native modal left in the app.
  *
- * The 409 case is the interesting one. A food still referenced by meals or
- * storage items can't be deleted (deleting it would strand those rows and the
- * allergen exposures counted from them), and the server answers with the two
- * counts so this can say exactly where to go clean up instead of a bare
- * "couldn't delete".
+ * Delete is soft (ledger 537), so nothing blocks it any more. An unused food
+ * gets a plain confirm; a used one names where (`food.usage`, zero counts
+ * left out) and offers two ways on: "Replace with…" another food, which moves
+ * every entry across and deletes this one for good, or "Delete anyway", which
+ * leaves past entries showing it as deleted. Either delete keeps the parent
+ * on this page, now read-only with a Restore.
  *
  * Exported so a render test can pin the confirm/Edit/Delete markup directly
  * — the confirming state only exists after a click, and these tests have no
@@ -95,9 +117,22 @@ interface CustomFoodActionsProps {
  */
 export function CustomFoodActions({ food }: CustomFoodActionsProps) {
   const [confirming, setConfirming] = useState(false);
+  // null = untouched, so the same-name food stays preselected however late
+  // the foods list arrives; "" = the parent cleared it.
+  const [pickedId, setPickedId] = useState<string | null>(null);
   const navigate = useNavigate();
   const deleteFood = useDeleteCustomFood();
-  const conflict = asCustomFoodConflict(deleteFood.error);
+  const replaceFood = useReplaceCustomFood();
+  const { data } = useFoods();
+  const foods = data?.foods ?? [];
+
+  const usedIn = food.usage ? usedInPhrase(food.usage) : null;
+  const replacementId = pickedId ?? sameNameFood(foods, food)?.id ?? "";
+  const replacement = foods.find((candidate) => candidate.id === replacementId);
+  const summary = food.usage && replacement ? replaceSummary(food.usage, replacement.name) : null;
+  const pending = deleteFood.isPending || replaceFood.isPending;
+  const keep = () => setConfirming(false);
+  const softDelete = () => deleteFood.mutate(food);
 
   return (
     <div className="flex flex-col gap-2">
@@ -105,28 +140,83 @@ export function CustomFoodActions({ food }: CustomFoodActionsProps) {
         <ButtonLink to={`/foods/${food.slug}/edit`} variant="secondary" size="sm">
           Edit
         </ButtonLink>
-        {confirming ? (
-          <DeleteConfirmActions
-            confirmLabel="Delete for good"
-            pendingLabel="Deleting…"
-            pending={deleteFood.isPending}
-            onConfirm={() =>
-              deleteFood.mutate(
-                { id: food.id, slug: food.slug },
-                { onSuccess: () => navigate("/foods", { replace: true }) },
-              )
-            }
-            onKeep={() => setConfirming(false)}
-          />
-        ) : (
+        {!confirming ? (
           <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)}>
             Delete
           </Button>
+        ) : (
+          !usedIn && (
+            <DeleteConfirmActions
+              confirmLabel="Delete"
+              pendingLabel="Deleting…"
+              pending={pending}
+              onConfirm={softDelete}
+              onKeep={keep}
+            />
+          )
         )}
       </div>
-      {deleteFood.isError && (
+      {confirming && !usedIn && <p className="text-xs text-[var(--color-text-muted)]">{RESTORE_HINT}</p>}
+      {confirming && usedIn && (
+        <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-[var(--color-bg-inset)] p-3">
+          <p className="text-sm font-medium text-[var(--color-text)]">{usedIn}.</p>
+          <Field label="Replace with…" htmlFor="replace-food">
+            <SingleFoodPicker id="replace-food" value={replacementId} onChange={setPickedId} excludeId={food.id} />
+          </Field>
+          {summary && <p className="text-xs text-[var(--color-text-muted)]">{summary}.</p>}
+          <Button
+            type="button"
+            size="sm"
+            className="self-start"
+            disabled={!replacement || pending}
+            onClick={() =>
+              replacement &&
+              replaceFood.mutate(
+                { food, replacementId: replacement.id },
+                { onSuccess: (result) => navigate(`/foods/${result.replacement.slug}`, { replace: true }) },
+              )
+            }
+          >
+            {replaceFood.isPending ? "Replacing…" : "Replace"}
+          </Button>
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Or delete it anyway: past entries will show it as deleted. {RESTORE_HINT}
+          </p>
+          <div className="flex items-center gap-2">
+            <DeleteConfirmActions
+              confirmLabel="Delete anyway"
+              pendingLabel="Deleting…"
+              pending={pending}
+              onConfirm={softDelete}
+              onKeep={keep}
+            />
+          </div>
+        </div>
+      )}
+      {(deleteFood.isError || replaceFood.isError) && (
         <p role="alert" className="text-xs font-medium text-[var(--color-danger)]">
-          {conflict ? customFoodConflictMessage(conflict) : "Couldn't delete that — try again."}
+          {replaceFood.isError ? "Couldn't replace that — try again." : "Couldn't delete that — try again."}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * What a deleted food's page shows instead of its actions (ledger 543): the
+ * page is read-only — no Log meal, Edit or Delete — with one way back.
+ */
+export function DeletedFoodNotice({ food }: { food: FoodDetail }) {
+  const restore = useRestoreCustomFood();
+  return (
+    <div className="flex flex-col items-start gap-2 rounded-[var(--radius-lg)] bg-[var(--color-bg-inset)] p-4">
+      <p className="text-sm text-[var(--color-text)]">You deleted this food.</p>
+      <Button type="button" variant="secondary" size="sm" disabled={restore.isPending} onClick={() => restore.mutate(food)}>
+        {restore.isPending ? "Restoring…" : "Restore"}
+      </Button>
+      {restore.isError && (
+        <p role="alert" className="text-xs font-medium text-[var(--color-danger)]">
+          Couldn't restore that — try again.
         </p>
       )}
     </div>
@@ -175,9 +265,14 @@ export function FoodDetailPage() {
         </div>
       </div>
 
-      <MarkAsServed food={food} />
-
-      {food.isCustom && <CustomFoodActions food={food} />}
+      {food.deletedAt ? (
+        <DeletedFoodNotice food={food} />
+      ) : (
+        <>
+          <MarkAsServed food={food} />
+          {food.isCustom && <CustomFoodActions food={food} />}
+        </>
+      )}
 
       {food.isCustom && (
         <p className="rounded-[var(--radius-lg)] bg-[var(--color-bg-inset)] p-4 text-sm text-[var(--color-text-muted)]">
