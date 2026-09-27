@@ -42,7 +42,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         textureNote:
           'Smooth, thinned overnight oats loose enough to drip slowly off a spoon, with the strawberry mashed so no round berry shape is left.',
         steps: [
-          'Stir the oats and chia seeds together in a small bowl with enough breast milk, formula, or water to cover them well.',
+          'Soak the oats and chia seeds together in a small bowl with enough breast milk, formula, or water to cover them well.',
           'Leave them in the fridge overnight, or at least 10 minutes if you are in a hurry, until every chia seed has swelled into a soft gel with no dry grit left.',
           'Hull the strawberries and mash them completely flat, so no round or half-berry shape remains, then stir them through.',
           'Whisk the almond butter with a little warm water until it is runny, never thick or straight from the jar, and swirl it through the oats.',
@@ -53,7 +53,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         textureNote:
           'Thicker, spoonable oats with strawberry finely diced into small bite-sized pieces (no bigger than ½ inch) for pincer-grasp practice.',
         steps: [
-          'Soak the oats and chia seeds in a little less liquid, so the texture ends up thicker than a drizzly consistency, overnight or for at least 10 minutes, until the chia has gelled and nothing is still dry.',
+          'Soak the oats and chia seeds in a little less breast milk, formula, or water, so the texture ends up thicker than a drizzly consistency, overnight or for at least 10 minutes, until the chia has gelled and nothing is still dry.',
           'Hull the strawberries and dice them finely into small bite-sized pieces (no bigger than ½ inch) so no round or half-berry shape remains, then fold them in.',
           'Whisk the almond butter with warm water until runny and stir it through, so no thick pocket is left anywhere.',
           'Serve with a spoon for self-feeding, with a few strawberry pieces on the tray for fingers.',
@@ -100,7 +100,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, with a pinch of cinnamon stirred in as they go, until soft and smooth.',
           'Take the pan off the heat, then stir in the softened pear and the ground flaxseed until it disappears into the porridge.',
           'Whisk the sunflower seed butter with a little warm water until it is runny, then swirl it through so no thick pocket is left.',
-          'Thin with extra liquid to a drippy consistency, cool to a safe temperature, and serve on a pre-loaded spoon.',
+          'Thin with extra breast milk, formula, or water to a drippy consistency, cool to a safe temperature, and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
@@ -109,7 +109,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         steps: [
           'Simmer the diced pear in a splash of water over low heat for 5-7 minutes, until it squashes easily between two fingers, leaving the pieces whole rather than mashing them.',
           'Cook the oats over medium-low heat for 4-5 minutes with a pinch of cinnamon, until thick enough to sit on a spoon.',
-          'Off the heat, stir through the pear, the ground flaxseed, and the sunflower seed butter whisked with warm water until runny.',
+          'Off the heat, stir through the pear, the ground flaxseed, and the sunflower seed butter thinned with warm water until runny.',
           'Cool to just warm, then serve with a spoon for self-feeding, checking the pear pieces squash easily first.',
         ],
       },
@@ -118,7 +118,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         steps: [
           'Cook the oats over medium-low heat for 5-6 minutes with a pinch of cinnamon, until thick and family-style.',
           'Dice a ripe pear into small bite-sized pieces, softening it first over low heat for 5-7 minutes if it is still firm, then fold it in.',
-          'Stir in the ground flaxseed and a swirl of sunflower seed butter, whisked with warm water until runny and mixed evenly so no thick pockets remain.',
+          'Stir in the ground flaxseed and a swirl of sunflower seed butter, thinned with warm water until runny and mixed evenly so no thick pockets remain.',
           'Cool to just-warm, then serve with a spoon.',
         ],
       },
@@ -192,7 +192,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         textureNote:
           'A soft, spoonable pudding thinned until it drips slowly off a spoon, with the kiwi and banana mashed smooth.',
         steps: [
-          'Stir the chia seeds into the breast milk, formula, or water and leave them at least 10 minutes, or overnight in the fridge, until every seed has swelled into a soft gel with no dry grit left.',
+          'Soak the chia seeds in the breast milk, formula, or water for at least 10 minutes, or overnight in the fridge, until every seed has swelled into a soft gel with no dry grit left.',
           'Peel the kiwi and mash it with the banana until smooth.',
           'Fold the fruit through the gelled chia.',
           'Thin with a little more milk or water to a smooth, drippy consistency and serve on a pre-loaded spoon.',
@@ -302,7 +302,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         textureNote:
           'Soft strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice, with banana on top.',
         steps: [
-          'Toast and moisten the bread for 1-2 minutes, until it is soft, then cut it into strips, or small squares (no bigger than ½ inch) for pincer practice.',
+          'Toast the bread for 1-2 minutes and moisten it with a little water or milk until it is soft, then cut it into strips, or small squares (no bigger than ½ inch) for pincer practice.',
           'Whisk the almond butter with warm water until it is runny, and spread it thinly over each piece.',
           'Cut the banana into half-moons or small bite-sized pieces (no bigger than ½ inch) and press a few onto each piece.',
           'Sprinkle the ground flaxseed over the wet nut butter so it sticks rather than scattering.',
@@ -586,7 +586,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cover with water or a no-salt-added stock, add a small pinch of finely ground black pepper, and simmer covered over low heat for 25-30 minutes, until the carrot is fork-tender and the chicken reads 165°F (74°C) with no pink left.',
           'Lift the chicken out and shred it finely, moistening it with the cooking liquid so it is never dry or stringy.',
           'Mash the carrot and green beans until they give easily between two fingers, then stir the chicken back in.',
-          'Press the soft, sticky rice into a small ball or patty, cool the stew to just warm and check its temperature, then serve the stew alongside on a pre-loaded spoon.',
+          'Press the soft, sticky rice into a small ball or patty, cool the stew to just warm and check its temperature, then stir in a little olive oil before serving the stew alongside on a pre-loaded spoon.',
         ],
       },
       '9': {
@@ -596,15 +596,15 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Simmer the diced chicken, carrot, and green beans in water or no-salt-added stock over low heat for 25-30 minutes, with a small pinch of finely ground black pepper, until the carrot is soft and the chicken reads 165°F (74°C).',
           'Shred or chop the chicken into soft, small bite-sized pieces (no bigger than ½ inch), moistened so they do not crumble apart.',
           'Cut any larger carrot or green bean pieces down to small bite-sized pieces (no bigger than ½ inch).',
-          'Cool the stew until it is only just warm, then serve the soft rice loose for pincer-grasp practice, with the stew spooned over.',
+          'Cool the stew until it is only just warm, then stir in a little olive oil before serving the soft rice loose for pincer-grasp practice, with the stew spooned over.',
         ],
       },
       '12': {
         textureNote: 'Family-style stew with small bite-sized pieces, served over soft rice.',
         steps: [
-          'Simmer the chicken, carrot, and green beans over low heat for 25-30 minutes, with a pinch of finely ground pepper, until everything is tender and the chicken is 165°F (74°C) throughout.',
+          'Simmer the chicken, carrot, and green beans in water or no-salt-added stock over low heat for 25-30 minutes, with a pinch of finely ground black pepper, until everything is tender and the chicken is 165°F (74°C) throughout.',
           'Dice the chicken into small, soft bite-sized pieces and cut the vegetables the same size.',
-          'Cool the stew and check the temperature before serving over soft rice, reheating leftover rice only once and discarding anything left after that.',
+          'Cool the stew, check the temperature, and stir in a little olive oil before serving over soft rice, reheating leftover rice only once and discarding anything left after that.',
           'Let baby practice with a spoon and fingers, with no added salt in the pot.',
         ],
       },
@@ -665,7 +665,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Family-style mild curry with small bite-sized chicken and squash over soft rice.',
         steps: [
           'Warm the mild curry powder in a little olive oil over medium heat for 30-60 seconds — a blend with no salt and no chili in it.',
-          'Simmer the chicken and squash in coconut milk over low heat for 20-25 minutes, until tender and the chicken is 165°F (74°C) throughout.',
+          'Simmer the chicken and butternut squash in coconut milk over low heat for 20-25 minutes, until tender and the chicken is 165°F (74°C) throughout.',
           'Dice both into small bite-sized pieces and stir the runny cashew butter through off the heat, never as a thick glob.',
           'Let the curry cool and check the temperature before serving over soft rice with a spoon and fingers.',
         ],
@@ -886,14 +886,14 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then re-check every flake for stray bones.',
           'Steam the broccoli for 8-10 minutes, until soft, and cut it into small bite-sized florets (no bigger than ½ inch).',
           'Serve the soft rice loose for pincer-grasp practice.',
-          'Flake the salmon into soft, small bite-sized pieces (no bigger than ½ inch) over the top, sprinkle a pinch of sesame seeds onto the wet rice, and let it cool to just warm.',
+          'Flake the salmon into soft, small bite-sized pieces (no bigger than ½ inch) over the top, moisten it with a little olive oil so it is not dry, sprinkle a pinch of sesame seeds onto the wet rice, and let it cool to just warm.',
         ],
       },
       '12': {
         textureNote:
           'Family-style bowl with small bite-sized salmon and tender broccoli over soft rice.',
         steps: [
-          'Bake the salmon at 375°F (190°C) for 10-12 minutes, until it reads 145°F (63°C), then check for bones and flake it into small bite-sized pieces.',
+          'Bake the salmon at 375°F (190°C) for 10-12 minutes, until it reads 145°F (63°C), then check for bones, flake it into small bite-sized pieces, and moisten it with a little olive oil so it is not dry.',
           'Roast the broccoli at 400°F (200°C) for 15-18 minutes, until tender, and cut it into small bite-sized florets.',
           'Spoon it all over soft rice and finish with a pinch of sesame seeds on the wet grains.',
           'Let the bowl cool to a safe temperature, then serve with a fork, keeping the sesame a pinch rather than a spoonful.',
@@ -995,7 +995,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Simmer the lentils and skinned, diced tomato with a pinch of finely rubbed oregano over low heat for 20-25 minutes, until the lentils are soft with a little texture left.',
           'Stir the finely ground walnut meal through off the heat, so nothing crunchy remains.',
           'Cook the small pasta shapes for 10-12 minutes, past al dente, until soft.',
-          'Let the sauce cool to just warm, toss the pasta through it, and serve on the tray for self-feeding.',
+          'Let the sauce cool to just warm, loosening it with a little olive oil if it is stiff, toss the pasta through it, and serve on the tray for self-feeding.',
         ],
       },
       '12': {
@@ -1004,7 +1004,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Simmer the lentils, diced tomato, and finely rubbed oregano over low heat for 20-25 minutes, until thick.',
           'Stir the finely ground walnut meal through off the heat — ground meal only, since nut pieces stay off the menu until age 4-5.',
           'Cook the pasta for 10-12 minutes, until tender, and toss it through the sauce.',
-          'Let the bolognese cool to a safe temperature, then serve with a fork and let baby practice twirling, with no added salt in the pan.',
+          'Let the bolognese cool to a safe temperature, loosening it with a little olive oil if it is stiff, then serve with a fork and let baby practice twirling, with no added salt in the pan.',
         ],
       },
     },
@@ -1042,7 +1042,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Press the firm tofu dry, cut it into finger-length strips, and pan-fry them in a little olive oil over medium heat for 2-3 minutes a side, until lightly golden and still soft inside.',
           'Soften a small pinch of finely grated ginger in the same pan over medium heat for 30-60 seconds, until it smells warm rather than raw.',
           'Steam the broccoli florets for 8-10 minutes, keeping a bit of stem as a handle, until they mash easily between two fingers.',
-          'Whisk the peanut butter with warm water until it is completely runny — never thick or straight from the jar — and stir the cooked ginger through it off the heat.',
+          'Thin the peanut butter with warm water, whisking until it is completely runny — never thick or straight from the jar — and stir the cooked ginger through it off the heat.',
           'Press the soft, sticky rice into a small ball, arrange the tofu strips and florets alongside, cool everything to just warm, and spoon the thin sauce over.',
         ],
       },
@@ -1053,7 +1053,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cut the pressed tofu into small bite-sized cubes (no bigger than ½ inch) and pan-fry them in a little olive oil over medium heat for 2-3 minutes a side, until lightly golden and easy for little fingers to grip.',
           'Soften the finely grated ginger in the pan over medium heat for 30-60 seconds, until fragrant.',
           'Steam the broccoli for 8-10 minutes, until soft, and cut it into small bite-sized florets (no bigger than ½ inch).',
-          'Whisk the peanut butter with warm water until it is runny, stir the ginger through, and spoon the sauce over the rice, tofu, and broccoli.',
+          'Thin the peanut butter with warm water, whisking until it is runny, stir the ginger through, and spoon the sauce over the rice, tofu, and broccoli.',
           'Cool to just-warm, then serve the soft rice loose on the tray with the tofu and broccoli for pincer-grasp self-feeding.',
         ],
       },
@@ -1064,7 +1064,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cut the tofu into small bite-sized cubes and pan-fry in a little olive oil over medium heat for 2-3 minutes a side, until soft inside and lightly crisp outside.',
           'Soften the grated ginger in the pan over medium heat for 30-60 seconds, until fragrant.',
           'Roast the broccoli at 400°F (200°C) for 15-18 minutes, until tender, and cut it into small bite-sized florets.',
-          'Whisk the peanut butter with warm water until it is runny — still no thick spoonfuls or globs — cool everything to a safe temperature, and spoon it, with the tofu and broccoli, over a family-style bowl of soft rice, with a fork alongside.',
+          'Thin the peanut butter with warm water, whisking until it is runny — still no thick spoonfuls or globs — cool everything to a safe temperature, and spoon it, with the tofu and broccoli, over a family-style bowl of soft rice, with a fork alongside.',
         ],
       },
     },
@@ -1123,7 +1123,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         textureNote: 'Family-style soup with soft bite-sized carrot, finished with orange.',
         steps: [
           'Warm the mild curry powder in a little olive oil over medium heat for 30-60 seconds — a blend with no salt and no chili in it.',
-          'Simmer the diced carrot and lentils over low heat for 20-25 minutes, until tender.',
+          'Simmer the diced carrot and lentils in water or no-salt-added stock over low heat for 20-25 minutes, until tender.',
           'Stir the juice and finely grated zest of half an orange in off the heat, so the flavour and the vitamin C both survive.',
           'Cool to a safe temperature and serve in a bowl with a spoon, with membrane-free orange segments cut into small bite-sized pieces on the side.',
         ],

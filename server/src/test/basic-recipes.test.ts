@@ -605,33 +605,154 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     expect(noCue).toEqual([]);
   });
 
-  it("uses every ingredient it lists, in every age band, for the curated recipes", async () => {
-    // Curated only: the single-food basics legitimately call their one food by a
-    // part ("the washed florets", "the trimmed breast"), which no word-match survives.
-    const variants = (await catalogVariants()).filter((v) => CURATED_SLUGS.includes(v.slug));
-    expect(variants.length).toBeGreaterThan(40);
+  it("uses every ingredient and extra it lists, in every age band, for every catalog recipe", async () => {
+    // Item 548: every seeded recipe — curated, coverage and single-food basics —
+    // not just the curated 15. The basics used to be exempt because they call their
+    // one food by a part ("the trimmed breast"); they now name the food in the steps.
+    const variants = await catalogVariants();
+    // 125 recipes, 372 variants (see the time/temperature guard below); a
+    // collapse here would make the check below pass vacuously.
+    expect(variants.length).toBeGreaterThan(350);
+    const extraRows = await db
+      .select({ slug: schema.recipes.slug, extraIngredients: schema.recipes.extraIngredients })
+      .from(schema.recipes)
+      .where(isNull(schema.recipes.ownerId));
+    const extrasBySlug = new Map(extraRows.map((r) => [r.slug, r.extraIngredients ?? []]));
 
-    const unused: { slug: string; stage: string; food: string }[] = [];
+    // A word counts on a WORD BOUNDARY with an optional plural/possessive:
+    // substring matching silently let "chickpeas" satisfy `peas` and "water"
+    // satisfy `watermelon`. berry -> berries; a plural slug word also matches its
+    // singular ("walnuts" is named "ground walnut", "almonds" "almond butter"), and
+    // "-ed" counts ("a lightly oiled pan" uses the olive oil for the pan).
+    const wordRe = (w: string) =>
+      w.endsWith("y")
+        ? `${w.slice(0, -1)}(?:y|ies)`
+        : `${w.length > 3 && w.endsWith("s") ? w.slice(0, -1) : w}(?:e?s|'s|ed)?`;
+    const mentions = (text: string, w: string) => new RegExp(`\\b${wordRe(w)}\\b`, "i").test(text);
+    // A food's full name as a phrase, any word pluralised or not ("flax seed").
+    const phrase = (words: string[]) =>
+      new RegExp(`\\b${words.map(wordRe).join("[\\s-]+")}\\b`, "i");
+    // "seeds" and "seed" are the same word when comparing two names.
+    const stem = (w: string) => w.toLowerCase().replace(/ies$/, "y").replace(/(?<=\w{3})s$/, "");
+    const key = (words: string[]) => words.map(stem).join(" ");
+
+    // Item 564: a listed food counts ONLY on its full name (plural, possessive,
+    // hyphenated or run together: "flaxseed", "sweet-potato") or on an entry of
+    // this reviewed alias table. No automatic "distinctive word" rule: it counted
+    // incidental words ("iron absorption" for iron_fortified_oats, watermelon
+    // "seeds" for hemp_seeds, "sweet paprika" for sweet_potato, a "curry" dish
+    // for curry_powder). A single word of a name never counts unless it is here.
+    const ALIAS: Record<string, string[]> = {
+      // Each entry is how the steps really name that food; each is needed today.
+      iron_fortified_oats: ["oats"],
+      wheat_pasta: ["pasta"],
+      wheat_toast: ["toast"], // "toast a slice" toasts the listed toast
+      // Never a bare "squash": the recipes also use it as a verb ("soft enough to
+      // squash between two fingers"), which is not the food.
+      butternut_squash: ["the squash"],
+      chicken_thigh: ["chicken", "thigh"],
+      black_beans: ["beans"],
+      green_beans: ["beans"],
+      bell_pepper: ["pepper"],
+      chia_seeds: ["chia"],
+      hemp_seeds: ["hemp"], // "hemp hearts" are the hulled seeds
+    };
+
+    // An extra's purpose is met ONLY by that verb's own forms (item 565): no
+    // synonyms, so "steam over boiling water" neither cooks-and-thins a mash nor
+    // loosens one. "for cooking" is met by cook or simmer; "for the pan" by pan,
+    // (pan-)fry or the oven's "baking tray" (never a bare "tray": that is the
+    // high chair's).
+    const PURPOSE: Record<string, string> = {
+      thin: "thin(?:s|ned|ning)?",
+      cook: "(?:cook|simmer)(?:s|ed|ing)?",
+      pan: "pan|fr(?:y|ies|ied)|baking tray",
+    };
+    const purposeRe = (verb: string) => {
+      const base = verb.replace(/n?ing$/, "");
+      return new RegExp(`\\b(?:${PURPOSE[base] ?? `${base}(?:s|e?d|n?ing)?`})\\b`, "i");
+    };
+
+    // Age-only extras (item 566, owner decisions 2026-09-26): the extra is listed
+    // for the recipe but genuinely not used in that band. A fixed entry must leave
+    // the list (checked below), so it cannot hide a later regression.
+    const AGE_ONLY_EXTRAS = new Set([
+      // The loosening liquid is for the 6-month mash; 9 and 12 serve egg pieces.
+      "simple-egg|9|extra: breast milk, formula, or water, to loosen",
+      "simple-egg|12|extra: breast milk, formula, or water, to loosen",
+      // 12 months serves the beans soft and whole, not mashed.
+      "simple-black-beans|12|extra: water, to loosen the mash",
+      // 12 months serves golden toast on purpose; only 6 and 9 moisten the bread.
+      "banana-almond-butter-toast-fingers|12|extra: water or milk to moisten the bread",
+    ]);
+
+    // ACCEPTED LIMITATION (item 565): an extra is satisfied by any genuine use of
+    // one of its alternatives for its stated purpose in that band. When one liquid
+    // serves two foods ("simmer the lentils in water" and "steam the cauliflower
+    // over boiling water"), the guard cannot tell which food it was meant for; it
+    // only proves the band uses it for what the extra says.
+    const unused: { slug: string; stage: string; item: string }[] = [];
     for (const v of variants) {
-      const steps = v.instructions.join(" ").toLowerCase();
-      for (const food of v.foodSlugs) {
-        // Any meaningful word of the slug counts ("iron_fortified_oats" is named
-        // in the steps as "oats"), but match on a WORD BOUNDARY with an optional
-        // plural/possessive: substring matching silently let "chickpeas" satisfy
-        // `peas` and "water" satisfy `watermelon`. Short names like `egg` and
-        // `cod` must be checked too, not filtered out for being under 4 letters.
-        const parts = food.split("_").filter((w) => w.length > 2);
-        const named = parts.some((w) => {
-          // berry -> berries, as well as the regular -s / -es / -'s plurals.
-          const body = w.endsWith("y") ? `${w.slice(0, -1)}(?:y|ies)` : `${w}(?:e?s|'s)?`;
-          return new RegExp(`\\b${body}\\b`, "i").test(steps);
-        });
-        if (parts.length > 0 && !named) {
-          unused.push({ slug: v.slug, stage: v.ageStage, food });
+      const steps = v.instructions.join(" ");
+      // An extra is free text naming alternatives and an optional purpose:
+      // "breast milk, formula, or water, to loosen". "(optional)" is dropped first.
+      const extras = (extrasBySlug.get(v.slug) ?? []).map((extra) => {
+        const [head, purpose] = extra.name.replace(/\s*\(.*?\)/g, "").split(/,?\s+(?:to|for)\s+/);
+        const alternatives = head!.split(/,\s*(?:or\s+)?|\s+or\s+/).map((a) => a.trim().split(/\s+/));
+        return { name: extra.name, alternatives, purpose };
+      });
+      const foodWords = v.foodSlugs.map((f) => f.split("_"));
+      // A food's name, each word of it, and its aliases. An alias that another
+      // listed food in this recipe also answers to never counts: with black_pepper
+      // listed, "pepper" is not the bell pepper; with green_beans, "beans" is not
+      // the black beans.
+      const names = (j: number) => [
+        foodWords[j]!,
+        ...foodWords[j]!.map((w) => [w]),
+        ...(ALIAS[v.foodSlugs[j]!] ?? []).map((a) => a.split(" ")),
+      ];
+
+      for (const [i, food] of v.foodSlugs.entries()) {
+        const words = foodWords[i]!;
+        const others = new Set(foodWords.flatMap((_, j) => (j === i ? [] : names(j))).map(key));
+        const aliases = (ALIAS[food] ?? []).map((a) => a.split(" ")).filter((a) => !others.has(key(a)));
+        const used =
+          phrase(words).test(steps) ||
+          (words.length > 1 && mentions(steps, words.join(""))) ||
+          aliases.some((a) => phrase(a).test(steps));
+        if (!used) unused.push({ slug: v.slug, stage: v.ageStage, item: food });
+      }
+
+      const foodStems = new Set(foodWords.flat().map(stem));
+      for (const extra of extras) {
+        // Item 560: an alternative is named by its head noun (last word), and never
+        // by a word a listed food owns ("mashed avocado" is not the avocado).
+        const heads = extra.alternatives
+          .map((alt) => alt.at(-1)!)
+          .filter((w) => w.length > 2 && !foodStems.has(stem(w)));
+        let used: boolean;
+        if (extra.purpose) {
+          // With a purpose ("to loosen", "for the pan", "for cooking and thinning"),
+          // ONE step must name an alternative AND the purpose: "steam over boiling
+          // water" does not loosen a mash.
+          const verbs = extra.purpose
+            .replace(/^(?:the|a)\s+/, "")
+            .match(/^(\w+)(?:\s+(?:and|or)\s+(\w+))?/)!
+            .slice(1)
+            .filter((w): w is string => !!w)
+            .map(purposeRe);
+          used = v.instructions.some(
+            (s) => heads.some((w) => mentions(s, w)) && verbs.some((re) => re.test(s)),
+          );
+        } else {
+          used = heads.some((w) => mentions(steps, w));
         }
+        if (!used) unused.push({ slug: v.slug, stage: v.ageStage, item: `extra: ${extra.name}` });
       }
     }
-    expect(unused).toEqual([]);
+    const keys = unused.map((u) => `${u.slug}|${u.stage}|${u.item}`);
+    expect(keys.filter((k) => !AGE_ONLY_EXTRAS.has(k))).toEqual([]);
+    expect([...AGE_ONLY_EXTRAS].filter((k) => !keys.includes(k))).toEqual([]);
   });
 
   /** Every seeded catalog variant, with its recipe slug, stage and foods. */

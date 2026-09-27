@@ -260,7 +260,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Scrub and chunk the potato, cutting away any green patches or sprouts — the skin can stay on once baby handles it well.',
           'Steam or boil the chunks for 12-15 minutes, until they mash easily between two fingers, cooking the peas with them for the last 3-4 minutes, until soft.',
           'Mash most of it roughly with a drizzle of olive oil, squashing every pea flat, and cut a little of the potato into small bite-sized soft pieces (no bigger than ½ inch) for the tray.',
-          'Stir the finely snipped dill through off the heat, then serve just warm, with no added salt.',
+          'Stir the finely snipped dill through off the heat, then loosen the mash with a little breast milk, formula, or water until it is soft and spoonable rather than stiff or gluey, and serve just warm, with no added salt.',
         ],
       },
       '12': {
@@ -269,7 +269,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Scrub and chunk the potato, cutting away any green patches or sprouts, then steam or boil it for 12-15 minutes, until it mashes easily between two fingers.',
           'Cook the peas with it for the last 3-4 minutes, until soft, then drain everything.',
           'Mash it loosely with a drizzle of olive oil — broken up just enough to eat, never beaten until it turns gluey — squashing the peas flat, since a whole pea stays the riskier option.',
-          'Stir the finely snipped dill through off the heat, cool to just-warm, and serve family-style in small bite-sized spoonfuls, with no added salt in the pan.',
+          'Stir the finely snipped dill through off the heat, loosen the mash with a little breast milk, formula, or water until it is soft rather than stiff or gluey, cool to just-warm, and serve family-style in small bite-sized spoonfuls, with no added salt in the pan.',
         ],
       },
     },
@@ -411,7 +411,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         textureNote: 'Small bite-sized florets tossed with grated cheese, or a looser family-style mash.',
         steps: [
           'Wash the cauliflower and cut it into florets, then steam them for 8-10 minutes, or roast them at 400°F (200°C) for 25-30 minutes, until fork-tender and just golden on top.',
-          'Trim off any crispy or burnt edges from roasted florets, then cut them into small bite-sized florets and toss them with the finely grated cheese while hot, or mash them loosely with the cheese and a little breast milk, formula, or water.',
+          'Trim off any crispy or burnt edges from roasted florets, then cut them into small bite-sized florets and toss them with the finely grated cheese while hot, or mash them with the cheese, loosened with a little breast milk, formula, or water.',
           'Cool to just-warm and serve with no added salt.',
         ],
       },

@@ -60,16 +60,16 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Cook the beef well-done over medium heat, about 4-5 minutes a side, until it reads 160°F (71°C) with no pink left, then rest it for 3-5 minutes until it is cool enough to handle.',
           'Cut it into finger-length strips along the grain, or finely chop or shred it into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
-          'Stir through a little olive oil or cooking liquid so the pieces stay moist rather than dry and stringy.',
+          'Stir through a little olive oil or cooking liquid to moisten the pieces, so they are not dry and stringy.',
           'Serve just-warm on a plate.',
         ],
       },
       '12': {
         textureNote: 'Small, soft bite-sized pieces of tender, slow-cooked beef.',
         steps: [
-          'Choose a cut that goes tender when slow-cooked and simmer it covered over low heat for 2-3 hours, or bake it at 325°F (160°C) for the same, until it is well past 160°F (71°C) and pulls apart easily with a fork.',
+          'Choose a cut of beef that goes tender when slow-cooked and simmer it covered over low heat for 2-3 hours, or bake it at 325°F (160°C) for the same, until it is well past 160°F (71°C) and pulls apart easily with a fork.',
           'Dice it into small, soft bite-sized pieces baby can chew with emerging molars.',
-          'Spoon over a little cooking liquid so nothing is dry, and discard any tough or gristly bits.',
+          'Spoon over a little cooking liquid to moisten it so nothing is dry, and discard any tough or gristly bits.',
           'Serve just-warm and let baby practice with fingers or a fork.',
         ],
       },
@@ -107,7 +107,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Small, soft bite-sized dice of thoroughly cooked thigh.',
         steps: [
           'Bake the trimmed thigh at 400°F (200°C) for 18-22 minutes, until it reads 165°F (74°C) with clear juices, and rest it for 5 minutes.',
-          'Dice it into small, soft bite-sized pieces, discarding any tough skin, fat, or gristle.',
+          'Dice it into small, soft bite-sized pieces, discarding any tough skin, fat, or gristle, and moisten with a little olive oil or cooking liquid.',
           'Check the pieces for small bones one last time before they reach the plate.',
           'Serve just-warm with no added salt.',
         ],
@@ -242,7 +242,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'A soft lentil mash with some texture left in it.',
         steps: [
-          'Simmer the rinsed lentils over low heat for 15-20 minutes, until they squash easily between two fingers, then drain them well.',
+          'Simmer the rinsed lentils in plenty of unsalted water over low heat for 15-20 minutes, until they squash easily between two fingers, then drain them well.',
           'Mash lightly, leaving some texture rather than a smooth puree.',
           'Cool to just-warm and serve in a bowl with a spoon for baby to practice with.',
         ],
@@ -250,7 +250,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Soft cooked lentils served in small spoonfuls.',
         steps: [
-          'Simmer the rinsed lentils over low heat for 15-20 minutes, until soft, and drain them.',
+          'Simmer the rinsed lentils in plenty of unsalted water over low heat for 15-20 minutes, until soft, and drain them.',
           'Serve as-is in small spoonfuls, or stir them through whatever soup, stew, or grain bowl is on the table.',
           'Serve just-warm with no added salt.',
         ],
@@ -279,7 +279,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Lightly mashed chickpeas, or each one squeezed out of its skin and flattened between your fingers.',
         steps: [
           'Simmer soaked dried chickpeas over low heat for 45-60 minutes, or rinse canned ones and warm them for 2-3 minutes, until each squashes easily between two fingers.',
-          'Mash lightly for some texture, or squeeze each chickpea out of its skin and flatten it between your fingers.',
+          'Mash lightly for some texture, loosening with a little water or olive oil, or squeeze each chickpea out of its skin and flatten it between your fingers.',
           'Never leave a whole, round chickpea on the plate — always mash, squash flat, or blend.',
           'Serve just-warm for pincer-grasp self-feeding.',
         ],
@@ -288,7 +288,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Chickpeas squashed flat between finger and thumb one by one, or fully blended into hummus.',
         steps: [
           'Simmer soaked dried chickpeas over low heat for 45-60 minutes, or rinse canned ones and warm them for 2-3 minutes, until soft.',
-          'Squash each one flat between finger and thumb before it goes on the plate, or blend them fully into hummus or a mild curry.',
+          'Squash each one flat between finger and thumb before it goes on the plate, or blend them fully into hummus or a mild curry, loosening with a little water or olive oil.',
           'Round, firm whole chickpeas stay a choking hazard, so squash or blend rather than serving them whole.',
           'Serve just-warm with no added salt.',
         ],
@@ -318,6 +318,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Simmer soaked dried beans over low heat for 60-90 minutes, or rinse canned beans and warm them for 2-3 minutes, until they are very soft.',
           'Mash lightly, or squash each bean flat between your fingers, leaving some soft texture.',
+          'Loosen with a little water if the mash is stiff.',
           'Squash or mash rather than serving beans fully whole and round.',
           'Serve just-warm for baby to pick up.',
         ],
@@ -399,7 +400,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'A thick, family-style porridge.',
         steps: [
-          'Cook the oats over medium-low heat for 5-6 minutes, adding liquid a splash at a time, until thick and family-style.',
+          'Cook the oats with breast milk, formula, or water over medium-low heat for 5-6 minutes, adding liquid a splash at a time, until thick and family-style.',
           'Stir to release hot spots, cool to just-warm, and check the temperature.',
           'Serve unsweetened with a spoon — no added sugar, and no honey before 12 months.',
         ],
@@ -463,7 +464,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Soft loose grains for pincer-grasp practice, or small pressed bites.',
         steps: [
-          'Simmer the rinsed quinoa, covered, over low heat for 15 minutes, then rest it off the heat for 5 minutes and fluff it with a fork — every grain should be soft and translucent.',
+          'Simmer the rinsed quinoa in water, covered, over low heat for 15 minutes, then rest it off the heat for 5 minutes and fluff it with a fork — every grain should be soft and translucent.',
           'Serve a small pile of loose grains for pincer-grasp practice, or press some into small bites.',
           'Cool to just-warm before serving.',
         ],
@@ -498,7 +499,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Whole soft florets with a bit of stem to hold, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Steam the washed florets for 8-10 minutes, until they mash easily between two fingers.',
+          'Steam the washed broccoli florets for 8-10 minutes, until they mash easily between two fingers.',
           'Serve them whole with a bit of stem to hold, or cut some into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Cool to just-warm and serve.',
         ],
@@ -506,7 +507,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Small bite-sized florets, steamed or roasted tender.',
         steps: [
-          'Steam the washed florets for 8-10 minutes, or roast them at 400°F (200°C) for 18-20 minutes, until fork-tender.',
+          'Steam the washed broccoli florets for 8-10 minutes, or roast them at 400°F (200°C) for 18-20 minutes, until fork-tender.',
           'Cut them into small bite-sized florets.',
           'Cool to just-warm and serve with no added salt.',
         ],
@@ -646,7 +647,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Membrane-free segments cut into smaller bite-sized pieces.',
         steps: [
-          'Peel each segment down to the flesh and remove all seeds.',
+          'Peel each orange segment down to the flesh and remove all seeds.',
           'Cut the flesh into smaller bite-sized pieces.',
           'Serve at room temperature.',
         ],
@@ -916,7 +917,7 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'A teaspoon of tahini thinned until runny and drizzled in a light layer.',
         steps: [
-          'Stir 1 teaspoon of tahini with warm water, breast milk, or formula until it is runny, then let it cool to just-warm.',
+          'Thin 1 teaspoon of tahini with warm water, breast milk, or formula, stirring until it is runny, then let it cool to just-warm.',
           'A thick layer of tahini can stick in the mouth, so thin it well and keep the layer light.',
           'Drizzle it thinly over a soft food baby is already eating, or spread it very thin on a toast finger — toast the bread lightly, 1-2 minutes, and moisten it until it bends.',
           'Offer it in a small amount.',
@@ -1031,7 +1032,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Soft toast strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Toast the bread lightly, 1-2 minutes, then moisten it so it is soft rather than dry and hard.',
+          'Toast the bread lightly, 1-2 minutes, then moisten it with a little water, milk, or a thin smooth spread so it is soft rather than dry and hard.',
           'Cut it into finger-length strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice.',
           'Serve just-warm for pincer-grasp self-feeding.',
         ],
@@ -1040,7 +1041,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Small bite-sized toast squares or triangles.',
         steps: [
           'Toast the bread for 1-2 minutes, until just golden, and cut it into small bite-sized squares or triangles.',
-          'Soften it with a thin topping if it is hard or crumbly.',
+          'Moisten it with a thin smooth spread if it is hard or crumbly.',
           'Serve just-warm, plain or lightly topped, with no added salt.',
         ],
       },
@@ -1057,7 +1058,7 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'Large pasta shapes cooked well past al dente, soft enough to squash between two fingers.',
         steps: [
-          'Boil a large shape such as penne or fusilli in plenty of unsalted water, brought to a rolling boil over high heat.',
+          'Boil a large pasta shape such as penne or fusilli in plenty of unsalted water, brought to a rolling boil over high heat.',
           'Cook it to al dente — usually 9-11 minutes — then give it 3-4 minutes more, well past al dente, until a piece squashes easily between two fingers.',
           'Drain it, rinse briefly under cool water, and check the temperature.',
           'Serve the shapes whole as a finger food, just-warm.',
@@ -1133,7 +1134,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Halve a ripe avocado and scoop the flesh out of the skin.',
           'Cut it into finger-length wedges, or dice it into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
-          'If the pieces are slippery, dust them lightly with oat flour so little fingers can hold them.',
+          'If the pieces are slippery, dust them lightly with oat flour so little fingers can grip them.',
           'Serve at room temperature for pincer-grasp self-feeding.',
         ],
       },
@@ -1142,6 +1143,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Halve a ripe avocado, remove the stone, and scoop out the flesh.',
           'Dice or slice it into small bite-sized pieces.',
+          'If the pieces are slippery, dust them lightly with oat flour so little fingers can grip them.',
           'Serve at room temperature for baby to practice with a fork.',
         ],
       },
@@ -1491,7 +1493,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Soft loose grains for pincer-grasp practice, or small pressed bites.',
         steps: [
-          'Simmer the rinsed rice covered over low heat for 15-18 minutes, until soft, then rest it off the heat for 5 minutes.',
+          'Simmer the rinsed rice covered over low heat with plenty of water for 15-18 minutes, until soft, then rest it off the heat for 5 minutes.',
           'Serve a small pile of loose grains for pincer-grasp practice, or press some into small bites.',
           'Cool to just-warm before serving, and reheat any leftovers only once, to 165°F (74°C), before discarding them.',
         ],
@@ -1526,7 +1528,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Seed-free, rind-free finger-length sticks, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Remove all rind and check the flesh thoroughly for seeds.',
+          'Remove all rind and check the watermelon flesh thoroughly for seeds.',
           'Cut it into finger-length sticks, or dice it into small bite-sized pieces (no bigger than ½ inch) for pincer practice, keeping every piece a size baby can gum.',
           'Serve chilled or at room temperature for pincer-grasp self-feeding.',
         ],
@@ -1535,7 +1537,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Seed-free, rind-free small bite-sized pieces.',
         steps: [
           'Remove all rind and check for seeds once more.',
-          'Dice the flesh into small bite-sized pieces rather than large slippery chunks.',
+          'Dice the watermelon flesh into small bite-sized pieces rather than large slippery chunks.',
           'Serve chilled or at room temperature.',
         ],
       },
@@ -1555,7 +1557,7 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'A finger-length strip of thoroughly cooked breast cut along the grain, or finely shredded chicken moistened so it is never dry.',
         steps: [
-          'Trim any gristle from the breast and check it carefully for small bones.',
+          'Trim any gristle from the chicken breast and check it carefully for small bones.',
           'Cook it thoroughly with no added salt — bake at 400°F (200°C) for 18-20 minutes, or poach at a bare simmer for 10-12 minutes — until a thermometer in the thickest part reads 165°F (74°C) and the juices run clear.',
           'Rest it for 5 minutes, then cut a finger-length strip along the grain, or shred it finely.',
           'Moisten the strip or the shreds with a little olive oil or cooking liquid — breast meat dries out fast and turns stringy when it does.',
@@ -1565,16 +1567,16 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Finger-length strips, or small bite-sized shredded or chopped pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Bake the trimmed breast at 400°F (200°C) for 18-20 minutes, until it reads 165°F (74°C) all the way through, then rest it for 5 minutes.',
+          'Bake the trimmed chicken breast at 400°F (200°C) for 18-20 minutes, until it reads 165°F (74°C) all the way through, then rest it for 5 minutes.',
           'Cut it into finger-length strips, or shred or chop it into small bite-sized pieces (no bigger than ½ inch) for pincer practice, feeling for any small bones as you go.',
-          'Stir through a little olive oil or cooking liquid so the pieces stay moist rather than crumbly.',
+          'Stir through a little olive oil or cooking liquid to moisten the pieces, so they are not crumbly.',
           'Serve just-warm for baby to self-feed.',
         ],
       },
       '12': {
         textureNote: 'Small, soft bite-sized dice of thoroughly cooked breast.',
         steps: [
-          'Bake the trimmed breast at 400°F (200°C) for 18-20 minutes, until it reads 165°F (74°C) with clear juices, and rest it for 5 minutes.',
+          'Bake the trimmed chicken breast at 400°F (200°C) for 18-20 minutes, until it reads 165°F (74°C) with clear juices, and rest it for 5 minutes.',
           'Dice it into small, soft bite-sized pieces.',
           'Moisten the dice with a little cooking liquid or olive oil, and check once more for small bones.',
           'Serve just-warm with no added salt.',
@@ -1607,15 +1609,16 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Finger-length strips of thin turkey patty, or small bite-sized pieces (no bigger than ½ inch) for pincer practice, or a small meatball squashed completely flat.',
         steps: [
-          'Shape the turkey into a thin patty or small meatballs and cook it through — pan-fry over medium heat for 4-5 minutes a side, or bake at 375°F (190°C) for 18-20 minutes — until it reads 165°F (74°C) with no pink left.',
+          'Shape the turkey into a thin patty or small meatballs, binding it with a little grated vegetable so it does not come out crumbly, and cook it through — pan-fry over medium heat for 4-5 minutes a side, or bake at 375°F (190°C) for 18-20 minutes — until it reads 165°F (74°C) with no pink left.',
           'Rest it for 3-5 minutes, then cut the patty into finger-length strips, or break it into small bite-sized pieces (no bigger than ½ inch) for pincer practice, and squash any small meatball completely flat.',
-          'Stir through a little olive oil or cooking liquid so the pieces are not dry.',
+          'Stir through a little olive oil or cooking liquid to moisten the pieces, so they are not dry.',
           'Serve just-warm for pincer-grasp practice, never as a firm round meatball.',
         ],
       },
       '12': {
         textureNote: 'Small, soft bite-sized dice or shreds of thoroughly cooked turkey.',
         steps: [
+          'Shape the ground turkey into a thin patty, binding it with a little grated vegetable so it does not come out crumbly.',
           'Bake the turkey at 375°F (190°C) for 18-20 minutes, until it reads 165°F (74°C), then rest it for 3-5 minutes.',
           'Dice or shred it into small, soft bite-sized pieces.',
           'Moisten with a little cooking liquid or olive oil.',
@@ -1648,7 +1651,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Roast the trimmed pork at 400°F (200°C) for 20-25 minutes, until it reads 160°F (71°C), then rest it for 5 minutes.',
           'Cut it into finger-length strips along the grain, or shred or chop it into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
-          'Stir through a little olive oil or cooking liquid so the pieces stay moist.',
+          'Stir through a little olive oil or cooking liquid to moisten the pieces.',
           'Serve just-warm for baby to self-feed.',
         ],
       },
@@ -1675,7 +1678,7 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'A soft, moist pile of well-done lamb mince, or a finger-length shred of slow-cooked shoulder.',
         steps: [
-          'Use mince or boneless shoulder only — chops and anything on the bone are not a baby food — and check by feel for bone fragments.',
+          'Use lamb mince or boneless shoulder only — chops and anything on the bone are not a baby food — and check by feel for bone fragments.',
           'Cook it well-done with no added salt: brown the mince over medium heat for 6-8 minutes, or slow-cook the shoulder for 2-3 hours until it falls apart, in either case until a thermometer reads 160°F (71°C).',
           'Drain off the fat, rest it for 3-5 minutes, and moisten with a little olive oil or cooking liquid.',
           'Serve as a soft pile of fine mince, or pull a finger-length shred from the shoulder.',
@@ -1687,7 +1690,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Brown lamb mince over medium heat for 6-8 minutes, or slow-cook boneless shoulder until it falls apart, until it reads 160°F (71°C) with no pink left.',
           'Drain the fat, then pull a finger-length shred from the shoulder, or break the meat into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
-          'Stir through a little olive oil or cooking liquid so the pieces are not dry.',
+          'Stir through a little olive oil or cooking liquid to moisten the pieces, so they are not dry.',
           'Serve just-warm for pincer-grasp practice.',
         ],
       },
@@ -1737,6 +1740,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Bake the cod at 400°F (200°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then let it cool to just-warm.',
           'Flake it into small bite-sized pieces, or leave a small piece of fillet for baby to pick apart.',
+          'Moisten the flakes with a little olive oil.',
           'Check by feel for bones one last time before it reaches the plate.',
           'Serve with no added salt, alongside whatever else is on the tray.',
         ],
@@ -1755,7 +1759,7 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'A soft finger-length piece of flaked trout, checked twice for pin bones.',
         steps: [
-          'Run your fingers along the fillet and pull out the row of fine pin bones — they survive cooking, and a fillet sold as deboned often still has some.',
+          'Run your fingers along the trout fillet and pull out the row of fine pin bones — they survive cooking, and a fillet sold as deboned often still has some.',
           'Bake it at 375°F (190°C) for 10-12 minutes, or poach it at a bare simmer for 6-8 minutes, until it is opaque right through and flakes under gentle pressure — 145°F (63°C) on a thermometer.',
           'Flake a soft finger-length piece, then check the flakes by feel for pin bones a second time.',
           'Moisten with a little cooking liquid or olive oil.',
@@ -1776,6 +1780,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Bake the trout at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then let it cool to just-warm.',
           'Flake it into small bite-sized pieces, checking twice for pin bones.',
+          'Moisten the flakes with a little olive oil.',
           'Serve with no added salt, alongside whatever else is on the tray.',
         ],
       },
@@ -1794,7 +1799,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'A soft mashed pile of tuna, smooth and wet enough to scoop from a pre-loaded spoon.',
         steps: [
           'Choose skipjack ("light") tuna canned in water, ideally with no salt added — never albacore, white, or bigeye tuna, which carry far more mercury.',
-          'Drain it well and mash it thoroughly with plain yogurt, mashed avocado, or a little olive oil until no dry, crumbly lumps remain.',
+          'Drain it well and mash it thoroughly with plain yogurt, mashed avocado, or a little olive oil until it is moistened and no dry, crumbly lumps remain.',
           'Serve as a soft mashed pile, or pre-load a spoon and hand it over.',
           'Keep tuna to about one small serving a week while baby is under two.',
         ],
@@ -1802,7 +1807,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Soft, small bite-sized dollops (no bigger than ½ inch) of mashed tuna, or tuna stirred through a mash.',
         steps: [
-          'Drain skipjack ("light") tuna canned in water and mash it smooth with yogurt or a little olive oil.',
+          'Drain skipjack ("light") tuna canned in water and mash it smooth with yogurt or a little olive oil until it is moistened and no dry, crumbly lumps remain.',
           'Serve it as soft, small bite-sized dollops (no bigger than ½ inch), or stir it through soft pasta or a vegetable mash.',
           'Never offer it dry and crumbly — on its own it packs into a dense ball in the mouth.',
           'Keep tuna to about one small serving a week while baby is under two.',
@@ -1850,7 +1855,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'A thick, family-style porridge.',
         steps: [
-          'Simmer the oats over medium-low heat for 5-6 minutes, adding liquid a splash at a time, until thick and family-style.',
+          'Simmer the oats with breast milk, formula, or water over medium-low heat for 5-6 minutes, adding liquid a splash at a time, until thick and family-style.',
           'Stir to release hot spots, cool to just-warm, and check the temperature.',
           'Serve unsweetened, with no added sugar — and use rolled or quick oats rather than steel-cut, which stay chewy.',
         ],
@@ -1870,7 +1875,7 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'A pinch of ground or whole sesame seeds stirred through a wet food so nothing is dry or loose.',
         steps: [
-          'Grind the seeds to a fine meal if you want them to disappear completely, or leave them whole.',
+          'Grind the sesame seeds to a fine meal if you want them to disappear completely, or leave them whole.',
           'Sprinkle a pinch over a wet food — porridge, yogurt, or a soft vegetable mash — so the seeds cling rather than scatter.',
           'Stir them through, and never hand over a spoonful or a pile of dry seeds: any dry seed is easy to inhale.',
         ],
@@ -1905,7 +1910,7 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'A soft chia gel thinned to a smooth, spoonable porridge, stirred through milk or mashed fruit.',
         steps: [
-          'Stir 1 teaspoon of chia seeds into 4-5 tablespoons of milk, water, or mashed fruit.',
+          'Soak 1 teaspoon of chia seeds in 4-5 tablespoons of milk, water, or mashed fruit.',
           'Leave it at least 10 minutes, until every seed has swelled into a soft gel with no dry grit left.',
           'Thin it until it is smooth and spoonable rather than stiff.',
           'Never offer chia dry: it absorbs many times its weight in liquid and can swell and clump after it is swallowed.',
@@ -1914,7 +1919,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Soaked, gelled chia stirred through yogurt, porridge, or a fruit mash.',
         steps: [
-          'Soak 1 teaspoon of chia in 4-5 tablespoons of liquid for at least 10 minutes, until it is a soft gel.',
+          'Soak 1 teaspoon of chia in 4-5 tablespoons of milk, water, or mashed fruit for at least 10 minutes, until it is a soft gel.',
           'Stir the gel through yogurt, porridge, or a fruit mash.',
           'Keep it spoonable rather than stiff, and never serve the seeds dry.',
         ],
@@ -1949,7 +1954,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Ground flaxseed stirred through porridge, yogurt, or a fruit mash.',
         steps: [
-          'Grind the seeds fresh, or use meal you ground earlier and kept in the fridge.',
+          'Grind the flaxseed fresh, or use meal you ground earlier and kept in the fridge.',
           'Stir a teaspoon through porridge, yogurt, a fruit mash, or a fritter mix.',
           'Whole seeds stay off the menu — it is the grinding that makes flax useful and safe.',
         ],
@@ -2064,7 +2069,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Thinned sunflower seed butter used as a spread or a dip, still never a thick layer.',
         steps: [
-          'Thin smooth sunflower seed butter until runny before using it as a spread or a dip base.',
+          'Thin smooth sunflower seed butter with warm water, breast milk, or formula until runny before using it as a spread or a dip base.',
           'Keep any spread layer thin; thick spoonfuls and globs remain a choking hazard.',
           'Check the label for added salt and sugar — sunflower seed butter is not a nut butter, but it is often sweetened.',
         ],
@@ -2101,7 +2106,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Thinned cashew butter used as a spread or a dip, still never a thick layer.',
         steps: [
-          'Thin smooth cashew butter until runny before using it as a spread or a dip base.',
+          'Thin smooth cashew butter with warm water, breast milk, or formula until runny before using it as a spread or a dip base.',
           'Keep any spread layer thin; thick spoonfuls and globs remain a choking hazard.',
           'Whole and chopped nuts stay off the menu until age 4-5, at every stage.',
         ],

@@ -91,7 +91,7 @@ const curatedRecipes: RecipeSeed[] = [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, or poach it for 8-10 minutes, until it is opaque and flakes easily at 145°F (63°C), then check thoroughly with your fingers for any bones and remove them all.',
           'Flake the salmon finely into a bowl, add the oats and beaten egg, and mix until it holds together.',
           'Shape into smaller patties, or one larger patty to slice after cooking.',
-          'Cook in a little olive oil over medium heat, about 3 minutes per side, until firm and set to 160°F (71°C), then cool and cut into strips, or break into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+          'Pan-fry in a little olive oil over medium heat, about 3 minutes per side, until firm and set to 160°F (71°C), then cool and cut into strips, or break into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Serve on a plate for baby to self-feed.',
         ],
       },
@@ -100,7 +100,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, or poach it for 8-10 minutes, until it is opaque and flakes easily at 145°F (63°C), then check thoroughly with your fingers for any bones and remove them all.',
           'Flake the salmon finely into a bowl, add the oats and beaten egg, mix until it holds together, and shape into small mini patties suited to little hands.',
-          'Cook in a little olive oil over medium heat for about 3 minutes per side, until golden, firm, and 160°F (71°C) in the centre.',
+          'Pan-fry in a little olive oil over medium heat for about 3 minutes per side, until golden, firm, and 160°F (71°C) in the centre.',
           'Cool to just-warm, check the temperature, then cut into bite-sized pieces or serve whole for baby to bite pieces off.',
           'Pair with a vitamin-C side like steamed broccoli for extra iron absorption.',
         ],
@@ -137,7 +137,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Soft finger-length fritters, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Squeeze excess water from the grated zucchini and carrot using a clean towel, then mash the lentils and mix them with the zucchini, carrot, beaten egg, and a pinch of sweet paprika, with no added salt.',
-          'Spoon into finger-length oval shapes and cook in olive oil over medium-low heat for 3-4 minutes per side, until firm and set through at 160°F (71°C).',
+          'Spoon into finger-length oval shapes and pan-fry in olive oil over medium-low heat for 3-4 minutes per side, until firm and set through at 160°F (71°C).',
           'Cool and serve whole, or break into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Serve with a spoon nearby for baby to practice self-feeding.',
         ],
@@ -146,7 +146,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Small bite-sized fritter pieces, family-style.',
         steps: [
           'Squeeze excess water from the grated zucchini and carrot using a clean towel, mash the lentils and mix them with the zucchini, carrot, beaten egg, and a pinch of sweet paprika, with no added salt, and form slightly larger patty shapes.',
-          'Cook in olive oil over medium-low heat for 3-4 minutes per side, until golden on both sides and set through at 160°F (71°C).',
+          'Pan-fry in olive oil over medium-low heat for 3-4 minutes per side, until golden on both sides and set through at 160°F (71°C).',
           'Cool to just-warm, check the temperature, then cut into bite-sized pieces and serve with a fork for baby to practice.',
           'Great alongside a vitamin-C side like tomato wedges (quartered lengthwise) for iron absorption.',
         ],
@@ -307,7 +307,7 @@ const curatedRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'Smooth, thinned porridge-like texture loose enough to drip slowly off a spoon.',
         steps: [
-          'Combine the oats, chia seeds, yogurt, and enough breast milk, formula, or water to make a loose, smooth mixture.',
+          'Combine the oats, chia seeds, yogurt, and enough breast milk, formula, or water to thin it to a loose, smooth mixture.',
           'Finely grate the pear and stir it in.',
           'Cover and refrigerate overnight, or at least 2 hours, until the oats and chia have softened and thickened slightly.',
           'Stir in a little extra liquid before serving to loosen it to a smooth, drippy consistency for a pre-loaded spoon.',
@@ -316,7 +316,7 @@ const curatedRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Thicker, lumpier porridge with soft, small pear pieces baby can self-feed with a spoon.',
         steps: [
-          'Combine the oats, chia seeds, and yogurt with just enough breast milk, formula, or water to moisten them, keeping the mixture thick and spoonable rather than pourable.',
+          'Combine the oats, chia seeds, and yogurt with just enough breast milk, formula, or water to thin the mixture slightly, keeping it thick and spoonable rather than pourable.',
           'Finely dice the pear into small, soft pieces and stir it through.',
           'Cover and refrigerate overnight, or at least 2 hours, until the oats and chia have softened and thickened, then stir well before serving.',
           "Offer a pre-loaded spoon for baby to bring to their own mouth.",
@@ -325,7 +325,7 @@ const curatedRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Thick, family-style overnight oats with diced pear pieces.',
         steps: [
-          'Combine the oats, chia seeds, and yogurt with just enough breast milk, formula, or water to moisten them, keeping the mixture thick enough to hold its shape on a spoon.',
+          'Combine the oats, chia seeds, and yogurt with just enough breast milk, formula, or water to thin the mixture slightly, keeping it thick enough to hold its shape on a spoon.',
           'Dice the pear into small bite-sized pieces and stir through.',
           'Cover and refrigerate overnight, or at least 2 hours, until the oats and chia have softened and thickened, and serve chilled or gently warmed, checking the temperature is not hot before serving.',
           'Let baby practice self-feeding with a spoon.',
@@ -354,7 +354,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Soft finger-length meat logs or well-mashed meatballs.',
         steps: [
           'Peel, core, and finely grate the apple.',
-          'Mix the ground chicken with the grated apple and herbs if using.',
+          'Mix the ground chicken with the grated apple and the dried thyme or sage if using.',
           'Shape into finger-length logs rather than round balls — easier for baby to grip and lower choking risk.',
           'Bake at 375°F (190°C) for 18-20 minutes, or pan-fry in olive oil over medium heat for 4-5 minutes a side, until no pink remains and a thermometer in the centre reads 165°F (74°C).',
           'Cool, then flake or mash slightly to ensure the texture is soft enough to squish easily.',
@@ -363,16 +363,16 @@ const curatedRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Soft finger-length logs, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Peel, core, and finely grate the apple, then mix the ground chicken with the grated apple and herbs if using, and shape it into finger-length logs rather than round balls.',
-          'Bake at 375°F (190°C) for 18-20 minutes, until no pink remains and a thermometer in the centre reads 165°F (74°C).',
+          'Peel, core, and finely grate the apple, then mix the ground chicken with the grated apple and the dried thyme or sage if using, and shape it into finger-length logs rather than round balls.',
+          'Bake at 375°F (190°C) for 18-20 minutes, or pan-fry in olive oil over medium heat for 4-5 minutes a side, until no pink remains and a thermometer in the centre reads 165°F (74°C).',
           'Cool, then serve the logs whole or cut a few into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         ],
       },
       '12': {
         textureNote: 'Small bite-sized meatballs baby can pick up and bite from.',
         steps: [
-          'Peel, core, and finely grate the apple, then mix the ground chicken with the grated apple and herbs if using.',
-          'Shape into small bite-sized meatballs and bake at 375°F (190°C) for 14-16 minutes, until they read 165°F (74°C) in the centre with no pink left.',
+          'Peel, core, and finely grate the apple, then mix the ground chicken with the grated apple and the dried thyme or sage if using.',
+          'Shape into small bite-sized meatballs, lightly oil the baking tray, and bake at 375°F (190°C) for 14-16 minutes, until they read 165°F (74°C) in the centre with no pink left.',
           'Cool to just-warm, check the temperature, then serve whole or halved alongside a soft grain and vegetable.',
         ],
       },
@@ -593,7 +593,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Soft finger-length bites, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Squeeze excess water from the grated zucchini using a clean towel, then mix the cooked quinoa, zucchini, beaten egg, and cheese together.',
-          'Spoon into finger-length shapes and cook in olive oil over medium-low heat for about 3 minutes per side, until firm and set through at 160°F (71°C).',
+          'Spoon into finger-length shapes and pan-fry in olive oil over medium-low heat for about 3 minutes per side, until firm and set through at 160°F (71°C).',
           'Cool and serve whole, or break into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         ],
       },
@@ -601,7 +601,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Small bite-sized pieces, family-style.',
         steps: [
           'Squeeze excess water from the grated zucchini using a clean towel, then mix the cooked quinoa, zucchini, beaten egg, and cheese together.',
-          'Shape the mixture into small patties and cook in olive oil over medium-low heat for 3-4 minutes per side, until set through at 160°F (71°C).',
+          'Shape the mixture into small patties and pan-fry in olive oil over medium-low heat for 3-4 minutes per side, until set through at 160°F (71°C).',
           'Cool to just-warm, check the temperature, then cut into bite-sized pieces.',
           'Serve with a vitamin-C side like orange segments (membrane removed) for iron absorption.',
         ],
@@ -629,14 +629,14 @@ const curatedRecipes: RecipeSeed[] = [
           'Simmer the diced apple in a little water over low heat for 5-7 minutes, until completely soft and squishable between two fingers.',
           'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, until soft, then blend or mash until mostly smooth.',
           'Stir in the softened apple, a thin swirl of tahini fully mixed through (never a thick glob), and a pinch of cinnamon.',
-          'Thin with extra liquid to a smooth, drippy consistency, cool to just-warm, and serve on a pre-loaded spoon.',
+          'Thin with extra breast milk, formula, or water to a smooth, drippy consistency, cool to just-warm, and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote: 'Thicker, spoonable porridge with small soft apple pieces.',
         steps: [
           'Simmer the diced apple in a little water over low heat for 5-7 minutes, until completely soft and squishable between two fingers.',
-          'Cook the oats over medium-low heat for 4-5 minutes, to a thick, spoonable consistency.',
+          'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, thinning with a little more only if needed, to a thick, spoonable consistency.',
           'Stir in the softened diced apple, tahini mixed in thoroughly, and cinnamon.',
           'Cool to just-warm, then serve with a pre-loaded spoon for self-feeding, checking apple pieces are soft.',
         ],
@@ -645,7 +645,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Thick, family-style porridge with soft diced apple.',
         steps: [
           'Simmer the diced apple in a little water over low heat for 5-7 minutes, until completely soft and squishable between two fingers.',
-          'Cook the oats over medium-low heat for 5-6 minutes, to a thick, family-style porridge consistency.',
+          'Cook the oats with breast milk, formula, or water over medium-low heat for 5-6 minutes, thinning with a little more only if needed, to a thick, family-style porridge consistency.',
           'Stir in the softened apple and tahini, mixed evenly through so no thick pockets remain.',
           'Stir a pinch of cinnamon through the porridge — never sprinkled on dry — then cool to just-warm and serve with a spoon.',
         ],

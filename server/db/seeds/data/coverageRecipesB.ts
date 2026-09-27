@@ -35,7 +35,7 @@ export const coverageRecipesB: RecipeSeed[] = [
         textureNote:
           'A loose, spoonable bowl with the mango mashed smooth through the yogurt, plus one finger-length strip of ripe mango to hold.',
         steps: [
-          'Whisk the cashew butter with a splash of warm water, breast milk, or formula until it is completely runny and pours off the spoon — thick nut butter straight from the jar is a serious choking hazard.',
+          'Thin the cashew butter with a splash of warm water, breast milk, or formula, whisking until it is completely runny and pours off the spoon — thick nut butter straight from the jar is a serious choking hazard.',
           'Peel the mango, mash half of it smooth, and cut the rest into a finger-length strip baby can hold and gnaw.',
           'Stir the yogurt, mashed mango, and runny cashew butter together until no thick pocket of nut butter is left anywhere in the bowl.',
           'Sprinkle the hemp hearts over the wet bowl so they cling rather than scatter, and serve on a pre-loaded spoon with the mango strip alongside.',
@@ -44,7 +44,7 @@ export const coverageRecipesB: RecipeSeed[] = [
       '9': {
         textureNote: 'Thick yogurt with small bite-sized soft mango pieces (no bigger than ½ inch) baby can pick up with a pincer grasp.',
         steps: [
-          'Whisk the cashew butter with a splash of warm water until it is runny enough to drip off the spoon.',
+          'Thin the cashew butter with a splash of warm water, whisking until it is runny enough to drip off the spoon.',
           'Peel the mango and dice it into small bite-sized soft pieces (no bigger than ½ inch), choosing fruit that is fully ripe rather than firm and slippery.',
           'Stir the runny cashew butter right through the yogurt, then fold the mango pieces in.',
           'Stir the hemp hearts through so they soften, and serve with a spoon for self-feeding.',
@@ -209,7 +209,7 @@ export const coverageRecipesB: RecipeSeed[] = [
         textureNote: 'Soft chilled fingers, about the length and thickness of an adult finger, that squish easily between two fingers.',
         steps: [
           'Blitz half the rolled oats to a flour and keep the rest whole — use rolled or quick oats, never steel-cut or jumbo, which stay firm and chewy however long they sit.',
-          'Whisk the sunflower seed butter with a splash of warm water until it is completely runny, then mash the very ripe banana into it with a pinch of cinnamon.',
+          'Thin the sunflower seed butter with a splash of warm water, whisking until it is completely runny, then mash the very ripe banana into it with a pinch of cinnamon.',
           'Grind the pecans to a fine, flour-like meal, stir them in with both lots of oats, and leave the mixture to stand for 15 minutes so the oats swell and go soft rather than staying dry.',
           'Press the mixture firmly into a small lined tin and chill it for 1-2 hours, until it is firm enough to cut cleanly.',
           'Cut into finger-length fingers, check one squishes easily between two fingers, and serve.',
@@ -219,7 +219,7 @@ export const coverageRecipesB: RecipeSeed[] = [
         textureNote: 'Soft chilled fingers, or small bite-sized pieces (no bigger than ½ inch) broken from them for a pincer grasp.',
         steps: [
           'Blitz half the rolled oats to a flour and leave the rest whole, using rolled or quick oats only.',
-          'Whisk the sunflower seed butter with warm water until runny, mash in the very ripe banana and a pinch of cinnamon, and stir through the oats and the finely ground pecan meal.',
+          'Thin the sunflower seed butter with warm water until runny, mash in the very ripe banana and a pinch of cinnamon, and stir through the oats and the finely ground pecan meal.',
           'Let the mixture stand for 15 minutes so the oats soften, then press it into a lined tin and chill for 1-2 hours until firm.',
           'Cut into fingers, or break them into soft, small bite-sized pieces (no bigger than ½ inch), and serve on the tray for self-feeding.',
         ],
@@ -227,7 +227,7 @@ export const coverageRecipesB: RecipeSeed[] = [
       '12': {
         textureNote: 'Small bite-sized pieces of a soft chilled finger, or a whole finger to bite from.',
         steps: [
-          'Blitz half the rolled oats to a flour and leave the rest whole, whisk the sunflower seed butter with a splash of warm water until runny, mash in the very ripe banana and a pinch of cinnamon, and stir in the pecans ground to a fine meal.',
+          'Blitz half the rolled oats to a flour and leave the rest whole, thin the sunflower seed butter with a splash of warm water until runny, mash in the very ripe banana and a pinch of cinnamon, and stir in the pecans ground to a fine meal.',
           'Stand it for 15 minutes so the oats soften, press it into a lined tin, and chill for 1-2 hours until firm enough to cut.',
           'Cut into small bite-sized pieces, or hand over a whole finger to bite from.',
           'Pair with a vitamin-C side such as orange segments with the membrane removed.',
