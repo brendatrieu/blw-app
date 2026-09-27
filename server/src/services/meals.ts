@@ -6,8 +6,8 @@
 // Keeping both flows on one insert helper is what guarantees a served meal
 // is byte-for-byte the same kind of row as a hand-logged one — the only
 // difference is `meal_foods.storage_item_id`.
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import type { MealItem } from "@blw/shared";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import type { MealItem, RatingHistoryQuery, RatingHistoryResponse, RatingSummary, RatingsResponse } from "@blw/shared";
 import type { Database } from "../db/index.js";
 import { allergens, babies, foodAllergens, foods, mealFoods, meals, recipes } from "../db/schema.js";
 
@@ -23,6 +23,8 @@ export interface MealFoodInsert {
   foodId: string;
   /** Set only by the storage serve flow. */
   storageItemId?: string | null;
+  /** 1-5, loose-food meals only (the route enforces that). */
+  rating?: number | null;
 }
 
 export interface MealInsert {
@@ -34,6 +36,8 @@ export interface MealInsert {
   /** General note. Distinct from `reactionNote`, which is the only field the
    * AI symptom/snapshot pipeline reads as a reaction signal. */
   notes: string | null;
+  /** 1-5, recipe meals only (the route enforces that). */
+  recipeRating?: number | null;
   /** At least one; callers dedupe by foodId before calling. */
   foods: MealFoodInsert[];
 }
@@ -54,6 +58,7 @@ export async function insertMealWithFoods(tx: Transaction, input: MealInsert): P
       servedAt: input.servedAt,
       reactionNote: input.reactionNote,
       notes: input.notes,
+      recipeRating: input.recipeRating ?? null,
     })
     .returning();
   if (!meal) throw new Error("Meal insert returned no row");
@@ -63,6 +68,7 @@ export async function insertMealWithFoods(tx: Transaction, input: MealInsert): P
       mealId: meal.id,
       foodId: food.foodId,
       storageItemId: food.storageItemId ?? null,
+      rating: food.rating ?? null,
     })),
   );
 
@@ -86,6 +92,7 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
       notes: meals.notes,
       recipeId: meals.recipeId,
       recipeTitle: recipes.title,
+      recipeRating: meals.recipeRating,
     })
     .from(meals)
     .leftJoin(recipes, eq(meals.recipeId, recipes.id))
@@ -100,6 +107,7 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
       category: foods.category,
       emoji: foods.emoji,
       storageItemId: mealFoods.storageItemId,
+      rating: mealFoods.rating,
       // A deleted food stays in the meal it was eaten in, marked.
       deleted: sql<boolean>`${foods.deletedAt} is not null`,
     })
@@ -136,6 +144,7 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
         notes: row.notes,
         recipeId: row.recipeId,
         recipeTitle: row.recipeTitle ?? null,
+        recipeRating: row.recipeRating,
         foods: [],
       },
     ]),
@@ -153,6 +162,7 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
       storageItemId: row.storageItemId,
       deleted: row.deleted,
       allergens: allergensByFoodId.get(row.id) ?? [],
+      rating: row.rating,
     });
   }
 
@@ -167,4 +177,81 @@ export async function ownsBaby(db: Database, babyId: string, userId: string): Pr
     .where(and(eq(babies.id, babyId), eq(babies.userId, userId)))
     .limit(1);
   return Boolean(row);
+}
+
+/**
+ * One row per rating, newest meal first: every rated food on this baby's
+ * LOOSE-FOOD meals, or every rated recipe meal. The `recipe_id IS NULL`
+ * filter on the food side is the chair call of item 573 — a recipe's rating
+ * never counts toward its ingredient foods (PATCH also clears food ratings
+ * when a meal becomes a recipe meal, so this is belt and braces).
+ */
+function ratedFoodRows(db: Database, babyId: string, foodId?: string) {
+  return db
+    .select({ id: mealFoods.foodId, rating: mealFoods.rating, servedAt: meals.servedAt })
+    .from(mealFoods)
+    .innerJoin(meals, eq(mealFoods.mealId, meals.id))
+    .where(
+      and(
+        eq(meals.babyId, babyId),
+        isNull(meals.recipeId),
+        isNotNull(mealFoods.rating),
+        foodId === undefined ? undefined : eq(mealFoods.foodId, foodId),
+      ),
+    )
+    .orderBy(desc(meals.servedAt), desc(meals.id));
+}
+
+function ratedRecipeRows(db: Database, babyId: string, recipeId?: string) {
+  return db
+    .select({ id: meals.recipeId, rating: meals.recipeRating, servedAt: meals.servedAt })
+    .from(meals)
+    .where(
+      and(
+        eq(meals.babyId, babyId),
+        isNotNull(meals.recipeId),
+        isNotNull(meals.recipeRating),
+        recipeId === undefined ? undefined : eq(meals.recipeId, recipeId),
+      ),
+    )
+    .orderBy(desc(meals.servedAt), desc(meals.id));
+}
+
+/** Folds newest-first rating rows into one summary per id. */
+function summarize(rows: { id: string | null; rating: number | null; servedAt: Date }[]): Record<string, RatingSummary> {
+  const byId: Record<string, RatingSummary & { total: number }> = {};
+  for (const row of rows) {
+    if (row.id === null || row.rating === null) continue;
+    const summary = byId[row.id];
+    if (summary) {
+      summary.total += row.rating;
+      summary.count += 1;
+    } else {
+      // Rows arrive newest first, so the first one seen is the latest.
+      byId[row.id] = { total: row.rating, count: 1, average: 0, latest: row.rating, lastRatedAt: row.servedAt.toISOString() };
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(byId).map(([id, { total, ...summary }]) => [id, { ...summary, average: total / summary.count }]),
+  );
+}
+
+// ponytail: aggregates in JS over one baby's rated rows (hundreds a year);
+// move to GROUP BY if a baby ever has tens of thousands.
+export async function loadRatingSummaries(db: Database, babyId: string): Promise<RatingsResponse> {
+  const [foodRows, recipeRows] = await Promise.all([ratedFoodRows(db, babyId), ratedRecipeRows(db, babyId)]);
+  return { foods: summarize(foodRows), recipes: summarize(recipeRows) };
+}
+
+export async function loadRatingHistory(
+  db: Database,
+  babyId: string,
+  query: RatingHistoryQuery,
+): Promise<RatingHistoryResponse["points"]> {
+  const rows = query.foodId
+    ? await ratedFoodRows(db, babyId, query.foodId)
+    : await ratedRecipeRows(db, babyId, query.recipeId);
+  return rows
+    .flatMap((row) => (row.rating === null ? [] : [{ servedAt: row.servedAt.toISOString(), rating: row.rating }]))
+    .reverse();
 }

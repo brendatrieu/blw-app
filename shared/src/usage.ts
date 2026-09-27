@@ -171,6 +171,9 @@ export const catalogFilterKeySchema = z.enum([
   "fiber_high",
   "ingredient_food_id",
   "deleted",
+  /** Item 576: a rating sort ("Highest rated" / "Most recently rated") was
+   * on. The key only — which sort is not recorded, like every other filter. */
+  "sort",
 ]);
 export type CatalogFilterKey = z.infer<typeof catalogFilterKeySchema>;
 
@@ -266,7 +269,7 @@ const eventProps = {
       catalog: usageCatalogSchema,
       /** Which filters were active, as keys. Capped well above the number of
        * controls that exist, so a malformed client cannot pad a payload. */
-      filters: z.array(catalogFilterKeySchema).max(12),
+      filters: z.array(catalogFilterKeySchema).max(13),
       has_query: z.boolean(),
       results: resultsBucketSchema,
       zero_results: z.boolean(),

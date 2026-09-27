@@ -7,6 +7,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -14,6 +15,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -368,9 +370,17 @@ export const meals = pgTable(
     // pipeline treats reaction_note — and only reaction_note — as a reaction
     // signal, so writing here can never make a food look reactive.
     notes: text("notes"),
+    // Item 571: the baby's 1-5 star rating of the RECIPE, only on a recipe
+    // meal (recipe_id set). NULL = not rated, never 0. Deliberately no
+    // cross-column CHECK against recipe_id: the recipe FK is ON DELETE SET
+    // NULL, and PATCH clears this whenever recipeId becomes null instead.
+    recipeRating: smallint("recipe_rating"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("meals_baby_id_served_at_idx").on(t.babyId, t.servedAt.desc())],
+  (t) => [
+    index("meals_baby_id_served_at_idx").on(t.babyId, t.servedAt.desc()),
+    check("meals_recipe_rating_range", sql`${t.recipeRating} BETWEEN 1 AND 5`),
+  ],
 );
 
 export const mealFoods = pgTable(
@@ -388,10 +398,16 @@ export const mealFoods = pgTable(
     // deleting the storage item never removes eaten-food history — the meal
     // simply loses its link back to the container it came from.
     storageItemId: uuid("storage_item_id").references(() => storageItems.id, { onDelete: "set null" }),
+    // Item 571: the baby's 1-5 star rating of THIS food, only on a
+    // loose-food meal (the meal's recipe_id is NULL). NULL = not rated,
+    // never 0. A recipe meal's rating lives on meals.recipe_rating and never
+    // counts toward its ingredient foods.
+    rating: smallint("rating"),
   },
   (t) => [
     uniqueIndex("meal_foods_meal_food_idx").on(t.mealId, t.foodId),
     index("meal_foods_food_id_idx").on(t.foodId),
+    check("meal_foods_rating_range", sql`${t.rating} BETWEEN 1 AND 5`),
   ],
 );
 

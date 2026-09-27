@@ -231,7 +231,7 @@ describe("an empty database", () => {
     expect(payload.featureAdoption.features.every((row) => row.users === 0 && row.share === 0)).toBe(true);
     expect(payload.tourOutcomes.skipsBySlide.map((row) => row.slide)).toEqual([0, 1, 2, 3, 4, 5]);
     expect(payload.tourOutcomes.completionRate).toBe(0);
-    expect(payload.catalogFilters.byFilter).toHaveLength(12);
+    expect(payload.catalogFilters.byFilter).toHaveLength(13);
     expect(payload.catalogFilters.zeroResultCombos).toEqual([]);
     expect(payload.storageServeThrough).toEqual({
       added: 0,

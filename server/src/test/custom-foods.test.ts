@@ -10,6 +10,8 @@ import type {
   CreateStorageItemResponse,
   MealItem,
   MealsResponse,
+  RatingHistoryResponse,
+  RatingsResponse,
   RecipeDetail,
   RecipesResponse,
   ReplaceCustomFoodResponse,
@@ -899,6 +901,27 @@ describe("custom foods", () => {
       expect((await rowsOf(cauliflower.id)).meals).toEqual([expect.objectContaining({ mealId: both, storageItemId: box })]);
     });
 
+    it("carries a merged meal row's rating onto the kept row only when that row has none (item 572)", async () => {
+      const cauliflower = await insertCatalogFood("cauliflower", "Cauliflower");
+      const mine = await createFood(owner, { name: "cauliflower", category: "veg" });
+      const babyId = await createBaby(owner);
+      const inherits = (await postMeal(owner, babyId, [mine.id, cauliflower.id])).json<MealItem>().id;
+      const keepsOwn = (await postMeal(owner, babyId, [mine.id, cauliflower.id])).json<MealItem>().id;
+      const rate = (mealId: string, foodId: string, rating: number) =>
+        db
+          .update(schema.mealFoods)
+          .set({ rating })
+          .where(and(eq(schema.mealFoods.mealId, mealId), eq(schema.mealFoods.foodId, foodId)));
+      await rate(inherits, mine.id, 4);
+      await rate(keepsOwn, mine.id, 1);
+      await rate(keepsOwn, cauliflower.id, 5);
+
+      expect((await replace(owner, mine.id, cauliflower.id)).statusCode).toBe(200);
+
+      const ratings = Object.fromEntries((await rowsOf(cauliflower.id)).meals.map((row) => [row.mealId, row.rating]));
+      expect(ratings).toEqual({ [inherits]: 4, [keepsOwn]: 5 });
+    });
+
     it("works on a food that was already deleted, and leaves another user's rows untouched", async () => {
       const cauliflower = await insertCatalogFood("cauliflower", "Cauliflower");
       const mine = await createFood(owner, { name: "cauliflower", category: "veg" });
@@ -951,6 +974,102 @@ describe("custom foods", () => {
       expect((await rowsOf(mine.id)).meals).toHaveLength(1);
       expect(await db.select().from(schema.foods).where(eq(schema.foods.id, mine.id))).toHaveLength(1);
     });
+  });
+
+  // -----------------------------------------------------------------------
+  // Ratings x soft-delete / replace (mutation gaps S36/S37/S39)
+  // -----------------------------------------------------------------------
+  describe("ratings and custom-food lifecycle", () => {
+    async function rateMealFood(mealId: string, foodId: string, rating: number) {
+      await db
+        .update(schema.mealFoods)
+        .set({ rating })
+        .where(and(eq(schema.mealFoods.mealId, mealId), eq(schema.mealFoods.foodId, foodId)));
+    }
+    async function del(user: TestUser, id: string) {
+      return app.inject({ method: "DELETE", url: `/api/foods/${id}`, headers: { cookie: user.cookie } });
+    }
+    async function summaries(babyId: string) {
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/babies/${babyId}/ratings`,
+        headers: { cookie: owner.cookie },
+      });
+      return response.json<RatingsResponse>();
+    }
+    async function history(babyId: string, foodId: string) {
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/babies/${babyId}/ratings/history?foodId=${foodId}`,
+        headers: { cookie: owner.cookie },
+      });
+      return response.json<RatingHistoryResponse>();
+    }
+
+    it("keeps a soft-deleted food's rating in the summaries and history, not silently dropped (S36)", async () => {
+      const mine = await createFood(owner, { name: "Banana bread", category: "grain" });
+      const babyId = await createBaby(owner);
+      const meal = (await postMeal(owner, babyId, [mine.id])).json<MealItem>();
+      await rateMealFood(meal.id, mine.id, 4);
+
+      expect((await del(owner, mine.id)).statusCode).toBe(204);
+
+      expect((await summaries(babyId)).foods[mine.id]).toMatchObject({ average: 4, count: 1 });
+      expect((await history(babyId, mine.id)).points.map((p) => p.rating)).toEqual([4]);
+    });
+
+    it("soft-deleting a custom food does not null out its meal ratings (S37)", async () => {
+      const mine = await createFood(owner, { name: "Banana bread", category: "grain" });
+      const babyId = await createBaby(owner);
+      const meal = (await postMeal(owner, babyId, [mine.id])).json<MealItem>();
+      await rateMealFood(meal.id, mine.id, 3);
+
+      await del(owner, mine.id);
+
+      const [row] = await db.select().from(schema.mealFoods).where(eq(schema.mealFoods.foodId, mine.id));
+      expect(row?.rating).toBe(3);
+    });
+
+    it("carries a rating onto the re-pointed row when replace does not merge it into an existing one (S39)", async () => {
+      const cauliflower = await insertCatalogFoodForRatings("cauliflower-s39", "Cauliflower S39");
+      const mine = await createFood(owner, { name: "cauliflower s39", category: "veg" });
+      const babyId = await createBaby(owner);
+      // Only `mine` on this meal — cauliflower is NOT, so nothing to merge into:
+      // the food is re-pointed via the blanket update, not the merge loop.
+      const meal = (await postMeal(owner, babyId, [mine.id])).json<MealItem>();
+      await rateMealFood(meal.id, mine.id, 5);
+
+      const response = await app.inject({
+        method: "POST",
+        url: `/api/foods/${mine.id}/replace`,
+        headers: { cookie: owner.cookie },
+        payload: { replacementId: cauliflower.id },
+      });
+      expect(response.statusCode).toBe(200);
+
+      const [row] = await db.select().from(schema.mealFoods).where(eq(schema.mealFoods.mealId, meal.id));
+      expect(row).toMatchObject({ foodId: cauliflower.id, rating: 5 });
+    });
+
+    async function insertCatalogFoodForRatings(slug: string, name: string) {
+      const [row] = await db
+        .insert(schema.foods)
+        .values({
+          slug,
+          name,
+          category: "veg",
+          ironLevel: "low",
+          vitaminCLevel: "high",
+          chokingRisk: "low",
+          minAgeMonths: 6,
+          prep6m: "steam",
+          prep9m: "florets",
+          prep12m: "bites",
+          storageCategory: "produce_cooked",
+        })
+        .returning();
+      return row!;
+    }
   });
 
   // -----------------------------------------------------------------------

@@ -5,6 +5,7 @@ import { FoodPicker } from "../../catalog/components/FoodPicker.js";
 import { RecipePicker } from "../../catalog/components/RecipePicker.js";
 import { useCreateMeal, useUpdateMeal } from "../hooks.js";
 import { applyRecipeIngredients, recipeIngredientFoodIds } from "../recipeChips.js";
+import { MealRatingsField, RECIPE_RATING_KEY, mealRatingRows, mealRatingsInput } from "./MealRatingsField.js";
 import { useCreateStorageItem } from "../../storage/hooks.js";
 import { LOCATIONS, offersContainerChoice, type ContainerChoice } from "../../storage/format.js";
 import { ContainerChoiceField } from "../../storage/components/ContainerChoiceField.js";
@@ -28,6 +29,9 @@ export interface MealSubmitInput {
   reactionNote: string | null;
   /** General note, distinct from `reactionNote` — see `optionalNotes` in shared/tracking. */
   notes: string | null;
+  /** Item 574 — built by `mealRatingsInput`: per food, or the recipe's. */
+  foodRatings?: Record<string, number | null>;
+  recipeRating?: number | null;
 }
 
 export type MealSubmitAction =
@@ -287,6 +291,12 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
   const [servedAt, setServedAt] = useState(() => (meal ? nowAtMinute(new Date(meal.servedAt)) : nowAtMinute()));
   const [reactionNote, setReactionNote] = useState(() => meal?.reactionNote ?? "");
   const [notes, setNotes] = useState(() => meal?.notes ?? "");
+  // Item 574: kept per food id, so a chip removed and re-added keeps its
+  // stars; only the foods still on the meal are ever sent.
+  const [foodRatings, setFoodRatings] = useState<Record<string, number | null>>(() =>
+    Object.fromEntries((meal?.foods ?? []).map((food) => [food.id, food.rating ?? null])),
+  );
+  const [recipeRating, setRecipeRating] = useState<number | null>(() => meal?.recipeRating ?? null);
 
   // Leftovers-to-storage (items 152-153) — create mode only; `isEditing` gates
   // every bit of this out of edit-mode renders entirely.
@@ -317,6 +327,20 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
   const keptFoods = useMemo(() => meal?.foods.filter((food) => food.deleted), [meal]);
 
   const slugToFoodId = useMemo(() => new Map(foods.map((food) => [food.slug, food.id])), [foods]);
+  const foodNameById = new Map([...(meal?.foods ?? []), ...foods].map((food) => [food.id, food.name]));
+  const ratingRows = mealRatingRows(
+    recipeId ? { title: recipeDetail?.title ?? meal?.recipeTitle ?? "Recipe", rating: recipeRating } : null,
+    foodIds.flatMap((id) => {
+      const name = foodNameById.get(id);
+      return name ? [{ id, name }] : [];
+    }),
+    foodRatings,
+  );
+
+  function handleRatingChange(key: string, value: number | null) {
+    if (key === RECIPE_RATING_KEY) setRecipeRating(value);
+    else setFoodRatings((current) => ({ ...current, [key]: value }));
+  }
 
   const leftoverSource = resolveLeftoverSource(recipeId || null, foodIds);
 
@@ -352,6 +376,9 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
 
   function handleRecipeChange(nextRecipeId: string) {
     setRecipeId(nextRecipeId);
+    // Item 579: the stars belong to the recipe they were given to — a
+    // different recipe (or none) starts unrated.
+    if (nextRecipeId !== recipeId) setRecipeRating(null);
     if (nextRecipeId === "") {
       setFoodIds((current) => applyRecipeIngredients(current, appliedRecipeFoodIdsRef.current, []));
       appliedRecipeFoodIdsRef.current = [];
@@ -418,6 +445,7 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
       servedAt: servedAt.toISOString(),
       reactionNote: reactionNote.trim() || null,
       notes: notes.trim() || null,
+      ...mealRatingsInput(recipeId || null, foodIds, foodRatings, recipeRating),
     };
     const action = resolveMealSubmit(meal?.id, input);
     switch (action.kind) {
@@ -463,6 +491,8 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
       <Field label="When" htmlFor="log-food-when">
         <DateTimeField id="log-food-when" value={servedAt} onChange={setServedAt} />
       </Field>
+
+      <MealRatingsField rows={ratingRows} onChange={handleRatingChange} />
 
       <Field
         label="Reaction (optional)"

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import type { AgeStage, RecipeDetail } from "@blw/shared";
 import { ageInMonths, formatExtraIngredient } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
+import { RatingHistory } from "../features/tracking/components/RatingHistory.js";
 import { useDeleteCustomRecipe, useRecipe } from "../features/catalog/hooks.js";
 import { asCustomRecipeConflict } from "../features/catalog/api.js";
 import { clampStageToAvailable, stageForAge } from "../features/catalog/stage.js";
@@ -228,6 +229,8 @@ export function RecipeDetailPage() {
           Add to storage
         </ButtonLink>
       </div>
+
+      <RatingHistory target={{ recipeId: recipe.id }} name={recipe.title} />
 
       <section className="flex flex-col gap-2">
         <h2 className="font-h2 text-[var(--color-text)]">Ingredients</h2>

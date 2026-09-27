@@ -3,8 +3,10 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { RecipeListItem } from "@blw/shared";
+import type { Baby, RatingsResponse, RecipeListItem } from "@blw/shared";
 import { catalogKeys } from "../hooks.js";
+import { babyKeys } from "../../babies/api.js";
+import { trackingKeys } from "../../tracking/hooks.js";
 import {
   activeRecipeFilters,
   buildRecipesFilters,
@@ -36,10 +38,24 @@ function renderCard(item: RecipeListItem) {
   return renderToString(createElement(MemoryRouter, null, createElement(RecipeCard, { recipe: item })));
 }
 
+const RATED_BABY: Baby = {
+  id: "baby-1",
+  name: "Robin",
+  birthDate: "2026-01-01",
+  notes: null,
+  archived: false,
+  archivedAt: null,
+  createdAt: "2026-01-01T00:00:00.000Z",
+};
+
 /** The recipes list as the segment's default (unfiltered) query holds it. */
-function renderSegment(recipes?: RecipeListItem[]) {
+function renderSegment(recipes?: RecipeListItem[], ratings?: RatingsResponse) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   if (recipes) queryClient.setQueryData(catalogKeys.recipesList({ scope: "all" }), { recipes });
+  if (ratings) {
+    queryClient.setQueryData(babyKeys.list(false), [RATED_BABY]);
+    queryClient.setQueryData(trackingKeys.ratings(RATED_BABY.id), ratings);
+  }
   return renderToString(
     createElement(
       QueryClientProvider,
@@ -148,6 +164,35 @@ describe("RecipeCard", () => {
   it("nests no interactive element inside the card's anchor", () => {
     const html = renderCard(recipe({ isFavorite: true, isCustom: true, allergens: ["milk"] }));
     expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
+  });
+});
+
+describe("RecipeCard rating (item 575)", () => {
+  it('shows the baby\'s average as "★ 4.2 (5)", and nothing when unrated', () => {
+    const summary = { average: 4.2, count: 5, latest: 5, lastRatedAt: "2026-09-27T12:00:00.000Z" };
+    const rated = renderToString(createElement(MemoryRouter, null, createElement(RecipeCard, { recipe: recipe(), rating: summary })));
+    expect(rated).toContain("★ 4.2 (5)");
+    expect(renderCard(recipe())).not.toContain("★");
+  });
+
+  it("offers the rating sorts in the Filters sheet", () => {
+    const html = renderFilterGroups({ ...EMPTY_RECIPE_FILTERS, sort: "highest" });
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Highest rated</);
+    expect(html).toContain(">Most recently rated<");
+    expect(activeRecipeFilters({ ...EMPTY_RECIPE_FILTERS, sort: "recent" })).toEqual([
+      { key: "sort", label: "Most recently rated" },
+    ]);
+  });
+});
+
+describe("RecipesSegment ratings wiring (item 581)", () => {
+  it("hands each card the active baby's own average, on the rated recipe only", () => {
+    const html = renderSegment([recipe(), recipe({ id: "recipe-2", title: "Lentil mash" })], {
+      foods: {},
+      recipes: { "recipe-2": { average: 4.2, count: 5, latest: 4, lastRatedAt: "2026-09-27T12:00:00.000Z" } },
+    });
+    expect(html.match(/★ 4\.2 \(5\)/g)).toHaveLength(1);
+    expect(html.indexOf("★ 4.2 (5)")).toBeGreaterThan(html.indexOf("Lentil mash"));
   });
 });
 
@@ -375,9 +420,11 @@ describe("EMPTY_RECIPE_FILTERS (what Clear all applies)", () => {
       "ingredientFoodId",
       "ironFocus",
       "maxAgeMonths",
+      "sort",
       "vitaminCHigh",
     ]);
     expect(EMPTY_RECIPE_FILTERS.maxAgeMonths).toBeUndefined();
+    expect(EMPTY_RECIPE_FILTERS.sort).toBeUndefined();
     expect(EMPTY_RECIPE_FILTERS.allergen).toBeUndefined();
     expect(EMPTY_RECIPE_FILTERS.ironFocus).toBe(false);
     expect(EMPTY_RECIPE_FILTERS.vitaminCHigh).toBe(false);

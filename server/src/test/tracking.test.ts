@@ -214,6 +214,8 @@ describe("tracking routes", () => {
           deleted: false,
           // The food's allergens ride on the meal (ledger 554).
           allergens: ["egg"],
+          // Not rated (item 572): null, never 0.
+          rating: null,
         },
       ]);
 

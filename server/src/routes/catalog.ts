@@ -580,6 +580,21 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
           );
       }
 
+      // Ratings merge the same way: the kept row keeps its own rating and
+      // inherits this food's only when it had none, so no rating is lost.
+      const ratedHere = await tx
+        .select({ mealId: mealFoods.mealId, rating: mealFoods.rating })
+        .from(mealFoods)
+        .where(and(eq(mealFoods.foodId, existing.id), isNotNull(mealFoods.rating)));
+      for (const row of ratedHere) {
+        await tx
+          .update(mealFoods)
+          .set({ rating: row.rating })
+          .where(
+            and(eq(mealFoods.mealId, row.mealId), eq(mealFoods.foodId, replacement.id), isNull(mealFoods.rating)),
+          );
+      }
+
       // Each table has a unique (parent, food) key, so where the parent row
       // already holds the replacement the old row is dropped rather than
       // re-pointed. Every statement is keyed on this food's id, and only its

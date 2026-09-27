@@ -3,8 +3,10 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { RecipeDetail } from "@blw/shared";
+import type { Baby, RatingHistoryResponse, RecipeDetail } from "@blw/shared";
 import { catalogKeys } from "../features/catalog/hooks.js";
+import { babyKeys } from "../features/babies/api.js";
+import { trackingKeys } from "../features/tracking/hooks.js";
 import { customRecipeConflictMessage } from "../features/catalog/constants.js";
 import { CustomRecipeActions, RecipeDetailPage } from "./RecipeDetailPage.js";
 
@@ -75,9 +77,23 @@ const CUSTOM_RECIPE = catalogRecipe({
   notes: "Freezes well in ice-cube trays",
 });
 
-function renderRecipe(recipe: RecipeDetail) {
+const BABY: Baby = {
+  id: "baby-1",
+  name: "Robin",
+  birthDate: "2026-01-01",
+  notes: null,
+  archived: false,
+  archivedAt: null,
+  createdAt: "2026-01-01T00:00:00.000Z",
+};
+
+function renderRecipe(recipe: RecipeDetail, history?: RatingHistoryResponse["points"]) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(catalogKeys.recipe(recipe.id), recipe);
+  if (history) {
+    queryClient.setQueryData(babyKeys.list(false), [BABY]);
+    queryClient.setQueryData(trackingKeys.ratingHistory(BABY.id, { recipeId: recipe.id }), { points: history });
+  }
   return renderToString(
     createElement(
       QueryClientProvider,
@@ -442,5 +458,21 @@ describe("RecipeDetailPage ingredient allergen rows (item 334)", () => {
   it("keeps the row a single link — the marks are plain spans, not controls", () => {
     const html = renderRecipe(catalogRecipe());
     expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
+  });
+});
+
+describe("RecipeDetailPage rating history (item 581)", () => {
+  it("draws the active baby's rating graph for this recipe", () => {
+    const html = renderRecipe(catalogRecipe(), [
+      { servedAt: "2026-09-20T12:00:00.000Z", rating: 2 },
+      { servedAt: "2026-09-25T12:00:00.000Z", rating: 4 },
+    ]);
+    expect(html).toContain("Robin&#x27;s ratings");
+    expect(html).toContain("★ 3.0 (2)");
+    expect(html).toContain('stroke="var(--chart-1)"');
+  });
+
+  it("shows no ratings section before the first rating", () => {
+    expect(renderRecipe(catalogRecipe(), [])).not.toContain("ratings</h2>");
   });
 });

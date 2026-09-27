@@ -6,7 +6,7 @@
 // it only unions into the reported status (see `unionAllergenStatus`). Every
 // route sits behind requireAuth and every baby/meal lookup is scoped to the
 // caller's own rows — a miss (wrong owner or unknown id) is 404, never 403.
-import { and, desc, eq, inArray, isNull, lt, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   allergenDetailParamsSchema,
@@ -16,17 +16,26 @@ import {
   markAllergenEstablishedInputSchema,
   mealIdParamSchema,
   mealsQuerySchema,
+  ratingHistoryQuerySchema,
   updateMealInputSchema,
   type AllergenDetail,
   type AllergenProgressResponse,
   type MealsResponse,
+  type RatingHistoryResponse,
+  type RatingsResponse,
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
 import { allergenOverrides, allergens, babies, foods, mealFoods, meals, recipes } from "../db/schema.js";
 import { loadAllergenDetail, loadAllergenProgress } from "../services/allergens.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
-import { insertMealWithFoods, loadMeals, ownsBaby } from "../services/meals.js";
+import {
+  insertMealWithFoods,
+  loadMeals,
+  loadRatingHistory,
+  loadRatingSummaries,
+  ownsBaby,
+} from "../services/meals.js";
 
 const DEFAULT_LIMIT = 50;
 
@@ -121,6 +130,33 @@ async function validateRecipeId(db: Database, recipeId: string, userId: string):
   return { ok: true, value: recipeId };
 }
 
+/**
+ * Item 572: a rating must fit the meal it lands on. A loose-food meal (no
+ * recipe) is rated per food, and each rated food must be on the meal; a
+ * recipe meal is rated once, as the recipe. A misplaced rating is a 400
+ * rather than silently dropped — the parent tapped it, so losing it quietly
+ * would be the worse failure. `null` (clear) is always accepted: clearing a
+ * rating that cannot exist is already true.
+ */
+function validateRatings(
+  recipeId: string | null,
+  foodIds: readonly string[],
+  foodRatings: Record<string, number | null> | undefined,
+  recipeRating: number | null | undefined,
+): Validated<null> {
+  const rated = Object.entries(foodRatings ?? {}).filter(([, rating]) => rating !== null);
+  if (recipeId !== null && rated.length > 0) {
+    return { ok: false, details: { foodRatings: "a recipe meal is rated as a recipe, not per food" } };
+  }
+  if (recipeId === null && recipeRating != null) {
+    return { ok: false, details: { recipeRating: "only a recipe meal has a recipe rating" } };
+  }
+  const onMeal = new Set(foodIds);
+  const strays = rated.filter(([foodId]) => !onMeal.has(foodId)).map(([foodId]) => foodId);
+  if (strays.length > 0) return { ok: false, details: { foodRatings: "food is not on this meal", strays } };
+  return { ok: true, value: null };
+}
+
 export function registerMealRoutes(app: FastifyInstance, db: Database): void {
   // -----------------------------------------------------------------------
   // GET /api/babies/:babyId/meals
@@ -173,6 +209,9 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
       if (!recipe.ok) return badRequest(reply, recipe.details);
     }
 
+    const ratings = validateRatings(body.data.recipeId, children.value, body.data.foodRatings, body.data.recipeRating);
+    if (!ratings.ok) return badRequest(reply, ratings.details);
+
     const servedAt = body.data.servedAt ? new Date(body.data.servedAt) : new Date();
 
     // One transaction so a meal is all-or-nothing: either the meal and every
@@ -185,7 +224,8 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
         servedAt,
         reactionNote: body.data.reactionNote,
         notes: body.data.notes,
-        foods: children.value.map((foodId) => ({ foodId })),
+        recipeRating: body.data.recipeRating,
+        foods: children.value.map((foodId) => ({ foodId, rating: body.data.foodRatings?.[foodId] ?? null })),
       }),
     );
 
@@ -202,7 +242,7 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     if (!params.success) return notFound(reply);
 
     const [existing] = await db
-      .select({ id: meals.id })
+      .select({ id: meals.id, recipeId: meals.recipeId })
       .from(meals)
       .where(ownedMealCondition(db, params.data.id, currentUserId(request)))
       .limit(1);
@@ -211,13 +251,13 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     const body = updateMealInputSchema.safeParse(request.body);
     if (!body.success) return badRequest(reply, body.error.flatten());
 
+    const onMeal = await db
+      .select({ foodId: mealFoods.foodId })
+      .from(mealFoods)
+      .where(eq(mealFoods.mealId, existing.id));
+    const kept = new Set(onMeal.map((row) => row.foodId));
     let foodIds: string[] | null = null;
     if (body.data.foodIds) {
-      const onMeal = await db
-        .select({ foodId: mealFoods.foodId })
-        .from(mealFoods)
-        .where(eq(mealFoods.mealId, existing.id));
-      const kept = new Set(onMeal.map((row) => row.foodId));
       const children = await validateFoodIds(db, body.data.foodIds, currentUserId(request), kept);
       if (!children.ok) return badRequest(reply, children.details);
       foodIds = children.value;
@@ -228,6 +268,16 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
       if (!recipe.ok) return badRequest(reply, recipe.details);
     }
 
+    // Ratings are checked against the meal as it will be AFTER this edit.
+    const finalRecipeId = body.data.recipeId !== undefined ? body.data.recipeId : existing.recipeId;
+    const ratings = validateRatings(
+      finalRecipeId,
+      foodIds ?? [...kept],
+      body.data.foodRatings,
+      body.data.recipeRating,
+    );
+    if (!ratings.ok) return badRequest(reply, ratings.details);
+
     // One transaction so the column updates and the child replacement can
     // never be observed half-applied.
     await db.transaction(async (tx) => {
@@ -236,6 +286,10 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
       if (body.data.reactionNote !== undefined) columns.reactionNote = body.data.reactionNote;
       if (body.data.notes !== undefined) columns.notes = body.data.notes;
       if (body.data.recipeId !== undefined) columns.recipeId = body.data.recipeId;
+      // A recipe rating belongs to the recipe it was given for: a changed or
+      // removed recipe drops it unless this same edit rates the new one.
+      if (body.data.recipeRating !== undefined) columns.recipeRating = body.data.recipeRating;
+      else if (finalRecipeId !== existing.recipeId) columns.recipeRating = null;
       if (Object.keys(columns).length > 0) {
         await tx.update(meals).set(columns).where(eq(meals.id, existing.id));
       }
@@ -247,19 +301,40 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
         // food swapped in during the edit was not served from anywhere and
         // gets null. Read before the delete — the rows are gone after it.
         const previous = await tx
-          .select({ foodId: mealFoods.foodId, storageItemId: mealFoods.storageItemId })
+          .select({ foodId: mealFoods.foodId, storageItemId: mealFoods.storageItemId, rating: mealFoods.rating })
           .from(mealFoods)
           .where(eq(mealFoods.mealId, existing.id));
-        const storageItemIdByFoodId = new Map(previous.map((row) => [row.foodId, row.storageItemId]));
+        const previousByFoodId = new Map(previous.map((row) => [row.foodId, row]));
 
         await tx.delete(mealFoods).where(eq(mealFoods.mealId, existing.id));
         await tx.insert(mealFoods).values(
           foodIds.map((foodId) => ({
             mealId: existing.id,
             foodId,
-            storageItemId: storageItemIdByFoodId.get(foodId) ?? null,
+            // Ratings ride along the same way, so editing a meal's foods
+            // never silently wipes what the parent rated.
+            storageItemId: previousByFoodId.get(foodId)?.storageItemId ?? null,
+            rating: previousByFoodId.get(foodId)?.rating ?? null,
           })),
         );
+      }
+
+      if (finalRecipeId !== null) {
+        // Turned into a recipe meal: its per-food ratings no longer apply
+        // (validateRatings already refused new ones).
+        if (existing.recipeId === null) {
+          await tx
+            .update(mealFoods)
+            .set({ rating: null })
+            .where(and(eq(mealFoods.mealId, existing.id), isNotNull(mealFoods.rating)));
+        }
+      } else {
+        for (const [foodId, rating] of Object.entries(body.data.foodRatings ?? {})) {
+          await tx
+            .update(mealFoods)
+            .set({ rating })
+            .where(and(eq(mealFoods.mealId, existing.id), eq(mealFoods.foodId, foodId)));
+        }
       }
     });
 
@@ -283,6 +358,38 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
 
     if (deleted.length === 0) return notFound(reply);
     return reply.code(204).send();
+  });
+
+  // -----------------------------------------------------------------------
+  // GET /api/babies/:babyId/ratings
+  // -----------------------------------------------------------------------
+  // Item 573: this baby's average / count / latest per food and per recipe,
+  // for the Foods and Recipes cards and their rating sorts. Separate from the
+  // catalog lists on purpose: those are shared across babies (and the foods
+  // list across signed-out visitors), and a rating is always one baby's.
+  app.get("/api/babies/:babyId/ratings", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = babyIdRouteParamSchema.safeParse(request.params);
+    if (!params.success) return notFound(reply);
+    if (!(await ownsBaby(db, params.data.babyId, currentUserId(request)))) return notFound(reply);
+
+    return reply.send((await loadRatingSummaries(db, params.data.babyId)) satisfies RatingsResponse);
+  });
+
+  // -----------------------------------------------------------------------
+  // GET /api/babies/:babyId/ratings/history?foodId=|recipeId=
+  // -----------------------------------------------------------------------
+  // The points of one food's or recipe's rating graph, oldest first. An id
+  // the baby never rated (or cannot see) is simply an empty series.
+  app.get("/api/babies/:babyId/ratings/history", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = babyIdRouteParamSchema.safeParse(request.params);
+    if (!params.success) return notFound(reply);
+    if (!(await ownsBaby(db, params.data.babyId, currentUserId(request)))) return notFound(reply);
+
+    const query = ratingHistoryQuerySchema.safeParse(request.query);
+    if (!query.success) return badRequest(reply, query.error.flatten());
+
+    const points = await loadRatingHistory(db, params.data.babyId, query.data);
+    return reply.send({ points } satisfies RatingHistoryResponse);
   });
 
   // -----------------------------------------------------------------------

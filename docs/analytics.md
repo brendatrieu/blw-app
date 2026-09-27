@@ -62,7 +62,7 @@ six buckets is as much as it can ever carry.
 | `meal_save_failed` | a meal create/edit/serve that failed | `via`, `kind`, `offline` |
 | `storage_item_added` | a container saved (one event per container, so a "Separate containers" save of three foods sends three) | `location`, `source`, `via`, `has_servings`, `has_best_by`, `food_count` (food containers only), `split` |
 | `storage_item_closed` | a status change, including restore and undo | `to`, `via`, `freshness_at_change`, `age_days_bucket` |
-| `catalog_filtered` | a Foods/Recipes query resolved after a filter or search change (debounced 800 ms) | `catalog`, `filters` (keys only), `has_query`, `results`, `zero_results` |
+| `catalog_filtered` | a Foods/Recipes query resolved after a filter or search change (debounced 800 ms) | `catalog`, `filters` (keys only; `sort` = a rating sort was on, never which), `has_query`, `results`, `zero_results` |
 | `article_viewed` | a Learn article mounts | `article` (closed slug set), `from_route` |
 | `symptom_check_started` | the first change on the symptom survey | — |
 | `ai_key_saved` | the Settings key form answers | `outcome`, `attempt` |

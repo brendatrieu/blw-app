@@ -1,11 +1,15 @@
 import { useMemo, useState } from "react";
-import type { RecipeListItem, RecipeScope } from "@blw/shared";
+import type { RatingSummary, RecipeListItem, RecipeScope } from "@blw/shared";
 import type { RecipeFilters } from "../api.js";
 import { AGE_THRESHOLDS, ALLERGEN_SLUGS, RECIPE_SCOPES, allergenLabel } from "../constants.js";
 import { useFoods, useRecipes } from "../hooks.js";
 import { useCatalogFilteredEvent } from "../../../lib/usage/useCatalogFiltered.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../basicRecipe.js";
-import { ActiveFilterPill, FilterChip, FunnelButton } from "./filters.js";
+import { ActiveFilterPill, FilterChip, FunnelButton, RatingSortGroup } from "./filters.js";
+import { ratingSortLabel, sortByRating, type RatingSort } from "../ratingSort.js";
+import { useActiveBaby } from "../../babies/useActiveBaby.js";
+import { useRatings } from "../../tracking/hooks.js";
+import { RatingSummaryText } from "../../../components/ui/StarRating.js";
 import { SingleFoodPicker } from "./FoodPicker.js";
 import { Badge } from "./Badge.js";
 import { FoodNames } from "./DeletedMark.js";
@@ -25,7 +29,7 @@ import { SkeletonList } from "../../../components/ui/Skeleton.js";
  * Exported so a render test can pin every badge combination without needing
  * a server to produce one.
  */
-export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
+export function RecipeCard({ recipe, rating }: { recipe: RecipeListItem; rating?: RatingSummary }) {
   return (
     <CardLink to={`/recipes/${recipe.id}`} padding="sm" className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-2">
@@ -36,6 +40,7 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
           </span>
         )}
       </div>
+      <RatingSummaryText summary={rating} />
       {recipe.ingredientNames.length > 0 && (
         <p className="truncate text-xs text-[var(--color-text-muted)]">
           <FoodNames
@@ -90,6 +95,8 @@ export interface ExtraRecipeFilters {
   vitaminCHigh: boolean;
   fiberHigh: boolean;
   ingredientFoodId: string;
+  /** Item 576: a rating sort for the active baby, applied client-side. */
+  sort?: RatingSort;
 }
 
 export type ExtraRecipeFilterKey = keyof ExtraRecipeFilters;
@@ -104,6 +111,7 @@ export const EMPTY_RECIPE_FILTERS: ExtraRecipeFilters = {
   vitaminCHigh: false,
   fiberHigh: false,
   ingredientFoodId: "",
+  sort: undefined,
 };
 
 /** The raw filter state the Recipes segment's controls hold. */
@@ -157,6 +165,7 @@ export function activeRecipeFilters(
   if (filters.ingredientFoodId) {
     pills.push({ key: "ingredientFoodId", label: ingredientName ?? "Ingredient" });
   }
+  if (filters.sort) pills.push({ key: "sort", label: ratingSortLabel(filters.sort) });
   return pills;
 }
 
@@ -171,6 +180,8 @@ export function RecipeFilterGroups({ onChange, ...filters }: RecipeFilterGroupsP
 
   return (
     <>
+      <RatingSortGroup value={filters.sort} onChange={(sort) => set({ sort })} />
+
       <div className="flex flex-col gap-1.5">
         <span className="text-xs font-medium text-[var(--color-text-muted)]">Age</span>
         <div className="flex flex-wrap gap-1.5">
@@ -254,8 +265,16 @@ export function RecipesSegment() {
   const filters = useMemo(() => buildRecipesFilters({ q, scope, ...extra }), [q, scope, extra]);
 
   const { data, isLoading, isError } = useRecipes(filters);
+  // Item 575/576 — see FoodsPage: ratings joined by id, sort applied here.
+  const { activeBaby } = useActiveBaby();
+  const { data: ratings } = useRatings(activeBaby?.id);
+  const shownRecipes = useMemo(
+    () => sortByRating(data?.recipes ?? [], extra.sort, (recipe) => ratings?.recipes[recipe.id]),
+    [data, extra.sort, ratings],
+  );
   // `catalog_filtered` — see FoodsPage; the same hook, the same debounce.
-  useCatalogFilteredEvent({ catalog: "recipes", filters, resultCount: data?.recipes.length });
+  const reported = useMemo(() => ({ ...filters, sort: extra.sort }), [filters, extra.sort]);
+  useCatalogFilteredEvent({ catalog: "recipes", filters: reported, resultCount: data?.recipes.length });
   // Only to name the picked ingredient in its pill; the picker itself reads
   // the same (deduplicated) query.
   const { data: foodsData } = useFoods();
@@ -312,8 +331,8 @@ export function RecipesSegment() {
 
       {data && data.recipes.length > 0 && (
         <div className="flex flex-col gap-2">
-          {data.recipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
+          {shownRecipes.map((recipe) => (
+            <RecipeCard key={recipe.id} recipe={recipe} rating={ratings?.recipes[recipe.id]} />
           ))}
         </div>
       )}

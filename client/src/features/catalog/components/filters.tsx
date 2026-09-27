@@ -1,3 +1,5 @@
+import { RATING_SORTS, type RatingSort } from "../ratingSort.js";
+
 interface FilterChipProps {
   active: boolean;
   label: string;
@@ -81,5 +83,31 @@ export function FunnelButton({ onClick, activeCount }: FunnelButtonProps) {
         </span>
       )}
     </button>
+  );
+}
+
+/** Item 576: the "Sort" chips, shared by the Foods and Recipes filter
+ * sheets. Tapping the active chip goes back to the usual order. */
+export function RatingSortGroup({
+  value,
+  onChange,
+}: {
+  value: RatingSort | undefined;
+  onChange: (sort: RatingSort | undefined) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-[var(--color-text-muted)]">Sort</span>
+      <div className="flex flex-wrap gap-1.5">
+        {RATING_SORTS.map((opt) => (
+          <FilterChip
+            key={opt.value}
+            label={opt.label}
+            active={opt.value === value}
+            onClick={() => onChange(opt.value === value ? undefined : opt.value)}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

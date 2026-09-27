@@ -607,3 +607,40 @@ describe("initialFoodIds prefill (log meal from a food page)", () => {
     expect(html).not.toContain('aria-label="Remove Banana"');
   });
 });
+
+describe("LogFoodForm ratings (item 574)", () => {
+  const base: MealItem = {
+    id: "meal-1",
+    babyId: "baby-1",
+    servedAt: new Date(2026, 8, 20, 8, 30).toISOString(),
+    reactionNote: null,
+    notes: null,
+    recipeId: null,
+    recipeTitle: null,
+    foods: [
+      { id: "food-1", slug: "avocado", name: "Avocado", category: "fruit", storageItemId: null, rating: 4 },
+      { id: "food-2", slug: "banana", name: "Banana", category: "fruit", storageItemId: null, rating: null },
+    ],
+  };
+  const render = (meal: MealItem) =>
+    renderWithProviders(createElement(LogFoodForm, { babyId: "baby-1", meal, onDone: () => {} }));
+
+  it("puts the stars after When and ABOVE the reaction note, one row per food on a loose-food meal", () => {
+    const html = render(base);
+    const stars = html.indexOf("Rating (optional)");
+    expect(stars).toBeGreaterThan(html.indexOf('id="log-food-when"'));
+    expect(stars).toBeLessThan(html.indexOf(">Reaction<!-- -->"));
+    expect(html).toContain('aria-label="Rating for Avocado"');
+    expect(html).toContain('aria-label="Rating for Banana"');
+    expect(html).toMatch(/aria-checked="true" aria-label="4 stars"/);
+    expect(html.match(/aria-checked="true"/g)).toHaveLength(1);
+  });
+
+  it("shows one row, for the recipe, on a recipe meal", () => {
+    const html = render({ ...base, recipeId: "11111111-1111-4111-8111-111111111111", recipeTitle: "Mash", recipeRating: 2 });
+    expect(html.match(/role="radiogroup"/g)).toHaveLength(1);
+    expect(html).toContain('aria-label="Rating for Mash"');
+    expect(html).not.toContain('aria-label="Rating for Avocado"');
+    expect(html).toMatch(/aria-checked="true" aria-label="2 stars"/);
+  });
+});

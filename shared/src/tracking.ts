@@ -96,6 +96,21 @@ export type MealsQuery = z.infer<typeof mealsQuerySchema>;
  */
 export const mealFoodIdsSchema = z.array(z.string().uuid()).min(1).max(25);
 
+/**
+ * Item 572: a baby's star rating, a whole number of stars from 1 to 5.
+ * "Not rated" is `null`, never 0 — there is no 0-star state anywhere.
+ */
+export const STAR_RATING_MAX = 5;
+export const starRatingSchema = z.number().int().min(1).max(STAR_RATING_MAX);
+
+/**
+ * Per-food ratings on a LOOSE-FOOD meal (no recipe), keyed by food id; `null`
+ * clears. A recipe meal is rated once, as a recipe (`recipeRating`), and the
+ * route refuses a food rating on it — as it refuses a recipe rating on a
+ * loose-food meal — rather than silently dropping what the parent tapped.
+ */
+const foodRatingsSchema = z.record(z.string().uuid(), starRatingSchema.nullable());
+
 export const createMealInputSchema = z.object({
   foodIds: mealFoodIdsSchema,
   /** Attribution only — never expanded into foods server-side. */
@@ -109,6 +124,10 @@ export const createMealInputSchema = z.object({
   reactionNote: optionalReactionNote,
   /** General note — never read as a reaction signal. See `optionalNotes`. */
   notes: optionalNotes,
+  foodRatings: foodRatingsSchema.optional(),
+  recipeRating: starRatingSchema
+    .nullish()
+    .transform((value) => value ?? null),
 });
 export type CreateMealInput = z.input<typeof createMealInputSchema>;
 
@@ -133,6 +152,11 @@ export const updateMealInputSchema = z
     servedAt: servedAtSchema.optional(),
     reactionNote: patchReactionNote,
     notes: patchNotes,
+    /** Merged per food: a food absent from the map keeps its rating. A food
+     * that survives a `foodIds` replacement keeps its rating too. */
+    foodRatings: foodRatingsSchema.optional(),
+    /** Cleared server-side whenever the recipe changes without a new one. */
+    recipeRating: starRatingSchema.nullable().optional(),
   })
   .refine((value) => Object.values(value).some((field) => field !== undefined), {
     message: "At least one field must be provided",
@@ -166,6 +190,9 @@ export const mealFoodSchema = z.object({
    * keeps its allergen chips even after the food is deleted (and so hidden
    * from the foods list). Optional so an older cached body still parses. */
   allergens: z.array(z.string()).optional(),
+  /** This food's rating on a loose-food meal; always null on a recipe meal.
+   * Optional so an older cached body still parses. */
+  rating: starRatingSchema.nullable().optional(),
 });
 export type MealFood = z.infer<typeof mealFoodSchema>;
 
@@ -178,6 +205,9 @@ export const mealItemSchema = z.object({
   notes: z.string().nullable(),
   recipeId: z.string().uuid().nullable(),
   recipeTitle: z.string().nullable(),
+  /** The recipe's rating on a recipe meal; always null on a loose-food meal.
+   * Optional so an older cached body still parses. */
+  recipeRating: starRatingSchema.nullable().optional(),
   /** Always at least one food, ordered by name for a stable render. */
   foods: z.array(mealFoodSchema),
 });
@@ -185,6 +215,45 @@ export type MealItem = z.infer<typeof mealItemSchema>;
 
 export const mealsResponseSchema = z.object({ items: z.array(mealItemSchema) });
 export type MealsResponse = z.infer<typeof mealsResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// GET /api/babies/:babyId/ratings (+ /history)
+// ---------------------------------------------------------------------------
+
+/**
+ * Item 573: one baby's ratings of one food or recipe. A food's summary counts
+ * only its ratings on LOOSE-FOOD meals — a recipe's rating never counts
+ * toward its ingredient foods. `latest` is the rating on the most recently
+ * served rated meal, and `lastRatedAt` is when that meal was served.
+ */
+export const ratingSummarySchema = z.object({
+  average: z.number(),
+  count: z.number().int().min(1),
+  latest: starRatingSchema,
+  lastRatedAt: z.string(),
+});
+export type RatingSummary = z.infer<typeof ratingSummarySchema>;
+
+/** Summaries keyed by food id and by recipe id; an unrated item is absent. */
+export const ratingsResponseSchema = z.object({
+  foods: z.record(z.string().uuid(), ratingSummarySchema),
+  recipes: z.record(z.string().uuid(), ratingSummarySchema),
+});
+export type RatingsResponse = z.infer<typeof ratingsResponseSchema>;
+
+/** Exactly one of the two: the history of one food or of one recipe. */
+export const ratingHistoryQuerySchema = z
+  .object({ foodId: z.string().uuid().optional(), recipeId: z.string().uuid().optional() })
+  .refine((value) => (value.foodId === undefined) !== (value.recipeId === undefined), {
+    message: "Exactly one of foodId or recipeId",
+  });
+export type RatingHistoryQuery = z.infer<typeof ratingHistoryQuerySchema>;
+
+/** Every rating, oldest meal first — the points of the detail-page graph. */
+export const ratingHistoryResponseSchema = z.object({
+  points: z.array(z.object({ servedAt: z.string(), rating: starRatingSchema })),
+});
+export type RatingHistoryResponse = z.infer<typeof ratingHistoryResponseSchema>;
 
 // ---------------------------------------------------------------------------
 // GET /api/babies/:babyId/allergen-progress

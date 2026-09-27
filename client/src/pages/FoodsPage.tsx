@@ -2,9 +2,12 @@ import { useMemo, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import type { FoodCategory, FoodsQuery, Level } from "@blw/shared";
 import { useFoods } from "../features/catalog/hooks.js";
+import { useActiveBaby } from "../features/babies/useActiveBaby.js";
+import { useRatings } from "../features/tracking/hooks.js";
+import { ratingSortLabel, sortByRating, type RatingSort } from "../features/catalog/ratingSort.js";
 import { useCatalogFilteredEvent } from "../lib/usage/useCatalogFiltered.js";
 import { FoodTile } from "../features/catalog/components/FoodTile.js";
-import { ActiveFilterPill, FilterChip, FunnelButton } from "../features/catalog/components/filters.js";
+import { ActiveFilterPill, FilterChip, FunnelButton, RatingSortGroup } from "../features/catalog/components/filters.js";
 import {
   ALLERGEN_SLUGS,
   AGE_THRESHOLDS,
@@ -60,6 +63,9 @@ export interface ExtraFoodFilters {
   /** Foods › Deleted: ONLY the parent's own deleted custom foods, each
    * opening its read-only page with Restore (ledger 544). */
   deleted: boolean | undefined;
+  /** Item 576: a rating sort for the active baby. Client-side only — the
+   * server returns the usual order and `sortByRating` reorders it. */
+  sort?: RatingSort;
 }
 
 export type ExtraFoodFilterKey = keyof ExtraFoodFilters;
@@ -72,6 +78,7 @@ export const EMPTY_EXTRA_FILTERS: ExtraFoodFilters = {
   fiberLevel: undefined,
   maxAgeMonths: undefined,
   deleted: undefined,
+  sort: undefined,
 };
 
 const LEVEL_VALUES = ["high", "moderate", "low"] as const;
@@ -153,6 +160,7 @@ export function activeExtraFilters(filters: ExtraFoodFilters): Array<{ key: Extr
     if (ageLabel) pills.push({ key: "maxAgeMonths", label: ageLabel });
   }
   if (filters.deleted) pills.push({ key: "deleted", label: "Deleted" });
+  if (filters.sort) pills.push({ key: "sort", label: ratingSortLabel(filters.sort) });
   return pills;
 }
 
@@ -185,6 +193,8 @@ export function FoodFilterGroups({ onChange, ...filters }: FoodFilterGroupsProps
 
   return (
     <>
+      <RatingSortGroup value={filters.sort} onChange={(sort) => set({ sort })} />
+
       <div className="flex flex-col gap-1.5">
         <span className="text-xs font-medium text-[var(--color-text-muted)]">Allergen</span>
         <div className="flex flex-wrap gap-1.5">
@@ -256,18 +266,29 @@ export function FoodsPage() {
   const [fiberLevel, setFiberLevel] = useState<Level | undefined>(initial.fiberLevel);
   const [maxAgeMonths, setMaxAgeMonths] = useState<number | undefined>(initial.maxAgeMonths);
   const [deleted, setDeleted] = useState<boolean | undefined>(initial.deleted);
+  const [sort, setSort] = useState<RatingSort | undefined>(initial.sort);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const extraFilters = useMemo<ExtraFoodFilters>(
-    () => ({ allergen, ironLevel, vitaminCLevel, fiberLevel, maxAgeMonths, deleted }),
-    [allergen, ironLevel, vitaminCLevel, fiberLevel, maxAgeMonths, deleted],
+    () => ({ allergen, ironLevel, vitaminCLevel, fiberLevel, maxAgeMonths, deleted, sort }),
+    [allergen, ironLevel, vitaminCLevel, fiberLevel, maxAgeMonths, deleted, sort],
   );
   const filters = useMemo(() => buildFoodsFilters(q, category, extraFilters), [q, category, extraFilters]);
 
   const { data, isLoading, isError } = useFoods(filters);
+  // Item 575/576: the active baby's ratings, fetched apart from the catalog
+  // list (which is the same for every baby) and joined here by food id.
+  const { activeBaby } = useActiveBaby();
+  const { data: ratings } = useRatings(activeBaby?.id);
+  const shownFoods = useMemo(
+    () => sortByRating(data?.foods ?? [], sort, (food) => ratings?.foods[food.id]),
+    [data, sort, ratings],
+  );
   // `catalog_filtered`, once a changed filter set has actually resolved
   // (item 320). Keys and a results bucket only — never the search text.
-  useCatalogFilteredEvent({ catalog: "foods", filters, resultCount: data?.foods.length });
+  // The sort rides along as a key; the baby never does.
+  const reported = useMemo(() => ({ ...filters, sort }), [filters, sort]);
+  useCatalogFilteredEvent({ catalog: "foods", filters: reported, resultCount: data?.foods.length });
 
   const pills = activeExtraFilters(extraFilters);
   const activeExtraFilterCount = pills.length;
@@ -278,6 +299,7 @@ export function FoodsPage() {
     setFiberLevel(next.fiberLevel);
     setMaxAgeMonths(next.maxAgeMonths);
     setDeleted(next.deleted);
+    setSort(next.sort);
   }
   const clearExtra = (key: ExtraFoodFilterKey) => applyExtra({ ...extraFilters, [key]: undefined });
 
@@ -334,8 +356,8 @@ export function FoodsPage() {
 
       {data && data.foods.length > 0 && (
         <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-          {data.foods.map((food) => (
-            <FoodTile key={food.slug} food={food} />
+          {shownFoods.map((food) => (
+            <FoodTile key={food.slug} food={food} rating={ratings?.foods[food.id]} />
           ))}
         </div>
       )}

@@ -3,7 +3,11 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
+import type { Baby, FoodListItem } from "@blw/shared";
 import { RECIPES_TAB_PATH, addCustomFoodLabel } from "../features/catalog/constants.js";
+import { babyKeys } from "../features/babies/api.js";
+import { catalogKeys } from "../features/catalog/hooks.js";
+import { trackingKeys } from "../features/tracking/hooks.js";
 import {
   FoodsPage,
   FoodsRoute,
@@ -364,9 +368,64 @@ describe("buildFoodsFilters (what the grid actually requests)", () => {
       "fiberLevel",
       "ironLevel",
       "maxAgeMonths",
+      "sort",
       "vitaminCLevel",
     ]);
     expect(Object.values(EMPTY_EXTRA_FILTERS).every((v) => v === undefined)).toBe(true);
     expect(activeExtraFilters(EMPTY_EXTRA_FILTERS)).toEqual([]);
+  });
+});
+
+describe("ratings on the Foods grid (items 575-576)", () => {
+  const BABY: Baby = {
+    id: "baby-1",
+    name: "Robin",
+    birthDate: "2026-01-01",
+    notes: null,
+    archived: false,
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+  const food = (id: string, name: string): FoodListItem => ({
+    id,
+    slug: name.toLowerCase(),
+    name,
+    category: "fruit",
+    ironLevel: "low",
+    vitaminCLevel: "low",
+    fiberLevel: "low",
+    chokingRisk: "low",
+    minAgeMonths: 6,
+    allergens: [],
+    isCustom: false,
+    emoji: null,
+  });
+
+  it("shows the active baby's average on rated tiles only", () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(babyKeys.list(false), [BABY]);
+    queryClient.setQueryData(catalogKeys.foodsList({}), { foods: [food("f1", "Apple"), food("f2", "Banana")] });
+    queryClient.setQueryData(trackingKeys.ratings(BABY.id), {
+      foods: { f2: { average: 4.2, count: 5, latest: 4, lastRatedAt: "2026-09-27T12:00:00.000Z" } },
+      recipes: {},
+    });
+    const html = renderToString(
+      createElement(QueryClientProvider, { client: queryClient }, createElement(MemoryRouter, null, createElement(FoodsPage, null))),
+    );
+    expect(html.match(/★ 4\.2 \(5\)/g)).toHaveLength(1);
+    // On Banana's tile, not Apple's.
+    expect(html.indexOf("★ 4.2 (5)")).toBeGreaterThan(html.indexOf("Banana"));
+  });
+
+  it("offers the two rating sorts in the Filters sheet, and a pill names the active one", () => {
+    const html = renderToString(createElement(FoodFilterGroups, { ...EMPTY_EXTRA_FILTERS, sort: "recent", onChange: () => {} }));
+    expect(html).toContain(">Sort<");
+    expect(html).toMatch(/aria-pressed="false"[^>]*>Highest rated</);
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Most recently rated</);
+    expect(activeExtraFilters({ ...EMPTY_EXTRA_FILTERS, sort: "highest" })).toEqual([{ key: "sort", label: "Highest rated" }]);
+    // The sort is not a server filter: the request is unchanged by it.
+    expect(buildFoodsFilters("", undefined, { ...EMPTY_EXTRA_FILTERS, sort: "highest" })).toEqual(
+      buildFoodsFilters("", undefined, EMPTY_EXTRA_FILTERS),
+    );
   });
 });

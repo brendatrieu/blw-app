@@ -49,19 +49,37 @@ interface LineProps {
   summary: string;
   /** Names the measure in the table and the end label, e.g. "Parents". */
   valueHeader: string;
+  /** Names the table's first column — what one point is. */
+  labelHeader?: string;
+  /** A fixed top for a bounded scale (5 for star ratings), with one gridline
+   * per whole step; omitted, the axis grows to fit the data. */
+  fixedMax?: number;
 }
 
-export function Line({ points, markers = [], title, summary, valueHeader }: LineProps) {
+export function Line({
+  points,
+  markers = [],
+  title,
+  summary,
+  valueHeader,
+  labelHeader = "Week",
+  fixedMax,
+}: LineProps) {
   const values = points.map((point) => point.value);
-  const max = axisMax(Math.max(0, ...values));
-  const ticks = niceTicks(Math.max(0, ...values));
+  const top = fixedMax ?? Math.max(0, ...values);
+  const tickCount = fixedMax ?? 4;
+  const max = axisMax(top, tickCount);
+  const ticks = niceTicks(top, tickCount);
   const box = { width: PLOT_W, height: PLOT_H, max };
   const labelled = new Set(axisLabelIndexes(points.length, 4));
   const last = points.length - 1;
   const lastY = PAD_T + valueToY(values[last] ?? 0, max, PLOT_H);
+  const lastX = round(GUTTER_L + pointX(last, points.length, PLOT_W));
+  // A lone point sits mid-plot: its value and date centre on it, not on the edges.
+  const single = points.length === 1;
 
   const table: ChartTable = {
-    columns: markers.length > 0 ? ["Week", valueHeader, "Deploys"] : ["Week", valueHeader],
+    columns: markers.length > 0 ? [labelHeader, valueHeader, "Deploys"] : [labelHeader, valueHeader],
     rows: points.map((point, index) => {
       const inWeek = markers.filter((marker) => Math.floor(marker.at) === index).map((marker) => marker.label);
       return {
@@ -135,7 +153,7 @@ export function Line({ points, markers = [], title, summary, valueHeader }: Line
         <>
           {/* 2px surface ring, so the end dot stays legible wherever it lands. */}
           <circle
-            cx={round(GUTTER_L + pointX(last, points.length, PLOT_W))}
+            cx={lastX}
             cy={round(lastY)}
             r={4}
             fill="var(--chart-1)"
@@ -145,9 +163,9 @@ export function Line({ points, markers = [], title, summary, valueHeader }: Line
           {/* One direct label — the endpoint. Flips below the line rather than
               being clipped when the series finishes at the top of the plot. */}
           <text
-            x={VIEW_W - PAD_R}
+            x={single ? lastX : VIEW_W - PAD_R}
             y={round(lastY < PAD_T + 14 ? lastY + 14 : lastY - 8)}
-            textAnchor="end"
+            textAnchor={single ? "middle" : "end"}
             fontSize={11}
             fontWeight={700}
             fill="var(--color-text)"
@@ -160,10 +178,10 @@ export function Line({ points, markers = [], title, summary, valueHeader }: Line
       {points.map((point, index) =>
         labelled.has(index) ? (
           <text
-            key={point.label}
+            key={index}
             x={round(GUTTER_L + pointX(index, points.length, PLOT_W))}
             y={VIEW_H - 5}
-            textAnchor={index === 0 ? "start" : index === last ? "end" : "middle"}
+            textAnchor={single ? "middle" : index === 0 ? "start" : index === last ? "end" : "middle"}
             fontSize={9}
             fill="var(--color-text-muted)"
           >

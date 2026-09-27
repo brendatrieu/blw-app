@@ -554,7 +554,7 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(16);
+    expect(bundle.exportVersion).toBe(17);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -705,7 +705,7 @@ describe("account export", () => {
     const bundle = accountExportSchema.parse(
       (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: user.cookie } })).json(),
     );
-    expect(bundle.exportVersion).toBe(16);
+    expect(bundle.exportVersion).toBe(17);
     expect(bundle.customFoods).toHaveLength(1);
     expect(bundle.customFoods[0]).toMatchObject({ id: food.id, name: "Satay sauce" });
     expect(Date.parse(bundle.customFoods[0]!.deletedAt!)).not.toBeNaN();

@@ -6,6 +6,7 @@ import type {
   FavoritesResponse,
   MealItem,
   MealsResponse,
+  RatingHistoryQuery,
   UpdateMealInput,
 } from "@blw/shared";
 import {
@@ -17,6 +18,8 @@ import {
   fetchAllergenProgress,
   fetchFavorites,
   fetchMeals,
+  fetchRatingHistory,
+  fetchRatings,
   putAllergenOverride,
   putFavorite,
   updateMeal,
@@ -43,6 +46,10 @@ export const trackingKeys = {
   allergenDetails: (babyId: string) => ["allergen-detail", babyId] as const,
   allergenDetail: (babyId: string, allergenSlug: string) => ["allergen-detail", babyId, allergenSlug] as const,
   favorites: ["favorites"] as const,
+  /** Prefix: the summaries AND every cached history for one baby, so a meal
+   * mutation refreshes both with one invalidation. */
+  ratings: (babyId: string) => ["ratings", babyId] as const,
+  ratingHistory: (babyId: string, target: RatingHistoryQuery) => ["ratings", babyId, "history", target] as const,
 };
 
 /** Every query that has to change when this baby's allergen picture does:
@@ -71,6 +78,26 @@ export function useAllergenDetail(babyId: string | undefined, allergenSlug: stri
     queryKey: trackingKeys.allergenDetail(babyId ?? "", allergenSlug ?? ""),
     queryFn: () => fetchAllergenDetail(babyId as string, allergenSlug as string),
     enabled: Boolean(babyId && allergenSlug),
+    staleTime: 15_000,
+  });
+}
+
+/** Item 573: this baby's rating summaries for the Foods / Recipes cards. */
+export function useRatings(babyId: string | undefined) {
+  return useQuery({
+    queryKey: trackingKeys.ratings(babyId ?? ""),
+    queryFn: () => fetchRatings(babyId as string),
+    enabled: Boolean(babyId),
+    staleTime: 15_000,
+  });
+}
+
+/** Item 575: the points of one food's or recipe's rating graph. */
+export function useRatingHistory(babyId: string | undefined, target: RatingHistoryQuery) {
+  return useQuery({
+    queryKey: trackingKeys.ratingHistory(babyId ?? "", target),
+    queryFn: () => fetchRatingHistory(babyId as string, target),
+    enabled: Boolean(babyId && (target.foodId || target.recipeId)),
     staleTime: 15_000,
   });
 }
@@ -266,6 +293,7 @@ export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
       invalidateAllergenQueries(queryClient, babyId);
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.ratings(babyId) });
     },
   });
 }
@@ -296,6 +324,7 @@ export function useUpdateMeal(babyId: string | undefined) {
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
       invalidateAllergenQueries(queryClient, babyId);
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.ratings(babyId) });
     },
   });
 }
@@ -322,6 +351,7 @@ export function useDeleteMeal(babyId: string | undefined) {
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
       invalidateAllergenQueries(queryClient, babyId);
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.ratings(babyId) });
     },
   });
 }

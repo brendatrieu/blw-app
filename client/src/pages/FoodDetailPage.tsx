@@ -16,6 +16,7 @@ import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe, sortBasicRecipesFirst } from "../features/catalog/basicRecipe.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useMeals } from "../features/tracking/hooks.js";
+import { RatingHistory } from "../features/tracking/components/RatingHistory.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { CardLink } from "../components/ui/Card.js";
@@ -273,6 +274,10 @@ export function FoodDetailPage() {
           {food.isCustom && <CustomFoodActions food={food} />}
         </>
       )}
+
+      {/* Item 575: loose-food meal ratings only — a recipe's rating never
+          counts toward this food. A deleted food keeps its history. */}
+      <RatingHistory target={{ foodId: food.id }} name={food.name} />
 
       {food.isCustom && (
         <p className="rounded-[var(--radius-lg)] bg-[var(--color-bg-inset)] p-4 text-sm text-[var(--color-text-muted)]">

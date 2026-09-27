@@ -75,7 +75,7 @@ describe("account export v16", () => {
   });
 
   it("bumped its version and carries usage events alongside the preferences", () => {
-    expect(ACCOUNT_EXPORT_VERSION).toBe(16);
+    expect(ACCOUNT_EXPORT_VERSION).toBe(17);
 
     const shape = accountExportSchema.shape;
     expect(shape.preferences.safeParse(null).success).toBe(true);

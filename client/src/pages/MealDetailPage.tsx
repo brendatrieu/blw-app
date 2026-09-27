@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import type { MealItem } from "@blw/shared";
-import { useMeals } from "../features/tracking/hooks.js";
+import { useMeals, useUpdateMeal } from "../features/tracking/hooks.js";
+import {
+  MealRatingsField,
+  RECIPE_RATING_KEY,
+  mealRatingRows,
+} from "../features/tracking/components/MealRatingsField.js";
 import { MealDeleteControl } from "../features/tracking/components/ServeLogList.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
@@ -54,10 +59,24 @@ export function MealDetailPage() {
   // History must not depend on the foods LIST, which hides a deleted food —
   // a past meal keeps that food's allergen chips.
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Item 574: the stars are this page's one inline edit; each tap saves like
+  // any other meal edit (PATCH), and shows the tapped value while it does.
+  const updateMeal = useUpdateMeal(activeBaby?.id);
   const goBack = useBackNavigate("/");
 
   const isLoading = babyLoading || mealsLoading;
   const meal = data?.items.find((candidate) => candidate.id === id) ?? null;
+
+  // While a tap is saving, show what was tapped rather than the old value.
+  const pending = updateMeal.isPending ? updateMeal.variables : undefined;
+  const pendingRecipeRating = (current: MealItem) =>
+    pending?.id === current.id && pending.input.recipeRating !== undefined
+      ? pending.input.recipeRating
+      : (current.recipeRating ?? null);
+  const pendingFoodRating = (current: MealItem, foodId: string) => {
+    const tapped = pending?.id === current.id ? pending.input.foodRatings?.[foodId] : undefined;
+    return tapped !== undefined ? tapped : (current.foods.find((food) => food.id === foodId)?.rating ?? null);
+  };
 
   if (isLoading) {
     return (
@@ -110,6 +129,25 @@ export function MealDetailPage() {
 
         {meal.recipeTitle && (
           <span className="text-xs font-medium text-[var(--color-text-muted)]">🍳 {meal.recipeTitle}</span>
+        )}
+
+        <MealRatingsField
+          rows={mealRatingRows(
+            meal.recipeId ? { title: meal.recipeTitle ?? "Recipe", rating: pendingRecipeRating(meal) } : null,
+            meal.foods,
+            Object.fromEntries(meal.foods.map((food) => [food.id, pendingFoodRating(meal, food.id)])),
+          )}
+          onChange={(key, value) =>
+            updateMeal.mutate({
+              id: meal.id,
+              input: key === RECIPE_RATING_KEY ? { recipeRating: value } : { foodRatings: { [key]: value } },
+            })
+          }
+        />
+        {updateMeal.isError && (
+          <p role="alert" className="text-xs text-[var(--color-danger)]">
+            Couldn't save that rating — try again.
+          </p>
         )}
 
         {meal.reactionNote && (

@@ -219,3 +219,26 @@ describe("MealDetailPage allergen marks (item 334, ledger 554)", () => {
     expect(chipRow).toContain("Egg");
   });
 });
+
+describe("MealDetailPage ratings (item 574)", () => {
+  it("shows one star row per food ABOVE the reaction note", () => {
+    const html = renderMeal({
+      ...MEAL,
+      reactionNote: "rash",
+      foods: [{ ...MEAL.foods[0]!, rating: 5 }, MEAL.foods[1]!],
+    });
+    const stars = html.indexOf("Rating (optional)");
+    expect(stars).toBeGreaterThan(-1);
+    expect(stars).toBeLessThan(html.indexOf("Reaction:"));
+    expect(html).toContain('aria-label="Rating for Avocado"');
+    expect(html).toContain('aria-label="Rating for Chicken"');
+    expect(html).toMatch(/aria-checked="true" aria-label="5 stars"/);
+  });
+
+  it("shows one row, for the recipe, on a recipe meal", () => {
+    const html = renderMeal({ ...MEAL, recipeId: "r1", recipeTitle: "Iron-Rich Purée", recipeRating: 3 });
+    expect(html.match(/role="radiogroup"/g)).toHaveLength(1);
+    expect(html).toContain('aria-label="Rating for Iron-Rich Purée"');
+    expect(html).toMatch(/aria-checked="true" aria-label="3 stars"/);
+  });
+});

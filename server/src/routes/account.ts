@@ -124,6 +124,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
             servedAt: meals.servedAt,
             reactionNote: meals.reactionNote,
             notes: meals.notes,
+            recipeRating: meals.recipeRating,
             createdAt: meals.createdAt,
           })
           .from(meals)
@@ -141,6 +142,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
             slug: foods.slug,
             name: foods.name,
             storageItemId: mealFoods.storageItemId,
+            rating: mealFoods.rating,
           })
           .from(mealFoods)
           .innerJoin(foods, eq(mealFoods.foodId, foods.id))
@@ -155,10 +157,16 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
 
     const foodsByMealId = new Map<
       string,
-      { id: string; slug: string; name: string; storageItemId: string | null }[]
+      { id: string; slug: string; name: string; storageItemId: string | null; rating: number | null }[]
     >();
     for (const row of mealFoodRows) {
-      const entry = { id: row.id, slug: row.slug, name: row.name, storageItemId: row.storageItemId };
+      const entry = {
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        storageItemId: row.storageItemId,
+        rating: row.rating,
+      };
       const existing = foodsByMealId.get(row.mealId);
       if (existing) existing.push(entry);
       else foodsByMealId.set(row.mealId, [entry]);
@@ -431,6 +439,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         servedAt: row.servedAt.toISOString(),
         reactionNote: row.reactionNote,
         notes: row.notes,
+        recipeRating: row.recipeRating,
         createdAt: row.createdAt.toISOString(),
         foods: foodsByMealId.get(row.id) ?? [],
       })),

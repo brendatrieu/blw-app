@@ -95,6 +95,12 @@ describe("catalogFilterKeys — which controls, never what they were set to", ()
     ).toEqual(["scope", "iron_focus", "ingredient_food_id"]);
   });
 
+  // Item 576: a rating sort is reported as the key "sort" — never which one.
+  it("reports an active rating sort as the key only", () => {
+    expect(catalogFilterKeys({ q: "", sort: "highest" })).toEqual(["sort"]);
+    expect(catalogFilterKeys({ q: "", sort: undefined })).toEqual([]);
+  });
+
   it("never emits the search box's contents, under any key", () => {
     const keys = catalogFilterKeys({ q: "priya peanut rash" });
     expect(keys).toEqual([]);

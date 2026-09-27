@@ -22,3 +22,12 @@ describe("invalidateAllergenQueries", () => {
     expect(detail.slice(0, prefix.length)).toEqual([...prefix]);
   });
 });
+
+describe("trackingKeys.ratings", () => {
+  it("prefixes every rating history, so one meal-mutation invalidation refreshes cards AND graphs", () => {
+    const prefix = trackingKeys.ratings("baby-1");
+    const history = trackingKeys.ratingHistory("baby-1", { foodId: "f1" });
+    expect(history.slice(0, prefix.length)).toEqual([...prefix]);
+    expect(trackingKeys.ratings("baby-2")).not.toEqual(prefix);
+  });
+});

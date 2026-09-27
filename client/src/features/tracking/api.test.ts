@@ -13,7 +13,7 @@
 // Stub idiom from features/storage/api.test.ts.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../lib/api.js";
-import { deleteAllergenOverride, putAllergenOverride, putFavorite } from "./api.js";
+import { deleteAllergenOverride, fetchRatingHistory, fetchRatings, putAllergenOverride, putFavorite } from "./api.js";
 
 const BABY_ID = "22222222-2222-2222-2222-222222222222";
 const MARKED_IN_MARCH = "2026-03-04T08:15:00.000Z";
@@ -117,5 +117,40 @@ describe("deleteAllergenOverride (undo)", () => {
     expect(calls[0]![0]).toBe(`/api/babies/${BABY_ID}/allergens/peanut/established`);
     expect(calls[0]![1]!.method).toBe("DELETE");
     expect(calls[0]![1]!.body).toBeUndefined();
+  });
+});
+
+describe("fetchRatings (C30)", () => {
+  it("GETs the plural /ratings path for this baby", async () => {
+    const calls = stubFetch({ json: () => Promise.resolve({ foods: {}, recipes: {} }) });
+    await fetchRatings(BABY_ID);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]![0]).toBe(`/api/babies/${BABY_ID}/ratings`);
+    expect(calls[0]![1]?.method ?? "GET").toBe("GET");
+  });
+});
+
+describe("fetchRatingHistory (C29)", () => {
+  it("sends the food's id under the foodId param, not recipeId", async () => {
+    const calls = stubFetch({ json: () => Promise.resolve({ points: [] }) });
+    const FOOD_ID = "food-1";
+    await fetchRatingHistory(BABY_ID, { foodId: FOOD_ID });
+
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0]![0], "http://localhost");
+    expect(url.pathname).toBe(`/api/babies/${BABY_ID}/ratings/history`);
+    expect(url.searchParams.get("foodId")).toBe(FOOD_ID);
+    expect(url.searchParams.has("recipeId")).toBe(false);
+  });
+
+  it("sends the recipe's id under the recipeId param, not foodId", async () => {
+    const calls = stubFetch({ json: () => Promise.resolve({ points: [] }) });
+    const RECIPE_ID = "recipe-1";
+    await fetchRatingHistory(BABY_ID, { recipeId: RECIPE_ID });
+
+    const url = new URL(calls[0]![0], "http://localhost");
+    expect(url.searchParams.get("recipeId")).toBe(RECIPE_ID);
+    expect(url.searchParams.has("foodId")).toBe(false);
   });
 });

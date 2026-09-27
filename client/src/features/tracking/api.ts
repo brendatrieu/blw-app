@@ -6,6 +6,9 @@ import type {
   MarkAllergenEstablishedInput,
   MealItem,
   MealsResponse,
+  RatingHistoryQuery,
+  RatingHistoryResponse,
+  RatingsResponse,
   UpdateMealInput,
 } from "@blw/shared";
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from "../../lib/api.js";
@@ -76,6 +79,17 @@ export function updateMeal(id: string, input: UpdateMealInput): Promise<MealItem
 
 export function deleteMeal(id: string): Promise<void> {
   return apiDelete<void>(`/api/meals/${id}`);
+}
+
+/** This baby's rating summaries, keyed by food id and by recipe id. */
+export function fetchRatings(babyId: string): Promise<RatingsResponse> {
+  return apiGet<RatingsResponse>(`/api/babies/${babyId}/ratings`);
+}
+
+/** One food's or recipe's ratings for this baby, oldest first. */
+export function fetchRatingHistory(babyId: string, target: RatingHistoryQuery): Promise<RatingHistoryResponse> {
+  const params = new URLSearchParams(target.foodId ? { foodId: target.foodId } : { recipeId: target.recipeId ?? "" });
+  return apiGet<RatingHistoryResponse>(`/api/babies/${babyId}/ratings/history?${params.toString()}`);
 }
 
 export function fetchAllergenProgress(babyId: string): Promise<AllergenProgressResponse> {

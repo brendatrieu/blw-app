@@ -1081,6 +1081,8 @@ describe("ownership", () => {
           storageItemId: created.body.id,
           deleted: false,
           allergens: [],
+          // A served meal is never rated at serve time (item 572).
+          rating: null,
         },
       ]);
       // Default servings is 1.

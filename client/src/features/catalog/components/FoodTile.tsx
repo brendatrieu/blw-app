@@ -1,7 +1,8 @@
-import type { FoodListItem } from "@blw/shared";
+import type { FoodListItem, RatingSummary } from "@blw/shared";
 import { Link } from "react-router-dom";
 import { Badge } from "./Badge.js";
 import { getFoodEmoji } from "../foodEmoji.js";
+import { RatingSummaryText } from "../../../components/ui/StarRating.js";
 
 interface FoodTileProps {
   /** `emoji`/`isCustom` are optional rather than part of the `Pick`: several
@@ -9,6 +10,8 @@ interface FoodTileProps {
    * custom foods, and a catalog food behaves exactly as it always did when
    * they're absent. */
   food: Pick<FoodListItem, "slug" | "name" | "category"> & { emoji?: string | null; isCustom?: boolean };
+  /** The active baby's rating summary; nothing renders when unrated. */
+  rating?: RatingSummary;
 }
 
 /**
@@ -16,7 +19,7 @@ interface FoodTileProps {
  * one-per-row card. Deliberately no iron/allergen dots: unlabeled 8px
  * circles read as arbitrary shades; the food page carries the real badges.
  */
-export function FoodTile({ food }: FoodTileProps) {
+export function FoodTile({ food, rating }: FoodTileProps) {
   return (
     <Link
       to={`/foods/${food.slug}`}
@@ -29,6 +32,7 @@ export function FoodTile({ food }: FoodTileProps) {
       {/* Item 182: a quiet neutral label, in the flow under the name rather
           than floated over the emoji — a 3-across tile has no corner to
           spare, and this is a provenance note, not a status alert. */}
+      <RatingSummaryText summary={rating} />
       {food.isCustom ? <Badge tone="neutral">Custom</Badge> : null}
     </Link>
   );

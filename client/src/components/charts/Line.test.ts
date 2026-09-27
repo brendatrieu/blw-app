@@ -58,3 +58,61 @@ describe("Line axis labels", () => {
     expect(axisLabels(html)).toEqual(["0", "1"]);
   });
 });
+
+// Ratings draw on a fixed 0-5 scale: two 2-star ratings must sit low on the
+// chart, not stretch to its top as a data-fitted axis would draw them.
+describe("Line with a fixed maximum", () => {
+  it("keeps the axis at 0-5 however low the ratings are", () => {
+    const html = renderToString(
+      createElement(Line, {
+        points: [
+          { label: "Sep 20", value: 2 },
+          { label: "Sep 27", value: 2 },
+        ],
+        title: "Ratings",
+        summary: "Two ratings.",
+        valueHeader: "Stars",
+        fixedMax: 5,
+      }),
+    );
+    const labels = axisLabels(html);
+    expect(labels[0]).toBe("0");
+    expect(labels[labels.length - 1]).toBe("5");
+  });
+});
+
+// Item 582: one rating (or one admin week) draws a centred dot; its value and
+// date must sit on it, not at the plot's right and left edges.
+describe("Line with a single point", () => {
+  it("centres the value label and the date on the lone dot", () => {
+    const html = renderToString(
+      createElement(Line, {
+        points: [{ label: "Sep 27", value: 4 }],
+        title: "Ratings",
+        summary: "One rating.",
+        valueHeader: "Stars",
+        fixedMax: 5,
+      }),
+    );
+    const cx = html.match(/<circle cx="([^"]+)"/)![1];
+    expect(html).toMatch(new RegExp(`<text x="${cx}"[^>]*text-anchor="middle"[^>]*font-size="11"[^>]*>4<`));
+    expect(html).toMatch(new RegExp(`<text x="${cx}"[^>]*text-anchor="middle"[^>]*>Sep 27<`));
+  });
+
+  it("keeps the end label at the right edge for a real series", () => {
+    const html = renderToString(
+      createElement(Line, {
+        points: [
+          { label: "Sep 20", value: 2 },
+          { label: "Sep 27", value: 4 },
+        ],
+        title: "Ratings",
+        summary: "Two ratings.",
+        valueHeader: "Stars",
+        fixedMax: 5,
+      }),
+    );
+    expect(html).toMatch(/<text x="314"[^>]*text-anchor="end"[^>]*font-size="11"[^>]*>4</);
+  });
+});
+

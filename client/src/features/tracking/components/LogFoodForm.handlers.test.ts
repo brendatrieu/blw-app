@@ -93,7 +93,9 @@ vi.mock("../../storage/hooks.js", async (importOriginal) => {
 });
 
 import { LeftoversFields, LogFoodForm } from "./LogFoodForm.js";
+import { MealRatingsField } from "./MealRatingsField.js";
 import { Switch } from "../../../components/ui/Switch.js";
+import { RecipePicker } from "../../catalog/components/RecipePicker.js";
 
 interface Rendered {
   type: unknown;
@@ -183,5 +185,54 @@ describe("LogFoodForm's own 'Save as' state (item 348)", () => {
     saveAndSettle(tree);
 
     expect((h.containers[0] as CreateStorageItemInput).separateItems).toBe(true);
+  });
+});
+
+describe("LogFoodForm's own rating state (item 574)", () => {
+  it("sends each food's stars with the meal, null for the unrated, and no recipe rating", () => {
+    h.reset();
+    const field = find(render(), MealRatingsField);
+    if (!field) throw new Error("the ratings block should render");
+    (field.props.onChange as (key: string, value: number | null) => void)("food-2", 5);
+    (find(render(), MealRatingsField)!.props.onChange as (key: string, value: number | null) => void)("food-3", 2);
+    // An accidental rating, cleared again.
+    (find(render(), MealRatingsField)!.props.onChange as (key: string, value: number | null) => void)("food-3", null);
+
+    saveAndSettle(render());
+
+    const input = h.meals[0]!.input as { foodRatings?: unknown; recipeRating?: unknown };
+    expect(input.foodRatings).toEqual({ "food-1": null, "food-2": 5, "food-3": null });
+    expect(input.recipeRating).toBeUndefined();
+  });
+
+  // Item 579: A's stars must never be saved as B's.
+  function pickRecipe(id: string) {
+    (find(render(), RecipePicker)!.props.onChange as (next: string) => void)(id);
+  }
+  function rateRecipe(value: number) {
+    (find(render(), MealRatingsField)!.props.onChange as (key: string, value: number | null) => void)("recipe", value);
+  }
+
+  it("drops the recipe's stars when the parent switches to another recipe", () => {
+    h.reset();
+    pickRecipe("recipe-a");
+    rateRecipe(4);
+    pickRecipe("recipe-b");
+
+    saveAndSettle(render());
+    expect((h.meals[0]!.input as { recipeRating?: unknown }).recipeRating).toBeNull();
+  });
+
+  it("drops the recipe's stars when the recipe is cleared, and keeps them when it is re-picked unchanged", () => {
+    h.reset();
+    pickRecipe("recipe-a");
+    rateRecipe(3);
+    pickRecipe("recipe-a");
+    expect(find(render(), MealRatingsField)!.props.rows).toEqual([expect.objectContaining({ value: 3 })]);
+    pickRecipe("");
+    pickRecipe("recipe-a");
+
+    saveAndSettle(render());
+    expect((h.meals[0]!.input as { recipeRating?: unknown }).recipeRating).toBeNull();
   });
 });

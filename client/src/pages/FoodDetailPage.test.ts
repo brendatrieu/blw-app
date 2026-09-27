@@ -390,3 +390,38 @@ describe("FoodDetailPage — Recipes with <food> (item 255)", () => {
     expect(html).not.toContain(">Basic<");
   });
 });
+
+describe("FoodDetailPage rating history (item 575)", () => {
+  function renderWithHistory(points: { servedAt: string; rating: number }[]) {
+    const food = catalogFood();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(catalogKeys.food(food.slug), food);
+    queryClient.setQueryData(babyKeys.list(false), [BABY]);
+    queryClient.setQueryData(trackingKeys.ratingHistory(BABY.id, { foodId: food.id }), { points });
+    return renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(
+          MemoryRouter,
+          { initialEntries: [`/foods/${food.slug}`] },
+          createElement(Routes, null, createElement(Route, { path: "/foods/:slug", element: createElement(FoodDetailPage, null) })),
+        ),
+      ),
+    );
+  }
+
+  it("draws the active baby's rating graph for this food", () => {
+    const html = renderWithHistory([
+      { servedAt: "2026-09-20T12:00:00.000Z", rating: 2 },
+      { servedAt: "2026-09-25T12:00:00.000Z", rating: 4 },
+    ]);
+    expect(html).toContain(`${escapeHtml(BABY.name)}&#x27;s ratings`);
+    expect(html).toContain("★ 3.0 (2)");
+    expect(html).toContain('stroke="var(--chart-1)"');
+  });
+
+  it("shows no ratings section before the first rating", () => {
+    expect(renderWithHistory([])).not.toContain("ratings</h2>");
+  });
+});

@@ -47,14 +47,25 @@ vi.mock("./api.js", () => ({
   deleteFavorite: async () => ({}),
 }));
 
-import { useMarkAllergenEstablished, useUndoAllergenEstablished } from "./hooks.js";
+import {
+  trackingKeys,
+  useCreateMeal,
+  useDeleteMeal,
+  useMarkAllergenEstablished,
+  useUndoAllergenEstablished,
+  useUpdateMeal,
+} from "./hooks.js";
 
 const fakeQueryClient = {
   getQueryData: () => undefined,
   getQueriesData: () => [],
   setQueryData: () => {},
-  invalidateQueries: () => Promise.resolve(),
+  invalidateQueries: (filters: { queryKey: unknown }) => {
+    invalidated.push(filters.queryKey);
+    return Promise.resolve();
+  },
 } as never;
+const invalidated: unknown[] = [];
 
 const BABY_ID = "22222222-2222-2222-2222-222222222222";
 const MARKED_IN_MARCH = "2026-03-04T08:15:00.000Z";
@@ -113,5 +124,22 @@ describe("useUndoAllergenEstablished", () => {
     const mutationFn = mutationFnFor(() => useUndoAllergenEstablished(undefined));
     expect(() => mutationFn("peanut" as never)).toThrow(/no active baby/);
     expect(apiCalls).toEqual([]);
+  });
+});
+
+// Item 581: a logged, edited or deleted meal can change the baby's averages
+// and graphs, so each one refreshes the ratings (the prefix covers history).
+describe("meal mutations refresh the baby's ratings", () => {
+  it.each([
+    ["useCreateMeal", () => useCreateMeal(BABY_ID)],
+    ["useUpdateMeal", () => useUpdateMeal(BABY_ID)],
+    ["useDeleteMeal", () => useDeleteMeal(BABY_ID)],
+  ])("%s invalidates the ratings on settle", (_name, create) => {
+    captured.length = 0;
+    create();
+    invalidated.length = 0;
+    (captured[0]!.onSettled as () => void)();
+
+    expect(invalidated).toContainEqual(trackingKeys.ratings(BABY_ID));
   });
 });

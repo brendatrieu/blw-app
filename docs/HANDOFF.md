@@ -32,7 +32,7 @@ server/    Fastify 5 API; Drizzle ORM; Postgres 17 in prod, PGlite locally; bett
   src/routes/     account admin ai-keys babies catalog chat favorites feedback meals preferences recipes storage symptom usage
   src/services/   allergens foods meals recipeNutrition recipes slugs storage
   src/metrics/    the admin dashboard's queries, collector, and markdown export
-  drizzle/        migrations 0000–0018
+  drizzle/        migrations 0000–0019
   db/seeds/       catalog + recipe seed data (outside tsc; exercised by tests)
 client/    Vite + React 18 + TypeScript, react-router 7, TanStack Query, Tailwind v4, vite-plugin-pwa
   src/features/   account admin ai babies catalog chat feedback safety storage symptom tour tracking
@@ -46,7 +46,7 @@ docs/      analytics.md (event catalog + review ritual), decisions.md (agreed me
 
 Shell: `AppLayout` = sticky header + `<main>` + in-flow sticky `BottomNav` (Home · Storage · Foods · Recipes · More). Each routed page is wrapped in `.page-transition`.
 
-Migrations worth knowing: 0009/0010 renamed Pantry → Fridge → **Storage** (final; `/pantry/*` and `/fridge/*` redirect); 0011 structured recipe ingredients; 0012 user preferences (tour); 0013 analytics + roles + admin audit; 0014 spice category; 0015 many foods per storage item; 0016 feedback; 0017 allergen `established_at`; 0018 `foods.deleted_at` (soft-deleted custom foods: hidden from lists and pickers, kept and marked "(deleted)" in history, restorable).
+Migrations worth knowing: 0009/0010 renamed Pantry → Fridge → **Storage** (final; `/pantry/*` and `/fridge/*` redirect); 0011 structured recipe ingredients; 0012 user preferences (tour); 0013 analytics + roles + admin audit; 0014 spice category; 0015 many foods per storage item; 0016 feedback; 0017 allergen `established_at`; 0018 `foods.deleted_at` (soft-deleted custom foods: hidden from lists and pickers, kept and marked "(deleted)" in history, restorable); 0019 meal star ratings (`meal_foods.rating` per food on a loose-food meal, `meals.recipe_rating` on a recipe meal).
 
 ## 3. Deploy and infrastructure (no secrets here)
 

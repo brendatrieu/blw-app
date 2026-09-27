@@ -44,10 +44,11 @@ const FILTER_KEY_BY_FIELD: Readonly<Record<string, CatalogFilterKey>> = {
   fiberHigh: "fiber_high",
   ingredientFoodId: "ingredient_food_id",
   deleted: "deleted",
+  sort: "sort",
 };
 
 /** Ceiling from the shared schema — more keys than either page has controls. */
-const MAX_FILTER_KEYS = 12;
+const MAX_FILTER_KEYS = 13;
 
 /**
  * Which filters were ACTIVE, as keys.
