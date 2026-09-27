@@ -16,7 +16,7 @@ import { createTestApp, insertMeals, signUpUser, type TestUser } from "./helpers
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
 import { buildExposureSnapshot, noveltyFor, rankFallbackCandidates, type ExposureSnapshotItem } from "../ai/snapshot.js";
-import { SYMPTOM_MODEL, SYMPTOM_OUTPUT_FORMAT } from "../ai/symptom.js";
+import { SYMPTOM_MODEL, SYMPTOM_OUTPUT_FORMAT, buildSymptomUserMessage } from "../ai/symptom.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -872,5 +872,25 @@ describe("GET /api/babies/:babyId/symptom-checks", () => {
       headers: { cookie: user.cookie },
     });
     expect((response.json() as SymptomCheckHistoryResponse).items).toHaveLength(1);
+  });
+});
+
+describe("buildSymptomUserMessage body areas (item 569)", () => {
+  it("sends each body area with its US label, so the model never only sees a key like nappy_area", () => {
+    const message = buildSymptomUserMessage({
+      survey: {
+        symptoms: ["hives_localized"],
+        severity: "mild",
+        onsetAt: new Date("2026-09-27T10:00:00Z").toISOString(),
+        mealTiming: "under_1h",
+        bodyAreas: ["nappy_area"],
+        notes: null,
+      } as never,
+      snapshot: [],
+      ageMonths: 8,
+      now: new Date("2026-09-27T12:00:00Z"),
+    });
+    expect(message).toContain('"code": "nappy_area"');
+    expect(message).toContain('"label": "Diaper area"');
   });
 });

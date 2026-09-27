@@ -150,7 +150,7 @@ export const SYMPTOM_CATALOG: readonly SymptomCatalogEntry[] = [
     timing: "delayed",
   },
   { value: "diarrhea", label: "Diarrhea", group: "tummy", soloTriage: null, timing: "delayed" },
-  { value: "blood_in_stool", label: "Blood or mucus in the nappy", group: "tummy", soloTriage: null, timing: "delayed" },
+  { value: "blood_in_stool", label: "Blood or mucus in the diaper", group: "tummy", soloTriage: null, timing: "delayed" },
   {
     value: "pale_or_floppy",
     label: "Pale, gray or floppy",
@@ -216,7 +216,7 @@ export const BODY_AREA_LABELS: Record<BodyArea, string> = {
   arms: "Arms",
   legs: "Legs",
   back: "Back",
-  nappy_area: "Nappy area",
+  nappy_area: "Diaper area",
   whole_body: "All over",
 };
 

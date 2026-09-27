@@ -198,11 +198,11 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
-      'Cook with breast milk, formula, or water into a smooth, thinned porridge loose enough to drip slowly off a spoon.',
+      'Cook with breast milk, formula, or water into a smooth, thinned oatmeal loose enough to drip slowly off a spoon.',
     prep9m:
-      'Cook to a thicker, spoonable porridge with some texture, or stir into pancakes or oat-based bites.',
+      'Cook to a thicker, spoonable oatmeal with some texture, or stir into pancakes or oat-based bites.',
     prep12m:
-      'Cook to a thick, family-style porridge, or bake into muffins, pancakes, or patties.',
+      'Cook to a thick, family-style oatmeal, or bake into muffins, pancakes, or patties.',
     notes: 'A commonly recommended first iron source in BLW because it is fortified — pair with fruit for vitamin C and flavor.',
     allergens: [],
     storageCategory: 'grain_cooked',
@@ -525,7 +525,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Thin 1 teaspoon of tahini with warm water, breast milk, or formula until runny, then drizzle thinly over food or spread very thin on toast.',
     prep9m:
-      'Thin tahini and stir into porridge, yogurt, or vegetables, or spread thinly on toast.',
+      'Thin tahini and stir into oatmeal, yogurt, or vegetables, or spread thinly on toast.',
     prep12m:
       'Use thinned as a dressing or dip base; keep the layer thin rather than a thick paste.',
     chokingNotes: 'A thick layer of tahini can stick in the mouth — always thin it and spread only a light layer.',
@@ -900,7 +900,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Shape ground turkey into a thin, moist patty and cut it into finger-length strips, or slow-cook thigh meat and shred it finely, moistened with cooking liquid.',
     prep9m:
-      'Cook thoroughly and serve as finger-length strips of thin patty, or small bite-sized pieces of mince or shredded thigh (no bigger than ½ inch) for pincer practice, or as a small meatball squashed flat.',
+      'Cook thoroughly and serve as finger-length strips of thin patty, or small bite-sized pieces of ground turkey or shredded thigh (no bigger than ½ inch) for pincer practice, or as a small meatball squashed flat.',
     prep12m:
       'Cook thoroughly and dice or shred into small, soft bite-sized pieces.',
     chokingNotes: 'Ground turkey is very lean and cooks dry and crumbly — bind it with grated vegetable or a little oil, and never serve a firm, round meatball whole.',
@@ -938,12 +938,12 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
-      'Use lamb mince cooked well-done and moistened into a soft pile, or slow-cook shoulder until it falls apart and serve a finger-length shred.',
+      'Use ground lamb cooked well-done and moistened into a soft pile, or slow-cook shoulder until it falls apart and serve a finger-length shred.',
     prep9m:
-      'Cook well-done and serve a finger-length shred of slow-cooked shoulder, or small bite-sized pieces of mince or shoulder (no bigger than ½ inch) for pincer practice.',
+      'Cook well-done and serve a finger-length shred of slow-cooked shoulder, or small bite-sized pieces of ground lamb or shoulder (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Slow-cook until tender and dice or shred into small, soft bite-sized pieces.',
-    chokingNotes: 'Chops and any cut on the bone are not a baby food — serve mince or slow-cooked shoulder only, and check by feel for bone fragments before every serving.',
+    chokingNotes: 'Chops and any cut on the bone are not a baby food — serve ground lamb or slow-cooked shoulder only, and check by feel for bone fragments before every serving.',
     notes: 'Richer and more strongly flavored than chicken or pork, with a little more iron — an easy way to widen the meat rotation.',
     allergens: [],
     storageCategory: 'meat_poultry_cooked',
@@ -1022,12 +1022,12 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
-      'Simmer rolled or quick oats with plenty of water, breast milk, or formula into a smooth, thin porridge loose enough to drip slowly off a spoon.',
+      'Simmer rolled or quick oats with plenty of water, breast milk, or formula into a smooth, thin oatmeal loose enough to drip slowly off a spoon.',
     prep9m:
-      'Simmer to a thicker, spoonable porridge with a little texture left, or stir cooked oats into pancakes or soft oat patties.',
+      'Simmer to a thicker, spoonable oatmeal with a little texture left, or stir cooked oats into pancakes or soft oat patties.',
     prep12m:
-      'Simmer to a thick, family-style porridge, or bake cooked oats into muffins, pancakes, or patties.',
-    chokingNotes: 'Steel-cut and jumbo oats stay firm and chewy — use rolled or quick oats, cook them until soft, and never serve dry oats or uncooked muesli.',
+      'Simmer to a thick, family-style oatmeal, or bake cooked oats into muffins, pancakes, or patties.',
+    chokingNotes: 'Steel-cut and thick-cut oats stay firm and chewy — use rolled or quick oats, cook them until soft, and never serve dry oats or uncooked muesli.',
     notes: 'Plain oats are not a substitute for iron-fortified oats, which carry several times the iron — use the fortified kind when the meal is meant to be the iron anchor, and pair either one with a vitamin-C food.',
     allergens: [],
     storageCategory: 'grain_cooked',
@@ -1044,9 +1044,9 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
-      'Grind to a fine meal and stir a pinch through porridge or yogurt, or sprinkle a pinch of whole seeds over a wet food so they cling rather than scatter.',
+      'Grind to a fine meal and stir a pinch through oatmeal or yogurt, or sprinkle a pinch of whole seeds over a wet food so they cling rather than scatter.',
     prep9m:
-      'Sprinkle a pinch of whole or ground seeds over yogurt, porridge, hummus, or soft vegetables, or stir them through a mash.',
+      'Sprinkle a pinch of whole or ground seeds over yogurt, oatmeal, hummus, or soft vegetables, or stir them through a mash.',
     prep12m:
       'Sprinkle over family food or stir into a dip or a mash — still a pinch, never a spoonful.',
     chokingNotes: 'Sesame seeds are small, but a dry spoonful of any seed can be inhaled — sprinkle a pinch onto wet food so the seeds stick, and never hand over a spoon or a pile of dry seeds.',
@@ -1064,11 +1064,11 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
-      'Always soak first: stir 1 teaspoon into 4-5 tablespoons of milk, water, or mashed fruit and leave it 10 minutes or longer until the seeds swell into a soft gel, then thin it to a smooth, spoonable porridge.',
+      'Always soak first: stir 1 teaspoon into 4-5 tablespoons of milk, water, or mashed fruit and leave it 10 minutes or longer until the seeds swell into a soft gel, then thin it to a smooth, spoonable pudding.',
     prep9m:
-      'Serve soaked, gelled chia stirred through yogurt, porridge, or a fruit mash, still spoonable rather than stiff.',
+      'Serve soaked, gelled chia stirred through yogurt, oatmeal, or a fruit mash, still spoonable rather than stiff.',
     prep12m:
-      'Serve soaked chia in puddings, porridge, or smoothies; soak it before it goes in, never dry.',
+      'Serve soaked chia in puddings, oatmeal, or smoothies; soak it before it goes in, never dry.',
     chokingNotes: 'Dry chia absorbs many times its weight in liquid and can swell and clump after it is swallowed — always bloom it for at least 10 minutes or stir it into a wet food, and never offer it dry.',
     notes: 'A very high-fiber seed: a teaspoon at a time is plenty, with extra fluid alongside. Pair with a vitamin-C food to get more from its plant-based iron.',
     allergens: [],
@@ -1084,11 +1084,11 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'moderate',
     minAgeMonths: 6,
     prep6m:
-      'Use ground flaxseed only: stir 1 teaspoon of the ground meal through porridge, yogurt, or a vegetable mash until it disappears.',
+      'Use ground flaxseed only: stir 1 teaspoon of the ground meal through oatmeal, yogurt, or a vegetable mash until it disappears.',
     prep9m:
-      'Stir ground flaxseed through porridge, yogurt, fruit mash, or a fritter mix.',
+      'Stir ground flaxseed through oatmeal, yogurt, fruit mash, or a fritter mix.',
     prep12m:
-      'Stir ground flaxseed into porridge or baking; whole seeds stay off the menu.',
+      'Stir ground flaxseed into oatmeal or baking; whole seeds stay off the menu.',
     chokingNotes: 'Whole flaxseeds are hard and slippery and pass straight through undigested — grind them first, every time, and stir the meal into a wet food rather than serving it dry.',
     notes: 'Grind in small batches and keep the meal in the fridge — flax turns rancid quickly once ground. Pair with a vitamin-C food to boost absorption of its plant-based iron.',
     allergens: [],
@@ -1104,11 +1104,11 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
-      'Sprinkle a pinch of hulled hemp hearts over a wet food such as porridge, yogurt, or a vegetable mash, or stir them through so they soften.',
+      'Sprinkle a pinch of hulled hemp hearts over a wet food such as oatmeal, yogurt, or a vegetable mash, or stir them through so they soften.',
     prep9m:
-      'Sprinkle or stir hulled hemp hearts through porridge, yogurt, soft fruit, or vegetables.',
+      'Sprinkle or stir hulled hemp hearts through oatmeal, yogurt, soft fruit, or vegetables.',
     prep12m:
-      'Sprinkle hulled hemp hearts over family food, or stir them into porridge, dips, and baking.',
+      'Sprinkle hulled hemp hearts over family food, or stir them into oatmeal, dips, and baking.',
     chokingNotes: 'Buy hulled hemp hearts rather than whole hemp seed with the shell on — the hearts are soft and crumble easily, while the shell is hard and fibrous.',
     notes: 'Soft enough to need no grinding, which makes it the gentlest seed to start with. Pair with a vitamin-C food to boost absorption of its plant-based iron.',
     allergens: [],
@@ -1124,9 +1124,9 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
-      'Grind hulled pumpkin seeds to a fine meal and stir 1 teaspoon through porridge, yogurt, or a vegetable mash, or thin a smooth pumpkin seed butter with warm water until runny.',
+      'Grind hulled pumpkin seeds to a fine meal and stir 1 teaspoon through oatmeal, yogurt, or a vegetable mash, or thin a smooth pumpkin seed butter with warm water until runny.',
     prep9m:
-      'Stir finely ground pumpkin seed meal through porridge, yogurt, or a mash, or thin smooth pumpkin seed butter until runny and spread it very thinly.',
+      'Stir finely ground pumpkin seed meal through oatmeal, yogurt, or a mash, or thin smooth pumpkin seed butter until runny and spread it very thinly.',
     prep12m:
       'Keep to ground meal or thinned smooth butter; whole and chopped seeds stay off the menu well past this age.',
     chokingNotes: 'Whole pumpkin seeds are named as a choking hazard alongside whole nuts and stay off the menu until age 4-5 — grind them to a fine meal or use a smooth butter thinned runny, never whole, chopped, or roasted as a snack.',
@@ -1146,7 +1146,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Thin 1-2 teaspoons of smooth, unsalted, unsweetened sunflower seed butter with warm water, breast milk, or formula until runny, then serve on a pre-loaded spoon or spread a very thin layer on a soft toast finger.',
     prep9m:
-      'Thin smooth sunflower seed butter until runny and stir it into porridge or yogurt, or spread it thinly on toast or banana.',
+      'Thin smooth sunflower seed butter until runny and stir it into oatmeal or yogurt, or spread it thinly on toast or banana.',
     prep12m:
       'Thin smooth sunflower seed butter until runny for spreads and dips; still avoid thick spoonfuls or globs.',
     chokingNotes: 'Thick or sticky seed butter is a serious choking hazard — always thin it until runny, spread only a light layer, and never serve a spoonful straight or whole sunflower seeds.',
@@ -1168,7 +1168,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Thin 1-2 teaspoons of smooth, unsalted cashew butter with warm water, breast milk, or formula until runny, then serve on a pre-loaded spoon or spread a very thin layer on a soft toast finger.',
     prep9m:
-      'Thin smooth cashew butter until runny and stir it into porridge or yogurt, or spread it thinly on toast or soft fruit.',
+      'Thin smooth cashew butter until runny and stir it into oatmeal or yogurt, or spread it thinly on toast or soft fruit.',
     prep12m:
       'Thin smooth cashew butter until runny for spreads and dips; still avoid thick spoonfuls or globs.',
     chokingNotes: 'Thick or sticky nut butter is a serious choking hazard — always thin it until runny, and never serve whole or chopped cashews, which stay off the menu until age 4-5.',
@@ -1186,9 +1186,9 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
-      'Grind shelled walnuts to a fine, flour-like meal and stir 1 teaspoon through porridge, yogurt, or a fruit mash — never a piece, a half, or a whole nut.',
+      'Grind shelled walnuts to a fine, flour-like meal and stir 1 teaspoon through oatmeal, yogurt, or a fruit mash — never a piece, a half, or a whole nut.',
     prep9m:
-      'Stir finely ground walnut meal through porridge, yogurt, soft fruit, or a fritter mix.',
+      'Stir finely ground walnut meal through oatmeal, yogurt, soft fruit, or a fritter mix.',
     prep12m:
       'Keep to finely ground walnut meal stirred into food, or a smooth walnut butter thinned runny; pieces stay off the menu.',
     chokingNotes: 'Whole nuts and nut pieces are a serious choking hazard and stay off the menu until age 4-5 — grind walnuts to a fine meal and stir it into a wet food so nothing crunchy is left.',
@@ -1206,9 +1206,9 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
-      'Use shelled, unsalted pistachios ground to a fine, flour-like meal, and stir 1 teaspoon through porridge, yogurt, or a fruit mash.',
+      'Use shelled, unsalted pistachios ground to a fine, flour-like meal, and stir 1 teaspoon through oatmeal, yogurt, or a fruit mash.',
     prep9m:
-      'Stir finely ground pistachio meal through porridge, yogurt, soft fruit, or a mash.',
+      'Stir finely ground pistachio meal through oatmeal, yogurt, soft fruit, or a mash.',
     prep12m:
       'Keep to finely ground pistachio meal stirred into food; whole and chopped nuts stay off the menu.',
     chokingNotes: 'Whole and chopped pistachios are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal, and never serve them in the shell.',
@@ -1226,9 +1226,9 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
-      'Grind skinned, shelled hazelnuts to a fine, flour-like meal and stir 1 teaspoon through porridge, yogurt, or a fruit mash, or thin a plain smooth hazelnut butter with warm water until runny.',
+      'Grind skinned, shelled hazelnuts to a fine, flour-like meal and stir 1 teaspoon through oatmeal, yogurt, or a fruit mash, or thin a plain smooth hazelnut butter with warm water until runny.',
     prep9m:
-      'Stir finely ground hazelnut meal through porridge, yogurt, or soft fruit, or spread thinned plain hazelnut butter very thinly.',
+      'Stir finely ground hazelnut meal through oatmeal, yogurt, or soft fruit, or spread thinned plain hazelnut butter very thinly.',
     prep12m:
       'Keep to finely ground hazelnut meal or thinned plain hazelnut butter; whole and chopped nuts stay off the menu.',
     chokingNotes: 'Whole and chopped hazelnuts are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal, or use a plain smooth butter thinned runny.',
@@ -1246,9 +1246,9 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
-      'Grind shelled pecans to a fine, flour-like meal and stir 1 teaspoon through porridge, yogurt, or a fruit mash.',
+      'Grind shelled pecans to a fine, flour-like meal and stir 1 teaspoon through oatmeal, yogurt, or a fruit mash.',
     prep9m:
-      'Stir finely ground pecan meal through porridge, yogurt, soft fruit, or a mash.',
+      'Stir finely ground pecan meal through oatmeal, yogurt, soft fruit, or a mash.',
     prep12m:
       'Keep to finely ground pecan meal stirred into food; halves and pieces stay off the menu.',
     chokingNotes: 'Pecan halves and pieces are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal and stir it into a wet food.',
@@ -1271,9 +1271,9 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
-      'Grind shelled almonds to a fine, flour-like meal and stir 1 teaspoon through porridge, yogurt, or a fruit mash — never a piece, a half, or a whole nut.',
+      'Grind shelled almonds to a fine, flour-like meal and stir 1 teaspoon through oatmeal, yogurt, or a fruit mash — never a piece, a half, or a whole nut.',
     prep9m:
-      'Stir finely ground almond meal through porridge, yogurt, soft fruit, or a mash.',
+      'Stir finely ground almond meal through oatmeal, yogurt, soft fruit, or a mash.',
     prep12m:
       'Keep to finely ground almond meal stirred into food, or a smooth almond butter thinned runny; pieces and whole nuts stay off the menu.',
     chokingNotes: 'Whole and chopped almonds are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal and stir it into a wet food so nothing hard is left.',
@@ -1291,9 +1291,9 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'high',
     minAgeMonths: 6,
     prep6m:
-      'Grind plain, unsalted cashews to a fine, flour-like meal and stir 1 teaspoon through porridge, yogurt, or a fruit mash — never a piece, a half, or a whole nut.',
+      'Grind plain, unsalted cashews to a fine, flour-like meal and stir 1 teaspoon through oatmeal, yogurt, or a fruit mash — never a piece, a half, or a whole nut.',
     prep9m:
-      'Stir finely ground cashew meal through porridge, yogurt, soft fruit, or a mash.',
+      'Stir finely ground cashew meal through oatmeal, yogurt, soft fruit, or a mash.',
     prep12m:
       'Keep to finely ground cashew meal stirred into food, or a smooth cashew butter thinned runny; pieces and whole nuts stay off the menu.',
     chokingNotes: 'Whole and chopped cashews are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal and stir it into a wet food, or use a plain smooth cashew butter thinned runny.',
@@ -1318,11 +1318,11 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
-      'Add a pinch of ground cinnamon to porridge, mashed fruit, or roasting vegetables while you cook — enough to smell, not enough to see, and with no sweetener alongside it.',
+      'Add a pinch of ground cinnamon to oatmeal, mashed fruit, or roasting vegetables while you cook — enough to smell, not enough to see, and with no sweetener alongside it.',
     prep9m:
-      'Stir a pinch into porridge, yogurt, apple or pear mash, or squash; cinnamon is there for flavor, not sweetness.',
+      'Stir a pinch into oatmeal, yogurt, apple or pear mash, or squash; cinnamon is there for flavor, not sweetness.',
     prep12m:
-      'Use a pinch in family cooking and baking — porridge, stewed fruit, squash, lentils — still with no added sugar.',
+      'Use a pinch in family cooking and baking — oatmeal, stewed fruit, squash, lentils — still with no added sugar.',
     chokingNotes: 'Never let baby lick dry cinnamon off a spoon or a finger: loose powder is easy to inhale and irritates the airway. Mix it into food instead.',
     notes: 'Ceylon ("true") cinnamon is the gentler choice if cinnamon becomes a daily habit; the common cassia kind is fine now and then. Cinnamon is a flavor, not a sweetener — the no-added-sugar rule still applies.',
     allergens: [],
@@ -1340,7 +1340,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Warm a pinch of ground cumin in the pan with the vegetables, lentils, or meat you are already cooking — a few seconds in the oil takes the raw edge off.',
     prep9m:
-      'Add a pinch of ground cumin to lentils, beans, squash, or minced meat as they cook.',
+      'Add a pinch of ground cumin to lentils, beans, squash, or ground meat as they cook.',
     prep12m:
       'Use a pinch in family cooking — curries, stews, roasted vegetables, hummus — as long as the dish stays salt-free.',
     chokingNotes: 'Stir ground spice into food rather than sprinkling it on top dry — loose powder is easy to inhale.',
@@ -1380,7 +1380,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Use sweet (mild) paprika only, and stir a pinch into vegetables, chicken, or a tomato-based sauce as it cooks.',
     prep9m:
-      'Add a pinch of sweet paprika to roasting vegetables, minced meat, beans, or a soft stew.',
+      'Add a pinch of sweet paprika to roasting vegetables, ground meat, beans, or a soft stew.',
     prep12m:
       'Use a pinch in family cooking wherever a gentle, sweet-peppery flavor and a little color help.',
     chokingNotes: 'Stir ground spice into food rather than sprinkling it on dry — loose powder is easy to inhale.',
@@ -1400,7 +1400,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Use a mild blend with no salt and no chili, and cook a small pinch into lentils, vegetables, or a soft stew rather than stirring it in at the end.',
     prep9m:
-      'Add a pinch of mild curry powder to lentils, chickpeas, squash, or minced meat as they cook.',
+      'Add a pinch of mild curry powder to lentils, chickpeas, squash, or ground meat as they cook.',
     prep12m:
       'Use a pinch in family curries and stews, keeping the blend mild and the dish salt-free.',
     chokingNotes: 'Stir the blend into food as it cooks rather than sprinkling it on dry — loose powder is easy to inhale.',
@@ -1438,7 +1438,7 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
-      'Rub a pinch of dried oregano between your fingers to break it up finely, then cook it into a tomato sauce, vegetables, or minced meat.',
+      'Rub a pinch of dried oregano between your fingers to break it up finely, then cook it into a tomato sauce, vegetables, or ground meat.',
     prep9m:
       'Add a pinch of finely rubbed dried oregano to pasta sauce, beans, vegetables, or a soft stew.',
     prep12m:
@@ -1463,7 +1463,7 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Cook it, never raw: soften finely minced or crushed garlic in the pan before the other ingredients go in, or roast a whole clove until soft and stir the paste through a mash. Half a small clove is plenty for a baby portion.',
     prep9m:
-      'Cook finely minced garlic into vegetables, lentils, sauces, or minced meat; salt-free garlic powder works the same way.',
+      'Cook finely minced garlic into vegetables, lentils, sauces, or ground meat; salt-free garlic powder works the same way.',
     prep12m:
       'Use finely minced cooked garlic in family cooking; raw garlic is harsh and stays off the menu for now.',
     chokingNotes: 'A whole or halved clove is firm, round, and exactly the wrong size — mince, crush, or roast it to a soft paste, and never serve a raw piece.',

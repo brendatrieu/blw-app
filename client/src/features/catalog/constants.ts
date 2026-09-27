@@ -8,12 +8,13 @@ import type { FoodCategory, Level, RecipeScope } from "@blw/shared";
  * `chipLabel` is the Foods page's filter-chip wording, `label` the long one the
  * custom-food select uses (item 332). Seven equal-width chips share a 360px
  * phone, so "Spices & herbs" would ellipsize into "Spices…" anyway — the short
- * label says the same thing on purpose rather than by truncation. Every other
- * category is already one short word and sets no `chipLabel`.
+ * label says the same thing on purpose rather than by truncation. "Vegetables"
+ * gets "Veggies" the same way (item 569: "Veg" is British shorthand). Every
+ * other category is already one short word and sets no `chipLabel`.
  */
 export const CATEGORIES: { value: FoodCategory; label: string; chipLabel?: string }[] = [
   { value: "protein", label: "Protein" },
-  { value: "veg", label: "Veg" },
+  { value: "veg", label: "Vegetables", chipLabel: "Veggies" },
   { value: "fruit", label: "Fruit" },
   { value: "grain", label: "Grain" },
   { value: "dairy", label: "Dairy" },

@@ -306,7 +306,7 @@ export function FoodsPage() {
           aria-label="Search foods"
         />
 
-        <div className="flex items-center gap-1" role="group" aria-label="Category">
+        <div className="flex items-center gap-0.5" role="group" aria-label="Category">
           {CATEGORIES.map((opt) => (
             <FilterChip
               key={opt.value}

@@ -120,7 +120,7 @@ describe("getExtraIngredientEmoji", () => {
       "breast milk, formula, or water to thin",
       "breast milk, formula, or water, to loosen",
       "dried thyme or sage (optional)",
-      "grated vegetable, to bind the mince",
+      "grated vegetable, to bind the ground turkey",
       "ground coriander",
       "milk, water, or mashed fruit, to soak",
       "oat flour for grip (optional)",

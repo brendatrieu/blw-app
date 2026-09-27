@@ -661,12 +661,12 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     // An extra's purpose is met ONLY by that verb's own forms (item 565): no
     // synonyms, so "steam over boiling water" neither cooks-and-thins a mash nor
     // loosens one. "for cooking" is met by cook or simmer; "for the pan" by pan,
-    // (pan-)fry or the oven's "baking tray" (never a bare "tray": that is the
+    // (pan-)fry or the oven's "baking sheet" (never a bare "tray": that is the
     // high chair's).
     const PURPOSE: Record<string, string> = {
       thin: "thin(?:s|ned|ning)?",
       cook: "(?:cook|simmer)(?:s|ed|ing)?",
-      pan: "pan|fr(?:y|ies|ied)|baking tray",
+      pan: "pan|fr(?:y|ies|ied)|baking sheet",
     };
     const purposeRe = (verb: string) => {
       const base = verb.replace(/n?ing$/, "");

@@ -38,7 +38,7 @@ const curatedRecipes: RecipeSeed[] = [
           'Peel the sweet potato and cut it into thick, finger-length wedges, then steam or boil for 12-15 minutes, until a fork slides through with no resistance and a wedge mashes easily between two fingers.',
           'Season the beef with a pinch of cumin (no added salt), then pan-fry a thin steak over medium heat for 4-5 minutes a side, or shape ground beef into a thin patty and bake it at 350°F (180°C) for 20-25 minutes, until well-done at 160°F (71°C) with no pink left.',
           'Once cool enough to handle, mince or finely shred the beef so no tough or stringy pieces remain, and toss the sweet potato wedges with a drizzle of olive oil.',
-          'Serve the wedges alongside a small pile of minced beef, moistened with a little olive oil or cooking liquid so it is not dry.',
+          'Serve the wedges alongside a small pile of the beef, minced very finely and moistened with a little olive oil or cooking liquid so it is not dry.',
         ],
       },
       '9': {
@@ -305,7 +305,7 @@ const curatedRecipes: RecipeSeed[] = [
     extraIngredients: [{ name: 'breast milk, formula, or water to thin' }],
     variants: {
       '6': {
-        textureNote: 'Smooth, thinned porridge-like texture loose enough to drip slowly off a spoon.',
+        textureNote: 'Smooth, thinned oatmeal-like texture loose enough to drip slowly off a spoon.',
         steps: [
           'Combine the oats, chia seeds, yogurt, and enough breast milk, formula, or water to thin it to a loose, smooth mixture.',
           'Finely grate the pear and stir it in.',
@@ -314,7 +314,7 @@ const curatedRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Thicker, lumpier porridge with soft, small pear pieces baby can self-feed with a spoon.',
+        textureNote: 'Thicker, lumpier oatmeal with soft, small pear pieces baby can self-feed with a spoon.',
         steps: [
           'Combine the oats, chia seeds, and yogurt with just enough breast milk, formula, or water to thin the mixture slightly, keeping it thick and spoonable rather than pourable.',
           'Finely dice the pear into small, soft pieces and stir it through.',
@@ -372,7 +372,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Small bite-sized meatballs baby can pick up and bite from.',
         steps: [
           'Peel, core, and finely grate the apple, then mix the ground chicken with the grated apple and the dried thyme or sage if using.',
-          'Shape into small bite-sized meatballs, lightly oil the baking tray, and bake at 375°F (190°C) for 14-16 minutes, until they read 165°F (74°C) in the center with no pink left.',
+          'Shape into small bite-sized meatballs, lightly oil the baking sheet, and bake at 375°F (190°C) for 14-16 minutes, until they read 165°F (74°C) in the center with no pink left.',
           'Cool to just-warm, check the temperature, then serve whole or halved alongside a soft grain and vegetable.',
         ],
       },
@@ -610,7 +610,7 @@ const curatedRecipes: RecipeSeed[] = [
   },
   {
     slug: 'apple-cinnamon-tahini-porridge',
-    title: 'Apple Cinnamon Tahini Porridge',
+    title: 'Apple Cinnamon Tahini Oatmeal',
     minAgeMonths: 6,
     prepMinutes: 15,
     ironFocus: true,
@@ -624,7 +624,7 @@ const curatedRecipes: RecipeSeed[] = [
     extraIngredients: [{ name: 'breast milk, formula, or water to thin' }],
     variants: {
       '6': {
-        textureNote: 'Smooth, thinned porridge loose enough to drip slowly off a spoon.',
+        textureNote: 'Smooth, thinned oatmeal loose enough to drip slowly off a spoon.',
         steps: [
           'Simmer the diced apple in a little water over low heat for 5-7 minutes, until completely soft and squishable between two fingers.',
           'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, until soft, then blend or mash until mostly smooth.',
@@ -633,7 +633,7 @@ const curatedRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Thicker, spoonable porridge with small soft apple pieces.',
+        textureNote: 'Thicker, spoonable oatmeal with small soft apple pieces.',
         steps: [
           'Simmer the diced apple in a little water over low heat for 5-7 minutes, until completely soft and squishable between two fingers.',
           'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, thinning with a little more only if needed, to a thick, spoonable consistency.',
@@ -642,12 +642,12 @@ const curatedRecipes: RecipeSeed[] = [
         ],
       },
       '12': {
-        textureNote: 'Thick, family-style porridge with soft diced apple.',
+        textureNote: 'Thick, family-style oatmeal with soft diced apple.',
         steps: [
           'Simmer the diced apple in a little water over low heat for 5-7 minutes, until completely soft and squishable between two fingers.',
-          'Cook the oats with breast milk, formula, or water over medium-low heat for 5-6 minutes, thinning with a little more only if needed, to a thick, family-style porridge consistency.',
+          'Cook the oats with breast milk, formula, or water over medium-low heat for 5-6 minutes, thinning with a little more only if needed, to a thick, family-style oatmeal consistency.',
           'Stir in the softened apple and tahini, mixed evenly through so no thick pockets remain.',
-          'Stir a pinch of cinnamon through the porridge — never sprinkled on dry — then cool to just-warm and serve with a spoon.',
+          'Stir a pinch of cinnamon through the oatmeal — never sprinkled on dry — then cool to just-warm and serve with a spoon.',
         ],
       },
     },

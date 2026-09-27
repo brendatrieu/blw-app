@@ -74,7 +74,7 @@ export const storageGuidelines: StorageGuidelineSeed[] = [
     freezerDays: null,
     roomTempHours: 2,
     notes:
-      'Once thinned with water, breast milk, or formula for serving, treat nut and seed butters like a fresh prepared food rather than a shelf-stable cupboard item. Freezing is not recommended once thinned. Re-stir before each serving and never serve thick or straight from the jar.',
+      'Once thinned with water, breast milk, or formula for serving, treat nut and seed butters like a fresh prepared food rather than a shelf-stable pantry item. Freezing is not recommended once thinned. Re-stir before each serving and never serve thick or straight from the jar.',
   },
   {
     category: 'bread_pasta_grain_baked',
@@ -90,7 +90,7 @@ export const storageGuidelines: StorageGuidelineSeed[] = [
     freezerDays: 90,
     roomTempHours: 2,
     notes:
-      'Muffins, patties, fritters, meatballs, and nuggets freeze well individually wrapped or open-frozen on a tray. Reheat to steaming hot and cool to a safe temperature before serving. Never refreeze after thawing.',
+      'Muffins, patties, fritters, meatballs, and nuggets freeze well individually wrapped or flash-frozen on a baking sheet. Reheat to steaming hot and cool to a safe temperature before serving. Never refreeze after thawing.',
   },
   {
     category: 'soup_stew_curry',
@@ -106,7 +106,7 @@ export const storageGuidelines: StorageGuidelineSeed[] = [
     freezerDays: null,
     roomTempHours: 2,
     notes:
-      'Overnight oats and similar porridges keep chilled in a sealed container; stir in extra liquid before serving if they have thickened. Not recommended for freezing once dairy or fruit is mixed in.',
+      'Overnight oats and other oatmeal keep chilled in a sealed container; stir in extra liquid before serving if they have thickened. Not recommended for freezing once dairy or fruit is mixed in.',
   },
   {
     category: 'opened_pouch_jarred_puree',
@@ -127,6 +127,6 @@ export const storageGuidelines: StorageGuidelineSeed[] = [
     freezerDays: 365,
     roomTempHours: 4320,
     notes:
-      'Dry spices, herbs, seeds, and shelled nuts keep in a sealed jar somewhere cool and dark, away from the stove and out of direct sun. Ground spices fade rather than spoil — replace them when the smell goes flat. Anything you grind yourself (flax, nut and seed meal, hemp hearts) is oily and turns rancid fast: grind small batches and keep those in the fridge or freezer instead of the cupboard.',
+      'Dry spices, herbs, seeds, and shelled nuts keep in a sealed jar somewhere cool and dark, away from the stove and out of direct sun. Ground spices fade rather than spoil — replace them when the smell goes flat. Anything you grind yourself (flax, nut and seed meal, hemp hearts) is oily and turns rancid fast: grind small batches and keep those in the fridge or freezer instead of the pantry.',
   },
 ]

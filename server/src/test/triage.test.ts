@@ -211,6 +211,9 @@ describe("while-waiting advice", () => {
   it("emergency advice leads with calling emergency services", () => {
     const result = triage(["difficulty_breathing"]);
     expect(result.whileWaiting[0]).toMatch(/emergency services/i);
+    // US numbers only (item 569): 911, never the UK's 999 or 111.
+    expect(result.whileWaiting[0]).toMatch(/\b911\b/);
+    expect(result.whileWaiting.join(" ")).not.toMatch(/\b(?:999|111)\b/);
   });
 
   it("urgent advice tells the parent to escalate if things change", () => {

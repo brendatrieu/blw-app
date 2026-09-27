@@ -149,15 +149,15 @@ export const TRIAGE_RULES: readonly TriageRule[] = [
 ];
 
 const EMERGENCY_WHILE_WAITING: readonly string[] = [
-  "Call emergency services now — 999 in the UK, 911 in the US — and say it is a baby with a suspected allergic reaction.",
-  "If a clinician has prescribed an adrenaline auto-injector for this baby, use it now exactly as you were shown, then still call.",
-  "Lay your baby flat with their legs raised. If breathing is hard, hold them upright; if they are being sick or unresponsive, lay them on their side.",
+  "Call emergency services (911) now and say it is a baby with a suspected allergic reaction.",
+  "If a clinician has prescribed an epinephrine auto-injector for this baby, use it now exactly as you were shown, then still call.",
+  "Lay your baby flat with their legs raised. If breathing is hard, hold them upright; if they are vomiting or unresponsive, lay them on their side.",
   "Do not give any food, drink or medicine unless emergency services tell you to.",
   "Stay with them and keep watching their breathing until help arrives.",
 ];
 
 const URGENT_CARE_WHILE_WAITING: readonly string[] = [
-  "Get your baby seen today — call your pediatrician's urgent line, NHS 111, or your nearest urgent care.",
+  "Get your baby seen today — call your pediatrician's urgent line or go to your nearest urgent care.",
   "Keep them where you can see them and do not leave them to nap alone until they have been checked.",
   "Do not offer the suspected food again until a clinician has advised you.",
   "Write down what they ate, when they ate it, and what you saw — take that with you.",

@@ -40,22 +40,13 @@ export function EmergencyCard({ level, reasons, steps, disclaimer, onDismiss }: 
         </div>
 
         {emergency && (
-          <div className="flex gap-2">
-            <a
-              href="tel:999"
-              className="flex-1 rounded-lg bg-white px-4 py-3 text-center text-base font-bold"
-              style={{ color: palette.background }}
-            >
-              Call 999 (UK)
-            </a>
-            <a
-              href="tel:911"
-              className="flex-1 rounded-lg bg-white px-4 py-3 text-center text-base font-bold"
-              style={{ color: palette.background }}
-            >
-              Call 911 (US)
-            </a>
-          </div>
+          <a
+            href="tel:911"
+            className="rounded-lg bg-white px-4 py-3 text-center text-base font-bold"
+            style={{ color: palette.background }}
+          >
+            Call 911
+          </a>
         )}
 
         {reasons.length > 0 && (

@@ -7,6 +7,7 @@
 // same rule-based fallback the no-key path already uses.
 import type Anthropic from "@anthropic-ai/sdk";
 import {
+  BODY_AREA_LABELS,
   NARRATIVE_MAX_WORDS,
   MAX_CANDIDATES,
   SYMPTOM_WINDOW_HOURS,
@@ -189,7 +190,9 @@ export function buildSymptomUserMessage(input: SymptomAnalysisInput): string {
     severity: survey.severity,
     onsetAt: survey.onsetAt,
     mealTiming: survey.mealTiming,
-    bodyAreas: survey.bodyAreas,
+    // With labels, like symptoms: the model writes the narrative the parent
+    // reads, so it must see "Diaper area", not only the key "nappy_area".
+    bodyAreas: survey.bodyAreas.map((area) => ({ code: area, label: BODY_AREA_LABELS[area] })),
   };
 
   const sections = [

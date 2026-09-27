@@ -197,7 +197,7 @@ export const coverageRecipesB: RecipeSeed[] = [
     fridgeHoursOverride: 72,
     freezerDaysOverride: 90,
     ingredients: [
-      { foodSlug: 'oats', quantityNote: '3/4 cup rolled oats, half of them blitzed to a flour' },
+      { foodSlug: 'oats', quantityNote: '3/4 cup rolled oats, half of them blended to a flour' },
       { foodSlug: 'sunflower_seed_butter', quantityNote: '3 tablespoons smooth unsalted sunflower seed butter, thinned until runny' },
       { foodSlug: 'banana', quantityNote: '1 very ripe banana, mashed' },
       { foodSlug: 'pecans', quantityNote: '1 tablespoon pecans, ground to a fine meal' },
@@ -208,27 +208,27 @@ export const coverageRecipesB: RecipeSeed[] = [
       '6': {
         textureNote: 'Soft chilled fingers, about the length and thickness of an adult finger, that squish easily between two fingers.',
         steps: [
-          'Blitz half the rolled oats to a flour and keep the rest whole — use rolled or quick oats, never steel-cut or jumbo, which stay firm and chewy however long they sit.',
+          'Blend half the rolled oats to a flour and keep the rest whole — use rolled or quick oats, never steel-cut or thick-cut, which stay firm and chewy however long they sit.',
           'Thin the sunflower seed butter with a splash of warm water, whisking until it is completely runny, then mash the very ripe banana into it with a pinch of cinnamon.',
           'Grind the pecans to a fine, flour-like meal, stir them in with both lots of oats, and leave the mixture to stand for 15 minutes so the oats swell and go soft rather than staying dry.',
-          'Press the mixture firmly into a small lined tin and chill it for 1-2 hours, until it is firm enough to cut cleanly.',
+          'Press the mixture firmly into a small lined baking pan and chill it for 1-2 hours, until it is firm enough to cut cleanly.',
           'Cut into finger-length fingers, check one squishes easily between two fingers, and serve.',
         ],
       },
       '9': {
         textureNote: 'Soft chilled fingers, or small bite-sized pieces (no bigger than ½ inch) broken from them for a pincer grasp.',
         steps: [
-          'Blitz half the rolled oats to a flour and leave the rest whole, using rolled or quick oats only.',
+          'Blend half the rolled oats to a flour and leave the rest whole, using rolled or quick oats only.',
           'Thin the sunflower seed butter with warm water until runny, mash in the very ripe banana and a pinch of cinnamon, and stir through the oats and the finely ground pecan meal.',
-          'Let the mixture stand for 15 minutes so the oats soften, then press it into a lined tin and chill for 1-2 hours until firm.',
+          'Let the mixture stand for 15 minutes so the oats soften, then press it into a lined baking pan and chill for 1-2 hours until firm.',
           'Cut into fingers, or break them into soft, small bite-sized pieces (no bigger than ½ inch), and serve on the tray for self-feeding.',
         ],
       },
       '12': {
         textureNote: 'Small bite-sized pieces of a soft chilled finger, or a whole finger to bite from.',
         steps: [
-          'Blitz half the rolled oats to a flour and leave the rest whole, thin the sunflower seed butter with a splash of warm water until runny, mash in the very ripe banana and a pinch of cinnamon, and stir in the pecans ground to a fine meal.',
-          'Stand it for 15 minutes so the oats soften, press it into a lined tin, and chill for 1-2 hours until firm enough to cut.',
+          'Blend half the rolled oats to a flour and leave the rest whole, thin the sunflower seed butter with a splash of warm water until runny, mash in the very ripe banana and a pinch of cinnamon, and stir in the pecans ground to a fine meal.',
+          'Stand it for 15 minutes so the oats soften, press it into a lined baking pan, and chill for 1-2 hours until firm enough to cut.',
           'Cut into small bite-sized pieces, or hand over a whole finger to bite from.',
           'Pair with a vitamin-C side such as orange segments with the membrane removed.',
         ],
@@ -301,17 +301,17 @@ export const coverageRecipesB: RecipeSeed[] = [
           'Peel the tough outer skin from the bell pepper with a vegetable peeler, then dice it and the peeled sweet potato as finely as you can.',
           'Warm a little olive oil in a pan and cook the sweet potato and pepper over medium heat for 8-10 minutes, stirring in a pinch of sweet (mild) paprika as they soften, until the pepper is completely tender.',
           'Add the ground turkey, break it up well, and cook over medium heat for 7-8 minutes more, until the sweet potato is fork-tender and the turkey reads 165°F (74°C) with no pink left.',
-          'Mash the pan well with a fork so the soft sweet potato binds the mince, and stir through a little more olive oil — lean ground turkey turns dry and crumbly on its own.',
+          'Mash the pan well with a fork so the soft sweet potato binds the ground turkey, and stir through a little more olive oil — lean ground turkey turns dry and crumbly on its own.',
           'Cool to just-warm, press the hash into a thin patty, and cut it into finger-length strips, checking one squishes easily between two fingers.',
         ],
       },
       '9': {
-        textureNote: 'Soft, small bite-sized pieces of vegetable and mince (no bigger than ½ inch), loose on the tray for a pincer grasp.',
+        textureNote: 'Soft, small bite-sized pieces of vegetable and ground turkey (no bigger than ½ inch), loose on the tray for a pincer grasp.',
         steps: [
           'Peel the tough skin from the bell pepper and dice it and the peeled sweet potato into small bite-sized pieces (no bigger than ½ inch).',
           'Cook them in a little olive oil over medium heat for 8-10 minutes with a pinch of sweet (mild) paprika, until the pepper is completely tender.',
           'Add the ground turkey and cook over medium heat for 7-8 minutes more, until the sweet potato squashes easily between two fingers and the turkey reads 165°F (74°C) with no pink left.',
-          'Stir in a little olive oil to keep the mince moist, cool to just-warm, and serve loose on the tray for self-feeding.',
+          'Stir in a little olive oil to keep the ground turkey moist, cool to just-warm, and serve loose on the tray for self-feeding.',
         ],
       },
       '12': {
@@ -320,7 +320,7 @@ export const coverageRecipesB: RecipeSeed[] = [
           'Peel the tough skin from the bell pepper and dice it with the peeled sweet potato into small bite-sized pieces.',
           'Cook them in a little olive oil over medium heat for 8-10 minutes with a pinch of sweet (mild) paprika, until tender.',
           'Add the ground turkey and cook over medium heat for 7-8 minutes more, until it reads 165°F (74°C) with no pink left.',
-          'Stir in a little olive oil so the mince stays moist, cool to just-warm, and serve with no added salt, letting baby practice with a fork.',
+          'Stir in a little olive oil so the ground turkey stays moist, cool to just-warm, and serve with no added salt, letting baby practice with a fork.',
         ],
       },
     },
@@ -345,7 +345,7 @@ export const coverageRecipesB: RecipeSeed[] = [
         textureNote: 'A finger-length wedge of soft squash beside a pile of finely shredded pork, moistened with the pan juices.',
         steps: [
           'Peel the butternut squash and cut it into finger-length wedges, peel, core, and dice the apple, and toss both with a little olive oil and a pinch of cinnamon.',
-          'Trim every scrap of fat and gristle from the pork, sit it on the tray with the squash and apple, and roast at 400°F (200°C) for 25-30 minutes, until the squash mashes easily between two fingers, the apple has collapsed, and the pork reads 160°F (71°C) with no pink left.',
+          'Trim every scrap of fat and gristle from the pork, sit it in a roasting pan with the squash and apple, and roast at 400°F (200°C) for 25-30 minutes, until the squash mashes easily between two fingers, the apple has collapsed, and the pork reads 160°F (71°C) with no pink left.',
           'Shred the pork very finely against the grain and moisten it well with the pan juices — pork turns chewy the moment it dries out.',
           'Mash the apple into some of the squash, keeping one soft wedge whole for baby to hold.',
           'Cool to just-warm and serve the shredded pork in a soft pile beside the wedge.',
@@ -382,7 +382,7 @@ export const coverageRecipesB: RecipeSeed[] = [
     ingredients: [
       { foodSlug: 'pork', quantityNote: '225g (8oz) ground pork' },
       { foodSlug: 'carrot', quantityNote: '1 carrot, peeled and finely grated' },
-      { foodSlug: 'tomato', quantityNote: '2 tomatoes, skinned and diced, or 200g passata with no added salt' },
+      { foodSlug: 'tomato', quantityNote: '2 tomatoes, skinned and diced, or 200g tomato puree with no added salt' },
       { foodSlug: 'oregano', quantityNote: 'a pinch of dried oregano, rubbed fine between your fingers' },
       { foodSlug: 'wheat_pasta', quantityNote: '60g pasta shapes' },
     ],
@@ -399,7 +399,7 @@ export const coverageRecipesB: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Small soft pasta shapes in a ragu with the mince in small bite-sized pieces (no bigger than ½ inch), sized for a pincer grasp.',
+        textureNote: 'Small soft pasta shapes in a ragu with the ground pork in small bite-sized pieces (no bigger than ½ inch), sized for a pincer grasp.',
         steps: [
           'Brown the ground pork in a little olive oil over medium heat for 5-6 minutes, breaking it up finely.',
           'Add the grated carrot, the skinned and diced tomato, and a pinch of finely rubbed dried oregano, then simmer covered over low heat for 25-30 minutes, until the carrot has melted in and the pork is well past 160°F (71°C) and soft enough to squash.',
@@ -493,11 +493,11 @@ export const coverageRecipesB: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soft, small bite-sized pieces of mince (no bigger than ½ inch) with squashed peas and loose rice grains for pincer practice.',
+        textureNote: 'Soft, small bite-sized pieces of ground lamb (no bigger than ½ inch) with squashed peas and loose rice grains for pincer practice.',
         steps: [
           'Warm a small pinch of turmeric in a little olive oil over medium heat for 30-60 seconds, then brown the ground lamb over medium heat for 5-6 minutes.',
           'Stir in the skinned, diced tomato and simmer over low heat for 20-25 minutes, until the lamb is well past 160°F (71°C) and the sauce is thick, adding the peas for the last 5 minutes.',
-          'Squash each pea flat between finger and thumb and check the mince by feel for bone fragments.',
+          'Squash each pea flat between finger and thumb and check the ground lamb by feel for bone fragments.',
           'Cool everything to just-warm before serving the rice as loose grains beside the keema for pincer-grasp practice.',
         ],
       },

@@ -283,7 +283,7 @@ export const coverageRecipesC: RecipeSeed[] = [
     fridgeHoursOverride: 24,
     freezerDaysOverride: 60,
     ingredients: [
-      { foodSlug: 'beef', quantityNote: '1/2 cup lean minced beef' },
+      { foodSlug: 'beef', quantityNote: '1/2 cup lean ground beef' },
       { foodSlug: 'potato', quantityNote: '1 medium potato, peeled, green patches and sprouts trimmed away' },
       { foodSlug: 'carrot', quantityNote: '1 small carrot, peeled and chunked' },
       { foodSlug: 'tomato', quantityNote: '1 small tomato, skinned, deseeded, and chopped' },
@@ -296,10 +296,10 @@ export const coverageRecipesC: RecipeSeed[] = [
     variants: {
       '6': {
         textureNote:
-          'A soft, loose mash of potato and carrot with very finely minced beef stirred through, moist enough to need no chewing.',
+          'A soft, loose mash of potato and carrot with ground beef, broken up very fine, stirred through, moist enough to need no chewing.',
         steps: [
           'Soften the minced garlic in a little olive oil over medium-low heat for 2-3 minutes, until fragrant — garlic is always cooked, never raw.',
-          'Brown the minced beef with it over medium heat for 5-7 minutes, breaking it up very small, until no pink is left and it reads 160°F (71°C) on a thermometer.',
+          'Brown the ground beef with it over medium heat for 5-7 minutes, breaking it up very small, until no pink is left and it reads 160°F (71°C) on a thermometer.',
           'Add the skinned, deseeded tomato and a splash of water or no-salt-added stock, then simmer over low heat for 12-15 minutes, until the beef is very tender and the sauce has thickened.',
           'Steam or boil the potato and carrot for 12-15 minutes, until both mash easily between two fingers — carrot is never served raw or firm.',
           'Mash the potato and carrot together with a drizzle of olive oil, loose rather than stiff, and stir the beef sauce through it.',
@@ -310,7 +310,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         textureNote: 'A rougher mash with soft, small bite-sized pieces of beef and potato (no bigger than ½ inch) on the tray.',
         steps: [
           'Soften the minced garlic in a little olive oil over medium-low heat for 2-3 minutes, until fragrant.',
-          'Brown the minced beef with it over medium heat for 5-7 minutes, until no pink is left and it reads 160°F (71°C) on a thermometer.',
+          'Brown the ground beef with it over medium heat for 5-7 minutes, until no pink is left and it reads 160°F (71°C) on a thermometer.',
           'Add the skinned, deseeded tomato and a little water or no-salt-added stock, then simmer over low heat for 12-15 minutes, until the beef is soft and shreds easily into small bite-sized pieces (no bigger than ½ inch).',
           'Steam or boil the potato and carrot for 12-15 minutes, until they mash easily between two fingers, then mash most of it roughly and keep a few small bite-sized soft pieces (no bigger than ½ inch) for the tray.',
           'Spoon the beef over the mash, cool to just-warm, and serve with no added salt.',
@@ -320,7 +320,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         textureNote: 'Family-style cottage mash, in small bite-sized pieces of soft beef, potato and carrot.',
         steps: [
           'Soften the minced garlic in a little olive oil over medium-low heat for 2-3 minutes, until fragrant.',
-          'Brown the minced beef over medium heat for 5-7 minutes, until it reads 160°F (71°C) on a thermometer, then add the skinned, deseeded tomato and a little no-salt-added stock.',
+          'Brown the ground beef over medium heat for 5-7 minutes, until it reads 160°F (71°C) on a thermometer, then add the skinned, deseeded tomato and a little no-salt-added stock.',
           'Simmer over low heat for 15-20 minutes, until thick and tender, while you steam or boil the potato and carrot for 12-15 minutes, until fork-tender.',
           'Mash the potato and carrot loosely with a drizzle of olive oil — never beaten until it turns gluey — spoon the beef over the top, cool to just-warm, and serve family-style in small bite-sized pieces, with no added salt in the pan.',
         ],

@@ -62,7 +62,7 @@ export const coverageRecipesA: RecipeSeed[] = [
       '12': {
         textureNote: 'Thick, family-style overnight oats with small bite-sized pieces of strawberry.',
         steps: [
-          'Soak the oats and chia seeds overnight in enough milk or water for a thick, family-style porridge, long enough that every seed has swelled soft.',
+          'Soak the oats and chia seeds overnight in enough milk or water for a thick, family-style oatmeal, long enough that every seed has swelled soft.',
           'Hull and quarter the strawberries lengthwise, never leaving a whole round berry, and stir most of them through.',
           'Whisk the almond butter until runny and ripple it over the top, keeping the layer thin rather than a glob.',
           'Serve cold with a spoon and let baby scoop for themselves.',
@@ -71,11 +71,11 @@ export const coverageRecipesA: RecipeSeed[] = [
     },
   },
 
-  // A nut-free porridge that gets its richness from sunflower seed butter and ground flax stirred
+  // A nut-free oatmeal that gets its richness from sunflower seed butter and ground flax stirred
   // in at the end.
   {
     slug: 'pear-sunflower-flax-porridge',
-    title: 'Pear, Flax & Sunflower Seed Porridge',
+    title: 'Pear, Flax & Sunflower Seed Oatmeal',
     minAgeMonths: 6,
     prepMinutes: 20,
     ironFocus: false,
@@ -94,18 +94,18 @@ export const coverageRecipesA: RecipeSeed[] = [
     variants: {
       '6': {
         textureNote:
-          'Smooth, thin porridge loose enough to drip slowly off a spoon, with the pear cooked until it mashes easily between two fingers.',
+          'Smooth, thin oatmeal loose enough to drip slowly off a spoon, with the pear cooked until it mashes easily between two fingers.',
         steps: [
           'Simmer the diced pear in a splash of water over low heat for 5-7 minutes, until it mashes easily between two fingers.',
           'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, with a pinch of cinnamon stirred in as they go, until soft and smooth.',
-          'Take the pan off the heat, then stir in the softened pear and the ground flaxseed until it disappears into the porridge.',
+          'Take the pan off the heat, then stir in the softened pear and the ground flaxseed until it disappears into the oatmeal.',
           'Whisk the sunflower seed butter with a little warm water until it is runny, then swirl it through so no thick pocket is left.',
           'Thin with extra breast milk, formula, or water to a drippy consistency, cool to a safe temperature, and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote:
-          'Thicker, spoonable porridge with small bite-sized pieces of soft pear (no bigger than ½ inch) left in for pincer-grasp practice.',
+          'Thicker, spoonable oatmeal with small bite-sized pieces of soft pear (no bigger than ½ inch) left in for pincer-grasp practice.',
         steps: [
           'Simmer the diced pear in a splash of water over low heat for 5-7 minutes, until it squashes easily between two fingers, leaving the pieces whole rather than mashing them.',
           'Cook the oats over medium-low heat for 4-5 minutes with a pinch of cinnamon, until thick enough to sit on a spoon.',
@@ -114,7 +114,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         ],
       },
       '12': {
-        textureNote: 'Thick, family-style porridge with small bite-sized pieces of ripe pear.',
+        textureNote: 'Thick, family-style oatmeal with small bite-sized pieces of ripe pear.',
         steps: [
           'Cook the oats over medium-low heat for 5-6 minutes with a pinch of cinnamon, until thick and family-style.',
           'Dice a ripe pear into small bite-sized pieces, softening it first over low heat for 5-7 minutes if it is still firm, then fold it in.',
@@ -690,7 +690,7 @@ export const coverageRecipesA: RecipeSeed[] = [
       },
       {
         foodSlug: 'tomato',
-        quantityNote: '2 tomatoes, skinned and diced, or 200g passata with no added salt',
+        quantityNote: '2 tomatoes, skinned and diced, or 200g tomato puree with no added salt',
       },
       {
         foodSlug: 'oregano',
@@ -970,7 +970,7 @@ export const coverageRecipesA: RecipeSeed[] = [
       { foodSlug: 'walnuts', quantityNote: '2 tablespoons walnuts, ground to a fine meal' },
       {
         foodSlug: 'tomato',
-        quantityNote: '2 tomatoes, skinned and diced, or 200g passata with no added salt',
+        quantityNote: '2 tomatoes, skinned and diced, or 200g tomato puree with no added salt',
       },
       { foodSlug: 'oregano', quantityNote: 'a pinch of dried oregano, rubbed fine' },
       { foodSlug: 'wheat_pasta', quantityNote: '60g small pasta shapes' },

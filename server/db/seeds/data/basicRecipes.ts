@@ -46,11 +46,11 @@ export const basicRecipes: RecipeSeed[] = [
     extraIngredients: [{ name: 'olive oil or a spoonful of the cooking liquid, to moisten' }],
     variants: {
       '6': {
-        textureNote: 'A finger-length strip of well-done beef cut along the grain, or a moist pile of very finely minced beef.',
+        textureNote: 'A finger-length strip of well-done beef cut along the grain, or a moist pile of beef minced very finely.',
         steps: [
           'Cook the beef well-done with no added salt — pan-fry a thin steak over medium heat for 4-5 minutes a side, or shape ground beef into a thin patty and bake it at 350°F (180°C) for 20-25 minutes — until a thermometer in the thickest part reads 160°F (71°C) and no pink remains.',
           'Rest it for 3-5 minutes, then cut a finger-length strip along the grain so it holds together, or mince it very finely.',
-          'Moisten the strip or the mince with a little olive oil or cooking liquid so it is never dry or stringy.',
+          'Moisten the strip or the finely minced pieces with a little olive oil or cooking liquid so it is never dry or stringy.',
           'Dense or dry meat is hard to gum into a swallowable piece, so keep it moist and tender and shred it finely against the grain if it feels tough.',
           'Cool to just-warm, check the temperature, and serve.',
         ],
@@ -381,16 +381,16 @@ export const basicRecipes: RecipeSeed[] = [
     extraIngredients: [{ name: 'breast milk, formula, or water' }],
     variants: {
       '6': {
-        textureNote: 'A smooth, thinned porridge loose enough to drip slowly off a spoon.',
+        textureNote: 'A smooth, thinned oatmeal loose enough to drip slowly off a spoon.',
         steps: [
-          'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, stirring, until the grains are soft and the porridge is smooth.',
-          'Thin the porridge until it drips slowly off a spoon rather than sitting in a stiff lump.',
+          'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, stirring, until the grains are soft and the oatmeal is smooth.',
+          'Thin the oatmeal until it drips slowly off a spoon rather than sitting in a stiff lump.',
           'Stir well to release hot spots, cool to just-warm, and check the temperature.',
           'Serve on a pre-loaded spoon and let baby bring it to their mouth.',
         ],
       },
       '9': {
-        textureNote: 'A thicker, spoonable porridge with some texture, or stirred into oat-based bites.',
+        textureNote: 'A thicker, spoonable oatmeal with some texture, or stirred into oat-based bites.',
         steps: [
           'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, to a thicker, spoonable consistency.',
           'Leave a little texture rather than cooking it completely smooth.',
@@ -398,7 +398,7 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '12': {
-        textureNote: 'A thick, family-style porridge.',
+        textureNote: 'A thick, family-style oatmeal.',
         steps: [
           'Cook the oats with breast milk, formula, or water over medium-low heat for 5-6 minutes, adding liquid a splash at a time, until thick and family-style.',
           'Stir to release hot spots, cool to just-warm, and check the temperature.',
@@ -701,7 +701,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Finger-length strips of fully ripe mango.',
         steps: [
           'Choose a fully ripe mango — firm, underripe pieces can be slippery and harder to gum.',
-          'Wash and peel it, then cut the flesh away from the stone; ripe mango is served raw.',
+          'Wash and peel it, then cut the flesh away from the pit; ripe mango is served raw.',
           'Cut the flesh into finger-length strips baby can hold and gnaw on.',
           'Serve at room temperature.',
         ],
@@ -709,7 +709,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Finger-length strips of fully ripe mango, or small bite-sized dice (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Peel a fully ripe mango and cut the flesh off the stone.',
+          'Peel a fully ripe mango and cut the flesh off the pit.',
           'Cut it into finger-length strips, or dice it into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Serve at room temperature for pincer-grasp self-feeding.',
         ],
@@ -717,7 +717,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Small bite-sized pieces of ripe mango.',
         steps: [
-          'Peel a fully ripe mango and cut it off the stone.',
+          'Peel a fully ripe mango and cut it off the pit.',
           'Dice it into small bite-sized pieces.',
           'Serve at room temperature.',
         ],
@@ -927,7 +927,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Thinned tahini stirred through food, or spread in a thin layer.',
         steps: [
           'Thin the tahini with warm water, breast milk, or formula until it is runny, and let it cool to just-warm before serving.',
-          'Stir it through porridge, yogurt, or vegetables, or spread it thinly on a toast finger toasted for 1-2 minutes and softened.',
+          'Stir it through oatmeal, yogurt, or vegetables, or spread it thinly on a toast finger toasted for 1-2 minutes and softened.',
           'Keep the layer thin rather than a thick paste.',
           'Serve it to baby.',
         ],
@@ -1123,7 +1123,7 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'A finger-length wedge of ripe avocado, with a little skin left on one side as a grip.',
         steps: [
-          'Halve a ripe avocado, remove the stone, and cut a finger-length wedge — ripe avocado is served raw, with no cooking.',
+          'Halve a ripe avocado, remove the pit, and cut a finger-length wedge — ripe avocado is served raw, with no cooking.',
           'Leave a little skin on one side of the wedge as a grip, or serve the flesh mashed on a spoon.',
           'A very ripe avocado can be slippery, so if the wedge keeps sliding out of baby\'s hand, roll it in a thin coating of oat flour for grip.',
           'Serve at room temperature.',
@@ -1141,7 +1141,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Small bite-sized pieces or slices of ripe avocado.',
         steps: [
-          'Halve a ripe avocado, remove the stone, and scoop out the flesh.',
+          'Halve a ripe avocado, remove the pit, and scoop out the flesh.',
           'Dice or slice it into small bite-sized pieces.',
           'If the pieces are slippery, dust them lightly with oat flour so little fingers can grip them.',
           'Serve at room temperature for baby to practice with a fork.',
@@ -1592,7 +1592,7 @@ export const basicRecipes: RecipeSeed[] = [
     ironFocus: false,
     ingredients: [{ foodSlug: 'turkey', quantityNote: '55g (2oz) ground turkey, or a small boneless turkey thigh' }],
     extraIngredients: [
-      { name: 'grated vegetable, to bind the mince' },
+      { name: 'grated vegetable, to bind the ground turkey' },
       { name: 'olive oil or a spoonful of the cooking liquid, to moisten' },
     ],
     variants: {
@@ -1672,23 +1672,23 @@ export const basicRecipes: RecipeSeed[] = [
     minAgeMonths: 6,
     prepMinutes: 30,
     ironFocus: false,
-    ingredients: [{ foodSlug: 'lamb', quantityNote: '55g (2oz) lamb mince, or a piece of boneless lamb shoulder' }],
+    ingredients: [{ foodSlug: 'lamb', quantityNote: '55g (2oz) ground lamb, or a piece of boneless lamb shoulder' }],
     extraIngredients: [{ name: 'olive oil or a spoonful of the cooking liquid, to moisten' }],
     variants: {
       '6': {
-        textureNote: 'A soft, moist pile of well-done lamb mince, or a finger-length shred of slow-cooked shoulder.',
+        textureNote: 'A soft, moist pile of well-done ground lamb, or a finger-length shred of slow-cooked shoulder.',
         steps: [
-          'Use lamb mince or boneless shoulder only — chops and anything on the bone are not a baby food — and check by feel for bone fragments.',
-          'Cook it well-done with no added salt: brown the mince over medium heat for 6-8 minutes, or slow-cook the shoulder for 2-3 hours until it falls apart, in either case until a thermometer reads 160°F (71°C).',
+          'Use ground lamb or boneless shoulder only — chops and anything on the bone are not a baby food — and check by feel for bone fragments.',
+          'Cook it well-done with no added salt: brown the ground lamb over medium heat for 6-8 minutes, or slow-cook the shoulder for 2-3 hours until it falls apart, in either case until a thermometer reads 160°F (71°C).',
           'Drain off the fat, rest it for 3-5 minutes, and moisten with a little olive oil or cooking liquid.',
-          'Serve as a soft pile of fine mince, or pull a finger-length shred from the shoulder.',
+          'Serve as a soft pile of finely crumbled ground lamb, or pull a finger-length shred from the shoulder.',
           'Cool to just-warm, check the temperature, and serve.',
         ],
       },
       '9': {
-        textureNote: 'A finger-length shred of slow-cooked shoulder, or small bite-sized pieces of well-done mince or shoulder (no bigger than ½ inch) for pincer practice.',
+        textureNote: 'A finger-length shred of slow-cooked shoulder, or small bite-sized pieces of well-done ground lamb or shoulder (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Brown lamb mince over medium heat for 6-8 minutes, or slow-cook boneless shoulder until it falls apart, until it reads 160°F (71°C) with no pink left.',
+          'Brown the ground lamb over medium heat for 6-8 minutes, or slow-cook boneless shoulder until it falls apart, until it reads 160°F (71°C) with no pink left.',
           'Drain the fat, then pull a finger-length shred from the shoulder, or break the meat into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Stir through a little olive oil or cooking liquid to moisten the pieces, so they are not dry.',
           'Serve just-warm for pincer-grasp practice.',
@@ -1697,7 +1697,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Small, soft bite-sized dice or shreds of tender slow-cooked lamb.',
         steps: [
-          'Slow-cook boneless lamb shoulder for 2-3 hours until it is falling apart, or brown the mince over medium heat for 6-8 minutes, until it reads 160°F (71°C).',
+          'Slow-cook boneless lamb shoulder for 2-3 hours until it is falling apart, or brown the ground lamb over medium heat for 6-8 minutes, until it reads 160°F (71°C).',
           'Drain the fat, then dice or shred the meat into small, soft bite-sized pieces.',
           'Moisten with a little cooking liquid or olive oil.',
           'Serve just-warm with no added salt, checking once more for bone fragments.',
@@ -1836,16 +1836,16 @@ export const basicRecipes: RecipeSeed[] = [
     extraIngredients: [{ name: 'breast milk, formula, or water' }],
     variants: {
       '6': {
-        textureNote: 'A smooth, thinned porridge loose enough to drip slowly off a spoon.',
+        textureNote: 'A smooth, thinned oatmeal loose enough to drip slowly off a spoon.',
         steps: [
           'Simmer the oats with plenty of breast milk, formula, or water over medium-low heat for 4-5 minutes, stirring, until the flakes are completely soft.',
-          'Thin the porridge until it drips slowly off a spoon rather than sitting in a stiff lump.',
+          'Thin the oatmeal until it drips slowly off a spoon rather than sitting in a stiff lump.',
           'Stir well to release hot spots, cool to just-warm, and check the temperature.',
           'Serve on a pre-loaded spoon — plain oats carry far less iron than the fortified kind, so pair the meal with an iron-rich food.',
         ],
       },
       '9': {
-        textureNote: 'A thicker, spoonable porridge with a little texture left.',
+        textureNote: 'A thicker, spoonable oatmeal with a little texture left.',
         steps: [
           'Simmer the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, to a thicker, spoonable consistency.',
           'Leave a little texture rather than cooking it completely smooth.',
@@ -1853,7 +1853,7 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '12': {
-        textureNote: 'A thick, family-style porridge.',
+        textureNote: 'A thick, family-style oatmeal.',
         steps: [
           'Simmer the oats with breast milk, formula, or water over medium-low heat for 5-6 minutes, adding liquid a splash at a time, until thick and family-style.',
           'Stir to release hot spots, cool to just-warm, and check the temperature.',
@@ -1876,14 +1876,14 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'A pinch of ground or whole sesame seeds stirred through a wet food so nothing is dry or loose.',
         steps: [
           'Grind the sesame seeds to a fine meal if you want them to disappear completely, or leave them whole.',
-          'Sprinkle a pinch over a wet food — porridge, yogurt, or a soft vegetable mash — so the seeds cling rather than scatter.',
+          'Sprinkle a pinch over a wet food — oatmeal, yogurt, or a soft vegetable mash — so the seeds cling rather than scatter.',
           'Stir them through, and never hand over a spoonful or a pile of dry seeds: any dry seed is easy to inhale.',
         ],
       },
       '9': {
-        textureNote: 'A pinch of whole or ground seeds stirred through yogurt, porridge, or a mash.',
+        textureNote: 'A pinch of whole or ground seeds stirred through yogurt, oatmeal, or a mash.',
         steps: [
-          'Sprinkle a pinch of whole or ground sesame seeds over yogurt, porridge, hummus, or soft vegetables.',
+          'Sprinkle a pinch of whole or ground sesame seeds over yogurt, oatmeal, hummus, or soft vegetables.',
           'Stir them through a mash so they cling rather than scatter across the tray.',
           'Keep it to a pinch, never a spoonful of dry seeds.',
         ],
@@ -1908,7 +1908,7 @@ export const basicRecipes: RecipeSeed[] = [
     extraIngredients: [{ name: 'milk, water, or mashed fruit, to soak', quantityNote: '4-5 tablespoons' }],
     variants: {
       '6': {
-        textureNote: 'A soft chia gel thinned to a smooth, spoonable porridge, stirred through milk or mashed fruit.',
+        textureNote: 'A soft chia gel thinned to a smooth, spoonable pudding, stirred through milk or mashed fruit.',
         steps: [
           'Soak 1 teaspoon of chia seeds in 4-5 tablespoons of milk, water, or mashed fruit.',
           'Leave it at least 10 minutes, until every seed has swelled into a soft gel with no dry grit left.',
@@ -1917,18 +1917,18 @@ export const basicRecipes: RecipeSeed[] = [
         ],
       },
       '9': {
-        textureNote: 'Soaked, gelled chia stirred through yogurt, porridge, or a fruit mash.',
+        textureNote: 'Soaked, gelled chia stirred through yogurt, oatmeal, or a fruit mash.',
         steps: [
           'Soak 1 teaspoon of chia in 4-5 tablespoons of milk, water, or mashed fruit for at least 10 minutes, until it is a soft gel.',
-          'Stir the gel through yogurt, porridge, or a fruit mash.',
+          'Stir the gel through yogurt, oatmeal, or a fruit mash.',
           'Keep it spoonable rather than stiff, and never serve the seeds dry.',
         ],
       },
       '12': {
-        textureNote: 'Soaked chia in a pudding, porridge, or smoothie — never dry.',
+        textureNote: 'Soaked chia in a pudding, oatmeal, or smoothie — never dry.',
         steps: [
           'Soak the chia first, every time: at least 10 minutes in milk, water, or fruit.',
-          'Stir the gel into a pudding, porridge, or smoothie.',
+          'Stir the gel into a pudding, oatmeal, or smoothie.',
           'Chia is very high in fiber, so a teaspoon at a time is plenty, with extra fluid alongside.',
         ],
       },
@@ -1943,26 +1943,26 @@ export const basicRecipes: RecipeSeed[] = [
     ingredients: [{ foodSlug: 'flax_seeds', quantityNote: '1 teaspoon flaxseed, ground to a meal' }],
     variants: {
       '6': {
-        textureNote: 'A teaspoon of ground flaxseed stirred through porridge, yogurt, or a vegetable mash until it disappears.',
+        textureNote: 'A teaspoon of ground flaxseed stirred through oatmeal, yogurt, or a vegetable mash until it disappears.',
         steps: [
           'Grind the flaxseed to a meal — whole seeds are hard and slippery and pass straight through undigested.',
-          'Stir 1 teaspoon of the meal through porridge, yogurt, or a soft vegetable mash until it disappears.',
+          'Stir 1 teaspoon of the meal through oatmeal, yogurt, or a soft vegetable mash until it disappears.',
           'Serve it wet, never as a dry powder on a spoon.',
           'Keep the rest of the meal in the fridge: ground flax turns rancid quickly.',
         ],
       },
       '9': {
-        textureNote: 'Ground flaxseed stirred through porridge, yogurt, or a fruit mash.',
+        textureNote: 'Ground flaxseed stirred through oatmeal, yogurt, or a fruit mash.',
         steps: [
           'Grind the flaxseed fresh, or use meal you ground earlier and kept in the fridge.',
-          'Stir a teaspoon through porridge, yogurt, a fruit mash, or a fritter mix.',
+          'Stir a teaspoon through oatmeal, yogurt, a fruit mash, or a fritter mix.',
           'Whole seeds stay off the menu — it is the grinding that makes flax useful and safe.',
         ],
       },
       '12': {
-        textureNote: 'Ground flaxseed stirred into porridge or into whatever you are baking.',
+        textureNote: 'Ground flaxseed stirred into oatmeal or into whatever you are baking.',
         steps: [
-          'Use ground flaxseed only, stirred into porridge or into whatever you are baking.',
+          'Use ground flaxseed only, stirred into oatmeal or into whatever you are baking.',
           'Whole seeds still pass through undigested, so it is the meal that goes in.',
           'Grind small batches and keep them in the fridge.',
         ],
@@ -1978,25 +1978,25 @@ export const basicRecipes: RecipeSeed[] = [
     ingredients: [{ foodSlug: 'hemp_seeds', quantityNote: '1 teaspoon hulled hemp hearts' }],
     variants: {
       '6': {
-        textureNote: 'A pinch of hulled hemp hearts stirred through a wet porridge, yogurt, or vegetable mash.',
+        textureNote: 'A pinch of hulled hemp hearts stirred through wet oatmeal, yogurt, or a vegetable mash.',
         steps: [
           'Use hulled hemp hearts, not whole hemp seed with the shell on — the shell is hard and fibrous, the hearts are soft.',
-          'Sprinkle a pinch over porridge, yogurt, or a soft vegetable mash.',
+          'Sprinkle a pinch over oatmeal, yogurt, or a soft vegetable mash.',
           'Stir them through so they soften and cling rather than scatter across the tray.',
         ],
       },
       '9': {
         textureNote: 'Hulled hemp hearts sprinkled or stirred through soft food.',
         steps: [
-          'Sprinkle or stir a teaspoon of hulled hemp hearts through porridge, yogurt, soft fruit, or vegetables.',
+          'Sprinkle or stir a teaspoon of hulled hemp hearts through oatmeal, yogurt, soft fruit, or vegetables.',
           'They need no grinding — the hearts crumble easily on their own.',
-          'Keep the bag sealed in the fridge; hemp hearts are oily and turn rancid in a warm cupboard.',
+          'Keep the bag sealed in the fridge; hemp hearts are oily and turn rancid in a warm pantry.',
         ],
       },
       '12': {
-        textureNote: 'Hulled hemp hearts sprinkled over family food or stirred into porridge and dips.',
+        textureNote: 'Hulled hemp hearts sprinkled over family food or stirred into oatmeal and dips.',
         steps: [
-          'Sprinkle hulled hemp hearts over family food, or stir them into porridge, dips, and baking.',
+          'Sprinkle hulled hemp hearts over family food, or stir them into oatmeal, dips, and baking.',
           'Whole shelled hemp seed stays off the menu; the hulled hearts are the soft part.',
           'Store them sealed in the fridge to keep them from turning rancid.',
         ],
@@ -2012,19 +2012,19 @@ export const basicRecipes: RecipeSeed[] = [
     ingredients: [{ foodSlug: 'pumpkin_seeds', quantityNote: '1 teaspoon hulled pumpkin seeds, ground to a fine meal' }],
     variants: {
       '6': {
-        textureNote: 'A teaspoon of fine pumpkin seed meal stirred through porridge, yogurt, or a vegetable mash.',
+        textureNote: 'A teaspoon of fine pumpkin seed meal stirred through oatmeal, yogurt, or a vegetable mash.',
         steps: [
           'Whole pumpkin seeds are a listed choking hazard and stay off the menu until age 4-5 — grind hulled seeds to a fine, flour-like meal first.',
-          'Stir 1 teaspoon of the meal through porridge, yogurt, or a soft vegetable mash.',
+          'Stir 1 teaspoon of the meal through oatmeal, yogurt, or a soft vegetable mash.',
           'A smooth pumpkin seed butter thinned with warm water until runny works the same way — never thick, never a spoonful straight.',
           'Check that nothing crunchy is left before it reaches the tray.',
         ],
       },
       '9': {
-        textureNote: 'Fine pumpkin seed meal stirred through porridge, yogurt, or a mash, or thinned smooth butter spread very thinly.',
+        textureNote: 'Fine pumpkin seed meal stirred through oatmeal, yogurt, or a mash, or thinned smooth butter spread very thinly.',
         steps: [
           'Grind hulled pumpkin seeds to a fine meal, or use a smooth pumpkin seed butter.',
-          'Stir the meal through porridge, yogurt, or a mash, or thin the butter until it is runny and spread it very thinly.',
+          'Stir the meal through oatmeal, yogurt, or a mash, or thin the butter until it is runny and spread it very thinly.',
           'Whole and chopped seeds are still a hazard at this age, and remain one for years yet.',
         ],
       },
@@ -2062,7 +2062,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Runny thinned sunflower seed butter stirred through food, or spread very thinly.',
         steps: [
           'Thin smooth sunflower seed butter with warm water, breast milk, or formula until it is runny.',
-          'Stir it into porridge or yogurt, or spread a very thin layer on soft fruit.',
+          'Stir it into oatmeal or yogurt, or spread a very thin layer on soft fruit.',
           'Keep the layer thin — never a thick glob, and never a spoonful straight.',
         ],
       },
@@ -2099,7 +2099,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Runny thinned cashew butter stirred through food, or spread very thinly.',
         steps: [
           'Thin smooth cashew butter with warm water, breast milk, or formula until it is runny.',
-          'Stir it into porridge or yogurt, or spread a very thin layer on soft fruit.',
+          'Stir it into oatmeal or yogurt, or spread a very thin layer on soft fruit.',
           'Keep the layer thin — never a thick glob, and never a spoonful straight.',
         ],
       },
@@ -2122,18 +2122,18 @@ export const basicRecipes: RecipeSeed[] = [
     ingredients: [{ foodSlug: 'walnuts', quantityNote: '1 teaspoon shelled walnuts, ground to a fine meal' }],
     variants: {
       '6': {
-        textureNote: 'A teaspoon of fine walnut meal stirred through porridge, yogurt, or a fruit mash.',
+        textureNote: 'A teaspoon of fine walnut meal stirred through oatmeal, yogurt, or a fruit mash.',
         steps: [
           'Grind shelled walnuts to a fine, flour-like meal — whole nuts and nut pieces are a serious choking hazard and stay off the menu until age 4-5.',
-          'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash until nothing crunchy is left.',
+          'Stir 1 teaspoon of the meal through oatmeal, yogurt, or a fruit mash until nothing crunchy is left.',
           'Keep the rest of the meal in the fridge — walnut meal turns rancid quickly.',
         ],
       },
       '9': {
-        textureNote: 'Fine walnut meal stirred through porridge, yogurt, soft fruit, or a fritter mix.',
+        textureNote: 'Fine walnut meal stirred through oatmeal, yogurt, soft fruit, or a fritter mix.',
         steps: [
           'Grind shelled walnuts to a fine meal, in a small batch.',
-          'Stir it through porridge, yogurt, soft fruit, or a fritter mix.',
+          'Stir it through oatmeal, yogurt, soft fruit, or a fritter mix.',
           'Pieces and halves stay off the menu — it is the grinding that makes this safe.',
         ],
       },
@@ -2158,18 +2158,18 @@ export const basicRecipes: RecipeSeed[] = [
     ],
     variants: {
       '6': {
-        textureNote: 'A teaspoon of fine pistachio meal stirred through porridge, yogurt, or a fruit mash.',
+        textureNote: 'A teaspoon of fine pistachio meal stirred through oatmeal, yogurt, or a fruit mash.',
         steps: [
           'Use shelled, unsalted pistachios — salted ones carry far too much sodium for a baby — and grind them to a fine, flour-like meal.',
-          'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash.',
+          'Stir 1 teaspoon of the meal through oatmeal, yogurt, or a fruit mash.',
           'Whole and chopped pistachios are a serious choking hazard and stay off the menu until age 4-5.',
         ],
       },
       '9': {
-        textureNote: 'Fine pistachio meal stirred through porridge, yogurt, soft fruit, or a mash.',
+        textureNote: 'Fine pistachio meal stirred through oatmeal, yogurt, soft fruit, or a mash.',
         steps: [
           'Grind shelled, unsalted pistachios to a fine meal, in a small batch.',
-          'Stir it through porridge, yogurt, soft fruit, or a mash.',
+          'Stir it through oatmeal, yogurt, soft fruit, or a mash.',
           'Never serve them in the shell, and never in pieces.',
         ],
       },
@@ -2194,10 +2194,10 @@ export const basicRecipes: RecipeSeed[] = [
     ],
     variants: {
       '6': {
-        textureNote: 'A teaspoon of fine hazelnut meal stirred through porridge, yogurt, or a fruit mash, or plain hazelnut butter thinned runny.',
+        textureNote: 'A teaspoon of fine hazelnut meal stirred through oatmeal, yogurt, or a fruit mash, or plain hazelnut butter thinned runny.',
         steps: [
           'Grind skinned, shelled hazelnuts to a fine, flour-like meal, or use a plain smooth hazelnut butter.',
-          'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash, or thin the butter with warm water until it is runny.',
+          'Stir 1 teaspoon of the meal through oatmeal, yogurt, or a fruit mash, or thin the butter with warm water until it is runny.',
           'A chocolate hazelnut spread is mostly sugar and is not a way to introduce this allergen.',
           'Whole and chopped hazelnuts are a serious choking hazard and stay off the menu until age 4-5.',
         ],
@@ -2206,7 +2206,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Fine hazelnut meal stirred through soft food, or thinned plain hazelnut butter spread very thinly.',
         steps: [
           'Grind skinned hazelnuts to a fine meal, or thin plain hazelnut butter until it is runny.',
-          'Stir the meal through porridge, yogurt, or soft fruit, or spread the thinned butter very thinly.',
+          'Stir the meal through oatmeal, yogurt, or soft fruit, or spread the thinned butter very thinly.',
           'Nothing crunchy should be left — pieces stay off the menu.',
         ],
       },
@@ -2229,18 +2229,18 @@ export const basicRecipes: RecipeSeed[] = [
     ingredients: [{ foodSlug: 'pecans', quantityNote: '1 teaspoon shelled pecans, ground to a fine meal' }],
     variants: {
       '6': {
-        textureNote: 'A teaspoon of fine pecan meal stirred through porridge, yogurt, or a fruit mash.',
+        textureNote: 'A teaspoon of fine pecan meal stirred through oatmeal, yogurt, or a fruit mash.',
         steps: [
           'Grind shelled pecans to a fine, flour-like meal — halves and pieces are a serious choking hazard and stay off the menu until age 4-5.',
-          'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash until nothing crunchy is left.',
+          'Stir 1 teaspoon of the meal through oatmeal, yogurt, or a fruit mash until nothing crunchy is left.',
           'Keep the rest in the fridge — pecan meal is oily and turns rancid quickly.',
         ],
       },
       '9': {
-        textureNote: 'Fine pecan meal stirred through porridge, yogurt, soft fruit, or a mash.',
+        textureNote: 'Fine pecan meal stirred through oatmeal, yogurt, soft fruit, or a mash.',
         steps: [
           'Grind shelled pecans to a fine meal, in a small batch.',
-          'Stir it through porridge, yogurt, soft fruit, or a mash.',
+          'Stir it through oatmeal, yogurt, soft fruit, or a mash.',
           'Halves and pieces stay off the menu — grinding is what makes this safe.',
         ],
       },
@@ -2265,18 +2265,18 @@ export const basicRecipes: RecipeSeed[] = [
     ingredients: [{ foodSlug: 'almonds', quantityNote: '1 teaspoon shelled almonds, ground to a fine meal' }],
     variants: {
       '6': {
-        textureNote: 'A teaspoon of fine almond meal stirred through porridge, yogurt, or a fruit mash.',
+        textureNote: 'A teaspoon of fine almond meal stirred through oatmeal, yogurt, or a fruit mash.',
         steps: [
           'Grind shelled almonds to a fine, flour-like meal — whole and chopped almonds are a serious choking hazard and stay off the menu until age 4-5.',
-          'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash until nothing hard is left.',
+          'Stir 1 teaspoon of the meal through oatmeal, yogurt, or a fruit mash until nothing hard is left.',
           'Plain almond flour from a bag is the same thing, as long as nothing has been added to it.',
         ],
       },
       '9': {
-        textureNote: 'Fine almond meal stirred through porridge, yogurt, soft fruit, or a mash.',
+        textureNote: 'Fine almond meal stirred through oatmeal, yogurt, soft fruit, or a mash.',
         steps: [
           'Grind shelled almonds to a fine meal, in a small batch.',
-          'Stir it through porridge, yogurt, soft fruit, or a mash.',
+          'Stir it through oatmeal, yogurt, soft fruit, or a mash.',
           'Pieces and halves stay off the menu — the grinding is what makes this safe.',
         ],
       },
@@ -2299,18 +2299,18 @@ export const basicRecipes: RecipeSeed[] = [
     ingredients: [{ foodSlug: 'cashews', quantityNote: '1 teaspoon plain, unsalted cashews, ground to a fine meal' }],
     variants: {
       '6': {
-        textureNote: 'A teaspoon of fine cashew meal stirred through porridge, yogurt, or a fruit mash.',
+        textureNote: 'A teaspoon of fine cashew meal stirred through oatmeal, yogurt, or a fruit mash.',
         steps: [
           'Grind plain, unsalted cashews to a fine, flour-like meal — whole and chopped cashews are a serious choking hazard and stay off the menu until age 4-5.',
-          'Stir 1 teaspoon of the meal through porridge, yogurt, or a fruit mash until nothing hard is left.',
+          'Stir 1 teaspoon of the meal through oatmeal, yogurt, or a fruit mash until nothing hard is left.',
           'Buy the plain kernels rather than the salted ones, which carry far too much sodium for a baby.',
         ],
       },
       '9': {
-        textureNote: 'Fine cashew meal stirred through porridge, yogurt, soft fruit, or a mash.',
+        textureNote: 'Fine cashew meal stirred through oatmeal, yogurt, soft fruit, or a mash.',
         steps: [
           'Grind plain, unsalted cashews to a fine meal, in a small batch.',
-          'Stir it through porridge, yogurt, soft fruit, or a mash.',
+          'Stir it through oatmeal, yogurt, soft fruit, or a mash.',
           'Pieces and halves stay off the menu — the grinding is what makes this safe.',
           'Cashew and pistachio are closely related, so a reaction to one means taking care with the other.',
         ],
