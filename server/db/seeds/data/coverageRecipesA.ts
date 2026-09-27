@@ -706,7 +706,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         steps: [
           'Wilt the spinach for 2-3 minutes, until very soft, then chop it very finely and squeeze the water out.',
           'Mix it through the ground turkey with a little olive oil and a pinch of dried oregano rubbed fine between your fingers, then shape finger-length logs rather than balls — a firm, round meatball never goes on the tray whole.',
-          'Bake the logs at 375°F (190°C) for 16-18 minutes, until they read 165°F (74°C) in the centre with no pink left.',
+          'Bake the logs at 375°F (190°C) for 16-18 minutes, until they read 165°F (74°C) in the center with no pink left.',
           'Simmer the skinned, diced tomatoes over low heat for 15-20 minutes, until they collapse into a soft sauce, then mash it smooth.',
           'Cook the pasta for 10-12 minutes, well past al dente, until it is soft enough to squash against the roof of the mouth.',
           'Spoon the sauce over the pasta, moisten the turkey logs with it so they are never dry, cool everything to just warm, and serve.',
@@ -717,7 +717,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soft, small bite-sized pieces of turkey meatball (no bigger than ½ inch) and small pasta shapes for pincer-grasp self-feeding.',
         steps: [
           'Wilt the spinach for 2-3 minutes, chop it very finely, squeeze the water out, and mix it into the turkey with a little olive oil and a pinch of finely rubbed oregano.',
-          'Bake small meatballs at 375°F (190°C) for 14-16 minutes, until they read 165°F (74°C) in the centre, then squash each one flat rather than serving it round.',
+          'Bake small meatballs at 375°F (190°C) for 14-16 minutes, until they read 165°F (74°C) in the center, then squash each one flat rather than serving it round.',
           'Simmer the skinned, diced tomato over low heat for 15-20 minutes, until it breaks down into a soft sauce.',
           'Cook the small pasta shapes for 10-12 minutes, past al dente, until soft.',
           'Let the meatballs cool to just warm, break them into soft, small bite-sized pieces (no bigger than ½ inch), and serve them through the pasta and sauce.',
@@ -728,7 +728,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Family-style pasta with small bite-sized meatball pieces in an oregano tomato sauce.',
         steps: [
           'Squeeze the water out of the finely chopped wilted spinach, then mix it into the turkey with a pinch of finely rubbed oregano and a little olive oil, which keeps lean turkey from turning dry and crumbly.',
-          'Bake the meatballs at 375°F (190°C) for 16-18 minutes, until they are 165°F (74°C) in the centre.',
+          'Bake the meatballs at 375°F (190°C) for 16-18 minutes, until they are 165°F (74°C) in the center.',
           'Simmer the tomato sauce over low heat for 15-20 minutes, until thick, and stir a little more oregano through.',
           'Cook the pasta for 10-12 minutes, until tender, and toss it through the sauce.',
           'Let the meatballs cool and check the temperature before cutting them into small bite-sized pieces — never a whole round meatball — and serve with no added salt.',
@@ -762,7 +762,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Bake the cod at 375°F (190°C) for 10-12 minutes, until it is opaque and flakes easily at 145°F (63°C), then run your fingers through every flake and remove any bones.',
           'Steam the cubed sweet potato for 12-15 minutes and the peas for 4-5 minutes, until both mash easily between two fingers.',
           'Mash the sweet potato, squash every pea flat so none keeps its round shape, and fold in the flaked cod with the beaten egg and a little finely snipped dill.',
-          'Shape finger-length cakes and pan-fry them in a little olive oil over medium heat for about 3 minutes a side, until firm and set through to 160°F (71°C) in the centre.',
+          'Shape finger-length cakes and pan-fry them in a little olive oil over medium heat for about 3 minutes a side, until firm and set through to 160°F (71°C) in the center.',
           'Cool until just warm, check a cake mashes easily, and serve whole or torn into strips.',
         ],
       },
@@ -782,7 +782,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         steps: [
           'Bake the cod at 375°F (190°C) for 10-12 minutes, until it flakes at 145°F (63°C), then flake it and check thoroughly for bones.',
           'Steam the sweet potato and peas for 12-15 minutes, until tender, and mash them together.',
-          'Bind with the beaten egg and finely snipped dill, shape mini cakes, and pan-fry in a little olive oil over medium heat for about 3 minutes a side, until golden and 160°F (71°C) in the centre.',
+          'Bind with the beaten egg and finely snipped dill, shape mini cakes, and pan-fry in a little olive oil over medium heat for about 3 minutes a side, until golden and 160°F (71°C) in the center.',
           'Cool until just warm, cut into small bite-sized pieces, and serve with soft vegetables on the side.',
         ],
       },
@@ -842,7 +842,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soften the minced garlic in a little olive oil over medium heat for 30-60 seconds and simmer the diced tomato over low heat for 10-12 minutes, until thick.',
           'Bake the cod at 375°F (190°C) for 12-15 minutes, until it flakes at 145°F (63°C), then check it for bones and break it into small bite-sized pieces.',
           'Steam the green beans for 8-10 minutes, until tender, and cut them into small bite-sized pieces.',
-          'Chop the basil very finely, stir it in at the end so the flavour stays bright, let the dish cool to a safe temperature, and serve with no added salt.',
+          'Chop the basil very finely, stir it in at the end so the flavor stays bright, let the dish cool to a safe temperature, and serve with no added salt.',
         ],
       },
     },
@@ -1124,7 +1124,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         steps: [
           'Warm the mild curry powder in a little olive oil over medium heat for 30-60 seconds — a blend with no salt and no chili in it.',
           'Simmer the diced carrot and lentils in water or no-salt-added stock over low heat for 20-25 minutes, until tender.',
-          'Stir the juice and finely grated zest of half an orange in off the heat, so the flavour and the vitamin C both survive.',
+          'Stir the juice and finely grated zest of half an orange in off the heat, so the flavor and the vitamin C both survive.',
           'Cool to a safe temperature and serve in a bowl with a spoon, with membrane-free orange segments cut into small bite-sized pieces on the side.',
         ],
       },

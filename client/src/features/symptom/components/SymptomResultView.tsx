@@ -55,7 +55,7 @@ export function SymptomResultView({ result, onReopenAlarm }: SymptomResultViewPr
         <Section title="Why" items={result.reasons} />
         <Section title="What to do" items={result.whileWaiting} />
         <p className="text-xs text-[var(--color-text-muted)]">
-          Because of what you reported, this was answered from a fixed safety checklist — no food history was analysed.
+          Because of what you reported, this was answered from a fixed safety checklist — no food history was analyzed.
         </p>
         <DisclaimerFootnote text={result.disclaimer} />
       </div>

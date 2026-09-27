@@ -103,7 +103,7 @@ export const TRIAGE_RULES: readonly TriageRule[] = [
   {
     id: "pale_or_floppy",
     level: "emergency",
-    reason: "A pale, grey or floppy baby may be going into shock.",
+    reason: "A pale, gray or floppy baby may be going into shock.",
     matches: (_input, has) => has("pale_or_floppy"),
   },
   {

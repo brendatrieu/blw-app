@@ -200,7 +200,7 @@ function windowFitText(hours: number, reactionType: ReactionType): string {
       ? `Served ${gap} before symptoms — inside the 2-72 hour window for delayed reactions.`
       : `Served ${gap} before symptoms — outside the usual 2-72 hour delayed window.`;
   }
-  return `Served ${gap} before symptoms — the timing does not clearly favour an immediate or a delayed pattern.`;
+  return `Served ${gap} before symptoms — the timing does not clearly favor an immediate or a delayed pattern.`;
 }
 
 function likelihoodFor(score: number): SymptomCandidate["likelihood"] {

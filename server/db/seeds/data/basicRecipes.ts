@@ -206,7 +206,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Soft scrambled pieces, or firm omelet cut into strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Cook the egg fully: scramble it over low heat for 3-4 minutes, or set a thin omelet in a lightly oiled pan over medium-low heat for 2-3 minutes a side, until the yolk and white are firm and the centre reads 160°F (71°C).',
+          'Cook the egg fully: scramble it over low heat for 3-4 minutes, or set a thin omelet in a lightly oiled pan over medium-low heat for 2-3 minutes a side, until the yolk and white are firm and the center reads 160°F (71°C).',
           'Cut the omelet into strips, or cut or break the egg into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Cool to just-warm and serve on a plate.',
         ],
@@ -1600,7 +1600,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'A finger-length strip of thin turkey patty, or finely shredded thigh moistened so it is not dry.',
         steps: [
           'Shape the ground turkey into a thin patty, binding it with a little grated vegetable so it does not come out crumbly.',
-          'Cook it through with no added salt — pan-fry over medium heat for 4-5 minutes a side, or bake at 375°F (190°C) for 18-20 minutes — until a thermometer in the centre reads 165°F (74°C) and no pink remains.',
+          'Cook it through with no added salt — pan-fry over medium heat for 4-5 minutes a side, or bake at 375°F (190°C) for 18-20 minutes — until a thermometer in the center reads 165°F (74°C) and no pink remains.',
           'Rest it for 3-5 minutes, then cut the patty into finger-length strips, or shred slow-cooked thigh meat finely instead.',
           'Moisten with a little olive oil or cooking liquid so nothing is dry or crumbly.',
           'Cool to just-warm, check the temperature, and serve.',

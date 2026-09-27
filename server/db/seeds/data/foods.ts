@@ -944,7 +944,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Slow-cook until tender and dice or shred into small, soft bite-sized pieces.',
     chokingNotes: 'Chops and any cut on the bone are not a baby food — serve mince or slow-cooked shoulder only, and check by feel for bone fragments before every serving.',
-    notes: 'Richer and more strongly flavoured than chicken or pork, with a little more iron — an easy way to widen the meat rotation.',
+    notes: 'Richer and more strongly flavored than chicken or pork, with a little more iron — an easy way to widen the meat rotation.',
     allergens: [],
     storageCategory: 'meat_poultry_cooked',
   },
@@ -986,7 +986,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Cook through and flake into small bite-sized pieces.',
     chokingNotes: 'Trout carries a row of fine pin bones that survive cooking — check every flake by feel, twice, even from a fillet sold as deboned.',
-    notes: 'A low-mercury freshwater fish with a gentler flavour than salmon; another option for the fish step of the allergen ladder.',
+    notes: 'A low-mercury freshwater fish with a gentler flavor than salmon; another option for the fish step of the allergen ladder.',
     allergens: ['fish'],
     storageCategory: 'fish_seafood_cooked',
   },
@@ -1320,11 +1320,11 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Add a pinch of ground cinnamon to porridge, mashed fruit, or roasting vegetables while you cook — enough to smell, not enough to see, and with no sweetener alongside it.',
     prep9m:
-      'Stir a pinch into porridge, yogurt, apple or pear mash, or squash; cinnamon is there for flavour, not sweetness.',
+      'Stir a pinch into porridge, yogurt, apple or pear mash, or squash; cinnamon is there for flavor, not sweetness.',
     prep12m:
       'Use a pinch in family cooking and baking — porridge, stewed fruit, squash, lentils — still with no added sugar.',
     chokingNotes: 'Never let baby lick dry cinnamon off a spoon or a finger: loose powder is easy to inhale and irritates the airway. Mix it into food instead.',
-    notes: 'Ceylon ("true") cinnamon is the gentler choice if cinnamon becomes a daily habit; the common cassia kind is fine now and then. Cinnamon is a flavour, not a sweetener — the no-added-sugar rule still applies.',
+    notes: 'Ceylon ("true") cinnamon is the gentler choice if cinnamon becomes a daily habit; the common cassia kind is fine now and then. Cinnamon is a flavor, not a sweetener — the no-added-sugar rule still applies.',
     allergens: [],
     storageCategory: 'pantry_dry',
   },
@@ -1362,9 +1362,9 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Add a pinch to lentils, rice, soups, or vegetables as they cook.',
     prep12m:
-      'Use a pinch in family cooking; a little fat in the dish helps carry the flavour.',
+      'Use a pinch in family cooking; a little fat in the dish helps carry the flavor.',
     chokingNotes: 'Stir ground spice into food rather than sprinkling it on dry — loose powder is easy to inhale.',
-    notes: 'Mild and slightly bitter, and it stains everything it touches — clothes, high chairs, and hands included. Use it for flavour and colour; it is not a supplement.',
+    notes: 'Mild and slightly bitter, and it stains everything it touches — clothes, high chairs, and hands included. Use it for flavor and color; it is not a supplement.',
     allergens: [],
     storageCategory: 'pantry_dry',
   },
@@ -1382,7 +1382,7 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Add a pinch of sweet paprika to roasting vegetables, minced meat, beans, or a soft stew.',
     prep12m:
-      'Use a pinch in family cooking wherever a gentle, sweet-peppery flavour and a little colour help.',
+      'Use a pinch in family cooking wherever a gentle, sweet-peppery flavor and a little color help.',
     chokingNotes: 'Stir ground spice into food rather than sprinkling it on dry — loose powder is easy to inhale.',
     notes: 'Sweet paprika only — hot paprika, smoked hot paprika, chili powder, and cayenne all carry a heat a baby has no reason to meet. Check the jar says sweet or mild.',
     allergens: [],
@@ -1420,11 +1420,11 @@ export const foods: FoodSeed[] = [
     prep6m:
       'A pinch of finely ground black pepper cooked into food is fine; skip the mill at the table, where the coarse grind lands on top.',
     prep9m:
-      'Add a small pinch of finely ground pepper to savoury food as it cooks.',
+      'Add a small pinch of finely ground pepper to savory food as it cooks.',
     prep12m:
       'Use a pinch in family cooking, keeping it finely ground rather than coarse.',
     chokingNotes: 'Coarse grinds and whole peppercorns make babies cough and sneeze and can be inhaled — use a fine grind stirred into food, and keep whole peppercorns out of reach.',
-    notes: 'Mild warmth rather than chili heat. Pepper is one of the flavour-builders that makes salt-free cooking taste finished.',
+    notes: 'Mild warmth rather than chili heat. Pepper is one of the flavor-builders that makes salt-free cooking taste finished.',
     allergens: [],
     storageCategory: 'pantry_dry',
   },
@@ -1467,7 +1467,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Use finely minced cooked garlic in family cooking; raw garlic is harsh and stays off the menu for now.',
     chokingNotes: 'A whole or halved clove is firm, round, and exactly the wrong size — mince, crush, or roast it to a soft paste, and never serve a raw piece.',
-    notes: 'One of the best salt-free flavour-builders there is. If you reach for garlic powder, check the label says garlic only — garlic salt is mostly salt.',
+    notes: 'One of the best salt-free flavor-builders there is. If you reach for garlic powder, check the label says garlic only — garlic salt is mostly salt.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },
@@ -1507,7 +1507,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Use finely chopped fresh basil in family food; whole leaves stay off the menu until chewing is confident.',
     chokingNotes: 'A whole basil leaf is slippery and can fold over the airway — always chop it finely rather than serving leaves whole.',
-    notes: 'Add it at the end: the flavour fades with long cooking. Dried basil works too, rubbed fine between your fingers.',
+    notes: 'Add it at the end: the flavor fades with long cooking. Dried basil works too, rubbed fine between your fingers.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },
@@ -1527,7 +1527,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Use finely chopped cilantro in family food; the stalks are stringy, so stick to the leaves.',
     chokingNotes: 'Whole leaves and stalks are stringy and slippery — chop finely and stir them in rather than serving sprigs.',
-    notes: 'Fresh and citrusy, and an early flavour in a great many cuisines. Some people taste it as soapy, which is genetic — if your baby turns it down, that may be why.',
+    notes: 'Fresh and citrusy, and an early flavor in a great many cuisines. Some people taste it as soapy, which is genetic — if your baby turns it down, that may be why.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },

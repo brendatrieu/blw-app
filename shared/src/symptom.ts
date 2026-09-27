@@ -60,7 +60,7 @@ export const SYMPTOM_GROUP_LABELS: Record<SymptomGroup, string> = {
   breathing: "Breathing",
   tummy: "Tummy",
   whole_body: "Whole body",
-  behavior: "Behaviour",
+  behavior: "Behavior",
 };
 
 /**
@@ -153,7 +153,7 @@ export const SYMPTOM_CATALOG: readonly SymptomCatalogEntry[] = [
   { value: "blood_in_stool", label: "Blood or mucus in the nappy", group: "tummy", soloTriage: null, timing: "delayed" },
   {
     value: "pale_or_floppy",
-    label: "Pale, grey or floppy",
+    label: "Pale, gray or floppy",
     group: "whole_body",
     soloTriage: "emergency",
     timing: "either",

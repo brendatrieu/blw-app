@@ -810,7 +810,7 @@ export function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
 
         <p className="text-sm text-[var(--color-text)]">
           This permanently deletes your account and everything in it — every baby profile, the whole
-          food log, your allergen progress, favourites, storage, symptom checks, chats, and your
+          food log, your allergen progress, favorites, storage, symptom checks, chats, and your
           Anthropic key. <strong>It cannot be undone and there is no backup we can restore from.</strong>
         </p>
 
@@ -909,7 +909,7 @@ function AccountSection() {
 
       <p className="text-xs text-[var(--color-text-muted)]">
         The export is a single JSON file with everything on your account: babies, food log,
-        favourites, storage, symptom checks and chats. It never contains your API key.
+        favorites, storage, symptom checks and chats. It never contains your API key.
       </p>
 
       {exportData.isError ? (

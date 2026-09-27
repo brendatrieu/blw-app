@@ -81,7 +81,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, or poach it for 8-10 minutes, until it is opaque and flakes easily at 145°F (63°C), then check thoroughly with your fingers for any bones and remove them all.',
           'Flake the salmon finely into a bowl, add the oats and beaten egg, and mix until it holds together.',
-          'Shape into finger-length oval patties and pan-fry in a little olive oil over medium heat, about 3 minutes per side, until firm, golden, and set through to 160°F (71°C) in the centre.',
+          'Shape into finger-length oval patties and pan-fry in a little olive oil over medium heat, about 3 minutes per side, until firm, golden, and set through to 160°F (71°C) in the center.',
           'Cool until just warm and check the texture mashes easily before serving whole or torn into strips.',
         ],
       },
@@ -100,7 +100,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, or poach it for 8-10 minutes, until it is opaque and flakes easily at 145°F (63°C), then check thoroughly with your fingers for any bones and remove them all.',
           'Flake the salmon finely into a bowl, add the oats and beaten egg, mix until it holds together, and shape into small mini patties suited to little hands.',
-          'Pan-fry in a little olive oil over medium heat for about 3 minutes per side, until golden, firm, and 160°F (71°C) in the centre.',
+          'Pan-fry in a little olive oil over medium heat for about 3 minutes per side, until golden, firm, and 160°F (71°C) in the center.',
           'Cool to just-warm, check the temperature, then cut into bite-sized pieces or serve whole for baby to bite pieces off.',
           'Pair with a vitamin-C side like steamed broccoli for extra iron absorption.',
         ],
@@ -219,7 +219,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Finely dice the bell pepper and chop the spinach.',
           'Whisk the eggs and stir in the vegetables.',
-          'Pour into a lightly oiled pan over low-medium heat and cook, covered, for 4-5 minutes, until fully set with no runny egg remaining and the centre reads 160°F (71°C).',
+          'Pour into a lightly oiled pan over low-medium heat and cook, covered, for 4-5 minutes, until fully set with no runny egg remaining and the center reads 160°F (71°C).',
           'Cool and cut into finger-length strips baby can hold and gum.',
         ],
       },
@@ -227,7 +227,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Soft omelet strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Finely dice the bell pepper and chop the spinach, then whisk the eggs and stir in the vegetables.',
-          'Pour into a lightly oiled pan over low-medium heat and cook, covered, for 4-5 minutes, until fully set with no runny egg remaining and the centre reads 160°F (71°C).',
+          'Pour into a lightly oiled pan over low-medium heat and cook, covered, for 4-5 minutes, until fully set with no runny egg remaining and the center reads 160°F (71°C).',
           'Cool and cut into strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Serve for pincer-grasp self-feeding.',
         ],
@@ -236,7 +236,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Small bite-sized omelet pieces, family-style.',
         steps: [
           'Finely dice the bell pepper and chop the spinach, then whisk the eggs and stir in the vegetables.',
-          'Pour into a lightly oiled pan over low-medium heat and cook, covered, for 4-5 minutes, until fully set with no runny egg remaining and the centre reads 160°F (71°C), or scramble it soft over low heat for 3-4 minutes, until the egg is firm with no runny patches.',
+          'Pour into a lightly oiled pan over low-medium heat and cook, covered, for 4-5 minutes, until fully set with no runny egg remaining and the center reads 160°F (71°C), or scramble it soft over low heat for 3-4 minutes, until the egg is firm with no runny patches.',
           'Cool to just-warm, check the temperature, then cut into bite-sized pieces.',
           'Serve alongside soft toast strips — toast the bread 1-2 minutes and moisten it so it bends — for a full meal.',
         ],
@@ -262,7 +262,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Steam the broccoli for 8-10 minutes, until it mashes easily between two fingers, then finely chop it.',
           'Whisk the eggs and stir in the broccoli and grated cheese.',
-          'Pour into a well-greased mini muffin tin and bake at 350°F (180°C) for 12-15 minutes, until fully set with no wobble in the centre — 160°F (71°C) on a thermometer.',
+          'Pour into a well-greased mini muffin tin and bake at 350°F (180°C) for 12-15 minutes, until fully set with no wobble in the center — 160°F (71°C) on a thermometer.',
           'Cool completely, then cut each muffin into quarters or finger-length strips before serving.',
         ],
       },
@@ -270,7 +270,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Soft muffin quarters or strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Steam the broccoli for 8-10 minutes, until it mashes easily between two fingers, then finely chop it and whisk it into the beaten eggs with the grated cheese.',
-          'Pour into a well-greased mini muffin tin and bake at 350°F (180°C) for 12-15 minutes, until fully set with no wobble in the centre — 160°F (71°C) on a thermometer.',
+          'Pour into a well-greased mini muffin tin and bake at 350°F (180°C) for 12-15 minutes, until fully set with no wobble in the center — 160°F (71°C) on a thermometer.',
           'Cool and cut into quarters or strips, or break into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Serve for pincer-grasp self-feeding.',
         ],
@@ -279,7 +279,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Small bite-sized muffin pieces or a whole mini muffin to hold.',
         steps: [
           'Steam the broccoli for 8-10 minutes, until it mashes easily between two fingers, then finely chop it and whisk it into the beaten eggs with the grated cheese.',
-          'Pour into a well-greased mini muffin tin and bake at 350°F (180°C) for 12-15 minutes, until fully set with no wobble in the centre — 160°F (71°C) on a thermometer.',
+          'Pour into a well-greased mini muffin tin and bake at 350°F (180°C) for 12-15 minutes, until fully set with no wobble in the center — 160°F (71°C) on a thermometer.',
           'Cool to just-warm, check the temperature, then serve whole mini muffins or cut into halves for baby to hold and bite from.',
           'Pair with fruit on the side for a balanced meal.',
         ],
@@ -356,7 +356,7 @@ const curatedRecipes: RecipeSeed[] = [
           'Peel, core, and finely grate the apple.',
           'Mix the ground chicken with the grated apple and the dried thyme or sage if using.',
           'Shape into finger-length logs rather than round balls — easier for baby to grip and lower choking risk.',
-          'Bake at 375°F (190°C) for 18-20 minutes, or pan-fry in olive oil over medium heat for 4-5 minutes a side, until no pink remains and a thermometer in the centre reads 165°F (74°C).',
+          'Bake at 375°F (190°C) for 18-20 minutes, or pan-fry in olive oil over medium heat for 4-5 minutes a side, until no pink remains and a thermometer in the center reads 165°F (74°C).',
           'Cool, then flake or mash slightly to ensure the texture is soft enough to squish easily.',
         ],
       },
@@ -364,7 +364,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Soft finger-length logs, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Peel, core, and finely grate the apple, then mix the ground chicken with the grated apple and the dried thyme or sage if using, and shape it into finger-length logs rather than round balls.',
-          'Bake at 375°F (190°C) for 18-20 minutes, or pan-fry in olive oil over medium heat for 4-5 minutes a side, until no pink remains and a thermometer in the centre reads 165°F (74°C).',
+          'Bake at 375°F (190°C) for 18-20 minutes, or pan-fry in olive oil over medium heat for 4-5 minutes a side, until no pink remains and a thermometer in the center reads 165°F (74°C).',
           'Cool, then serve the logs whole or cut a few into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         ],
       },
@@ -372,7 +372,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Small bite-sized meatballs baby can pick up and bite from.',
         steps: [
           'Peel, core, and finely grate the apple, then mix the ground chicken with the grated apple and the dried thyme or sage if using.',
-          'Shape into small bite-sized meatballs, lightly oil the baking tray, and bake at 375°F (190°C) for 14-16 minutes, until they read 165°F (74°C) in the centre with no pink left.',
+          'Shape into small bite-sized meatballs, lightly oil the baking tray, and bake at 375°F (190°C) for 14-16 minutes, until they read 165°F (74°C) in the center with no pink left.',
           'Cool to just-warm, check the temperature, then serve whole or halved alongside a soft grain and vegetable.',
         ],
       },
@@ -585,7 +585,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Squeeze excess water from the grated zucchini using a clean towel.',
           'Mix the cooked quinoa, zucchini, beaten egg, and cheese together.',
-          'Spoon into finger-length shapes and pan-fry in olive oil over medium-low heat, about 3 minutes per side, until set, lightly golden, and 160°F (71°C) in the centre.',
+          'Spoon into finger-length shapes and pan-fry in olive oil over medium-low heat, about 3 minutes per side, until set, lightly golden, and 160°F (71°C) in the center.',
           'Cool until warm and check the bite mashes easily before serving.',
         ],
       },

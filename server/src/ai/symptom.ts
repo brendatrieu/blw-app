@@ -338,7 +338,7 @@ export const FALLBACK_NEXT_STEPS: readonly string[] = [
 export const FALLBACK_WHEN_TO_SEEK_HELP: readonly string[] = [
   "Any trouble breathing, wheezing, or noisy breathing — call emergency services.",
   "Swelling of the tongue or throat, drooling, or trouble swallowing — call emergency services.",
-  "Your baby goes pale, grey, floppy, or is hard to wake — call emergency services.",
+  "Your baby goes pale, gray, floppy, or is hard to wake — call emergency services.",
   "Repeated vomiting, or vomiting with unusual sleepiness — get them seen the same day.",
   "Symptoms that keep spreading or getting worse rather than settling — get them seen the same day.",
 ];
