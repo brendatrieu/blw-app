@@ -462,17 +462,29 @@ describe("RecipeDetailPage ingredient allergen rows (item 334)", () => {
 });
 
 describe("RecipeDetailPage rating history (item 581)", () => {
-  it("draws the active baby's rating graph for this recipe", () => {
-    const html = renderRecipe(catalogRecipe(), [
+  it("puts the active baby's average under the badges and the graph at the bottom (item 585)", () => {
+    const html = renderRecipe(catalogRecipe({ notes: "Keeps well" }), [
       { servedAt: "2026-09-20T12:00:00.000Z", rating: 2 },
       { servedAt: "2026-09-25T12:00:00.000Z", rating: 4 },
     ]);
-    expect(html).toContain("Robin&#x27;s ratings");
-    expect(html).toContain("★ 3.0 (2)");
-    expect(html).toContain('stroke="var(--chart-1)"');
+    const average = html.indexOf("★ 3.0 (2)");
+    const graph = html.indexOf("Robin&#x27;s rating history</h2>");
+    // A subtitle: after the last badge, before the Log meal / Add to storage buttons.
+    expect(average).toBeGreaterThan(html.indexOf(">Fish<"));
+    expect(average).toBeLessThan(html.indexOf(">Log meal<"));
+    expect(html).not.toContain("Robin&#x27;s ratings<");
+    expect(graph).toBeGreaterThan(html.indexOf("Keeps well"));
+    expect(html.indexOf('stroke="var(--chart-1)"')).toBeGreaterThan(graph);
   });
 
-  it("shows no ratings section before the first rating", () => {
-    expect(renderRecipe(catalogRecipe(), [])).not.toContain("ratings</h2>");
+  it("keeps a custom recipe's Edit and Delete below the graph", () => {
+    const html = renderRecipe(CUSTOM_RECIPE, [{ servedAt: "2026-09-25T12:00:00.000Z", rating: 4 }]);
+    expect(html.indexOf(">Edit<")).toBeGreaterThan(html.indexOf("rating history</h2>"));
+  });
+
+  it("shows neither before the first rating", () => {
+    const html = renderRecipe(catalogRecipe(), []);
+    expect(html).not.toContain("★");
+    expect(html).not.toContain("rating history");
   });
 });

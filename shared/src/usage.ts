@@ -171,7 +171,7 @@ export const catalogFilterKeySchema = z.enum([
   "fiber_high",
   "ingredient_food_id",
   "deleted",
-  /** Item 576: a rating sort ("Highest rated" / "Most recently rated") was
+  /** Item 576: a rating sort ("Average rating") was
    * on. The key only — which sort is not recorded, like every other filter. */
   "sort",
 ]);

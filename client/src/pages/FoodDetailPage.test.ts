@@ -393,7 +393,7 @@ describe("FoodDetailPage — Recipes with <food> (item 255)", () => {
 
 describe("FoodDetailPage rating history (item 575)", () => {
   function renderWithHistory(points: { servedAt: string; rating: number }[]) {
-    const food = catalogFood();
+    const food = catalogFood({ recipes: [{ id: "r-simple", title: "Simple salmon", minAgeMonths: 6, ingredientCount: 1 }] });
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     queryClient.setQueryData(catalogKeys.food(food.slug), food);
     queryClient.setQueryData(babyKeys.list(false), [BABY]);
@@ -411,17 +411,27 @@ describe("FoodDetailPage rating history (item 575)", () => {
     );
   }
 
-  it("draws the active baby's rating graph for this food", () => {
+  it("puts the active baby's average under the badges and the graph at the very bottom (item 585)", () => {
     const html = renderWithHistory([
       { servedAt: "2026-09-20T12:00:00.000Z", rating: 2 },
       { servedAt: "2026-09-25T12:00:00.000Z", rating: 4 },
     ]);
-    expect(html).toContain(`${escapeHtml(BABY.name)}&#x27;s ratings`);
-    expect(html).toContain("★ 3.0 (2)");
-    expect(html).toContain('stroke="var(--chart-1)"');
+    const average = html.indexOf("★ 3.0 (2)");
+    const graph = html.indexOf(`${escapeHtml(BABY.name)}&#x27;s rating history</h2>`);
+    // A subtitle: after the last badge, inside the header, before the buttons.
+    expect(average).toBeGreaterThan(html.indexOf(">Fish<"));
+    expect(average).toBeLessThan(html.indexOf(">Log meal<"));
+    expect(html).not.toContain(`${escapeHtml(BABY.name)}&#x27;s ratings<`);
+    // After the last section, and the page's last child: the graph section
+    // closes and so does the page, with nothing in between.
+    expect(graph).toBeGreaterThan(html.indexOf("Simple salmon"));
+    expect(html.indexOf('stroke="var(--chart-1)"')).toBeGreaterThan(graph);
+    expect(html.endsWith("</figure></section></div>")).toBe(true);
   });
 
-  it("shows no ratings section before the first rating", () => {
-    expect(renderWithHistory([])).not.toContain("ratings</h2>");
+  it("shows neither before the first rating", () => {
+    const html = renderWithHistory([]);
+    expect(html).not.toContain("★");
+    expect(html).not.toContain("rating history");
   });
 });

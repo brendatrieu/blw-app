@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { RatingHistoryChart } from "./RatingHistory.js";
+import { RatingHistoryChart, RatingSummaryRowView } from "./RatingHistory.js";
 
 const POINTS = [
   { servedAt: "2026-09-20T12:00:00.000Z", rating: 3 },
@@ -13,10 +13,11 @@ const render = (points = POINTS) =>
   renderToString(createElement(RatingHistoryChart, { points, name: "Banana", babyName: "Robin" }));
 
 describe("RatingHistoryChart (item 575)", () => {
-  it("draws a line graph on a fixed 0-5 axis with the baby's average", () => {
+  it("draws a line graph on a fixed 0-5 axis under the baby's history heading", () => {
     const html = render();
-    expect(html).toContain("Robin&#x27;s ratings");
-    expect(html).toContain("★ 4.0 (3)");
+    expect(html).toContain("Robin&#x27;s rating history</h2>");
+    // The average is the top-of-page row's job now (item 585), said once.
+    expect(html).not.toContain("★");
     expect(html).toContain('role="img"');
     expect(html).toContain('stroke="var(--chart-1)"');
     // Axis labels 0..5 and never above 5 (the data-driven axis would round to 6).
@@ -30,5 +31,21 @@ describe("RatingHistoryChart (item 575)", () => {
 
   it("renders nothing until there is a rating", () => {
     expect(render([])).toBe("");
+  });
+});
+
+describe("RatingSummaryRowView (item 585)", () => {
+  const row = (points = POINTS) => renderToString(createElement(RatingSummaryRowView, { points }));
+
+  it("is the average exactly as the cards show it, with no label and no graph", () => {
+    const html = row();
+    expect(html).toContain("★ 4.0 (3)");
+    expect(html).toContain("Rated 4.0 out of 5, 3 ratings");
+    expect(html).not.toContain("&#x27;s ratings");
+    expect(html).not.toContain("<svg");
+  });
+
+  it("renders nothing until there is a rating", () => {
+    expect(row([])).toBe("");
   });
 });

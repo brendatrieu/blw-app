@@ -77,7 +77,5 @@ describe("RecipesSegment rating sort (item 576)", () => {
     expect(order(render())).toEqual(["Congee", "Beef stew", "Apple mash"]);
     expect(h.reported.at(-1)).toMatchObject({ sort: "highest" });
 
-    pickSort("recent");
-    expect(order(render())).toEqual(["Beef stew", "Congee", "Apple mash"]);
   });
 });

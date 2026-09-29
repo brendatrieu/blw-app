@@ -175,12 +175,12 @@ describe("RecipeCard rating (item 575)", () => {
     expect(renderCard(recipe())).not.toContain("★");
   });
 
-  it("offers the rating sorts in the Filters sheet", () => {
+  it("offers the average rating sort in the Filters sheet", () => {
     const html = renderFilterGroups({ ...EMPTY_RECIPE_FILTERS, sort: "highest" });
-    expect(html).toMatch(/aria-pressed="true"[^>]*>Highest rated</);
-    expect(html).toContain(">Most recently rated<");
-    expect(activeRecipeFilters({ ...EMPTY_RECIPE_FILTERS, sort: "recent" })).toEqual([
-      { key: "sort", label: "Most recently rated" },
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Average rating</);
+    expect(html).not.toContain("Most recent");
+    expect(activeRecipeFilters({ ...EMPTY_RECIPE_FILTERS, sort: "highest" })).toEqual([
+      { key: "sort", label: "Average rating" },
     ]);
   });
 });

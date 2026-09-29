@@ -84,7 +84,5 @@ describe("FoodsPage rating sort (item 576)", () => {
     expect(order(render())).toEqual(["Date", "Beef", "Apple", "Carrot"]);
     expect(h.reported.at(-1)).toMatchObject({ sort: "highest" });
 
-    pickSort("recent");
-    expect(order(render())).toEqual(["Beef", "Date", "Apple", "Carrot"]);
   });
 });

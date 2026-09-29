@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import type { AgeStage, RecipeDetail } from "@blw/shared";
 import { ageInMonths, formatExtraIngredient } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { RatingHistory } from "../features/tracking/components/RatingHistory.js";
+import { RatingHistory, RatingSummaryRow } from "../features/tracking/components/RatingHistory.js";
 import { useDeleteCustomRecipe, useRecipe } from "../features/catalog/hooks.js";
 import { asCustomRecipeConflict } from "../features/catalog/api.js";
 import { clampStageToAvailable, stageForAge } from "../features/catalog/stage.js";
@@ -214,6 +214,8 @@ export function RecipeDetailPage() {
           {recipe.isCustom && <Badge tone="neutral">Custom</Badge>}
           <AllergenChips allergens={recipe.allergens} />
         </div>
+        {/* Item 585: a subtitle under the badges; the graph is at the bottom. */}
+        <RatingSummaryRow target={{ recipeId: recipe.id }} />
       </div>
 
       {/* The same pair Home offers, in the same order and the same variants
@@ -229,8 +231,6 @@ export function RecipeDetailPage() {
           Add to storage
         </ButtonLink>
       </div>
-
-      <RatingHistory target={{ recipeId: recipe.id }} name={recipe.title} />
 
       <section className="flex flex-col gap-2">
         <h2 className="font-h2 text-[var(--color-text)]">Ingredients</h2>
@@ -381,6 +381,8 @@ export function RecipeDetailPage() {
           <p className="text-sm whitespace-pre-line text-[var(--color-text)]">{recipe.notes}</p>
         </section>
       )}
+
+      <RatingHistory target={{ recipeId: recipe.id }} name={recipe.title} />
 
       {recipe.isCustom && <CustomRecipeActions recipe={recipe} />}
     </div>

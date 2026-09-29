@@ -8,6 +8,7 @@ import { RECIPES_TAB_PATH, addCustomFoodLabel } from "../features/catalog/consta
 import { babyKeys } from "../features/babies/api.js";
 import { catalogKeys } from "../features/catalog/hooks.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
+import { RatingSortGroup } from "../features/catalog/components/filters.js";
 import {
   FoodsPage,
   FoodsRoute,
@@ -417,12 +418,26 @@ describe("ratings on the Foods grid (items 575-576)", () => {
     expect(html.indexOf("★ 4.2 (5)")).toBeGreaterThan(html.indexOf("Banana"));
   });
 
-  it("offers the two rating sorts in the Filters sheet, and a pill names the active one", () => {
-    const html = renderToString(createElement(FoodFilterGroups, { ...EMPTY_EXTRA_FILTERS, sort: "recent", onChange: () => {} }));
+  it("offers the one rating sort: a tap turns it on, a second tap goes back to the usual order (item 586)", () => {
+    const picked: unknown[] = [];
+    const chips = (value: "highest" | undefined) =>
+      (
+        RatingSortGroup({ value, onChange: (sort) => picked.push(sort) }) as unknown as {
+          props: { children: [unknown, { props: { children: { props: { label: string; onClick: () => void } }[] } }] };
+        }
+      ).props.children[1].props.children;
+    expect(chips(undefined).map((chip) => chip.props.label)).toEqual(["Average rating"]);
+    chips(undefined)[0]!.props.onClick();
+    chips("highest")[0]!.props.onClick();
+    expect(picked).toEqual(["highest", undefined]);
+  });
+
+  it("offers the average rating sort in the Filters sheet, and a pill names it", () => {
+    const html = renderToString(createElement(FoodFilterGroups, { ...EMPTY_EXTRA_FILTERS, sort: "highest", onChange: () => {} }));
     expect(html).toContain(">Sort<");
-    expect(html).toMatch(/aria-pressed="false"[^>]*>Highest rated</);
-    expect(html).toMatch(/aria-pressed="true"[^>]*>Most recently rated</);
-    expect(activeExtraFilters({ ...EMPTY_EXTRA_FILTERS, sort: "highest" })).toEqual([{ key: "sort", label: "Highest rated" }]);
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Average rating</);
+    expect(html).not.toContain("Most recent");
+    expect(activeExtraFilters({ ...EMPTY_EXTRA_FILTERS, sort: "highest" })).toEqual([{ key: "sort", label: "Average rating" }]);
     // The sort is not a server filter: the request is unchanged by it.
     expect(buildFoodsFilters("", undefined, { ...EMPTY_EXTRA_FILTERS, sort: "highest" })).toEqual(
       buildFoodsFilters("", undefined, EMPTY_EXTRA_FILTERS),

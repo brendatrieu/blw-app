@@ -18,19 +18,15 @@ const RATINGS: Record<string, RatingSummary> = {
   egg: s(5, 1, 1),
   fig: s(2, 3, 20),
 };
-const sorted = (sort: "highest" | "recent" | undefined) => sortByRating(ITEMS, sort, (id) => RATINGS[id]);
+const sorted = (sort: "highest" | undefined) => sortByRating(ITEMS, sort, (id) => RATINGS[id]);
 
-describe("sortByRating (item 576)", () => {
+describe("sortByRating (items 576, 586)", () => {
   it("leaves the usual order alone with no sort", () => {
     expect(sorted(undefined)).toEqual(ITEMS);
   });
 
-  it("Highest rated: average first, more ratings breaking a tie, never-rated last in the usual order", () => {
+  it("Average rating: average first, more ratings breaking a tie, never-rated last in the usual order", () => {
     expect(sorted("highest")).toEqual(["egg", "date", "beef", "fig", "apple", "carrot"]);
-  });
-
-  it("Most recently rated: latest rated meal first, never-rated last in the usual order", () => {
-    expect(sorted("recent")).toEqual(["fig", "beef", "date", "egg", "apple", "carrot"]);
   });
 
   it("keeps the usual order between exact ties", () => {
