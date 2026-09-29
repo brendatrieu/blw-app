@@ -233,7 +233,7 @@ export const coverageRecipesC: RecipeSeed[] = [
     ironFocus: false,
     fridgeHoursOverride: 48,
     ingredients: [
-      { foodSlug: 'potato', quantityNote: '1 medium potato, green patches and sprouts trimmed away' },
+      { foodSlug: 'potato', quantityNote: '1 medium Yukon Gold potato, green patches and sprouts trimmed away' },
       { foodSlug: 'peas', quantityNote: '1/2 cup frozen or fresh peas' },
       { foodSlug: 'dill', quantityNote: 'a few soft fronds, snipped very finely and stirred in at the end' },
     ],
@@ -284,7 +284,7 @@ export const coverageRecipesC: RecipeSeed[] = [
     freezerDaysOverride: 60,
     ingredients: [
       { foodSlug: 'beef', quantityNote: '1/2 cup lean ground beef' },
-      { foodSlug: 'potato', quantityNote: '1 medium potato, peeled, green patches and sprouts trimmed away' },
+      { foodSlug: 'potato', quantityNote: '1 medium Yukon Gold potato, peeled, green patches and sprouts trimmed away' },
       { foodSlug: 'carrot', quantityNote: '1 small carrot, peeled and chunked' },
       { foodSlug: 'tomato', quantityNote: '1 small tomato, skinned, deseeded, and chopped' },
       { foodSlug: 'garlic', quantityNote: 'half a small clove, minced and cooked in' },

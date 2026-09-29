@@ -1334,7 +1334,7 @@ export const basicRecipes: RecipeSeed[] = [
     minAgeMonths: 6,
     prepMinutes: 25,
     ironFocus: false,
-    ingredients: [{ foodSlug: 'potato', quantityNote: '1 medium potato' }],
+    ingredients: [{ foodSlug: 'potato', quantityNote: '1 medium Yukon Gold potato' }],
     variants: {
       '6': {
         textureNote: 'A thick finger-length wedge, peeled and cooked until it mashes easily between two fingers.',
@@ -1358,7 +1358,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Small bite-sized pieces, or a loose fork mash that is never beaten sticky.',
         steps: [
           'Scrub the potato and cut away any green patches or sprouts.',
-          'Steam or boil it in chunks for 12-15 minutes, or bake it whole at 400°F (200°C) for 45-55 minutes, until a skewer slides in with no resistance and the flesh mashes easily.',
+          'Steam or boil it in chunks for 12-15 minutes, or bake it whole at 400°F (200°C) for 50-60 minutes, until a skewer slides in with no resistance and the flesh mashes easily.',
           'Serve it in small bite-sized pieces, or mash it loosely with a fork — broken up just enough to eat, never beaten until it turns gluey.',
           'Cool to just-warm and serve with no added salt.',
         ],

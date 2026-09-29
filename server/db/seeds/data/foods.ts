@@ -767,7 +767,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Cook until tender and serve in small bite-sized pieces, or as a soft mash stirred loose rather than beaten sticky.',
     chokingNotes: 'Raw or under-cooked potato is hard and slippery and can shear into a firm, airway-blocking chunk — always cook until it mashes easily between two fingers, peel it for the youngest babies, and never serve raw or firm cubes. Stiff, gluey mash is hard to swallow too, so keep it loose and soft.',
-    notes: 'A gentle, filling everyday vegetable with more vitamin C than it gets credit for, especially cooked in its skin. Serve it with no added salt, and trim away any green patches or sprouts before cooking.',
+    notes: 'A gentle, filling everyday vegetable with more vitamin C than it gets credit for, especially cooked in its skin. Yukon Gold (or any yellow potato) is the easiest choice: steamed wedges hold together for little hands and it mashes creamy. Russets are best baked, since boiled russet wedges tend to crumble, and waxy red potatoes make a lumpier mash. Serve it with no added salt, and trim away any green patches or sprouts before cooking.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
