@@ -7,7 +7,14 @@ import { useRatings } from "../features/tracking/hooks.js";
 import { ratingSortLabel, sortByRating, type RatingSort } from "../features/catalog/ratingSort.js";
 import { useCatalogFilteredEvent } from "../lib/usage/useCatalogFiltered.js";
 import { FoodTile } from "../features/catalog/components/FoodTile.js";
-import { ActiveFilterPill, FilterChip, FunnelButton, RatingSortGroup } from "../features/catalog/components/filters.js";
+import {
+  ActiveFilterPill,
+  FilterChip,
+  FunnelButton,
+  RatingSortGroup,
+  toggleValue,
+  withoutPill,
+} from "../features/catalog/components/filters.js";
 import {
   ALLERGEN_SLUGS,
   AGE_THRESHOLDS,
@@ -18,7 +25,6 @@ import {
   FIBER_LEVELS,
   RECIPES_TAB_PATH,
   addCustomFoodLabel,
-  allergenLabel,
 } from "../features/catalog/constants.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
@@ -55,10 +61,12 @@ export function NoFoodsEmptyState({ query }: { query: string }) {
 }
 
 export interface ExtraFoodFilters {
-  allergen: string | undefined;
-  ironLevel: Level | undefined;
-  vitaminCLevel: Level | undefined;
-  fiberLevel: Level | undefined;
+  /** Pick-several (item 592): any picked value matches; `[]` is no filter. */
+  allergen: string[];
+  ironLevel: Level[];
+  vitaminCLevel: Level[];
+  fiberLevel: Level[];
+  /** Pick-one: 9m+ already includes 6m+. */
   maxAgeMonths: number | undefined;
   /** Foods › Deleted: ONLY the parent's own deleted custom foods, each
    * opening its read-only page with Restore (ledger 544). */
@@ -72,22 +80,21 @@ export type ExtraFoodFilterKey = keyof ExtraFoodFilters;
 
 /** What "Clear all" applies — every funnel filter off. */
 export const EMPTY_EXTRA_FILTERS: ExtraFoodFilters = {
-  allergen: undefined,
-  ironLevel: undefined,
-  vitaminCLevel: undefined,
-  fiberLevel: undefined,
+  allergen: [],
+  ironLevel: [],
+  vitaminCLevel: [],
+  fiberLevel: [],
   maxAgeMonths: undefined,
   deleted: undefined,
   sort: undefined,
 };
 
-const LEVEL_VALUES = ["high", "moderate", "low"] as const;
-
-/** A `?…Level=` param narrowed to a `Level`, or undefined for anything else
- * (absent, blank, "HIGH", a typo) — a bad value is ignored, never rendered
- * as a chip that matches nothing. */
-function levelParam(raw: string | null): Level | undefined {
-  return LEVEL_VALUES.find((level) => level === raw);
+/** A `?key=` param, given once or repeated, narrowed to the chips that
+ * exist, in chip order — anything else (blank, "HIGH", a typo) is ignored,
+ * never rendered as a chip that matches nothing. */
+function pickedFromSearch<V extends string>(params: URLSearchParams, key: string, options: readonly { value: V }[]): V[] {
+  const raw = params.getAll(key);
+  return options.map((option) => option.value).filter((value) => raw.includes(value));
 }
 
 /**
@@ -95,7 +102,8 @@ function levelParam(raw: string | null): Level | undefined {
  * article's constipation section points at `/foods?fiberLevel=high`, and
  * `?ironLevel=`, `?vitaminCLevel=` and `?allergen=` work the same way so a
  * link can preset any of the level filters rather than only the one that
- * happened to need it first.
+ * happened to need it first. Each may repeat (`?ironLevel=high&ironLevel=moderate`)
+ * to preselect several chips.
  *
  * Pure, and total: anything unrecognised (a bad level, an allergen slug the
  * chips don't have) falls back to that filter being off, so a hand-edited URL
@@ -104,18 +112,17 @@ function levelParam(raw: string | null): Level | undefined {
  * and no link in the app or the corpus asks for one.
  */
 export function initialExtraFiltersFromSearch(params: URLSearchParams): ExtraFoodFilters {
-  const allergen = params.get("allergen");
   return {
     ...EMPTY_EXTRA_FILTERS,
-    allergen: ALLERGEN_SLUGS.some((a) => a.value === allergen) ? (allergen ?? undefined) : undefined,
-    ironLevel: levelParam(params.get("ironLevel")),
-    vitaminCLevel: levelParam(params.get("vitaminCLevel")),
-    fiberLevel: levelParam(params.get("fiberLevel")),
+    allergen: pickedFromSearch(params, "allergen", ALLERGEN_SLUGS),
+    ironLevel: pickedFromSearch(params, "ironLevel", IRON_LEVELS),
+    vitaminCLevel: pickedFromSearch(params, "vitaminCLevel", VITAMIN_C_LEVELS),
+    fiberLevel: pickedFromSearch(params, "fiberLevel", FIBER_LEVELS),
   };
 }
 
 /** The request the grid makes: search + category + every funnel filter. */
-export function buildFoodsFilters(q: string, category: FoodCategory | undefined, extra: ExtraFoodFilters): FoodsQuery {
+export function buildFoodsFilters(q: string, category: FoodCategory[], extra: ExtraFoodFilters): FoodsQuery {
   return {
     q: q.trim() || undefined,
     category,
@@ -128,33 +135,34 @@ export function buildFoodsFilters(q: string, category: FoodCategory | undefined,
   };
 }
 
+/** One removable pill; `value` names the pick it removes in a pick-several group. */
+export interface FoodFilterPill {
+  key: ExtraFoodFilterKey;
+  label: string;
+  value?: string;
+}
+
+type MultiFoodFilterKey = "allergen" | "ironLevel" | "vitaminCLevel" | "fiberLevel";
+
 /**
  * The filters that live behind the funnel button, resolved to the pills the
- * page shows — one entry per set filter, in display order. Pure, so the
+ * page shows — one entry per set filter, and one per picked value in a
+ * pick-several group (item 596), in display order. Pure, so the
  * funnel count and the pill row can't disagree and both are testable
  * without opening the (node-env-invisible) Sheet.
  */
-export function activeExtraFilters(filters: ExtraFoodFilters): Array<{ key: ExtraFoodFilterKey; label: string }> {
-  const pills: Array<{ key: ExtraFoodFilterKey; label: string }> = [];
-  if (filters.allergen) pills.push({ key: "allergen", label: allergenLabel(filters.allergen) });
-  if (filters.ironLevel) {
-    pills.push({
-      key: "ironLevel",
-      label: IRON_LEVELS.find((l) => l.value === filters.ironLevel)?.label ?? filters.ironLevel,
-    });
-  }
-  if (filters.vitaminCLevel) {
-    pills.push({
-      key: "vitaminCLevel",
-      label: VITAMIN_C_LEVELS.find((l) => l.value === filters.vitaminCLevel)?.label ?? filters.vitaminCLevel,
-    });
-  }
-  if (filters.fiberLevel) {
-    pills.push({
-      key: "fiberLevel",
-      label: FIBER_LEVELS.find((l) => l.value === filters.fiberLevel)?.label ?? filters.fiberLevel,
-    });
-  }
+export function activeExtraFilters(filters: ExtraFoodFilters): FoodFilterPill[] {
+  const pills: FoodFilterPill[] = [];
+  const multi = (key: MultiFoodFilterKey, options: readonly { value: string; label: string }[]) => {
+    const picked: readonly string[] = filters[key];
+    for (const option of options) {
+      if (picked.includes(option.value)) pills.push({ key, value: option.value, label: option.label });
+    }
+  };
+  multi("allergen", ALLERGEN_SLUGS);
+  multi("ironLevel", IRON_LEVELS);
+  multi("vitaminCLevel", VITAMIN_C_LEVELS);
+  multi("fiberLevel", FIBER_LEVELS);
   if (filters.maxAgeMonths !== undefined) {
     const ageLabel = AGE_THRESHOLDS.find((a) => a.value === filters.maxAgeMonths)?.label;
     if (ageLabel) pills.push({ key: "maxAgeMonths", label: ageLabel });
@@ -171,47 +179,34 @@ interface FoodFilterGroupsProps extends ExtraFoodFilters {
 /** The Filters sheet's chip groups — exported so tests can render them open. */
 export function FoodFilterGroups({ onChange, ...filters }: FoodFilterGroupsProps) {
   const set = (patch: Partial<ExtraFoodFilters>) => onChange({ ...filters, ...patch });
-  const levelGroup = (
-    label: string,
-    key: "ironLevel" | "vitaminCLevel" | "fiberLevel",
-    options: { value: Level; label: string }[],
-  ) => (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-[var(--color-text-muted)]">{label}</span>
-      <div className="flex flex-wrap gap-1.5">
-        {options.map((opt) => (
-          <FilterChip
-            key={opt.value}
-            label={opt.label}
-            active={opt.value === filters[key]}
-            onClick={() => set({ [key]: opt.value === filters[key] ? undefined : opt.value })}
-          />
-        ))}
+  // Pick-several (item 592): each chip toggles its own value.
+  const multiGroup = (label: string, key: MultiFoodFilterKey, options: readonly { value: string; label: string }[]) => {
+    const picked: readonly string[] = filters[key];
+    return (
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-[var(--color-text-muted)]">{label}</span>
+        <div className="flex flex-wrap gap-1.5">
+          {options.map((opt) => (
+            <FilterChip
+              key={opt.value}
+              label={opt.label}
+              active={picked.includes(opt.value)}
+              onClick={() => set({ [key]: toggleValue(options, picked, opt.value) })}
+            />
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
       <RatingSortGroup value={filters.sort} onChange={(sort) => set({ sort })} />
 
-      <div className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium text-[var(--color-text-muted)]">Allergen</span>
-        <div className="flex flex-wrap gap-1.5">
-          {ALLERGEN_SLUGS.map((opt) => (
-            <FilterChip
-              key={opt.value}
-              label={opt.label}
-              active={opt.value === filters.allergen}
-              onClick={() => set({ allergen: opt.value === filters.allergen ? undefined : opt.value })}
-            />
-          ))}
-        </div>
-      </div>
-
-      {levelGroup("Iron", "ironLevel", IRON_LEVELS)}
-      {levelGroup("Vitamin C", "vitaminCLevel", VITAMIN_C_LEVELS)}
-      {levelGroup("Fiber", "fiberLevel", FIBER_LEVELS)}
+      {multiGroup("Allergen", "allergen", ALLERGEN_SLUGS)}
+      {multiGroup("Iron", "ironLevel", IRON_LEVELS)}
+      {multiGroup("Vitamin C", "vitaminCLevel", VITAMIN_C_LEVELS)}
+      {multiGroup("Fiber", "fiberLevel", FIBER_LEVELS)}
 
       <div className="flex flex-col gap-1.5">
         <span className="text-xs font-medium text-[var(--color-text-muted)]">Age</span>
@@ -259,11 +254,11 @@ export function FoodsPage() {
   // lazy initializers make that literal — after mount the URL is ignored.
   const [initial] = useState(() => initialExtraFiltersFromSearch(searchParams));
   const [q, setQ] = useState("");
-  const [category, setCategory] = useState<FoodCategory | undefined>(undefined);
-  const [allergen, setAllergen] = useState<string | undefined>(initial.allergen);
-  const [ironLevel, setIronLevel] = useState<Level | undefined>(initial.ironLevel);
-  const [vitaminCLevel, setVitaminCLevel] = useState<Level | undefined>(initial.vitaminCLevel);
-  const [fiberLevel, setFiberLevel] = useState<Level | undefined>(initial.fiberLevel);
+  const [category, setCategory] = useState<FoodCategory[]>([]);
+  const [allergen, setAllergen] = useState<string[]>(initial.allergen);
+  const [ironLevel, setIronLevel] = useState<Level[]>(initial.ironLevel);
+  const [vitaminCLevel, setVitaminCLevel] = useState<Level[]>(initial.vitaminCLevel);
+  const [fiberLevel, setFiberLevel] = useState<Level[]>(initial.fiberLevel);
   const [maxAgeMonths, setMaxAgeMonths] = useState<number | undefined>(initial.maxAgeMonths);
   const [deleted, setDeleted] = useState<boolean | undefined>(initial.deleted);
   const [sort, setSort] = useState<RatingSort | undefined>(initial.sort);
@@ -301,7 +296,7 @@ export function FoodsPage() {
     setDeleted(next.deleted);
     setSort(next.sort);
   }
-  const clearExtra = (key: ExtraFoodFilterKey) => applyExtra({ ...extraFilters, [key]: undefined });
+  const removePill = (pill: FoodFilterPill) => applyExtra(withoutPill(extraFilters, EMPTY_EXTRA_FILTERS, pill));
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -333,8 +328,8 @@ export function FoodsPage() {
             <FilterChip
               key={opt.value}
               label={categoryChipLabel(opt)}
-              active={opt.value === category}
-              onClick={() => setCategory(opt.value === category ? undefined : opt.value)}
+              active={category.includes(opt.value)}
+              onClick={() => setCategory(toggleValue(CATEGORIES, category, opt.value))}
               className="min-w-0 flex-1 overflow-hidden px-1 text-[10px] text-ellipsis"
             />
           ))}
@@ -345,7 +340,7 @@ export function FoodsPage() {
       {pills.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {pills.map((pill) => (
-            <ActiveFilterPill key={pill.key} label={pill.label} onRemove={() => clearExtra(pill.key)} />
+            <ActiveFilterPill key={`${pill.key}:${pill.value ?? ""}`} label={pill.label} onRemove={() => removePill(pill)} />
           ))}
         </div>
       )}

@@ -323,7 +323,7 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
         .from(recipeIngredients)
         .innerJoin(foodAllergens, eq(recipeIngredients.foodId, foodAllergens.foodId))
         .innerJoin(allergens, eq(foodAllergens.allergenId, allergens.id))
-        .where(eq(allergens.slug, allergen));
+        .where(inArray(allergens.slug, allergen));
       conditions.push(inArray(recipes.id, withAllergen));
     }
 

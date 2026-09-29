@@ -55,7 +55,8 @@ const MAX_FILTER_KEYS = 13;
  *
  * `q` is skipped outright: it is represented by `has_query`, so the text has
  * nowhere to go. A `scope` of "all" is the default rather than a filter, and
- * an off toggle (`false`, `""`, `undefined`) is not a filter either.
+ * an off toggle (`false`, `""`, `undefined`, `[]`) is not a filter either. A
+ * group with several picks is still ONE key — never its values.
  */
 export function catalogFilterKeys(filters: object): CatalogFilterKey[] {
   const keys: CatalogFilterKey[] = [];
@@ -66,6 +67,8 @@ export function catalogFilterKeys(filters: object): CatalogFilterKey[] {
     const key = FILTER_KEY_BY_FIELD[field];
     if (!key) continue;
     if (value === undefined || value === null || value === false || value === "") continue;
+    // A pick-several group with nothing picked is no filter (item 597).
+    if (Array.isArray(value) && value.length === 0) continue;
     if (field === "scope" && value === "all") continue;
     keys.push(key);
   }

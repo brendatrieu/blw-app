@@ -47,6 +47,7 @@ vi.mock("../../../lib/usage/useCatalogFiltered.js", () => ({
 }));
 
 import { EMPTY_RECIPE_FILTERS, RecipeCard, RecipeFilterGroups, RecipesSegment } from "./RecipesSegment.js";
+import { ActiveFilterPill, FilterChip, FunnelButton } from "./filters.js";
 
 interface El {
   type: unknown;
@@ -77,5 +78,44 @@ describe("RecipesSegment rating sort (item 576)", () => {
     expect(order(render())).toEqual(["Congee", "Beef stew", "Apple mash"]);
     expect(h.reported.at(-1)).toMatchObject({ sort: "highest" });
 
+  });
+});
+
+// Items 593/596: Allergen is pick-several on Recipes too.
+describe("RecipesSegment allergen pills", () => {
+  it("shows one pill per picked allergen, badges the count, and a pill removes only its own allergen", () => {
+    (all(render(), RecipeFilterGroups)[0]!.props.onChange as (next: object) => void)({
+      ...EMPTY_RECIPE_FILTERS,
+      allergen: ["egg", "peanut"],
+    });
+    const tree = render();
+    const pills = all(tree, ActiveFilterPill);
+    expect(pills.map((pill) => pill.props.label)).toEqual(["Egg", "Peanut"]);
+    expect(all(tree, FunnelButton)[0]!.props.activeCount).toBe(2);
+    expect(new Set(pills.map((pill) => (pill as { key?: unknown }).key)).size).toBe(2);
+    expect(h.reported.at(-1)).toMatchObject({ allergen: ["egg", "peanut"] });
+
+    (pills[0]!.props.onRemove as () => void)();
+    expect(all(render(), ActiveFilterPill).map((pill) => pill.props.label)).toEqual(["Peanut"]);
+    expect(h.reported.at(-1)).toMatchObject({ allergen: ["peanut"] });
+  });
+});
+
+// Item 593: tapping a second Allergen chip adds to the pick, not replaces it.
+describe("RecipeFilterGroups allergen chips", () => {
+  it("keeps both tapped allergens, in chip order, and a second tap removes one", () => {
+    let filters = { ...EMPTY_RECIPE_FILTERS };
+    const tap = (label: string) => {
+      const tree = (RecipeFilterGroups as unknown as (props: object) => El)({
+        ...filters,
+        onChange: (next: typeof filters) => (filters = next),
+      });
+      (all(tree, FilterChip).find((chip) => chip.props.label === label)!.props.onClick as () => void)();
+    };
+    tap("Egg");
+    tap("Peanut");
+    expect(filters.allergen).toEqual(["egg", "peanut"]);
+    tap("Egg");
+    expect(filters.allergen).toEqual(["peanut"]);
   });
 });

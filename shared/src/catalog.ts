@@ -28,12 +28,26 @@ const queryFlag = z
   .union([z.boolean(), z.enum(["true", "false", "1", "0"])])
   .transform((value) => value === true || value === "true" || value === "1");
 
+/**
+ * A multi-select filter (item 594): the key given once (`?ironLevel=high`,
+ * which old app versions and saved links send) or repeated
+ * (`?ironLevel=high&ironLevel=moderate`, which the server's query parser
+ * hands over as an array). Either way it reads back as a list, and EVERY
+ * value is validated by `item` — one bad value is a 400, as before. The
+ * route matches any of them (OR within a group; groups still AND).
+ */
+function oneOrMany<T extends z.ZodTypeAny>(item: T) {
+  return z
+    .union([item, z.array(item).min(1)])
+    .transform((value): z.infer<T>[] => (Array.isArray(value) ? value : [value]));
+}
+
 export const foodsQuerySchema = z.object({
-  category: foodCategorySchema.optional(),
-  allergen: z.string().min(1).optional(),
-  ironLevel: levelSchema.optional(),
-  vitaminCLevel: levelSchema.optional(),
-  fiberLevel: levelSchema.optional(),
+  category: oneOrMany(foodCategorySchema).optional(),
+  allergen: oneOrMany(z.string().min(1)).optional(),
+  ironLevel: oneOrMany(levelSchema).optional(),
+  vitaminCLevel: oneOrMany(levelSchema).optional(),
+  fiberLevel: oneOrMany(levelSchema).optional(),
   q: z.string().min(1).optional(),
   maxAgeMonths: z.coerce.number().int().nonnegative().optional(),
   /** On: ONLY the caller's own deleted custom foods (Foods › Deleted), so
@@ -356,8 +370,9 @@ export const recipesQuerySchema = z.object({
   scope: recipeScopeSchema.default("all"),
   /** Recipes suitable at or below this age, i.e. `minAgeMonths <= value`. */
   maxAgeMonths: z.coerce.number().int().nonnegative().optional(),
-  /** Allergen slug, matched against the recipe's DERIVED allergen set. */
-  allergen: z.string().min(1).optional(),
+  /** Allergen slug(s), matched against the recipe's DERIVED allergen set:
+   * a recipe containing ANY of them matches. */
+  allergen: oneOrMany(z.string().min(1)).optional(),
   /** "true"/"false"/"1"/"0". Present is an exact filter on the recipe's
    * DERIVED `ironFocus` (curated flag OR a high-iron ingredient), absent
    * filters on nothing. */

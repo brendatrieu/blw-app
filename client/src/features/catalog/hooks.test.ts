@@ -86,13 +86,44 @@ describe("removeFoodFromList", () => {
   });
 });
 
+describe("catalogKeys (item 595: pick-several filters)", () => {
+  it("keys the same whatever order the chips were tapped in", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(catalogKeys.foodsList({ vitaminCLevel: ["high", "moderate"], category: ["veg", "fruit"] }), {
+      foods: [listItem()],
+    });
+    expect(
+      queryClient.getQueryData(catalogKeys.foodsList({ category: ["fruit", "veg"], vitaminCLevel: ["moderate", "high"] })),
+    ).toEqual({ foods: [listItem()] });
+
+    queryClient.setQueryData(catalogKeys.recipesList({ allergen: ["peanut", "egg"] }), { recipes: [] });
+    expect(queryClient.getQueryData(catalogKeys.recipesList({ allergen: ["egg", "peanut"] }))).toEqual({ recipes: [] });
+  });
+
+  it("keys an empty pick like no filter, so the unfiltered page shares the pickers' entry", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(catalogKeys.foodsList({}), { foods: [listItem()] });
+    expect(
+      queryClient.getQueryData(
+        catalogKeys.foodsList({ category: [], allergen: [], ironLevel: [], vitaminCLevel: [], fiberLevel: [] }),
+      ),
+    ).toEqual({ foods: [listItem()] });
+  });
+
+  it("does not reorder the caller's own filters", () => {
+    const filters = { ironLevel: ["moderate", "high"] as ("moderate" | "high")[] };
+    catalogKeys.foodsList(filters);
+    expect(filters.ironLevel).toEqual(["moderate", "high"]);
+  });
+});
+
 describe("writeCustomFoodToCache", () => {
   it("inserts the created food into EVERY cached filter variant, so the picker can select it at once", () => {
     // Item 180: the picker reads `["foods", {}]`; the Foods grid may hold
     // several filtered variants at the same time. A prefix write covers all.
     const queryClient = new QueryClient();
     queryClient.setQueryData(catalogKeys.foodsList({}), { foods: [listItem()] });
-    queryClient.setQueryData(catalogKeys.foodsList({ category: "grain" }), { foods: [] });
+    queryClient.setQueryData(catalogKeys.foodsList({ category: ["grain"] }), { foods: [] });
 
     const created = detail();
     writeCustomFoodToCache(queryClient, created);
@@ -102,7 +133,7 @@ describe("writeCustomFoodToCache", () => {
       "food-9",
     ]);
     expect(
-      queryClient.getQueryData<FoodsResponse>(catalogKeys.foodsList({ category: "grain" }))!.foods.map((f) => f.id),
+      queryClient.getQueryData<FoodsResponse>(catalogKeys.foodsList({ category: ["grain"] }))!.foods.map((f) => f.id),
     ).toEqual(["food-9"]);
     // …and its own detail entry, so /foods/<slug> renders without a fetch.
     expect(queryClient.getQueryData(catalogKeys.food(created.slug))).toEqual(created);
@@ -397,7 +428,7 @@ describe("buildRecipesQueryString", () => {
       buildRecipesQueryString({
         scope: "custom",
         maxAgeMonths: 9,
-        allergen: "peanut",
+        allergen: ["peanut"],
         ironFocus: true,
         ingredientFoodId: "food-1",
       }),

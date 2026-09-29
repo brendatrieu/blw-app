@@ -5,7 +5,7 @@ import { AGE_THRESHOLDS, ALLERGEN_SLUGS, RECIPE_SCOPES, allergenLabel } from "..
 import { useFoods, useRecipes } from "../hooks.js";
 import { useCatalogFilteredEvent } from "../../../lib/usage/useCatalogFiltered.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../basicRecipe.js";
-import { ActiveFilterPill, FilterChip, FunnelButton, RatingSortGroup } from "./filters.js";
+import { ActiveFilterPill, FilterChip, FunnelButton, RatingSortGroup, toggleValue, withoutPill } from "./filters.js";
 import { ratingSortLabel, sortByRating, type RatingSort } from "../ratingSort.js";
 import { useActiveBaby } from "../../babies/useActiveBaby.js";
 import { useRatings } from "../../tracking/hooks.js";
@@ -90,7 +90,8 @@ export function NoRecipesEmptyState() {
  * and scope (which live in their own always-visible controls). */
 export interface ExtraRecipeFilters {
   maxAgeMonths: number | undefined;
-  allergen: string | undefined;
+  /** Pick-several (item 593): a recipe containing ANY picked allergen. */
+  allergen: string[];
   ironFocus: boolean;
   vitaminCHigh: boolean;
   fiberHigh: boolean;
@@ -106,7 +107,7 @@ export type ExtraRecipeFilterKey = keyof ExtraRecipeFilters;
  * key without having to restate what "off" means for it. */
 export const EMPTY_RECIPE_FILTERS: ExtraRecipeFilters = {
   maxAgeMonths: undefined,
-  allergen: undefined,
+  allergen: [],
   ironFocus: false,
   vitaminCHigh: false,
   fiberHigh: false,
@@ -140,9 +141,16 @@ export function buildRecipesFilters(state: RecipesFilterState): RecipeFilters {
   };
 }
 
+/** One removable pill; `value` names the allergen it removes. */
+export interface RecipeFilterPill {
+  key: ExtraRecipeFilterKey;
+  label: string;
+  value?: string;
+}
+
 /**
  * The filters that live behind the funnel button, resolved to the pills the
- * page shows — one entry per set filter, in display order (age, allergen,
+ * page shows — one entry per set filter (one per picked allergen), in display order (age, allergen,
  * iron focus, high vitamin C, high fiber, ingredient). Pure, so the funnel count and the
  * pill row can't disagree and both are testable without opening the
  * (node-env-invisible) Sheet. `ingredientName` is the only piece that isn't
@@ -152,13 +160,15 @@ export function buildRecipesFilters(state: RecipesFilterState): RecipeFilters {
 export function activeRecipeFilters(
   filters: ExtraRecipeFilters,
   ingredientName?: string,
-): Array<{ key: ExtraRecipeFilterKey; label: string }> {
-  const pills: Array<{ key: ExtraRecipeFilterKey; label: string }> = [];
+): RecipeFilterPill[] {
+  const pills: RecipeFilterPill[] = [];
   if (filters.maxAgeMonths !== undefined) {
     const ageLabel = AGE_THRESHOLDS.find((age) => age.value === filters.maxAgeMonths)?.label;
     if (ageLabel) pills.push({ key: "maxAgeMonths", label: ageLabel });
   }
-  if (filters.allergen) pills.push({ key: "allergen", label: allergenLabel(filters.allergen) });
+  for (const option of ALLERGEN_SLUGS) {
+    if (filters.allergen.includes(option.value)) pills.push({ key: "allergen", value: option.value, label: option.label });
+  }
   if (filters.ironFocus) pills.push({ key: "ironFocus", label: "Iron focus" });
   if (filters.vitaminCHigh) pills.push({ key: "vitaminCHigh", label: "High vitamin C" });
   if (filters.fiberHigh) pills.push({ key: "fiberHigh", label: "High fiber" });
@@ -206,8 +216,8 @@ export function RecipeFilterGroups({ onChange, ...filters }: RecipeFilterGroupsP
             <FilterChip
               key={option.value}
               label={option.label}
-              active={option.value === filters.allergen}
-              onClick={() => set({ allergen: option.value === filters.allergen ? undefined : option.value })}
+              active={filters.allergen.includes(option.value)}
+              onClick={() => set({ allergen: toggleValue(ALLERGEN_SLUGS, filters.allergen, option.value) })}
             />
           ))}
         </div>
@@ -283,8 +293,8 @@ export function RecipesSegment() {
   const pills = activeRecipeFilters(extra, ingredientName);
   const activeExtraFilterCount = pills.length;
 
-  function clearPill(key: ExtraRecipeFilterKey) {
-    setExtra((current) => ({ ...current, [key]: EMPTY_RECIPE_FILTERS[key] }));
+  function clearPill(pill: RecipeFilterPill) {
+    setExtra((current) => withoutPill(current, EMPTY_RECIPE_FILTERS, pill));
   }
 
   return (
@@ -320,7 +330,7 @@ export function RecipesSegment() {
       {pills.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {pills.map((pill) => (
-            <ActiveFilterPill key={pill.key} label={pill.label} onRemove={() => clearPill(pill.key)} />
+            <ActiveFilterPill key={`${pill.key}:${pill.value ?? ""}`} label={pill.label} onRemove={() => clearPill(pill)} />
           ))}
         </div>
       )}

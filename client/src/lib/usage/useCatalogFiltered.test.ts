@@ -111,6 +111,21 @@ describe("catalogFilterKeys — which controls, never what they were set to", ()
     expect(catalogFilterKeys({ scope: "all", ironFocus: false, allergen: "" })).toEqual([]);
   });
 
+  // Item 597: a pick-several group reports its KEY once however many values
+  // are picked — never the values — and an empty pick reports nothing.
+  it("reports a pick-several group once, as its key, and an empty one not at all", () => {
+    const keys = catalogFilterKeys({
+      category: ["protein", "veg"],
+      allergen: ["peanut", "egg"],
+      ironLevel: [],
+      vitaminCLevel: ["high", "moderate"],
+      fiberLevel: [],
+    });
+    expect(keys).toEqual(["category", "allergen", "vitamin_c_level"]);
+    expect(JSON.stringify(keys)).not.toMatch(/peanut|protein|moderate/);
+    expect(catalogFilterKeys({ category: [], allergen: [] })).toEqual([]);
+  });
+
   it("ignores fields nobody has decided a name for", () => {
     expect(catalogFilterKeys({ somethingNew: "value" })).toEqual([]);
   });

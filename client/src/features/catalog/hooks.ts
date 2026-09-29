@@ -30,6 +30,22 @@ import {
 } from "./api.js";
 
 /**
+ * Item 595: a pick-several filter must key the same whatever order it was
+ * tapped in, and an empty pick is no filter — so arrays are sorted (alphabetically;
+ * any fixed order works) and `[]`
+ * dropped (an undefined entry hashes like an absent one, which keeps the
+ * unfiltered page on the pickers' `useFoods()` entry).
+ */
+function canonicalFilters<T extends object>(filters: T): T {
+  return Object.fromEntries(
+    Object.entries(filters).map(([key, value]) => [
+      key,
+      Array.isArray(value) ? (value.length > 0 ? [...(value as string[])].sort() : undefined) : value,
+    ]),
+  ) as T;
+}
+
+/**
  * The catalog's query keys, previously inline string literals. Collected
  * here (mirroring `storageKeys` / `trackingKeys`) because the custom-food
  * mutations now have to reach into these caches by prefix — `["foods"]`
@@ -41,12 +57,12 @@ import {
 export const catalogKeys = {
   /** Prefix covering every filter variant of the foods list. */
   foods: ["foods"] as const,
-  foodsList: (filters: FoodsQuery) => ["foods", filters] as const,
+  foodsList: (filters: FoodsQuery) => ["foods", canonicalFilters(filters)] as const,
   food: (slug: string | undefined) => ["food", slug] as const,
   recipe: (id: string | undefined) => ["recipe", id] as const,
   /** Prefix covering every filter variant of the recipes list. */
   recipes: ["recipes"] as const,
-  recipesList: (filters: RecipeFilters) => ["recipes", filters] as const,
+  recipesList: (filters: RecipeFilters) => ["recipes", canonicalFilters(filters)] as const,
 };
 
 export function useFoods(filters: FoodsQuery = {}) {

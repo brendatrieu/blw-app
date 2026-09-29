@@ -97,12 +97,20 @@ async function seedFixtures(db: Database) {
     ])
     .returning();
 
-  const [eggAllergen] = await db
+  const [eggAllergen, milkAllergen] = await db
     .insert(schema.allergens)
-    .values({ slug: "egg", name: "Egg", introGuidance: "Well-cooked egg." })
+    .values([
+      { slug: "egg", name: "Egg", introGuidance: "Well-cooked egg." },
+      { slug: "milk", name: "Milk", introGuidance: "Full-fat dairy." },
+    ])
     .returning();
 
-  await db.insert(schema.foodAllergens).values({ foodId: egg!.id, allergenId: eggAllergen!.id });
+  // Beef carries milk only so a repeated ?allergen= has two different foods
+  // to union (item 594); beef is not in the recipe, so recipe allergens stay ["egg"].
+  await db.insert(schema.foodAllergens).values([
+    { foodId: egg!.id, allergenId: eggAllergen!.id },
+    { foodId: beef!.id, allergenId: milkAllergen!.id },
+  ]);
 
   await db.insert(schema.foodPairings).values({
     ironFoodId: spinach!.id,
@@ -229,6 +237,53 @@ describe("catalog routes", () => {
     const response = await app.inject({ method: "GET", url: "/api/foods?fiberLevel=enormous" });
     expect(response.statusCode).toBe(400);
     expect(response.json()).toMatchObject({ error: "invalid_query" });
+  });
+
+  // Items 592/594: every multi-select group takes one value or the key
+  // repeated. Repeats match ANY of the values; groups still AND together.
+  describe("multi-select params", () => {
+    const slugs = async (query: string) =>
+      ((await app.inject({ method: "GET", url: `/api/foods${query}` })).json() as FoodsResponse).foods
+        .map((f) => f.slug)
+        .sort();
+
+    it("a single value still filters as before", async () => {
+      expect(await slugs("?vitaminCLevel=high")).toEqual(["orange"]);
+      expect(await slugs("?category=veg")).toEqual(["spinach"]);
+    });
+
+    it("repeated values match any of them (OR within a group)", async () => {
+      expect(await slugs("?vitaminCLevel=high&vitaminCLevel=moderate")).toEqual(["orange", "spinach"]);
+      expect(await slugs("?category=veg&category=fruit")).toEqual(["orange", "spinach"]);
+      expect(await slugs("?ironLevel=high&ironLevel=moderate")).toEqual(["beef", "egg", "spinach"]);
+      expect(await slugs("?fiberLevel=high&fiberLevel=moderate")).toEqual(["orange", "spinach"]);
+      expect(await slugs("?allergen=egg&allergen=egg")).toEqual(["egg"]);
+      expect(await slugs("?allergen=milk")).toEqual(["beef"]);
+      expect(await slugs("?allergen=egg&allergen=milk")).toEqual(["beef", "egg"]);
+    });
+
+    it("groups AND together", async () => {
+      // high OR moderate vitamin C = orange, spinach; protein OR veg = beef,
+      // egg, spinach; both = spinach alone.
+      expect(await slugs("?vitaminCLevel=high&vitaminCLevel=moderate&category=protein&category=veg")).toEqual([
+        "spinach",
+      ]);
+      expect(await slugs("?category=protein&category=veg&allergen=egg")).toEqual(["egg"]);
+    });
+
+    it("validates every repeated value", async () => {
+      for (const query of [
+        "?ironLevel=high&ironLevel=enormous",
+        "?category=veg&category=candy",
+        "?fiberLevel=low&fiberLevel=",
+        "?allergen=egg&allergen=",
+        "?category=",
+      ]) {
+        const response = await app.inject({ method: "GET", url: `/api/foods${query}` });
+        expect(response.statusCode, query).toBe(400);
+        expect(response.json()).toMatchObject({ error: "invalid_query" });
+      }
+    });
   });
 
   it("carries fiberLevel on both the list row and the detail body", async () => {

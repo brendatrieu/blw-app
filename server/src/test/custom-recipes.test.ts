@@ -650,6 +650,31 @@ describe("custom recipes", () => {
       expect((await listRecipes(intruder, `?ingredientFoodId=${peanutFood.id}`)).recipes).toEqual([]);
     });
 
+    // Item 593/594: Allergen is pick-several — a recipe containing ANY
+    // picked allergen matches, and the group still ANDs with the rest.
+    it("matches ANY of several repeated allergen params, still ANDed with other filters", async () => {
+      const peanutFood = await createFood(owner, { name: "Satay sauce", category: "protein", allergenSlugs: ["peanut"] });
+      const eggFood = await createFood(owner, { name: "Omelette strips", category: "protein", allergenSlugs: ["egg"] });
+      const satay = await createRecipe(
+        owner,
+        recipePayload({ title: "Satay noodles", minAgeMonths: 12, ingredients: [{ foodId: peanutFood.id, quantityNote: "" }] }),
+      );
+      const omelette = await createRecipe(
+        owner,
+        recipePayload({ title: "Omelette fingers", minAgeMonths: 6, ingredients: [{ foodId: eggFood.id, quantityNote: "" }] }),
+      );
+      const ids = async (query: string) => (await listRecipes(owner, query)).recipes.map((r) => r.id).sort();
+
+      expect(await ids("?allergen=peanut")).toEqual([satay.id]);
+      expect(await ids("?allergen=peanut&allergen=egg")).toEqual([satay.id, omelette.id].sort());
+      expect(await ids("?allergen=egg&allergen=peanut&maxAgeMonths=6")).toEqual([omelette.id]);
+
+      for (const bad of ["?allergen=peanut&allergen=", "?allergen="]) {
+        const response = await app.inject({ method: "GET", url: `/api/recipes${bad}`, headers: { cookie: owner.cookie } });
+        expect(response.statusCode, bad).toBe(400);
+      }
+    });
+
     it("400s an unusable query", async () => {
       const response = await app.inject({
         method: "GET",

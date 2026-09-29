@@ -8,7 +8,7 @@ import { RECIPES_TAB_PATH, addCustomFoodLabel } from "../features/catalog/consta
 import { babyKeys } from "../features/babies/api.js";
 import { catalogKeys } from "../features/catalog/hooks.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
-import { RatingSortGroup } from "../features/catalog/components/filters.js";
+import { RatingSortGroup, withoutPill } from "../features/catalog/components/filters.js";
 import {
   FoodsPage,
   FoodsRoute,
@@ -181,10 +181,10 @@ describe("activeExtraFilters (funnel count + pill row share this)", () => {
   it("yields one labelled pill per set filter, in display order, and nothing when none are set", () => {
     expect(activeExtraFilters(EMPTY_EXTRA_FILTERS)).toEqual([]);
     const pills = activeExtraFilters({
-      allergen: "egg",
-      ironLevel: "high",
-      vitaminCLevel: "moderate",
-      fiberLevel: "high",
+      allergen: ["egg"],
+      ironLevel: ["high"],
+      vitaminCLevel: ["moderate"],
+      fiberLevel: ["high"],
       maxAgeMonths: 6,
       deleted: true,
     });
@@ -200,21 +200,57 @@ describe("activeExtraFilters (funnel count + pill row share this)", () => {
   });
 
   it("counts vitamin C on its own", () => {
-    const pills = activeExtraFilters({ ...EMPTY_EXTRA_FILTERS, vitaminCLevel: "low" });
-    expect(pills).toEqual([{ key: "vitaminCLevel", label: "Low vitamin C" }]);
+    const pills = activeExtraFilters({ ...EMPTY_EXTRA_FILTERS, vitaminCLevel: ["low"] });
+    expect(pills).toEqual([{ key: "vitaminCLevel", value: "low", label: "Low vitamin C" }]);
+  });
+
+  // Item 596: one pill per picked value, in chip order; the badge counts them.
+  it("yields one pill per picked value in a pick-several group", () => {
+    const pills = activeExtraFilters({
+      ...EMPTY_EXTRA_FILTERS,
+      vitaminCLevel: ["high", "moderate"],
+      allergen: ["egg", "peanut"],
+      maxAgeMonths: 9,
+    });
+    expect(pills).toEqual([
+      { key: "allergen", value: "egg", label: "Egg" },
+      { key: "allergen", value: "peanut", label: "Peanut" },
+      { key: "vitaminCLevel", value: "high", label: "High vitamin C" },
+      { key: "vitaminCLevel", value: "moderate", label: "Moderate vitamin C" },
+      { key: "maxAgeMonths", label: "9m+" },
+    ]);
+  });
+
+  it("removing one pill removes only that value; a pick-one pill clears its filter", () => {
+    const filters: ExtraFoodFilters = {
+      ...EMPTY_EXTRA_FILTERS,
+      vitaminCLevel: ["high", "moderate"],
+      allergen: ["egg"],
+      maxAgeMonths: 9,
+      deleted: true,
+    };
+    const pills = activeExtraFilters(filters);
+    const pill = (label: string) => pills.find((p) => p.label === label)!;
+    expect(withoutPill(filters, EMPTY_EXTRA_FILTERS, pill("High vitamin C"))).toEqual({
+      ...filters,
+      vitaminCLevel: ["moderate"],
+    });
+    expect(withoutPill(filters, EMPTY_EXTRA_FILTERS, pill("Egg"))).toEqual({ ...filters, allergen: [] });
+    expect(withoutPill(filters, EMPTY_EXTRA_FILTERS, pill("9m+"))).toEqual({ ...filters, maxAgeMonths: undefined });
+    expect(withoutPill(filters, EMPTY_EXTRA_FILTERS, pill("Deleted"))).toEqual({ ...filters, deleted: undefined });
   });
 
   // Item 279: fiber is a level filter like the other two, so every level —
   // not just "high" — gets its own pill and counts toward the funnel badge.
   it("counts fiber on its own, at every level", () => {
-    expect(activeExtraFilters({ ...EMPTY_EXTRA_FILTERS, fiberLevel: "high" })).toEqual([
-      { key: "fiberLevel", label: "High fiber" },
+    expect(activeExtraFilters({ ...EMPTY_EXTRA_FILTERS, fiberLevel: ["high"] })).toEqual([
+      { key: "fiberLevel", value: "high", label: "High fiber" },
     ]);
-    expect(activeExtraFilters({ ...EMPTY_EXTRA_FILTERS, fiberLevel: "moderate" })).toEqual([
-      { key: "fiberLevel", label: "Moderate fiber" },
+    expect(activeExtraFilters({ ...EMPTY_EXTRA_FILTERS, fiberLevel: ["moderate"] })).toEqual([
+      { key: "fiberLevel", value: "moderate", label: "Moderate fiber" },
     ]);
-    expect(activeExtraFilters({ ...EMPTY_EXTRA_FILTERS, fiberLevel: "low" })).toEqual([
-      { key: "fiberLevel", label: "Low fiber" },
+    expect(activeExtraFilters({ ...EMPTY_EXTRA_FILTERS, fiberLevel: ["low"] })).toEqual([
+      { key: "fiberLevel", value: "low", label: "Low fiber" },
     ]);
   });
 });
@@ -224,7 +260,7 @@ describe("FoodFilterGroups (the sheet's chip groups, rendered open)", () => {
     const html = renderToString(
       createElement(FoodFilterGroups, {
         ...EMPTY_EXTRA_FILTERS,
-        vitaminCLevel: "high",
+        vitaminCLevel: ["high"],
         onChange: () => {},
       }),
     );
@@ -246,7 +282,7 @@ describe("FoodFilterGroups (the sheet's chip groups, rendered open)", () => {
     const html = renderToString(
       createElement(FoodFilterGroups, {
         ...EMPTY_EXTRA_FILTERS,
-        fiberLevel: "moderate",
+        fiberLevel: ["moderate"],
         onChange: () => {},
       }),
     );
@@ -277,24 +313,57 @@ describe("FoodFilterGroups — Show › Deleted", () => {
   });
 
   it("toggles the filter on, then off again", () => {
-    const changes: ExtraFoodFilters[] = [];
-    const chipIn = (filters: ExtraFoodFilters) => {
-      const tree = FoodFilterGroups({ ...filters, onChange: (next) => changes.push(next) });
-      const found: Array<{ props: { label?: string; onClick?: () => void } }> = [];
-      const walk = (node: unknown) => {
-        if (Array.isArray(node)) return node.forEach(walk);
-        if (typeof node !== "object" || node === null || !("props" in node)) return;
-        const element = node as { props: { label?: string; children?: unknown; onClick?: () => void } };
-        if (element.props.label === "Deleted") found.push(element);
-        walk(element.props.children);
-      };
-      walk(tree);
-      return found[0]!;
-    };
-    chipIn(EMPTY_EXTRA_FILTERS).props.onClick!();
-    expect(changes.at(-1)).toEqual({ ...EMPTY_EXTRA_FILTERS, deleted: true });
-    chipIn({ ...EMPTY_EXTRA_FILTERS, deleted: true }).props.onClick!();
-    expect(changes.at(-1)).toEqual(EMPTY_EXTRA_FILTERS);
+    expect(tapChip(EMPTY_EXTRA_FILTERS, "Deleted")).toEqual({ ...EMPTY_EXTRA_FILTERS, deleted: true });
+    expect(tapChip({ ...EMPTY_EXTRA_FILTERS, deleted: true }, "Deleted")).toEqual(EMPTY_EXTRA_FILTERS);
+  });
+});
+
+/** The `onChange` payload of tapping the chip labelled `label` in the sheet. */
+function tapChip(filters: ExtraFoodFilters, label: string): ExtraFoodFilters {
+  let changed: ExtraFoodFilters | undefined;
+  const found: Array<{ props: { label?: string; onClick?: () => void } }> = [];
+  const walk = (node: unknown) => {
+    if (Array.isArray(node)) return node.forEach(walk);
+    if (typeof node !== "object" || node === null || !("props" in node)) return;
+    const element = node as { props: { label?: string; children?: unknown; onClick?: () => void } };
+    if (element.props.label === label) found.push(element);
+    walk(element.props.children);
+  };
+  walk(FoodFilterGroups({ ...filters, onChange: (next) => (changed = next) }));
+  found[0]!.props.onClick!();
+  return changed!;
+}
+
+// Item 592: Allergen, Iron, Vitamin C and Fiber are pick-several; Age,
+// Deleted and the sort stay pick-one.
+describe("FoodFilterGroups — pick-several vs pick-one", () => {
+  it("adds a second pick in a group instead of replacing the first, in chip order", () => {
+    const one = tapChip(EMPTY_EXTRA_FILTERS, "Moderate vitamin C");
+    expect(one.vitaminCLevel).toEqual(["moderate"]);
+    const two = tapChip(one, "High vitamin C");
+    expect(two.vitaminCLevel).toEqual(["high", "moderate"]);
+    // Tapping a picked chip removes only that one.
+    expect(tapChip(two, "Moderate vitamin C").vitaminCLevel).toEqual(["high"]);
+
+    expect(tapChip(tapChip(EMPTY_EXTRA_FILTERS, "Peanut"), "Egg").allergen).toEqual(["egg", "peanut"]);
+    expect(tapChip(tapChip(EMPTY_EXTRA_FILTERS, "Low iron"), "High iron").ironLevel).toEqual(["high", "low"]);
+    expect(tapChip(tapChip(EMPTY_EXTRA_FILTERS, "High fiber"), "Low fiber").fiberLevel).toEqual(["high", "low"]);
+  });
+
+  it("presses every picked chip", () => {
+    const html = renderToString(
+      createElement(FoodFilterGroups, { ...EMPTY_EXTRA_FILTERS, vitaminCLevel: ["high", "moderate"], onChange: () => {} }),
+    );
+    expect(html).toMatch(/aria-pressed="true"[^>]*>High vitamin C</);
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Moderate vitamin C</);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>Low vitamin C</);
+  });
+
+  // The sort's own chip is pinned pick-one in "offers the one rating sort".
+  it("keeps Age pick-one", () => {
+    expect(tapChip(tapChip(EMPTY_EXTRA_FILTERS, "6m+"), "9m+").maxAgeMonths).toBe(9);
+    expect(tapChip({ ...EMPTY_EXTRA_FILTERS, maxAgeMonths: 9 }, "6m+").maxAgeMonths).toBe(6);
+    expect(tapChip({ ...EMPTY_EXTRA_FILTERS, maxAgeMonths: 9 }, "9m+").maxAgeMonths).toBeUndefined();
   });
 });
 
@@ -309,29 +378,42 @@ describe("initialExtraFiltersFromSearch (what a link into /foods presets)", () =
   });
 
   it("reads ?fiberLevel=, the link the constipation section actually uses", () => {
-    expect(from("?fiberLevel=high").fiberLevel).toBe("high");
-    expect(activeExtraFilters(from("?fiberLevel=high"))).toEqual([{ key: "fiberLevel", label: "High fiber" }]);
+    expect(from("?fiberLevel=high").fiberLevel).toEqual(["high"]);
+    expect(activeExtraFilters(from("?fiberLevel=high"))).toEqual([
+      { key: "fiberLevel", value: "high", label: "High fiber" },
+    ]);
   });
 
   it("reads ?ironLevel=, ?vitaminCLevel= and ?allergen= the same way, together", () => {
     expect(from("?ironLevel=high&vitaminCLevel=moderate&fiberLevel=low&allergen=egg")).toEqual({
-      allergen: "egg",
-      ironLevel: "high",
-      vitaminCLevel: "moderate",
-      fiberLevel: "low",
-      maxAgeMonths: undefined,
+      ...EMPTY_EXTRA_FILTERS,
+      allergen: ["egg"],
+      ironLevel: ["high"],
+      vitaminCLevel: ["moderate"],
+      fiberLevel: ["low"],
     });
   });
 
+  // Item 595: a link can preselect several chips by repeating the param.
+  it("reads a repeated param as several picks, in chip order", () => {
+    expect(from("?vitaminCLevel=moderate&vitaminCLevel=high&allergen=peanut&allergen=egg")).toEqual({
+      ...EMPTY_EXTRA_FILTERS,
+      vitaminCLevel: ["high", "moderate"],
+      allergen: ["egg", "peanut"],
+    });
+    // A bad value among good ones drops only the bad one.
+    expect(from("?ironLevel=high&ironLevel=HUGE&ironLevel=low").ironLevel).toEqual(["high", "low"]);
+  });
+
   it("ignores values the chips don't have rather than presetting a filter that matches nothing", () => {
-    expect(from("?fiberLevel=HIGH").fiberLevel).toBeUndefined();
-    expect(from("?fiberLevel=").fiberLevel).toBeUndefined();
-    expect(from("?fiberLevel=very-high").fiberLevel).toBeUndefined();
-    expect(from("?ironLevel=nonsense").ironLevel).toBeUndefined();
-    expect(from("?vitaminCLevel=1").vitaminCLevel).toBeUndefined();
-    expect(from("?allergen=kiwi").allergen).toBeUndefined();
+    expect(from("?fiberLevel=HIGH").fiberLevel).toEqual([]);
+    expect(from("?fiberLevel=").fiberLevel).toEqual([]);
+    expect(from("?fiberLevel=very-high").fiberLevel).toEqual([]);
+    expect(from("?ironLevel=nonsense").ironLevel).toEqual([]);
+    expect(from("?vitaminCLevel=1").vitaminCLevel).toEqual([]);
+    expect(from("?allergen=kiwi").allergen).toEqual([]);
     // A bad value alongside a good one drops only the bad one.
-    expect(from("?fiberLevel=high&allergen=kiwi")).toEqual({ ...EMPTY_EXTRA_FILTERS, fiberLevel: "high" });
+    expect(from("?fiberLevel=high&allergen=kiwi")).toEqual({ ...EMPTY_EXTRA_FILTERS, fiberLevel: ["high"] });
   });
 
   it("leaves the age chips alone — no link in the app asks for one", () => {
@@ -341,25 +423,25 @@ describe("initialExtraFiltersFromSearch (what a link into /foods presets)", () =
 
 describe("buildFoodsFilters (what the grid actually requests)", () => {
   it("passes every funnel filter through to the request, vitamin C and fiber included, and trims the search", () => {
-    const filters = buildFoodsFilters("  beef ", "protein", {
-      allergen: "egg",
-      ironLevel: "high",
-      vitaminCLevel: "low",
-      fiberLevel: "high",
+    const filters = buildFoodsFilters("  beef ", ["protein", "veg"], {
+      allergen: ["egg"],
+      ironLevel: ["high"],
+      vitaminCLevel: ["high", "low"],
+      fiberLevel: ["high"],
       maxAgeMonths: 9,
       deleted: true,
     });
     expect(filters).toEqual({
       q: "beef",
-      category: "protein",
-      allergen: "egg",
-      ironLevel: "high",
-      vitaminCLevel: "low",
-      fiberLevel: "high",
+      category: ["protein", "veg"],
+      allergen: ["egg"],
+      ironLevel: ["high"],
+      vitaminCLevel: ["high", "low"],
+      fiberLevel: ["high"],
       maxAgeMonths: 9,
       deleted: true,
     });
-    expect(buildFoodsFilters("   ", undefined, EMPTY_EXTRA_FILTERS).q).toBeUndefined();
+    expect(buildFoodsFilters("   ", [], EMPTY_EXTRA_FILTERS).q).toBeUndefined();
   });
 
   it("Clear all's payload switches every funnel filter off", () => {
@@ -372,7 +454,10 @@ describe("buildFoodsFilters (what the grid actually requests)", () => {
       "sort",
       "vitaminCLevel",
     ]);
-    expect(Object.values(EMPTY_EXTRA_FILTERS).every((v) => v === undefined)).toBe(true);
+    // Every filter off: pick-several groups empty, the rest unset.
+    expect(Object.values(EMPTY_EXTRA_FILTERS).every((v) => v === undefined || (Array.isArray(v) && v.length === 0))).toBe(
+      true,
+    );
     expect(activeExtraFilters(EMPTY_EXTRA_FILTERS)).toEqual([]);
   });
 });
@@ -439,8 +524,8 @@ describe("ratings on the Foods grid (items 575-576)", () => {
     expect(html).not.toContain("Most recent");
     expect(activeExtraFilters({ ...EMPTY_EXTRA_FILTERS, sort: "highest" })).toEqual([{ key: "sort", label: "Average rating" }]);
     // The sort is not a server filter: the request is unchanged by it.
-    expect(buildFoodsFilters("", undefined, { ...EMPTY_EXTRA_FILTERS, sort: "highest" })).toEqual(
-      buildFoodsFilters("", undefined, EMPTY_EXTRA_FILTERS),
+    expect(buildFoodsFilters("", [], { ...EMPTY_EXTRA_FILTERS, sort: "highest" })).toEqual(
+      buildFoodsFilters("", [], EMPTY_EXTRA_FILTERS),
     );
   });
 });

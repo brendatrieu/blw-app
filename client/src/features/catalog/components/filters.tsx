@@ -8,8 +8,8 @@ interface FilterChipProps {
 }
 
 /**
- * Single-select-clears-on-reclick chip, matching the app's existing filter
- * chip behavior. Lifted out of `FoodsPage` when the Recipes segment (item
+ * Toggle chip — tapping an active chip clears it, whether its group is
+ * pick-one or pick-several (see `toggleValue`). Lifted out of `FoodsPage` when the Recipes segment (item
  * 210) needed the same chip for its scope/allergen/age filters — "the same
  * FilterChip style" is a shared component here, not a copy that can drift.
  */
@@ -28,6 +28,27 @@ export function FilterChip({ active, label, onClick, className = "" }: FilterChi
       {label}
     </button>
   );
+}
+
+/**
+ * A pick-several group (item 592) with `value` tapped: added if it was off,
+ * removed if it was on. The result is always in the chips' own order, so the
+ * order the parent tapped in never changes the list (or its cache key).
+ */
+export function toggleValue<V>(options: readonly { value: V }[], picked: readonly V[], value: V): V[] {
+  return options.map((option) => option.value).filter((v) => (v === value) !== picked.includes(v));
+}
+
+/**
+ * The filters with one pill removed (item 596): a pick-several group loses
+ * just that pill's value; any other filter goes back to its `empty` value.
+ */
+export function withoutPill<T extends object>(filters: T, empty: T, pill: { key: keyof T; value?: unknown }): T {
+  const current = filters[pill.key];
+  return {
+    ...filters,
+    [pill.key]: Array.isArray(current) ? current.filter((v: unknown) => v !== pill.value) : empty[pill.key],
+  };
 }
 
 /** Removable pill for an active filter, shown below the sticky bar. */

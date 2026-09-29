@@ -298,10 +298,10 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
         ? and(eq(foods.ownerId, userId), isNotNull(foods.deletedAt))
         : choosableFoodsCondition(userId),
     ];
-    if (category) conditions.push(eq(foods.category, category));
-    if (ironLevel) conditions.push(eq(foods.ironLevel, ironLevel));
-    if (vitaminCLevel) conditions.push(eq(foods.vitaminCLevel, vitaminCLevel));
-    if (fiberLevel) conditions.push(eq(foods.fiberLevel, fiberLevel));
+    if (category) conditions.push(inArray(foods.category, category));
+    if (ironLevel) conditions.push(inArray(foods.ironLevel, ironLevel));
+    if (vitaminCLevel) conditions.push(inArray(foods.vitaminCLevel, vitaminCLevel));
+    if (fiberLevel) conditions.push(inArray(foods.fiberLevel, fiberLevel));
     if (maxAgeMonths !== undefined) conditions.push(lte(foods.minAgeMonths, maxAgeMonths));
     if (q) conditions.push(ilike(foods.name, `%${q}%`));
     if (allergen) {
@@ -309,7 +309,7 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
         .select({ foodId: foodAllergens.foodId })
         .from(foodAllergens)
         .innerJoin(allergens, eq(foodAllergens.allergenId, allergens.id))
-        .where(eq(allergens.slug, allergen));
+        .where(inArray(allergens.slug, allergen));
       conditions.push(inArray(foods.id, matchingFoodIds));
     }
 

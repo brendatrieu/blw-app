@@ -16,6 +16,7 @@ import {
   RecipeFilterGroups,
   RecipesSegment,
 } from "./RecipesSegment.js";
+import { withoutPill } from "./filters.js";
 
 function recipe(overrides: Partial<RecipeListItem> = {}): RecipeListItem {
   return {
@@ -259,7 +260,7 @@ describe("buildRecipesFilters (what the list actually requests)", () => {
     q: "  mash ",
     scope: "custom" as const,
     maxAgeMonths: 9,
-    allergen: "egg",
+    allergen: ["egg", "milk"],
     ironFocus: true,
     vitaminCHigh: true,
     fiberHigh: true,
@@ -271,7 +272,7 @@ describe("buildRecipesFilters (what the list actually requests)", () => {
       q: "mash",
       scope: "custom",
       maxAgeMonths: 9,
-      allergen: "egg",
+      allergen: ["egg", "milk"],
       ironFocus: true,
       vitaminCHigh: true,
       fiberHigh: true,
@@ -292,13 +293,15 @@ describe("buildRecipesFilters (what the list actually requests)", () => {
       q: "   ",
       scope: "all",
       maxAgeMonths: undefined,
-      allergen: undefined,
+      allergen: [],
       ironFocus: false,
       vitaminCHigh: false,
       fiberHigh: false,
       ingredientFoodId: "",
     });
-    expect(off).toEqual({ q: undefined, scope: "all", maxAgeMonths: undefined, allergen: undefined, ironFocus: undefined, vitaminCHigh: undefined, fiberHigh: undefined, ingredientFoodId: undefined });
+    // An empty allergen pick rides along as [] — the query string and the
+    // cache key both treat it as no filter (api.test.ts, hooks.test.ts).
+    expect(off).toEqual({ q: undefined, scope: "all", maxAgeMonths: undefined, allergen: [], ironFocus: undefined, vitaminCHigh: undefined, fiberHigh: undefined, ingredientFoodId: undefined });
   });
 });
 
@@ -306,7 +309,7 @@ describe("activeRecipeFilters (funnel count + pill row share this)", () => {
   it("yields one labelled pill per set filter, in display order, and nothing when none are set", () => {
     expect(activeRecipeFilters(EMPTY_RECIPE_FILTERS)).toEqual([]);
     const pills = activeRecipeFilters(
-      { maxAgeMonths: 9, allergen: "egg", ironFocus: true, vitaminCHigh: true, fiberHigh: true, ingredientFoodId: "food-1" },
+      { maxAgeMonths: 9, allergen: ["egg"], ironFocus: true, vitaminCHigh: true, fiberHigh: true, ingredientFoodId: "food-1" },
       "Broccoli",
     );
     expect(pills.map((p) => p.key)).toEqual([
@@ -339,6 +342,19 @@ describe("activeRecipeFilters (funnel count + pill row share this)", () => {
     ]);
   });
 
+  // Item 596: one pill per picked allergen; removing one removes only it.
+  it("yields one pill per picked allergen, and removing one keeps the rest", () => {
+    const filters = { ...EMPTY_RECIPE_FILTERS, allergen: ["egg", "peanut"], ironFocus: true };
+    const pills = activeRecipeFilters(filters);
+    expect(pills).toEqual([
+      { key: "allergen", value: "egg", label: "Egg" },
+      { key: "allergen", value: "peanut", label: "Peanut" },
+      { key: "ironFocus", label: "Iron focus" },
+    ]);
+    expect(withoutPill(filters, EMPTY_RECIPE_FILTERS, pills[1]!)).toEqual({ ...filters, allergen: ["egg"] });
+    expect(withoutPill(filters, EMPTY_RECIPE_FILTERS, pills[2]!)).toEqual({ ...filters, ironFocus: false });
+  });
+
   it("falls back to a generic label for a picked ingredient when its name hasn't resolved yet", () => {
     const pills = activeRecipeFilters({ ...EMPTY_RECIPE_FILTERS, ingredientFoodId: "food-1" });
     expect(pills).toEqual([{ key: "ingredientFoodId", label: "Ingredient" }]);
@@ -362,7 +378,7 @@ describe("RecipeFilterGroups (the sheet's chip groups, rendered open)", () => {
   it("renders a Nutrition group holding all three toggles, with vitamin C pressed beside iron focus and high fiber", () => {
     const html = renderFilterGroups({
       maxAgeMonths: undefined,
-      allergen: undefined,
+      allergen: [],
       ironFocus: false,
       vitaminCHigh: true,
       fiberHigh: false,
@@ -385,7 +401,7 @@ describe("RecipeFilterGroups (the sheet's chip groups, rendered open)", () => {
   it("presses the High fiber chip when the filter is on", () => {
     const html = renderFilterGroups({
       maxAgeMonths: undefined,
-      allergen: undefined,
+      allergen: [],
       ironFocus: false,
       vitaminCHigh: false,
       fiberHigh: true,
@@ -398,7 +414,7 @@ describe("RecipeFilterGroups (the sheet's chip groups, rendered open)", () => {
   it("renders the age, allergen and ingredient-picker groups too", () => {
     const html = renderFilterGroups({
       maxAgeMonths: 9,
-      allergen: "egg",
+      allergen: ["egg", "peanut"],
       ironFocus: false,
       vitaminCHigh: false,
       fiberHigh: false,
@@ -409,6 +425,9 @@ describe("RecipeFilterGroups (the sheet's chip groups, rendered open)", () => {
     expect(html).toContain("Contains ingredient");
     expect(html).toMatch(/aria-pressed="true"[^>]*>9m\+</);
     expect(html).toMatch(/aria-pressed="true"[^>]*>Egg</);
+    // Allergen is pick-several (item 593): both picks pressed.
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Peanut</);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>Milk</);
   });
 });
 
@@ -425,7 +444,7 @@ describe("EMPTY_RECIPE_FILTERS (what Clear all applies)", () => {
     ]);
     expect(EMPTY_RECIPE_FILTERS.maxAgeMonths).toBeUndefined();
     expect(EMPTY_RECIPE_FILTERS.sort).toBeUndefined();
-    expect(EMPTY_RECIPE_FILTERS.allergen).toBeUndefined();
+    expect(EMPTY_RECIPE_FILTERS.allergen).toEqual([]);
     expect(EMPTY_RECIPE_FILTERS.ironFocus).toBe(false);
     expect(EMPTY_RECIPE_FILTERS.vitaminCHigh).toBe(false);
     expect(EMPTY_RECIPE_FILTERS.fiberHigh).toBe(false);

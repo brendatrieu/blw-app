@@ -22,11 +22,11 @@ import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from "../../lib/api.js
  */
 export function buildFoodsQueryString(filters: FoodsQuery): string {
   const params = new URLSearchParams();
-  if (filters.category) params.set("category", filters.category);
-  if (filters.allergen) params.set("allergen", filters.allergen);
-  if (filters.ironLevel) params.set("ironLevel", filters.ironLevel);
-  if (filters.vitaminCLevel) params.set("vitaminCLevel", filters.vitaminCLevel);
-  if (filters.fiberLevel) params.set("fiberLevel", filters.fiberLevel);
+  // Pick-several groups (item 595): one repeated param per value, and an
+  // empty pick sends nothing at all (never `category=`).
+  for (const key of ["category", "allergen", "ironLevel", "vitaminCLevel", "fiberLevel"] as const) {
+    for (const value of filters[key] ?? []) params.append(key, value);
+  }
   if (filters.q) params.set("q", filters.q);
   if (filters.maxAgeMonths !== undefined) params.set("maxAgeMonths", String(filters.maxAgeMonths));
   if (filters.deleted) params.set("deleted", "true");
@@ -92,7 +92,8 @@ export interface RecipeFilters {
   q?: string;
   scope?: RecipeScope;
   maxAgeMonths?: number;
-  allergen?: string;
+  /** Pick-several: a recipe containing ANY of these matches. */
+  allergen?: string[];
   ironFocus?: boolean;
   vitaminCHigh?: boolean;
   fiberHigh?: boolean;
@@ -113,7 +114,7 @@ export function buildRecipesQueryString(filters: RecipeFilters): string {
   if (q) params.set("q", q);
   if (filters.scope && filters.scope !== "all") params.set("scope", filters.scope);
   if (filters.maxAgeMonths !== undefined) params.set("maxAgeMonths", String(filters.maxAgeMonths));
-  if (filters.allergen) params.set("allergen", filters.allergen);
+  for (const allergen of filters.allergen ?? []) params.append("allergen", allergen);
   if (filters.ironFocus) params.set("ironFocus", "true");
   if (filters.vitaminCHigh) params.set("vitaminCHigh", "true");
   if (filters.fiberHigh) params.set("fiberHigh", "true");
