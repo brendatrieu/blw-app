@@ -3,6 +3,7 @@ import { AddStorageItemForm, resolveStoragePrefill } from "../features/storage/c
 import { useBackNavigate } from "../components/ui/BackButton.js";
 import { CloseButton } from "../components/ui/CloseButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
+import { HowToLink } from "../features/safety/HowToLink.js";
 
 /**
  * Full-screen replacement for the old inline "add to storage" panel.
@@ -23,6 +24,7 @@ export function StorageAddPage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <PageHeader title="Add to storage" emoji="📦" leading={<CloseButton fallback="/storage" />} />
+      <HowToLink slug="how-to-add-to-storage" />
       <AddStorageItemForm onDone={goBack} prefill={prefill} />
     </div>
   );

@@ -78,3 +78,28 @@ if (bySlug.size !== safetyArticles.length) {
 export function getSafetyArticle(slug: string): SafetyArticle | undefined {
   return bySlug.get(slug);
 }
+
+// The "Using the app" how-to guides (item 601): same format, same page, but a
+// separate folder so they stay out of the AI safety corpus, which is built
+// from `content/safety/` only (server/scripts/build-safety-corpus.mjs), and
+// out of chat citations, which resolve through `getSafetyArticle`. Their
+// screenshots live in client/public/guides/ (the image runtime cache keeps
+// them for offline reading after the first view).
+const rawGuides = import.meta.glob("../../../../content/guides/*.mdx", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
+
+export const guideArticles: SafetyArticle[] = Object.entries(rawGuides)
+  .map(([sourcePath, raw]) => parseArticle(sourcePath, raw))
+  .sort((a, b) => a.order - b.order);
+
+const guidesBySlug = new Map(guideArticles.map((guide) => [guide.slug, guide]));
+if (guidesBySlug.size !== guideArticles.length || guideArticles.some((guide) => bySlug.has(guide.slug))) {
+  throw new Error("Duplicate slug found among guides.");
+}
+
+export function getGuide(slug: string): SafetyArticle | undefined {
+  return guidesBySlug.get(slug);
+}

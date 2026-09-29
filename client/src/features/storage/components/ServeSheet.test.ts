@@ -91,8 +91,8 @@ describe("ServeControl — the serve sheet's body (item 263)", () => {
     expect(html).toContain(">Serve<");
     expect(html.lastIndexOf("<textarea")).toBeLessThan(html.indexOf(">Serve<"));
     expect(html).not.toContain(">Cancel<");
-    // Stepper (2) + When (1) + Serve (1) and nothing else.
-    expect((html.match(/<button/g) ?? []).length).toBe(4);
+    // How-to guide (1, opens its own sheet) + Stepper (2) + When (1) + Serve (1) and nothing else.
+    expect((html.match(/<button/g) ?? []).length).toBe(5);
   });
 
   it("keeps every control at the 44px tap target", () => {

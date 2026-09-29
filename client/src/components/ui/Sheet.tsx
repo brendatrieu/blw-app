@@ -21,6 +21,13 @@ function nudgeViewportSync() {
   });
 }
 
+/**
+ * Open sheets, oldest first. Every open sheet listens on the document, so only
+ * the TOP one may act on Escape or Tab — a how-to guide opened over the Serve
+ * sheet must close alone, not take the Serve sheet and its typed note with it.
+ */
+const openSheets: object[] = [];
+
 interface SheetProps {
   open: boolean;
   onClose: () => void;
@@ -72,7 +79,11 @@ export function Sheet({ open, onClose, title, showClose = false, children }: She
     const focusable = panel?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
     (focusable?.[0] ?? panel)?.focus();
 
+    const token = {};
+    openSheets.push(token);
+
     function handleKeyDown(event: KeyboardEvent) {
+      if (openSheets[openSheets.length - 1] !== token) return;
       if (event.key === "Escape") {
         event.preventDefault();
         onCloseRef.current();
@@ -97,6 +108,7 @@ export function Sheet({ open, onClose, title, showClose = false, children }: She
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+      openSheets.splice(openSheets.indexOf(token), 1);
       root.style.overflow = previousRootOverflow;
       document.body.style.overflow = previousBodyOverflow;
       previouslyFocused.current?.focus();

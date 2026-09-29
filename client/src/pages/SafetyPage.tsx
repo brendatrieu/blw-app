@@ -1,4 +1,4 @@
-import { safetyArticles } from "../features/safety/content.js";
+import { guideArticles, safetyArticles } from "../features/safety/content.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { CardLink } from "../components/ui/Card.js";
 
@@ -32,6 +32,18 @@ export function SafetyPage() {
           </CardLink>
         ))}
       </div>
+
+      <section aria-labelledby="using-the-app" className="flex flex-col gap-2">
+        <h2 id="using-the-app" className="font-h2 text-[var(--color-text)]">
+          Using the app
+        </h2>
+        {guideArticles.map((guide) => (
+          <CardLink key={guide.slug} to={`/safety/${guide.slug}`} padding="sm" className="flex flex-col gap-1">
+            <span className="text-base font-semibold text-[var(--color-text)]">{guide.title}</span>
+            <span className="text-sm text-[var(--color-text-muted)]">{guide.summary}</span>
+          </CardLink>
+        ))}
+      </section>
     </div>
   );
 }

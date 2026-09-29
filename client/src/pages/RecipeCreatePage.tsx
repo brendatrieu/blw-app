@@ -3,6 +3,7 @@ import { CustomRecipeForm } from "../features/catalog/components/CustomRecipeFor
 import { RECIPES_TAB_PATH } from "../features/catalog/constants.js";
 import { CloseButton } from "../components/ui/CloseButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
+import { HowToLink } from "../features/safety/HowToLink.js";
 
 /**
  * `/recipes/new` — writing down a recipe of your own (item 211). Reached
@@ -26,6 +27,7 @@ export function RecipeCreatePage() {
         description="Whatever you actually cook — it logs and fans out like any recipe."
         leading={<CloseButton fallback={RECIPES_TAB_PATH} />}
       />
+      <HowToLink slug="how-to-custom-recipe" />
       <CustomRecipeForm
         idPrefix="recipe-new"
         onSaved={(recipe) => navigate(`/recipes/${recipe.id}`, { replace: true })}

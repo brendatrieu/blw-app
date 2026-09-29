@@ -9,6 +9,7 @@ import { PageHeader, resolveHeaderAffordance, type HeaderAffordance } from "../c
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
+import { HowToLink } from "../features/safety/HowToLink.js";
 
 /**
  * Full-screen page for both logging a new meal and editing an existing one
@@ -101,6 +102,7 @@ export function LogFoodPage() {
           )
         }
       />
+      <HowToLink slug="how-to-log-a-meal" />
 
       {(babyLoading || stillLoadingEditTarget) && <Skeleton className="h-40 w-full rounded-[var(--radius-lg)]" />}
 

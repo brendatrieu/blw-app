@@ -7,6 +7,7 @@ import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField
 import { Field } from "../../../components/ui/Field.js";
 import { Textarea } from "../../../components/ui/Input.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
+import { HowToLink } from "../../safety/HowToLink.js";
 
 /** Ceiling for the serve stepper on an untracked item (no servingsLeft to
  * bound it by) — generous enough never to feel like a real limit. */
@@ -74,6 +75,7 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
 
   return (
     <div className="flex flex-col gap-3">
+      <HowToLink slug="how-to-serve-from-storage" />
       <div className="flex items-center gap-2">
         <span className="text-sm text-[var(--color-text)]">Servings</span>
         <div className="flex items-center gap-1.5" role="group" aria-label="Servings">

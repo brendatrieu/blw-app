@@ -138,6 +138,27 @@ describe("Sheet handlers", () => {
     expect(prevented).toBe(true);
   });
 
+  it("hands Escape to the top sheet only, so a guide over the Serve sheet closes alone (item 601)", () => {
+    h.reset();
+    const { listeners } = fakeDocument();
+    const closed: string[] = [];
+    open(() => closed.push("serve"));
+    const serveCleanups = h.store.cleanups;
+    // A second, separate Sheet instance on top: its own refs and effects.
+    h.store.refs = [];
+    h.store.cleanups = [];
+    open(() => closed.push("guide"));
+    const guideCleanups = h.store.cleanups;
+    const escape = () => listeners.forEach((listener) => listener({ key: "Escape", preventDefault: () => {} }));
+
+    escape();
+    expect(closed).toEqual(["guide"]);
+    guideCleanups.forEach((cleanup) => cleanup());
+    escape();
+    expect(closed).toEqual(["guide", "serve"]);
+    serveCleanups.forEach((cleanup) => cleanup());
+  });
+
   it("locks background scroll while open and restores exactly what was there before", () => {
     h.reset();
     const { doc, restored } = fakeDocument("scroll", "");

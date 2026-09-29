@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { articleSlugSchema } from "@blw/shared";
-import { getSafetyArticle } from "../features/safety/content.js";
+import { getGuide, getSafetyArticle } from "../features/safety/content.js";
 import { fromRouteFor, track } from "../lib/usage/track.js";
 import { Markdown } from "../lib/markdown/Markdown.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
@@ -28,7 +28,9 @@ function useArticleViewed(slug: string | undefined): void {
 
 export function SafetyArticlePage() {
   const { slug } = useParams<{ slug: string }>();
-  const article = slug ? getSafetyArticle(slug) : undefined;
+  // A how-to guide renders on this same page (item 601); only safety
+  // articles report `article_viewed`, whose slug set is closed to them.
+  const article = slug ? (getSafetyArticle(slug) ?? getGuide(slug)) : undefined;
   // Before the redirect below, so the hook order never depends on the slug.
   useArticleViewed(article?.slug);
 

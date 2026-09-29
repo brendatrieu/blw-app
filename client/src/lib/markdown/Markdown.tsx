@@ -47,6 +47,22 @@ const components: Components = {
       </a>
     );
   },
+  // Images are the how-to guides' screenshots (item 601): same-origin paths
+  // only (served from client/public, cached for offline by the PWA's image
+  // runtime cache), and never without alt text. Anything else renders nothing.
+  // Eager, not lazy: the cache only keeps images that were fetched, so a guide
+  // opened once must fetch every step's screenshot to be readable offline.
+  img: ({ node: _node, src, alt }) => {
+    if (typeof src !== "string" || !src.startsWith("/") || src.startsWith("//") || !alt?.trim()) return null;
+    return (
+      <img
+        src={src}
+        alt={alt}
+        loading="eager"
+        className="block w-full max-w-[390px] rounded-lg border border-[var(--color-border)]"
+      />
+    );
+  },
   blockquote: ({ node: _node, children }) => (
     <div
       role="note"
