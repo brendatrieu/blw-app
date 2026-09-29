@@ -33,7 +33,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
 
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import { catalogKeys, useRecipes } from "./hooks.js";
+import { catalogKeys, useFood, useRecipes } from "./hooks.js";
 import { RecipePicker } from "./components/RecipePicker.js";
 
 function lastQueryOptions(): Record<string, unknown> {
@@ -85,5 +85,23 @@ describe("RecipePicker read policy", () => {
     expect(options.queryKey).toEqual(catalogKeys.recipesList({}));
     expect(options.staleTime).toBe(0);
     expect(options.refetchOnMount).toBe("always");
+  });
+});
+
+// Item 600: the delete question decides Replace from `usage`, so its read must
+// not be the page's five-minute (persisted) copy — same key, always refetched.
+describe("useFood read policy", () => {
+  it("caches for five minutes by default", () => {
+    useFood("kale");
+    expect(lastQueryOptions().staleTime).toBe(5 * 60 * 1000);
+    expect(lastQueryOptions().refetchOnMount).not.toBe("always");
+  });
+
+  it("with fresh, always refetches on mount under the SAME key", () => {
+    useFood("kale", { fresh: true });
+    const options = lastQueryOptions();
+    expect(options.staleTime).toBe(0);
+    expect(options.refetchOnMount).toBe("always");
+    expect(options.queryKey).toEqual(catalogKeys.food("kale"));
   });
 });

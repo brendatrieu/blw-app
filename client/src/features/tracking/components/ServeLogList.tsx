@@ -8,7 +8,7 @@ import { MealActionsMenu } from "./MealActionsMenu.js";
 import { Badge } from "../../catalog/components/Badge.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
-import { KeepButton } from "../../../components/ui/KeepButton.js";
+import { ConfirmSheet } from "../../../components/ui/ConfirmSheet.js";
 import { SkeletonList } from "../../../components/ui/Skeleton.js";
 
 /** yyyy-mm-dd in the viewer's local timezone. The log itself is no longer
@@ -55,70 +55,56 @@ export function hasStorageFood(foods: readonly MealFood[]): boolean {
   return foods.some((food) => Boolean(food.storageItemId));
 }
 
-export interface MealDeleteControlProps {
+export interface MealDeleteSheetProps {
   meal: MealItem;
   babyId: string;
-  confirming: boolean;
-  onRequestDelete: () => void;
-  onCancelDelete: () => void;
-  /** Fired on a successful delete, in addition to the always-run
-   * `onCancelDelete` settle — `MealDetailPage` uses this to navigate away;
-   * the list (`MealCard`) leaves it unset since the row just disappears. */
+  open: boolean;
+  onClose: () => void;
+  /** Fired on a successful delete, after the sheet closes — `MealDetailPage`
+   * uses this to navigate away; the list leaves it unset since the row just
+   * disappears. */
   onDeleted?: () => void;
 }
 
 /**
- * The Delete → "Remove this meal?" confirm idiom, extracted so `MealCard`'s
- * list row (one shared `pendingDeleteId` per list) and `MealDetailPage`'s
- * standalone actions (its own local boolean) render the exact same markup
- * instead of forking it. Only the `confirming` source and what happens after
- * a successful delete differ between the two call sites.
- *
- * `MealCard` now reaches the confirming branch through its kebab menu
- * (`MealActionsMenu` → `onRequestDelete`) and so renders this control only
- * while confirming; `MealDetailPage` still shows the plain Delete button
- * beside its Edit link, which is why the non-confirming branch stays.
+ * The meal delete question (item 599), shared by the food log list (one per
+ * list, for the meal whose kebab asked) and `MealDetailPage`'s Delete button.
+ * Nothing is deleted until the red button is tapped. A failed delete keeps the
+ * sheet open with the reason, so the parent can try again.
  */
-export function MealDeleteControl({ meal, babyId, confirming, onRequestDelete, onCancelDelete, onDeleted }: MealDeleteControlProps) {
+export function MealDeleteSheet({ meal, babyId, open, onClose, onDeleted }: MealDeleteSheetProps) {
   const deleteMeal = useDeleteMeal(babyId);
 
-  if (confirming) {
-    return (
-      <div className="flex items-center gap-2 border-t border-[var(--color-border)] pt-2">
-        <span className="text-xs text-[var(--color-text-muted)]">Remove this meal?</span>
-        <button
-          type="button"
-          disabled={deleteMeal.isPending}
-          onClick={() => deleteMeal.mutate(meal.id, { onSuccess: onDeleted, onSettled: onCancelDelete })}
-          className="rounded-[var(--radius-md)] bg-[var(--color-danger)] px-2 py-1 text-xs font-medium text-[var(--color-danger-contrast)] disabled:opacity-60"
-        >
-          {deleteMeal.isPending ? "Removing…" : "Yes, delete"}
-        </button>
-        {/* The one dismiss that survives item 257: a destructive confirm has
-            no other way out, so backing out stays reachable — as an icon-only
-            × rather than a text button competing with "Yes, delete". */}
-        <KeepButton onClick={onCancelDelete} disabled={deleteMeal.isPending} />
-      </div>
-    );
-  }
-
   return (
-    <button
-      type="button"
-      onClick={onRequestDelete}
-      className="rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
+    <ConfirmSheet
+      open={open}
+      onClose={onClose}
+      title="Delete this meal?"
+      confirmLabel="Delete"
+      pendingLabel="Deleting…"
+      pending={deleteMeal.isPending}
+      onConfirm={() =>
+        deleteMeal.mutate(meal.id, {
+          onSuccess: () => {
+            onClose();
+            onDeleted?.();
+          },
+        })
+      }
+      error={deleteMeal.isError ? "Couldn't delete that — try again." : undefined}
     >
-      Delete
-    </button>
+      <p>
+        It comes off the food log with its ratings, and allergen progress is counted without it.
+        {hasStorageFood(meal.foods) ? " Servings it took from storage stay used." : ""} This can't be undone.
+      </p>
+    </ConfirmSheet>
   );
 }
 
 export interface MealCardProps {
   meal: MealItem;
-  babyId: string;
-  pendingDeleteId: string | null;
-  onRequestDelete: (id: string) => void;
-  onCancelDelete: () => void;
+  /** Asks to delete this meal — the list owns the one `MealDeleteSheet`. */
+  onRequestDelete: (meal: MealItem) => void;
   /** False renders the info block as plain content instead of a Link to
    * `/log-meal?edit=:id` — for a page that must not link to itself.
    * Defaults to true (the food log taps through). Mirrors
@@ -139,21 +125,17 @@ export interface MealCardProps {
  */
 export function MealCard({
   meal,
-  babyId,
-  pendingDeleteId,
   onRequestDelete,
-  onCancelDelete,
   linkable = true,
   actions,
 }: MealCardProps) {
-  const confirming = pendingDeleteId === meal.id;
   const { emojis, overflow } = emojiCluster(meal.foods);
   // `undefined` (the prop omitted) means "the standard kebab"; an explicit
   // `null` means "no actions" — hence the default lives here, not in the
   // destructuring above.
   const actionsSlot =
     actions === undefined ? (
-      <MealActionsMenu mealId={meal.id} onRequestDelete={() => onRequestDelete(meal.id)} />
+      <MealActionsMenu mealId={meal.id} onRequestDelete={() => onRequestDelete(meal)} />
     ) : (
       actions
     );
@@ -184,7 +166,7 @@ export function MealCard({
       <div className="flex items-start justify-between gap-2">
         {/* Stretched link: the anchor's ::after overlay covers the whole card
             so tapping anywhere opens the meal for editing (which is why there
-            is no separate Edit link). The kebab and the confirm row sit ABOVE
+            is no separate Edit link). The kebab sits ABOVE
             the overlay (relative z-10) as siblings — nothing interactive is
             ever nested inside the anchor (same rule `StorageItemCard` follows). */}
         {linkable ? (
@@ -206,18 +188,6 @@ export function MealCard({
       {meal.notes && <p className="text-xs text-[var(--color-text-muted)]">{meal.notes}</p>}
 
       {meal.reactionNote && <p className="text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</p>}
-
-      {confirming && (
-        <div className="relative z-10">
-          <MealDeleteControl
-            meal={meal}
-            babyId={babyId}
-            confirming
-            onRequestDelete={() => onRequestDelete(meal.id)}
-            onCancelDelete={onCancelDelete}
-          />
-        </div>
-      )}
     </li>
   );
 }
@@ -250,7 +220,9 @@ export function limitMeals<T>(items: readonly T[], limit: number | undefined): T
  */
 export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true }: ServeLogListProps) {
   const { data, isLoading, isError } = useMeals(babyId, { limit: 100 });
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  // The meal itself, not its id: the delete removes the row optimistically,
+  // and the question has to outlive it to show a failure.
+  const [pendingDelete, setPendingDelete] = useState<MealItem | null>(null);
 
   // The API returns meals newest-first; the slice preserves that order.
   const meals = useMemo(() => limitMeals(data?.items ?? [], limit), [data, limit]);
@@ -290,13 +262,13 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true }: 
             <MealCard
               key={meal.id}
               meal={meal}
-              babyId={babyId}
-              pendingDeleteId={pendingDeleteId}
-              onRequestDelete={setPendingDeleteId}
-              onCancelDelete={() => setPendingDeleteId(null)}
+              onRequestDelete={setPendingDelete}
             />
           ))}
         </ul>
+      )}
+      {pendingDelete && (
+        <MealDeleteSheet meal={pendingDelete} babyId={babyId} open onClose={() => setPendingDelete(null)} />
       )}
     </section>
   );

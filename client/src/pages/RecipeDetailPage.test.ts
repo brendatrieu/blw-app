@@ -325,7 +325,7 @@ describe("CustomRecipeActions", () => {
       createElement(
         QueryClientProvider,
         { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) },
-        createElement(MemoryRouter, null, createElement(CustomRecipeActions, { recipe: { id: "recipe-9" } })),
+        createElement(MemoryRouter, null, createElement(CustomRecipeActions, { recipe: { id: "recipe-9", title: "Lentil mash" } })),
       ),
     );
     expect(html).toContain('href="/recipes/recipe-9/edit"');

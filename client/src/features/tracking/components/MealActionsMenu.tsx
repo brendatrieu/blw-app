@@ -2,9 +2,8 @@ import { Menu, MenuItem, MenuLinkItem } from "../../../components/ui/Menu.js";
 
 export interface MealActionsMenuProps {
   mealId: string;
-  /** Reveals the card's own "Remove this meal?" confirm row (the shared
-   * `pendingDeleteId` plumbing) — the menu never deletes anything itself,
-   * so the confirmation still happens in the card the user is looking at. */
+  /** Opens the list's "Delete this meal?" sheet (`MealDeleteSheet`) — the
+   * menu never deletes anything itself. */
   onRequestDelete: () => void;
 }
 
@@ -13,8 +12,8 @@ export interface MealActionsMenuProps {
  * `StorageItemActionsMenu`'s shape so a meal row and a storage row offer their
  * actions the same way. Edit is a real `MenuLinkItem` (so modifier-click works
  * like any other in-app link); Delete only *asks* — it hands the request back
- * to `MealCard`, which owns the confirm row and the delete mutation via
- * `MealDeleteControl`.
+ * through `MealCard` to the list, which owns the delete question and its
+ * mutation (`MealDeleteSheet`).
  */
 export function MealActionsMenu({ mealId, onRequestDelete }: MealActionsMenuProps) {
   return (

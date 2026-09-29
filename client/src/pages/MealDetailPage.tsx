@@ -7,7 +7,7 @@ import {
   RECIPE_RATING_KEY,
   mealRatingRows,
 } from "../features/tracking/components/MealRatingsField.js";
-import { MealDeleteControl } from "../features/tracking/components/ServeLogList.js";
+import { MealDeleteSheet } from "../features/tracking/components/ServeLogList.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
 import { DeletedMark, FoodNames } from "../features/catalog/components/DeletedMark.js";
@@ -158,17 +158,21 @@ export function MealDetailPage() {
       </Card>
 
       <div className="flex items-center gap-2">
-        {!confirmingDelete && (
-          <ButtonLink to={`/log-meal?edit=${meal.id}`} size="sm" variant="secondary">
-            Edit
-          </ButtonLink>
-        )}
-        <MealDeleteControl
+        <ButtonLink to={`/log-meal?edit=${meal.id}`} size="sm" variant="secondary">
+          Edit
+        </ButtonLink>
+        <button
+          type="button"
+          onClick={() => setConfirmingDelete(true)}
+          className="rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
+        >
+          Delete
+        </button>
+        <MealDeleteSheet
           meal={meal}
           babyId={meal.babyId}
-          confirming={confirmingDelete}
-          onRequestDelete={() => setConfirmingDelete(true)}
-          onCancelDelete={() => setConfirmingDelete(false)}
+          open={confirmingDelete}
+          onClose={() => setConfirmingDelete(false)}
           onDeleted={goBack}
         />
       </div>

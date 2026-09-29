@@ -196,8 +196,8 @@ describe("FoodDetailPage — custom food (item 181)", () => {
     expect(html).toContain(`href="/foods/${CUSTOM_FOOD.slug}/edit"`);
     expect(html).toContain(">Edit<");
     expect(html).toContain(">Delete<");
-    // Delete is two-step: the destructive confirm isn't on screen yet.
-    expect(html).not.toContain("Delete for good");
+    // Delete only asks (item 599): no question is on screen yet.
+    expect(html).not.toContain("Delete this");
   });
 });
 

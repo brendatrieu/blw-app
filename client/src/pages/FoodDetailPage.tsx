@@ -20,7 +20,7 @@ import { RatingHistory, RatingSummaryRow } from "../features/tracking/components
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { CardLink } from "../components/ui/Card.js";
-import { DeleteConfirmActions } from "../components/ui/DeleteConfirmActions.js";
+import { ConfirmSheet } from "../components/ui/ConfirmSheet.js";
 import { Field } from "../components/ui/Field.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
@@ -100,24 +100,45 @@ export function sameNameFood(foods: FoodListItem[], food: Pick<FoodDetail, "id" 
 }
 
 /**
- * Edit + Delete for a food the parent owns (item 181). Delete is a two-step
- * inline confirm — the same idiom the meal log's delete uses — rather than a
- * dialog: it's a destructive action on a row, and a `window.confirm` would
- * be the only native modal left in the app.
+ * Edit + Delete for a food the parent owns (item 181). Delete only asks
+ * (item 599): it opens `DeleteFoodQuestion`, and nothing is deleted until
+ * that sheet's red button is tapped.
  *
- * Delete is soft (ledger 537), so nothing blocks it any more. An unused food
- * gets a plain confirm; a used one names where (`food.usage`, zero counts
- * left out) and offers two ways on: "Replace with…" another food, which moves
- * every entry across and deletes this one for good, or "Delete anyway", which
- * leaves past entries showing it as deleted. Either delete keeps the parent
- * on this page, now read-only with a Restore.
- *
- * Exported so a render test can pin the confirm/Edit/Delete markup directly
- * — the confirming state only exists after a click, and these tests have no
- * DOM to click in.
+ * Exported so a render test can pin the Edit/Delete markup directly.
  */
 export function CustomFoodActions({ food }: CustomFoodActionsProps) {
-  const [confirming, setConfirming] = useState(false);
+  const [asking, setAsking] = useState(false);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ButtonLink to={`/foods/${food.slug}/edit`} variant="secondary" size="sm">
+        Edit
+      </ButtonLink>
+      <Button type="button" variant="secondary" size="sm" onClick={() => setAsking(true)}>
+        Delete
+      </Button>
+      {/* Mounted only while asking, so every open fetches usage afresh. */}
+      {asking && <DeleteFoodQuestion food={food} onClose={() => setAsking(false)} />}
+    </div>
+  );
+}
+
+/**
+ * The delete question for a custom food (items 599-600). Delete is soft
+ * (ledger 537), so nothing blocks it. Where the food is used is fetched FRESH
+ * when the sheet opens — the page's cached detail can predate the meal or
+ * storage item that now uses it — and the sheet says "Checking where it's
+ * used…" until that answer is in. Used: it names where (zero counts left out)
+ * and offers "Replace with…" another food, which moves every entry across and
+ * deletes this one for good, or "Delete anyway", which leaves past entries
+ * showing it as deleted. Unused: it says so, which is why only Delete is
+ * offered. Either delete keeps the parent on this page, now read-only with a
+ * Restore.
+ *
+ * Exported so a handler test can drive it as a plain function.
+ */
+export function DeleteFoodQuestion({ food, onClose }: { food: FoodDetail; onClose: () => void }) {
+  const { data: fetched, isFetchedAfterMount, isError: checkFailed, refetch } = useFood(food.slug, { fresh: true });
   // null = untouched, so the same-name food stays preselected however late
   // the foods list arrives; "" = the parent cleared it.
   const [pickedId, setPickedId] = useState<string | null>(null);
@@ -127,79 +148,77 @@ export function CustomFoodActions({ food }: CustomFoodActionsProps) {
   const { data } = useFoods();
   const foods = data?.foods ?? [];
 
-  const usedIn = food.usage ? usedInPhrase(food.usage) : null;
+  // Only an answer fetched since the sheet opened counts — never the cache.
+  const checked = isFetchedAfterMount && !checkFailed ? fetched : undefined;
+  const usedIn = checked?.usage ? usedInPhrase(checked.usage) : null;
   const replacementId = pickedId ?? sameNameFood(foods, food)?.id ?? "";
   const replacement = foods.find((candidate) => candidate.id === replacementId);
-  const summary = food.usage && replacement ? replaceSummary(food.usage, replacement.name) : null;
+  const summary = checked?.usage && replacement ? replaceSummary(checked.usage, replacement.name) : null;
   const pending = deleteFood.isPending || replaceFood.isPending;
-  const keep = () => setConfirming(false);
-  const softDelete = () => deleteFood.mutate(food);
+  const error =
+    deleteFood.isError || replaceFood.isError
+      ? replaceFood.isError
+        ? "Couldn't replace that — try again."
+        : "Couldn't delete that — try again."
+      : undefined;
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <ButtonLink to={`/foods/${food.slug}/edit`} variant="secondary" size="sm">
-          Edit
-        </ButtonLink>
-        {!confirming ? (
-          <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)}>
-            Delete
-          </Button>
+    <ConfirmSheet
+      open
+      onClose={onClose}
+      title={`Delete ${food.name}?`}
+      confirmLabel={usedIn ? "Delete anyway" : "Delete"}
+      pendingLabel="Deleting…"
+      pending={pending}
+      {...(checked ? { onConfirm: () => deleteFood.mutate(checked) } : {})}
+      error={error}
+    >
+      {!checked ? (
+        checkFailed ? (
+          <>
+            <p role="alert" className="font-medium text-[var(--color-danger)]">
+              Couldn't check where it's used — try again.
+            </p>
+            <Button type="button" variant="secondary" size="sm" className="self-start" onClick={() => void refetch()}>
+              Try again
+            </Button>
+          </>
         ) : (
-          !usedIn && (
-            <DeleteConfirmActions
-              confirmLabel="Delete"
-              pendingLabel="Deleting…"
-              pending={pending}
-              onConfirm={softDelete}
-              onKeep={keep}
-            />
-          )
-        )}
-      </div>
-      {confirming && !usedIn && <p className="text-xs text-[var(--color-text-muted)]">{RESTORE_HINT}</p>}
-      {confirming && usedIn && (
-        <div className="flex flex-col gap-3 rounded-[var(--radius-lg)] bg-[var(--color-bg-inset)] p-3">
-          <p className="text-sm font-medium text-[var(--color-text)]">{usedIn}.</p>
+          <p role="status" className="text-[var(--color-text-muted)]">
+            Checking where it's used…
+          </p>
+        )
+      ) : usedIn ? (
+        <>
+          <p className="font-medium">{usedIn}.</p>
           <Field label="Replace with…" htmlFor="replace-food">
             <SingleFoodPicker id="replace-food" value={replacementId} onChange={setPickedId} excludeId={food.id} />
           </Field>
           {summary && <p className="text-xs text-[var(--color-text-muted)]">{summary}.</p>}
           <Button
             type="button"
-            size="sm"
-            className="self-start"
+            className="w-full"
             disabled={!replacement || pending}
             onClick={() =>
               replacement &&
               replaceFood.mutate(
-                { food, replacementId: replacement.id },
+                { food: checked, replacementId: replacement.id },
                 { onSuccess: (result) => navigate(`/foods/${result.replacement.slug}`, { replace: true }) },
               )
             }
           >
             {replaceFood.isPending ? "Replacing…" : "Replace"}
           </Button>
-          <p className="text-xs text-[var(--color-text-muted)]">
+          <p className="text-[var(--color-text-muted)]">
             Or delete it anyway: past entries will show it as deleted. {RESTORE_HINT}
           </p>
-          <div className="flex items-center gap-2">
-            <DeleteConfirmActions
-              confirmLabel="Delete anyway"
-              pendingLabel="Deleting…"
-              pending={pending}
-              onConfirm={softDelete}
-              onKeep={keep}
-            />
-          </div>
-        </div>
-      )}
-      {(deleteFood.isError || replaceFood.isError) && (
-        <p role="alert" className="text-xs font-medium text-[var(--color-danger)]">
-          {replaceFood.isError ? "Couldn't replace that — try again." : "Couldn't delete that — try again."}
+        </>
+      ) : (
+        <p>
+          Nothing uses it yet, so it just comes off your foods and pickers. {RESTORE_HINT}
         </p>
       )}
-    </div>
+    </ConfirmSheet>
   );
 }
 

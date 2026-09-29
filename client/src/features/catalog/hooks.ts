@@ -73,12 +73,20 @@ export function useFoods(filters: FoodsQuery = {}) {
   });
 }
 
-export function useFood(slug: string | undefined) {
+/**
+ * `fresh` (item 600): the delete question decides Replace from `usage`, which
+ * a five-minute (and IndexedDB-persisted) copy gets wrong the moment a meal
+ * or storage item uses the food — so that reader refetches on mount, on the
+ * same key, the policy `useRecipes` uses for its pickers.
+ */
+export function useFood(slug: string | undefined, options: { fresh?: boolean } = {}) {
+  const fresh = options.fresh ?? false;
   return useQuery({
     queryKey: catalogKeys.food(slug),
     queryFn: () => fetchFood(slug as string),
     enabled: Boolean(slug),
-    staleTime: 5 * 60 * 1000,
+    staleTime: fresh ? 0 : 5 * 60 * 1000,
+    refetchOnMount: fresh ? "always" : true,
   });
 }
 

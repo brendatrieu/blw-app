@@ -16,6 +16,24 @@ import {
   servedLine,
   timeLabel,
 } from "./ServeLogList.js";
+import { MealActionsMenu } from "./MealActionsMenu.js";
+
+interface El {
+  type: unknown;
+  props: Record<string, unknown> & { children?: unknown };
+}
+function findElement(node: unknown, type: unknown): El | null {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = findElement(child, type);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!node || typeof node !== "object" || !("props" in node)) return null;
+  const el = node as El;
+  return el.type === type ? el : findElement(el.props.children, type);
+}
 
 function food(overrides: Partial<MealFood> = {}): MealFood {
   return {
@@ -30,7 +48,6 @@ function food(overrides: Partial<MealFood> = {}): MealFood {
 
 function renderMealCard(
   meal: MealItem,
-  pendingDeleteId: string | null = null,
   linkable?: boolean,
   actions?: ReactNode,
 ) {
@@ -46,10 +63,7 @@ function renderMealCard(
           createElement(MealCard, {
             key: meal.id,
             meal,
-            babyId: "baby-1",
-            pendingDeleteId,
             onRequestDelete: () => {},
-            onCancelDelete: () => {},
             ...(linkable === undefined ? {} : { linkable }),
             ...(actions === undefined ? {} : { actions }),
           }),
@@ -303,14 +317,13 @@ describe("MealCard actions slot (item 194)", () => {
   });
 
   it("renders nothing in the slot when actions is explicitly null (read-only card)", () => {
-    const html = renderMealCard(baseMeal, null, undefined, null);
+    const html = renderMealCard(baseMeal, undefined, null);
     expect(html).not.toContain('aria-label="Actions"');
   });
 
   it("renders a caller-supplied actions slot instead of the kebab", () => {
     const html = renderMealCard(
       baseMeal,
-      null,
       undefined,
       createElement("button", { type: "button" }, "Actions slot marker"),
     );
@@ -318,20 +331,16 @@ describe("MealCard actions slot (item 194)", () => {
     expect(html).not.toContain('aria-label="Actions"');
   });
 
-  it("shows the confirm row (and no kebab-triggered delete of its own) while a delete is pending for this meal", () => {
-    const html = renderMealCard(baseMeal, baseMeal.id);
-    expect(html).toContain("Remove this meal?");
-    expect(html).toContain("Yes, delete");
-    // Item 257: the destructive confirm keeps a dismiss, but as an
-    // icon-only × with an accessible name — never a "Cancel" text button.
-    expect(html).not.toContain(">Cancel<");
-    expect(html).toContain('aria-label="Keep it"');
-    // The confirm row rides above the stretched overlay like the kebab does.
-    expect(html).toMatch(/<div class="relative z-10">(?:(?!<\/div>).)*Remove this meal\?/s);
-  });
-
-  it("shows no confirm row when the pending id belongs to a different meal", () => {
-    expect(renderMealCard(baseMeal, "some-other-meal")).not.toContain("Remove this meal?");
+  it("never shows a confirm of its own — its kebab's Delete asks the list, with the meal (item 599)", () => {
+    const asked: MealItem[] = [];
+    const card = (MealCard as unknown as (props: unknown) => unknown)({
+      meal: baseMeal,
+      onRequestDelete: (meal: MealItem) => asked.push(meal),
+    });
+    expect(renderMealCard(baseMeal)).not.toContain("Delete this meal?");
+    const menu = findElement(card, MealActionsMenu);
+    (menu!.props.onRequestDelete as () => void)();
+    expect(asked).toEqual([baseMeal]);
   });
 });
 
@@ -347,7 +356,7 @@ describe("MealCard tap-through link (item 195)", () => {
     const editHref = new RegExp(`href="/log-meal\\?edit=${baseMeal.id}"`, "g");
     expect((renderMealCard(baseMeal).match(editHref) ?? []).length).toBe(1);
     // linkable=false still leaves the closed kebab, which holds no href until opened.
-    expect((renderMealCard(baseMeal, null, false).match(editHref) ?? []).length).toBe(0);
+    expect((renderMealCard(baseMeal, false).match(editHref) ?? []).length).toBe(0);
   });
 
   it("keeps the kebab outside the info anchor (no nested-interactive markup)", () => {
@@ -356,11 +365,6 @@ describe("MealCard tap-through link (item 195)", () => {
     const kebabIndex = html.indexOf('aria-label="Actions"');
     expect(anchorClose).toBeGreaterThan(-1);
     expect(kebabIndex).toBeGreaterThan(anchorClose);
-    expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
-  });
-
-  it("keeps the confirm row's buttons outside the anchor too", () => {
-    const html = renderMealCard(baseMeal, baseMeal.id);
     expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
   });
 });

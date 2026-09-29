@@ -46,6 +46,14 @@ interface SheetProps {
 export function Sheet({ open, onClose, title, showClose = false, children }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  // The latest onClose, read by the Escape handler. Keeping it out of the
+  // effect's deps means a caller re-rendering with a fresh inline arrow (a
+  // pending mutation, a picker change) no longer tears the effect down, which
+  // bounced focus back to the first control on every render (item 599).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -67,7 +75,7 @@ export function Sheet({ open, onClose, title, showClose = false, children }: She
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !panel) return;
@@ -94,7 +102,7 @@ export function Sheet({ open, onClose, title, showClose = false, children }: She
       previouslyFocused.current?.focus();
       nudgeViewportSync();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

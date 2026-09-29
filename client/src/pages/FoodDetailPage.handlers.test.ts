@@ -1,5 +1,5 @@
-// Drives the custom-food delete prompt's real handlers without a DOM
-// (ledger 542). The prompt only exists after a click, which a renderToString
+// Drives the custom-food delete question's real handlers without a DOM
+// (ledger 542, items 599-600). It only exists after a click, which a renderToString
 // suite never makes, so `useState` is replaced with a tiny store and the
 // component is called as a plain function, its element tree walked and its
 // callbacks invoked against fake mutations. Idiom from FeedbackPage.handlers.
@@ -10,10 +10,21 @@ const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], i: 0 };
   const calls = { deletes: [] as unknown[], replaces: [] as unknown[], restores: [] as unknown[], navigations: [] as unknown[] };
   const foods = { list: [] as unknown[] };
+  // What the delete question's own (fresh) food read returns.
+  const fresh = {
+    data: undefined as unknown,
+    isFetchedAfterMount: true,
+    isError: false,
+    refetches: 0,
+    options: [] as unknown[],
+  };
+  const pending = { delete: false, replace: false, deleteError: false, replaceError: false };
   return {
     store,
     calls,
     foods,
+    fresh,
+    pending,
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states)) store.states[i] = typeof init === "function" ? (init as () => unknown)() : init;
@@ -30,6 +41,15 @@ const h = vi.hoisted(() => {
       calls.replaces = [];
       calls.restores = [];
       calls.navigations = [];
+      fresh.data = undefined;
+      fresh.isFetchedAfterMount = true;
+      fresh.isError = false;
+      fresh.refetches = 0;
+      fresh.options = [];
+      pending.delete = false;
+      pending.replace = false;
+      pending.deleteError = false;
+      pending.replaceError = false;
     },
   };
 });
@@ -49,13 +69,28 @@ interface MutateOptions {
 }
 
 vi.mock("../features/catalog/hooks.js", () => ({
-  useFood: () => ({}),
+  useFood: (slug: unknown, options: unknown) => {
+    h.fresh.options.push([slug, options]);
+    return {
+      data: h.fresh.data,
+      isFetchedAfterMount: h.fresh.isFetchedAfterMount,
+      isError: h.fresh.isError,
+      refetch: () => {
+        h.fresh.refetches += 1;
+        return Promise.resolve();
+      },
+    };
+  },
   useFoods: () => ({ data: { foods: h.foods.list } }),
-  useDeleteCustomFood: () => ({ isPending: false, isError: false, mutate: (food: unknown) => h.calls.deletes.push(food) }),
+  useDeleteCustomFood: () => ({
+    isPending: h.pending.delete,
+    isError: h.pending.deleteError,
+    mutate: (food: unknown) => h.calls.deletes.push(food),
+  }),
   useRestoreCustomFood: () => ({ isPending: false, isError: false, mutate: (food: unknown) => h.calls.restores.push(food) }),
   useReplaceCustomFood: () => ({
-    isPending: false,
-    isError: false,
+    isPending: h.pending.replace,
+    isError: h.pending.replaceError,
     mutate: (input: unknown, options?: MutateOptions) => {
       h.calls.replaces.push(input);
       options?.onSuccess?.({ replacement: { id: "c", slug: "cauliflower", name: "Cauliflower" } });
@@ -64,9 +99,9 @@ vi.mock("../features/catalog/hooks.js", () => ({
 }));
 
 import { Button } from "../components/ui/Button.js";
-import { DeleteConfirmActions } from "../components/ui/DeleteConfirmActions.js";
+import { ConfirmSheet } from "../components/ui/ConfirmSheet.js";
 import { SingleFoodPicker } from "../features/catalog/components/FoodPicker.js";
-import { CustomFoodActions, DeletedFoodNotice, RESTORE_HINT } from "./FoodDetailPage.js";
+import { CustomFoodActions, DeleteFoodQuestion, DeletedFoodNotice, RESTORE_HINT } from "./FoodDetailPage.js";
 
 interface Rendered {
   type: unknown;
@@ -135,18 +170,24 @@ const CATALOG_CAULIFLOWER: FoodListItem = {
   emoji: null,
 };
 
+const UNUSED = { mealCount: 0, storageCount: 0, recipeCount: 0 };
+
 function actions(food: FoodDetail): Rendered {
   h.store.i = 0;
   return (CustomFoodActions as unknown as (props: { food: FoodDetail }) => Rendered)({ food });
 }
 
-function button(tree: Rendered, label: string): Rendered | undefined {
-  return collect(tree, (element) => element.type === Button && text(element.props.children).join("") === label)[0];
+/** The question as it renders now; `cached` is the page's (possibly stale) detail. */
+function question(cached: FoodDetail): Rendered {
+  h.store.i = 0;
+  return (DeleteFoodQuestion as unknown as (props: { food: FoodDetail; onClose: () => void }) => Rendered)({
+    food: cached,
+    onClose: () => {},
+  });
 }
 
-function openPrompt(food: FoodDetail): Rendered {
-  (button(actions(food), "Delete")!.props.onClick as () => void)();
-  return actions(food);
+function button(tree: Rendered, label: string): Rendered | undefined {
+  return collect(tree, (element) => element.type === Button && text(element.props.children).join("") === label)[0];
 }
 
 beforeEach(() => {
@@ -154,26 +195,87 @@ beforeEach(() => {
   h.foods.list = [CATALOG_CAULIFLOWER];
 });
 
-describe("an unused custom food", () => {
-  const UNUSED = { ...FOOD, usage: { mealCount: 0, storageCount: 0, recipeCount: 0 } };
+describe("CustomFoodActions", () => {
+  it("Delete opens the question instead of deleting", () => {
+    expect(collect(actions(FOOD), (element) => element.type === DeleteFoodQuestion)).toEqual([]);
+    (button(actions(FOOD), "Delete")!.props.onClick as () => void)();
+    const [asked] = collect(actions(FOOD), (element) => element.type === DeleteFoodQuestion);
+    expect(asked!.props.food).toBe(FOOD);
+    expect(h.calls.deletes).toEqual([]);
+  });
+});
 
-  it("gets a plain confirm that says it can be restored, and no Replace", () => {
-    const tree = openPrompt(UNUSED);
-    const [confirm] = collect(tree, (element) => element.type === DeleteConfirmActions);
-    expect(confirm!.props.confirmLabel).toBe("Delete");
-    expect(text(tree).join(" ")).toContain(RESTORE_HINT);
+describe("the delete question's usage check (item 600)", () => {
+  it("reads the food fresh, never trusting the cached detail", () => {
+    h.fresh.data = FOOD;
+    question(FOOD);
+    expect(h.fresh.options).toEqual([[FOOD.slug, { fresh: true }]]);
+  });
+
+  it("says it is checking, and offers nothing to commit, until a fetch since opening answers", () => {
+    h.fresh.data = { ...FOOD, usage: UNUSED };
+    h.fresh.isFetchedAfterMount = false;
+    const tree = question({ ...FOOD, usage: UNUSED });
+    expect(tree.type).toBe(ConfirmSheet);
+    expect(tree.props.title).toBe("Delete cauliflower?");
+    expect(text(tree).join(" ")).toContain("Checking where it's used…");
+    expect(tree.props.onConfirm).toBeUndefined();
     expect(collect(tree, (element) => element.type === SingleFoodPicker)).toEqual([]);
+  });
 
-    (confirm!.props.onConfirm as () => void)();
-    expect(h.calls.deletes).toEqual([UNUSED]);
-    // Soft: the parent stays on the page, which turns read-only.
+  it("offers Replace when the cached detail said unused but the fresh answer says used (the stale-cache bug)", () => {
+    h.fresh.data = { ...FOOD, usage: { mealCount: 1, storageCount: 1, recipeCount: 0 } };
+    const tree = question({ ...FOOD, usage: UNUSED });
+    const words = text(tree).join(" ");
+    expect(words).toContain("Used in 1 meal and 1 storage item");
+    expect(words).not.toContain("Nothing uses it yet");
+    expect(button(tree, "Replace")).toBeDefined();
+    expect(tree.props.confirmLabel).toBe("Delete anyway");
+  });
+
+  it("says why it can't check, with a retry, and offers nothing to commit", () => {
+    h.fresh.data = FOOD;
+    h.fresh.isError = true;
+    const tree = question(FOOD);
+    expect(text(tree).join(" ")).toContain("Couldn't check where it's used — try again.");
+    expect(tree.props.onConfirm).toBeUndefined();
+    (button(tree, "Try again")!.props.onClick as () => void)();
+    expect(h.fresh.refetches).toBe(1);
+  });
+});
+
+describe("an unused custom food", () => {
+  const FRESH_UNUSED = { ...FOOD, usage: UNUSED };
+
+  it("says nothing uses it yet — why there is no Replace — and that it can be restored", () => {
+    h.fresh.data = FRESH_UNUSED;
+    const tree = question(FOOD);
+    const words = text(tree).join(" ");
+    expect(words).toContain("Nothing uses it yet, so it just comes off your foods and pickers.");
+    expect(words).toContain(RESTORE_HINT);
+    expect(collect(tree, (element) => element.type === SingleFoodPicker)).toEqual([]);
+    expect(button(tree, "Replace")).toBeUndefined();
+    expect(tree.props.confirmLabel).toBe("Delete");
+    expect(tree.props.pendingLabel).toBe("Deleting…");
+  });
+
+  it("soft-deletes only on the red button, and stays on the page", () => {
+    h.fresh.data = FRESH_UNUSED;
+    const tree = question(FOOD);
+    expect(h.calls.deletes).toEqual([]);
+    (tree.props.onConfirm as () => void)();
+    expect(h.calls.deletes).toEqual([FRESH_UNUSED]);
     expect(h.calls.navigations).toEqual([]);
   });
 });
 
 describe("a custom food still in use", () => {
+  beforeEach(() => {
+    h.fresh.data = FOOD;
+  });
+
   it("names where, without zero counts, and offers Replace with the same-name catalog food preselected", () => {
-    const tree = openPrompt(FOOD);
+    const tree = question(FOOD);
     const words = text(tree).join(" ");
     expect(words).toContain("Used in 1 storage item");
     expect(words).not.toContain("0 meals");
@@ -186,31 +288,43 @@ describe("a custom food still in use", () => {
   });
 
   it("replaces with the picked food and lands on its page", () => {
-    const tree = openPrompt(FOOD);
-    (button(tree, "Replace")!.props.onClick as () => void)();
+    (button(question(FOOD), "Replace")!.props.onClick as () => void)();
     expect(h.calls.replaces).toEqual([{ food: FOOD, replacementId: CATALOG_CAULIFLOWER.id }]);
     expect(h.calls.navigations).toEqual(["/foods/cauliflower"]);
     expect(h.calls.deletes).toEqual([]);
   });
 
   it("can't Replace once the picker is cleared (nothing preselected is a real answer)", () => {
-    const [picker] = collect(openPrompt(FOOD), (element) => element.type === SingleFoodPicker);
+    const [picker] = collect(question(FOOD), (element) => element.type === SingleFoodPicker);
     (picker!.props.onChange as (next: string) => void)("");
-    const tree = actions(FOOD);
+    const tree = question(FOOD);
     expect(button(tree, "Replace")!.props.disabled).toBe(true);
     expect(text(tree).join(" ")).not.toContain("will switch to");
   });
 
   it("offers Delete anyway, which soft-deletes and says past entries will show it as deleted", () => {
-    const tree = openPrompt(FOOD);
+    const tree = question(FOOD);
     const words = text(tree).join(" ");
     expect(words).toContain("past entries will show it as deleted");
     expect(words).toContain(RESTORE_HINT);
-    const [confirm] = collect(tree, (element) => element.type === DeleteConfirmActions);
-    expect(confirm!.props.confirmLabel).toBe("Delete anyway");
-    (confirm!.props.onConfirm as () => void)();
+    expect(tree.props.confirmLabel).toBe("Delete anyway");
+    (tree.props.onConfirm as () => void)();
     expect(h.calls.deletes).toEqual([FOOD]);
     expect(h.calls.replaces).toEqual([]);
+  });
+
+  it("shows pending labels and the existing error text", () => {
+    h.pending.replace = true;
+    let tree = question(FOOD);
+    expect(tree.props.pending).toBe(true);
+    expect(button(tree, "Replacing…")!.props.disabled).toBe(true);
+
+    h.pending.replace = false;
+    h.pending.deleteError = true;
+    expect(question(FOOD).props.error).toBe("Couldn't delete that — try again.");
+    h.pending.replaceError = true;
+    tree = question(FOOD);
+    expect(tree.props.error).toBe("Couldn't replace that — try again.");
   });
 });
 

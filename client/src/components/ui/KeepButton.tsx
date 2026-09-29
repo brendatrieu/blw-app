@@ -10,12 +10,12 @@ interface KeepButtonProps {
 }
 
 /**
- * The only dismiss affordance that survives item 257: the "×" beside a
- * DESTRUCTIVE inline confirm ("Remove this meal?", "Delete for good",
- * "Delete my account forever"). Those confirms have no other way out — no
- * back chevron, no sheet close, no Done — so backing out has to stay
+ * The "×" for an inline panel with no other way out (item 257): the account
+ * deletion form ("Delete my account forever") and Chat's kind picker. Those
+ * have no back chevron, sheet close or Done, so backing out has to stay
  * reachable; everywhere else the header's chevron or X already is that way
- * out and the Cancel button is gone.
+ * out and the Cancel button is gone. Other deletes ask in a `ConfirmSheet`
+ * (item 599), whose own × does this job.
  *
  * Icon-only on purpose: a text "Cancel"/"Keep" next to a red destructive
  * button competes with it for weight. Same 44px footprint and glyph as

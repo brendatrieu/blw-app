@@ -8,11 +8,12 @@ const h = vi.hoisted(() => ({
   meal: null as unknown,
   mutations: [] as unknown[],
   pending: undefined as unknown,
+  sets: [] as unknown[],
 }));
 
 vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, useState: (init: unknown) => [init, () => {}] };
+  return { ...actual, useState: (init: unknown) => [init, (value: unknown) => h.sets.push(value)] };
 });
 vi.mock("react-router-dom", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
@@ -34,6 +35,7 @@ vi.mock("../features/tracking/hooks.js", () => ({
 
 import { MealDetailPage } from "./MealDetailPage.js";
 import { MealRatingsField, type MealRatingRow } from "../features/tracking/components/MealRatingsField.js";
+import { MealDeleteSheet } from "../features/tracking/components/ServeLogList.js";
 
 interface El {
   type: unknown;
@@ -102,5 +104,28 @@ describe("MealDetailPage stars (item 574)", () => {
       ["food-1", 2],
       ["food-2", 3],
     ]);
+  });
+});
+
+describe("MealDetailPage delete (item 599)", () => {
+  it("Delete opens the question sheet instead of deleting", () => {
+    h.meal = LOOSE;
+    h.sets.length = 0;
+    const tree = (MealDetailPage as unknown as () => El)();
+    const sheet = find(tree, MealDeleteSheet)!;
+    expect(sheet.props.open).toBe(false);
+    expect(sheet.props.meal).toBe(LOOSE);
+
+    const buttons: El[] = [];
+    const walk = (node: unknown): void => {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (!node || typeof node !== "object" || !("props" in node)) return;
+      const el = node as El;
+      if (el.type === "button" && el.props.children === "Delete") buttons.push(el);
+      walk(el.props.children);
+    };
+    walk(tree);
+    (buttons[0]!.props.onClick as () => void)();
+    expect(h.sets).toEqual([true]);
   });
 });

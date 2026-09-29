@@ -16,7 +16,7 @@ import { getExtraIngredientEmoji, getFoodEmoji } from "../features/catalog/foodE
 import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
-import { DeleteConfirmActions } from "../components/ui/DeleteConfirmActions.js";
+import { ConfirmSheet } from "../components/ui/ConfirmSheet.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
 const AGE_STAGES: { value: AgeStage; label: string }[] = [
@@ -78,13 +78,13 @@ function FavoriteHeart({
 }
 
 interface CustomRecipeActionsProps {
-  recipe: Pick<RecipeDetail, "id">;
+  recipe: Pick<RecipeDetail, "id" | "title">;
 }
 
 /**
- * Edit + Delete for a recipe the parent owns (item 212). Delete is the same
- * two-step inline confirm the custom-food page uses — a destructive action
- * on the thing you're looking at, not a native modal.
+ * Edit + Delete for a recipe the parent owns (item 212). Delete only asks
+ * (item 599): a `ConfirmSheet` says what goes, and nothing is deleted until
+ * its red button is tapped.
  *
  * The 409 is the case worth spelling out: a recipe still referenced by
  * logged meals or storage items can't be deleted (those rows would be left
@@ -92,44 +92,44 @@ interface CustomRecipeActionsProps {
  * exactly where to go clean up. Favorites never block — the server drops
  * the caller's own favorite row along with the recipe.
  *
- * Exported so a render test can pin the Edit/Delete markup directly: the
- * confirming state only exists after a click, and these tests have no DOM.
+ * Exported so a handler test can drive it as a plain function.
  */
 export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
-  const [confirming, setConfirming] = useState(false);
+  const [asking, setAsking] = useState(false);
   const navigate = useNavigate();
   const deleteRecipe = useDeleteCustomRecipe();
   const conflict = asCustomRecipeConflict(deleteRecipe.error);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <ButtonLink to={`/recipes/${recipe.id}/edit`} variant="secondary" size="sm">
-          Edit
-        </ButtonLink>
-        {confirming ? (
-          <DeleteConfirmActions
-            confirmLabel="Delete for good"
-            pendingLabel="Deleting…"
-            pending={deleteRecipe.isPending}
-            onConfirm={() =>
-              deleteRecipe.mutate(recipe.id, {
-                onSuccess: () => navigate(RECIPES_TAB_PATH, { replace: true }),
-              })
-            }
-            onKeep={() => setConfirming(false)}
-          />
-        ) : (
-          <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)}>
-            Delete
-          </Button>
-        )}
-      </div>
-      {deleteRecipe.isError && (
-        <p role="alert" className="text-xs font-medium text-[var(--color-danger)]">
-          {conflict ? customRecipeConflictMessage(conflict) : "Couldn't delete that — try again."}
-        </p>
-      )}
+    <div className="flex flex-wrap items-center gap-2">
+      <ButtonLink to={`/recipes/${recipe.id}/edit`} variant="secondary" size="sm">
+        Edit
+      </ButtonLink>
+      <Button type="button" variant="secondary" size="sm" onClick={() => setAsking(true)}>
+        Delete
+      </Button>
+      <ConfirmSheet
+        open={asking}
+        onClose={() => setAsking(false)}
+        title={`Delete ${recipe.title}?`}
+        confirmLabel="Delete for good"
+        pendingLabel="Deleting…"
+        pending={deleteRecipe.isPending}
+        onConfirm={() =>
+          deleteRecipe.mutate(recipe.id, {
+            onSuccess: () => navigate(RECIPES_TAB_PATH, { replace: true }),
+          })
+        }
+        error={
+          deleteRecipe.isError
+            ? conflict
+              ? customRecipeConflictMessage(conflict)
+              : "Couldn't delete that — try again."
+            : undefined
+        }
+      >
+        <p>The recipe and its steps are deleted. This can't be undone.</p>
+      </ConfirmSheet>
     </div>
   );
 }
