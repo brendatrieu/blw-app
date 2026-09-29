@@ -392,7 +392,7 @@ describe("buildExposureSnapshot", () => {
   let babyId: string;
 
   beforeEach(async () => {
-    ({ app, db, close } = await createTestApp());
+    ({ app, db, close } = await createTestApp({}, { aiFeaturesEnabled: true }));
     user = await signUpUser(app);
     babyId = await createBaby(app, user.cookie);
   });
@@ -512,6 +512,7 @@ describe("POST /api/ai/symptom-check", () => {
     clientRequests = [];
     anthropic = handler ? fakeAnthropic(handler) : null;
     ({ app, db, close } = await createTestApp(envOverrides, {
+      aiFeaturesEnabled: true,
       symptom: {
         anthropicForUser: async (userId: string) => {
           clientRequests.push(userId);
@@ -809,7 +810,7 @@ describe("GET /api/babies/:babyId/symptom-checks", () => {
   let babyId: string;
 
   beforeEach(async () => {
-    ({ app, db, close } = await createTestApp({}, { symptom: { anthropicForUser: async () => null } }));
+    ({ app, db, close } = await createTestApp({}, { aiFeaturesEnabled: true, symptom: { anthropicForUser: async () => null } }));
     user = await signUpUser(app);
     babyId = await createBaby(app, user.cookie);
   });

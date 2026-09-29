@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AI_FEATURES_ENABLED } from "@blw/shared";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { CardButton, CardLink } from "../components/ui/Card.js";
 import { useFeedbackSummary, useIsAdmin } from "../features/admin/hooks.js";
@@ -127,6 +128,8 @@ export function MorePage() {
 
   const rows = moreLinks
     .filter((row) => !row.adminOnly || isAdmin)
+    // Item 589: Chat is hidden while AI features are switched off.
+    .filter((row) => AI_FEATURES_ENABLED || row.to !== "/chat")
     // The count rides on the Metrics row as a chip; its description is
     // untouched, so the row still says what the page is for.
     .map((row) => (row.to === "/admin/metrics" && badge ? { ...row, badge } : row));

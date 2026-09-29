@@ -5,7 +5,7 @@ import fs from "node:fs";
 import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { sql } from "drizzle-orm";
-import type { DeepHealthResponse, HealthResponse } from "@blw/shared";
+import { AI_FEATURES_ENABLED, type DeepHealthResponse, type HealthResponse } from "@blw/shared";
 import { loadConfig, type Env } from "./config.js";
 import { createDb, type Database } from "./db/index.js";
 import { createAuth, type AuthLogger } from "./auth.js";
@@ -27,7 +27,7 @@ import { registerUsageRoutes } from "./routes/usage.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerFeedbackRoutes } from "./routes/feedback.js";
 import { decorateAdminRequest } from "./admin/access.js";
-import type { ApiKeyVerifier } from "./ai/client.js";
+import { registerAiRateLimit, type ApiKeyVerifier } from "./ai/client.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDistDir = path.resolve(__dirname, "../../client/dist");
@@ -79,6 +79,10 @@ export interface BuildAppOptions {
   // Lets tests drive the chat tool-runner loop without a live Anthropic
   // round trip, and assert exactly what was sent to it.
   chat?: ChatRoutesOptions;
+  // Item 589: defaults to the shared AI_FEATURES_ENABLED switch. Tests pass
+  // true to keep exercising the AI code for when it returns, false to pin
+  // the switched-off behavior.
+  aiFeaturesEnabled?: boolean;
   // Request logging. Defaults to on outside NODE_ENV=test; tests that need a
   // non-test NODE_ENV (the dev auto-auth suite) turn it off explicitly so the
   // suite output stays readable.
@@ -88,6 +92,7 @@ export interface BuildAppOptions {
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const env = options.env ?? loadConfig();
   const db = options.db ?? createDb(env.DATABASE_URL);
+  const aiEnabled = options.aiFeaturesEnabled ?? AI_FEATURES_ENABLED;
   const app = Fastify({
     logger: options.logger ?? env.NODE_ENV !== "test",
     // Every request gets an id, echoed to the caller as `x-request-id` and
@@ -186,7 +191,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     // Must come before any /api/ai/* route: it installs the shared per-user
     // AI budget through an onRoute hook, which only sees routes declared
     // after it.
-    registerAiKeyRoutes(app, db, { env, verifyApiKey: options.verifyApiKey }); // BYO Anthropic key
+    // Switched off (item 589), the key routes are simply not registered, so
+    // they 404 exactly like unknown URLs — but the symptom check keeps its
+    // /api/ai/* budget.
+    if (aiEnabled) {
+      registerAiKeyRoutes(app, db, { env, verifyApiKey: options.verifyApiKey }); // BYO Anthropic key
+    } else {
+      registerAiRateLimit(app, env);
+    }
 
     registerCatalogRoutes(app, db); // foods catalog + custom foods
     registerRecipeRoutes(app, db); // recipe catalog + custom recipes
@@ -194,8 +206,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     registerMealRoutes(app, db); // meals + allergen progress
     registerFavoriteRoutes(app, db); // recipe favorites
     registerStorageRoutes(app, db); // storage items + expiry tracking
-    registerSymptomRoutes(app, db, options.symptom); // triage + symptom checker
-    registerChatRoutes(app, db, options.chat); // recipe assistant + ask-anything BLW chat
+    // Switched off, the symptom check never gets a client, whatever key is on
+    // file: triage + the fixed-rule ranking only.
+    registerSymptomRoutes(
+      app,
+      db,
+      aiEnabled ? options.symptom : { ...options.symptom, anthropicForUser: () => Promise.resolve(null) },
+    ); // triage + symptom checker
+    if (aiEnabled) registerChatRoutes(app, db, options.chat); // recipe assistant + ask-anything BLW chat
     registerAccountRoutes(app, db); // data export + account deletion
     registerPreferenceRoutes(app, db); // per-user app preferences (tour, usage sharing)
     registerUsageRoutes(app, db, env); // anonymous usage events

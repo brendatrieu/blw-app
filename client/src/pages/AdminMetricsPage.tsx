@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import {
+  AI_FEATURES_ENABLED,
   METRICS_RANGES,
   RETENTION_WEEKS,
   triageLevelSchema,
@@ -351,8 +352,11 @@ function RetentionPanel({ data }: { data: AdminMetricsResponse }) {
   );
 }
 
-function AdoptionPanel({ data }: { data: AdminMetricsResponse }) {
-  const { denominator, windowDays, features } = data.featureAdoption;
+/** Exported for the item 589 render pin. */
+export function AdoptionPanel({ data }: { data: Pick<AdminMetricsResponse, "featureAdoption"> }) {
+  const { denominator, windowDays } = data.featureAdoption;
+  // Item 589: AI is hidden for everyone, admin included, so no Chat row.
+  const features = data.featureAdoption.features.filter((row) => AI_FEATURES_ENABLED || row.feature !== "chat");
 
   return (
     <Panel

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { isAlarmLevel, resultTriageLevel, type SymptomResult } from "@blw/shared";
+import { AI_FEATURES_ENABLED, isAlarmLevel, resultTriageLevel, type SymptomResult } from "@blw/shared";
 import { alarmStyle } from "../alarmColors.js";
 import { CandidateList } from "./CandidateCard.js";
 import { DisclaimerFootnote } from "./DisclaimerBanner.js";
@@ -80,17 +80,22 @@ export function SymptomResultView({ result, onReopenAlarm }: SymptomResultViewPr
       {result.kind === "fallback" && (
         <div className="flex flex-col gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
           <p className="text-sm text-[var(--color-text)]">
-            {result.reason === "no_ai_key"
+            {/* Item 589: switched off, an older "AI unavailable" result reads as the plain rule too. */}
+            {result.reason === "no_ai_key" || !AI_FEATURES_ENABLED
               ? "This list came from a fixed rule the app applies on its own: how new each food is, whether it is a top-9 allergen, and how well the timing fits."
               : "The AI analysis could not be completed this time, so this list came from the same fixed rule the app uses without a key."}
           </p>
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Adding your own Anthropic API key adds a written explanation on top of this list. The ranking above does not
-            need one.
-          </p>
-          <Link to="/settings" className="self-start text-xs font-medium text-[var(--color-accent)] underline">
-            {result.reason === "no_ai_key" ? "Add an API key in Settings" : "Check your API key in Settings"}
-          </Link>
+          {AI_FEATURES_ENABLED && (
+            <>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Adding your own Anthropic API key adds a written explanation on top of this list. The ranking above
+                does not need one.
+              </p>
+              <Link to="/settings" className="self-start text-xs font-medium text-[var(--color-accent)] underline">
+                {result.reason === "no_ai_key" ? "Add an API key in Settings" : "Check your API key in Settings"}
+              </Link>
+            </>
+          )}
         </div>
       )}
 

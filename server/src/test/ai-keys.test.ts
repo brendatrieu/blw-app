@@ -161,7 +161,7 @@ describe("/api/account/ai-key", () => {
       return verdict;
     };
 
-    ({ app, db, close } = await createTestApp({}, { verifyApiKey: verify }));
+    ({ app, db, close } = await createTestApp({}, { aiFeaturesEnabled: true, verifyApiKey: verify }));
     user = await signUpUser(app);
   });
 

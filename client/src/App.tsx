@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { AI_FEATURES_ENABLED } from "@blw/shared";
 import { AppLayout } from "./components/AppLayout.js";
 import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
 import { LoginPage } from "./pages/LoginPage.js";
@@ -110,8 +111,9 @@ export function App() {
         <Route path="/safety" element={<SafetyPage />} />
         <Route path="/safety/:slug" element={<SafetyArticlePage />} />
         <Route path="/symptom-check" element={<SymptomCheckPage />} />
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/chat/:threadId" element={<ChatPage />} />
+        {/* Item 589: while AI is switched off, /chat falls through to Not found. */}
+        {AI_FEATURES_ENABLED ? <Route path="/chat" element={<ChatPage />} /> : null}
+        {AI_FEATURES_ENABLED ? <Route path="/chat/:threadId" element={<ChatPage />} /> : null}
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/more" element={<MorePage />} />
         {/* Item 360. Reached from the More row it sits next to here, and

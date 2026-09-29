@@ -113,7 +113,7 @@ describe("chat threads and messages", () => {
 
   describe("thread CRUD + ownership", () => {
     beforeEach(async () => {
-      ({ app, db, close } = await createTestApp());
+      ({ app, db, close } = await createTestApp({}, { aiFeaturesEnabled: true }));
     });
 
     it("creates, lists, and deletes a thread, all scoped to the caller", async () => {
@@ -194,7 +194,7 @@ describe("chat threads and messages", () => {
 
   describe("sending a message", () => {
     beforeEach(async () => {
-      ({ app, db, close } = await createTestApp());
+      ({ app, db, close } = await createTestApp({}, { aiFeaturesEnabled: true }));
     });
 
     it("returns 403 ai_unavailable before opening the stream when no key is on file", async () => {
@@ -232,7 +232,7 @@ describe("chat threads and messages", () => {
     it("streams disclaimer/text/done and persists both turns for a normal recipe reply", async () => {
       const capturedParams: unknown[] = [];
       const anthropicForUser = async () => fakeAnthropicClient({ text: "Try mashed sweet potato strips." }, capturedParams);
-      ({ app, db, close } = await createTestApp({}, { chat: { anthropicForUser } }));
+      ({ app, db, close } = await createTestApp({}, { aiFeaturesEnabled: true, chat: { anthropicForUser } }));
 
       const user = await signUpUser(app);
       const thread = await createThread(app, user, { kind: "recipe" });
@@ -274,7 +274,7 @@ describe("chat threads and messages", () => {
     it("only hands the blw kind the get_baby_profile tool", async () => {
       const capturedParams: unknown[] = [];
       const anthropicForUser = async () => fakeAnthropicClient({ text: "Gagging is normal [gagging-vs-choking]." }, capturedParams);
-      ({ app, db, close } = await createTestApp({}, { chat: { anthropicForUser } }));
+      ({ app, db, close } = await createTestApp({}, { aiFeaturesEnabled: true, chat: { anthropicForUser } }));
 
       const user = await signUpUser(app);
       const thread = await createThread(app, user, { kind: "blw" });
@@ -293,7 +293,7 @@ describe("chat threads and messages", () => {
     it("emits a triage card and makes zero model calls for an emergency phrase on the blw thread", async () => {
       const capturedParams: unknown[] = [];
       const anthropicForUser = async () => fakeAnthropicClient({ text: "should never be reached" }, capturedParams);
-      ({ app, db, close } = await createTestApp({}, { chat: { anthropicForUser } }));
+      ({ app, db, close } = await createTestApp({}, { aiFeaturesEnabled: true, chat: { anthropicForUser } }));
 
       const user = await signUpUser(app);
       const thread = await createThread(app, user, { kind: "blw" });
@@ -326,7 +326,7 @@ describe("chat threads and messages", () => {
     it("does not trigger the emergency pre-check on a recipe thread", async () => {
       const capturedParams: unknown[] = [];
       const anthropicForUser = async () => fakeAnthropicClient({ text: "Here is a recipe." }, capturedParams);
-      ({ app, db, close } = await createTestApp({}, { chat: { anthropicForUser } }));
+      ({ app, db, close } = await createTestApp({}, { aiFeaturesEnabled: true, chat: { anthropicForUser } }));
 
       const user = await signUpUser(app);
       const thread = await createThread(app, user, { kind: "recipe" });
@@ -346,7 +346,7 @@ describe("chat threads and messages", () => {
     it("emits an error event and persists no assistant turn on refusal", async () => {
       const capturedParams: unknown[] = [];
       const anthropicForUser = async () => fakeAnthropicClient({ text: "", stopReason: "refusal" }, capturedParams);
-      ({ app, db, close } = await createTestApp({}, { chat: { anthropicForUser } }));
+      ({ app, db, close } = await createTestApp({}, { aiFeaturesEnabled: true, chat: { anthropicForUser } }));
 
       const user = await signUpUser(app);
       const thread = await createThread(app, user, { kind: "recipe" });
@@ -376,7 +376,7 @@ describe("chat threads and messages", () => {
     it("trims history sent to the model to the most recent 30 rows", async () => {
       const capturedParams: unknown[] = [];
       const anthropicForUser = async () => fakeAnthropicClient({ text: "ok" }, capturedParams);
-      ({ app, db, close } = await createTestApp({}, { chat: { anthropicForUser } }));
+      ({ app, db, close } = await createTestApp({}, { aiFeaturesEnabled: true, chat: { anthropicForUser } }));
 
       const user = await signUpUser(app);
       const thread = await createThread(app, user, { kind: "recipe" });
@@ -408,7 +408,7 @@ describe("chat threads and messages", () => {
     it("wraps user turns in <user_input> tags for the model but stores raw text", async () => {
       const capturedParams: unknown[] = [];
       const anthropicForUser = async () => fakeAnthropicClient({ text: "ok" }, capturedParams);
-      ({ app, db, close } = await createTestApp({}, { chat: { anthropicForUser } }));
+      ({ app, db, close } = await createTestApp({}, { aiFeaturesEnabled: true, chat: { anthropicForUser } }));
 
       const user = await signUpUser(app);
       const thread = await createThread(app, user, { kind: "recipe" });

@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Baby } from "@blw/shared";
 import {
   ACCOUNT_DELETE_CONFIRMATION,
+  AI_FEATURES_ENABLED,
   ANTHROPIC_CONSOLE_URL,
   DEFAULT_SHARE_USAGE_DATA,
   ageInMonths,
@@ -810,8 +811,9 @@ export function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
 
         <p className="text-sm text-[var(--color-text)]">
           This permanently deletes your account and everything in it — every baby profile, the whole
-          food log, your allergen progress, favorites, storage, symptom checks, chats, and your
-          Anthropic key. <strong>It cannot be undone and there is no backup we can restore from.</strong>
+          food log, your allergen progress, favorites, storage,{" "}
+          {AI_FEATURES_ENABLED ? "symptom checks, chats, and your Anthropic key" : "and symptom checks"}.{" "}
+          <strong>It cannot be undone and there is no backup we can restore from.</strong>
         </p>
 
         <p className="text-sm text-[var(--color-text-muted)]">
@@ -909,7 +911,8 @@ function AccountSection() {
 
       <p className="text-xs text-[var(--color-text-muted)]">
         The export is a single JSON file with everything on your account: babies, food log,
-        favorites, storage, symptom checks and chats. It never contains your API key.
+        favorites, storage and symptom checks
+        {AI_FEATURES_ENABLED ? " and chats. It never contains your API key." : "."}
       </p>
 
       {exportData.isError ? (
@@ -943,7 +946,8 @@ export function SettingsPage() {
           have to go looking for it to know it exists. */}
       <p className="-mt-4 text-sm text-[var(--color-text-muted)]">{PRIVACY_SETTINGS_HINT}</p>
       <BabiesSection />
-      <AiSection />
+      {/* Item 589: no key section, and no mention of keys, while AI is switched off. */}
+      {AI_FEATURES_ENABLED ? <AiSection /> : null}
       <AppearanceSection />
       <PrivacySection />
       <AccountSection />

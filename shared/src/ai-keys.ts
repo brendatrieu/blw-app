@@ -1,6 +1,17 @@
 import { z } from "zod";
 
 /**
+ * Item 589: THE switch for every AI / API-key feature, read by both sides.
+ * While false, for everyone (admins included): the Chat row, /chat pages and
+ * the Settings key section are gone; the chat and AI-key API routes 404 like
+ * unknown URLs; the symptom check never calls the model (base result only,
+ * even with a stored key) and its result says nothing about keys. No data is
+ * touched: stored keys, chat threads and past checks stay in the database.
+ * To turn it all back on: set this to true, run the gates, push.
+ */
+export const AI_FEATURES_ENABLED: boolean = false;
+
+/**
  * Bring-your-own Anthropic API key.
  *
  * The key itself is write-only across the whole API: it is submitted once on

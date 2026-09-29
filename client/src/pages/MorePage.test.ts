@@ -36,6 +36,13 @@ vi.mock("../features/admin/hooks.js", () => ({
   },
 }));
 
+// Item 589: every pin in this file describes the page with AI switched on
+// (the Chat row included); src/aiSwitch.test.ts pins it switched off.
+vi.mock("@blw/shared", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@blw/shared")>()),
+  AI_FEATURES_ENABLED: true,
+}));
+
 import { CardButton } from "../components/ui/Card.js";
 import { MorePage, unreadFeedbackBadge } from "./MorePage.js";
 

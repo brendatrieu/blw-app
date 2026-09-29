@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { ROUTE_PATTERNS } from "@blw/shared";
+
+// Item 589: the enum keeps /chat for when AI is switched back on, so it is
+// compared against the router as it is with AI on (the /chat routes mounted).
+vi.mock("@blw/shared", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@blw/shared")>()),
+  AI_FEATURES_ENABLED: true,
+}));
 import { App } from "../../App.js";
 import { UNMATCHED_ROUTE, toRoutePattern } from "./routes.js";
 
