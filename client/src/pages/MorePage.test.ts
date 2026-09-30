@@ -105,6 +105,7 @@ describe("MorePage (item 274)", () => {
       { tag: "a", href: "/chat", emoji: "💬", label: "Chat" },
       { tag: "a", href: "/feedback", emoji: "💌", label: "Send feedback" },
       { tag: "button", href: null, emoji: "🧭", label: "Take the tour" },
+      { tag: "a", href: "/about", emoji: "🌱", label: "About Little Meals" },
       { tag: "a", href: "/settings", emoji: "⚙️", label: "Settings" },
     ];
 
@@ -155,6 +156,14 @@ describe("MorePage (item 274)", () => {
     const html = render();
     expect(html).toContain("Little Meals v");
     expect(html).not.toContain("blw-app");
+  });
+
+  it("offers ONE About Little Meals row opening /about, right above Settings (item 612)", () => {
+    const rows = render().split(/<(?:a|button) /).slice(1);
+    const about = rows.filter((row) => row.includes(">About Little Meals<"));
+    expect(about).toHaveLength(1);
+    expect(about[0]).toContain('href="/about"');
+    expect(rows[rows.indexOf(about[0]!) + 1]).toContain('href="/settings"');
   });
 
   it("offers ONE How-to guides row opening /guides (item 608)", () => {

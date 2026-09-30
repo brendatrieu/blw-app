@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { readFileSync } from "node:fs";
 import { App, legacyStoragePath } from "./App.js";
+import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
+import { AboutPage } from "./pages/AboutPage.js";
+import { LoginPage } from "./pages/LoginPage.js";
+import { SignupPage } from "./pages/SignupPage.js";
 import { storageKeys } from "./features/storage/hooks.js";
 import { preferenceKeys } from "./features/tour/hooks.js";
 
@@ -12,7 +16,8 @@ import { preferenceKeys } from "./features/tour/hooks.js";
  * effect loop, which the node-env renderToString suite doesn't have.)
  */
 describe("legacyStoragePath", () => {
-  const at = (pathname: string, search = "", hash = "") => legacyStoragePath({ pathname, search, hash });
+  const at = (pathname: string, search = "", hash = "") =>
+    legacyStoragePath({ pathname, search, hash });
 
   it("maps every old /pantry route onto its /storage twin", () => {
     expect(at("/pantry")).toBe("/storage");
@@ -114,6 +119,57 @@ describe("App route wiring (item 327 — the admin dashboard)", () => {
 
   it("mounts nothing else under /admin, so any other probe is an ordinary 404 page", () => {
     expect(paths().filter((path) => path.startsWith("/admin"))).toEqual(["/admin/metrics"]);
+  });
+});
+
+type RouteEl = ReactElement<{ path?: string; element?: ReactNode; children?: ReactNode }>;
+
+/** The <Route> with this path, plus the `element` of every layout route above it. */
+function findRoute(path: string): { route: RouteEl; wrappers: unknown[] } | null {
+  const walk = (
+    node: ReactNode,
+    wrappers: unknown[],
+  ): { route: RouteEl; wrappers: unknown[] } | null => {
+    if (Array.isArray(node)) {
+      for (const n of node as ReactNode[]) {
+        const hit = walk(n, wrappers);
+        if (hit) return hit;
+      }
+      return null;
+    }
+    if (!isValidElement(node)) return null;
+    const el = node as RouteEl;
+    if (el.props.path === path) return { route: el, wrappers };
+    const layout =
+      el.props.path === undefined && isValidElement(el.props.element)
+        ? [el.props.element.type]
+        : [];
+    return walk(el.props.children, [...wrappers, ...layout]);
+  };
+  return walk((App as unknown as () => ReactNode)(), []);
+}
+
+describe("App route wiring (items 611/612 — who may open what)", () => {
+  it("mounts /about as a bare AboutPage: public, outside RequireAuth and RequireAnonymous", () => {
+    const hit = findRoute("/about");
+    expect(hit).not.toBeNull();
+    expect((hit?.route.props.element as ReactElement).type).toBe(AboutPage);
+    expect(hit?.wrappers).not.toContain(RequireAuth);
+  });
+
+  it.each([
+    ["/login", LoginPage],
+    ["/signup", SignupPage],
+  ])("keeps a signed-in parent off %s with RequireAnonymous", (path, page) => {
+    const hit = findRoute(path);
+    const element = hit?.route.props.element as ReactElement<{ children: ReactElement }>;
+    expect(element.type).toBe(RequireAnonymous);
+    expect(element.props.children.type).toBe(page);
+    expect(hit?.wrappers).not.toContain(RequireAuth);
+  });
+
+  it("guards the app screens with RequireAuth (sanity for the walk above)", () => {
+    expect(findRoute("/more")?.wrappers).toContain(RequireAuth);
   });
 });
 

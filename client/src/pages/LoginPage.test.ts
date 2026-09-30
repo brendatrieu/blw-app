@@ -51,6 +51,10 @@ describe("validateLogin", () => {
 });
 
 describe("LoginPage (render)", () => {
+  it("links to the About page for anyone who lands here directly (item 612)", () => {
+    expect(render()).toMatch(/<a[^>]*href="\/about"[^>]*>What is Little Meals\?<\/a>/);
+  });
+
   // Item 235: Sign in was always enabled here; what was missing is the
   // per-field message it produces on an empty submit — and nothing may show
   // before that submit happens.

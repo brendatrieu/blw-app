@@ -78,6 +78,8 @@ const moreLinks: MoreRow[] = [
     emoji: "📈",
     adminOnly: true,
   },
+  // Item 612: what the app is and why it exists, right above Settings.
+  { to: "/about", label: "About Little Meals", description: "What it helps with, and why it exists.", emoji: "🌱" },
   { to: "/settings", label: "Settings", description: "Babies, account, and app preferences.", emoji: "⚙️" },
 ];
 

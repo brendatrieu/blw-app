@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { authErrorMessage, signIn } from "../lib/auth.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
@@ -44,10 +44,15 @@ export function LoginPage() {
 
   const redirectTo = (location.state as { from?: string } | null)?.from ?? "/";
 
-  const { errors, attemptSubmit } = useSubmitValidation({ email, password }, validateLogin, LOGIN_FIELD_ORDER, {
-    email: "login-email",
-    password: "login-password",
-  });
+  const { errors, attemptSubmit } = useSubmitValidation(
+    { email, password },
+    validateLogin,
+    LOGIN_FIELD_ORDER,
+    {
+      email: "login-email",
+      password: "login-password",
+    },
+  );
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -75,6 +80,12 @@ export function LoginPage() {
         </span>
         <h1 className="font-display text-[var(--color-text)]">Welcome to Little Meals</h1>
         <p className="text-sm text-[var(--color-text-muted)]">Sign in or create an account.</p>
+        <Link
+          to="/about"
+          className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--color-accent)] underline"
+        >
+          What is Little Meals?
+        </Link>
       </div>
 
       <Card padding="md" className="flex flex-col gap-4">

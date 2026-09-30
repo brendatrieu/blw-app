@@ -4,6 +4,7 @@ import { AppLayout } from "./components/AppLayout.js";
 import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { SignupPage } from "./pages/SignupPage.js";
+import { AboutPage } from "./pages/AboutPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
 import { LogFoodPage } from "./pages/LogFoodPage.js";
 import { StoragePage } from "./pages/StoragePage.js";
@@ -72,6 +73,8 @@ export function App() {
           </RequireAnonymous>
         }
       />
+      {/* Item 611: public to everyone, signed in or out — no RequireAnonymous. */}
+      <Route path="/about" element={<AboutPage />} />
 
       {/* Everything below the guard needs a session. The server enforces
           this independently; the wrapper just keeps the UI honest. */}

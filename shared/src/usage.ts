@@ -39,6 +39,8 @@ import { storageLocationSchema, storageStatusSchema } from "./storage.js";
 export const ROUTE_PATTERNS = [
   "/login",
   "/signup",
+  /** What the app is, public (item 611): a signed-out "/" lands here. */
+  "/about",
   "/",
   "/log-meal",
   "/meals",
