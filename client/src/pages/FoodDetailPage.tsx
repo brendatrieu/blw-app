@@ -11,7 +11,7 @@ import {
 import { FoodBadges } from "../features/catalog/components/FoodBadges.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { SingleFoodPicker } from "../features/catalog/components/FoodPicker.js";
-import { CUSTOM_FOOD_SOFT_NOTE, levelLabel, replaceSummary, usedInPhrase } from "../features/catalog/constants.js";
+import { CUSTOM_FOOD_SOFT_NOTE, levelLabel, usedInPhrase } from "../features/catalog/constants.js";
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe, sortBasicRecipesFirst } from "../features/catalog/basicRecipe.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
@@ -153,7 +153,6 @@ export function DeleteFoodQuestion({ food, onClose }: { food: FoodDetail; onClos
   const usedIn = checked?.usage ? usedInPhrase(checked.usage) : null;
   const replacementId = pickedId ?? sameNameFood(foods, food)?.id ?? "";
   const replacement = foods.find((candidate) => candidate.id === replacementId);
-  const summary = checked?.usage && replacement ? replaceSummary(checked.usage, replacement.name) : null;
   const pending = deleteFood.isPending || replaceFood.isPending;
   const error =
     deleteFood.isError || replaceFood.isError
@@ -190,11 +189,10 @@ export function DeleteFoodQuestion({ food, onClose }: { food: FoodDetail; onClos
         )
       ) : usedIn ? (
         <>
-          <p className="font-medium">{usedIn}.</p>
+          <p className="font-medium text-[var(--color-text)]">{usedIn}.</p>
           <Field label="Replace with…" htmlFor="replace-food">
             <SingleFoodPicker id="replace-food" value={replacementId} onChange={setPickedId} excludeId={food.id} />
           </Field>
-          {summary && <p className="text-xs text-[var(--color-text-muted)]">{summary}.</p>}
           <Button
             type="button"
             className="w-full"
@@ -209,14 +207,9 @@ export function DeleteFoodQuestion({ food, onClose }: { food: FoodDetail; onClos
           >
             {replaceFood.isPending ? "Replacing…" : "Replace"}
           </Button>
-          <p className="text-[var(--color-text-muted)]">
-            Or delete it anyway: past entries will show it as deleted. {RESTORE_HINT}
-          </p>
         </>
       ) : (
-        <p>
-          Nothing uses it yet, so it just comes off your foods and pickers. {RESTORE_HINT}
-        </p>
+        <p>{RESTORE_HINT}</p>
       )}
     </ConfirmSheet>
   );

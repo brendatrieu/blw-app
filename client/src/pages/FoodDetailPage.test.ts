@@ -7,7 +7,7 @@ import type { Baby, FoodDetail, FoodListItem, MealItem } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
 import { catalogKeys } from "../features/catalog/hooks.js";
-import { CUSTOM_FOOD_SOFT_NOTE, replaceSummary, usedInPhrase } from "../features/catalog/constants.js";
+import { CUSTOM_FOOD_SOFT_NOTE, usedInPhrase } from "../features/catalog/constants.js";
 import { CustomFoodActions, FoodDetailPage, RESTORE_HINT, sameNameFood } from "./FoodDetailPage.js";
 
 /** React's SSR escaping, so a copy assertion can be made against the exact
@@ -280,17 +280,6 @@ describe("usedInPhrase", () => {
   it("is null when nothing uses it — the plain-confirm branch", () => {
     expect(usedInPhrase({ mealCount: 0, storageCount: 0, recipeCount: 0 })).toBeNull();
     expect(usedInPhrase({ mealCount: 0, storageCount: 0 })).toBeNull();
-  });
-});
-
-describe("replaceSummary", () => {
-  it("says what will switch to the replacement, without zero counts", () => {
-    expect(replaceSummary({ mealCount: 0, storageCount: 1, recipeCount: 0 }, "Cauliflower")).toBe(
-      "1 storage item will switch to Cauliflower",
-    );
-    expect(replaceSummary({ mealCount: 2, storageCount: 0, recipeCount: 1 }, "Cauliflower")).toBe(
-      "2 meals and 1 recipe will switch to Cauliflower",
-    );
   });
 });
 

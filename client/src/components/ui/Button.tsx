@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from "react";
 import { Link, type LinkProps } from "react-router-dom";
 
-export type ButtonVariant = "primary" | "secondary" | "tonal" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "tonal" | "ghost" | "danger" | "danger-quiet";
 export type ButtonSize = "md" | "sm";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
@@ -16,6 +16,10 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
     "border border-transparent bg-[var(--color-success)] text-[var(--color-primary-contrast)] hover:bg-[color-mix(in_srgb,var(--color-success),#000000_8%)]",
   ghost: "border border-transparent bg-transparent text-[var(--color-text)] hover:bg-[var(--color-bg-inset)]",
   danger: "border border-transparent bg-[var(--color-danger)] text-[var(--color-danger-contrast)] shadow-[var(--shadow-sm)]",
+  // The delete question's commit (item 607): red text + border on the sheet's
+  // own surface, a soft red tint on hover — pairs the contrast gate covers.
+  "danger-quiet":
+    "border border-[var(--color-danger)] bg-[var(--color-bg-elevated)] text-[var(--color-danger)] hover:bg-[var(--color-danger-soft)]",
 };
 
 // `md` meets the 44px touch-target minimum; `sm` is a deliberate exception

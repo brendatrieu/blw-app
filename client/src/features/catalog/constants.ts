@@ -147,15 +147,6 @@ export function usedInPhrase(counts: UsageCounts): string | null {
 }
 
 /**
- * What a replace will move, for its confirm line: "1 storage item will switch
- * to Cauliflower". Null when nothing uses the food.
- */
-export function replaceSummary(counts: UsageCounts, replacementName: string): string | null {
-  const list = countList(counts);
-  return list ? `${list} will switch to ${replacementName}` : null;
-}
-
-/**
  * Why a custom recipe couldn't be deleted, from the server's 409 counts
  * (item 212). Favorites never appear here: they're removed with the recipe
  * rather than blocking it.

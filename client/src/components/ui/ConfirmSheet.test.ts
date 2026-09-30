@@ -15,7 +15,7 @@ function sheet(overrides: Partial<Props> = {}) {
     open: true,
     onClose: () => {},
     title: "Delete this meal?",
-    children: "It comes off the food log.",
+    children: "This can't be undone.",
     confirmLabel: "Delete",
     pendingLabel: "Deleting…",
     pending: false,
@@ -41,13 +41,23 @@ describe("ConfirmSheet (item 599)", () => {
     expect(element.props.showClose).toBe(true);
   });
 
-  it("names the dialog by its question, says what happens, and holds one red commit button", () => {
+  it("names the dialog by its question, one muted line, and one right-aligned red-outlined commit (item 607)", () => {
     const { html } = sheet();
     expect(html).toContain('role="dialog"');
     expect(html).toContain('aria-label="Delete this meal?"');
     expect(html).toMatch(/<h2[^>]*>Delete this meal\?<\/h2>/);
-    expect(html).toContain("It comes off the food log.");
-    expect(html).toMatch(/<button [^>]*bg-\[var\(--color-danger\)\][^>]*type="button"[^>]*>Delete<\/button>/);
+    expect(html).toMatch(/text-\[var\(--color-text-muted\)\]">This can(?:&#x27;|')t be undone\.</);
+    const commit = html.match(/<button [^>]*>Delete<\/button>/)![0];
+    // Red text + border on the sheet surface, not a solid red block; right-aligned, not full-width.
+    expect(commit).toContain("text-[var(--color-danger)] ");
+    expect(commit).toContain("border-[var(--color-danger)]");
+    expect(commit).toContain("bg-[var(--color-bg-elevated)]");
+    expect(commit).not.toContain("bg-[var(--color-danger)]");
+    expect(commit).not.toContain("w-full");
+    expect(commit).toContain("self-end");
+    // Quieter, not smaller: still the 44px touch target.
+    expect(commit).toContain("min-h-11");
+    expect(commit).not.toContain("min-h-9");
     expect(html).toContain('aria-label="Close"');
     expect(html).not.toContain(">Cancel<");
   });
@@ -56,7 +66,7 @@ describe("ConfirmSheet (item 599)", () => {
     const { element, confirms } = sheet();
     expect(confirms).toEqual([]);
     const children = element.props.children as ReactElement<{ onClick?: () => void; variant?: string }>[];
-    const commit = children.find((child) => child?.props?.variant === "danger");
+    const commit = children.find((child) => child?.props?.variant === "danger-quiet");
     commit!.props.onClick!();
     expect(confirms).toEqual([1]);
   });

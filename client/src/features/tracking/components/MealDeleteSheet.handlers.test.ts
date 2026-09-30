@@ -94,21 +94,18 @@ beforeEach(() => {
 });
 
 describe("MealDeleteSheet", () => {
-  it("asks a question and says what happens, deleting nothing until the red button", () => {
+  it("asks a question with one short line (item 607), deleting nothing until the red button", () => {
     const sheet = question(MEAL);
     expect(sheet.type).toBe(ConfirmSheet);
     expect(sheet.props.title).toBe("Delete this meal?");
-    const words = text(sheet.props.children);
-    expect(words).toContain("It comes off the food log with its ratings, and allergen progress is counted without it.");
-    expect(words).toContain("This can't be undone.");
-    expect(words).not.toContain("storage");
+    expect(text(sheet.props.children)).toBe("This can't be undone.");
     expect(sheet.props.confirmLabel).toBe("Delete");
     expect(h.mutation.calls).toEqual([]);
   });
 
-  it("says storage servings stay used when the meal came from storage", () => {
+  it("keeps the same one line for a meal from storage — no storage explanation", () => {
     const fromStorage = { ...MEAL, foods: [{ ...MEAL.foods[0]!, storageItemId: "s-1" }] };
-    expect(text(question(fromStorage).props.children)).toContain("Servings it took from storage stay used.");
+    expect(text(question(fromStorage).props.children)).toBe("This can't be undone.");
   });
 
   it("deletes on the red button, then closes and hands off to onDeleted", () => {

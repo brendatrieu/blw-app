@@ -7,8 +7,8 @@ interface ConfirmSheetProps {
   onClose: () => void;
   /** The question itself, e.g. "Delete this meal?" — also the dialog's name. */
   title: string;
-  /** What will happen, in a sentence or two (and any choices before it). */
-  children: ReactNode;
+  /** At most one short, muted line (and any choices before it). */
+  children?: ReactNode;
   /** e.g. "Delete" — shown as "Deleting…" (`pendingLabel`) while in flight. */
   confirmLabel: string;
   pendingLabel: string;
@@ -21,8 +21,8 @@ interface ConfirmSheetProps {
 
 /**
  * The one way a destructive action asks first (item 599): a bottom sheet that
- * names the action as a question, says what will happen, and holds ONE red
- * commit. Nothing happens until that button is tapped; the sheet's × (or an
+ * names the action as a question, adds at most one short line, and holds ONE
+ * right-aligned (still 44px tall), red-outlined commit (quieter per item 607). Nothing happens until that button is tapped; the sheet's × (or an
  * overlay tap / Escape) backs out — no Cancel, per item 257. Replaces the old
  * two-tap inline confirms, whose only signal was the button turning red.
  */
@@ -39,14 +39,14 @@ export function ConfirmSheet({
 }: ConfirmSheetProps) {
   return (
     <Sheet open={open} onClose={onClose} title={title} showClose>
-      <div className="flex flex-col gap-3 text-sm text-[var(--color-text)]">{children}</div>
+      {children ? <div className="flex flex-col gap-3 text-sm text-[var(--color-text-muted)]">{children}</div> : null}
       {error ? (
         <p role="alert" className="text-sm font-medium text-[var(--color-danger)]">
           {error}
         </p>
       ) : null}
       {onConfirm ? (
-        <Button type="button" variant="danger" className="w-full" disabled={pending} onClick={onConfirm}>
+        <Button type="button" variant="danger-quiet" className="self-end" disabled={pending} onClick={onConfirm}>
           {pending ? pendingLabel : confirmLabel}
         </Button>
       ) : null}

@@ -81,9 +81,9 @@ describe("CustomRecipeActions delete question (item 599)", () => {
     expect(sheet.props.open).toBe(true);
     expect(sheet.props.title).toBe("Delete Lentil mash?");
     expect(sheet.props.children).toMatchObject({
-      props: { children: "The recipe and its steps are deleted. This can't be undone." },
+      props: { children: "This can't be undone." },
     });
-    expect(sheet.props.confirmLabel).toBe("Delete for good");
+    expect(sheet.props.confirmLabel).toBe("Delete");
     expect(h.mutation.calls).toEqual([]);
   });
 

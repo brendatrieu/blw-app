@@ -228,7 +228,7 @@ describe("the delete question's usage check (item 600)", () => {
     const tree = question({ ...FOOD, usage: UNUSED });
     const words = text(tree).join(" ");
     expect(words).toContain("Used in 1 meal and 1 storage item");
-    expect(words).not.toContain("Nothing uses it yet");
+    expect(words).not.toContain(RESTORE_HINT);
     expect(button(tree, "Replace")).toBeDefined();
     expect(tree.props.confirmLabel).toBe("Delete anyway");
   });
@@ -247,12 +247,10 @@ describe("the delete question's usage check (item 600)", () => {
 describe("an unused custom food", () => {
   const FRESH_UNUSED = { ...FOOD, usage: UNUSED };
 
-  it("says nothing uses it yet — why there is no Replace — and that it can be restored", () => {
+  it("says only that it can be restored (item 607: one short line), with no Replace", () => {
     h.fresh.data = FRESH_UNUSED;
     const tree = question(FOOD);
-    const words = text(tree).join(" ");
-    expect(words).toContain("Nothing uses it yet, so it just comes off your foods and pickers.");
-    expect(words).toContain(RESTORE_HINT);
+    expect(text(tree).join(" ")).toBe(RESTORE_HINT);
     expect(collect(tree, (element) => element.type === SingleFoodPicker)).toEqual([]);
     expect(button(tree, "Replace")).toBeUndefined();
     expect(tree.props.confirmLabel).toBe("Delete");
@@ -284,7 +282,6 @@ describe("a custom food still in use", () => {
     expect(picker!.props.value).toBe(CATALOG_CAULIFLOWER.id);
     // The food being replaced is never offered as its own replacement.
     expect(picker!.props.excludeId).toBe(FOOD.id);
-    expect(words).toContain("1 storage item will switch to Cauliflower");
   });
 
   it("replaces with the picked food and lands on its page", () => {
@@ -299,14 +296,13 @@ describe("a custom food still in use", () => {
     (picker!.props.onChange as (next: string) => void)("");
     const tree = question(FOOD);
     expect(button(tree, "Replace")!.props.disabled).toBe(true);
-    expect(text(tree).join(" ")).not.toContain("will switch to");
   });
 
-  it("offers Delete anyway, which soft-deletes and says past entries will show it as deleted", () => {
+  it("offers a quiet Delete anyway with no extra explanation (item 607), which soft-deletes", () => {
     const tree = question(FOOD);
     const words = text(tree).join(" ");
-    expect(words).toContain("past entries will show it as deleted");
-    expect(words).toContain(RESTORE_HINT);
+    expect(words).not.toContain("past entries");
+    expect(words).not.toContain(RESTORE_HINT);
     expect(tree.props.confirmLabel).toBe("Delete anyway");
     (tree.props.onConfirm as () => void)();
     expect(h.calls.deletes).toEqual([FOOD]);

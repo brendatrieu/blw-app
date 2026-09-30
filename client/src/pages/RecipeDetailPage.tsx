@@ -112,7 +112,7 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
         open={asking}
         onClose={() => setAsking(false)}
         title={`Delete ${recipe.title}?`}
-        confirmLabel="Delete for good"
+        confirmLabel="Delete"
         pendingLabel="Deleting…"
         pending={deleteRecipe.isPending}
         onConfirm={() =>
@@ -128,7 +128,7 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
             : undefined
         }
       >
-        <p>The recipe and its steps are deleted. This can't be undone.</p>
+        <p>This can't be undone.</p>
       </ConfirmSheet>
     </div>
   );

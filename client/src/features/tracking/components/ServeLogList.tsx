@@ -93,10 +93,7 @@ export function MealDeleteSheet({ meal, babyId, open, onClose, onDeleted }: Meal
       }
       error={deleteMeal.isError ? "Couldn't delete that — try again." : undefined}
     >
-      <p>
-        It comes off the food log with its ratings, and allergen progress is counted without it.
-        {hasStorageFood(meal.foods) ? " Servings it took from storage stay used." : ""} This can't be undone.
-      </p>
+      <p>This can't be undone.</p>
     </ConfirmSheet>
   );
 }
