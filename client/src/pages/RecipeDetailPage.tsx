@@ -16,7 +16,7 @@ import { getExtraIngredientEmoji, getFoodEmoji } from "../features/catalog/foodE
 import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
-import { ConfirmSheet } from "../components/ui/ConfirmSheet.js";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
 const AGE_STAGES: { value: AgeStage; label: string }[] = [
@@ -83,7 +83,7 @@ interface CustomRecipeActionsProps {
 
 /**
  * Edit + Delete for a recipe the parent owns (item 212). Delete only asks
- * (item 599): a `ConfirmSheet` says what goes, and nothing is deleted until
+ * (item 599): a `ConfirmDialog` says what goes, and nothing is deleted until
  * its red button is tapped.
  *
  * The 409 is the case worth spelling out: a recipe still referenced by
@@ -108,7 +108,7 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
       <Button type="button" variant="secondary" size="sm" onClick={() => setAsking(true)}>
         Delete
       </Button>
-      <ConfirmSheet
+      <ConfirmDialog
         open={asking}
         onClose={() => setAsking(false)}
         title={`Delete ${recipe.title}?`}
@@ -129,7 +129,7 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
         }
       >
         <p>This can't be undone.</p>
-      </ConfirmSheet>
+      </ConfirmDialog>
     </div>
   );
 }

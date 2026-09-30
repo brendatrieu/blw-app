@@ -1,24 +1,6 @@
-import { useEffect, useRef, type ReactNode, type Ref } from "react";
+import { useRef, type ReactNode, type Ref } from "react";
 import { createPortal } from "react-dom";
-
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-/**
- * The WebKit re-sync nudge run after a modal unlocks background scroll (item
- * 379). In an installed iOS app the layout viewport that fixed and sticky
- * boxes hang from stays shrunken once the keyboard has been up — the note
- * fields in the Serve sheet — until something scrolls the document. Scrolling
- * to exactly where the page already is re-syncs it without moving anything.
- * Deferred a frame so it lands after the restored `overflow` has taken effect.
- * Guarded: the node-env test suite drives these components with no window.
- */
-function nudgeViewportSync() {
-  if (typeof window === "undefined" || typeof window.requestAnimationFrame !== "function") return;
-  window.requestAnimationFrame(() => {
-    window.scrollTo(window.scrollX, window.scrollY);
-  });
-}
+import { useModal } from "./useModal.js";
 
 /**
  * How a dialog was dismissed. The two ways OUT of a modal that are not a
@@ -42,12 +24,12 @@ interface DialogProps {
  * middle of the viewport, rather than `Sheet`'s panel riding up from the
  * bottom edge.
  *
- * The mechanics are deliberately Sheet's, line for line — portal to
- * `document.body`, background scroll locked and restored to whatever inline
- * value was there before, focus moved into the panel on open and returned to
- * whatever had it on close, Tab trapped inside the panel, Escape and an
- * overlay tap both closing. A second, subtly different focus trap in the app
- * is a bug factory; this one is the same trap with a different box around it.
+ * The mechanics are Sheet's own `useModal` — background scroll locked and
+ * restored, focus moved into the panel on open and returned on close, Tab
+ * trapped inside the panel, Escape closing only the TOP modal (so a delete
+ * question over a sheet closes alone) — plus an overlay tap. A second,
+ * subtly different focus trap in the app is a bug factory; this is the same
+ * trap with a different box around it.
  *
  * A click on the panel cannot close: the overlay is the panel's SIBLING, not
  * its ancestor, so a tap inside the card never reaches the overlay's handler
@@ -55,59 +37,7 @@ interface DialogProps {
  */
 export function Dialog({ open, onClose, ariaLabel, children }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const previouslyFocused = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    // Guarded: the node-env suite drives this component as a function, with
-    // a stand-in document or none at all.
-    if (typeof document === "undefined") return;
-
-    const root = document.documentElement;
-    const previousRootOverflow = root.style.overflow;
-    const previousBodyOverflow = document.body.style.overflow;
-    root.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-
-    previouslyFocused.current = document.activeElement as HTMLElement | null;
-    // Focus lands on the panel itself (tabIndex -1, no outline), not on its
-    // first control: a programmatic focus on a button draws the browser's
-    // focus ring around it on mobile, which read as a stray border on Skip.
-    // Tab from here goes to the first control as usual.
-    const panel = panelRef.current;
-    panel?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose("escape");
-        return;
-      }
-      if (event.key !== "Tab" || !panel) return;
-
-      const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-      if (items.length === 0) return;
-      const first = items[0]!;
-      const last = items[items.length - 1]!;
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      root.style.overflow = previousRootOverflow;
-      document.body.style.overflow = previousBodyOverflow;
-      previouslyFocused.current?.focus();
-      nudgeViewportSync();
-    };
-  }, [open, onClose]);
+  useModal(open, panelRef, onClose, false);
 
   if (!open) return null;
   if (typeof document === "undefined") return null;

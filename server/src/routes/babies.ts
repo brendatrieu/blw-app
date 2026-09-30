@@ -127,9 +127,9 @@ export function registerBabyRoutes(app: FastifyInstance, db: Database): void {
       return notFound(reply);
     }
 
-    // Cascades through meals (and meal_foods under them), symptom_checks and
-    // chat threads by foreign key, so this really does remove the child's
-    // whole record.
+    // Cascades through meals (and meal_foods under them), allergen overrides
+    // and symptom_checks by foreign key, so this really does remove the
+    // child's whole record. Chat threads are kept, only unlinked (set null).
     const deleted = await db
       .delete(babies)
       .where(and(eq(babies.id, params.data.id), eq(babies.userId, currentUserId(request))))

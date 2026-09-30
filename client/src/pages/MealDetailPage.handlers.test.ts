@@ -35,7 +35,7 @@ vi.mock("../features/tracking/hooks.js", () => ({
 
 import { MealDetailPage } from "./MealDetailPage.js";
 import { MealRatingsField, type MealRatingRow } from "../features/tracking/components/MealRatingsField.js";
-import { MealDeleteSheet } from "../features/tracking/components/ServeLogList.js";
+import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
 
 interface El {
   type: unknown;
@@ -112,7 +112,7 @@ describe("MealDetailPage delete (item 599)", () => {
     h.meal = LOOSE;
     h.sets.length = 0;
     const tree = (MealDetailPage as unknown as () => El)();
-    const sheet = find(tree, MealDeleteSheet)!;
+    const sheet = find(tree, MealDeleteDialog)!;
     expect(sheet.props.open).toBe(false);
     expect(sheet.props.meal).toBe(LOOSE);
 

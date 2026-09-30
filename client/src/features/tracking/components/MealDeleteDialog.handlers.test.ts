@@ -1,5 +1,5 @@
-// Item 599: a meal is deleted only from the "Delete this meal?" sheet's red
-// button — the kebab (list) just asks. Components are called as plain
+// Items 599, 610: a meal is deleted only from the "Delete this meal?" pop-up's
+// red button — the kebab (list) just asks. Components are called as plain
 // functions with the hooks mocked (idiom from FoodDetailPage.handlers).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MealItem } from "@blw/shared";
@@ -36,8 +36,8 @@ vi.mock("../hooks.js", () => ({
   }),
 }));
 
-import { ConfirmSheet } from "../../../components/ui/ConfirmSheet.js";
-import { MealCard, MealDeleteSheet, ServeLogList } from "./ServeLogList.js";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog.js";
+import { MealCard, MealDeleteDialog, ServeLogList } from "./ServeLogList.js";
 
 interface El {
   type: unknown;
@@ -75,7 +75,7 @@ const MEAL: MealItem = {
 };
 
 function question(meal: MealItem, events: string[] = []): El {
-  return (MealDeleteSheet as unknown as (props: unknown) => El)({
+  return (MealDeleteDialog as unknown as (props: unknown) => El)({
     meal,
     babyId: "baby-1",
     open: true,
@@ -93,19 +93,26 @@ beforeEach(() => {
   h.meals = [MEAL];
 });
 
-describe("MealDeleteSheet", () => {
+describe("MealDeleteDialog", () => {
   it("asks a question with one short line (item 607), deleting nothing until the red button", () => {
-    const sheet = question(MEAL);
-    expect(sheet.type).toBe(ConfirmSheet);
-    expect(sheet.props.title).toBe("Delete this meal?");
-    expect(text(sheet.props.children)).toBe("This can't be undone.");
-    expect(sheet.props.confirmLabel).toBe("Delete");
+    const dialog = question(MEAL);
+    expect(dialog.type).toBe(ConfirmDialog);
+    expect(dialog.props.title).toBe("Delete this meal?");
+    expect(text(dialog.props.children)).toBe("This can't be undone.");
+    expect(dialog.props.confirmLabel).toBe("Delete");
     expect(h.mutation.calls).toEqual([]);
   });
 
   it("keeps the same one line for a meal from storage — no storage explanation", () => {
     const fromStorage = { ...MEAL, foods: [{ ...MEAL.foods[0]!, storageItemId: "s-1" }] };
     expect(text(question(fromStorage).props.children)).toBe("This can't be undone.");
+  });
+
+  it("backs out (Cancel, overlay, Escape) through onClose, deleting nothing (item 610)", () => {
+    const events: string[] = [];
+    (question(MEAL, events).props.onClose as () => void)();
+    expect(events).toEqual(["closed"]);
+    expect(h.mutation.calls).toEqual([]);
   });
 
   it("deletes on the red button, then closes and hands off to onDeleted", () => {
@@ -117,7 +124,7 @@ describe("MealDeleteSheet", () => {
     expect(events).toEqual(["closed", "deleted"]);
   });
 
-  it("shows pending, and keeps the sheet open with the reason when the delete fails", () => {
+  it("shows pending, and keeps the pop-up open with the reason when the delete fails", () => {
     h.mutation.isPending = true;
     expect(question(MEAL).props.pending).toBe(true);
     h.mutation.isPending = false;
@@ -133,19 +140,19 @@ describe("ServeLogList delete flow", () => {
   }
 
   it("opens the question for the meal whose kebab asked, without deleting", () => {
-    expect(find(list(), MealDeleteSheet)).toBeNull();
+    expect(find(list(), MealDeleteDialog)).toBeNull();
     (find(list(), MealCard)!.props.onRequestDelete as (meal: MealItem) => void)(MEAL);
-    const sheet = find(list(), MealDeleteSheet);
-    expect(sheet!.props.meal).toBe(MEAL);
+    const dialog = find(list(), MealDeleteDialog);
+    expect(dialog!.props.meal).toBe(MEAL);
     expect(h.mutation.calls).toEqual([]);
   });
 
   it("keeps the question open after the row leaves the list (the delete is optimistic), until closed", () => {
     (find(list(), MealCard)!.props.onRequestDelete as (meal: MealItem) => void)(MEAL);
     h.meals = [];
-    const sheet = find(list(), MealDeleteSheet);
-    expect(sheet).not.toBeNull();
-    (sheet!.props.onClose as () => void)();
-    expect(find(list(), MealDeleteSheet)).toBeNull();
+    const dialog = find(list(), MealDeleteDialog);
+    expect(dialog).not.toBeNull();
+    (dialog!.props.onClose as () => void)();
+    expect(find(list(), MealDeleteDialog)).toBeNull();
   });
 });

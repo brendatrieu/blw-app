@@ -87,6 +87,12 @@ interface MultiComboboxProps {
   createLabel?: (query: string) => string;
   /** See `MultiComboboxMode`. Defaults to "multi". */
   mode?: MultiComboboxMode;
+  /**
+   * Opens the menu IN FLOW, pushing what follows down, instead of floating
+   * over it — for a combobox inside a scrolling pop-up, whose overflow would
+   * clip a floating menu (the delete question's "Replace with…", item 610).
+   */
+  inline?: boolean;
 }
 
 /** Case-insensitive substring match of `query` against each option's label. */
@@ -538,6 +544,8 @@ export function MultiComboboxOptionList({
 interface MultiComboboxPanelProps extends MultiComboboxOptionListProps {
   /** Closes the menu only — must never touch selection or the query. */
   onDone: () => void;
+  /** See `MultiComboboxProps.inline`. */
+  inline?: boolean;
 }
 
 /**
@@ -554,9 +562,11 @@ interface MultiComboboxPanelProps extends MultiComboboxOptionListProps {
  * keyboard/pointer events (this repo's tests render with `renderToString`
  * under a Node test environment, with no DOM to dispatch events into).
  */
-export function MultiComboboxPanel({ onDone, ...listProps }: MultiComboboxPanelProps) {
+export function MultiComboboxPanel({ onDone, inline = false, ...listProps }: MultiComboboxPanelProps) {
   return (
-    <div className="absolute top-full left-0 z-20 mt-1 w-full overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-lg)]">
+    <div
+      className={`${inline ? "" : "absolute top-full left-0 z-20 "}mt-1 w-full overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-lg)]`}
+    >
       <MultiComboboxOptionList {...listProps} />
       <button
         type="button"
@@ -717,6 +727,7 @@ export function MultiCombobox({
   onCreate,
   createLabel,
   mode = "multi",
+  inline = false,
 }: MultiComboboxProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -892,6 +903,7 @@ export function MultiCombobox({
 
         {open && !disabled && (
           <MultiComboboxPanel
+            inline={inline}
             listboxId={listboxId}
             options={filtered}
             selectedValues={value}

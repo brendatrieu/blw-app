@@ -99,7 +99,7 @@ vi.mock("../features/catalog/hooks.js", () => ({
 }));
 
 import { Button } from "../components/ui/Button.js";
-import { ConfirmSheet } from "../components/ui/ConfirmSheet.js";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog.js";
 import { SingleFoodPicker } from "../features/catalog/components/FoodPicker.js";
 import { CustomFoodActions, DeleteFoodQuestion, DeletedFoodNotice, RESTORE_HINT } from "./FoodDetailPage.js";
 
@@ -216,7 +216,7 @@ describe("the delete question's usage check (item 600)", () => {
     h.fresh.data = { ...FOOD, usage: UNUSED };
     h.fresh.isFetchedAfterMount = false;
     const tree = question({ ...FOOD, usage: UNUSED });
-    expect(tree.type).toBe(ConfirmSheet);
+    expect(tree.type).toBe(ConfirmDialog);
     expect(tree.props.title).toBe("Delete cauliflower?");
     expect(text(tree).join(" ")).toContain("Checking where it's used…");
     expect(tree.props.onConfirm).toBeUndefined();
@@ -282,6 +282,22 @@ describe("a custom food still in use", () => {
     expect(picker!.props.value).toBe(CATALOG_CAULIFLOWER.id);
     // The food being replaced is never offered as its own replacement.
     expect(picker!.props.excludeId).toBe(FOOD.id);
+    // Its list opens in flow inside the pop-up, so the pop-up grows to hold
+    // it instead of clipping it (item 610: fits a 390x844 screen).
+    expect(picker!.props.inline).toBe(true);
+  });
+
+  it("backs out (Cancel, overlay, Escape) through onClose alone, deleting and replacing nothing (item 610)", () => {
+    h.store.i = 0;
+    const closed: string[] = [];
+    const tree = (DeleteFoodQuestion as unknown as (props: { food: FoodDetail; onClose: () => void }) => Rendered)({
+      food: FOOD,
+      onClose: () => closed.push("closed"),
+    });
+    (tree.props.onClose as () => void)();
+    expect(closed).toEqual(["closed"]);
+    expect(h.calls.deletes).toEqual([]);
+    expect(h.calls.replaces).toEqual([]);
   });
 
   it("replaces with the picked food and lands on its page", () => {

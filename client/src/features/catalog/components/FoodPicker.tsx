@@ -134,6 +134,8 @@ interface SingleFoodPickerProps {
   placeholder?: string;
   /** A food not to offer — the one a replace is moving away from. */
   excludeId?: string;
+  /** See `MultiCombobox`'s `inline`. */
+  inline?: boolean;
 }
 
 /**
@@ -144,7 +146,7 @@ interface SingleFoodPickerProps {
  * could only ever match nothing. `mode="single"` so a pick fills the field and
  * closes the menu, rather than staying open for a second food (item 230).
  */
-export function SingleFoodPicker({ id, value, onChange, placeholder, excludeId }: SingleFoodPickerProps) {
+export function SingleFoodPicker({ id, value, onChange, placeholder, excludeId, inline }: SingleFoodPickerProps) {
   const { data, isLoading } = useFoods();
   const foods = data?.foods ?? [];
   const options = useMemo(
@@ -156,6 +158,7 @@ export function SingleFoodPicker({ id, value, onChange, placeholder, excludeId }
     <MultiCombobox
       id={id}
       mode="single"
+      inline={inline}
       options={options}
       value={value ? [value] : []}
       onChange={(next) => onChange(resolveSingleSelection(next))}

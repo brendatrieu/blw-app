@@ -20,7 +20,7 @@ import { RatingHistory, RatingSummaryRow } from "../features/tracking/components
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { CardLink } from "../components/ui/Card.js";
-import { ConfirmSheet } from "../components/ui/ConfirmSheet.js";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog.js";
 import { Field } from "../components/ui/Field.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
@@ -102,7 +102,7 @@ export function sameNameFood(foods: FoodListItem[], food: Pick<FoodDetail, "id" 
 /**
  * Edit + Delete for a food the parent owns (item 181). Delete only asks
  * (item 599): it opens `DeleteFoodQuestion`, and nothing is deleted until
- * that sheet's red button is tapped.
+ * that pop-up's red button is tapped.
  *
  * Exported so a render test can pin the Edit/Delete markup directly.
  */
@@ -126,8 +126,8 @@ export function CustomFoodActions({ food }: CustomFoodActionsProps) {
 /**
  * The delete question for a custom food (items 599-600). Delete is soft
  * (ledger 537), so nothing blocks it. Where the food is used is fetched FRESH
- * when the sheet opens — the page's cached detail can predate the meal or
- * storage item that now uses it — and the sheet says "Checking where it's
+ * when the pop-up opens — the page's cached detail can predate the meal or
+ * storage item that now uses it — and the pop-up says "Checking where it's
  * used…" until that answer is in. Used: it names where (zero counts left out)
  * and offers "Replace with…" another food, which moves every entry across and
  * deletes this one for good, or "Delete anyway", which leaves past entries
@@ -148,7 +148,7 @@ export function DeleteFoodQuestion({ food, onClose }: { food: FoodDetail; onClos
   const { data } = useFoods();
   const foods = data?.foods ?? [];
 
-  // Only an answer fetched since the sheet opened counts — never the cache.
+  // Only an answer fetched since the pop-up opened counts — never the cache.
   const checked = isFetchedAfterMount && !checkFailed ? fetched : undefined;
   const usedIn = checked?.usage ? usedInPhrase(checked.usage) : null;
   const replacementId = pickedId ?? sameNameFood(foods, food)?.id ?? "";
@@ -162,7 +162,7 @@ export function DeleteFoodQuestion({ food, onClose }: { food: FoodDetail; onClos
       : undefined;
 
   return (
-    <ConfirmSheet
+    <ConfirmDialog
       open
       onClose={onClose}
       title={`Delete ${food.name}?`}
@@ -191,7 +191,13 @@ export function DeleteFoodQuestion({ food, onClose }: { food: FoodDetail; onClos
         <>
           <p className="font-medium text-[var(--color-text)]">{usedIn}.</p>
           <Field label="Replace with…" htmlFor="replace-food">
-            <SingleFoodPicker id="replace-food" value={replacementId} onChange={setPickedId} excludeId={food.id} />
+            <SingleFoodPicker
+              id="replace-food"
+              value={replacementId}
+              onChange={setPickedId}
+              excludeId={food.id}
+              inline
+            />
           </Field>
           <Button
             type="button"
@@ -211,7 +217,7 @@ export function DeleteFoodQuestion({ food, onClose }: { food: FoodDetail; onClos
       ) : (
         <p>{RESTORE_HINT}</p>
       )}
-    </ConfirmSheet>
+    </ConfirmDialog>
   );
 }
 

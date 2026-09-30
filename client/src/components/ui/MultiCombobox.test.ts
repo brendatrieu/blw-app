@@ -472,6 +472,26 @@ describe("MultiComboboxPanel (render)", () => {
     expect(listboxEnd).toBeGreaterThan(-1);
     expect(doneStart).toBeGreaterThan(listboxEnd);
   });
+
+  it("floats under the field by default, but opens in flow when inline (item 610: inside a scrolling pop-up)", () => {
+    const panel = (inline?: boolean) =>
+      renderToString(
+        createElement(MultiComboboxPanel, {
+          listboxId: "veg-listbox",
+          options: OPTIONS,
+          selectedValues: [],
+          highlighted: -1,
+          emptyMessage: "No matches",
+          onHoverOption: () => {},
+          onSelectOption: () => {},
+          onDone: () => {},
+          ...(inline === undefined ? {} : { inline }),
+        }),
+      ).match(/^<div class="([^"]*)"/)![1]!;
+    expect(panel()).toContain("absolute top-full");
+    expect(panel(true)).not.toContain("absolute");
+    expect(panel(true)).toContain("w-full");
+  });
 });
 
 describe("MultiComboboxOptionList (render)", () => {

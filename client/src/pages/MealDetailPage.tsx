@@ -7,7 +7,7 @@ import {
   RECIPE_RATING_KEY,
   mealRatingRows,
 } from "../features/tracking/components/MealRatingsField.js";
-import { MealDeleteSheet } from "../features/tracking/components/ServeLogList.js";
+import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
 import { DeletedMark, FoodNames } from "../features/catalog/components/DeletedMark.js";
@@ -168,7 +168,7 @@ export function MealDetailPage() {
         >
           Delete
         </button>
-        <MealDeleteSheet
+        <MealDeleteDialog
           meal={meal}
           babyId={meal.babyId}
           open={confirmingDelete}

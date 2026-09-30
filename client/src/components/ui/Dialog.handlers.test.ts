@@ -6,7 +6,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => {
-  const store = { refs: [] as { current: unknown }[], r: 0, cleanups: [] as (() => void)[] };
+  const store = {
+    refs: [] as { current: unknown }[],
+    r: 0,
+    cleanups: [] as (() => void)[],
+    deps: [] as (readonly unknown[] | undefined)[],
+    e: 0,
+  };
   return {
     store,
     useRef: (init: unknown) => {
@@ -14,7 +20,13 @@ const h = vi.hoisted(() => {
       if (!(i in store.refs)) store.refs[i] = { current: init };
       return store.refs[i];
     },
-    useEffect: (effect: () => void | (() => void)) => {
+    // Honours deps like React: an effect whose deps are unchanged since the
+    // last render is skipped, so a re-render can be told apart from a re-open.
+    useEffect: (effect: () => void | (() => void), deps?: readonly unknown[]) => {
+      const i = store.e++;
+      const prev = store.deps[i];
+      if (deps && prev && deps.length === prev.length && deps.every((dep, k) => Object.is(dep, prev[k]))) return;
+      store.deps[i] = deps;
       const cleanup = effect();
       if (typeof cleanup === "function") store.cleanups.push(cleanup);
     },
@@ -22,6 +34,8 @@ const h = vi.hoisted(() => {
       store.refs = [];
       store.r = 0;
       store.cleanups = [];
+      store.deps = [];
+      store.e = 0;
     },
   };
 });
@@ -37,6 +51,7 @@ vi.mock("react-dom", () => ({
 }));
 
 import { Dialog } from "./Dialog.js";
+import { Sheet } from "./Sheet.js";
 
 interface Rendered {
   type: unknown;
@@ -80,6 +95,7 @@ function fakeDocument(rootOverflow = "", bodyOverflow = "") {
 
 function open(onClose: () => void) {
   h.store.r = 0;
+  h.store.e = 0;
   return (Dialog as unknown as (props: unknown) => Rendered)({
     open: true,
     onClose,
@@ -166,6 +182,18 @@ describe("Dialog handlers (item 309)", () => {
     // Any other key is left entirely alone.
     listeners[0]!({ key: "a", preventDefault: () => {} });
     expect(closes).toBe(1);
+  });
+
+  it("leaves an Escape a control inside already handled alone, so an open list closes without the pop-up (item 610)", () => {
+    h.reset();
+    const { listeners } = fakeDocument();
+    let closes = 0;
+    open(() => {
+      closes += 1;
+    });
+    const handled = { key: "Escape", defaultPrevented: true, preventDefault: () => {} };
+    (listeners[0] as unknown as (event: typeof handled) => void)(handled);
+    expect(closes).toBe(0);
   });
 
   it("traps Tab inside the panel: forward from the last control wraps to the first, Shift+Tab from the first wraps to the last", () => {
@@ -255,5 +283,72 @@ describe("Dialog handlers (item 309)", () => {
     expect(() => {
       for (const cleanup of h.store.cleanups) cleanup();
     }).not.toThrow();
+  });
+
+  it("reads onClose through a ref: a re-render with a fresh arrow neither refocuses nor re-locks, and Escape calls the latest (item 610)", () => {
+    h.reset();
+    const { listeners } = fakeDocument();
+    const focused: string[] = [];
+    h.store.refs[0] = { current: { focus: () => focused.push("panel"), querySelectorAll: () => [] } };
+    const closed: string[] = [];
+    open(() => closed.push("first render"));
+    open(() => closed.push("second render"));
+    expect(focused).toEqual(["panel"]);
+    expect(listeners).toHaveLength(1);
+    listeners[0]!({ key: "Escape", preventDefault: () => {} });
+    expect(closed).toEqual(["second render"]);
+  });
+
+  it("shares ONE top-modal stack with Sheet: a pop-up over a sheet takes Escape alone, then the sheet does (item 610)", () => {
+    h.reset();
+    const { listeners } = fakeDocument();
+    fakeWindow();
+    const closed: string[] = [];
+    h.store.r = 0;
+    h.store.e = 0;
+    (Sheet as unknown as (props: unknown) => Rendered)({
+      open: true,
+      onClose: () => closed.push("sheet"),
+      title: "Serve",
+      children: "fields",
+    });
+    const sheetCleanups = h.store.cleanups;
+    // A separate Dialog instance on top: its own refs and effects.
+    h.reset();
+    open(() => closed.push("dialog"));
+    const dialogCleanups = h.store.cleanups;
+    const escape = () => listeners.forEach((listener) => listener({ key: "Escape", preventDefault: () => {} }));
+
+    escape();
+    expect(closed).toEqual(["dialog"]);
+    dialogCleanups.forEach((cleanup) => cleanup());
+    escape();
+    expect(closed).toEqual(["dialog", "sheet"]);
+    sheetCleanups.forEach((cleanup) => cleanup());
+  });
+
+  it("and the other way round: a sheet over a pop-up takes Escape alone", () => {
+    h.reset();
+    const { listeners } = fakeDocument();
+    fakeWindow();
+    const closed: string[] = [];
+    open(() => closed.push("dialog"));
+    const dialogCleanups = h.store.cleanups;
+    h.reset();
+    (Sheet as unknown as (props: unknown) => Rendered)({
+      open: true,
+      onClose: () => closed.push("sheet"),
+      title: "Guide",
+      children: "steps",
+    });
+    const sheetCleanups = h.store.cleanups;
+    const escape = () => listeners.forEach((listener) => listener({ key: "Escape", preventDefault: () => {} }));
+
+    escape();
+    expect(closed).toEqual(["sheet"]);
+    sheetCleanups.forEach((cleanup) => cleanup());
+    escape();
+    expect(closed).toEqual(["sheet", "dialog"]);
+    dialogCleanups.forEach((cleanup) => cleanup());
   });
 });

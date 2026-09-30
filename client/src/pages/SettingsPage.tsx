@@ -24,6 +24,7 @@ import { getStoredTheme, setTheme, type ThemePreference } from "../theme.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Card } from "../components/ui/Card.js";
 import { Button } from "../components/ui/Button.js";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog.js";
 import { Field } from "../components/ui/Field.js";
 import { KeepButton } from "../components/ui/KeepButton.js";
 import { Input, Textarea } from "../components/ui/Input.js";
@@ -188,12 +189,19 @@ function AddBabySheet({ open, onClose }: { open: boolean; onClose: () => void })
   );
 }
 
-function BabyRow({ baby }: { baby: Baby }) {
+/** The delete-baby question's one line: the server removes their meals,
+ * allergen progress and symptom checks with them (`DELETE /api/babies/:id`
+ * cascades; chats are kept, only unlinked). */
+export const DELETE_BABY_LINE = "Everything logged for them goes too, for good.";
+
+/** Exported so a handler test can drive it as a plain function. */
+export function BabyRow({ baby }: { baby: Baby }) {
   const updateBaby = useUpdateBaby();
   const deleteBaby = useDeleteBaby();
   const { activeBaby, setActiveBabyId } = useActiveBaby();
 
   const [editing, setEditing] = useState(false);
+  const [askingDelete, setAskingDelete] = useState(false);
   const [values, setValues] = useState<BabyFormValues>({
     name: baby.name,
     birthDate: baby.birthDate,
@@ -239,13 +247,11 @@ function BabyRow({ baby }: { baby: Baby }) {
     );
   }
 
+  // Deleting a baby cascades on the server to everything logged for them
+  // (meals, allergen progress, symptom checks), so it asks first (items 606, 610) rather
+  // than offering an undo that could not restore it.
   function handleDelete() {
-    // Deleting a baby cascades to their whole log on the server, so make the
-    // parent confirm rather than offering an undo that cannot restore it.
-    const confirmed = window.confirm(
-      `Delete ${baby.name}? This also removes their food log and cannot be undone.`,
-    );
-    if (!confirmed) return;
+    setAskingDelete(false);
     if (activeBaby?.id === baby.id) setActiveBabyId(null);
     deleteBaby.mutate(baby.id);
   }
@@ -281,11 +287,28 @@ function BabyRow({ baby }: { baby: Baby }) {
           >
             {baby.archived ? "Restore" : "Archive"}
           </Button>
-          <button type="button" disabled={deleteBaby.isPending} onClick={handleDelete} className={dangerGhostButtonClass}>
+          <button
+            type="button"
+            disabled={deleteBaby.isPending}
+            onClick={() => setAskingDelete(true)}
+            className={dangerGhostButtonClass}
+          >
             Delete
           </button>
         </div>
       </Card>
+
+      <ConfirmDialog
+        open={askingDelete}
+        onClose={() => setAskingDelete(false)}
+        title={`Delete ${baby.name}?`}
+        confirmLabel="Delete"
+        pendingLabel="Deleting…"
+        pending={deleteBaby.isPending}
+        onConfirm={handleDelete}
+      >
+        <p>{DELETE_BABY_LINE}</p>
+      </ConfirmDialog>
 
       <Sheet open={editing} onClose={() => setEditing(false)} title={`Edit ${baby.name}`} showClose>
         <form className="flex flex-col gap-3" onSubmit={handleSave} noValidate>

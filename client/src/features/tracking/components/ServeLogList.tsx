@@ -8,7 +8,7 @@ import { MealActionsMenu } from "./MealActionsMenu.js";
 import { Badge } from "../../catalog/components/Badge.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
-import { ConfirmSheet } from "../../../components/ui/ConfirmSheet.js";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog.js";
 import { SkeletonList } from "../../../components/ui/Skeleton.js";
 
 /** yyyy-mm-dd in the viewer's local timezone. The log itself is no longer
@@ -55,12 +55,12 @@ export function hasStorageFood(foods: readonly MealFood[]): boolean {
   return foods.some((food) => Boolean(food.storageItemId));
 }
 
-export interface MealDeleteSheetProps {
+export interface MealDeleteDialogProps {
   meal: MealItem;
   babyId: string;
   open: boolean;
   onClose: () => void;
-  /** Fired on a successful delete, after the sheet closes — `MealDetailPage`
+  /** Fired on a successful delete, after the pop-up closes — `MealDetailPage`
    * uses this to navigate away; the list leaves it unset since the row just
    * disappears. */
   onDeleted?: () => void;
@@ -70,13 +70,13 @@ export interface MealDeleteSheetProps {
  * The meal delete question (item 599), shared by the food log list (one per
  * list, for the meal whose kebab asked) and `MealDetailPage`'s Delete button.
  * Nothing is deleted until the red button is tapped. A failed delete keeps the
- * sheet open with the reason, so the parent can try again.
+ * pop-up open with the reason, so the parent can try again.
  */
-export function MealDeleteSheet({ meal, babyId, open, onClose, onDeleted }: MealDeleteSheetProps) {
+export function MealDeleteDialog({ meal, babyId, open, onClose, onDeleted }: MealDeleteDialogProps) {
   const deleteMeal = useDeleteMeal(babyId);
 
   return (
-    <ConfirmSheet
+    <ConfirmDialog
       open={open}
       onClose={onClose}
       title="Delete this meal?"
@@ -94,13 +94,13 @@ export function MealDeleteSheet({ meal, babyId, open, onClose, onDeleted }: Meal
       error={deleteMeal.isError ? "Couldn't delete that — try again." : undefined}
     >
       <p>This can't be undone.</p>
-    </ConfirmSheet>
+    </ConfirmDialog>
   );
 }
 
 export interface MealCardProps {
   meal: MealItem;
-  /** Asks to delete this meal — the list owns the one `MealDeleteSheet`. */
+  /** Asks to delete this meal — the list owns the one `MealDeleteDialog`. */
   onRequestDelete: (meal: MealItem) => void;
   /** False renders the info block as plain content instead of a Link to
    * `/log-meal?edit=:id` — for a page that must not link to itself.
@@ -265,7 +265,7 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true }: 
         </ul>
       )}
       {pendingDelete && (
-        <MealDeleteSheet meal={pendingDelete} babyId={babyId} open onClose={() => setPendingDelete(null)} />
+        <MealDeleteDialog meal={pendingDelete} babyId={babyId} open onClose={() => setPendingDelete(null)} />
       )}
     </section>
   );

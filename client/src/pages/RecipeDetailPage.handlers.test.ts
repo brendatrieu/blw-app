@@ -1,5 +1,5 @@
-// Item 599: a custom recipe is deleted only from the "Delete <title>?" sheet's
-// red button. Called as a plain function with the hooks mocked (idiom from
+// Items 599, 610: a custom recipe is deleted only from the "Delete <title>?"
+// pop-up's red button. Called as a plain function with the hooks mocked (idiom from
 // FoodDetailPage.handlers).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -40,7 +40,7 @@ vi.mock("../features/catalog/hooks.js", () => ({
 
 import { ApiError } from "../lib/api.js";
 import { Button } from "../components/ui/Button.js";
-import { ConfirmSheet } from "../components/ui/ConfirmSheet.js";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog.js";
 import { CustomRecipeActions } from "./RecipeDetailPage.js";
 
 interface El {
@@ -64,7 +64,7 @@ function render(): El {
   h.store.i = 0;
   return (CustomRecipeActions as unknown as (props: unknown) => El)({ recipe: { id: "recipe-9", title: "Lentil mash" } });
 }
-const sheetOf = (tree: El) => find(tree, (el) => el.type === ConfirmSheet)!;
+const dialogOf = (tree: El) => find(tree, (el) => el.type === ConfirmDialog)!;
 
 beforeEach(() => {
   h.store.states = [];
@@ -74,21 +74,29 @@ beforeEach(() => {
 
 describe("CustomRecipeActions delete question (item 599)", () => {
   it("Delete opens the question, deleting nothing", () => {
-    expect(sheetOf(render()).props.open).toBe(false);
+    expect(dialogOf(render()).props.open).toBe(false);
     const del = find(render(), (el) => el.type === Button && el.props.children === "Delete")!;
     (del.props.onClick as () => void)();
-    const sheet = sheetOf(render());
-    expect(sheet.props.open).toBe(true);
-    expect(sheet.props.title).toBe("Delete Lentil mash?");
-    expect(sheet.props.children).toMatchObject({
+    const dialog = dialogOf(render());
+    expect(dialog.props.open).toBe(true);
+    expect(dialog.props.title).toBe("Delete Lentil mash?");
+    expect(dialog.props.children).toMatchObject({
       props: { children: "This can't be undone." },
     });
-    expect(sheet.props.confirmLabel).toBe("Delete");
+    expect(dialog.props.confirmLabel).toBe("Delete");
+    expect(h.mutation.calls).toEqual([]);
+  });
+
+  it("backs out (Cancel, overlay, Escape) through onClose, deleting nothing (item 610)", () => {
+    const del = find(render(), (el) => el.type === Button && el.props.children === "Delete")!;
+    (del.props.onClick as () => void)();
+    (dialogOf(render()).props.onClose as () => void)();
+    expect(dialogOf(render()).props.open).toBe(false);
     expect(h.mutation.calls).toEqual([]);
   });
 
   it("deletes on the red button and returns to Recipes", () => {
-    (sheetOf(render()).props.onConfirm as () => void)();
+    (dialogOf(render()).props.onConfirm as () => void)();
     expect(h.mutation.calls.map((call) => call.id)).toEqual(["recipe-9"]);
     h.mutation.calls[0]!.options.onSuccess!();
     expect(h.navigations).toEqual(["/recipes"]);
@@ -96,14 +104,14 @@ describe("CustomRecipeActions delete question (item 599)", () => {
 
   it("shows pending, and says what is in the way on a 409", () => {
     h.mutation.isPending = true;
-    expect(sheetOf(render()).props.pending).toBe(true);
+    expect(dialogOf(render()).props.pending).toBe(true);
     Object.assign(h.mutation, {
       isPending: false,
       isError: true,
       error: new ApiError(409, "conflict", { error: "conflict", mealCount: 2, storageCount: 0 }),
     });
-    expect(sheetOf(render()).props.error).toBe("Used in 2 meals — remove those first.");
+    expect(dialogOf(render()).props.error).toBe("Used in 2 meals — remove those first.");
     h.mutation.error = new Error("offline");
-    expect(sheetOf(render()).props.error).toBe("Couldn't delete that — try again.");
+    expect(dialogOf(render()).props.error).toBe("Couldn't delete that — try again.");
   });
 });
