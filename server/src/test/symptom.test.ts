@@ -208,7 +208,8 @@ function snapshotItem(overrides: Partial<ExposureSnapshotItem> = {}): ExposureSn
     foodName: "Carrot",
     servedAt: new Date().toISOString(),
     hoursBeforeOnset: 1,
-    timesServedEver: 10,
+    // Second to third time: an everyday non-allergen food is not listed at all.
+    timesServedEver: 2,
     firstExposure: false,
     allergenClass: null,
     isTop9: false,
@@ -224,7 +225,7 @@ describe("rankFallbackCandidates", () => {
   it("puts a brand-new top-9 allergen inside the immediate window first", () => {
     const candidates = rankFallbackCandidates(
       [
-        snapshotItem({ foodSlug: "carrot", foodName: "Carrot", hoursBeforeOnset: 1 }),
+        snapshotItem({ foodSlug: "carrot", foodName: "Carrot", hoursBeforeOnset: 1, timesServedEver: 3 }),
         snapshotItem({
           foodSlug: "peanut-butter",
           foodName: "Peanut butter",
@@ -245,7 +246,36 @@ describe("rankFallbackCandidates", () => {
       reactionType: "ige_immediate",
     });
     expect(candidates[0]!.windowFit).toMatch(/minutes-to-2-hours/);
-    expect(candidates[1]!.likelihood).toBe("low");
+    expect(candidates[1]!.likelihood).toBe("medium");
+  });
+
+  it("leaves out foods the baby eats regularly unless they are a top-9 allergen (owner, 2026-09-30)", () => {
+    const candidates = rankFallbackCandidates(
+      [
+        snapshotItem({ foodSlug: "apple", foodName: "Apple", hoursBeforeOnset: 1, timesServedEver: 12 }),
+        snapshotItem({ foodSlug: "cinnamon", foodName: "Cinnamon", hoursBeforeOnset: 1, timesServedEver: 4 }),
+        snapshotItem({ foodSlug: "oats", foodName: "Oats", hoursBeforeOnset: 3, timesServedEver: 1, firstExposure: true }),
+        snapshotItem({
+          foodSlug: "egg",
+          foodName: "Egg",
+          hoursBeforeOnset: 2,
+          timesServedEver: 9,
+          allergenClass: "egg",
+          isTop9: true,
+        }),
+      ],
+      { symptoms: ["hives_localized"] },
+    );
+    // New oats and established egg stay; everyday apple and cinnamon do not.
+    expect(candidates.map((candidate) => candidate.foodSlug).sort()).toEqual(["egg", "oats"]);
+  });
+
+  it("returns nothing when only everyday non-allergen foods were eaten", () => {
+    expect(
+      rankFallbackCandidates([snapshotItem({ foodSlug: "apple", foodName: "Apple", timesServedEver: 12 })], {
+        symptoms: ["hives_localized"],
+      }),
+    ).toEqual([]);
   });
 
   it("prefers the older serving when the symptoms are delayed-type", () => {
@@ -646,6 +676,33 @@ describe("POST /api/ai/symptom-check", () => {
       expect(body.result.kind).toBe("fallback");
       if (body.result.kind !== "fallback") throw new Error("unreachable");
       expect(body.result.candidates).toEqual([]);
+      // Nothing listed, so no advice about "the foods listed above".
+      expect(body.result.nextSteps.join(" ")).not.toMatch(/listed above|this list|list above/i);
+      expect(body.result.nextSteps.length).toBeGreaterThan(0);
+    });
+
+    it("lists only new or allergenic foods, with the list advice kept (owner, 2026-09-30)", async () => {
+      await boot(null);
+      const foods = await seedFoods(db);
+      // Carrot served five times already: an everyday non-allergen food.
+      await insertMeals(
+        db,
+        Array.from({ length: 5 }, (_unused, index) => ({
+          babyId,
+          foodId: foods.carrot.id,
+          servedAt: new Date(Date.now() - (index + 1) * HOUR_MS),
+        })),
+      );
+      const everyday = (await post({ babyId, survey: survey() })).json() as SymptomCheckResponse;
+      if (everyday.result.kind !== "fallback") throw new Error("expected the base result");
+      expect(everyday.result.candidates).toEqual([]);
+      expect(everyday.result.nextSteps.join(" ")).not.toMatch(/listed above/i);
+
+      await insertMeals(db, [{ babyId, foodId: foods.peanutButter.id, servedAt: new Date(Date.now() - 45 * 60_000) }]);
+      const withAllergen = (await post({ babyId, survey: survey() })).json() as SymptomCheckResponse;
+      if (withAllergen.result.kind !== "fallback") throw new Error("expected the base result");
+      expect(withAllergen.result.candidates.map((candidate) => candidate.foodSlug)).toEqual(["peanut-butter"]);
+      expect(withAllergen.result.nextSteps[0]).toMatch(/listed above/);
     });
   });
 

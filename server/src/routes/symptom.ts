@@ -37,6 +37,7 @@ import { notFound } from "../plugins/auth.js";
 import { buildExposureSnapshot, rankFallbackCandidates, type ExposureSnapshotItem } from "../ai/snapshot.js";
 import {
   FALLBACK_NEXT_STEPS,
+  FALLBACK_NEXT_STEPS_NO_CANDIDATES,
   FALLBACK_WHEN_TO_SEEK_HELP,
   analyzeSymptoms,
   type SymptomAnalysisOutcome,
@@ -82,12 +83,13 @@ function buildFallback(
   survey: SymptomSurvey,
   reason: SymptomFallbackResult["reason"],
 ): SymptomFallbackResult {
+  const candidates = rankFallbackCandidates(snapshot, survey);
   return {
     kind: "fallback",
     reason,
     triageLevel: FALLBACK_TRIAGE_LEVEL,
-    candidates: rankFallbackCandidates(snapshot, survey),
-    nextSteps: [...FALLBACK_NEXT_STEPS],
+    candidates,
+    nextSteps: [...(candidates.length > 0 ? FALLBACK_NEXT_STEPS : FALLBACK_NEXT_STEPS_NO_CANDIDATES)],
     whenToSeekHelp: [...FALLBACK_WHEN_TO_SEEK_HELP],
     disclaimer: SYMPTOM_DISCLAIMER,
   };

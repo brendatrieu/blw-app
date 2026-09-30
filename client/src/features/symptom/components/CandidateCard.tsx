@@ -57,8 +57,8 @@ export function CandidateList({ candidates }: { candidates: SymptomCandidate[] }
   if (candidates.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-[var(--color-border)] p-3 text-sm text-[var(--color-text-muted)]">
-        Nothing was logged in the seven days before this, so there is no food history to line the symptoms up against.
-        Keep logging meals and the next check will have more to work with.
+        Nothing new or allergenic was logged in the seven days before this. Foods your baby eats often are unlikely
+        causes.
       </p>
     );
   }

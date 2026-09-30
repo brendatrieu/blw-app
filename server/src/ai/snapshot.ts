@@ -244,6 +244,11 @@ interface ScoredCandidate {
  * Score = novelty weight x allergen weight x best window fit. Both reaction
  * windows are scored and the better one is kept, which is also what decides
  * the reported `reactionType`.
+ *
+ * Only plausible causes are listed: a top-9 allergen, or a food that is new
+ * to the baby (first to third time). A food the baby eats regularly and that
+ * is not a top-9 allergen — the everyday apple — is left out rather than
+ * padding the list as "low" (owner, 2026-09-30).
  */
 export function rankFallbackCandidates(
   snapshot: readonly ExposureSnapshotItem[],
@@ -254,6 +259,7 @@ export function rankFallbackCandidates(
 
   for (const item of snapshot) {
     const novelty = noveltyFor(item.timesServedEver);
+    if (novelty === "established" && !item.isTop9) continue;
     const immediate = immediateWindowFit(item.hoursBeforeOnset) * weights.immediate;
     const delayed = delayedWindowFit(item.hoursBeforeOnset) * weights.delayed;
 

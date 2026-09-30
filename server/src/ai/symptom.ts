@@ -338,6 +338,17 @@ export const FALLBACK_NEXT_STEPS: readonly string[] = [
   "Share this list with your pediatrician and let them decide what to test or reintroduce.",
 ];
 
+/**
+ * The same advice when the list came back empty (nothing new or allergenic
+ * was logged) — nothing "above" to hold off on or share.
+ */
+export const FALLBACK_NEXT_STEPS_NO_CANDIDATES: readonly string[] = [
+  "Write down exactly what your baby ate, when they ate it, and what you saw.",
+  "Photograph any rash or swelling now; it often fades before an appointment.",
+  "Keep logging every food as usual, so the next check has a fuller picture.",
+  "Tell your pediatrician what you saw and what your baby has eaten recently.",
+];
+
 export const FALLBACK_WHEN_TO_SEEK_HELP: readonly string[] = [
   "Any trouble breathing, wheezing, or noisy breathing — call emergency services.",
   "Swelling of the tongue or throat, drooling, or trouble swallowing — call emergency services.",
