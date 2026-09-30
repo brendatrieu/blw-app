@@ -62,6 +62,11 @@ describe("BottomNav", () => {
     expect(activeTabLabel(renderAt("/safety/choking"))).toBe("More");
   });
 
+  it("lights the More tab on the how-to guides, list and guide (item 608)", () => {
+    expect(activeTabLabel(renderAt("/guides"))).toBe("More");
+    expect(activeTabLabel(renderAt("/guides/how-to-log-a-meal"))).toBe("More");
+  });
+
   it("keeps Home exact — a nested route lights its own tab, not Home", () => {
     expect(activeTabLabel(renderAt("/"))).toBe("Home");
     expect(activeTabLabel(renderAt("/foods/banana"))).toBe("Foods");
@@ -109,6 +114,7 @@ describe("isMoreTabPath (the More tab's active rule)", () => {
     expect(isMoreTabPath("/feedbackery")).toBe(false);
     expect(isMoreTabPath("/recipes")).toBe(false);
     expect(isMoreTabPath("/safetyville")).toBe(false);
+    expect(isMoreTabPath("/guidesville")).toBe(false);
     expect(isMoreTabPath("/moreish")).toBe(false);
   });
 });
@@ -123,6 +129,8 @@ describe("resolveActiveTab (one rule for highlight AND aria-current)", () => {
       "/more",
       "/safety",
       "/safety/choking",
+      "/guides",
+      "/guides/how-to-log-a-meal",
       "/settings",
       "/favorites",
       "/chat/t1",

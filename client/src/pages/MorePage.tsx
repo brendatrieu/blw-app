@@ -32,6 +32,13 @@ const moreLinks: MoreRow[] = [
     description: "Choking, allergies, storage, and more — works offline.",
     emoji: "🛟",
   },
+  // Item 608: the how-to guides moved here from Learn, right under it.
+  {
+    to: "/guides",
+    label: "How-to guides",
+    description: "Step by step: recipes, meals, and storage.",
+    emoji: "📖",
+  },
   { to: "/favorites", label: "Favorites", description: "Recipes you've saved.", emoji: "❤️" },
   {
     to: "/symptom-check",

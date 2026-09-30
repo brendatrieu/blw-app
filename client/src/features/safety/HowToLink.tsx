@@ -9,7 +9,7 @@ import { getGuide } from "./content.js";
  * where it goes. It opens the guide in a Sheet over the form rather than
  * navigating: a parent is usually stuck partway through, and leaving the page
  * would unmount the form and throw away what they typed. The full guide page
- * stays at `/safety/<slug>` in Learn. An unknown slug renders nothing;
+ * is `/guides/<slug>`, under More. An unknown slug renders nothing;
  * `HowToLink.test.ts` pins every slug the app passes here to a real guide.
  */
 export function HowToLink({ slug }: { slug: string }) {

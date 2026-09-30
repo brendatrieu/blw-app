@@ -85,10 +85,10 @@ function isWithin(pathname: string, base: string): boolean {
  * for Recipes, so the safety library has no tab of its own any more — its
  * routes belong to More, which is where the "Learn" entry now lives, as do
  * the other More-page destinations (settings, favorites, chat, the symptom
- * checker). Pure and exported so the rule is pinned by a test.
+ * checker, the how-to guides). Pure and exported so the rule is pinned by a test.
  */
 export function isMoreTabPath(pathname: string): boolean {
-  return ["/more", "/safety", "/settings", "/favorites", "/chat", "/symptom-check", "/feedback"].some(
+  return ["/more", "/safety", "/guides", "/settings", "/favorites", "/chat", "/symptom-check", "/feedback"].some(
     (base) => isWithin(pathname, base),
   );
 }

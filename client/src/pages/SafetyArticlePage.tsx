@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { articleSlugSchema } from "@blw/shared";
-import { getGuide, getSafetyArticle } from "../features/safety/content.js";
+import { getSafetyArticle, type SafetyArticle } from "../features/safety/content.js";
 import { fromRouteFor, track } from "../lib/usage/track.js";
 import { Markdown } from "../lib/markdown/Markdown.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
@@ -28,9 +28,7 @@ function useArticleViewed(slug: string | undefined): void {
 
 export function SafetyArticlePage() {
   const { slug } = useParams<{ slug: string }>();
-  // A how-to guide renders on this same page (item 601); only safety
-  // articles report `article_viewed`, whose slug set is closed to them.
-  const article = slug ? (getSafetyArticle(slug) ?? getGuide(slug)) : undefined;
+  const article = slug ? getSafetyArticle(slug) : undefined;
   // Before the redirect below, so the hook order never depends on the slug.
   useArticleViewed(article?.slug);
 
@@ -40,13 +38,14 @@ export function SafetyArticlePage() {
     return <Navigate to="/safety" replace />;
   }
 
+  return <ArticleView article={article} back="/safety" />;
+}
+
+/** One article's page body, shared with the how-to guide page (item 608). */
+export function ArticleView({ article, back }: { article: SafetyArticle; back: string }) {
   return (
     <div className="flex flex-col gap-4 p-4">
-      <PageHeader
-        title={article.title}
-        description={article.summary}
-        leading={<BackButton fallback="/safety" />}
-      />
+      <PageHeader title={article.title} description={article.summary} leading={<BackButton fallback={back} />} />
 
       <Markdown content={article.body} />
     </div>

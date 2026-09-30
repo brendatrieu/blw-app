@@ -25,6 +25,7 @@ import { AllergenDetailPage } from "./pages/AllergenDetailPage.js";
 import { FavoritesPage } from "./pages/FavoritesPage.js";
 import { SafetyPage } from "./pages/SafetyPage.js";
 import { SafetyArticlePage } from "./pages/SafetyArticlePage.js";
+import { GuidePage, GuidesPage } from "./pages/GuidesPage.js";
 import { SymptomCheckPage } from "./pages/SymptomCheckPage.js";
 import { ChatPage } from "./pages/ChatPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
@@ -110,6 +111,9 @@ export function App() {
         <Route path="/favorites" element={<FavoritesPage />} />
         <Route path="/safety" element={<SafetyPage />} />
         <Route path="/safety/:slug" element={<SafetyArticlePage />} />
+        {/* Item 608: the how-to guides, reached from More. */}
+        <Route path="/guides" element={<GuidesPage />} />
+        <Route path="/guides/:slug" element={<GuidePage />} />
         <Route path="/symptom-check" element={<SymptomCheckPage />} />
         {/* Item 589: while AI is switched off, /chat falls through to Not found. */}
         {AI_FEATURES_ENABLED ? <Route path="/chat" element={<ChatPage />} /> : null}

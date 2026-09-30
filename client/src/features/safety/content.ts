@@ -79,8 +79,8 @@ export function getSafetyArticle(slug: string): SafetyArticle | undefined {
   return bySlug.get(slug);
 }
 
-// The "Using the app" how-to guides (item 601): same format, same page, but a
-// separate folder so they stay out of the AI safety corpus, which is built
+// The how-to guides (item 601; listed at /guides from More since item 608):
+// same format as the articles, but a separate folder so they stay out of the AI safety corpus, which is built
 // from `content/safety/` only (server/scripts/build-safety-corpus.mjs), and
 // out of chat citations, which resolve through `getSafetyArticle`. Their
 // screenshots live in client/public/guides/ (the image runtime cache keeps

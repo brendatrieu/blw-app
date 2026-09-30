@@ -1,4 +1,4 @@
-import { guideArticles, safetyArticles } from "../features/safety/content.js";
+import { safetyArticles, type SafetyArticle } from "../features/safety/content.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { CardLink } from "../components/ui/Card.js";
 
@@ -6,7 +6,7 @@ export function SafetyPage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <PageHeader
-        title="Safety Library"
+        title="Learn"
         description="Choking, allergies, storage, and more — every article here is saved on your device, so it's readable even with no signal."
       />
 
@@ -24,26 +24,21 @@ export function SafetyPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {safetyArticles.map((article) => (
-          <CardLink key={article.slug} to={`/safety/${article.slug}`} padding="sm" className="flex flex-col gap-1">
-            <span className="text-base font-semibold text-[var(--color-text)]">{article.title}</span>
-            <span className="text-sm text-[var(--color-text-muted)]">{article.summary}</span>
-          </CardLink>
-        ))}
-      </div>
+      <ArticleLinks articles={safetyArticles} base="/safety" />
+    </div>
+  );
+}
 
-      <section aria-labelledby="using-the-app" className="flex flex-col gap-2">
-        <h2 id="using-the-app" className="font-h2 text-[var(--color-text)]">
-          Using the app
-        </h2>
-        {guideArticles.map((guide) => (
-          <CardLink key={guide.slug} to={`/safety/${guide.slug}`} padding="sm" className="flex flex-col gap-1">
-            <span className="text-base font-semibold text-[var(--color-text)]">{guide.title}</span>
-            <span className="text-sm text-[var(--color-text-muted)]">{guide.summary}</span>
-          </CardLink>
-        ))}
-      </section>
+/** The article cards, shared by Learn and the How-to guides list (item 608). */
+export function ArticleLinks({ articles, base }: { articles: SafetyArticle[]; base: string }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {articles.map((article) => (
+        <CardLink key={article.slug} to={`${base}/${article.slug}`} padding="sm" className="flex flex-col gap-1">
+          <span className="text-base font-semibold text-[var(--color-text)]">{article.title}</span>
+          <span className="text-sm text-[var(--color-text-muted)]">{article.summary}</span>
+        </CardLink>
+      ))}
     </div>
   );
 }

@@ -83,6 +83,8 @@ describe("toRoutePattern", () => {
     ["/favorites", "/favorites"],
     ["/safety", "/safety"],
     ["/safety/gagging-vs-choking", "/safety/:slug"],
+    ["/guides", "/guides"],
+    ["/guides/how-to-log-a-meal", "/guides/:slug"],
     ["/symptom-check", "/symptom-check"],
     ["/chat", "/chat"],
     ["/chat/6f1c0b1a-0000-4000-8000-000000000005", "/chat/:threadId"],

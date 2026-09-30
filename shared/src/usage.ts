@@ -63,6 +63,9 @@ export const ROUTE_PATTERNS = [
   "/favorites",
   "/safety",
   "/safety/:slug",
+  /** The how-to guides, reached from More (item 608). */
+  "/guides",
+  "/guides/:slug",
   "/symptom-check",
   "/chat",
   "/chat/:threadId",

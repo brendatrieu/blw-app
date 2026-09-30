@@ -99,6 +99,7 @@ describe("MorePage (item 274)", () => {
     const rows = render().split(/<(?:a|button) /).slice(1);
     const expected = [
       { tag: "a", href: "/safety", emoji: "🛟", label: "Learn" },
+      { tag: "a", href: "/guides", emoji: "📖", label: "How-to guides" },
       { tag: "a", href: "/favorites", emoji: "❤️", label: "Favorites" },
       { tag: "a", href: "/symptom-check", emoji: "🩺", label: "Symptom Check" },
       { tag: "a", href: "/chat", emoji: "💬", label: "Chat" },
@@ -154,6 +155,14 @@ describe("MorePage (item 274)", () => {
     const html = render();
     expect(html).toContain("Little Meals v");
     expect(html).not.toContain("blw-app");
+  });
+
+  it("offers ONE How-to guides row opening /guides (item 608)", () => {
+    const rows = render().split(/<(?:a|button) /).slice(1);
+    const guides = rows.filter((row) => row.includes("How-to guides"));
+    expect(guides).toHaveLength(1);
+    expect(guides[0]).toContain('href="/guides"');
+    expect(guides[0]).toContain("Step by step: recipes, meals, and storage.");
   });
 
   it("changes nothing else on the page — same entries, same destinations", () => {
