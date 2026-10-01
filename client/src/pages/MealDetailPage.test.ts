@@ -102,6 +102,9 @@ describe("MealDetailPage", () => {
 
     expect(html).toContain("Avocado");
     expect(html).toContain("Chicken");
+    // Item 659: each food chip leads with a 24px plate.
+    expect(html).toContain("width:24px;height:24px;font-size:14px;background:var(--color-plate-fruit)");
+    expect(html).toContain("width:24px;height:24px;font-size:14px;background:var(--color-plate-protein)");
     expect(html).toContain("ate the whole thing");
     expect(html).toMatch(/2:05\s?PM/);
     expect(html).toContain(`href="/storage/${MEAL.foods[0]!.storageItemId}"`);

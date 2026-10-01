@@ -4,6 +4,7 @@ import type { StorageItem } from "@blw/shared";
 import { Badge } from "../../catalog/components/Badge.js";
 import { FoodNames } from "../../catalog/components/DeletedMark.js";
 import { emojiCluster, getFoodEmoji, type EmojiCluster } from "../../catalog/foodEmoji.js";
+import { FoodPlates } from "../../catalog/components/FoodPlate.js";
 import { bestByLabel, countdownLabel, LOCATION_LABEL, storageItemTitle, servingsLabel } from "../format.js";
 import { resolveFreshness } from "../freshness.js";
 
@@ -22,14 +23,14 @@ export function storageItemEmoji(item: StorageItem): string {
 
 /**
  * The card's leading glyph run: since item 347 a container holds a whole
- * meal, so it gets the meal row's emoji cluster — at most `max` food emoji
- * plus a "+N" for the rest. A recipe or label container names no foods, so
- * it falls back to the single stand-in `storageItemEmoji` picks, rendered
- * through the same markup rather than a second branch in the JSX.
+ * meal, so it gets the meal row's plates (item 658). A recipe or label
+ * container names no foods, so it falls back to the single stand-in
+ * `storageItemEmoji` picks on a neutral plate, rendered through the same
+ * markup rather than a second branch in the JSX.
  */
-export function storageItemCluster(item: StorageItem, max = 3): EmojiCluster {
-  if (item.foods.length > 0) return emojiCluster(item.foods, max);
-  return { emojis: [storageItemEmoji(item)], overflow: 0 };
+export function storageItemCluster(item: StorageItem): EmojiCluster {
+  if (item.foods.length > 0) return emojiCluster(item.foods);
+  return { plates: [{ emoji: storageItemEmoji(item), tint: "neutral" }], overflow: 0 };
 }
 
 /** `storageItemTitle` as a node: when the title IS the food list, each
@@ -61,16 +62,13 @@ interface StorageItemCardProps {
 export function StorageItemCard({ item, actions, linkable = true }: StorageItemCardProps) {
   const preparedLabel = new Date(item.preparedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const freshness = resolveFreshness(item);
-  const { emojis, overflow } = storageItemCluster(item);
+  const cluster = storageItemCluster(item);
 
   const info = (
     <>
-      {/* Byte-for-byte the meal row's cluster markup (`MealCard`) — a
-          container and the meal it becomes are the same thing twice. */}
-      <span aria-hidden="true" className="flex shrink-0 items-center text-xl leading-none">
-        {emojis.join("")}
-        {overflow > 0 && <span className="ml-0.5 text-xs font-medium text-[var(--color-text-muted)]">+{overflow}</span>}
-      </span>
+      {/* The meal row's plates too (`MealCard`) — a container and the meal
+          it becomes are the same thing twice. */}
+      <FoodPlates {...cluster} />
       <div className="flex flex-col">
         <span className="text-sm font-semibold text-[var(--color-text)]">
           <StorageItemTitle item={item} />

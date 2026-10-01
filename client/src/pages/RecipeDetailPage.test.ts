@@ -301,6 +301,8 @@ describe("RecipeDetailPage ingredients", () => {
   it("falls back to the slug map for a catalog ingredient, and shows its quantity", () => {
     const html = renderRecipe(catalogRecipe());
     expect(html).toContain('href="/foods/salmon"');
+    // Item 659: a 32px plate, tinted by the slug map (ingredients carry no category).
+    expect(html).toContain("width:32px;height:32px;font-size:16px;background:var(--color-plate-protein)");
     expect(html).toContain("1 fillet");
   });
 
@@ -321,6 +323,8 @@ describe("RecipeDetailPage ingredients", () => {
   it("marks each extra with its own emoji, never the old salt shaker", () => {
     const html = renderRecipe(catalogRecipe({ extraIngredients: [{ name: "water", quantityNote: "" }] }));
     expect(html).toContain("💧");
+    // Item 659: on a neutral plate, so the column lines up with the food rows.
+    expect(html).toContain("width:32px;height:32px;font-size:16px;background:var(--color-plate-neutral)");
     expect(html).not.toContain("🧂");
   });
 

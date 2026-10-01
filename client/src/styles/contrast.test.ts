@@ -459,3 +459,34 @@ describe("dark-mode block parity", () => {
     expect(declarations(mediaRoot!)).toEqual(declarations(darkBlock!));
   });
 });
+
+describe("food plates (items 657, 658)", () => {
+  // The tinted discs are decorative (aria-hidden, the food's name is always
+  // text beside them), so the tints carry no 3:1 graphics gate. The one plate
+  // that carries text is the "+N" overflow count: ink on the neutral plate.
+  const PLATE_PAIRS: Pair[] = [{ name: '"+N" count on the neutral plate', fg: "color-text", bg: "color-plate-neutral" }];
+  for (const mode of ["light", "dark"] as const) {
+    for (const pair of PLATE_PAIRS) {
+      it(`[${mode}] ${pair.name} >= ${pair.min ?? 4.5}:1`, () => {
+        expect(ratioOf(pair.fg, pair.bg, mode)).toBeGreaterThanOrEqual(pair.min ?? 4.5);
+      });
+    }
+  }
+
+  // Mockup values (A-Home / A-Home-Dark / A-Salmon); fruit and grain chosen to match.
+  const EXPECTED: Record<string, { light: string; dark: string }> = {
+    "color-plate-veg": { light: "#dcefe2", dark: "#1f3a2e" },
+    "color-plate-protein": { light: "#fbe3d2", dark: "#3a2a20" },
+    "color-plate-legume": { light: "#f1e9dc", dark: "#33302a" },
+    "color-plate-dairy": { light: "#fdf0c4", dark: "#3a3418" },
+    "color-plate-fruit": { light: "#fde4e1", dark: "#3a2422" },
+    "color-plate-grain": { light: "#f7e7c8", dark: "#383020" },
+    "color-plate-neutral": { light: "#efe9e1", dark: "#2a3542" },
+  };
+  for (const [token, { light, dark }] of Object.entries(EXPECTED)) {
+    it(`--${token} is ${light} light / ${dark} dark`, () => {
+      expect(resolve(token, "light")).toBe(light);
+      expect(resolve(token, "dark")).toBe(dark);
+    });
+  }
+});

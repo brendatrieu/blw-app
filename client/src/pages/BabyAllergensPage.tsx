@@ -16,7 +16,8 @@ import {
   servingCountLabel,
   showsReactionBadge,
 } from "../features/tracking/allergenRow.js";
-import { allergenEmoji } from "../features/tracking/allergenEmoji.js";
+import { allergenEmoji, allergenTint } from "../features/tracking/allergenEmoji.js";
+import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
 import { MarkEstablishedAction, OverriddenHint } from "../features/tracking/components/AllergenActions.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
@@ -38,12 +39,7 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
   const info = (
     <div className="flex flex-1 flex-col gap-2">
       <div className="flex items-center gap-3">
-        <span
-          aria-hidden="true"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-bg-inset)] text-lg leading-none"
-        >
-          {allergenEmoji(item.allergenSlug)}
-        </span>
+        <FoodPlate emoji={allergenEmoji(item.allergenSlug)} tint={allergenTint(item.allergenSlug)} size={40} />
         <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">{item.allergenName}</span>
         <Badge tone={ALLERGEN_STATUS_TONE[item.status]}>{ALLERGEN_STATUS_LABEL[item.status]}</Badge>
         {/* No chevron: storage rows open on tap without one, and the two

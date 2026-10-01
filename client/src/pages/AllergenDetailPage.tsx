@@ -19,7 +19,8 @@ import {
 import { allergenEmoji } from "../features/tracking/allergenEmoji.js";
 import { MarkEstablishedAction, OverriddenHint } from "../features/tracking/components/AllergenActions.js";
 import { servedLine } from "../features/tracking/components/ServeLogList.js";
-import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
+import { foodPlate } from "../features/catalog/foodEmoji.js";
+import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
 import { DeletedMark, FoodNames } from "../features/catalog/components/DeletedMark.js";
 import { Badge } from "../components/ui/Badge.js";
 import { ButtonLink } from "../components/ui/Button.js";
@@ -40,9 +41,7 @@ function FoodRow({ food }: { food: AllergenDetailFood }) {
     // SIBLING outside it, so nothing interactive is ever nested in a link.
     <Card as="li" padding="sm" className="flex items-center gap-2">
       <Link to={`/foods/${food.slug}`} className={`flex flex-1 items-center gap-2 ${LINK_FOCUS}`}>
-        <span aria-hidden="true" className="text-lg leading-none">
-          {getFoodEmoji(food.slug, food.category, food.emoji)}
-        </span>
+        <FoodPlate {...foodPlate(food)} size={32} />
         <span className="flex-1 text-sm font-medium text-[var(--color-text)]">
           {food.name}
           <DeletedMark deleted={food.deleted} />

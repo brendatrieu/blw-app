@@ -1,7 +1,8 @@
 import type { FoodListItem, RatingSummary } from "@blw/shared";
 import { Link } from "react-router-dom";
 import { Badge } from "./Badge.js";
-import { getFoodEmoji } from "../foodEmoji.js";
+import { foodPlate } from "../foodEmoji.js";
+import { FoodPlate } from "./FoodPlate.js";
 import { RatingSummaryText } from "../../../components/ui/StarRating.js";
 
 interface FoodTileProps {
@@ -25,9 +26,7 @@ export function FoodTile({ food, rating }: FoodTileProps) {
       to={`/foods/${food.slug}`}
       className="relative flex min-h-[44px] flex-col items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] p-3 text-center shadow-[var(--shadow-sm)] transition-transform duration-[var(--duration-fast)] ease-[var(--ease-spring)] active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100"
     >
-      <span aria-hidden="true" className="text-3xl leading-none">
-        {getFoodEmoji(food.slug, food.category, food.emoji)}
-      </span>
+      <FoodPlate {...foodPlate(food)} size={56} />
       <span className="font-caption line-clamp-2 text-[var(--color-text)]">{food.name}</span>
       {/* Item 182: a quiet neutral label, in the flow under the name rather
           than floated over the emoji — a 3-across tile has no corner to

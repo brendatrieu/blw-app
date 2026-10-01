@@ -383,6 +383,8 @@ describe("AllergenDetailPage foods section (item 187)", () => {
     expect(html).toContain(`href="/log-meal?food=${CATALOG_FOOD_ID}"`);
     expect(html).toContain(`href="/log-meal?food=${CUSTOM_FOOD_ID}"`);
     expect(html).toContain(">Log meal<");
+    // Item 659: each food row leads with a plate (an unmapped slug falls back to its category).
+    expect(html).toContain("width:32px;height:32px;font-size:16px;background:var(--color-plate-protein)");
   });
 
   it("badges a custom food and leaves the catalog food unbadged", () => {

@@ -11,7 +11,8 @@ import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.j
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
 import { DeletedMark, FoodNames } from "../features/catalog/components/DeletedMark.js";
-import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
+import { foodPlate, getFoodEmoji } from "../features/catalog/foodEmoji.js";
+import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
 import { BackButton, useBackNavigate } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
@@ -109,7 +110,7 @@ export function MealDetailPage() {
               key={food.id}
               className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] px-2 py-1 text-sm text-[var(--color-text)]"
             >
-              <span aria-hidden="true">{getFoodEmoji(food.slug, food.category, food.emoji)}</span>
+              <FoodPlate {...foodPlate(food)} size={24} />
               {food.name}
               <DeletedMark deleted={food.deleted} />
               <AllergenChips allergens={food.allergens ?? []} />

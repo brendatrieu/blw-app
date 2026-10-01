@@ -12,7 +12,8 @@ import { Badge } from "../features/catalog/components/Badge.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
 import { DeletedMark } from "../features/catalog/components/DeletedMark.js";
 import { RECIPES_TAB_PATH, allergenLabel, customRecipeConflictMessage } from "../features/catalog/constants.js";
-import { getExtraIngredientEmoji, getFoodEmoji } from "../features/catalog/foodEmoji.js";
+import { foodPlate, getExtraIngredientEmoji } from "../features/catalog/foodEmoji.js";
+import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
 import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
@@ -249,9 +250,7 @@ export function RecipeDetailPage() {
                 to={`/foods/${ingredient.foodSlug}`}
                 className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text)]"
               >
-                <span aria-hidden="true" className="text-lg leading-none">
-                  {getFoodEmoji(ingredient.foodSlug, null, ingredient.foodEmoji)}
-                </span>
+                <FoodPlate {...foodPlate({ slug: ingredient.foodSlug, emoji: ingredient.foodEmoji })} size={32} />
                 <span className="flex-1">
                   <span className="font-medium">{ingredient.foodName}</span>
                   <DeletedMark deleted={ingredient.deleted} />
@@ -278,9 +277,7 @@ export function RecipeDetailPage() {
               key={`${index}-${extra.name}`}
               className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text-muted)]"
             >
-              <span aria-hidden="true" className="text-lg leading-none">
-                {getExtraIngredientEmoji(extra.name)}
-              </span>
+              <FoodPlate emoji={getExtraIngredientEmoji(extra.name)} tint="neutral" size={32} />
               {formatExtraIngredient(extra)}
             </li>
           ))}

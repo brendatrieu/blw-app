@@ -64,6 +64,8 @@ describe("FoodTile", () => {
       ),
     );
     expect(html).toContain("🌾");
+    // Item 659: on a 56px plate tinted by its category.
+    expect(html).toContain("width:56px;height:56px;font-size:28px;background:var(--color-plate-grain)");
   });
 
   it("renders a 3-column grid of 40 tiles without throwing", () => {
