@@ -301,6 +301,32 @@ describe("StorageItemCard freshness chip (item 333)", () => {
     expect(fresh).not.toContain("Use soon");
   });
 
+  // Item 671: the badge matches mockup A-Home — a line clock, not the emoji.
+  it("draws Use soon as the A-Home chip with a decorative line clock", () => {
+    const html = renderCard({ ...BASE_ITEM, bestBy: null, useSoon: true });
+    const chip = html.match(/<span class="([^"]*)"><svg([^>]*)>.*?<\/svg>Use soon<\/span>/);
+    expect(chip).not.toBeNull();
+    const [, classes = "", svg = ""] = chip ?? [];
+    for (const cls of [
+      "inline-flex",
+      "h-5",
+      "items-center",
+      "gap-[3px]",
+      "px-[7px]",
+      "font-extrabold",
+      "whitespace-nowrap",
+      "bg-[var(--color-caution-soft)]",
+      "text-[var(--color-caution-soft-text)]",
+    ]) {
+      expect(classes.split(" ")).toContain(cls);
+    }
+    expect(svg).toContain('aria-hidden="true"');
+    expect(svg).toContain('stroke-width="2.4"');
+    expect(svg).toContain('class="h-3 w-3 shrink-0"');
+    expect(svg).toContain('stroke="currentColor"');
+    expect(html).not.toContain("⏰");
+  });
+
   it("shows no freshness row at all on a finished or discarded item", () => {
     const html = renderCard({ ...BASE_ITEM, status: "finished", bestBy: ymd(-1) });
     expect(html).toContain("Finished");

@@ -9,7 +9,7 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
     "border border-transparent bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-sm)] hover:bg-[var(--color-primary-hover)] active:bg-[var(--color-primary-active)]",
   secondary: "border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]",
   // A quieter CTA than `primary` (the Add-to-storage button): a solid
-  // `--color-success` fill (mint in light, deep green in dark) with its own
+  // `--color-success` fill (mint in both modes, item 670) with its own
   // `--color-success-contrast` text, so the contrast gate covers it.
   // Hover darkens the fill by 8% — no new color token.
   tonal:

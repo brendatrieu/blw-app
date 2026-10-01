@@ -169,14 +169,14 @@ const BASE_PAIRS: Pair[] = [
   { name: "muted text on inset surface", fg: "color-text-muted", bg: "color-bg-inset" },
 
   // CTA fill (Button/Badge/SegmentedControl/Done bar) — black on sky blue
-  // in light, pale on deep sea blue in dark (item 639).
+  // in both modes (item 670, superseding item 639's deep dark fill).
   { name: "primary-contrast on primary fill (CTA)", fg: "color-primary-contrast", bg: "color-primary" },
   { name: "primary-contrast on primary-hover fill", fg: "color-primary-contrast", bg: "color-primary-hover" },
   { name: "primary-contrast on primary-active fill", fg: "color-primary-contrast", bg: "color-primary-active" },
   // Selected / on states (item 644): filter and option chips, the age tabs,
   // the SegmentedControl segment — black on the pastel sky in both modes.
   { name: "selected-contrast on selected fill (chips, segments, age tabs)", fg: "color-selected-contrast", bg: "color-selected" },
-  // The tonal Button (storage CTA): black on mint in light, pale on deep green in dark.
+  // The tonal Button (storage CTA): black on mint in both modes (item 670).
   { name: "success-contrast on success fill (tonal Button)", fg: "color-success-contrast", bg: "color-success" },
 
   // ---- Apricot identity (items 634/635/640) ----
@@ -266,6 +266,7 @@ BASE_PAIRS.push(...RAMP_INK_PAIRS);
 
 const CHIP_TONES = [
   { name: "primary", text: "color-primary-soft-text", tint: "color-primary-soft" },
+  // Also the "Use soon" badge's clock icon (item 671), which draws in the text color.
   { name: "caution", text: "color-caution-soft-text", tint: "color-caution-soft" },
   { name: "success", text: "color-success-soft-text", tint: "color-success-soft" },
   { name: "neutral", text: "color-neutral-soft-text", tint: "color-neutral-soft" },
@@ -366,7 +367,7 @@ const DARK_STATE_PAIRS: Pair[] = [
 ];
 
 describe("dark-mode selected / on states and confetti (items 644, 645)", () => {
-  it("reads the three confetti swatches from Celebration.tsx, none of them a deep dark-mode fill", () => {
+  it("reads the three confetti swatches from Celebration.tsx", () => {
     expect(PARTICLE_TOKENS).toEqual(["color-selected", "color-caution", "color-mint"]);
   });
   for (const pair of DARK_STATE_PAIRS) {
@@ -407,14 +408,16 @@ describe("tonal Button hover (success fill darkened with black)", () => {
   }
 });
 
-describe("Direction A token values (items 634, 636, 639, 641, 644, 645, 653)", () => {
+describe("Direction A token values (items 634, 636, 639, 641, 644, 645, 653, 670)", () => {
   // The owner approved exact hexes; the gate above only proves they pass,
-  // so pin the values themselves (light unchanged, dark buttons deep).
+  // so pin the values themselves (item 670: buttons identical in both modes).
   const EXPECTED: Record<string, { light: string; dark: string }> = {
-    "color-primary": { light: "#b4d4e6", dark: "#24465c" },
-    "color-primary-contrast": { light: "#000000", dark: "#eaf3f9" },
-    "color-success": { light: "#cde9da", dark: "#1f4a37" },
-    "color-success-contrast": { light: "#000000", dark: "#e6f5ec" },
+    "color-primary": { light: "#b4d4e6", dark: "#b4d4e6" },
+    "color-primary-hover": { light: "#a3c8de", dark: "#a3c8de" },
+    "color-primary-active": { light: "#8fbad4", dark: "#8fbad4" },
+    "color-primary-contrast": { light: "#000000", dark: "#000000" },
+    "color-success": { light: "#cde9da", dark: "#cde9da" },
+    "color-success-contrast": { light: "#000000", dark: "#000000" },
     "color-apricot": { light: "#f7b48a", dark: "#3a2a20" },
     "color-apricot-ink": { light: "#3d1a06", dark: "#f7b48a" },
     "color-apricot-text": { light: "#b9571a", dark: "#f7b48a" },
@@ -428,6 +431,9 @@ describe("Direction A token values (items 634, 636, 639, 641, 644, 645, 653)", (
     "color-selected": { light: "#b4d4e6", dark: "#b4d4e6" },
     "color-selected-contrast": { light: "#000000", dark: "#000000" },
     "color-mint": { light: "#cde9da", dark: "#cde9da" },
+    // Use soon chip, dark as A-Home-Dark (warm, not grey).
+    "color-caution-soft": { light: "rgba(255, 236, 195, 0.9)", dark: "#3a3115" },
+    "color-caution-soft-text": { light: "#6b4f10", dark: "#ffe3a3" },
   };
   for (const [token, { light, dark }] of Object.entries(EXPECTED)) {
     it(`--${token} is ${light} light / ${dark} dark`, () => {

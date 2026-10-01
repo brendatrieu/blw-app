@@ -13,8 +13,8 @@ interface ProgressRingProps {
 
 /**
  * SVG progress ring — an accent stroke on an inset track. Used for
- * allergen/progress summaries. Accent, not the CTA fill: the dark CTA is a
- * deep blue that sinks into the dark track (1.4:1), and a ring is a graphic.
+ * allergen/progress summaries. Accent, not the CTA fill: the pastel CTA
+ * sinks into the light inset track (1.35:1), and a ring is a graphic.
  */
 export function ProgressRing({ size = 96, value, strokeWidth = 10, label, children }: ProgressRingProps) {
   const clamped = Math.min(1, Math.max(0, value));

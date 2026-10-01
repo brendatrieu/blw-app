@@ -21,7 +21,7 @@ export function useCelebration(): CelebrationContextValue {
   return ctx;
 }
 
-// Pastel in both modes (item 645): the CTA and success fills go deep in dark.
+// Pastel in both modes (item 645): the selected/mint roles, not the CTA/success fills.
 const PARTICLE_COLORS = ["var(--color-selected)", "var(--color-caution)", "var(--color-mint)"];
 const PARTICLE_COUNT = 24;
 const TOAST_DURATION_MS = 2600;

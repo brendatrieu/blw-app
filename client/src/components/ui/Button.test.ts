@@ -8,7 +8,7 @@ describe("Button variants", () => {
   it("renders the tonal variant as the solid success fill with its own contrast text, not the primary fill", () => {
     const html = renderToString(createElement(Button, { variant: "tonal" }, "Tonal"));
     expect(html).toContain("bg-[var(--color-success)]");
-    // Item 639: its own ink (pale in dark mode), no longer the primary's.
+    // Item 639: its own ink token, not the primary's.
     expect(html).toContain("text-[var(--color-success-contrast)]");
     expect(html).not.toContain("primary-contrast");
     expect(html).not.toContain("var(--color-primary)]");
