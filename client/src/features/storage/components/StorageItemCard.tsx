@@ -116,7 +116,7 @@ export function StorageItemCard({ item, actions, linkable = true }: StorageItemC
           {freshness.state === "expired" ? (
             <Badge tone="dangerSoft">Expired</Badge>
           ) : freshness.state === "use_soon" ? (
-            <Badge tone="sunshine">⏰ Use soon</Badge>
+            <UseSoonBadge />
           ) : null}
           {/* The badge and the text are now the SAME fact told twice (item
               333): with a best-by date it decides the badge, so the date is
@@ -140,5 +140,30 @@ export function StorageItemCard({ item, actions, linkable = true }: StorageItemC
       )}
 
     </li>
+  );
+}
+
+/** The "Use soon" chip per mockup A-Home (item 671): the caution tint with a
+ * line clock icon, a little tighter and bolder than `Badge`. Its own span
+ * rather than a `Badge` override — there is no class merge, so `Badge`'s
+ * px-2.5 would fight px-[7px]. The icon draws in the chip's text color, the
+ * caution pair contrast.test.ts already gates. */
+export function UseSoonBadge() {
+  return (
+    <span className="inline-flex h-5 items-center gap-[3px] rounded-[var(--radius-pill)] bg-[var(--color-caution-soft)] px-[7px] text-xs font-extrabold whitespace-nowrap text-[var(--color-caution-soft-text)]">
+      <svg
+        aria-hidden="true"
+        className="h-3 w-3 shrink-0"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.4}
+        strokeLinecap="round"
+      >
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v4l2.5 2" />
+      </svg>
+      Use soon
+    </span>
   );
 }

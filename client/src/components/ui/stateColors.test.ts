@@ -1,7 +1,7 @@
 // Items 644, 646, 647: selected / on states wear --color-selected (pastel sky
-// in BOTH modes), never the CTA --color-primary, which goes deep in dark and
-// left these states at ~1.4-1.9:1. Light is unchanged: --color-selected is the
-// light CTA's own hex (pinned in styles/contrast.test.ts).
+// in BOTH modes), never the CTA --color-primary. Item 670 made the CTA pastel
+// in dark again, so the two share a hex today (pinned in styles/contrast.test.ts),
+// but they stay separate roles so the CTA can change without moving these states.
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { readFileSync, readdirSync } from "node:fs";
@@ -60,7 +60,7 @@ describe("client source guards (items 644, 646)", () => {
     expect(sources.length).toBeGreaterThan(100);
   });
 
-  it("never uses the CTA fill as a text color (1.9:1 as text in dark; links use --color-accent)", () => {
+  it("never uses the CTA fill as a text color (~1.5:1 as text on the light grounds; links use --color-accent)", () => {
     expect(sources.filter((s) => s.text.includes("text-[var(--color-primary)]")).map((s) => s.path)).toEqual([]);
   });
 
