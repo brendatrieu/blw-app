@@ -138,31 +138,33 @@ describe("MealCard title (item 192, ledger 555)", () => {
   });
 });
 
-describe("emojiCluster (item 192)", () => {
-  it("returns one emoji per food with no overflow under the cap", () => {
-    const cluster = emojiCluster([food(), food({ id: "f2", slug: "chicken", category: "protein" })]);
-    expect(cluster.emojis).toHaveLength(2);
-    expect(cluster.overflow).toBe(0);
-    expect(cluster.emojis.every((emoji) => emoji.length > 0)).toBe(true);
+describe("emojiCluster (items 192, 658)", () => {
+  const many = (n: number) => Array.from({ length: n }, (_, i) => food({ id: `f${i}` }));
+
+  it("returns one tinted plate per food with no overflow up to three", () => {
+    const cluster = emojiCluster([food({ slug: "avocado" }), food({ id: "f2", slug: "chicken", category: "protein" })]);
+    expect(cluster).toEqual({
+      plates: [
+        { emoji: "🥑", tint: "fruit" },
+        { emoji: "🍗", tint: "protein" },
+      ],
+      overflow: 0,
+    });
+    expect(emojiCluster(many(3))).toMatchObject({ overflow: 0 });
+    expect(emojiCluster(many(3)).plates).toHaveLength(3);
   });
 
-  it("caps at three and reports the rest as overflow", () => {
-    const foods = Array.from({ length: 5 }, (_, i) => food({ id: `f${i}` }));
-    const cluster = emojiCluster(foods);
-    expect(cluster.emojis).toHaveLength(3);
-    expect(cluster.overflow).toBe(2);
+  it("shows the first two plates and counts the rest from four foods on", () => {
+    expect(emojiCluster(many(4)).plates).toHaveLength(2);
+    expect(emojiCluster(many(4)).overflow).toBe(2);
+    expect(emojiCluster(many(5)).plates).toHaveLength(2);
+    expect(emojiCluster(many(5)).overflow).toBe(3);
   });
 
-  it("honors an explicit max", () => {
-    const foods = Array.from({ length: 4 }, (_, i) => food({ id: `f${i}` }));
-    expect(emojiCluster(foods, 1).emojis).toHaveLength(1);
-    expect(emojiCluster(foods, 1).overflow).toBe(3);
-    expect(emojiCluster(foods, 10).emojis).toHaveLength(4);
-    expect(emojiCluster(foods, 10).overflow).toBe(0);
-  });
-
-  it("prefers a custom food's own emoji", () => {
-    expect(emojiCluster([food({ slug: "made-up-thing", emoji: "🫐" })]).emojis).toEqual(["🫐"]);
+  it("prefers a custom food's own emoji, tinted by its category", () => {
+    expect(emojiCluster([food({ slug: "made-up-thing", category: "fruit", emoji: "🫐" })]).plates).toEqual([
+      { emoji: "🫐", tint: "fruit" },
+    ]);
   });
 });
 
@@ -231,18 +233,18 @@ describe("MealCard (render, storage-card styling — item 192)", () => {
     expect(html).not.toContain("rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)]");
   });
 
-  it("renders the leading emoji cluster as a single aria-hidden run", () => {
+  it("renders the leading plates in one fixed aria-hidden 48x44 slot", () => {
     const html = renderMealCard(baseMeal);
-    const { emojis } = emojiCluster(baseMeal.foods);
-    expect(html).toMatch(new RegExp(`<span aria-hidden="true" class="[^"]*text-xl[^"]*">${emojis.join("")}`));
+    expect(html).toContain('<span aria-hidden="true" class="relative block h-[44px] w-[48px] shrink-0">');
+    for (const { emoji } of emojiCluster(baseMeal.foods).plates) expect(html).toContain(emoji);
   });
 
-  it("caps the cluster at three emoji and shows a +N overflow count", () => {
+  it("shows two plates and a +N count from four foods on (5 foods: +3)", () => {
     const html = renderMealCard({
       ...baseMeal,
       foods: Array.from({ length: 5 }, (_, i) => food({ id: `food-${i}`, name: `Food ${i}` })),
     });
-    expect(html).toMatch(/\+(?:<!-- -->)?2/);
+    expect(html).toContain(">+3</span>");
   });
 
   it("shows no overflow count when every food fits", () => {

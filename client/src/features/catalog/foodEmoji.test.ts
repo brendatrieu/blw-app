@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getCategoryEmoji, getExtraIngredientEmoji, getFoodEmoji } from "./foodEmoji.js";
+import { emojiCluster, getCategoryEmoji, getExtraIngredientEmoji, getFoodEmoji, getFoodTint } from "./foodEmoji.js";
 
 describe("getFoodEmoji", () => {
   it("prefers the food's OWN emoji over everything else (item 177)", () => {
@@ -148,5 +148,120 @@ describe("getExtraIngredientEmoji", () => {
       expect(getExtraIngredientEmoji(name), name).not.toBe("🥄");
       expect(getExtraIngredientEmoji(name), name).not.toBe("🧂");
     }
+  });
+});
+
+describe("getFoodTint (item 657)", () => {
+  it("gives every seeded slug a food-group tint, never the neutral fallback", () => {
+    // No category passed: storage foods, recipe ingredients and pairings carry
+    // none, so the slug map alone has to cover the seed.
+    expect(CATALOG_SLUGS.filter((slug) => getFoodTint(slug) === "neutral")).toEqual([]);
+  });
+
+  it("follows the mockups where they differ from the seed category", () => {
+    expect(getFoodTint("salmon", "protein")).toBe("protein");
+    expect(getFoodTint("egg", "protein")).toBe("dairy");
+    expect(getFoodTint("peanut_butter", "protein")).toBe("legume");
+    expect(getFoodTint("sweet_potato", "veg")).toBe("veg");
+    expect(getFoodTint("broccoli")).toBe("veg");
+  });
+
+  it("falls back to the category for a custom food, then to neutral", () => {
+    expect(getFoodTint("custom-mash", "fruit")).toBe("fruit");
+    expect(getFoodTint("custom-mash", "spice")).toBe("veg");
+    expect(getFoodTint("custom-mash", null)).toBe("neutral");
+    expect(getFoodTint("custom-mash")).toBe("neutral");
+  });
+});
+
+describe("plate pins the verifier asked for (items 657, 658)", () => {
+  it("pins the whole slug -> tint table, so one food can't drift to the wrong group", () => {
+    expect(Object.fromEntries(CATALOG_SLUGS.map((slug) => [slug, getFoodTint(slug)]))).toMatchInlineSnapshot(`
+      {
+        "almond_butter": "legume",
+        "almonds": "legume",
+        "apple": "fruit",
+        "avocado": "fruit",
+        "banana": "fruit",
+        "basil": "veg",
+        "beef": "protein",
+        "bell_pepper": "veg",
+        "black_beans": "legume",
+        "black_pepper": "grain",
+        "blueberry": "fruit",
+        "broccoli": "veg",
+        "butternut_squash": "veg",
+        "carrot": "veg",
+        "cashew_butter": "legume",
+        "cashews": "legume",
+        "cauliflower": "veg",
+        "cheese": "dairy",
+        "chia_seeds": "legume",
+        "chicken": "protein",
+        "chicken_thigh": "protein",
+        "chickpeas": "legume",
+        "cilantro": "veg",
+        "cinnamon": "grain",
+        "cod": "protein",
+        "cumin": "grain",
+        "curry_powder": "grain",
+        "dill": "veg",
+        "egg": "dairy",
+        "flax_seeds": "legume",
+        "garlic": "veg",
+        "ginger": "veg",
+        "green_beans": "veg",
+        "hazelnuts": "legume",
+        "hemp_seeds": "legume",
+        "iron_fortified_oats": "grain",
+        "kiwi": "fruit",
+        "lamb": "protein",
+        "lemon": "fruit",
+        "lentils": "legume",
+        "mango": "fruit",
+        "oats": "grain",
+        "orange": "fruit",
+        "oregano": "veg",
+        "paprika": "grain",
+        "peanut_butter": "legume",
+        "pear": "fruit",
+        "peas": "veg",
+        "pecans": "legume",
+        "pistachios": "legume",
+        "pork": "protein",
+        "potato": "veg",
+        "pumpkin_seeds": "legume",
+        "quinoa": "grain",
+        "rice": "grain",
+        "salmon": "protein",
+        "sardines": "protein",
+        "sesame_seeds": "legume",
+        "shrimp": "protein",
+        "spinach": "veg",
+        "strawberry": "fruit",
+        "sunflower_seed_butter": "legume",
+        "sweet_potato": "veg",
+        "tahini": "legume",
+        "tofu": "legume",
+        "tomato": "veg",
+        "trout": "protein",
+        "tuna": "protein",
+        "turkey": "protein",
+        "turmeric": "grain",
+        "walnuts": "legume",
+        "watermelon": "fruit",
+        "wheat_pasta": "grain",
+        "wheat_toast": "grain",
+        "yogurt": "dairy",
+        "zucchini": "veg",
+      }
+    `);
+  });
+
+  it("shows the FIRST two foods and +N for four or more", () => {
+    const foods = ["apple", "banana", "broccoli", "salmon", "egg"].map((slug) => ({ slug }));
+    const { plates, overflow } = emojiCluster(foods);
+    expect(plates.map((p) => p.emoji)).toEqual([getFoodEmoji("apple"), getFoodEmoji("banana")]);
+    expect(overflow).toBe(3);
   });
 });

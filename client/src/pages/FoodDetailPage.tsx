@@ -12,7 +12,8 @@ import { FoodBadges } from "../features/catalog/components/FoodBadges.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { SingleFoodPicker } from "../features/catalog/components/FoodPicker.js";
 import { CUSTOM_FOOD_SOFT_NOTE, levelLabel, usedInPhrase } from "../features/catalog/constants.js";
-import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
+import { foodPlate } from "../features/catalog/foodEmoji.js";
+import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe, sortBasicRecipesFirst } from "../features/catalog/basicRecipe.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useMeals } from "../features/tracking/hooks.js";
@@ -272,12 +273,7 @@ export function FoodDetailPage() {
     <div className="flex flex-col gap-5 p-4">
       <BackButton fallback="/foods" />
       <div className="flex flex-col items-center gap-3 text-center">
-        <span
-          aria-hidden="true"
-          className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-5xl leading-none"
-        >
-          {getFoodEmoji(food.slug, food.category, food.emoji)}
-        </span>
+        <FoodPlate {...foodPlate(food)} size={104} />
         <div className="flex flex-col items-center gap-2">
           <h1 className="font-display text-[var(--color-text)]">{food.name}</h1>
           <FoodBadges food={food} />
@@ -348,9 +344,7 @@ export function FoodDetailPage() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1.5 text-sm font-medium text-[var(--color-text)]">
-                    <span aria-hidden="true" className="text-lg leading-none">
-                      {getFoodEmoji(pairing.food.slug)}
-                    </span>
+                    <FoodPlate {...foodPlate(pairing.food)} size={32} />
                     {pairing.food.name}
                   </span>
                   <Badge tone="nutrient">Vit C {levelLabel(pairing.food.vitaminCLevel)}</Badge>

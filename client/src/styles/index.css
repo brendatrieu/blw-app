@@ -108,6 +108,17 @@
      dots read at a glance (item 641). ---- */
   --color-icon: #3f4a56;
 
+  /* ---- Food plates (item 657): the disc behind a food emoji, tinted by
+     food group. Decorative (aria-hidden; the name is always text), so only
+     the "+N" overflow plate carries a gated pair (text on neutral). ---- */
+  --color-plate-veg: #dcefe2;
+  --color-plate-protein: #fbe3d2;
+  --color-plate-legume: #f1e9dc;
+  --color-plate-dairy: #fdf0c4;
+  --color-plate-fruit: #fde4e1;
+  --color-plate-grain: #f7e7c8;
+  --color-plate-neutral: #efe9e1;
+
   /* ---- Interactive text/border accent (links, focus rings,
      from-storage markers, selected-state labels) — mode-dependent because
      the sky blue is too pale to read as body-size text on a light ground. ---- */
@@ -269,6 +280,14 @@
 
   --_dark-icon: #b8c2cc;
 
+  --_dark-plate-veg: #1f3a2e;
+  --_dark-plate-protein: #3a2a20;
+  --_dark-plate-legume: #33302a;
+  --_dark-plate-dairy: #3a3418;
+  --_dark-plate-fruit: #3a2422;
+  --_dark-plate-grain: #383020;
+  --_dark-plate-neutral: #2a3542;
+
   --_dark-primary-soft: rgba(180, 212, 230, 0.18);
   --_dark-primary-soft-text: #b4d4e6;
   --_dark-caution-soft: rgba(255, 236, 195, 0.16);
@@ -342,6 +361,14 @@
 
     --color-icon: var(--_dark-icon);
 
+    --color-plate-veg: var(--_dark-plate-veg);
+    --color-plate-protein: var(--_dark-plate-protein);
+    --color-plate-legume: var(--_dark-plate-legume);
+    --color-plate-dairy: var(--_dark-plate-dairy);
+    --color-plate-fruit: var(--_dark-plate-fruit);
+    --color-plate-grain: var(--_dark-plate-grain);
+    --color-plate-neutral: var(--_dark-plate-neutral);
+
     --color-primary-soft: var(--_dark-primary-soft);
     --color-primary-soft-text: var(--_dark-primary-soft-text);
     --color-caution-soft: var(--_dark-caution-soft);
@@ -411,6 +438,14 @@
   --color-apricot-soft: var(--_dark-apricot-soft);
 
   --color-icon: var(--_dark-icon);
+
+  --color-plate-veg: var(--_dark-plate-veg);
+  --color-plate-protein: var(--_dark-plate-protein);
+  --color-plate-legume: var(--_dark-plate-legume);
+  --color-plate-dairy: var(--_dark-plate-dairy);
+  --color-plate-fruit: var(--_dark-plate-fruit);
+  --color-plate-grain: var(--_dark-plate-grain);
+  --color-plate-neutral: var(--_dark-plate-neutral);
 
   --color-primary-soft: var(--_dark-primary-soft);
   --color-primary-soft-text: var(--_dark-primary-soft-text);

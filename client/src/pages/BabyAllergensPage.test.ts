@@ -76,6 +76,8 @@ function renderWithItems(items: AllergenProgressItem[]) {
 describe("BabyAllergensPage row actions (item 136)", () => {
   it("offers 'Mark as established' for a not-yet-established row", () => {
     const html = renderWithItems([item({ status: "not_started" })]);
+    // Item 659: the allergen's emoji on a 40px plate in its food-group tint.
+    expect(html).toContain("width:40px;height:40px;font-size:20px;background:var(--color-plate-legume)");
     expect(html).toContain("Mark as established");
     expect(html).not.toContain("Marked by you");
   });

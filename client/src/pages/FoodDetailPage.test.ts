@@ -189,6 +189,8 @@ describe("FoodDetailPage — custom food (item 181)", () => {
   it("uses the food's own emoji in the hero and keeps the parent's notes", () => {
     const html = renderFood(CUSTOM_FOOD);
     expect(html).toContain("🍞");
+    // Item 659: the 104px hero plate (A-Salmon), tinted by the custom food's category.
+    expect(html).toContain("width:104px;height:104px;font-size:52px;background:var(--color-plate-grain)");
     expect(html).toContain("Cut into finger strips");
   });
 
@@ -401,6 +403,8 @@ describe("FoodDetailPage — pins from the color pass (items 637, 639)", () => {
         ],
       }),
     );
+    // Item 659: the pairing's emoji sits on a plate too (pairings carry no category; the slug map tints it).
+    expect(html).toContain("width:32px;height:32px;font-size:16px;background:var(--color-plate-fruit)");
     expect(html).toMatch(
       /class="[^"]*bg-\[var\(--color-primary-soft\)\][^"]*text-\[var\(--color-primary-soft-text\)\][^"]*"[^>]*>Vit C (?:<!-- -->)?High</,
     );

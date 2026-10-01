@@ -4,6 +4,7 @@ import type { MealFood, MealItem } from "@blw/shared";
 import { useDeleteMeal, useMeals } from "../hooks.js";
 import { emojiCluster, type EmojiCluster } from "../../catalog/foodEmoji.js";
 import { FoodNames } from "../../catalog/components/DeletedMark.js";
+import { FoodPlates } from "../../catalog/components/FoodPlate.js";
 import { MealActionsMenu } from "./MealActionsMenu.js";
 import { Badge } from "../../catalog/components/Badge.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
@@ -126,7 +127,6 @@ export function MealCard({
   linkable = true,
   actions,
 }: MealCardProps) {
-  const { emojis, overflow } = emojiCluster(meal.foods);
   // `undefined` (the prop omitted) means "the standard kebab"; an explicit
   // `null` means "no actions" — hence the default lives here, not in the
   // destructuring above.
@@ -139,10 +139,7 @@ export function MealCard({
 
   const info = (
     <>
-      <span aria-hidden="true" className="flex shrink-0 items-center text-xl leading-none">
-        {emojis.join("")}
-        {overflow > 0 && <span className="ml-0.5 text-xs font-medium text-[var(--color-text-muted)]">+{overflow}</span>}
-      </span>
+      <FoodPlates {...emojiCluster(meal.foods)} />
       <div className="flex flex-col">
         {/* Every food's name, comma-joined, a deleted one marked. Deliberately
             NOT the recipe title: that gets its own line underneath, so the

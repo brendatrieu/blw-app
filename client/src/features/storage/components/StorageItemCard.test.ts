@@ -325,46 +325,51 @@ describe("StorageItemCard food cluster (item 347)", () => {
     );
   });
 
-  it("renders one emoji per food as a single aria-hidden run, with no overflow count at three", () => {
+  it("renders one plate per food, tinted by slug, with no overflow count at three", () => {
     const html = renderCard({ ...BASE_ITEM, foods: threeFoods });
-    const { emojis, overflow } = storageItemCluster({ ...BASE_ITEM, foods: threeFoods });
-    expect(emojis).toHaveLength(3);
-    expect(overflow).toBe(0);
-    expect(html).toMatch(new RegExp(`<span aria-hidden="true" class="[^"]*text-xl[^"]*">${emojis.join("")}`));
+    expect(storageItemCluster({ ...BASE_ITEM, foods: threeFoods })).toEqual({
+      plates: [
+        { emoji: "🍗", tint: "protein" },
+        { emoji: "🥕", tint: "veg" },
+        { emoji: "🍚", tint: "grain" },
+      ],
+      overflow: 0,
+    });
+    for (const emoji of ["🍗", "🥕", "🍚"]) expect(html).toContain(emoji);
     expect(html).not.toMatch(/\+(?:<!-- -->)?\d/);
   });
 
-  it("caps the cluster at three and shows a +N for the rest", () => {
+  it("shows two plates and a +N for the rest from four foods on", () => {
     const foods = Array.from({ length: 5 }, (_, i) => itemFood("avocado", `Food ${i}`));
     const html = renderCard({ ...BASE_ITEM, foods });
-    expect(storageItemCluster({ ...BASE_ITEM, foods }).emojis).toHaveLength(3);
-    expect(html).toMatch(/\+(?:<!-- -->)?2/);
+    expect(storageItemCluster({ ...BASE_ITEM, foods }).plates).toHaveLength(2);
+    expect(html).toContain(">+3</span>");
   });
 
   it("renders a one-food container exactly as it always did: one emoji, one name", () => {
     const html = renderCard(BASE_ITEM);
     expect(html).toContain("Avocado");
-    expect(storageItemCluster(BASE_ITEM)).toEqual({ emojis: ["🥑"], overflow: 0 });
+    expect(storageItemCluster(BASE_ITEM)).toEqual({ plates: [{ emoji: "🥑", tint: "fruit" }], overflow: 0 });
     expect(html).not.toMatch(/\+(?:<!-- -->)?\d/);
   });
 
   it("prefers a custom food's own emoji over the slug map", () => {
     const foods = [itemFood("made-up-thing", "Priya's mash", "🫐")];
-    expect(storageItemCluster({ ...BASE_ITEM, foods }).emojis).toEqual(["🫐"]);
+    expect(storageItemCluster({ ...BASE_ITEM, foods }).plates).toEqual([{ emoji: "🫐", tint: "neutral" }]);
   });
 
-  it("uses the same markup the meal row does — a shrink-0 flex run, so a long title never squeezes it", () => {
+  it("uses the same fixed shrink-0 plate slot the meal row does, so a long title never squeezes it", () => {
     const html = renderCard({ ...BASE_ITEM, foods: threeFoods });
-    expect(html).toContain('<span aria-hidden="true" class="flex shrink-0 items-center text-xl leading-none">');
+    expect(html).toContain('<span aria-hidden="true" class="relative block h-[44px] w-[48px] shrink-0">');
   });
 
   it("falls back to one stand-in glyph for a recipe container and for a label-only one", () => {
     const recipe = { ...BASE_ITEM, foods: [], recipeId: "r1", recipeTitle: "Iron-Rich Purée" };
-    expect(storageItemCluster(recipe)).toEqual({ emojis: ["🍲"], overflow: 0 });
+    expect(storageItemCluster(recipe)).toEqual({ plates: [{ emoji: "🍲", tint: "neutral" }], overflow: 0 });
     expect(renderCard(recipe)).toContain("Iron-Rich Purée");
 
     const labelOnly = { ...BASE_ITEM, foods: [], label: "Leftover soup" };
-    expect(storageItemCluster(labelOnly)).toEqual({ emojis: ["📝"], overflow: 0 });
+    expect(storageItemCluster(labelOnly)).toEqual({ plates: [{ emoji: "📝", tint: "neutral" }], overflow: 0 });
     expect(renderCard(labelOnly)).toContain("Leftover soup");
   });
 });
