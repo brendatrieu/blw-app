@@ -1,6 +1,7 @@
 import {
   ALLERGEN_ESTABLISHED_SERVINGS,
   ALLERGEN_MAINTENANCE_DAYS,
+  type AllergenDetail,
   type AllergenProgressItem,
   type AllergenStatus,
 } from "@blw/shared";
@@ -220,6 +221,34 @@ export function dueAllergens<
   // A row paused for a reaction is not asking to be served again, so Home
   // must not count it — the row itself already stands its nudge down.
   return items.filter((item) => isAllergenDue(item.dueAt, now) && !showsReactionBadge(item));
+}
+
+/**
+ * Home's Up next line under "<Name> is due for a serve" (item 660): the same
+ * fact as `lastExposureLabel` — a newer mark says "Marked", never "Last
+ * served" — spelled out as a sentence ("Last served 9 days ago").
+ */
+export function dueSinceLabel(
+  item: Pick<AllergenProgressItem, "lastServedAt" | "lastExposureAt">,
+  now: Date = new Date(),
+): string {
+  const marked = markIsLatestExposure(item) ? item.lastExposureAt : null;
+  const at = marked ?? item.lastServedAt;
+  if (!at) return "No serves logged yet";
+  const days = daysSince(at, now);
+  const when = days <= 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
+  return `${marked ? "Marked" : "Last served"} ${when}`;
+}
+
+/**
+ * The food Up next's "Log meal" prefills for a due allergen (item 660): the
+ * one served last time (the exposure's foods are only the allergen carriers),
+ * else the first food carrying it; never a deleted food, which cannot be
+ * logged. Null leaves the form empty.
+ */
+export function serveFoodId(detail: Pick<AllergenDetail, "foods" | "exposures">): string | null {
+  const last = detail.exposures[0]?.foods.find((food) => !food.deleted);
+  return last?.id ?? detail.foods.find((food) => !food.deleted)?.id ?? null;
 }
 
 /**

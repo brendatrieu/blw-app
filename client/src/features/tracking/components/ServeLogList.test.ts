@@ -398,7 +398,7 @@ describe("limitMeals + Home cap", () => {
     };
   }
 
-  function renderList(limit: number | undefined, seeAllHref?: string) {
+  function renderList(limit: number | undefined, seeAllHref?: string, grouped?: boolean) {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     queryClient.setQueryData(["meals", "baby-1", { limit: 100 }], { items: Array.from({ length: 5 }, (_, i) => mealAt(i)) });
     return renderToString(
@@ -408,7 +408,7 @@ describe("limitMeals + Home cap", () => {
         createElement(
           MemoryRouter,
           null,
-          createElement(ServeLogList, { babyId: "baby-1", limit, ...(seeAllHref ? { seeAllHref } : {}) }),
+          createElement(ServeLogList, { babyId: "baby-1", limit, grouped, ...(seeAllHref ? { seeAllHref } : {}) }),
         ),
       ),
     );
@@ -419,13 +419,39 @@ describe("limitMeals + Home cap", () => {
     expect((html.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(3);
     expect(html).toContain("Food 0");
     expect(html).not.toContain("Food 3");
-    expect(html).toMatch(/<a [^>]*href="\/meals"[^>]*>See all<\/a>/);
+    // A-Home's link style: 14px bold accent, no underline, a decorative chevron, 44px tall.
+    expect(html).toMatch(
+      /<a class="inline-flex min-h-11 items-center text-sm font-bold text-\[var\(--color-accent\)\]" href="\/meals"[^>]*>See all<span aria-hidden="true">\u00a0›<\/span><\/a>/,
+    );
   });
 
   it("without a limit renders every meal and no See all link", () => {
     const html = renderList(undefined);
     expect((html.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(5);
-    expect(html).not.toContain(">See all<");
+    expect(html).not.toContain("See all");
+    expect(html).not.toContain('href="/meals"');
+  });
+
+  it("grouped (Home, item 664): one card of divided rows, each kebab named after its meal", () => {
+    const html = renderList(3, "/meals", true);
+    expect((html.match(/<ul\b/g) ?? []).length).toBe(1);
+    expect(html).toMatch(/<ul class="rounded-\[var\(--radius-lg\)\] border border-\[var\(--color-border\)\] bg-\[var\(--color-bg-elevated\)\][^"]*"/);
+    const rows = html.match(/<li class="[^"]*"/g) ?? [];
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      expect(row).toContain("not-first:before:h-px not-first:before:bg-[var(--color-divider)]");
+      expect(row).not.toContain("border");
+      expect(row).not.toContain("bg-[var(--color-bg-elevated)]");
+    }
+    expect(html).toContain('aria-label="Food 0 actions"');
+    expect(html).not.toContain('aria-label="Actions"');
+  });
+
+  it("not grouped (/meals) keeps a card per meal and the plain Actions label", () => {
+    const html = renderList(3, "/meals");
+    expect(html).toMatch(/<ul class="flex flex-col gap-2">/);
+    expect(html).not.toContain("not-first:before");
+    expect((html.match(/aria-label="Actions"/g) ?? []).length).toBe(3);
   });
 
   it("renders one flat newest-first <ul> with no day headers (item 193)", () => {

@@ -117,6 +117,14 @@
      dots read at a glance (item 641). ---- */
   --color-icon: #3f4a56;
 
+  /* ---- Home's 9-segment allergen ring (item 663). Established and started
+     are status graphics, gated 3:1 on the card; the mockup's lighter
+     #7cc6a0 / #f2c66d were 2.01 / 1.61:1, so these are the lightest same
+     hues that pass. Empty is the track itself (the counts are text). ---- */
+  --color-ring-established: #47a273;
+  --color-ring-started: #c08611;
+  --color-ring-empty: #e8e2da;
+
   /* ---- Food plates (item 657): the disc behind a food emoji, tinted by
      food group. Decorative (aria-hidden; the name is always text), so only
      the "+N" overflow plate carries a gated pair (text on neutral). ---- */
@@ -300,6 +308,10 @@
 
   --_dark-icon: #b8c2cc;
 
+  --_dark-ring-established: #6cc29c;
+  --_dark-ring-started: #e8b95c;
+  --_dark-ring-empty: #2c3744;
+
   --_dark-plate-veg: #1f3a2e;
   --_dark-plate-protein: #3a2a20;
   --_dark-plate-legume: #33302a;
@@ -382,6 +394,10 @@
 
     --color-icon: var(--_dark-icon);
 
+    --color-ring-established: var(--_dark-ring-established);
+    --color-ring-started: var(--_dark-ring-started);
+    --color-ring-empty: var(--_dark-ring-empty);
+
     --color-plate-veg: var(--_dark-plate-veg);
     --color-plate-protein: var(--_dark-plate-protein);
     --color-plate-legume: var(--_dark-plate-legume);
@@ -459,6 +475,10 @@
   --color-avatar-ink: var(--_dark-avatar-ink);
 
   --color-icon: var(--_dark-icon);
+
+  --color-ring-established: var(--_dark-ring-established);
+  --color-ring-started: var(--_dark-ring-started);
+  --color-ring-empty: var(--_dark-ring-empty);
 
   --color-plate-veg: var(--_dark-plate-veg);
   --color-plate-protein: var(--_dark-plate-protein);

@@ -6,7 +6,8 @@ import { FoodNames } from "../../catalog/components/DeletedMark.js";
 import { emojiCluster, getFoodEmoji, type EmojiCluster } from "../../catalog/foodEmoji.js";
 import { FoodPlates } from "../../catalog/components/FoodPlate.js";
 import { bestByLabel, countdownLabel, LOCATION_LABEL, storageItemTitle, servingsLabel } from "../format.js";
-import { resolveFreshness } from "../freshness.js";
+import { daysLeft, resolveFreshness } from "../freshness.js";
+import { CARD_ROW_DIVIDER } from "../../../components/ui/Card.js";
 
 /** ONE emoji for a storage item: the first food's when it holds foods,
  * otherwise a friendly stand-in for a recipe or free-form entry. It is the
@@ -137,6 +138,59 @@ export function StorageItemCard({ item, actions, linkable = true }: StorageItemC
         </Badge>
       )}
 
+    </li>
+  );
+}
+
+/** "3 servings" / "1 serving", for a servings-tracked item's row. */
+export function servingsCount(n: number): string {
+  return `${n} ${n === 1 ? "serving" : "servings"}`;
+}
+
+/**
+ * One active item as a row of Home's grouped Storage list (item 662, A-Home):
+ * plates, the name over "Fridge · 3 servings", and the days left as a big
+ * number — apricot once it is down to its last day — or Expired. The whole
+ * row taps through to the item (a stretched link); the actions slot sits
+ * above it. `StorageItemCard` stays the Storage tab's and detail page's card.
+ */
+export function StorageItemRow({ item, actions }: { item: StorageItem; actions?: ReactNode }) {
+  const days = daysLeft(item);
+  const expired = days <= 0 || resolveFreshness(item).state === "expired";
+  const amount = item.servingsLeft != null ? servingsCount(item.servingsLeft) : item.quantityNote;
+
+  return (
+    <li className={`relative flex items-center gap-3 py-2.5 pr-1 pl-3.5 ${CARD_ROW_DIVIDER}`}>
+      <Link
+        to={`/storage/${item.id}`}
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+      >
+        <FoodPlates {...storageItemCluster(item)} />
+        <span className="flex min-w-0 flex-col">
+          <span className="font-bold text-[var(--color-text)]">
+            <StorageItemTitle item={item} />
+          </span>
+          <span className="text-sm text-[var(--color-text-muted)]">
+            {LOCATION_LABEL[item.location]}
+            {amount ? ` · ${amount}` : ""}
+          </span>
+        </span>
+      </Link>
+      {expired ? (
+        <Badge tone="dangerSoft">Expired</Badge>
+      ) : (
+        <span className="flex shrink-0 flex-col items-end">
+          <span
+            className={`text-[22px] leading-tight font-black tabular-nums ${days <= 1 ? "text-[var(--color-apricot-text)]" : "text-[var(--color-text)]"}`}
+          >
+            {days}
+          </span>
+          <span className="text-xs font-bold whitespace-nowrap text-[var(--color-text-muted)]">
+            {days === 1 ? "day left" : "days left"}
+          </span>
+        </span>
+      )}
+      <div className="relative z-10 shrink-0">{actions}</div>
     </li>
   );
 }

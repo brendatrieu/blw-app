@@ -53,6 +53,9 @@ export interface StorageItemActionsMenuProps {
   onRestore?: () => void;
   /** A status mutation is already in flight upstream. */
   busy?: boolean;
+  /** The kebab's accessible name. Home names each one ("Peas actions"), as
+   * it lists several rows (and some twice); defaults to "Actions". */
+  label?: string;
 }
 
 /**
@@ -68,7 +71,14 @@ export interface StorageItemActionsMenuProps {
  * `resolveStorageItemMenuActions` so the gating logic (active/label-only)
  * has one home, unit-tested there.
  */
-export function StorageItemActionsMenu({ item, babyId, onRemove, onRestore, busy = false }: StorageItemActionsMenuProps) {
+export function StorageItemActionsMenu({
+  item,
+  babyId,
+  onRemove,
+  onRestore,
+  busy = false,
+  label = "Actions",
+}: StorageItemActionsMenuProps) {
   const [serveOpen, setServeOpen] = useState(false);
   const updateItem = useUpdateStorageItem();
   const rows = storageMenuRows(item, { hasBaby: Boolean(babyId), canRestore: Boolean(onRestore) });
@@ -76,7 +86,7 @@ export function StorageItemActionsMenu({ item, babyId, onRemove, onRestore, busy
 
   return (
     <>
-      <Menu label="Actions">
+      <Menu label={label}>
         {(close) => (
           <>
             {rows.includes("serve") && (

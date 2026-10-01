@@ -212,9 +212,6 @@ const BASE_PAIRS: Pair[] = [
   { name: "kebab icon on elevated surface", fg: "color-icon", bg: "color-bg-elevated", min: 3 },
   { name: "kebab icon on inset (hover)", fg: "color-icon", bg: "color-bg-inset", min: 3 },
 
-  // ProgressRing (item 639): the accent stroke on its inset track.
-  { name: "ProgressRing accent stroke on its inset track", fg: "color-accent", bg: "color-bg-inset", min: 3 },
-
   // Interactive text accent — links, active nav label, focus-adjacent text.
   { name: "accent link/text on page", fg: "color-accent", bg: "color-bg" },
   { name: "accent link/text on elevated surface", fg: "color-accent", bg: "color-bg-elevated" },
@@ -502,6 +499,38 @@ describe("food plates (items 657, 658)", () => {
     "color-plate-fruit": { light: "#fde4e1", dark: "#3a2422" },
     "color-plate-grain": { light: "#f7e7c8", dark: "#383020" },
     "color-plate-neutral": { light: "#efe9e1", dark: "#2a3542" },
+  };
+  for (const [token, { light, dark }] of Object.entries(EXPECTED)) {
+    it(`--${token} is ${light} light / ${dark} dark`, () => {
+      expect(resolve(token, "light")).toBe(light);
+      expect(resolve(token, "dark")).toBe(dark);
+    });
+  }
+});
+
+describe("Home allergen ring segments (item 663)", () => {
+  // The ring sits on the Allergens card (elevated). Established and started
+  // are status graphics, so 3:1 against the card. The empty segment is the
+  // track itself and is exempt, like the plate tints: the counts are always
+  // text beside the ring ("3 established", "3 started · 3 not started yet").
+  const RING_PAIRS: Pair[] = [
+    { name: "established segment on the card", fg: "color-ring-established", bg: "color-bg-elevated", min: 3 },
+    { name: "started segment on the card", fg: "color-ring-started", bg: "color-bg-elevated", min: 3 },
+  ];
+  for (const mode of ["light", "dark"] as const) {
+    for (const pair of RING_PAIRS) {
+      it(`[${mode}] ${pair.name} >= ${pair.min}:1`, () => {
+        expect(ratioOf(pair.fg, pair.bg, mode)).toBeGreaterThanOrEqual(pair.min!);
+      });
+    }
+  }
+
+  // Dark is the A-Home-Dark mockup exactly; light darkens the mockup's
+  // #7cc6a0 / #f2c66d (2.01 / 1.61:1) to the lightest same hue at 3:1.
+  const EXPECTED: Record<string, { light: string; dark: string }> = {
+    "color-ring-established": { light: "#47a273", dark: "#6cc29c" },
+    "color-ring-started": { light: "#c08611", dark: "#e8b95c" },
+    "color-ring-empty": { light: "#e8e2da", dark: "#2c3744" },
   };
   for (const [token, { light, dark }] of Object.entries(EXPECTED)) {
     it(`--${token} is ${light} light / ${dark} dark`, () => {
