@@ -8,6 +8,8 @@ import { FoodPlates } from "../../catalog/components/FoodPlate.js";
 import { MealActionsMenu } from "./MealActionsMenu.js";
 import { Badge } from "../../catalog/components/Badge.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
+import { Card, CARD_ROW_DIVIDER } from "../../../components/ui/Card.js";
+import { SectionLink } from "../../../components/ui/SectionLink.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog.js";
 import { SkeletonList } from "../../../components/ui/Skeleton.js";
@@ -112,6 +114,10 @@ export interface MealCardProps {
    * kebab `MealActionsMenu` (Edit / Delete); pass `null` for a read-only
    * card with no actions at all. Mirrors `StorageItemCard`'s `actions` slot. */
   actions?: ReactNode;
+  /** A row of a grouped list (Home, item 664) instead of a card of its own:
+   * no border or fill (the list's card has them), an inset divider, and a
+   * kebab named after the meal. */
+  grouped?: boolean;
 }
 
 /**
@@ -126,13 +132,18 @@ export function MealCard({
   onRequestDelete,
   linkable = true,
   actions,
+  grouped = false,
 }: MealCardProps) {
   // `undefined` (the prop omitted) means "the standard kebab"; an explicit
   // `null` means "no actions" — hence the default lives here, not in the
   // destructuring above.
   const actionsSlot =
     actions === undefined ? (
-      <MealActionsMenu mealId={meal.id} onRequestDelete={() => onRequestDelete(meal)} />
+      <MealActionsMenu
+        mealId={meal.id}
+        onRequestDelete={() => onRequestDelete(meal)}
+        {...(grouped && { label: `${meal.foods.map((food) => food.name).join(", ")} actions` })}
+      />
     ) : (
       actions
     );
@@ -156,7 +167,13 @@ export function MealCard({
   );
 
   return (
-    <li className="relative flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-divider)] bg-[var(--color-bg-elevated)] p-3">
+    <li
+      className={
+        grouped
+          ? `relative flex flex-col gap-2 py-2.5 pr-1 pl-3.5 ${CARD_ROW_DIVIDER}`
+          : "relative flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-divider)] bg-[var(--color-bg-elevated)] p-3"
+      }
+    >
       <div className="flex items-start justify-between gap-2">
         {/* Stretched link: the anchor's ::after overlay covers the whole card
             so tapping anywhere opens the meal for editing (which is why there
@@ -194,6 +211,9 @@ export interface ServeLogListProps {
   seeAllHref?: string;
   /** False when a page header already titles the list (the full log page). */
   showHeading?: boolean;
+  /** One rounded card of divided rows instead of a card per meal (Home's
+   * M3 style, item 664). /meals keeps its cards. */
+  grouped?: boolean;
 }
 
 /** The meals Home shows before "See all" takes over. */
@@ -212,7 +232,7 @@ export function limitMeals<T>(items: readonly T[], limit: number | undefined): T
  * LogFoodForm), which a card also reopens (as `/log-meal?edit=:id`) to edit
  * that meal in place.
  */
-export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true }: ServeLogListProps) {
+export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, grouped = false }: ServeLogListProps) {
   const { data, isLoading, isError } = useMeals(babyId, { limit: 100 });
   // The meal itself, not its id: the delete removes the row optimistically,
   // and the question has to outlive it to show a failure.
@@ -226,11 +246,7 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true }: 
       {(showHeading || seeAllHref) && (
         <div className="flex items-center justify-between">
           {showHeading && <h2 className="font-h2 text-[var(--color-text)]">📖 Food log</h2>}
-          {seeAllHref && (
-            <Link to={seeAllHref} className="text-xs font-medium text-[var(--color-accent)] underline">
-              See all
-            </Link>
-          )}
+          {seeAllHref && <SectionLink to={seeAllHref}>See all</SectionLink>}
         </div>
       )}
 
@@ -243,24 +259,27 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true }: 
           title="Nothing logged yet"
           description="Log what baby tried so allergen progress stays up to date."
           action={
-            <ButtonLink to="/log-meal" size="sm" variant="secondary">
+            <ButtonLink to="/log-meal" variant="secondary">
               Log meal
             </ButtonLink>
           }
         />
       )}
 
-      {meals.length > 0 && (
-        <ul className="flex flex-col gap-2">
-          {meals.map((meal) => (
-            <MealCard
-              key={meal.id}
-              meal={meal}
-              onRequestDelete={setPendingDelete}
-            />
-          ))}
-        </ul>
-      )}
+      {meals.length > 0 &&
+        (grouped ? (
+          <Card as="ul" padding="none" className="flex flex-col">
+            {meals.map((meal) => (
+              <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} grouped />
+            ))}
+          </Card>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {meals.map((meal) => (
+              <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} />
+            ))}
+          </ul>
+        ))}
       {pendingDelete && (
         <MealDeleteDialog meal={pendingDelete} babyId={babyId} open onClose={() => setPendingDelete(null)} />
       )}

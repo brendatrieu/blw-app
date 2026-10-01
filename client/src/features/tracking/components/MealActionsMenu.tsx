@@ -5,6 +5,8 @@ export interface MealActionsMenuProps {
   /** Opens the list's "Delete this meal?" pop-up (`MealDeleteDialog`) — the
    * menu never deletes anything itself. */
   onRequestDelete: () => void;
+  /** The kebab's accessible name; defaults to "Actions". */
+  label?: string;
 }
 
 /**
@@ -15,9 +17,9 @@ export interface MealActionsMenuProps {
  * through `MealCard` to the list, which owns the delete question and its
  * mutation (`MealDeleteDialog`).
  */
-export function MealActionsMenu({ mealId, onRequestDelete }: MealActionsMenuProps) {
+export function MealActionsMenu({ mealId, onRequestDelete, label = "Actions" }: MealActionsMenuProps) {
   return (
-    <Menu label="Actions">
+    <Menu label={label}>
       {(close) => (
         <>
           <MenuLinkItem to={`/log-meal?edit=${mealId}`} onSelect={close}>

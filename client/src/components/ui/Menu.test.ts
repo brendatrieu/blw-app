@@ -31,6 +31,12 @@ describe("Menu (render, closed)", () => {
     expect(html).not.toContain("text-[var(--color-text-muted)]");
   });
 
+  it("gives the kebab a 44px target with the mockup's 22px dots (item 665)", () => {
+    const html = renderToString(createElement(Menu, { label: "Actions", children: () => null }));
+    expect(html).toMatch(/<button[^>]*class="flex h-11 w-11 /);
+    expect(html).toContain('width="22" height="22"');
+  });
+
   it("disables the trigger when disabled is set", () => {
     const html = renderToString(createElement(Menu, { label: "Actions", disabled: true, children: () => null }));
     expect(html).toMatch(/<button[^>]*aria-label="Actions"[^>]*disabled/);

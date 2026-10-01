@@ -1,72 +1,205 @@
 import { Link } from "react-router-dom";
+import type { AllergenProgressItem, StorageItem } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
-import { dueAllergens } from "../features/tracking/allergenRow.js";
+import { dueAllergens, dueSinceLabel } from "../features/tracking/allergenRow.js";
+import { allergenEmoji, allergenTint } from "../features/tracking/allergenEmoji.js";
+import { AllergenUpNextMenu } from "../features/tracking/components/AllergenUpNextMenu.js";
 import { HOME_MEAL_LIMIT, ServeLogList } from "../features/tracking/components/ServeLogList.js";
 import { useStorageItems } from "../features/storage/hooks.js";
-import { StorageItemCard } from "../features/storage/components/StorageItemCard.js";
+import { storageItemTitle } from "../features/storage/format.js";
+import { resolveFreshness } from "../features/storage/freshness.js";
+import {
+  servingsCount,
+  storageItemCluster,
+  StorageItemRow,
+  StorageItemTitle,
+  UseSoonBadge,
+} from "../features/storage/components/StorageItemCard.js";
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
+import { FoodPlates } from "../features/catalog/components/FoodPlate.js";
 import { ButtonLink } from "../components/ui/Button.js";
-import { CardLink } from "../components/ui/Card.js";
+import { Card, CardLink } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { ProgressRing } from "../components/ui/ProgressRing.js";
+import { SectionLink } from "../components/ui/SectionLink.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 const ALLERGEN_TOTAL = 9;
+
+/** The rows Up next shows before "See all" takes over (item 660). */
+export const UP_NEXT_LIMIT = 3;
+
+export type UpNextRow = { kind: "storage"; item: StorageItem } | { kind: "allergen"; item: AllergenProgressItem };
+
+/**
+ * What Up next lists (item 660): storage items to use soon, in the freshness
+ * order the list already has, then allergens due for a serve, in ladder
+ * order — at most `UP_NEXT_LIMIT`. Expired items are left to Storage, which
+ * says Expired. `more` names where the hidden rows live: Storage when any of
+ * them is a storage item, otherwise the ladder; null when nothing is hidden.
+ */
+export function upNextRows(
+  storage: readonly StorageItem[],
+  allergens: AllergenProgressItem[],
+  now: Date = new Date(),
+): { rows: UpNextRow[]; more: "storage" | "allergens" | null } {
+  const all: UpNextRow[] = [
+    ...storage
+      .filter((item) => resolveFreshness(item, now).state === "use_soon")
+      .map((item) => ({ kind: "storage" as const, item })),
+    ...dueAllergens(allergens, now).map((item) => ({ kind: "allergen" as const, item })),
+  ];
+  const hidden = all.slice(UP_NEXT_LIMIT);
+  return {
+    rows: all.slice(0, UP_NEXT_LIMIT),
+    more: hidden.length === 0 ? null : hidden.some((row) => row.kind === "storage") ? "storage" : "allergens",
+  };
+}
+
+/** One Up next row: a stretched link to the thing, its kebab above it. */
+// A-Home: the line between Up next rows starts at the text (plate 48 + gap 12),
+// not at the card edge like the storage rows.
+const UP_NEXT_DIVIDER =
+  "not-first:before:absolute not-first:before:top-0 not-first:before:right-2.5 not-first:before:left-[60px] not-first:before:h-px not-first:before:bg-[var(--color-divider)]";
+
+function UpNextRowShell({
+  to,
+  plates,
+  title,
+  detail,
+  actions,
+}: {
+  to: string;
+  plates: React.ReactNode;
+  title: React.ReactNode;
+  detail: React.ReactNode;
+  actions: React.ReactNode;
+}) {
+  return (
+    <li className={`relative flex items-center gap-3 py-2 ${UP_NEXT_DIVIDER}`}>
+      <Link
+        to={to}
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-md)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+      >
+        {plates}
+        <span className="flex min-w-0 flex-col gap-[3px]">
+          <span className="text-[17px] font-extrabold text-[var(--color-text)]">{title}</span>
+          {detail}
+        </span>
+      </Link>
+      <div className="relative z-10 shrink-0">{actions}</div>
+    </li>
+  );
+}
+
+// The Home greeting's small uppercase apricot label (AppLayout), for the
+// card's own label (CSS uppercases it, so the copy stays "Up next").
+const UP_NEXT_LABEL_CLASS = "text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
+
+/**
+ * "Up next" (item 660, A-Home): what needs doing soon, each row with its own
+ * kebab — no single big button. Hidden while either list is loading and when
+ * nothing is due, so it never flashes in empty.
+ */
+function UpNextCard({ babyId }: { babyId: string }) {
+  const storage = useStorageItems("active");
+  const progress = useAllergenProgress(babyId);
+  if (storage.isLoading || progress.isLoading) return null;
+  const { rows, more } = upNextRows(storage.data?.items ?? [], progress.data?.items ?? []);
+  if (rows.length === 0) return null;
+  const ladderPath = `/babies/${babyId}/allergens`;
+
+  return (
+    <Card as="section" padding="none" aria-labelledby="up-next" className="flex flex-col pt-3 pr-1.5 pb-2 pl-4">
+      <div className="flex min-h-8 items-center justify-between pr-2.5">
+        <h2 id="up-next" className={UP_NEXT_LABEL_CLASS}>
+          Up next
+        </h2>
+        {more && <SectionLink to={more === "storage" ? "/storage" : ladderPath}>See all</SectionLink>}
+      </div>
+      <ul className="flex flex-col">
+        {rows.map((row) =>
+          row.kind === "storage" ? (
+            <UpNextRowShell
+              key={`storage-${row.item.id}`}
+              to={`/storage/${row.item.id}`}
+              plates={<FoodPlates {...storageItemCluster(row.item)} />}
+              title={<StorageItemTitle item={row.item} />}
+              detail={
+                <span className="flex items-center gap-1.5 text-sm whitespace-nowrap text-[var(--color-text-muted)]">
+                  <UseSoonBadge />
+                  {row.item.servingsLeft != null && <span>{servingsCount(row.item.servingsLeft)} left</span>}
+                </span>
+              }
+              actions={
+                <StorageItemActionsMenu
+                  item={row.item}
+                  babyId={babyId}
+                  label={`Up next: ${storageItemTitle(row.item)} actions`}
+                />
+              }
+            />
+          ) : (
+            <UpNextRowShell
+              key={`allergen-${row.item.allergenSlug}`}
+              to={`${ladderPath}/${row.item.allergenSlug}`}
+              plates={
+                <FoodPlates
+                  plates={[{ emoji: allergenEmoji(row.item.allergenSlug), tint: allergenTint(row.item.allergenSlug) }]}
+                  overflow={0}
+                />
+              }
+              title={`${row.item.allergenName} is due for a serve`}
+              detail={<span className="text-sm text-[var(--color-text-muted)]">{dueSinceLabel(row.item)}</span>}
+              actions={
+                <AllergenUpNextMenu babyId={babyId} item={row.item} label={`${row.item.allergenName} actions`} />
+              }
+            />
+          ),
+        )}
+      </ul>
+    </Card>
+  );
+}
 
 function AllergenProgressSummary({ babyId }: { babyId: string }) {
   const { data, isLoading } = useAllergenProgress(babyId);
 
   if (isLoading || !data) {
-    return <Skeleton className="h-[5.5rem] w-full rounded-[var(--radius-lg)]" />;
+    return <Skeleton className="h-[6.5rem] w-full rounded-[var(--radius-lg)]" />;
   }
 
   const established = data.items.filter((item) => item.status === "established").length;
   const started = data.items.filter((item) => item.status === "started").length;
   const notStarted = data.items.length - established - started;
-  const progressed = Math.min(established + started, ALLERGEN_TOTAL);
-  const due = dueAllergens(data.items).length;
-  const ladderPath = `/babies/${babyId}/allergens`;
+  // One segment per allergen (item 663): established, then started, then the
+  // empty track, clockwise from the top.
+  const segments = Array.from({ length: ALLERGEN_TOTAL }, (_, index) =>
+    index < established
+      ? "var(--color-ring-established)"
+      : index < established + started
+        ? "var(--color-ring-started)"
+        : "var(--color-ring-empty)",
+  );
 
   return (
-    <>
-      <CardLink to={ladderPath} padding="sm" className="flex items-center gap-4">
-        <ProgressRing
-          value={progressed / ALLERGEN_TOTAL}
-          label={`${progressed} of ${ALLERGEN_TOTAL} allergens started or established`}
-        >
-          {/* Inline: the unlayered `font:` shorthand on .font-h2 resets
-              font-variant-numeric, so a tabular-nums class would lose. */}
-          <span
-            className="font-h2 text-[var(--color-text)]"
-            style={{ fontVariantNumeric: "tabular-nums" }}
-          >
-            {progressed}/{ALLERGEN_TOTAL}
-          </span>
-        </ProgressRing>
-        <div className="flex flex-col gap-0.5 text-sm">
-          <span className="font-semibold text-[var(--color-text)]">🌟 Allergen ladder</span>
-          <span className="text-[var(--color-text-muted)]">
-            {established} established, {started} started
-          </span>
-          <span className="text-[var(--color-text-muted)]">{notStarted} not started yet</span>
-        </div>
-      </CardLink>
-
-      {/* One line, and only when there is something to say (item 365). It is
-          a SIBLING of the card, not a link inside it: `CardLink` is already
-          an anchor, and nesting a second one in it is invalid markup.
-          `min-h-11` keeps the tap target at 44px even though the text is
-          small. */}
-      {due > 0 && (
-        <Link
-          to={ladderPath}
-          className="inline-flex min-h-11 items-center text-xs font-medium text-[var(--color-accent)] underline"
-        >
-          {due === 1 ? "1 allergen due for a serve" : `${due} allergens due for a serve`}
-        </Link>
-      )}
-    </>
+    <CardLink to={`/babies/${babyId}/allergens`} padding="none" className="flex items-center gap-4 px-4 py-3.5">
+      <ProgressRing
+        segments={segments}
+        label={`${established} of ${ALLERGEN_TOTAL} allergens established, ${started} started`}
+      >
+        <span className="text-xl font-black tabular-nums text-[var(--color-text)]">
+          {established}/{ALLERGEN_TOTAL}
+        </span>
+      </ProgressRing>
+      <div className="flex flex-col gap-1 text-sm">
+        <span className="text-base font-extrabold text-[var(--color-text)]">{established} established</span>
+        <span className="text-[var(--color-text-muted)]">
+          {started} started · {notStarted} not started yet
+        </span>
+      </div>
+    </CardLink>
   );
 }
 
@@ -81,9 +214,7 @@ function StorageSection({ babyId }: { babyId: string }) {
     <section className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between">
         <h2 className="font-h2 text-[var(--color-text)]">Storage</h2>
-        <Link to="/storage" className="text-xs font-medium text-[var(--color-accent)] underline">
-          See all
-        </Link>
+        <SectionLink to="/storage">See all</SectionLink>
       </div>
 
       {isLoading && <SkeletonList count={2} />}
@@ -94,7 +225,7 @@ function StorageSection({ babyId }: { babyId: string }) {
           title="Nothing in storage yet"
           description="Log what you've prepped so nothing gets forgotten in storage."
           action={
-            <ButtonLink to="/storage/add" size="sm" variant="secondary">
+            <ButtonLink to="/storage/add" variant="secondary">
               Add what you prepped
             </ButtonLink>
           }
@@ -102,16 +233,18 @@ function StorageSection({ babyId }: { babyId: string }) {
       )}
 
       {topThree.length > 0 && (
-        <ul className="flex flex-col gap-2">
+        // One rounded group of divided rows (item 662), not a card per item.
+        <Card as="ul" padding="none" className="flex flex-col">
           {topThree.map((item) => (
-            <StorageItemCard
+            <StorageItemRow
               key={item.id}
               item={item}
-              busy={false}
-              actions={<StorageItemActionsMenu item={item} babyId={babyId} />}
+              actions={
+                <StorageItemActionsMenu item={item} babyId={babyId} label={`${storageItemTitle(item)} actions`} />
+              }
             />
           ))}
-        </ul>
+        </Card>
       )}
     </section>
   );
@@ -150,23 +283,28 @@ export function DashboardPage() {
       {/* The visible greeting lives in the shared AppLayout header; this keeps
           the document outline rooted for screen readers. */}
       <h1 className="sr-only">Home</h1>
+      <UpNextCard babyId={activeBaby.id} />
+      {/* Emoji-free per A-Home; sky and mint as before (item 661). */}
       <div className="flex gap-2">
-        <ButtonLink to="/log-meal" className="flex-1">
-          🍽️ Log meal
+        <ButtonLink to="/log-meal" size="lg" className="flex-1">
+          Log meal
         </ButtonLink>
-        <ButtonLink to="/storage/add" variant="tonal" className="flex-1">
-          📦 Add to storage
+        <ButtonLink to="/storage/add" variant="tonal" size="lg" className="flex-1">
+          Add to storage
         </ButtonLink>
       </div>
 
       <StorageSection babyId={activeBaby.id} />
 
       <section className="flex flex-col gap-2.5">
-        <h2 className="font-h2 text-[var(--color-text)]">Allergen progress</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-h2 text-[var(--color-text)]">Allergens</h2>
+          <SectionLink to={`/babies/${activeBaby.id}/allergens`}>Ladder</SectionLink>
+        </div>
         <AllergenProgressSummary babyId={activeBaby.id} />
       </section>
 
-      <ServeLogList babyId={activeBaby.id} limit={HOME_MEAL_LIMIT} seeAllHref="/meals" />
+      <ServeLogList babyId={activeBaby.id} limit={HOME_MEAL_LIMIT} seeAllHref="/meals" grouped />
     </div>
   );
 }

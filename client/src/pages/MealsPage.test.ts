@@ -62,7 +62,8 @@ describe("MealsPage (/meals — Home's See all)", () => {
   it("lists every meal with no cap and no See all link", () => {
     const html = render(true, 5);
     expect((html.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(5);
-    expect(html).not.toContain(">See all<");
+    expect(html).not.toContain("See all");
+    expect(html).not.toContain('href="/meals"');
   });
 
   it("asks for a baby profile when there is none", () => {

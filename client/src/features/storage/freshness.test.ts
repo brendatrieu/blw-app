@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BEST_BY_BEFORE_PREPARED_MESSAGE,
+  daysLeft,
   isBestByBeforePrepared,
   resolveFreshness,
   sortActiveByFreshness,
@@ -90,6 +91,28 @@ describe("resolveFreshness — no best-by date passes the server's flags through
 
   it("treats an empty-string best-by (a cleared field) as unset", () => {
     expect(resolveFreshness(bestByItem("", { useSoon: true }), new Date(2026, SEPT, 14, 9)).source).toBe("window");
+  });
+});
+
+describe("daysLeft (item 662)", () => {
+  it("rounds a part day up, so the last hours still read 1", () => {
+    const now = new Date(2026, SEPT, 14, 9);
+    // Window ends Sept 17 10:00: 3 days and 1 hour out.
+    expect(daysLeft(windowItem(), now)).toBe(4);
+    expect(daysLeft(windowItem({ expiresAt: new Date(2026, SEPT, 17, 9).toISOString() }), now)).toBe(3);
+    expect(daysLeft(windowItem({ expiresAt: new Date(2026, SEPT, 14, 10).toISOString() }), now)).toBe(1);
+  });
+
+  it("counts a best-by date to the midnight after it", () => {
+    const now = new Date(2026, SEPT, 14, 9);
+    expect(daysLeft(bestByItem("2026-09-14"), now)).toBe(1);
+    expect(daysLeft(bestByItem("2026-09-15"), now)).toBe(2);
+  });
+
+  it("is zero or less once the item has ended", () => {
+    const now = new Date(2026, SEPT, 14, 9);
+    expect(daysLeft(bestByItem("2026-09-13"), now)).toBeLessThanOrEqual(0);
+    expect(daysLeft(windowItem({ expiresAt: new Date(2026, SEPT, 12, 9).toISOString() }), now)).toBe(-2);
   });
 });
 

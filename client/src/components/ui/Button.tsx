@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes } from "react";
 import { Link, type LinkProps } from "react-router-dom";
 
 export type ButtonVariant = "primary" | "secondary" | "tonal" | "ghost" | "danger" | "danger-quiet";
-export type ButtonSize = "md" | "sm";
+export type ButtonSize = "lg" | "md" | "sm";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
@@ -26,14 +26,17 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 // for dense, secondary actions inside existing list rows (delete/cancel
 // links) where a full-size button would overwhelm the row.
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  md: "min-h-11 px-4 py-2 text-sm",
-  sm: "min-h-9 px-3 py-1.5 text-sm",
+  // `lg`: the page's main pair (Log meal / Add to storage on Home and the
+  // food page), 48px and 16px/800 as in the A mockups.
+  lg: "min-h-12 px-4 py-2.5 text-base font-extrabold",
+  md: "min-h-11 px-4 py-2 text-sm font-semibold",
+  sm: "min-h-9 px-3 py-1.5 text-sm font-semibold",
 };
 
 // Chunky, rounded, springy: a quick scale-down on press (skipped for
 // reduced-motion users, who get an instant, motionless press instead).
 const BASE =
-  "inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-md)] font-semibold transition-[transform,background-color,border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-spring)] active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100";
+  "inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-md)] transition-[transform,background-color,border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-spring)] active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;

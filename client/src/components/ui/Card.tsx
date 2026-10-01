@@ -22,6 +22,12 @@ interface CardProps extends HTMLAttributes<HTMLElement> {
   as?: ElementType;
 }
 
+/** A thin inset line above every row but the first, for a `Card` that holds
+ * a list of rows (Home's grouped lists, items 660/662/664). Each row must be
+ * `relative`. */
+export const CARD_ROW_DIVIDER =
+  "not-first:before:absolute not-first:before:inset-x-3.5 not-first:before:top-0 not-first:before:h-px not-first:before:bg-[var(--color-divider)]";
+
 /** Static content surface — the base unit for list rows, sections, and panels. */
 export function Card({ padding = "md", as: Tag = "div", className = "", ...props }: CardProps) {
   return <Tag className={`${BASE} ${PADDING_CLASSES[padding]} ${className}`} {...props} />;

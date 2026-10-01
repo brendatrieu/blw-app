@@ -82,7 +82,9 @@ describe("section headings share .font-h2 (item 649)", () => {
       .filter(({ path }) => !EXEMPT.has(path.replaceAll("\\", "/")))
       .flatMap(({ path, text }) =>
         [...text.matchAll(/<h2\b[^>]*>/g)]
-          .filter(([tag]) => !/\bfont-h2\b/.test(tag))
+          // Home's Up next card is titled by the small apricot label, as
+          // A-Home draws it (item 660), not by a section heading.
+          .filter(([tag]) => !/\bfont-h2\b/.test(tag) && !tag.includes("className={UP_NEXT_LABEL_CLASS}"))
           .map(([tag]) => `${path}: ${tag}`),
       );
     expect(offenders).toEqual([]);

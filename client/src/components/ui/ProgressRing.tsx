@@ -1,55 +1,52 @@
 interface ProgressRingProps {
-  /** Diameter in pixels. */
+  /** One CSS color per equal segment, drawn clockwise from the top. */
+  segments: readonly string[];
+  /** Box size in pixels. */
   size?: number;
-  /** 0–1 fraction of the ring to fill. */
-  value: number;
   /** Stroke width in pixels. */
   strokeWidth?: number;
-  /** Accessible label, e.g. "6 of 9 allergens introduced". */
+  /** Accessible label, e.g. "3 of 9 allergens established, 3 started". */
   label: string;
-  /** Content centered inside the ring, e.g. "6/9". */
+  /** Content centered inside the ring, e.g. "3/9". */
   children?: React.ReactNode;
 }
 
+/** The gap between two segments, in px along the ring. */
+const GAP = 4;
+
 /**
- * SVG progress ring — an accent stroke on an inset track. Used for
- * allergen/progress summaries. Accent, not the CTA fill: the pastel CTA
- * sinks into the light inset track (1.35:1), and a ring is a graphic.
+ * A ring of equal segments with small gaps (item 663, A-Home): Home's
+ * allergen summary draws one per allergen, colored by status. Static, so
+ * there is no motion to reduce.
  */
-export function ProgressRing({ size = 96, value, strokeWidth = 10, label, children }: ProgressRingProps) {
-  const clamped = Math.min(1, Math.max(0, value));
-  const radius = (size - strokeWidth) / 2;
+export function ProgressRing({ segments, size = 76, strokeWidth = 9, label, children }: ProgressRingProps) {
+  const center = size / 2;
+  // A-Home: r=30 in the 76px box, a little air outside the stroke.
+  const radius = center - strokeWidth + 1;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - clamped);
+  const step = circumference / segments.length;
 
   return (
     <div
       role="img"
       aria-label={label}
-      className="relative inline-flex items-center justify-center"
+      className="relative inline-flex shrink-0 items-center justify-center"
       style={{ width: size, height: size }}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="var(--color-bg-inset)"
-          strokeWidth={strokeWidth}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="var(--color-accent)"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="transition-[stroke-dashoffset] duration-[var(--duration-slow)] ease-[var(--ease-out)] motion-reduce:transition-none"
-        />
+        {segments.map((color, index) => (
+          <circle
+            key={index}
+            cx={center}
+            cy={center}
+            r={radius}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${step - GAP} ${circumference - step + GAP}`}
+            strokeDashoffset={-(index * step + GAP / 2)}
+          />
+        ))}
       </svg>
       {children ? (
         <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center">

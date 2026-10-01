@@ -6,6 +6,7 @@ import {
   REACTION_HINT_COPY,
   RECENCY_HINT_COPY,
   dueAllergens,
+  dueSinceLabel,
   isAllergenDue,
   lastExposureLabel,
   lastServedLabel,
@@ -14,6 +15,7 @@ import {
   resolveAllergenRecency,
   resolveAllergenRowAction,
   serveAgainByLabel,
+  serveFoodId,
   servingCountLabel,
   showsReactionBadge,
 } from "./allergenRow.js";
@@ -450,5 +452,55 @@ describe("dueAllergens leaves a reaction-paused row out of Home's count", () => 
     });
     expect(dueAllergens([due], NOW)).toEqual([due]);
     expect(dueAllergens([{ ...due, reactionNotedAt: iso(daysAgo(1)) }], NOW)).toEqual([]);
+  });
+});
+
+describe("dueSinceLabel — Up next's sentence (item 660)", () => {
+  it("says 'Last served N days ago' when the meal log is the latest exposure", () => {
+    expect(dueSinceLabel(servedAt(daysAgo(9)), NOW)).toBe("Last served 9 days ago");
+  });
+
+  it("says 'Marked' when the parent's mark is newer than the last serve", () => {
+    expect(dueSinceLabel(markedAt(daysAgo(8), daysAgo(12)), NOW)).toBe("Marked 8 days ago");
+  });
+
+  it("keeps the today/yesterday words and the nothing-yet fallback", () => {
+    expect(dueSinceLabel(servedAt(at(2026, 9, 1, 9, 0)), NOW)).toBe("Last served today");
+    expect(dueSinceLabel(servedAt(daysAgo(1)), NOW)).toBe("Last served yesterday");
+    expect(dueSinceLabel(progress({ status: "started" }), NOW)).toBe("No serves logged yet");
+  });
+});
+
+describe("serveFoodId — the food Up next's Log meal prefills (item 660)", () => {
+  const food = (id: string, deleted?: boolean) => ({
+    id,
+    slug: id,
+    name: id,
+    category: "protein" as const,
+    emoji: null,
+    isCustom: false,
+    ...(deleted === undefined ? {} : { deleted }),
+  });
+  const exposure = (...foods: { id: string; deleted?: boolean }[]) => ({
+    mealId: "m",
+    servedAt: iso(daysAgo(9)),
+    foods: foods.map((f) => ({ ...f, name: f.id, emoji: null })),
+    reaction: null,
+    notes: null,
+  });
+
+  it("prefers the newest exposure's first live food", () => {
+    expect(
+      serveFoodId({ foods: [food("butter")], exposures: [exposure({ id: "gone", deleted: true }, { id: "pb" }), exposure({ id: "old" })] }),
+    ).toBe("pb");
+  });
+
+  it("falls back to the first live food carrying the allergen", () => {
+    expect(serveFoodId({ foods: [food("gone", true), food("butter")], exposures: [] })).toBe("butter");
+    expect(serveFoodId({ foods: [food("butter")], exposures: [exposure({ id: "gone", deleted: true })] })).toBe("butter");
+  });
+
+  it("is null when nothing can be logged", () => {
+    expect(serveFoodId({ foods: [food("gone", true)], exposures: [] })).toBeNull();
   });
 });

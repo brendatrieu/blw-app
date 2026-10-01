@@ -76,6 +76,15 @@ export function resolveFreshness(item: FreshnessInput, now: Date = new Date()): 
 }
 
 /**
+ * Whole days until `resolveFreshness`'s `endsAt`, rounded UP: anything left
+ * of a day still reads "1 day left" (Home's Storage rows, item 662). Zero or
+ * less means the item has ended — the caller shows Expired instead.
+ */
+export function daysLeft(item: FreshnessInput, now: Date = new Date()): number {
+  return Math.ceil((resolveFreshness(item, now).endsAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+}
+
+/**
  * The active storage list in "eat this next" order — soonest `endsAt` first,
  * best-by and window items interleaved on the one scale.
  *
