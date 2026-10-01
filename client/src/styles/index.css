@@ -165,6 +165,13 @@
   --color-callout-border: #eedba3;
   --color-callout-icon: #6b4f10;
 
+  /* Choking notes callout (item 667): a calm soft-red tint, 1px border,
+     red title + triangle, body in ink. The border is decorative (the tint
+     and title carry the meaning), so it has no 3:1 gate. */
+  --color-danger-callout-bg: #fdeeec;
+  --color-danger-callout-border: #f3cdc8;
+  --color-danger-callout-text: #8f1f18;
+
   /* ---- Chart palette (item 326) ----
      The ONLY colors any `components/charts/*` mark is allowed to wear, and
      deliberately separate from the product tokens above: `--color-primary`
@@ -313,6 +320,10 @@
   --_dark-callout-border: #5e5122;
   --_dark-callout-icon: #ffecc3;
 
+  --_dark-danger-callout-bg: #33201e;
+  --_dark-danger-callout-border: #5a2e2a;
+  --_dark-danger-callout-text: #ffb4ab;
+
   /* Chart palette, stepped for the dark ground rather than flipped: both
      ramps run dark→light here so their near-surface end still means "near
      zero", and the two ramp inks swap roles with them. */
@@ -388,6 +399,9 @@
     --color-callout-bg: var(--_dark-callout-bg);
     --color-callout-border: var(--_dark-callout-border);
     --color-callout-icon: var(--_dark-callout-icon);
+    --color-danger-callout-bg: var(--_dark-danger-callout-bg);
+    --color-danger-callout-border: var(--_dark-danger-callout-border);
+    --color-danger-callout-text: var(--_dark-danger-callout-text);
 
     --chart-1: var(--_dark-chart-1);
     --chart-ramp-1: var(--_dark-chart-ramp-1);
@@ -461,6 +475,9 @@
   --color-callout-bg: var(--_dark-callout-bg);
   --color-callout-border: var(--_dark-callout-border);
   --color-callout-icon: var(--_dark-callout-icon);
+  --color-danger-callout-bg: var(--_dark-danger-callout-bg);
+  --color-danger-callout-border: var(--_dark-danger-callout-border);
+  --color-danger-callout-text: var(--_dark-danger-callout-text);
 
   --chart-1: var(--_dark-chart-1);
   --chart-ramp-1: var(--_dark-chart-ramp-1);

@@ -94,12 +94,16 @@ const BABY: Baby = {
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
-/** Same render, but with a baby and meals in the cache, so the served-count
- * fact under the actions row has something to count (item 282). */
-function renderFoodWithMeals(food: FoodDetail, servings: number) {
+/** Same render, but with a baby and meals (and optionally ratings) in the
+ * cache, so the hero's stats line has something to count (items 282, 666). */
+function renderFoodWithMeals(food: FoodDetail, servings: number, ratings?: number[]) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(catalogKeys.food(food.slug), food);
   queryClient.setQueryData(babyKeys.list(false), [BABY]);
+  if (ratings) {
+    const points = ratings.map((rating, i) => ({ servedAt: new Date(2026, 7, 20 + i, 12, 0).toISOString(), rating }));
+    queryClient.setQueryData(trackingKeys.ratingHistory(BABY.id, { foodId: food.id }), { points });
+  }
   const meals: MealItem[] = Array.from({ length: servings }, (_, i) => ({
     id: `meal-${i}`,
     babyId: BABY.id,
@@ -108,9 +112,24 @@ function renderFoodWithMeals(food: FoodDetail, servings: number) {
     notes: null,
     recipeId: null,
     recipeTitle: null,
-    foods: [{ id: food.id, slug: food.slug, name: food.name, category: food.category, storageItemId: null }],
+    // The first meal lists this food second, so the count can't key on foods[0].
+    foods: [
+      ...(i === 0 ? [{ id: "other-food", slug: "kiwi", name: "Kiwi", category: "fruit" as const, storageItemId: null }] : []),
+      { id: food.id, slug: food.slug, name: food.name, category: food.category, storageItemId: null },
+    ],
   }));
-  queryClient.setQueryData([...trackingKeys.meals(BABY.id), { limit: 100 }], { items: meals });
+  // A meal of something else, which must not count toward this food.
+  const other: MealItem = {
+    id: "meal-other",
+    babyId: BABY.id,
+    servedAt: new Date(2026, 7, 1, 12, 0).toISOString(),
+    reactionNote: null,
+    notes: null,
+    recipeId: null,
+    recipeTitle: null,
+    foods: [{ id: "other-food", slug: "kiwi", name: "Kiwi", category: "fruit", storageItemId: null }],
+  };
+  queryClient.setQueryData([...trackingKeys.meals(BABY.id), { limit: 100 }], { items: [...meals, other] });
   return renderToString(
     createElement(
       QueryClientProvider,
@@ -175,7 +194,7 @@ describe("FoodDetailPage — custom food (item 181)", () => {
   it("hides the Prep-by-age and choking sections rather than showing empty ones", () => {
     const html = renderFood(CUSTOM_FOOD);
     expect(html).not.toContain("Prep by age");
-    expect(html).not.toContain("6-8 months");
+    expect(html).not.toContain("6–8 mo");
     expect(html).not.toContain("Choking notes");
   });
 
@@ -247,13 +266,15 @@ describe("FoodDetailPage — actions row (item 282)", () => {
     expect(html).not.toContain("Where's it stored?");
   });
 
-  // The fact stays, under the pair rather than beside one button.
-  it("keeps the served-count fact, pluralised, naming the baby", () => {
+  // Item 666: the count moved up into the hero's stats line, above the pair.
+  it("keeps the served-count fact, pluralized, in the hero above the pair", () => {
     const two = renderFoodWithMeals(catalogFood(), 2);
-    expect(two).toMatch(/Served (?:<!-- -->)?2(?:<!-- -->)? (?:<!-- -->)?times/);
-    expect(two).toContain("Robin");
-    const one = renderFoodWithMeals(catalogFood(), 1);
-    expect(one).toMatch(/Served (?:<!-- -->)?1(?:<!-- -->)? (?:<!-- -->)?time/);
+    expect(two).toContain('<p class="text-sm tabular-nums text-[var(--color-text-muted)]">Served 2 times</p>');
+    expect(two.indexOf("Served 2 times")).toBeGreaterThan(two.indexOf(">Fish<"));
+    expect(two.indexOf("Served 2 times")).toBeLessThan(two.indexOf(">Log meal<"));
+    // The header names the baby; the line no longer does.
+    expect(two).not.toContain("to Robin");
+    expect(renderFoodWithMeals(catalogFood(), 1)).toContain(">Served 1 time</p>");
     // Nothing served, nothing claimed.
     expect(renderFoodWithMeals(catalogFood(), 0)).not.toContain("Served");
   });
@@ -448,7 +469,7 @@ describe("FoodDetailPage rating history (item 575)", () => {
       { servedAt: "2026-09-20T12:00:00.000Z", rating: 2 },
       { servedAt: "2026-09-25T12:00:00.000Z", rating: 4 },
     ]);
-    const average = html.indexOf("★</span> 3.0 (2)");
+    const average = html.indexOf("★</span> <strong");
     const graph = html.indexOf(`${escapeHtml(BABY.name)}&#x27;s rating history</h2>`);
     // A subtitle: after the last badge, inside the header, before the buttons.
     expect(average).toBeGreaterThan(html.indexOf(">Fish<"));
@@ -465,5 +486,101 @@ describe("FoodDetailPage rating history (item 575)", () => {
     const html = renderWithHistory([]);
     expect(html).not.toContain("★");
     expect(html).not.toContain("rating history");
+  });
+});
+
+describe("FoodDetailPage hero stats line (item 666)", () => {
+  it("merges the average, the rating count and the served count into one line", () => {
+    const html = renderFoodWithMeals(catalogFood(), 3, [2, 4]);
+    expect(html).toContain(
+      '<span aria-hidden="true"><span class="text-[var(--color-apricot-graphic)]">★</span> <strong class="text-[var(--color-text)]">3.0</strong> · 2 ratings · served 3 times</span>',
+    );
+    expect(html).toContain('<span class="sr-only">Rated 3.0 out of 5, 2 ratings, served 3 times</span>');
+    // One line: no second served fact anywhere else on the page.
+    expect(html).not.toContain("Served");
+  });
+
+  it("leaves out a part with nothing to say, and keeps singulars", () => {
+    const ratedOnly = renderFoodWithMeals(catalogFood(), 0, [5]);
+    expect(ratedOnly).toContain("<strong class=\"text-[var(--color-text)]\">5.0</strong> · 1 rating</span>");
+    expect(ratedOnly).toContain('<span class="sr-only">Rated 5.0 out of 5, 1 rating</span>');
+    expect(ratedOnly).not.toMatch(/served/i);
+    const servedOnce = renderFoodWithMeals(catalogFood(), 1, [3, 4]);
+    expect(servedOnce).toContain(" · 2 ratings · served 1 time</span>");
+    expect(servedOnce).toContain("Rated 3.5 out of 5, 2 ratings, served 1 time</span>");
+  });
+
+  it("renders nothing with no baby, or with neither ratings nor servings", () => {
+    for (const html of [renderFood(catalogFood()), renderFoodWithMeals(catalogFood(), 0, [])]) {
+      expect(html).not.toContain("★");
+      expect(html).not.toMatch(/served/i);
+      expect(html).not.toContain("tabular-nums");
+    }
+  });
+});
+
+describe("FoodDetailPage choking notes callout (item 667)", () => {
+  const callout = (html: string) => /<div[^>]*danger-callout-bg[^>]*>.*?Check for bones\.<\/p><\/div>/s.exec(html)?.[0] ?? "";
+
+  it("is a calm tinted callout: 1px border, 16px radius, the callout tokens", () => {
+    const box = callout(renderFood(catalogFood()));
+    expect(box).toContain(
+      'class="flex flex-col gap-1.5 rounded-2xl border border-[var(--color-danger-callout-border)] bg-[var(--color-danger-callout-bg)] px-4 py-3.5"',
+    );
+    expect(box).not.toContain("border-2");
+    expect(box).not.toContain("var(--color-danger)");
+    expect(box).not.toContain("⚠️");
+  });
+
+  it("titles it in the callout red with a hidden triangle icon, the body in ink", () => {
+    const box = callout(renderFood(catalogFood()));
+    expect(box).toMatch(
+      /<p class="[^"]*text-\[var\(--color-danger-callout-text\)\]"><svg[^>]*aria-hidden="true"[^>]*><path d="M12 4 2\.5 20h19z"><\/path>.*<\/svg>Choking notes<\/p>/s,
+    );
+    expect(box).toContain('<p class="text-[15px] leading-[1.45] text-[var(--color-text)]">Check for bones.</p>');
+  });
+});
+
+describe("FoodDetailPage prep by age (item 668)", () => {
+  /** A baby born on the 1st, `months` months before today, so its stage never drifts. */
+  function babyAged(months: number): Baby {
+    const born = new Date();
+    born.setUTCDate(1);
+    born.setUTCMonth(born.getUTCMonth() - months);
+    return { ...BABY, birthDate: born.toISOString().slice(0, 10) };
+  }
+  const checked = (html: string) => /role="radio" aria-checked="true"[^>]*>([^<]*)</.exec(html)?.[1];
+
+  it("is a three-way Age segmented control, in age order", () => {
+    const html = renderFood(catalogFood());
+    expect(html).toContain('role="radiogroup" aria-label="Age"');
+    const labels = [...html.matchAll(/role="radio"[^>]*>([^<]*)</g)].map((m) => m[1]);
+    expect(labels).toEqual(["6–8 mo", "9–11 mo", "12+ mo"]);
+    expect(html).toMatch(/Prep by age<\/h2><div role="radiogroup"/);
+  });
+
+  it("shows one stage's text at a time, the earliest with no baby", () => {
+    const html = renderFood(catalogFood());
+    expect(checked(html)).toBe("6–8 mo");
+    expect(html).toContain('<p class="text-base text-[var(--color-text)]">Flake it off the skin.</p>');
+    expect(html).not.toContain("Small flakes.");
+    expect(html).not.toContain("Bite-size pieces.");
+  });
+
+  it("defaults to the baby's current stage", () => {
+    const cases: Array<[number, string, string]> = [
+      [7, "6–8 mo", "Flake it off the skin."],
+      [8, "6–8 mo", "Flake it off the skin."],
+      [9, "9–11 mo", "Small flakes."],
+      [10, "9–11 mo", "Small flakes."],
+      [12, "12+ mo", "Bite-size pieces."],
+      [13, "12+ mo", "Bite-size pieces."],
+    ];
+    for (const [months, label, prep] of cases) {
+      const html = renderFood(catalogFood(), [babyAged(months)]);
+      expect(checked(html)).toBe(label);
+      expect(html).toContain(`>${prep}</p>`);
+      expect(html.match(/(Flake it off the skin|Small flakes|Bite-size pieces)\./g)).toHaveLength(1);
+    }
   });
 });

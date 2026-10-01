@@ -101,7 +101,8 @@ vi.mock("../features/catalog/hooks.js", () => ({
 import { Button } from "../components/ui/Button.js";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog.js";
 import { SingleFoodPicker } from "../features/catalog/components/FoodPicker.js";
-import { CustomFoodActions, DeleteFoodQuestion, DeletedFoodNotice, RESTORE_HINT } from "./FoodDetailPage.js";
+import { SegmentedControl } from "../components/ui/SegmentedControl.js";
+import { CustomFoodActions, DeleteFoodQuestion, DeletedFoodNotice, PrepByAge, RESTORE_HINT } from "./FoodDetailPage.js";
 
 interface Rendered {
   type: unknown;
@@ -347,5 +348,33 @@ describe("DeletedFoodNotice", () => {
     const tree = (DeletedFoodNotice as unknown as (props: { food: FoodDetail }) => Rendered)({ food: DELETED });
     (button(tree, "Restore")!.props.onClick as () => void)();
     expect(h.calls.restores).toEqual([DELETED]);
+  });
+});
+
+describe("PrepByAge (item 668)", () => {
+  const SALMON: FoodDetail = { ...FOOD, isCustom: false, prep6m: "Flake it.", prep9m: "Small flakes.", prep12m: "Bite-size pieces." };
+
+  function prep(defaultStage: "6" | "9" | "12") {
+    h.store.i = 0;
+    const tree = (PrepByAge as unknown as (props: { food: FoodDetail; defaultStage: string }) => Rendered)({
+      food: SALMON,
+      defaultStage,
+    });
+    const control = collect(tree, (element) => element.type === SegmentedControl)[0]!;
+    return { value: control.props.value, onChange: control.props.onChange as (stage: string) => void, text: text(tree).join("|") };
+  }
+
+  it("follows the baby's stage until a tab is tapped", () => {
+    expect(prep("6")).toMatchObject({ value: "6", text: "Prep by age|Flake it." });
+    // The baby loads (or has a birthday): nothing picked, so the default moves.
+    expect(prep("9")).toMatchObject({ value: "9", text: "Prep by age|Small flakes." });
+  });
+
+  it("shows the tapped stage's text, and keeps it when the default changes", () => {
+    prep("9").onChange("12");
+    expect(prep("9")).toMatchObject({ value: "12", text: "Prep by age|Bite-size pieces." });
+    expect(prep("6")).toMatchObject({ value: "12", text: "Prep by age|Bite-size pieces." });
+    prep("6").onChange("6");
+    expect(prep("12")).toMatchObject({ value: "6", text: "Prep by age|Flake it." });
   });
 });

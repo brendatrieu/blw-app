@@ -498,6 +498,21 @@ describe("RecipeDetailPage favorite heart (item 640)", () => {
     expect(pill).toContain("♡");
     expect(pill).not.toContain("apricot");
   });
+
+  it("gives the pill a 44px touch target in both states (item 672)", () => {
+    for (const favorited of [true, false]) {
+      const html = renderWithFavorites(catalogRecipe(), favorited);
+      const pill = new RegExp(`<button[^>]*aria-pressed="${favorited}"[^>]*>`).exec(html)?.[0] ?? "";
+      expect(pill).toContain("min-h-11");
+      expect(pill).not.toContain("min-h-9");
+    }
+  });
+
+  it("gives the age tabs a 44px touch target too", () => {
+    const html = renderWithFavorites(catalogRecipe(), false);
+    expect(html).toContain('class="min-h-11 rounded-[var(--radius-pill)] px-3.5');
+    expect(html).not.toContain('min-h-9 rounded-[var(--radius-pill)] px-3.5');
+  });
 });
 
 describe("RecipeDetailPage ingredient allergen rows (item 334)", () => {

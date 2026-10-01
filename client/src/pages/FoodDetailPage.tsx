@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import type { FoodDetail, FoodListItem } from "@blw/shared";
+import { STAR_RATING_MAX, ageInMonths, type AgeStage, type FoodDetail, type FoodListItem } from "@blw/shared";
 import {
   useDeleteCustomFood,
   useFood,
@@ -15,21 +15,85 @@ import { CUSTOM_FOOD_SOFT_NOTE, levelLabel, usedInPhrase } from "../features/cat
 import { foodPlate } from "../features/catalog/foodEmoji.js";
 import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe, sortBasicRecipesFirst } from "../features/catalog/basicRecipe.js";
+import { stageForAge } from "../features/catalog/stage.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { useMeals } from "../features/tracking/hooks.js";
-import { RatingHistory, RatingSummaryRow } from "../features/tracking/components/RatingHistory.js";
+import { useMeals, useRatingHistory } from "../features/tracking/hooks.js";
+import { RatingHistory } from "../features/tracking/components/RatingHistory.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { CardLink } from "../components/ui/Card.js";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog.js";
 import { Field } from "../components/ui/Field.js";
+import { SegmentedControl } from "../components/ui/SegmentedControl.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
 
+// Item 668: the age tabs, and the prep column each one shows.
 const PREP_STAGES = [
-  { key: "prep6m" as const, label: "6-8 months", tone: "leaf" as const },
-  { key: "prep9m" as const, label: "9-11 months", tone: "sunshine" as const },
-  { key: "prep12m" as const, label: "12+ months", tone: "primary" as const },
+  { value: "6" as const, label: "6–8 mo", icon: null, key: "prep6m" as const },
+  { value: "9" as const, label: "9–11 mo", icon: null, key: "prep9m" as const },
+  { value: "12" as const, label: "12+ mo", icon: null, key: "prep12m" as const },
 ];
+
+/**
+ * Item 668: prep by age as one segmented control showing one stage's text
+ * at a time (A-Salmon). It opens on `defaultStage` (the baby's current
+ * stage) and keeps following it — the baby can still be loading on first
+ * render — until the parent taps a tab.
+ *
+ * Exported so a handler test can tap a tab.
+ */
+export function PrepByAge({ food, defaultStage }: { food: FoodDetail; defaultStage: AgeStage }) {
+  const [picked, setPicked] = useState<AgeStage | null>(null);
+  // Every AgeStage has a tab, so the find always lands.
+  const stage = PREP_STAGES.find((option) => option.value === (picked ?? defaultStage))!;
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="font-h2 text-[var(--color-text)]">Prep by age</h2>
+      <SegmentedControl aria-label="Age" options={PREP_STAGES} value={stage.value} onChange={setPicked} />
+      <p className="text-base text-[var(--color-text)]">{food[stage.key]}</p>
+    </section>
+  );
+}
+
+/**
+ * Item 666: the hero's one stats line under the badges (A-Salmon), e.g.
+ * "★ 3.0 · 2 ratings · served 3 times" — the active baby's average and
+ * rating count, then how often this food was served to them. A part with
+ * nothing to say is left out; with neither, nothing renders. Both queries
+ * share their keys with the page's other readers, so no extra request.
+ */
+function FoodStatsLine({ foodId }: { foodId: string }) {
+  const { activeBaby } = useActiveBaby();
+  const { data: history } = useRatingHistory(activeBaby?.id, { foodId });
+  // 100 is the server's max page size — best-effort count over recent meals.
+  const { data: recentMeals } = useMeals(activeBaby?.id, { limit: 100 });
+  if (!activeBaby) return null;
+
+  const points = history?.points ?? [];
+  const timesServed =
+    recentMeals?.items.filter((meal) => meal.foods.some((mealFood) => mealFood.id === foodId)).length ?? 0;
+  const times = timesServed === 1 ? "time" : "times";
+  const className = "text-sm tabular-nums text-[var(--color-text-muted)]";
+  if (points.length === 0) {
+    return timesServed > 0 ? <p className={className}>{`Served ${timesServed} ${times}`}</p> : null;
+  }
+
+  const average = (points.reduce((sum, point) => sum + point.rating, 0) / points.length).toFixed(1);
+  const ratings = points.length === 1 ? "1 rating" : `${points.length} ratings`;
+  const served = timesServed > 0 ? `served ${timesServed} ${times}` : null;
+  return (
+    <p className={className}>
+      <span aria-hidden="true">
+        <span className="text-[var(--color-apricot-graphic)]">★</span>{" "}
+        <strong className="text-[var(--color-text)]">{average}</strong>
+        {` · ${[ratings, served].filter(Boolean).join(" · ")}`}
+      </span>
+      <span className="sr-only">
+        {[`Rated ${average} out of ${STAR_RATING_MAX}`, ratings, served].filter(Boolean).join(", ")}
+      </span>
+    </p>
+  );
+}
 
 interface MarkAsServedProps {
   food: FoodDetail;
@@ -37,23 +101,19 @@ interface MarkAsServedProps {
 
 /**
  * The food page's actions row: the same pair Home offers — primary "Log
- * meal" and tonal "Add to storage", in that order (item 282) — over the
- * served-count fact. Both are plain links carrying this food's id; the full
- * forms (time, notes, reaction, leftovers / location, servings, best-by)
- * live at the other end, which is why the old inline mini-forms are gone.
+ * meal" and tonal "Add to storage", in that order (item 282). The served
+ * count moved up into the hero's stats line (item 666). Both buttons are
+ * plain links carrying this food's id; the full forms (time, notes,
+ * reaction, leftovers / location, servings, best-by) live at the other
+ * end, which is why the old inline mini-forms are gone.
  *
  * The pair renders whether or not a baby exists: adding to storage never
  * needed one, and "Log meal" without a baby lands on the log page's own
- * "Add a baby first" state rather than being hidden here. The count and the
- * "add a baby" nudge are facts UNDER the row, not gates on it.
+ * "Add a baby first" state rather than being hidden here. The "add a baby"
+ * nudge is a fact UNDER the row, not a gate on it.
  */
 function MarkAsServed({ food }: MarkAsServedProps) {
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
-  // 100 is the server's max page size — best-effort count over recent meals.
-  const { data: recentMeals } = useMeals(activeBaby?.id, { limit: 100 });
-
-  const timesServed =
-    recentMeals?.items.filter((meal) => meal.foods.some((mealFood) => mealFood.id === food.id)).length ?? null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -72,11 +132,6 @@ function MarkAsServed({ food }: MarkAsServedProps) {
           </Link>{" "}
           to log this as served.
         </p>
-      )}
-      {activeBaby && timesServed !== null && timesServed > 0 && (
-        <span className="text-xs text-[var(--color-text-muted)]">
-          Served {timesServed} {timesServed === 1 ? "time" : "times"} to {activeBaby.name}
-        </span>
       )}
     </div>
   );
@@ -246,6 +301,7 @@ export function DeletedFoodNotice({ food }: { food: FoodDetail }) {
 export function FoodDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: food, isLoading, isError } = useFood(slug);
+  const { activeBaby } = useActiveBaby();
 
   if (isLoading) {
     return (
@@ -278,7 +334,7 @@ export function FoodDetailPage() {
           <h1 className="font-display text-[var(--color-text)]">{food.name}</h1>
           <FoodBadges food={food} />
           {/* Item 585: a subtitle, like the badges; the graph is at the bottom. */}
-          <RatingSummaryRow target={{ foodId: food.id }} />
+          <FoodStatsLine foodId={food.id} />
         </div>
       </div>
 
@@ -297,10 +353,30 @@ export function FoodDetailPage() {
         </p>
       )}
 
+      {/* Item 667: a calm callout (A-Salmon) — soft red tint, 1px border,
+          red title with a triangle, body in ink. */}
       {!food.isCustom && food.chokingNotes && (
-        <div className="flex flex-col gap-1 rounded-[var(--radius-lg)] border-2 border-[var(--color-danger)] bg-[var(--color-bg-elevated)] p-4">
-          <p className="font-caption text-[var(--color-danger)]">⚠️ Choking notes</p>
-          <p className="text-sm text-[var(--color-text)]">{food.chokingNotes}</p>
+        <div className="flex flex-col gap-1.5 rounded-2xl border border-[var(--color-danger-callout-border)] bg-[var(--color-danger-callout-bg)] px-4 py-3.5">
+          <p className="flex items-center gap-2 text-[15px] font-extrabold text-[var(--color-danger-callout-text)]">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="shrink-0"
+            >
+              <path d="M12 4 2.5 20h19z" />
+              <path d="M12 10v4" />
+              <path d="M12 17h.01" />
+            </svg>
+            Choking notes
+          </p>
+          <p className="text-[15px] leading-[1.45] text-[var(--color-text)]">{food.chokingNotes}</p>
         </div>
       )}
 
@@ -308,18 +384,7 @@ export function FoodDetailPage() {
           A custom food's columns hold empty strings and a placeholder "low"
           — the soft note above says so plainly instead. */}
       {!food.isCustom && (
-        <section className="flex flex-col gap-3">
-          <h2 className="font-h2 text-[var(--color-text)]">Prep by age</h2>
-          {PREP_STAGES.map((stage) => (
-            <div
-              key={stage.key}
-              className="flex flex-col gap-1.5 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3"
-            >
-              <Badge tone={stage.tone}>{stage.label}</Badge>
-              <p className="text-sm text-[var(--color-text)]">{food[stage.key]}</p>
-            </div>
-          ))}
-        </section>
+        <PrepByAge food={food} defaultStage={stageForAge(activeBaby ? ageInMonths(activeBaby.birthDate) : null)} />
       )}
 
       {food.notes && (
