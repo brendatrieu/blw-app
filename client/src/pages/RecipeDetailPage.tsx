@@ -187,10 +187,11 @@ export function RecipeDetailPage() {
   return (
     <div className="flex flex-col gap-6 p-4">
       <div className="flex flex-col gap-2">
-        {/* The chevron shares the title's row (item 258) — the recipe has no
-            PageHeader of its own, so this row IS the header. It wraps so a
-            long 34px title keeps the full width and the Favorite pill drops
-            under it, instead of the title stacking a word per line. */}
+        {/* The recipe has no PageHeader of its own, so this row IS the
+            header; the chevron portals into the app header's slot (item 654).
+            It wraps so a long 34px title keeps the full width and the
+            Favorite pill drops under it, instead of the title stacking a word
+            per line. */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-1">
             <BackButton fallback={RECIPES_TAB_PATH} />

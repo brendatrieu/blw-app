@@ -34,8 +34,9 @@ interface PageHeaderProps {
   /** Optional decorative emoji shown beside the title, e.g. "🥑". */
   emoji?: string;
   /**
-   * The page's way out — a `BackButton` chevron or a `CloseButton` X —
-   * rendered at the LEFT of the h1's own row (item 258). One or the other,
+   * The page's way out — a `BackButton` chevron or a `CloseButton` X. Inside
+   * AppLayout it portals into the slim header's left slot (item 654);
+   * elsewhere it sits at the LEFT of the h1's own row (item 258). One or the other,
    * never both; page *actions* ("Add food", "Log meal") stay in `action` on
    * the right.
    */
@@ -49,9 +50,9 @@ export function PageHeader({ title, description, action, emoji, leading }: PageH
     // description makes the left block taller does top-alignment look right.
     <div className={`flex justify-between gap-3 ${description ? "items-start" : "items-center"}`}>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        {/* The leading affordance shares the h1's row and is vertically
-            centered against it — a back chevron never gets a line of its own
-            above the title any more (item 258). */}
+        {/* Outside AppLayout the leading affordance shares the h1's row,
+            vertically centered (item 258); inside it, it portals into the
+            slim header instead (item 654). */}
         <div className="flex items-center gap-1">
           {leading}
           <h1 className="font-display flex min-w-0 items-center gap-2 text-[var(--color-text)]">

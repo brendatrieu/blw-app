@@ -45,6 +45,10 @@ vi.mock("react-router-dom", async () => {
 });
 
 const navigateMock = vi.fn();
+// Called as a plain function there's no render pass for `useContext`, so the
+// header slot is mocked to "none" (inline, as on signed-out pages / in SSR).
+// The portal branch is pinned in headerSlot.handlers.test.ts.
+vi.mock("./headerSlot.js", () => ({ useHeaderSlot: () => null }));
 
 function clickWithHistoryState(state: unknown, fallback: string): void {
   navigateMock.mockClear();

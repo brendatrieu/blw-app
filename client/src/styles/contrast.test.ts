@@ -196,6 +196,12 @@ const BASE_PAIRS: Pair[] = [
   // apricot text (the graphic shade is 2.55:1 there in light) at 3:1.
   { name: "body text on apricot soft chip (Favorited pill)", fg: "color-text", bg: "color-apricot-soft" },
   { name: "apricot text heart on apricot soft chip", fg: "color-apricot-text", bg: "color-apricot-soft", min: 3 },
+  // Slim inner-page header (items 654/655): the "Mila · 8 mo" baby chip's
+  // ink label on the soft chip, the avatar initial in ink on the apricot
+  // disc, and the gear (kebab color) on the header's elevated ground.
+  { name: "header baby chip label on apricot soft chip", fg: "color-text", bg: "color-apricot-soft" },
+  { name: "header baby chip avatar initial (apricot ink on apricot fill)", fg: "color-apricot-ink", bg: "color-apricot" },
+  { name: "header gear icon on elevated header", fg: "color-icon", bg: "color-bg-elevated", min: 3 },
 
   // Card kebab (⋮) icon — non-text UI on every ground a card menu sits on
   // (inset is its hover fill) (item 641).
