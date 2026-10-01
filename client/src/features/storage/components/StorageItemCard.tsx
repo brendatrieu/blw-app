@@ -9,9 +9,9 @@ import { bestByLabel, countdownLabel, LOCATION_LABEL, storageItemTitle, servings
 import { resolveFreshness } from "../freshness.js";
 
 /** ONE emoji for a storage item: the first food's when it holds foods,
- * otherwise a friendly stand-in for a recipe or free-form entry. Kept as a
- * single glyph (not the cluster below) for the places that have room for
- * exactly one — `StorageDetailPage`'s `PageHeader`. */
+ * otherwise a friendly stand-in for a recipe or free-form entry. It is the
+ * glyph on the neutral plate `storageItemCluster` draws when an item holds
+ * no foods. */
 export function storageItemEmoji(item: StorageItem): string {
   // Storage rows carry no category — a custom food's own emoji, or the
   // slug map, is all there is to go on.

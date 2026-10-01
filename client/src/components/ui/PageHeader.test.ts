@@ -70,6 +70,14 @@ describe("PageHeader leading slot (items 258/260)", () => {
     expect(heading).not.toContain("<a ");
   });
 
+  it("wraps a string emoji in the 2xl span, but renders a node visual as given (item 673)", () => {
+    expect(render({ title: "Storage", emoji: "📦" })).toContain('<span aria-hidden="true" class="text-2xl leading-none">📦</span>Storage</h1>');
+    const html = render({ title: "Avocado", emoji: createElement("i", { "aria-hidden": "true" }, "🥑") });
+    const heading = html.slice(html.indexOf("<h1"), html.indexOf("</h1>"));
+    expect(heading).toContain('<i aria-hidden="true">🥑</i>Avocado');
+    expect(heading).not.toContain("text-2xl");
+  });
+
   it("renders no leading wrapper at all when a page has no way out of its own", () => {
     const html = render({ title: "Storage", emoji: "📦" });
     expect(html).not.toContain("<button");

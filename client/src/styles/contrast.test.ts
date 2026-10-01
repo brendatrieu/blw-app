@@ -200,7 +200,10 @@ const BASE_PAIRS: Pair[] = [
   // ink label on the soft chip, the avatar initial in ink on the apricot
   // disc, and the gear (kebab color) on the header's elevated ground.
   { name: "header baby chip label on apricot soft chip", fg: "color-text", bg: "color-apricot-soft" },
-  { name: "header baby chip avatar initial (apricot ink on apricot fill)", fg: "color-apricot-ink", bg: "color-apricot" },
+  { name: "header baby chip avatar initial (avatar ink on avatar disc)", fg: "color-avatar-ink", bg: "color-avatar" },
+  // Item 675: the disc must stand apart from the chip it sits on (dark was
+  // #3a2a20 on #3a2a20, 1.00:1). Decorative, so no 3:1 — light is 1.44:1.
+  { name: "header baby chip avatar disc against the apricot soft chip", fg: "color-avatar", bg: "color-apricot-soft", min: 1.4 },
   { name: "header gear icon on elevated header", fg: "color-icon", bg: "color-bg-elevated", min: 3 },
 
   // Card kebab (⋮) icon — non-text UI on every ground a card menu sits on
@@ -418,7 +421,7 @@ describe("tonal Button hover (success fill darkened with black)", () => {
   }
 });
 
-describe("Direction A token values (items 634, 636, 639, 641, 644, 645, 653, 667, 670)", () => {
+describe("Direction A token values (items 634, 636, 639, 641, 644, 645, 653, 667, 670, 675)", () => {
   // The owner approved exact hexes; the gate above only proves they pass,
   // so pin the values themselves (item 670: buttons identical in both modes).
   const EXPECTED: Record<string, { light: string; dark: string }> = {
@@ -434,6 +437,9 @@ describe("Direction A token values (items 634, 636, 639, 641, 644, 645, 653, 667
     "color-apricot-graphic": { light: "#e1732e", dark: "#f7b48a" },
     "color-apricot-soft": { light: "#fde3d1", dark: "#3a2a20" },
     "color-apricot-graphic-ink": { light: "#3d1a06", dark: "#3d1a06" },
+    // Item 675: the baby-chip avatar is the light mockup's disc in both modes.
+    "color-avatar": { light: "#f7b48a", dark: "#f7b48a" },
+    "color-avatar-ink": { light: "#3d1a06", dark: "#3d1a06" },
     "color-allergen-soft": { light: "#f2e3f5", dark: "#3b2541" },
     "color-allergen-soft-text": { light: "#642a6e", dark: "#f2e3f5" },
     "color-icon": { light: "#3f4a56", dark: "#b8c2cc" },

@@ -102,6 +102,9 @@ describe("MealDetailPage", () => {
 
     expect(html).toContain("Avocado");
     expect(html).toContain("Chicken");
+    // Item 673: the title leads with the FIRST food's 40px plate, in the h1.
+    const heading = /<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]!;
+    expect(heading).toMatch(/^<span aria-hidden="true" class="flex shrink-0 [^"]*" style="width:40px;height:40px;font-size:20px;background:var\(--color-plate-fruit\)">🥑<\/span>/);
     // Item 659: each food chip leads with a 24px plate.
     expect(html).toContain("width:24px;height:24px;font-size:14px;background:var(--color-plate-fruit)");
     expect(html).toContain("width:24px;height:24px;font-size:14px;background:var(--color-plate-protein)");
@@ -134,7 +137,8 @@ describe("MealDetailPage", () => {
         renderAtMealDetailRoute(withRecipeAndReaction.id),
       ),
     );
-    expect(html).toContain("🍳");
+    // Item 673: a recipe meal's title plate is the pan on the neutral tint.
+    expect(/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]).toContain('style="width:40px;height:40px;font-size:20px;background:var(--color-plate-neutral)">🍳</span>');
     expect(html).toContain("Iron-Rich Purée");
     expect(html).toContain("Reaction: ");
     expect(html).toContain("mild rash around mouth");
@@ -253,5 +257,22 @@ describe("MealDetailPage ratings (item 574)", () => {
     expect(html.match(/role="radiogroup"/g)).toHaveLength(1);
     expect(html).toContain('aria-label="Rating for Iron-Rich Purée"');
     expect(html).toMatch(/aria-checked="true" aria-label="3 stars"/);
+  });
+});
+
+describe("MealDetailPage title plate for a custom food (item 673)", () => {
+  it("uses the food's own emoji and category, not just its slug", () => {
+    const html = renderMeal(
+      {
+        ...MEAL,
+        foods: [
+          { id: "food-c", slug: "grandmas-congee-x1y2z3", name: "Grandma's congee", category: "grain", storageItemId: null, emoji: "🥘" },
+        ],
+      },
+      [],
+    );
+    expect(/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]).toMatch(
+      /^<span aria-hidden="true" class="flex shrink-0 [^"]*" style="[^"]*background:var\(--color-plate-grain\)">🥘<\/span>/,
+    );
   });
 });

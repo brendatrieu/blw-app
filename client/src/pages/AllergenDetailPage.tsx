@@ -16,7 +16,7 @@ import {
   servingCountLabel,
   showsReactionBadge,
 } from "../features/tracking/allergenRow.js";
-import { allergenEmoji } from "../features/tracking/allergenEmoji.js";
+import { allergenEmoji, allergenTint } from "../features/tracking/allergenEmoji.js";
 import { MarkEstablishedAction, OverriddenHint } from "../features/tracking/components/AllergenActions.js";
 import { servedLine } from "../features/tracking/components/ServeLogList.js";
 import { foodPlate } from "../features/catalog/foodEmoji.js";
@@ -107,7 +107,7 @@ function AllergenDetailBody({
     <>
       <PageHeader
         title={progress.allergenName}
-        emoji={allergenEmoji(progress.allergenSlug)}
+        emoji={<FoodPlate emoji={allergenEmoji(progress.allergenSlug)} tint={allergenTint(progress.allergenSlug)} size={40} />}
         leading={leading}
         action={<Badge tone={ALLERGEN_STATUS_TONE[progress.status]}>{ALLERGEN_STATUS_LABEL[progress.status]}</Badge>}
       />

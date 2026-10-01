@@ -31,8 +31,12 @@ interface PageHeaderProps {
   title: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
-  /** Optional decorative emoji shown beside the title, e.g. "🥑". */
-  emoji?: string;
+  /**
+   * Optional decorative visual beside the title: an emoji string (e.g. "🥑"),
+   * or a node such as a 40px `FoodPlate` on detail pages (item 673). A node
+   * renders as given, so it must carry its own aria-hidden.
+   */
+  emoji?: ReactNode;
   /**
    * The page's way out — a `BackButton` chevron or a `CloseButton` X. Inside
    * AppLayout it portals into the slim header's left slot (item 654);
@@ -56,11 +60,13 @@ export function PageHeader({ title, description, action, emoji, leading }: PageH
         <div className="flex items-center gap-1">
           {leading}
           <h1 className="font-display flex min-w-0 items-center gap-2 text-[var(--color-text)]">
-            {emoji ? (
+            {typeof emoji === "string" && emoji ? (
               <span aria-hidden="true" className="text-2xl leading-none">
                 {emoji}
               </span>
-            ) : null}
+            ) : (
+              emoji
+            )}
             {title}
           </h1>
         </div>

@@ -39,6 +39,9 @@
  *   (text), rating stars and the favorite heart (graphic), and a soft chip;
  *   -graphic-ink is the number on the graphic-filled filter-count dot.
  *   The fill is never text on a light ground (1.7:1).
+ * - --color-avatar / -ink: the baby chip's initial disc — apricot with
+ *   deep ink in BOTH modes (item 675; the dark apricot fill matched the
+ *   dark soft chip, so the disc vanished).
  * - --color-accent: the INTERACTIVE TEXT/BORDER color — links,
  *   focus rings/focus-within borders, and small
  *   confirmation markers (e.g. "Added to your storage"). Deep steel blue in
@@ -107,6 +110,8 @@
   --color-apricot-graphic: #e1732e;
   --color-apricot-soft: #fde3d1;
   --color-apricot-graphic-ink: #3d1a06;
+  --color-avatar: #f7b48a;
+  --color-avatar-ink: #3d1a06;
 
   /* ---- Card action-menu (kebab) icon — darker than muted text so the
      dots read at a glance (item 641). ---- */
@@ -290,6 +295,8 @@
   --_dark-apricot-graphic: #f7b48a;
   --_dark-apricot-soft: #3a2a20;
   --_dark-apricot-graphic-ink: #3d1a06;
+  --_dark-avatar: #f7b48a;
+  --_dark-avatar-ink: #3d1a06;
 
   --_dark-icon: #b8c2cc;
 
@@ -370,6 +377,8 @@
     --color-apricot-graphic: var(--_dark-apricot-graphic);
     --color-apricot-soft: var(--_dark-apricot-soft);
     --color-apricot-graphic-ink: var(--_dark-apricot-graphic-ink);
+    --color-avatar: var(--_dark-avatar);
+    --color-avatar-ink: var(--_dark-avatar-ink);
 
     --color-icon: var(--_dark-icon);
 
@@ -446,6 +455,8 @@
   --color-apricot-graphic: var(--_dark-apricot-graphic);
   --color-apricot-soft: var(--_dark-apricot-soft);
   --color-apricot-graphic-ink: var(--_dark-apricot-graphic-ink);
+  --color-avatar: var(--_dark-avatar);
+  --color-avatar-ink: var(--_dark-avatar-ink);
 
   --color-icon: var(--_dark-icon);
 

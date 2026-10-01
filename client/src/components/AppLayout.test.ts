@@ -118,9 +118,9 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
       `<span class="truncate">Remy</span><span class="shrink-0 whitespace-pre"> · ${ageInMonths(remy.birthDate)} mo</span>`,
     );
     expect(html).not.toMatch(GREETING);
-    // Apricot soft chip with ink label; apricot-fill avatar holding the initial in apricot ink.
+    // Apricot soft chip with ink label; the avatar disc holds the initial in avatar ink (item 675).
     expect(html).toMatch(/class="[^"]*bg-\[var\(--color-apricot-soft\)\][^"]*text-\[var\(--color-text\)\]/);
-    expect(html).toMatch(/<span aria-hidden="true" class="[^"]*bg-\[var\(--color-apricot\)\][^"]*text-\[var\(--color-apricot-ink\)\][^"]*">R<\/span>/);
+    expect(html).toMatch(/<span aria-hidden="true" class="[^"]*bg-\[var\(--color-avatar\)\][^"]*text-\[var\(--color-avatar-ink\)\][^"]*">R<\/span>/);
     // One baby: nothing to pick, so no picker.
     expect(html).not.toContain("<select");
   });
@@ -169,11 +169,27 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
 
   it("keeps the header pinned (sticky top-0, bordered) and in order: back slot, chip, gear on the right", () => {
     for (const p of ["/", "/foods"]) {
-      expect(header(layoutWith([remy], p)), p).toMatch(/^<header class="sticky top-0 z-10 flex items-center justify-between gap-3 border-b /);
+      expect(header(layoutWith([remy], p)), p).toMatch(/^<header class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b /);
     }
     expect(header(layoutWith([remy], "/foods"))).toMatch(
       /<div class="flex min-h-11 shrink-0 items-center"><\/div><div class="flex min-w-0 items-center gap-1"><span [^>]*>.*?Remy.*?<\/span><a [^>]*aria-label="Settings"/s,
     );
+  });
+
+  it("the header out-stacks card action rows, and the portaled overlays out-stack it (item 674)", () => {
+    // Card action rows are \`relative z-10\` and come after the header in the
+    // tree, so a tie let them paint over it while scrolling under it.
+    const z = (source: string, re: RegExp) => Number(re.exec(source)?.[1]);
+    const src = (file: string) => readFileSync(new URL(file, import.meta.url), "utf8");
+    const headerZ = z(header(layoutWith([remy], "/foods")), /^<header class="[^"]*\bz-(\d+)\b/);
+    for (const card of ["../features/storage/components/StorageItemCard.tsx", "../features/tracking/components/ServeLogList.tsx"]) {
+      expect(headerZ, card).toBeGreaterThan(z(src(card), /"relative z-(\d+) flex shrink-0/));
+    }
+    // Menu portals to body AFTER the header, so a tie still floats it above; Sheet/Dialog sit higher.
+    expect(headerZ).toBeLessThanOrEqual(z(src("./ui/Menu.tsx"), /className="z-(\d+) min-w-40/));
+    for (const overlay of ["./ui/Sheet.tsx", "./ui/Dialog.tsx"]) {
+      expect(headerZ, overlay).toBeLessThan(z(src(overlay), /"fixed inset-0 z-(\d+) /));
+    }
   });
 
   it("inner pages are one slim row (py-1 + 44px targets = 52px); Home keeps its taller padding", () => {

@@ -82,14 +82,14 @@ function detail(overrides: Partial<AllergenDetail> = {}): AllergenDetail {
 
 /** `useParams` only resolves inside a matching `<Route>`, so every render
  * here goes through the real `/babies/:id/allergens/:slug` path. */
-function renderAtRoute(queryClient: QueryClient) {
+function renderAtRoute(queryClient: QueryClient, slug = SLUG) {
   return renderToString(
     createElement(
       QueryClientProvider,
       { client: queryClient },
       createElement(
         MemoryRouter,
-        { initialEntries: [`/babies/${BABY_ID}/allergens/${SLUG}`] },
+        { initialEntries: [`/babies/${BABY_ID}/allergens/${slug}`] },
         createElement(
           Routes,
           null,
@@ -107,10 +107,10 @@ function newClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
 
-function renderWithDetail(data: AllergenDetail) {
+function renderWithDetail(data: AllergenDetail, slug = SLUG) {
   const queryClient = newClient();
-  queryClient.setQueryData(trackingKeys.allergenDetail(BABY_ID, SLUG), data);
-  return renderAtRoute(queryClient);
+  queryClient.setQueryData(trackingKeys.allergenDetail(BABY_ID, slug), data);
+  return renderAtRoute(queryClient, slug);
 }
 
 /** The only way to express a failed query for an SSR render — `setQueryData`
@@ -147,7 +147,8 @@ describe("AllergenDetailPage states (item 189)", () => {
 describe("AllergenDetailPage header + facts (item 187)", () => {
   it("shows the allergen emoji, name, status badge, facts line, and guidance", () => {
     const html = renderWithDetail(detail());
-    expect(html).toContain("🥚");
+    // Item 673: the allergen's 40px plate on its allergen tint (egg = dairy), in the h1.
+    expect(/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]).toMatch(/^<span aria-hidden="true" class="flex shrink-0 [^"]*" style="width:40px;height:40px;font-size:20px;background:var\(--color-plate-dairy\)">🥚<\/span>/);
     expect(html).toContain("Egg");
     expect(html).toContain("Started");
     expect(html).toContain("2 of 3 servings");
@@ -491,5 +492,15 @@ describe("AllergenDetailPage mark/undo actions (item 187)", () => {
     );
     expect(html).not.toContain("Mark as established");
     expect(html).not.toContain("Marked by you");
+  });
+});
+
+describe("AllergenDetailPage title plate follows the allergen (item 673)", () => {
+  it("draws fish on the protein tint, not the egg's dairy one", () => {
+    const base = detail();
+    const html = renderWithDetail({ ...base, progress: { ...base.progress, allergenSlug: "fish", allergenName: "Fish" } }, "fish");
+    expect(/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]).toMatch(
+      /^<span aria-hidden="true" class="flex shrink-0 [^"]*" style="[^"]*background:var\(--color-plate-protein\)">🐟<\/span>/,
+    );
   });
 });

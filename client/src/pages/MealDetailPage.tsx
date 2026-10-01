@@ -11,7 +11,7 @@ import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.j
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
 import { DeletedMark, FoodNames } from "../features/catalog/components/DeletedMark.js";
-import { foodPlate, getFoodEmoji } from "../features/catalog/foodEmoji.js";
+import { foodPlate } from "../features/catalog/foodEmoji.js";
 import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
 import { BackButton, useBackNavigate } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
@@ -97,7 +97,12 @@ export function MealDetailPage() {
     <div className="flex flex-col gap-4 p-4">
       <PageHeader
         title={<MealTitle meal={meal} />}
-        emoji={meal.recipeTitle ? "🍳" : getFoodEmoji(meal.foods[0]!.slug, meal.foods[0]!.category, meal.foods[0]!.emoji)}
+        emoji={
+          <FoodPlate
+            {...(meal.recipeTitle ? { emoji: "🍳", tint: "neutral" as const } : foodPlate(meal.foods[0]!))}
+            size={40}
+          />
+        }
         leading={<BackButton fallback="/" />}
       />
 

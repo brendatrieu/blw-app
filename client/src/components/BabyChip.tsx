@@ -32,7 +32,7 @@ export function BabyChip() {
     >
       <span
         aria-hidden="true"
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-apricot)] text-xs font-black text-[var(--color-apricot-ink)]"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-avatar)] text-xs font-black text-[var(--color-avatar-ink)]"
       >
         {initial}
       </span>

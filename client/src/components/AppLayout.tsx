@@ -153,8 +153,14 @@ export function AppLayout() {
             No bottom padding reservation any more — the nav is in flow and
             occupies its own space (item 379). */}
         <div className="mx-auto flex min-h-screen supports-[height:100dvh]:min-h-[100dvh] max-w-lg flex-col">
+          {/* z-20, not z-10 (item 674): card action rows are `relative z-10`
+              and come later in the tree, so at a tie they painted over the
+              header when scrolled under it (reduced motion, where
+              .page-transition leaves no stacking context). Menu (z-20) and
+              Sheet/Dialog (z-30) portal to body, after the header, so they
+              still float above it. */}
           <header
-            className={`sticky top-0 z-10 flex items-center justify-between gap-3 border-b px-4 ${isHome ? "py-2.5" : "py-1"}`}
+            className={`sticky top-0 z-20 flex items-center justify-between gap-3 border-b px-4 ${isHome ? "py-2.5" : "py-1"}`}
             style={{
               backgroundColor: "var(--color-bg-elevated)",
               borderColor: "var(--color-border)",

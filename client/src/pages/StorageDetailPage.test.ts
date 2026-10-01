@@ -63,6 +63,8 @@ describe("StorageDetailPage", () => {
     expect(html).toContain("2 of 6 servings left");
     expect(html).toContain("smells great");
     expect(html).toContain('<div class="flex flex-col gap-6 p-4">'); // item 649 spacing
+    // Item 673: the title leads with the first food's 40px plate (slug tint; storage foods carry no category).
+    expect(/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]).toMatch(/^<span aria-hidden="true" class="flex shrink-0 [^"]*" style="width:40px;height:40px;font-size:20px;background:var\(--color-plate-fruit\)">🥑<\/span>/);
     // The card renders standalone here, not as a Link to itself.
     expect(html).not.toContain(`href="/storage/${ITEM.id}"`);
   });
