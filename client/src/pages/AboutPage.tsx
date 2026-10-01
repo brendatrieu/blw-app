@@ -46,6 +46,8 @@ export function AboutPage() {
     <div className="mx-auto flex min-h-full max-w-sm flex-col gap-6 p-6">
       {!signedIn ? (
         <div className="flex flex-col items-center gap-4 text-center">
+          {/* The home-screen icon above the name (owner, 2026-09-30); decorative — the h1 names it. */}
+          <img src="/icons/icon-192.png" alt="" width={72} height={72} className="h-18 w-18 rounded-2xl" />
           <div className="flex flex-col gap-2">
             <h1 className="font-display text-[var(--color-text)]">{TITLE}</h1>
             <p className="text-sm text-[var(--color-text-muted)]">{TAGLINE}</p>

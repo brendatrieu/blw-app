@@ -112,6 +112,21 @@ describe("AboutPage signed out (item 611)", () => {
   });
 });
 
+describe("AboutPage app icon (owner, 2026-09-30)", () => {
+  it("shows the app icon above the headline for a signed-out visitor, as decoration", () => {
+    const html = render();
+    const icon = html.indexOf('<img src="/icons/icon-192.png" alt=""');
+    expect(icon).toBeGreaterThan(-1);
+    expect(icon).toBeLessThan(html.indexOf("<h1"));
+    expect(html).toContain('width="72" height="72"');
+  });
+
+  it("is not on the signed-in page, which keeps its plain header", () => {
+    h.session = { user: { id: "u1" } };
+    expect(render()).not.toContain("/icons/icon-192.png");
+  });
+});
+
 describe("AboutPage while the session loads (item 611)", () => {
   it("shows neither the sign-up buttons nor a back button, so nothing flashes", () => {
     h.session = null;
