@@ -1,11 +1,13 @@
-import { useEffect, useRef, type SVGProps } from "react";
+import { useEffect, useRef, useState, type SVGProps } from "react";
 import { Link, Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { ageInMonths } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { TourProvider } from "../features/tour/TourProvider.js";
 import { isDaytimeHour, timeOfDayGreeting } from "../lib/greeting.js";
+import { BabyChip } from "./BabyChip.js";
 import { BottomNav } from "./BottomNav.js";
 import { CelebrationProvider } from "./ui/Celebration.js";
+import { HeaderSlotContext } from "./ui/headerSlot.js";
 
 // Small hand-drawn icons matching BottomNav's idiom: 24 viewBox, 1.8 stroke,
 // rounded caps/joins, colored entirely via `currentColor`.
@@ -122,7 +124,7 @@ function SettingsLink() {
     <Link
       to="/settings"
       aria-label="Settings"
-      className="flex min-h-11 min-w-11 items-center justify-center text-[var(--color-text-muted)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--color-accent)]"
+      className="flex min-h-11 min-w-11 items-center justify-center text-[var(--color-icon)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--color-accent)]"
     >
       <GearIcon />
     </Link>
@@ -147,6 +149,12 @@ export function AppLayout() {
   // change on the same page keeps its scroll position.
   const navigationTypeRef = useRef(navigationType);
   navigationTypeRef.current = navigationType;
+  // Home keeps its tall greeting header; every other page gets one slim row
+  // whose left slot receives the page's Back/Close button (item 654).
+  const isHome = location.pathname === "/";
+  // A ref callback into state: set in the commit phase, so the button moves
+  // into the header before the first paint (no inline flash).
+  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     // Guarded: this layout is also exercised outside a browser (the
@@ -172,20 +180,35 @@ export function AppLayout() {
             occupies its own space (item 379). */}
         <div className="mx-auto flex min-h-screen supports-[height:100dvh]:min-h-[100dvh] max-w-lg flex-col">
           <header
-            className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b px-4 py-2.5"
+            className={`sticky top-0 z-10 flex items-center justify-between gap-3 border-b px-4 ${isHome ? "py-2.5" : "py-1"}`}
             style={{
               backgroundColor: "var(--color-bg-elevated)",
               borderColor: "var(--color-border)",
-              paddingTop: "calc(0.625rem + env(safe-area-inset-top))",
+              paddingTop: `calc(${isHome ? "0.625rem" : "0.25rem"} + env(safe-area-inset-top))`,
             }}
           >
-            <BabySwitcher />
-            <SettingsLink />
+            {isHome ? (
+              <>
+                <BabySwitcher />
+                <SettingsLink />
+              </>
+            ) : (
+              <>
+                {/* 44px tall even when empty, so the row is 52px on every inner page. */}
+                <div ref={setHeaderSlot} className="flex min-h-11 shrink-0 items-center" />
+                <div className="flex min-w-0 items-center gap-1">
+                  <BabyChip />
+                  <SettingsLink />
+                </div>
+              </>
+            )}
           </header>
 
           <main className="scroll-momentum flex-1">
             <div key={location.pathname} className="page-transition">
-              <Outlet />
+              <HeaderSlotContext.Provider value={headerSlot}>
+                <Outlet />
+              </HeaderSlotContext.Provider>
             </div>
           </main>
           <BottomNav />

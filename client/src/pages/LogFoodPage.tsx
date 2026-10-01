@@ -88,7 +88,7 @@ export function LogFoodPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      {/* One leading affordance, inline with the title, chosen by
+      {/* One leading affordance, portaled into the app header's left slot, chosen by
           `resolveLogHeaderAffordance`: a chevron when editing (a drill-in), an
           X when creating (a task). Both resolve through the same
           `useBackNavigate` idiom. */}

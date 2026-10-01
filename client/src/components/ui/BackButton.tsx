@@ -1,4 +1,6 @@
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
+import { useHeaderSlot } from "./headerSlot.js";
 import { ChevronLeftGlyph, ICON_BUTTON_CLASSES, ICON_BUTTON_EDGE_INSET } from "./iconButton.js";
 
 interface BackButtonProps {
@@ -36,19 +38,23 @@ export function useBackNavigate(fallback: string): () => void {
  *
  * Chevron-only (item 258): a 24px "‹" at the sun/moon icons' stroke weight
  * in a 44px target, with the word "Back" kept for assistive tech as
- * `sr-only` text rather than shown. It renders in `PageHeader`'s `leading`
- * slot, on the same row as the h1 — never on a line of its own above it —
- * so the title row is the one place a page's way out ever lives. There is no
- * `children` label: a page that wants to name its destination says so in its
- * own title, not in the chevron.
+ * `sr-only` text rather than shown. Pages place it in `PageHeader`'s
+ * `leading` slot; inside the signed-in app it then portals itself into the
+ * slim app header's left slot (item 654), so the header row is the one place
+ * a page's way out lives and the page's title stands alone. With no header
+ * slot (signed-out pages, server rendering) it stays inline on the h1's row.
+ * There is no `children` label: a page that wants to name its destination
+ * says so in its own title, not in the chevron.
  */
 export function BackButton({ fallback, className = "" }: BackButtonProps) {
   const handleClick = useBackNavigate(fallback);
+  const slot = useHeaderSlot();
 
-  return (
+  const button = (
     <button type="button" onClick={handleClick} className={`${ICON_BUTTON_CLASSES} ${ICON_BUTTON_EDGE_INSET} ${className}`}>
       <ChevronLeftGlyph />
       <span className="sr-only">Back</span>
     </button>
   );
+  return slot ? createPortal(button, slot) : button;
 }

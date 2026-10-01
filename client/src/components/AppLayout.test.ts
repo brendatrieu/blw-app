@@ -1,9 +1,10 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import type { Baby } from "@blw/shared";
+import { ageInMonths, type Baby } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
 import { AppLayout, shouldScrollToTop } from "./AppLayout.js";
 
@@ -50,6 +51,111 @@ describe("AppLayout header", () => {
 
     expect(html).toContain("Remy");
     expect(/Good morning|Good afternoon|Good evening/.test(html)).toBe(true);
+  });
+});
+
+describe("AppLayout slim inner-page header (items 654/655)", () => {
+  const remy: Baby = {
+    id: "baby-1",
+    name: "Remy",
+    birthDate: "2026-01-01",
+    notes: null,
+    archived: false,
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+  const ada: Baby = { ...remy, id: "baby-2", name: "Ada", birthDate: "2025-06-01" };
+  const GREETING = /Good morning|Good afternoon|Good evening/;
+
+  function layoutWith(babies: Baby[], pathname: string) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(babyKeys.list(false), babies);
+    return renderLayout(queryClient, pathname);
+  }
+  function header(html: string) {
+    return html.slice(html.indexOf("<header"), html.indexOf("</header>"));
+  }
+
+  it("inner pages show the 'Name · N mo' apricot chip instead of the greeting", () => {
+    const html = header(layoutWith([remy], "/foods"));
+    // Only the name truncates; the age sits in its own non-shrinking span (N4).
+    expect(html).toContain(
+      `<span class="truncate">Remy</span><span class="shrink-0 whitespace-pre"> · ${ageInMonths(remy.birthDate)} mo</span>`,
+    );
+    expect(html).not.toMatch(GREETING);
+    // Apricot soft chip with ink label; apricot-fill avatar holding the initial in apricot ink.
+    expect(html).toMatch(/class="[^"]*bg-\[var\(--color-apricot-soft\)\][^"]*text-\[var\(--color-text\)\]/);
+    expect(html).toMatch(/<span aria-hidden="true" class="[^"]*bg-\[var\(--color-apricot\)\][^"]*text-\[var\(--color-apricot-ink\)\][^"]*">R<\/span>/);
+    // One baby: nothing to pick, so no picker.
+    expect(html).not.toContain("<select");
+  });
+
+  it("Home keeps the tall greeting header and no chip", () => {
+    const html = header(layoutWith([remy], "/"));
+    expect(html).toMatch(GREETING);
+    expect(html).not.toContain(" mo<");
+    expect(html).not.toContain("--color-apricot-soft");
+  });
+
+  it("several babies: the chip carries the same native switcher, labeled for assistive tech", () => {
+    const html = header(layoutWith([remy, ada], "/foods"));
+    expect(html).toContain('<span class="sr-only">Active baby</span>');
+    expect(html).toContain("<select");
+    expect(html).toMatch(/<option value="baby-1"[^>]*>Remy<\/option>/);
+    expect(html).toMatch(/<option value="baby-2"[^>]*>Ada<\/option>/);
+    // The 44px target is the select's wrapper; the visual chip is hidden from AT (the select names it).
+    expect(html).toMatch(/<label class="relative flex min-h-11 /);
+    expect(html).toMatch(/<span aria-hidden="true" class="inline-flex h-9 /);
+  });
+
+  it("no (unarchived) babies: the chip is the accent 'Add a baby' link to Settings", () => {
+    const html = header(layoutWith([], "/foods"));
+    const link = html.match(/<a [^>]*>Add a baby<\/a>/)?.[0] ?? "";
+    expect(link).toContain('style="color:var(--color-accent)"');
+    expect(link).toContain('href="/settings"');
+    // A 44px target that still fits the 52px row (B1).
+    expect(link).toMatch(/class="inline-flex min-h-11 items-center /);
+    expect(html).not.toContain("--color-apricot-soft");
+  });
+
+  it("the gear is the kebab icon color and the header is sticky, never fixed, on every page", () => {
+    for (const pathname of ["/", "/foods"]) {
+      const html = layoutWith([remy], pathname);
+      expect(html, pathname).toMatch(/aria-label="Settings"[^>]*class="[^"]*text-\[var\(--color-icon\)\]/);
+      expect(html, pathname).not.toMatch(/aria-label="Settings"[^>]*class="[^"]*--color-text-muted/);
+      // The gear itself goes to Settings (not just some other /settings link on the page).
+      expect(html.match(/<a [^>]*aria-label="Settings"[^>]*>/)?.[0], pathname).toContain('href="/settings"');
+      const headerClasses = html.match(/<header class="([^"]*)"/)![1]!.split(" ");
+      expect(headerClasses, pathname).toContain("sticky");
+      expect(headerClasses, pathname).not.toContain("fixed");
+      expect(html.match(/<header [^>]*style="([^"]*)"/)![1], pathname).not.toContain("position");
+    }
+  });
+
+  it("keeps the header pinned (sticky top-0, bordered) and in order: back slot, chip, gear on the right", () => {
+    for (const p of ["/", "/foods"]) {
+      expect(header(layoutWith([remy], p)), p).toMatch(/^<header class="sticky top-0 z-10 flex items-center justify-between gap-3 border-b /);
+    }
+    expect(header(layoutWith([remy], "/foods"))).toMatch(
+      /<div class="flex min-h-11 shrink-0 items-center"><\/div><div class="flex min-w-0 items-center gap-1"><span [^>]*>.*?Remy.*?<\/span><a [^>]*aria-label="Settings"/s,
+    );
+  });
+
+  it("inner pages are one slim row (py-1 + 44px targets = 52px); Home keeps its taller padding", () => {
+    const inner = layoutWith([remy], "/foods");
+    expect(inner).toMatch(/<header class="[^"]*\bpy-1\b/);
+    expect(inner).toContain("padding-top:calc(0.25rem + env(safe-area-inset-top))");
+    // The (empty) back-button slot keeps the row 44px tall.
+    expect(header(inner)).toMatch(/<div class="flex min-h-11 shrink-0 items-center"><\/div>/);
+    const home = layoutWith([remy], "/");
+    expect(home).toMatch(/<header class="[^"]*\bpy-2\.5\b/);
+    expect(home).toContain("padding-top:calc(0.625rem + env(safe-area-inset-top))");
+  });
+
+  it("--header-height matches that slim header, so the Foods/Recipes sticky bars dock flush under it", () => {
+    // 0.25rem + 2.75rem (44px row) + 0.25rem = 3.25rem, + the 1px border-b, + the notch inset.
+    const css = readFileSync(new URL("../styles/index.css", import.meta.url), "utf8");
+    expect(css).toContain("--header-height: calc(3.25rem + 1px + env(safe-area-inset-top));");
   });
 });
 

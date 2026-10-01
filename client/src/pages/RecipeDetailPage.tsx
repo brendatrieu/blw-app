@@ -186,8 +186,8 @@ export function RecipeDetailPage() {
   return (
     <div className="flex flex-col gap-5 p-4">
       <div className="flex flex-col gap-2">
-        {/* The chevron shares the title's row (item 258) — the recipe has no
-            PageHeader of its own, so this row IS the header. */}
+        {/* The recipe has no PageHeader of its own, so this row IS the
+            header; the chevron portals into the app header's slot (item 654). */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-1">
             <BackButton fallback={RECIPES_TAB_PATH} />

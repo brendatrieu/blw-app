@@ -232,9 +232,12 @@
   --font-caption: 600 0.75rem/1.4 var(--font-family-base);
 
   /* Fixed chrome heights. `--nav-height` is the bottom bar's own height; it
-     is no longer also reserved as page padding, since the bar is in flow. */
+     is no longer also reserved as page padding, since the bar is in flow.
+     `--header-height` is the slim inner-page header (AppLayout: py-1 around a
+     44px row, a 1px border, plus the notch inset it pads in) — the sticky
+     `top` of the bars that dock under it, so no gap opens between them. */
   --nav-height: 4.25rem;
-  --header-height: 4rem;
+  --header-height: calc(3.25rem + 1px + env(safe-area-inset-top));
 
   /* ---- Dark palette values (private) ----
      Defined unconditionally here so both the prefers-color-scheme path and
