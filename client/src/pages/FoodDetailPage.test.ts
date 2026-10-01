@@ -237,6 +237,11 @@ describe("FoodDetailPage — actions row (item 282)", () => {
     expect(html).toContain(`href="/log-meal?food=${id}"`);
     expect(html).toContain(`href="/storage/add?food=${id}"`);
     expect(html).toContain(">Log meal<");
+    // Item 676: the same 48px 16px/800 "lg" pair as Home.
+    for (const href of [`/log-meal?food=${id}`, `/storage/add?food=${id}`]) {
+      const tag = new RegExp(`<a [^>]*href="${href.replace("?", "\\?")}"[^>]*>`).exec(html)?.[0] ?? "";
+      expect(tag).toContain("min-h-12 px-4 py-2.5 text-base font-extrabold");
+    }
     expect(html).toContain(">Add to storage<");
     expect(html.indexOf(">Log meal<")).toBeLessThan(html.indexOf(">Add to storage<"));
   });

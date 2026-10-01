@@ -118,10 +118,10 @@ function MarkAsServed({ food }: MarkAsServedProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <ButtonLink to={`/log-meal?food=${food.id}`} className="flex-1">
+        <ButtonLink to={`/log-meal?food=${food.id}`} size="lg" className="flex-1">
           Log meal
         </ButtonLink>
-        <ButtonLink to={`/storage/add?food=${food.id}`} variant="tonal" className="flex-1">
+        <ButtonLink to={`/storage/add?food=${food.id}`} variant="tonal" size="lg" className="flex-1">
           Add to storage
         </ButtonLink>
       </div>
