@@ -8,12 +8,12 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
     "border border-transparent bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-sm)] hover:bg-[var(--color-primary-hover)] active:bg-[var(--color-primary-active)]",
   secondary: "border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]",
-  // A quieter CTA than `primary` (the Add-to-storage button): a solid fill of the
-  // mint `--color-success` swatch with the same fixed black the primary
-  // uses (`--color-primary-contrast`), so the contrast gate covers it.
-  // Hover darkens the mint by 8% — no new color token.
+  // A quieter CTA than `primary` (the Add-to-storage button): a solid
+  // `--color-success` fill (mint in light, deep green in dark) with its own
+  // `--color-success-contrast` text, so the contrast gate covers it.
+  // Hover darkens the fill by 8% — no new color token.
   tonal:
-    "border border-transparent bg-[var(--color-success)] text-[var(--color-primary-contrast)] hover:bg-[color-mix(in_srgb,var(--color-success),#000000_8%)]",
+    "border border-transparent bg-[var(--color-success)] text-[var(--color-success-contrast)] hover:bg-[color-mix(in_srgb,var(--color-success),#000000_8%)]",
   ghost: "border border-transparent bg-transparent text-[var(--color-text)] hover:bg-[var(--color-bg-inset)]",
   danger: "border border-transparent bg-[var(--color-danger)] text-[var(--color-danger-contrast)] shadow-[var(--shadow-sm)]",
   // The delete question's commit (item 607): red text + border on the sheet's

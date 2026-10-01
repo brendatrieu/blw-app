@@ -498,9 +498,9 @@ describe("ratings on the Foods grid (items 575-576)", () => {
     const html = renderToString(
       createElement(QueryClientProvider, { client: queryClient }, createElement(MemoryRouter, null, createElement(FoodsPage, null))),
     );
-    expect(html.match(/★ 4\.2 \(5\)/g)).toHaveLength(1);
+    expect(html.match(/★<\/span> 4\.2 \(5\)/g)).toHaveLength(1);
     // On Banana's tile, not Apple's.
-    expect(html.indexOf("★ 4.2 (5)")).toBeGreaterThan(html.indexOf("Banana"));
+    expect(html.indexOf("★</span> 4.2 (5)")).toBeGreaterThan(html.indexOf("Banana"));
   });
 
   it("offers the one rating sort: a tap turns it on, a second tap goes back to the usual order (item 586)", () => {

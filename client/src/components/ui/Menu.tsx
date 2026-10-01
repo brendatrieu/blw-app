@@ -164,7 +164,7 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
         {...getMenuTriggerAriaProps(open)}
         {...(open ? { "aria-controls": menuId } : {})}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-bg-inset)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--color-icon)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-bg-inset)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
           <circle cx="12" cy="5" r="2" />

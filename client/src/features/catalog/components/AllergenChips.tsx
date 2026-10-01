@@ -8,8 +8,8 @@ interface AllergenChipsProps {
 }
 
 /**
- * The one allergen mark in the app (item 334): a danger-toned Badge per
- * allergen, labelled through `allergenLabel`.
+ * The one allergen mark in the app (item 334): a soft plum Badge per
+ * allergen (item 636), labelled through `allergenLabel`.
  *
  * Extracted from the identical loops the food detail page's `FoodBadges` and
  * the recipe header carried, because it now has to appear in five more
@@ -26,7 +26,7 @@ export function AllergenChips({ allergens }: AllergenChipsProps) {
   return (
     <>
       {allergens.map((slug) => (
-        <Badge key={slug} tone="danger">
+        <Badge key={slug} tone="allergen">
           {allergenLabel(slug)}
         </Badge>
       ))}

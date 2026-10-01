@@ -41,6 +41,13 @@ describe("StarRating markup", () => {
     expect(html).toContain(">Clear<");
   });
 
+  it("paints filled stars in the apricot graphic, empty ones muted (item 640)", () => {
+    const html = renderToString(createElement(StarRating, { value: 3, onChange: () => {}, label: "Rating for Banana" }));
+    expect(html.match(/text-\[var\(--color-apricot-graphic\)\]"[^>]*><span aria-hidden="true">★/g)).toHaveLength(3);
+    expect(html.match(/text-\[var\(--color-text-muted\)\]"[^>]*><span aria-hidden="true">☆/g)).toHaveLength(2);
+    expect(html).not.toContain("text-[var(--color-accent)]");
+  });
+
   it("never shows a 0-star state: unrated means nothing checked, all empty, no Clear", () => {
     const html = renderToString(createElement(StarRating, { value: null, onChange: () => {}, label: "Rating for Banana" }));
     expect(html).not.toContain('aria-checked="true"');
@@ -108,15 +115,15 @@ describe("StarRating behaviour", () => {
 describe("rating summaries", () => {
   const summary = { average: 4.2, count: 5, latest: 4, lastRatedAt: "2026-09-27T12:00:00.000Z" };
 
-  it('reads "★ 4.2 (5)"', () => {
-    expect(formatRatingSummary(summary)).toBe("★ 4.2 (5)");
-    expect(formatRatingSummary({ ...summary, average: 4, count: 1 })).toBe("★ 4.0 (1)");
+  it('reads "4.2 (5)" (the ★ is drawn beside it)', () => {
+    expect(formatRatingSummary(summary)).toBe("4.2 (5)");
+    expect(formatRatingSummary({ ...summary, average: 4, count: 1 })).toBe("4.0 (1)");
   });
 
   it("renders nothing at all when unrated", () => {
     expect(renderToString(createElement(RatingSummaryText, { summary: undefined }))).toBe("");
     const html = renderToString(createElement(RatingSummaryText, { summary }));
-    expect(html).toContain("★ 4.2 (5)");
+    expect(html).toContain('<span class="text-[var(--color-apricot-graphic)]">★</span> 4.2 (5)');
     expect(html).toContain("Rated 4.2 out of 5, 5 ratings");
   });
 });

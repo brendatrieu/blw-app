@@ -21,16 +21,15 @@ interface FoodBadgesProps {
 export function FoodBadges({ food }: FoodBadgesProps) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {food.isCustom && <Badge tone="neutral">Custom</Badge>}
-      {!food.isCustom && food.ironLevel === "high" && <Badge tone="primary">Iron {levelLabel(food.ironLevel)}</Badge>}
-      {!food.isCustom && food.ironLevel !== "high" && <Badge tone="neutral">Iron {levelLabel(food.ironLevel)}</Badge>}
+      {food.isCustom && <Badge tone="outline">Custom</Badge>}
+      {!food.isCustom && <Badge tone="nutrient">Iron {levelLabel(food.ironLevel)}</Badge>}
       {!food.isCustom && food.vitaminCLevel !== "low" && (
-        <Badge tone="sunshine">Vit C {levelLabel(food.vitaminCLevel)}</Badge>
+        <Badge tone="nutrient">Vit C {levelLabel(food.vitaminCLevel)}</Badge>
       )}
       {/* Item 279: fiber is shown only at "high" — the one level that's a
           reason to reach for the food — and nowhere on the grid tiles. */}
-      {!food.isCustom && food.fiberLevel === "high" && <Badge tone="leaf">High fiber</Badge>}
-      {!food.isCustom && <Badge tone="neutral">{food.minAgeMonths}m+</Badge>}
+      {!food.isCustom && food.fiberLevel === "high" && <Badge tone="nutrient">High fiber</Badge>}
+      {!food.isCustom && <Badge tone="outline">{food.minAgeMonths}m+</Badge>}
       <AllergenChips allergens={food.allergens} />
     </div>
   );

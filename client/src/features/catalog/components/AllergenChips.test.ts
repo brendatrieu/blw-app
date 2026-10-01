@@ -7,16 +7,18 @@ function render(allergens: string[]): string {
   return renderToString(createElement(AllergenChips, { allergens }));
 }
 
-// Item 334: extracted from the two identical `Badge tone="danger"` loops
+// Item 334: extracted from the two identical allergen Badge loops
 // FoodBadges and the recipe header carried, so the five new surfaces mark
 // allergens the same way instead of each inventing one.
 describe("AllergenChips", () => {
-  it("renders one danger-toned badge per allergen, in the order given", () => {
+  it("renders one soft plum allergen pill per allergen, in the order given (item 636)", () => {
     const html = render(["fish", "sesame"]);
     expect(html).toContain("Fish");
     expect(html).toContain("Sesame");
     expect(html.indexOf("Fish")).toBeLessThan(html.indexOf("Sesame"));
-    expect((html.match(/var\(--color-danger\)/g) ?? []).length).toBe(2);
+    expect((html.match(/bg-\[var\(--color-allergen-soft\)\] text-\[var\(--color-allergen-soft-text\)\]/g) ?? []).length).toBe(2);
+    expect(html).not.toContain("--color-danger");
+    expect(html.match(/whitespace-nowrap/g)).toHaveLength(2);
   });
 
   it("labels each slug the way the food page does, not as a raw slug", () => {

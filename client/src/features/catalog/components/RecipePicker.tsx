@@ -47,7 +47,7 @@ export function recipePickerOptions(recipes: RecipeListItem[]): MultiComboboxOpt
       value: recipe.id,
       label: recipe.title,
       ...(recipe.isFavorite ? { emoji: "💛" } : {}),
-      ...(recipe.isCustom ? { markers: [{ label: "Custom", tone: "neutral" as const }] } : {}),
+      ...(recipe.isCustom ? { markers: [{ label: "Custom", tone: "outline" as const }] } : {}),
     }));
 }
 

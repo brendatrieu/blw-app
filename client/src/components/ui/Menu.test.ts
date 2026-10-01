@@ -25,6 +25,12 @@ describe("Menu (render, closed)", () => {
     expect(html).not.toContain('role="menu"');
   });
 
+  it("draws the kebab in the darker icon color, not muted text (item 641)", () => {
+    const html = renderToString(createElement(Menu, { label: "Actions", children: () => null }));
+    expect(html).toMatch(/<button[^>]*class="[^"]*text-\[var\(--color-icon\)\][^"]*"[^>]*aria-label="Actions"|<button[^>]*aria-label="Actions"[^>]*class="[^"]*text-\[var\(--color-icon\)\]/);
+    expect(html).not.toContain("text-[var(--color-text-muted)]");
+  });
+
   it("disables the trigger when disabled is set", () => {
     const html = renderToString(createElement(Menu, { label: "Actions", disabled: true, children: () => null }));
     expect(html).toMatch(/<button[^>]*aria-label="Actions"[^>]*disabled/);

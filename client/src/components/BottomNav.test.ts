@@ -12,12 +12,12 @@ function renderAt(pathname: string): string {
 
 /**
  * Which tab is lit, read the way a parent reads the bar: the one label
- * wearing the accent color. Every other label is muted, so this doubles as a
+ * wearing the apricot text color. Every other label is muted, so this doubles as a
  * "only one tab is active" assertion.
  */
 function activeTabLabel(html: string): string | undefined {
   const labels = [...html.matchAll(/<span class="font-caption" style="color:([^"]+)">(?:<!-- -->)?([^<]+)</g)];
-  const lit = labels.filter(([, color]) => color === "var(--color-accent)");
+  const lit = labels.filter(([, color]) => color === "var(--color-apricot-text)");
   expect(lit.length).toBeLessThanOrEqual(1);
   return lit[0]?.[2];
 }
@@ -47,6 +47,16 @@ describe("BottomNav", () => {
     expect(html.match(/viewBox="0 0 24 24"/g)).toHaveLength(5);
     expect(html).not.toContain("<img");
     expect(html).not.toContain("🍳");
+  });
+
+  it("draws the active tab as an apricot pill with the on-fill ink, inactive tabs bare and muted (item 635)", () => {
+    const html = renderAt("/recipes");
+    const pills = [...html.matchAll(/style="background-color:([^;]+);color:([^;]+);/g)].map(([, bg, fg]) => [bg, fg]);
+    expect(pills).toHaveLength(5);
+    expect(pills.filter(([bg]) => bg === "var(--color-apricot)")).toEqual([["var(--color-apricot)", "var(--color-apricot-ink)"]]);
+    expect(pills.filter(([bg]) => bg === "transparent")).toHaveLength(4);
+    expect(pills.every(([bg, fg]) => bg !== "transparent" || fg === "var(--color-text-muted)")).toBe(true);
+    expect(html).not.toContain("var(--color-primary)");
   });
 
   it("lights the Recipes tab across the whole recipe section, not just the list", () => {

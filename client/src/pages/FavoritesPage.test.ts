@@ -43,13 +43,12 @@ describe("FavoritesPage", () => {
     expect(neither).not.toContain(">Vit C<");
   });
 
-  // The Vit C badge must carry the SUNSHINE tone specifically — a tone swap
-  // to "primary" (Iron focus's tone) reads fine by text alone, so this pins
-  // the actual class the tone maps to.
-  it("gives the Vit C badge the sunshine tone's classes, not just its text", () => {
+  // Item 637: every nutrient badge wears the one soft nutrient tint (never
+  // solid sky); a tone swap reads fine by text alone, so pin the classes.
+  it("gives the Vit C badge the one nutrient tint's classes (item 637), not just its text", () => {
     const html = renderPage([favorite({ vitaminCHigh: true })]);
     expect(html).toMatch(
-      /class="[^"]*bg-\[var\(--color-caution-soft\)\][^"]*text-\[var\(--color-caution-soft-text\)\][^"]*"[^>]*>Vit C</,
+      /class="[^"]*bg-\[var\(--color-primary-soft\)\][^"]*text-\[var\(--color-primary-soft-text\)\][^"]*"[^>]*>Vit C</,
     );
   });
 
@@ -61,11 +60,20 @@ describe("FavoritesPage", () => {
     expect(renderPage([favorite({ fiberHigh: false })])).not.toContain(">Fiber<");
   });
 
-  it("gives the Fiber badge the success tone's classes, not just its text", () => {
+  it("gives the Fiber badge the one nutrient tint's classes (item 637), not just its text", () => {
     const html = renderPage([favorite({ fiberHigh: true })]);
     expect(html).toMatch(
-      /class="[^"]*bg-\[var\(--color-success-soft\)\][^"]*text-\[var\(--color-success-soft-text\)\][^"]*"[^>]*>Fiber</,
+      /class="[^"]*bg-\[var\(--color-primary-soft\)\][^"]*text-\[var\(--color-primary-soft-text\)\][^"]*"[^>]*>Fiber</,
     );
+  });
+
+  // Items 636/637: Iron focus is the one nutrient tint (not solid sky) and
+  // allergens are the plum pill (not solid red), via the shared AllergenChips.
+  it("tints Iron focus as a nutrient and marks allergens with the plum pill", () => {
+    const html = renderPage([favorite({ ironFocus: true, allergens: ["peanut"] })]);
+    expect(html).toContain('bg-[var(--color-primary-soft)] text-[var(--color-primary-soft-text)]">Iron focus<');
+    expect(html).toContain('bg-[var(--color-allergen-soft)] text-[var(--color-allergen-soft-text)]">Peanut<');
+    expect(html).not.toContain("--color-danger)");
   });
 
   it("falls back to the empty state when there are no favorites", () => {

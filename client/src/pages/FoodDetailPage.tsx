@@ -66,7 +66,7 @@ function MarkAsServed({ food }: MarkAsServedProps) {
       </div>
       {!babyLoading && !activeBaby && (
         <p className="text-xs text-[var(--color-text-muted)]">
-          <Link to="/settings" className="font-medium text-[var(--color-primary)] underline">
+          <Link to="/settings" className="font-medium text-[var(--color-accent)] underline">
             Add a baby
           </Link>{" "}
           to log this as served.
@@ -114,7 +114,7 @@ export function CustomFoodActions({ food }: CustomFoodActionsProps) {
       <ButtonLink to={`/foods/${food.slug}/edit`} variant="secondary" size="sm">
         Edit
       </ButtonLink>
-      <Button type="button" variant="secondary" size="sm" onClick={() => setAsking(true)}>
+      <Button type="button" variant="danger-quiet" size="sm" onClick={() => setAsking(true)}>
         Delete
       </Button>
       {/* Mounted only while asking, so every open fetches usage afresh. */}
@@ -353,7 +353,7 @@ export function FoodDetailPage() {
                     </span>
                     {pairing.food.name}
                   </span>
-                  <Badge tone="sunshine">Vit C {levelLabel(pairing.food.vitaminCLevel)}</Badge>
+                  <Badge tone="nutrient">Vit C {levelLabel(pairing.food.vitaminCLevel)}</Badge>
                 </div>
                 <p className="text-xs text-[var(--color-text-muted)]">{pairing.reason}</p>
               </CardLink>
@@ -373,8 +373,8 @@ export function FoodDetailPage() {
               <CardLink key={recipe.id} to={`/recipes/${recipe.id}`} padding="sm" className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium text-[var(--color-text)]">{recipe.title}</span>
                 <span className="flex shrink-0 items-center gap-1.5">
-                  {isBasicRecipe(recipe.ingredientCount) && <Badge tone="neutral">{BASIC_RECIPE_LABEL}</Badge>}
-                  <Badge tone="neutral">{recipe.minAgeMonths}m+</Badge>
+                  {isBasicRecipe(recipe.ingredientCount) && <Badge tone="outline">{BASIC_RECIPE_LABEL}</Badge>}
+                  <Badge tone="outline">{recipe.minAgeMonths}m+</Badge>
                 </span>
               </CardLink>
             ))}

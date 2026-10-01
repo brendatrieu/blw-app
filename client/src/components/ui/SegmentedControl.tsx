@@ -17,7 +17,7 @@ interface SegmentedControlProps<Value extends string> {
  * A chunky, rounded-segment picker for a small closed set of mutually
  * exclusive options (e.g. appearance mode). Renders as a `radiogroup` of
  * `radio` buttons rather than native radio inputs, so it can be styled as
- * one pill-shaped track with a solid peach fill on the selected segment.
+ * one pill-shaped track with a solid --color-selected fill on the selected segment.
  */
 export function SegmentedControl<Value extends string>({
   options,
@@ -46,7 +46,7 @@ export function SegmentedControl<Value extends string>({
             }}
             className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] px-3 py-2 text-sm font-medium transition-colors duration-[var(--duration-fast)] ${
               selected
-                ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+                ? "bg-[var(--color-selected)] text-[var(--color-selected-contrast)]"
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >

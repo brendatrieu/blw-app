@@ -63,9 +63,10 @@ const CUSTOM_FOOD = catalogFood({
   notes: "Cut into finger strips",
 });
 
-function renderFood(food: FoodDetail) {
+function renderFood(food: FoodDetail, babies?: Baby[]) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(catalogKeys.food(food.slug), food);
+  if (babies) queryClient.setQueryData(babyKeys.list(false), babies);
   return renderToString(
     createElement(
       QueryClientProvider,
@@ -263,6 +264,9 @@ describe("CustomFoodActions", () => {
     expect(html).toContain(">Edit<");
     expect(html).toContain(">Delete<");
     expect(html).not.toContain('role="alert"');
+    // Item 638: the shared red-outline Delete, last in its row.
+    expect(html).toMatch(/<button[^>]*class="[^"]*border-\[var\(--color-danger\)\][^"]*text-\[var\(--color-danger\)\][^"]*"[^>]*>Delete<\/button>/);
+    expect(html.indexOf(">Edit<")).toBeLessThan(html.indexOf(">Delete<"));
   });
 });
 
@@ -364,6 +368,14 @@ describe("FoodDetailPage — Recipes with <food> (item 255)", () => {
     expect(html.indexOf("Simple salmon")).toBeLessThan(html.indexOf("Salmon &amp; pea stew"));
   });
 
+  it("badges each recipe row's age in the outline tone (item 637)", () => {
+    // The food's own header carries a 6m+ outline badge too: look below it.
+    const html = renderFood(WITH_RECIPES);
+    expect(html.slice(html.search(/Recipes with/))).toMatch(
+      /class="[^"]*inset-ring-\[var\(--color-border\)\][^"]*"[^>]*>6(?:<!-- -->)?m\+</,
+    );
+  });
+
   it("badges only the single-ingredient card Basic", () => {
     const html = renderFood(WITH_RECIPES);
     expect(html).toContain(">Basic<");
@@ -377,6 +389,28 @@ describe("FoodDetailPage — Recipes with <food> (item 255)", () => {
     );
     expect(html).toContain("Salmon oat patties");
     expect(html).not.toContain(">Basic<");
+  });
+});
+
+describe("FoodDetailPage — pins from the color pass (items 637, 639)", () => {
+  it("gives the pairing card's Vit C badge the one nutrient tint", () => {
+    const html = renderFood(
+      catalogFood({
+        pairings: [
+          { food: { slug: "mango", name: "Mango", ironLevel: "low", vitaminCLevel: "high" }, reason: "Vitamin C helps iron." },
+        ],
+      }),
+    );
+    expect(html).toMatch(
+      /class="[^"]*bg-\[var\(--color-primary-soft\)\][^"]*text-\[var\(--color-primary-soft-text\)\][^"]*"[^>]*>Vit C (?:<!-- -->)?High</,
+    );
+  });
+
+  it("draws the 'Add a baby' link in the accent text color, never the CTA fill color", () => {
+    const html = renderFood(catalogFood(), []);
+    const link = html.match(/<a [^>]*>Add a baby<\/a>/)?.[0] ?? "";
+    expect(link).toContain("text-[var(--color-accent)]");
+    expect(link).not.toContain("--color-primary");
   });
 });
 
@@ -405,7 +439,7 @@ describe("FoodDetailPage rating history (item 575)", () => {
       { servedAt: "2026-09-20T12:00:00.000Z", rating: 2 },
       { servedAt: "2026-09-25T12:00:00.000Z", rating: 4 },
     ]);
-    const average = html.indexOf("★ 3.0 (2)");
+    const average = html.indexOf("★</span> 3.0 (2)");
     const graph = html.indexOf(`${escapeHtml(BABY.name)}&#x27;s rating history</h2>`);
     // A subtitle: after the last badge, inside the header, before the buttons.
     expect(average).toBeGreaterThan(html.indexOf(">Fish<"));

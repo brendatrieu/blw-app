@@ -121,6 +121,12 @@ describe("RecipeDetailPage (catalog recipe)", () => {
     expect(html).toContain(">Iron focus<");
   });
 
+  it("draws the prep badge in the outline tone (item 637), not a tint", () => {
+    expect(renderRecipe(catalogRecipe())).toMatch(
+      /class="[^"]*inset-ring-\[var\(--color-border\)\][^"]*"[^>]*>15(?:<!-- -->)? min prep</,
+    );
+  });
+
   it("badges high vitamin C beside Iron focus, and neither when the recipe has neither", () => {
     const both = renderRecipe(catalogRecipe({ ironFocus: true, vitaminCHigh: true }));
     expect(both).toContain(">Iron focus<");
@@ -131,13 +137,12 @@ describe("RecipeDetailPage (catalog recipe)", () => {
     expect(neither).not.toContain(">Vit C<");
   });
 
-  // The Vit C badge must carry the SUNSHINE tone specifically — a tone swap
-  // to "primary" (Iron focus's tone) reads fine by text alone, so this pins
-  // the actual class the tone maps to.
-  it("gives the Vit C badge the sunshine tone's classes, not just its text", () => {
+  // Item 637: every nutrient badge wears the one soft nutrient tint (never
+  // solid sky); a tone swap reads fine by text alone, so pin the classes.
+  it("gives the Vit C badge the one nutrient tint's classes (item 637), not just its text", () => {
     const html = renderRecipe(catalogRecipe({ vitaminCHigh: true }));
     expect(html).toMatch(
-      /class="[^"]*bg-\[var\(--color-caution-soft\)\][^"]*text-\[var\(--color-caution-soft-text\)\][^"]*"[^>]*>Vit C</,
+      /class="[^"]*bg-\[var\(--color-primary-soft\)\][^"]*text-\[var\(--color-primary-soft-text\)\][^"]*"[^>]*>Vit C</,
     );
   });
 
@@ -149,10 +154,10 @@ describe("RecipeDetailPage (catalog recipe)", () => {
     expect(renderRecipe(catalogRecipe({ fiberHigh: false }))).not.toContain(">Fiber<");
   });
 
-  it("gives the Fiber badge the success tone's classes, not just its text", () => {
+  it("gives the Fiber badge the one nutrient tint's classes (item 637), not just its text", () => {
     const html = renderRecipe(catalogRecipe({ fiberHigh: true }));
     expect(html).toMatch(
-      /class="[^"]*bg-\[var\(--color-success-soft\)\][^"]*text-\[var\(--color-success-soft-text\)\][^"]*"[^>]*>Fiber</,
+      /class="[^"]*bg-\[var\(--color-primary-soft\)\][^"]*text-\[var\(--color-primary-soft-text\)\][^"]*"[^>]*>Fiber</,
     );
   });
 
@@ -213,7 +218,8 @@ describe("RecipeDetailPage (catalog recipe)", () => {
       }),
     );
     const tab = (label: string) => html.match(new RegExp(`<button[^>]*>${label}</button>`))?.[0] ?? "";
-    const ACTIVE = "bg-[var(--color-primary)]";
+    // Item 644: the selected token, which stays pastel in dark mode.
+    const ACTIVE = "bg-[var(--color-selected)]";
 
     // `disabled=""` is the attribute; `disabled:` prefixes in the class list
     // are Tailwind variants and say nothing about the button's state.
@@ -271,6 +277,9 @@ describe("RecipeDetailPage (custom recipe)", () => {
     expect(html).toContain(`href="/recipes/${CUSTOM_RECIPE.id}/edit"`);
     expect(html).toContain(">Edit<");
     expect(html).toContain(">Delete<");
+    // Item 638: the shared red-outline Delete, last in its row.
+    expect(html).toMatch(/<button[^>]*class="[^"]*border-\[var\(--color-danger\)\][^"]*text-\[var\(--color-danger\)\][^"]*"[^>]*>Delete<\/button>/);
+    expect(html.indexOf(">Edit<")).toBeLessThan(html.indexOf(">Delete<"));
   });
 });
 
@@ -395,8 +404,8 @@ describe("RecipeDetailPage — Basic badge", () => {
     expect(renderRecipe(twoFoods)).not.toContain(">Basic<");
   });
 
-  it("gives the badge the neutral tone", () => {
-    expect(renderRecipe(catalogRecipe())).toMatch(/class="[^"]*color-neutral-soft[^"]*"[^>]*>Basic</);
+  it("gives the badge the outline tone (plain info, item 637)", () => {
+    expect(renderRecipe(catalogRecipe())).toMatch(/class="[^"]*inset-ring-\[var\(--color-border\)\][^"]*"[^>]*>Basic</);
   });
 });
 
@@ -439,6 +448,46 @@ describe("RecipeDetailPage allergen tagline", () => {
 
 // Item 334: the header said "Fish" about the whole dish; the ingredient rows
 // said nothing, so which food brought it was never on screen.
+// Item 640: the favorite heart is apricot; on its soft apricot chip it takes
+// the darker apricot text shade (the graphic shade is 2.55:1 there).
+describe("RecipeDetailPage favorite heart (item 640)", () => {
+  function renderWithFavorites(recipe: RecipeDetail, favorited: boolean) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(catalogKeys.recipe(recipe.id), recipe);
+    queryClient.setQueryData(trackingKeys.favorites, { items: favorited ? [{ recipeId: recipe.id }] : [] });
+    return renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(
+          MemoryRouter,
+          { initialEntries: [`/recipes/${recipe.id}`] },
+          createElement(
+            Routes,
+            null,
+            createElement(Route, { path: "/recipes/:id", element: createElement(RecipeDetailPage, null) }),
+          ),
+        ),
+      ),
+    );
+  }
+
+  it("draws a favorited recipe's pill on the apricot soft chip with an apricot heart", () => {
+    const html = renderWithFavorites(catalogRecipe(), true);
+    const pill = /<button[^>]*aria-pressed="true"[^>]*>.*?<\/button>/s.exec(html)?.[0] ?? "";
+    expect(pill).toContain("bg-[var(--color-apricot-soft)] text-[var(--color-text)]");
+    expect(pill).toContain('<span aria-hidden="true" class="text-base leading-none text-[var(--color-apricot-text)]">♥</span>');
+    expect(pill).not.toContain("primary-soft");
+  });
+
+  it("leaves the unfavorited pill neutral, its outline heart in the label color", () => {
+    const html = renderWithFavorites(catalogRecipe(), false);
+    const pill = /<button[^>]*aria-pressed="false"[^>]*>.*?<\/button>/s.exec(html)?.[0] ?? "";
+    expect(pill).toContain("♡");
+    expect(pill).not.toContain("apricot");
+  });
+});
+
 describe("RecipeDetailPage ingredient allergen rows (item 334)", () => {
   it("marks the ingredient that carries the allergen, inside its own row", () => {
     const html = renderRecipe(catalogRecipe());
@@ -452,7 +501,7 @@ describe("RecipeDetailPage ingredient allergen rows (item 334)", () => {
     const html = renderRecipe(CUSTOM_RECIPE);
     const ingredientsSection = html.slice(html.indexOf("Ingredients"));
     expect(ingredientsSection).toContain("Grandma&#x27;s loaf");
-    expect(ingredientsSection).not.toContain("var(--color-danger-contrast)");
+    expect(ingredientsSection).not.toContain("var(--color-allergen-soft)");
   });
 
   it("keeps the row a single link — the marks are plain spans, not controls", () => {
@@ -467,7 +516,7 @@ describe("RecipeDetailPage rating history (item 581)", () => {
       { servedAt: "2026-09-20T12:00:00.000Z", rating: 2 },
       { servedAt: "2026-09-25T12:00:00.000Z", rating: 4 },
     ]);
-    const average = html.indexOf("★ 3.0 (2)");
+    const average = html.indexOf("★</span> 3.0 (2)");
     const graph = html.indexOf("Robin&#x27;s rating history</h2>");
     // A subtitle: after the last badge, before the Log meal / Add to storage buttons.
     expect(average).toBeGreaterThan(html.indexOf(">Fish<"));

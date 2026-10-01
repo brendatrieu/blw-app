@@ -40,11 +40,11 @@ describe("FoodBadges — High fiber (item 279)", () => {
     expect(html).toContain(">Custom<");
   });
 
-  // The tone is load-bearing: swapping it for "sunshine" (vit C's) or
-  // "primary" (iron's) reads fine by text alone, so pin the classes.
-  it("carries the success tone's classes, not just its text", () => {
+  // Item 637: the one soft nutrient tint, shared with iron and vit C; a tone
+  // swap reads fine by text alone, so pin the classes.
+  it("carries the one nutrient tint's classes, not just its text (item 637)", () => {
     expect(render(food({ fiberLevel: "high" }))).toMatch(
-      /class="[^"]*bg-\[var\(--color-success-soft\)\][^"]*text-\[var\(--color-success-soft-text\)\][^"]*"[^>]*>High fiber</,
+      /class="[^"]*bg-\[var\(--color-primary-soft\)\][^"]*text-\[var\(--color-primary-soft-text\)\][^"]*"[^>]*>High fiber</,
     );
   });
 
@@ -57,5 +57,33 @@ describe("FoodBadges — High fiber (item 279)", () => {
     expect(vitC).toBeGreaterThan(-1);
     expect(fiber).toBeGreaterThan(vitC);
     expect(age).toBeGreaterThan(fiber);
+  });
+});
+
+// Item 637: nutrient badges wear ONE soft tint (never solid sky) at every
+// level; plain info (min age, Custom) is an outline; allergens are the plum
+// pill (item 636). Level wording (High/Moderate/Low) is unchanged.
+describe("FoodBadges — badge rules (items 636, 637)", () => {
+  const NUTRIENT = 'bg-[var(--color-primary-soft)] text-[var(--color-primary-soft-text)]';
+  const OUTLINE = "inset-ring inset-ring-[var(--color-border)] text-[var(--color-text-muted)]";
+
+  it("tints iron at every level, and vit C, in the one nutrient tint", () => {
+    for (const ironLevel of ["high", "moderate", "low"] as const) {
+      const html = render(food({ ironLevel, vitaminCLevel: "high" }));
+      expect(html).toContain(`${NUTRIENT}">Iron <!-- -->`);
+      expect(html).toContain(`${NUTRIENT}">Vit C <!-- -->`);
+      expect(html).not.toContain("bg-[var(--color-primary)]");
+    }
+  });
+
+  it("outlines min age and Custom", () => {
+    expect(render(food())).toMatch(new RegExp(`${OUTLINE.replace(/[[\]()]/g, "\\$&")}">6<!-- -->m\\+<`));
+    expect(render(food({ isCustom: true }))).toContain(`${OUTLINE}">Custom<`);
+  });
+
+  it("marks allergens with the plum pill, not red", () => {
+    const html = render(food({ allergens: ["fish"] }));
+    expect(html).toContain('bg-[var(--color-allergen-soft)] text-[var(--color-allergen-soft-text)]">Fish<');
+    expect(html).not.toContain("--color-danger");
   });
 });

@@ -11,7 +11,11 @@ interface ProgressRingProps {
   children?: React.ReactNode;
 }
 
-/** SVG progress ring — peach fill on a warm inset track. Used for allergen/progress summaries. */
+/**
+ * SVG progress ring — an accent stroke on an inset track. Used for
+ * allergen/progress summaries. Accent, not the CTA fill: the dark CTA is a
+ * deep blue that sinks into the dark track (1.4:1), and a ring is a graphic.
+ */
 export function ProgressRing({ size = 96, value, strokeWidth = 10, label, children }: ProgressRingProps) {
   const clamped = Math.min(1, Math.max(0, value));
   const radius = (size - strokeWidth) / 2;
@@ -39,7 +43,7 @@ export function ProgressRing({ size = 96, value, strokeWidth = 10, label, childr
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="var(--color-primary)"
+          stroke="var(--color-accent)"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}

@@ -81,6 +81,10 @@ describe("AI features switched off (item 589)", () => {
   it("Settings has no key section and never mentions keys, Anthropic, AI or chats", () => {
     const html = render(createElement(SettingsPage));
     expect(html).toContain("Delete account");
+    // Item 638: the same red-outline Delete button as everywhere else, last
+    // in its row after Export.
+    expect(html).toMatch(/<button[^>]*class="[^"]*border-\[var\(--color-danger\)\][^"]*"[^>]*>Delete account<\/button>/);
+    expect(html.indexOf("Export my data")).toBeLessThan(html.indexOf("Delete account"));
     expect(html).toContain("symptom checks");
     expect(html).not.toMatch(AI_WORDING);
     expect(html).not.toContain("anthropic-api-key");

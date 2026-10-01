@@ -168,13 +168,40 @@ const BASE_PAIRS: Pair[] = [
   // Inset surfaces (SegmentedControl track, Menu, EmptyState) carry muted text too.
   { name: "muted text on inset surface", fg: "color-text-muted", bg: "color-bg-inset" },
 
-  // CTA fill (Button/Badge/SegmentedControl/nav pill/Done bar) — fixed
-  // black-on-sky-blue in both modes.
+  // CTA fill (Button/Badge/SegmentedControl/Done bar) — black on sky blue
+  // in light, pale on deep sea blue in dark (item 639).
   { name: "primary-contrast on primary fill (CTA)", fg: "color-primary-contrast", bg: "color-primary" },
   { name: "primary-contrast on primary-hover fill", fg: "color-primary-contrast", bg: "color-primary-hover" },
   { name: "primary-contrast on primary-active fill", fg: "color-primary-contrast", bg: "color-primary-active" },
-  // The tonal Button (storage CTA): the same black on a solid mint fill.
-  { name: "primary-contrast on success fill (tonal Button)", fg: "color-primary-contrast", bg: "color-success" },
+  // Selected / on states (item 644): filter and option chips, the age tabs,
+  // the SegmentedControl segment — black on the pastel sky in both modes.
+  { name: "selected-contrast on selected fill (chips, segments, age tabs)", fg: "color-selected-contrast", bg: "color-selected" },
+  // The tonal Button (storage CTA): black on mint in light, pale on deep green in dark.
+  { name: "success-contrast on success fill (tonal Button)", fg: "color-success-contrast", bg: "color-success" },
+
+  // ---- Apricot identity (items 634/635/640) ----
+  // Active bottom-nav pill: ink icon on the apricot fill.
+  { name: "apricot ink on apricot fill (active nav pill)", fg: "color-apricot-ink", bg: "color-apricot" },
+  // Active nav label (the nav sits on elevated) — text on page/elevated only;
+  // it is 4.12:1 on inset, so it never goes there.
+  { name: "apricot text on page", fg: "color-apricot-text", bg: "color-bg" },
+  { name: "apricot text on elevated surface (active nav label)", fg: "color-apricot-text", bg: "color-bg-elevated" },
+  // Rating stars and the recipe-list heart: graphics, 3:1 on page/elevated.
+  { name: "apricot graphic (stars, heart) on page", fg: "color-apricot-graphic", bg: "color-bg", min: 3 },
+  { name: "apricot graphic (stars, heart) on elevated surface", fg: "color-apricot-graphic", bg: "color-bg-elevated", min: 3 },
+  // Favorited heart pill: body text on the soft chip, and the heart glyph in
+  // apricot text (the graphic shade is 2.55:1 there in light) at 3:1.
+  { name: "body text on apricot soft chip (Favorited pill)", fg: "color-text", bg: "color-apricot-soft" },
+  { name: "apricot text heart on apricot soft chip", fg: "color-apricot-text", bg: "color-apricot-soft", min: 3 },
+
+  // Card kebab (⋮) icon — non-text UI on every ground a card menu sits on
+  // (inset is its hover fill) (item 641).
+  { name: "kebab icon on page", fg: "color-icon", bg: "color-bg", min: 3 },
+  { name: "kebab icon on elevated surface", fg: "color-icon", bg: "color-bg-elevated", min: 3 },
+  { name: "kebab icon on inset (hover)", fg: "color-icon", bg: "color-bg-inset", min: 3 },
+
+  // ProgressRing (item 639): the accent stroke on its inset track.
+  { name: "ProgressRing accent stroke on its inset track", fg: "color-accent", bg: "color-bg-inset", min: 3 },
 
   // Interactive text accent — links, active nav label, focus-adjacent text.
   { name: "accent link/text on page", fg: "color-accent", bg: "color-bg" },
@@ -187,7 +214,7 @@ const BASE_PAIRS: Pair[] = [
   // Danger — both a standalone text color and (paired with -contrast) a fill.
   { name: "danger text on page", fg: "color-danger", bg: "color-bg" },
   { name: "danger text on elevated surface", fg: "color-danger", bg: "color-bg-elevated" },
-  { name: "danger-contrast on danger fill (Button/Badge)", fg: "color-danger-contrast", bg: "color-danger" },
+  { name: "danger-contrast on danger fill (Button)", fg: "color-danger-contrast", bg: "color-danger" },
 
   // Callout / disclaimer banner.
   { name: "callout icon/text on callout bg", fg: "color-callout-icon", bg: "color-callout-bg" },
@@ -240,6 +267,13 @@ const CHIP_TONES = [
   { name: "success", text: "color-success-soft-text", tint: "color-success-soft" },
   { name: "neutral", text: "color-neutral-soft-text", tint: "color-neutral-soft" },
   { name: "danger", text: "color-danger-soft-text", tint: "color-danger-soft" },
+  // Button `danger-quiet` hover: `--color-danger` text on the danger tint.
+  { name: "danger quiet-hover", text: "color-danger", tint: "color-danger-soft" },
+  // Item 636: the allergen pill (Badge tone "allergen", MultiCombobox markers).
+  { name: "allergen", text: "color-allergen-soft-text", tint: "color-allergen-soft" },
+  // Item 647: RecipePicker's outline "Custom" marker (muted text, no fill)
+  // on a selected listbox row, which is tinted primary-soft.
+  { name: "primary outline-marker", text: "color-text-muted", tint: "color-primary-soft" },
 ];
 
 // Chip text is checked against the tint COMPOSITED over each ground it can
@@ -301,7 +335,56 @@ describe("design token contrast (WCAG AA)", () => {
   }
 });
 
-describe("tonal Button hover (mint darkened with black)", () => {
+// ---------------------------------------------------------------------------
+// Dark-mode state contrast (items 644, 645). Non-text UI, so 3:1. Gated in
+// DARK ONLY: light keeps its long-standing pastel-on-white states (~1.3-1.6:1,
+// carried by position, shape and the thumb) because the owner ruled light
+// unchanged; dark is where the deep CTA fill had dropped these to 1.4-1.9:1.
+// ---------------------------------------------------------------------------
+
+/** Confetti swatches, read from the renderer so a new particle color is gated
+ * the moment it is added (the tonal-hover idiom below). */
+const celebrationSource = readFileSync(new URL("../components/ui/Celebration.tsx", import.meta.url), "utf8");
+const PARTICLE_TOKENS = [
+  ...(celebrationSource.match(/const PARTICLE_COLORS = \[([^\]]*)\]/)?.[1] ?? "").matchAll(/var\(--([\w-]+)\)/g),
+].map((m) => m[1]!);
+
+const DARK_STATE_PAIRS: Pair[] = [
+  // Selected chips sit on the page (Foods/Recipes sticky bar, forms) and on
+  // cards/sheets; the Switch thumb is --color-bg-elevated on the on track.
+  { name: "selected fill vs page (selected chip)", fg: "color-selected", bg: "color-bg", min: 3 },
+  { name: "selected fill vs elevated (chip on a card, Switch thumb on the on track)", fg: "color-selected", bg: "color-bg-elevated", min: 3 },
+  // SegmentedControl / age tabs: the selected segment on its inset track;
+  // the Switch: on track vs the off track (also inset).
+  { name: "selected fill vs inset (segment on its track, Switch on vs off)", fg: "color-selected", bg: "color-bg-inset", min: 3 },
+  ...PARTICLE_TOKENS.flatMap((token) =>
+    GROUNDS.map((ground) => ({ name: `confetti --${token} vs ${ground}`, fg: token, bg: ground, min: 3 })),
+  ),
+];
+
+describe("dark-mode selected / on states and confetti (items 644, 645)", () => {
+  it("reads the three confetti swatches from Celebration.tsx, none of them a deep dark-mode fill", () => {
+    expect(PARTICLE_TOKENS).toEqual(["color-selected", "color-caution", "color-mint"]);
+  });
+  for (const pair of DARK_STATE_PAIRS) {
+    it(`[dark] ${pair.name} >= ${pair.min}:1`, () => {
+      expect(ratioOf(pair.fg, pair.bg, "dark")).toBeGreaterThanOrEqual(pair.min!);
+    });
+  }
+});
+
+describe("chip tone rows", () => {
+  // Each row must test its own family's tint: a row pointing at another
+  // family's tint checks a pairing that never renders and leaves its own
+  // tint unguarded (the danger row once read allergen-soft).
+  for (const tone of CHIP_TONES) {
+    it(`${tone.name} is checked on its own tint`, () => {
+      expect(tone.tint).toBe(`color-${tone.name.split(" ")[0]}-soft`);
+    });
+  }
+});
+
+describe("tonal Button hover (success fill darkened with black)", () => {
   // Button.tsx: hover:bg-[color-mix(in_srgb,var(--color-success),#000000_N%)]
   // — not a token, so the pair list can't see it. Read N from the source so
   // a heavier mix can't slip past this check.
@@ -312,11 +395,40 @@ describe("tonal Button hover (mint darkened with black)", () => {
     expect(Number.isFinite(mixPercent)).toBe(true);
   });
   for (const mode of ["light", "dark"] as const) {
-    it(`[${mode}] primary-contrast on the darkened mint hover >= 4.5:1`, () => {
-      const mint = parseColor(resolve("color-success", mode));
-      const hover = compositeOver({ r: 0, g: 0, b: 0, a: mixPercent / 100 }, mint);
-      const black = parseColor(resolve("color-primary-contrast", mode));
-      expect(contrastRatio(black, hover)).toBeGreaterThanOrEqual(4.5);
+    it(`[${mode}] success-contrast on the darkened success hover >= 4.5:1`, () => {
+      const fill = parseColor(resolve("color-success", mode));
+      const hover = compositeOver({ r: 0, g: 0, b: 0, a: mixPercent / 100 }, fill);
+      const ink = parseColor(resolve("color-success-contrast", mode));
+      expect(contrastRatio(ink, hover)).toBeGreaterThanOrEqual(4.5);
+    });
+  }
+});
+
+describe("Direction A token values (items 634, 636, 639, 641, 644, 645)", () => {
+  // The owner approved exact hexes; the gate above only proves they pass,
+  // so pin the values themselves (light unchanged, dark buttons deep).
+  const EXPECTED: Record<string, { light: string; dark: string }> = {
+    "color-primary": { light: "#b4d4e6", dark: "#24465c" },
+    "color-primary-contrast": { light: "#000000", dark: "#eaf3f9" },
+    "color-success": { light: "#cde9da", dark: "#1f4a37" },
+    "color-success-contrast": { light: "#000000", dark: "#e6f5ec" },
+    "color-apricot": { light: "#f7b48a", dark: "#3a2a20" },
+    "color-apricot-ink": { light: "#3d1a06", dark: "#f7b48a" },
+    "color-apricot-text": { light: "#b9571a", dark: "#f7b48a" },
+    "color-apricot-graphic": { light: "#e1732e", dark: "#f7b48a" },
+    "color-apricot-soft": { light: "#fde3d1", dark: "#3a2a20" },
+    "color-allergen-soft": { light: "#f2e3f5", dark: "#3b2541" },
+    "color-allergen-soft-text": { light: "#642a6e", dark: "#f2e3f5" },
+    "color-icon": { light: "#3f4a56", dark: "#b8c2cc" },
+    // Items 644/645: light identical to the old primary / success swatches.
+    "color-selected": { light: "#b4d4e6", dark: "#b4d4e6" },
+    "color-selected-contrast": { light: "#000000", dark: "#000000" },
+    "color-mint": { light: "#cde9da", dark: "#cde9da" },
+  };
+  for (const [token, { light, dark }] of Object.entries(EXPECTED)) {
+    it(`--${token} is ${light} light / ${dark} dark`, () => {
+      expect(resolve(token, "light")).toBe(light);
+      expect(resolve(token, "dark")).toBe(dark);
     });
   }
 });

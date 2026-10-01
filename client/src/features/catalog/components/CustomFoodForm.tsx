@@ -133,7 +133,7 @@ function AllergenChip({ active, label, onClick }: AllergenChipProps) {
       aria-pressed={active}
       className={`inline-flex min-h-11 items-center justify-center rounded-full border px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
         active
-          ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+          ? "border-[var(--color-selected)] bg-[var(--color-selected)] text-[var(--color-selected-contrast)]"
           : "border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)]"
       }`}
     >

@@ -1070,7 +1070,7 @@ describe("MultiCombobox option markers (item 334)", () => {
         onSelectOption: () => {},
       }),
     );
-    expect(html).not.toContain("color-danger-soft");
+    expect(html).not.toContain("color-allergen-soft");
   });
 
   it("keeps the marked row at the 44px hit target", () => {
@@ -1099,7 +1099,9 @@ describe("MultiCombobox option markers (item 334)", () => {
     );
     const chipRow = html.slice(html.indexOf("mt-1.5 flex flex-wrap"));
     expect(chipRow).toContain("Fish");
-    expect(chipRow).toContain("color-danger-soft");
+    // Item 636: the soft plum allergen pill, not the red tint.
+    expect(chipRow).toContain("bg-[var(--color-allergen-soft)]");
+    expect(chipRow).not.toContain("--color-danger");
     // The mark sits between the label and the remove button, so the button
     // stays the last thing in the chip and keeps its own tap target.
     expect(chipRow.indexOf("Fish")).toBeLessThan(chipRow.indexOf('aria-label="Remove Salmon"'));
@@ -1117,6 +1119,24 @@ describe("MultiCombobox option markers (item 334)", () => {
     );
     const chipRow = html.slice(html.indexOf("mt-1.5 flex flex-wrap"));
     expect(chipRow).toContain('aria-label="Remove Pear"');
-    expect(chipRow).not.toContain("color-danger-soft");
+    expect(chipRow).not.toContain("color-allergen-soft");
+  });
+
+  it("draws an outline marker (RecipePicker's Custom) as the outline badge look, with no fill (item 647)", () => {
+    const html = renderToString(
+      createElement(MultiComboboxOptionList, {
+        listboxId: "recipe-listbox",
+        options: [{ value: "mine", label: "My mash", markers: [{ label: "Custom", tone: "outline" }] }],
+        selectedValues: [],
+        highlighted: -1,
+        emptyMessage: "No matches",
+        onHoverOption: () => {},
+        onSelectOption: () => {},
+      }),
+    );
+    const marker = html.match(/<span class="([^"]*)">Custom<\/span>/)?.[1] ?? "";
+    expect(marker).toContain("inset-ring inset-ring-[var(--color-border)]");
+    expect(marker).toContain("text-[var(--color-text-muted)]");
+    expect(marker).not.toMatch(/(^|\s)bg-/);
   });
 });

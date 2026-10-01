@@ -39,7 +39,7 @@ describe("RatingSummaryRowView (item 585)", () => {
 
   it("is the average exactly as the cards show it, with no label and no graph", () => {
     const html = row();
-    expect(html).toContain("★ 4.0 (3)");
+    expect(html).toContain("★</span> 4.0 (3)");
     expect(html).toContain("Rated 4.0 out of 5, 3 ratings");
     expect(html).not.toContain("&#x27;s ratings");
     expect(html).not.toContain("<svg");

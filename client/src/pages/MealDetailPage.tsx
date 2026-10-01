@@ -14,7 +14,7 @@ import { DeletedMark, FoodNames } from "../features/catalog/components/DeletedMa
 import { getFoodEmoji } from "../features/catalog/foodEmoji.js";
 import { BackButton, useBackNavigate } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
-import { ButtonLink } from "../components/ui/Button.js";
+import { Button, ButtonLink } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
@@ -161,13 +161,9 @@ export function MealDetailPage() {
         <ButtonLink to={`/log-meal?edit=${meal.id}`} size="sm" variant="secondary">
           Edit
         </ButtonLink>
-        <button
-          type="button"
-          onClick={() => setConfirmingDelete(true)}
-          className="rounded px-2 py-1 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
-        >
+        <Button type="button" variant="danger-quiet" size="sm" onClick={() => setConfirmingDelete(true)}>
           Delete
-        </button>
+        </Button>
         <MealDeleteDialog
           meal={meal}
           babyId={meal.babyId}

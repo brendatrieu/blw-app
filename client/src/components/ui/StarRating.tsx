@@ -75,7 +75,7 @@ export function StarRating({ value, onChange, label, disabled = false }: StarRat
               onClick={() => onChange(star)}
               onKeyDown={handleKeyDown}
               className={`flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] text-2xl leading-none ${FOCUS_RING} ${
-                filled ? "text-[var(--color-accent)]" : "text-[var(--color-text-muted)]"
+                filled ? "text-[var(--color-apricot-graphic)]" : "text-[var(--color-text-muted)]"
               }`}
             >
               <span aria-hidden="true">{filled ? "★" : "☆"}</span>
@@ -98,9 +98,9 @@ export function StarRating({ value, onChange, label, disabled = false }: StarRat
   );
 }
 
-/** "★ 4.2 (5)" — one decimal, whatever the average. */
+/** "4.2 (5)" — one decimal, whatever the average. The ★ is drawn beside it. */
 export function formatRatingSummary(summary: RatingSummary): string {
-  return `★ ${summary.average.toFixed(1)} (${summary.count})`;
+  return `${summary.average.toFixed(1)} (${summary.count})`;
 }
 
 /**
@@ -112,7 +112,11 @@ export function RatingSummaryText({ summary, className = "" }: { summary: Rating
   const ratings = summary.count === 1 ? "1 rating" : `${summary.count} ratings`;
   return (
     <span className={`text-xs text-[var(--color-text-muted)] ${className}`}>
-      <span aria-hidden="true">{formatRatingSummary(summary)}</span>
+      <span aria-hidden="true">
+        {/* Item 640: the star wears the apricot identity graphic, the number stays muted. */}
+        <span className="text-[var(--color-apricot-graphic)]">★</span>
+        {` ${formatRatingSummary(summary)}`}
+      </span>
       <span className="sr-only">{`Rated ${summary.average.toFixed(1)} out of ${STAR_RATING_MAX}, ${ratings}`}</span>
     </span>
   );

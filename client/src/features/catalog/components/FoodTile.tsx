@@ -33,7 +33,7 @@ export function FoodTile({ food, rating }: FoodTileProps) {
           than floated over the emoji — a 3-across tile has no corner to
           spare, and this is a provenance note, not a status alert. */}
       <RatingSummaryText summary={rating} />
-      {food.isCustom ? <Badge tone="neutral">Custom</Badge> : null}
+      {food.isCustom ? <Badge tone="outline">Custom</Badge> : null}
     </Link>
   );
 }

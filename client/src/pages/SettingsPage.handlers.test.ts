@@ -35,6 +35,7 @@ vi.mock("../lib/forms.js", () => ({
   useSubmitValidation: () => ({ errors: {}, attemptSubmit: () => true }),
 }));
 
+import { Button } from "../components/ui/Button.js";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog.js";
 import { BabyRow, DELETE_BABY_LINE } from "./SettingsPage.js";
 
@@ -63,7 +64,9 @@ function render(): El {
 }
 const dialogOf = (tree: El) => find(tree, (el) => el.type === ConfirmDialog)!;
 const askToDelete = () => {
-  const del = find(render(), (el) => el.type === "button" && el.props.children === "Delete")!;
+  const del = find(render(), (el) => el.type === Button && el.props.children === "Delete")!;
+  // Item 638: the shared red-outline Delete button.
+  expect(del.props.variant).toBe("danger-quiet");
   (del.props.onClick as () => void)();
 };
 

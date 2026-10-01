@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { ACCOUNT_DELETE_CONFIRMATION } from "@blw/shared";
+import { aiKeys } from "../features/ai/hooks.js";
 import {
   AiSection,
   BabyFields,
@@ -114,6 +115,22 @@ describe("AiSection (render)", () => {
 
   it("opts out of native constraint validation", () => {
     expect(renderInProviders(createElement(AiSection, null))).toMatch(/<form[^>]*novalidate/i);
+  });
+
+  it("draws Remove key as the shared red-outline danger-quiet button (item 638)", () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(aiKeys.status(), { configured: true, last4: "a1b2", lastValidatedAt: null });
+    const html = renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(MemoryRouter, { initialEntries: ["/settings"] }, createElement(AiSection, null)),
+      ),
+    );
+    const button = html.match(/<button [^>]*>Remove key<\/button>/)?.[0] ?? "";
+    expect(button).toContain("border-[var(--color-danger)]");
+    expect(button).toContain("text-[var(--color-danger)]");
+    expect(button).toContain("hover:bg-[var(--color-danger-soft)]");
   });
 });
 

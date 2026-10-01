@@ -185,16 +185,26 @@ describe("MealDetailPage allergen marks (item 334, ledger 554)", () => {
     expect(chipRow).toContain("Fish");
     expect(chipRow.indexOf("Fish")).toBeGreaterThan(chipRow.indexOf("Salmon"));
     expect(chipRow.indexOf("Fish")).toBeLessThan(chipRow.indexOf("Pear"));
-    // `--color-danger-contrast` is the badge tone and nothing else on the
-    // page (the Delete control only uses `--color-danger` on hover).
-    expect((html.match(/var\(--color-danger-contrast\)/g) ?? []).length).toBe(1);
+    // Item 636: the allergen pill is the soft plum, one per allergen, never
+    // a solid red fill.
+    expect((html.match(/bg-\[var\(--color-allergen-soft\)\]/g) ?? []).length).toBe(1);
+    expect(html).not.toContain("var(--color-danger-contrast)");
+  });
+
+  it("draws Delete as the shared red-outline button, last in the Edit/Delete row (item 638)", () => {
+    const html = renderMeal(FISH_MEAL);
+    const row = html.slice(html.lastIndexOf('<div class="flex items-center gap-2">'));
+    const del = /<button[^>]*>Delete<\/button>/.exec(row)?.[0] ?? "";
+    expect(del).toContain("border-[var(--color-danger)]");
+    expect(del).toContain("text-[var(--color-danger)]");
+    expect(row.indexOf(">Edit<")).toBeLessThan(row.indexOf(">Delete<"));
   });
 
   it("shows the meal exactly as before when an older cached body carries no allergens", () => {
     const html = renderMeal({ ...FISH_MEAL, foods: FISH_MEAL.foods.map(({ allergens: _a, ...food }) => food) });
     expect(html).toContain("Salmon");
     expect(html).toContain("Pear");
-    expect(html).not.toContain("var(--color-danger-contrast)");
+    expect(html).not.toContain("var(--color-allergen-soft)");
     expect(html).not.toContain("Fish");
   });
 

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { RatingSummary, RecipeListItem, RecipeScope } from "@blw/shared";
 import type { RecipeFilters } from "../api.js";
-import { AGE_THRESHOLDS, ALLERGEN_SLUGS, RECIPE_SCOPES, allergenLabel } from "../constants.js";
+import { AGE_THRESHOLDS, ALLERGEN_SLUGS, RECIPE_SCOPES } from "../constants.js";
 import { useFoods, useRecipes } from "../hooks.js";
 import { useCatalogFilteredEvent } from "../../../lib/usage/useCatalogFiltered.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../basicRecipe.js";
@@ -12,6 +12,7 @@ import { useRatings } from "../../tracking/hooks.js";
 import { RatingSummaryText } from "../../../components/ui/StarRating.js";
 import { SingleFoodPicker } from "./FoodPicker.js";
 import { Badge } from "./Badge.js";
+import { AllergenChips } from "./AllergenChips.js";
 import { FoodNames } from "./DeletedMark.js";
 import { Button, ButtonLink } from "../../../components/ui/Button.js";
 import { CardLink } from "../../../components/ui/Card.js";
@@ -35,7 +36,7 @@ export function RecipeCard({ recipe, rating }: { recipe: RecipeListItem; rating?
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-base font-semibold text-[var(--color-text)]">{recipe.title}</span>
         {recipe.isFavorite && (
-          <span aria-hidden="true" className="shrink-0 text-sm leading-none text-[var(--color-primary-soft-text)]">
+          <span aria-hidden="true" className="shrink-0 text-sm leading-none text-[var(--color-apricot-graphic)]">
             ♥
           </span>
         )}
@@ -49,18 +50,14 @@ export function RecipeCard({ recipe, rating }: { recipe: RecipeListItem; rating?
         </p>
       )}
       <div className="flex flex-wrap items-center gap-1.5">
-        <Badge tone="neutral">{recipe.minAgeMonths}m+</Badge>
+        <Badge tone="outline">{recipe.minAgeMonths}m+</Badge>
         {/* Derived, not stored: one ingredient IS the recipe (item 255). */}
-        {isBasicRecipe(recipe.ingredientNames.length) && <Badge tone="neutral">{BASIC_RECIPE_LABEL}</Badge>}
-        {recipe.ironFocus && <Badge tone="primary">Iron</Badge>}
-        {recipe.vitaminCHigh && <Badge tone="sunshine">Vit C</Badge>}
-        {recipe.fiberHigh && <Badge tone="leaf">Fiber</Badge>}
-        {recipe.isCustom && <Badge tone="neutral">Custom</Badge>}
-        {recipe.allergens.map((slug) => (
-          <Badge key={slug} tone="danger">
-            {allergenLabel(slug)}
-          </Badge>
-        ))}
+        {isBasicRecipe(recipe.ingredientNames.length) && <Badge tone="outline">{BASIC_RECIPE_LABEL}</Badge>}
+        {recipe.ironFocus && <Badge tone="nutrient">Iron</Badge>}
+        {recipe.vitaminCHigh && <Badge tone="nutrient">Vit C</Badge>}
+        {recipe.fiberHigh && <Badge tone="nutrient">Fiber</Badge>}
+        {recipe.isCustom && <Badge tone="outline">Custom</Badge>}
+        <AllergenChips allergens={recipe.allergens} />
       </div>
     </CardLink>
   );

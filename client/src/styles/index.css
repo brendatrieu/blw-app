@@ -20,13 +20,27 @@
  * the same source of truth via `var()` instead of repeating literals).
  *
  * Token roles (read this before touching a color):
- * - --color-primary / -contrast / -hover / -active: the ONE CTA fill,
- *   fixed sky blue in both modes with fixed pure-black text — every button,
- *   solid badge, and "selected chip" fill in the app uses this, never a
- *   per-action color. (The `tonal` Button variant is the one sibling: a
- *   solid mint --color-success fill with the same black text.)
- * - --color-accent: the INTERACTIVE TEXT/BORDER color — links, the active
- *   bottom-nav label, focus rings/focus-within borders, and small
+ * - --color-primary / -contrast / -hover / -active: the ONE CTA fill —
+ *   every button and solid badge in the app uses this, never a
+ *   per-action color. Sky blue with black text in light mode,
+ *   deep sea blue with pale text in dark mode (Direction A, item 639: the
+ *   old "same in both modes" rule was dropped on purpose). (The `tonal`
+ *   Button variant is the one sibling: a solid --color-success fill with
+ *   its own --color-success-contrast text — mint/black in light, deep
+ *   green/pale in dark.)
+ * - --color-selected / -contrast: the SELECTED / ON state fill — filter
+ *   and option chips, the Switch track, the SegmentedControl segment, the
+ *   recipe age tabs (item 644). Pastel sky with black text in BOTH modes:
+ *   the same as the light CTA, but it stays pastel in dark, where the deep
+ *   CTA fill fell to ~1.4-1.9:1 against the dark grounds.
+ * - --color-mint: the pastel mint confetti swatch, fixed in both modes
+ *   (item 645) — the solid --color-success went deep in dark.
+ * - --color-apricot / -ink / -text / -graphic / -soft: the identity color
+ *   (item 634) — the active bottom-nav pill (fill + ink) and its label
+ *   (text), rating stars and the favorite heart (graphic), and a soft chip.
+ *   The fill is never text on a light ground (1.7:1).
+ * - --color-accent: the INTERACTIVE TEXT/BORDER color — links,
+ *   focus rings/focus-within borders, and small
  *   confirmation markers (e.g. "Added to your storage"). Deep steel blue in
  *   light mode (the sky blue itself reads too pale as body-size text on a
  *   light ground), the sky blue itself in dark mode.
@@ -70,13 +84,31 @@
    * fighting the flat, minimal-border look everywhere else uses. */
   --color-divider: rgba(31, 42, 54, 0.14);
 
-  /* ---- Brand: the one CTA fill, fixed across both themes (sky blue) ---- */
+  /* ---- Brand: the one CTA fill (sky blue here, deep sea blue in dark) ---- */
   --color-primary: #b4d4e6;
   --color-primary-hover: #a3c8de;
   --color-primary-active: #8fbad4;
   --color-primary-contrast: #000000;
 
-  /* ---- Interactive text/border accent (links, active nav, focus rings,
+  /* ---- Selected / on state (item 644): the pastel sky in both modes. ---- */
+  --color-selected: #b4d4e6;
+  --color-selected-contrast: #000000;
+
+  /* ---- Apricot identity (item 634). Fill + ink: the active nav pill.
+     Text: the lightest same-hue shade at 4.5:1 on page/elevated (NOT on
+     inset, 4.12:1). Graphic: the lightest at 3:1 on page/elevated, for
+     stars and hearts. Soft: a chip tint that carries body text only. ---- */
+  --color-apricot: #f7b48a;
+  --color-apricot-ink: #3d1a06;
+  --color-apricot-text: #b9571a;
+  --color-apricot-graphic: #e1732e;
+  --color-apricot-soft: #fde3d1;
+
+  /* ---- Card action-menu (kebab) icon — darker than muted text so the
+     dots read at a glance (item 641). ---- */
+  --color-icon: #3f4a56;
+
+  /* ---- Interactive text/border accent (links, focus rings,
      from-storage markers, selected-state labels) — mode-dependent because
      the sky blue is too pale to read as body-size text on a light ground. ---- */
   --color-accent: #2f5f7c;
@@ -85,6 +117,8 @@
      never as a body-text color. ---- */
   --color-caution: #ffecc3; /* butter yellow */
   --color-success: #cde9da; /* mint */
+  --color-success-contrast: #000000; /* text on the solid mint (tonal Button) */
+  --color-mint: #cde9da; /* confetti — stays pastel in dark (item 645) */
 
   /* ---- Chip/badge tints — translucent brand/caution/success fills, each
      paired with its own deep (light mode) / pastel (dark mode) text. ---- */
@@ -99,6 +133,11 @@
      any other label that deliberately carries no semantic color. ---- */
   --color-neutral-soft: rgba(91, 101, 112, 0.12);
   --color-neutral-soft-text: #5b6570;
+
+  /* ---- Allergen pill — a soft plum, opaque in both modes (item 636). Red
+     stays for reactions, choking notes and Delete. ---- */
+  --color-allergen-soft: #f2e3f5;
+  --color-allergen-soft-text: #642a6e;
 
   /* ---- Danger — functional only, kept legible as both plain text and a
      solid fill (see the token-roles note above). ---- */
@@ -201,8 +240,8 @@
      Defined unconditionally here so both the prefers-color-scheme path and
      the [data-theme="dark"] path below can assign the *same* literals via
      var() instead of duplicating hex/rgba codes. Tokens that are fixed
-     across themes (primary, primary-contrast, caution, success) are not
-     repeated here — both mode blocks below simply skip reassigning them. */
+     across themes (caution) are not repeated here — both mode blocks
+     below simply skip reassigning them. */
   --_dark-color-bg: #0e1218; /* near-black blue */
   --_dark-color-bg-elevated: #171d25;
   --_dark-color-bg-inset: #232b35;
@@ -211,6 +250,24 @@
   --_dark-color-border: #28313c;
 
   --_dark-accent: #b4d4e6;
+
+  --_dark-primary: #24465c;
+  --_dark-primary-hover: #2b5470;
+  --_dark-primary-active: #31596f;
+  --_dark-primary-contrast: #eaf3f9;
+  --_dark-selected: #b4d4e6;
+  --_dark-selected-contrast: #000000;
+  --_dark-mint: #cde9da;
+  --_dark-success: #1f4a37;
+  --_dark-success-contrast: #e6f5ec;
+
+  --_dark-apricot: #3a2a20;
+  --_dark-apricot-ink: #f7b48a;
+  --_dark-apricot-text: #f7b48a;
+  --_dark-apricot-graphic: #f7b48a;
+  --_dark-apricot-soft: #3a2a20;
+
+  --_dark-icon: #b8c2cc;
 
   --_dark-primary-soft: rgba(180, 212, 230, 0.18);
   --_dark-primary-soft-text: #b4d4e6;
@@ -221,6 +278,9 @@
 
   --_dark-neutral-soft: rgba(163, 175, 186, 0.16);
   --_dark-neutral-soft-text: #a3afba;
+
+  --_dark-allergen-soft: #3b2541;
+  --_dark-allergen-soft-text: #f2e3f5;
 
   --_dark-danger: #ff8a80;
   --_dark-danger-soft: rgba(255, 138, 128, 0.14);
@@ -264,6 +324,23 @@
     --color-divider: rgba(255, 255, 255, 0.14);
 
     --color-accent: var(--_dark-accent);
+    --color-primary: var(--_dark-primary);
+    --color-primary-hover: var(--_dark-primary-hover);
+    --color-primary-active: var(--_dark-primary-active);
+    --color-primary-contrast: var(--_dark-primary-contrast);
+    --color-selected: var(--_dark-selected);
+    --color-selected-contrast: var(--_dark-selected-contrast);
+    --color-mint: var(--_dark-mint);
+    --color-success: var(--_dark-success);
+    --color-success-contrast: var(--_dark-success-contrast);
+
+    --color-apricot: var(--_dark-apricot);
+    --color-apricot-ink: var(--_dark-apricot-ink);
+    --color-apricot-text: var(--_dark-apricot-text);
+    --color-apricot-graphic: var(--_dark-apricot-graphic);
+    --color-apricot-soft: var(--_dark-apricot-soft);
+
+    --color-icon: var(--_dark-icon);
 
     --color-primary-soft: var(--_dark-primary-soft);
     --color-primary-soft-text: var(--_dark-primary-soft-text);
@@ -274,6 +351,9 @@
 
     --color-neutral-soft: var(--_dark-neutral-soft);
     --color-neutral-soft-text: var(--_dark-neutral-soft-text);
+
+    --color-allergen-soft: var(--_dark-allergen-soft);
+    --color-allergen-soft-text: var(--_dark-allergen-soft-text);
 
     --color-danger: var(--_dark-danger);
   --color-danger-soft: var(--_dark-danger-soft);
@@ -314,6 +394,23 @@
   --color-divider: rgba(255, 255, 255, 0.14);
 
   --color-accent: var(--_dark-accent);
+  --color-primary: var(--_dark-primary);
+  --color-primary-hover: var(--_dark-primary-hover);
+  --color-primary-active: var(--_dark-primary-active);
+  --color-primary-contrast: var(--_dark-primary-contrast);
+  --color-selected: var(--_dark-selected);
+  --color-selected-contrast: var(--_dark-selected-contrast);
+  --color-mint: var(--_dark-mint);
+  --color-success: var(--_dark-success);
+  --color-success-contrast: var(--_dark-success-contrast);
+
+  --color-apricot: var(--_dark-apricot);
+  --color-apricot-ink: var(--_dark-apricot-ink);
+  --color-apricot-text: var(--_dark-apricot-text);
+  --color-apricot-graphic: var(--_dark-apricot-graphic);
+  --color-apricot-soft: var(--_dark-apricot-soft);
+
+  --color-icon: var(--_dark-icon);
 
   --color-primary-soft: var(--_dark-primary-soft);
   --color-primary-soft-text: var(--_dark-primary-soft-text);
@@ -324,6 +421,9 @@
 
   --color-neutral-soft: var(--_dark-neutral-soft);
   --color-neutral-soft-text: var(--_dark-neutral-soft-text);
+
+  --color-allergen-soft: var(--_dark-allergen-soft);
+  --color-allergen-soft-text: var(--_dark-allergen-soft-text);
 
   --color-danger: var(--_dark-danger);
   --color-danger-soft: var(--_dark-danger-soft);

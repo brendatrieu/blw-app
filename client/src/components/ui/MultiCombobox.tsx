@@ -16,18 +16,19 @@ export type MultiComboboxOption = {
 
 /**
  * A marker is a short word beside the label. A plain string reads in the
- * muted-danger tone (allergens); an object may pick "neutral" for an identity
- * mark such as "Custom", which is information, not a warning.
+ * allergen tone (the soft plum pill, item 636); an object may pick "outline"
+ * for an identity mark such as "Custom", which is information, not a warning
+ * (the Badge outline look, item 647).
  */
-export type MultiComboboxMarker = string | { label: string; tone?: "danger" | "neutral" };
+export type MultiComboboxMarker = string | { label: string; tone?: "allergen" | "outline" };
 
-function markerParts(marker: MultiComboboxMarker): { label: string; tone: "danger" | "neutral" } {
-  return typeof marker === "string" ? { label: marker, tone: "danger" } : { label: marker.label, tone: marker.tone ?? "danger" };
+function markerParts(marker: MultiComboboxMarker): { label: string; tone: "allergen" | "outline" } {
+  return typeof marker === "string" ? { label: marker, tone: "allergen" } : { label: marker.label, tone: marker.tone ?? "allergen" };
 }
 
 /**
- * One marker, in the muted-danger tone the Expired chip uses: a fact worth
- * noticing while scanning a list, not an alarm. Non-interactive, so it never
+ * One marker, in the allergen pill's soft plum: a fact worth noticing while
+ * scanning a list, not an alarm. Non-interactive, so it never
  * competes with the row's own hit target or the chip's remove button.
  */
 function MultiComboboxMarkers({ markers }: { markers: MultiComboboxMarker[] | undefined }) {
@@ -38,9 +39,9 @@ function MultiComboboxMarkers({ markers }: { markers: MultiComboboxMarker[] | un
         <span
           key={label}
           className={
-            tone === "neutral"
-              ? "inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-text-muted)]"
-              : "inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-danger-soft)] px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-danger-soft-text)]"
+            tone === "outline"
+              ? "inline-flex shrink-0 items-center rounded-[var(--radius-pill)] inset-ring inset-ring-[var(--color-border)] px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-text-muted)]"
+              : "inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-allergen-soft)] px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-allergen-soft-text)]"
           }
         >
           {label}

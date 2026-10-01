@@ -385,6 +385,8 @@ describe("AllergenDetailPage foods section (item 187)", () => {
   it("badges a custom food and leaves the catalog food unbadged", () => {
     const html = renderWithDetail(detail());
     expect((html.match(/>Custom</g) ?? []).length).toBe(1);
+    // Item 637: information, so the outline badge, not a tint.
+    expect(html).toMatch(/class="[^"]*inset-ring-\[var\(--color-border\)\][^"]*"[^>]*>Custom</);
   });
 
   it("keeps the 'Log meal' link OUTSIDE the food anchor — nothing interactive nested in a link", () => {

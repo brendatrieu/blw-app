@@ -39,7 +39,7 @@ export function StoragePage() {
             aria-pressed={view === tab}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               view === tab
-                ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+                ? "border-[var(--color-selected)] bg-[var(--color-selected)] text-[var(--color-selected-contrast)]"
                 : "border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]"
             }`}
           >

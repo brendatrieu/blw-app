@@ -5,10 +5,12 @@ import { describe, expect, it } from "vitest";
 import { Button, ButtonLink } from "./Button.js";
 
 describe("Button variants", () => {
-  it("renders the tonal variant as the solid mint (success) fill with black text, not the primary fill", () => {
+  it("renders the tonal variant as the solid success fill with its own contrast text, not the primary fill", () => {
     const html = renderToString(createElement(Button, { variant: "tonal" }, "Tonal"));
     expect(html).toContain("bg-[var(--color-success)]");
-    expect(html).toContain("text-[var(--color-primary-contrast)]");
+    // Item 639: its own ink (pale in dark mode), no longer the primary's.
+    expect(html).toContain("text-[var(--color-success-contrast)]");
+    expect(html).not.toContain("primary-contrast");
     expect(html).not.toContain("var(--color-primary)]");
     expect(html).not.toContain("var(--color-primary-soft)");
   });

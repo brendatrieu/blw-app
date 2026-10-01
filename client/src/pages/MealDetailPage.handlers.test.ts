@@ -36,6 +36,7 @@ vi.mock("../features/tracking/hooks.js", () => ({
 import { MealDetailPage } from "./MealDetailPage.js";
 import { MealRatingsField, type MealRatingRow } from "../features/tracking/components/MealRatingsField.js";
 import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
+import { Button } from "../components/ui/Button.js";
 
 interface El {
   type: unknown;
@@ -121,10 +122,13 @@ describe("MealDetailPage delete (item 599)", () => {
       if (Array.isArray(node)) return node.forEach(walk);
       if (!node || typeof node !== "object" || !("props" in node)) return;
       const el = node as El;
-      if (el.type === "button" && el.props.children === "Delete") buttons.push(el);
+      if (el.type === Button && el.props.children === "Delete") buttons.push(el);
       walk(el.props.children);
     };
     walk(tree);
+    expect(buttons).toHaveLength(1);
+    // Item 638: the shared red-outline Delete, not a muted text link.
+    expect(buttons[0]!.props.variant).toBe("danger-quiet");
     (buttons[0]!.props.onClick as () => void)();
     expect(h.sets).toEqual([true]);
   });

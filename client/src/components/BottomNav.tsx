@@ -153,14 +153,14 @@ export function BottomNav() {
             <span
               className="flex h-8 w-12 items-center justify-center rounded-[var(--radius-pill)] transition-[background-color,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] motion-reduce:transition-none"
               style={{
-                backgroundColor: active ? "var(--color-primary)" : "transparent",
-                color: active ? "var(--color-primary-contrast)" : "var(--color-text-muted)",
+                backgroundColor: active ? "var(--color-apricot)" : "transparent",
+                color: active ? "var(--color-apricot-ink)" : "var(--color-text-muted)",
                 transform: active ? "scale(1)" : "scale(0.92)",
               }}
             >
               <Icon />
             </span>
-            <span className="font-caption" style={{ color: active ? "var(--color-accent)" : "var(--color-text-muted)" }}>
+            <span className="font-caption" style={{ color: active ? "var(--color-apricot-text)" : "var(--color-text-muted)" }}>
               {label}
             </span>
           </Link>

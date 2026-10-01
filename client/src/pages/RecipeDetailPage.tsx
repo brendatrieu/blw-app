@@ -65,11 +65,13 @@ function FavoriteHeart({
       // reduced-motion users via motion-reduce:transition-none.
       className={`inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3.5 py-1.5 text-sm font-medium transition-[transform,background-color,border-color,color] duration-[var(--duration-base)] ease-[var(--ease-spring)] motion-reduce:transition-none motion-reduce:scale-100 disabled:opacity-60 ${
         favorited
-          ? "scale-105 border-transparent bg-[var(--color-primary-soft)] text-[var(--color-primary-soft-text)]"
+          ? "scale-105 border-transparent bg-[var(--color-apricot-soft)] text-[var(--color-text)]"
           : "scale-100 border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]"
       }`}
     >
-      <span aria-hidden="true" className="text-base leading-none">
+      {/* Item 640: the heart is apricot. On the soft chip the graphic shade is
+          2.55:1, so the filled heart takes the darker apricot text shade (3.85:1). */}
+      <span aria-hidden="true" className={`text-base leading-none ${favorited ? "text-[var(--color-apricot-text)]" : ""}`}>
         {favorited ? "♥" : "♡"}
       </span>
       {favorited ? "Favorited" : "Favorite"}
@@ -105,7 +107,7 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
       <ButtonLink to={`/recipes/${recipe.id}/edit`} variant="secondary" size="sm">
         Edit
       </ButtonLink>
-      <Button type="button" variant="secondary" size="sm" onClick={() => setAsking(true)}>
+      <Button type="button" variant="danger-quiet" size="sm" onClick={() => setAsking(true)}>
         Delete
       </Button>
       <ConfirmDialog
@@ -204,14 +206,14 @@ export function RecipeDetailPage() {
         <div className="flex flex-wrap items-center gap-1.5">
           {/* 0 minutes isn't "instant", it's "the parent didn't say" — the
               badge is dropped rather than claiming a prep time (item 212). */}
-          {recipe.prepMinutes > 0 && <Badge tone="neutral">{recipe.prepMinutes} min prep</Badge>}
-          {recipe.ironFocus && <Badge tone="primary">Iron focus</Badge>}
-          {recipe.vitaminCHigh && <Badge tone="sunshine">Vit C</Badge>}
-          {recipe.fiberHigh && <Badge tone="leaf">Fiber</Badge>}
-          <Badge tone="neutral">{recipe.minAgeMonths}m+</Badge>
+          {recipe.prepMinutes > 0 && <Badge tone="outline">{recipe.prepMinutes} min prep</Badge>}
+          {recipe.ironFocus && <Badge tone="nutrient">Iron focus</Badge>}
+          {recipe.vitaminCHigh && <Badge tone="nutrient">Vit C</Badge>}
+          {recipe.fiberHigh && <Badge tone="nutrient">Fiber</Badge>}
+          <Badge tone="outline">{recipe.minAgeMonths}m+</Badge>
           {/* Derived from the ingredient list, not stored (item 255). */}
-          {isBasicRecipe(recipe.ingredients.length) && <Badge tone="neutral">{BASIC_RECIPE_LABEL}</Badge>}
-          {recipe.isCustom && <Badge tone="neutral">Custom</Badge>}
+          {isBasicRecipe(recipe.ingredients.length) && <Badge tone="outline">{BASIC_RECIPE_LABEL}</Badge>}
+          {recipe.isCustom && <Badge tone="outline">Custom</Badge>}
           <AllergenChips allergens={recipe.allergens} />
         </div>
         {/* Item 585: a subtitle under the badges; the graph is at the bottom. */}
@@ -349,7 +351,7 @@ export function RecipeDetailPage() {
                 }}
                 className={`min-h-9 rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-semibold transition-[background-color,color] duration-[var(--duration-fast)] ease-[var(--ease-spring)] motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 ${
                   active
-                    ? "bg-[var(--color-primary)] text-[var(--color-primary-contrast)] shadow-[var(--shadow-sm)]"
+                    ? "bg-[var(--color-selected)] text-[var(--color-selected-contrast)] shadow-[var(--shadow-sm)]"
                     : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
                 }`}
               >

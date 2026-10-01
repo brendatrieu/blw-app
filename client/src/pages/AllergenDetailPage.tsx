@@ -47,7 +47,7 @@ function FoodRow({ food }: { food: AllergenDetailFood }) {
           {food.name}
           <DeletedMark deleted={food.deleted} />
         </span>
-        {food.isCustom && <Badge tone="neutral">Custom</Badge>}
+        {food.isCustom && <Badge tone="outline">Custom</Badge>}
       </Link>
       {/* A deleted food can't be picked for a new meal, so no CTA for one. */}
       {!food.deleted && (

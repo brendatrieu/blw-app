@@ -1,7 +1,7 @@
 import type { FavoriteItem } from "@blw/shared";
 import { useFavorites } from "../features/tracking/hooks.js";
 import { Badge } from "../features/catalog/components/Badge.js";
-import { allergenLabel } from "../features/catalog/constants.js";
+import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { CardLink } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
@@ -21,14 +21,10 @@ function FavoriteCard({ item }: { item: FavoriteItem }) {
         <span className="text-xs text-[var(--color-text-muted)]">{item.minAgeMonths}m+</span>
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
-        {item.ironFocus && <Badge tone="primary">Iron focus</Badge>}
-        {item.vitaminCHigh && <Badge tone="sunshine">Vit C</Badge>}
-        {item.fiberHigh && <Badge tone="leaf">Fiber</Badge>}
-        {item.allergens.map((slug) => (
-          <Badge key={slug} tone="danger">
-            {allergenLabel(slug)}
-          </Badge>
-        ))}
+        {item.ironFocus && <Badge tone="nutrient">Iron focus</Badge>}
+        {item.vitaminCHigh && <Badge tone="nutrient">Vit C</Badge>}
+        {item.fiberHigh && <Badge tone="nutrient">Fiber</Badge>}
+        <AllergenChips allergens={item.allergens} />
       </div>
     </CardLink>
   );

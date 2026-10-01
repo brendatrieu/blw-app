@@ -34,13 +34,6 @@ import { EmptyState } from "../components/ui/EmptyState.js";
 import { SegmentedControl, type SegmentedControlOption } from "../components/ui/SegmentedControl.js";
 import { useSubmitValidation, type FormErrors } from "../lib/forms.js";
 
-// A quiet, bordered "danger" affordance for small inline actions (remove
-// key, delete a baby, open the delete-account flow) — one step below the
-// solid `Button variant="danger"` fill, which is reserved for the actual
-// irreversible confirm buttons below.
-const dangerGhostButtonClass =
-  "min-h-9 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-danger)] transition-colors duration-[var(--duration-fast)] hover:border-[var(--color-danger)] disabled:cursor-not-allowed disabled:opacity-60";
-
 /** Local-time YYYY-MM-DD for the birth-date input's `max` — no future dates.
  * (Local date parts, not toISOString, so the cap is right near midnight.) */
 function todayYmd(): string {
@@ -287,14 +280,15 @@ export function BabyRow({ baby }: { baby: Baby }) {
           >
             {baby.archived ? "Restore" : "Archive"}
           </Button>
-          <button
+          <Button
             type="button"
+            variant="danger-quiet"
+            size="sm"
             disabled={deleteBaby.isPending}
             onClick={() => setAskingDelete(true)}
-            className={dangerGhostButtonClass}
           >
             Delete
-          </button>
+          </Button>
         </div>
       </Card>
 
@@ -509,9 +503,16 @@ export function AiSection() {
           <span className="text-xs text-[var(--color-text-muted)]">
             {validatedAt ? `Checked with Anthropic on ${validatedAt}` : "Not yet checked"}
           </span>
-          <button type="button" disabled={removeKey.isPending} onClick={handleRemove} className={`w-fit ${dangerGhostButtonClass}`}>
+          <Button
+            type="button"
+            variant="danger-quiet"
+            size="sm"
+            disabled={removeKey.isPending}
+            onClick={handleRemove}
+            className="w-fit"
+          >
             {removeKey.isPending ? "Removing…" : "Remove key"}
-          </button>
+          </Button>
         </Card>
       ) : null}
 
@@ -920,15 +921,16 @@ function AccountSection() {
           {exportData.isPending ? "Preparing…" : "Export my data"}
         </Button>
         {confirmingDelete ? null : (
-          <button
+          <Button
             type="button"
+            variant="danger-quiet"
+            size="sm"
             onClick={() => {
               setConfirmingDelete(true);
             }}
-            className={dangerGhostButtonClass}
           >
             Delete account
-          </button>
+          </Button>
         )}
       </div>
 

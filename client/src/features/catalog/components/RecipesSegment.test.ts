@@ -129,13 +129,12 @@ describe("RecipeCard", () => {
     expect(html).toContain(">Custom<");
   });
 
-  // The Vit C badge must carry the SUNSHINE tone specifically — a tone swap
-  // to "primary" (Iron's tone) reads fine by text alone, so this pins the
-  // actual class the tone maps to.
-  it("gives the Vit C badge the sunshine tone's classes, not just its text", () => {
+  // Item 637: every nutrient badge wears the one soft nutrient tint (never
+  // solid sky); a tone swap reads fine by text alone, so pin the classes.
+  it("gives the Vit C badge the one nutrient tint's classes (item 637), not just its text", () => {
     const html = renderCard(recipe({ vitaminCHigh: true }));
     expect(html).toMatch(
-      /class="[^"]*bg-\[var\(--color-caution-soft\)\][^"]*text-\[var\(--color-caution-soft-text\)\][^"]*"[^>]*>Vit C</,
+      /class="[^"]*bg-\[var\(--color-primary-soft\)\][^"]*text-\[var\(--color-primary-soft-text\)\][^"]*"[^>]*>Vit C</,
     );
   });
 
@@ -148,15 +147,27 @@ describe("RecipeCard", () => {
     expect(renderCard(recipe({ fiberHigh: false }))).not.toContain(">Fiber<");
   });
 
-  it("gives the Fiber badge the success tone's classes, not just its text", () => {
+  it("gives the Fiber badge the one nutrient tint's classes (item 637), not just its text", () => {
     const html = renderCard(recipe({ fiberHigh: true }));
     expect(html).toMatch(
-      /class="[^"]*bg-\[var\(--color-success-soft\)\][^"]*text-\[var\(--color-success-soft-text\)\][^"]*"[^>]*>Fiber</,
+      /class="[^"]*bg-\[var\(--color-primary-soft\)\][^"]*text-\[var\(--color-primary-soft-text\)\][^"]*"[^>]*>Fiber</,
     );
+  });
+
+  // Items 636/637: Iron is the one nutrient tint (not solid sky) and each
+  // allergen the plum pill (not solid red), through the shared AllergenChips.
+  it("tints Iron as a nutrient and marks allergens with the plum pill", () => {
+    const html = renderCard(recipe({ ironFocus: true, allergens: ["fish", "egg"] }));
+    expect(html).toContain('bg-[var(--color-primary-soft)] text-[var(--color-primary-soft-text)]">Iron<');
+    expect(html.match(/bg-\[var\(--color-allergen-soft\)\] text-\[var\(--color-allergen-soft-text\)\]/g)).toHaveLength(2);
+    expect(html).not.toContain("bg-[var(--color-primary)]");
+    expect(html).not.toContain("--color-danger");
   });
 
   it("marks a favorite decoratively, and only when it is one", () => {
     expect(renderCard(recipe({ isFavorite: true }))).toContain("♥");
+    // Item 640: the heart wears the apricot graphic.
+    expect(renderCard(recipe({ isFavorite: true }))).toContain('text-[var(--color-apricot-graphic)]">♥');
     expect(renderCard(recipe())).not.toContain("♥");
   });
 
@@ -172,7 +183,7 @@ describe("RecipeCard rating (item 575)", () => {
   it('shows the baby\'s average as "★ 4.2 (5)", and nothing when unrated', () => {
     const summary = { average: 4.2, count: 5, latest: 5, lastRatedAt: "2026-09-27T12:00:00.000Z" };
     const rated = renderToString(createElement(MemoryRouter, null, createElement(RecipeCard, { recipe: recipe(), rating: summary })));
-    expect(rated).toContain("★ 4.2 (5)");
+    expect(rated).toContain("★</span> 4.2 (5)");
     expect(renderCard(recipe())).not.toContain("★");
   });
 
@@ -192,8 +203,8 @@ describe("RecipesSegment ratings wiring (item 581)", () => {
       foods: {},
       recipes: { "recipe-2": { average: 4.2, count: 5, latest: 4, lastRatedAt: "2026-09-27T12:00:00.000Z" } },
     });
-    expect(html.match(/★ 4\.2 \(5\)/g)).toHaveLength(1);
-    expect(html.indexOf("★ 4.2 (5)")).toBeGreaterThan(html.indexOf("Lentil mash"));
+    expect(html.match(/★<\/span> 4\.2 \(5\)/g)).toHaveLength(1);
+    expect(html.indexOf("★</span> 4.2 (5)")).toBeGreaterThan(html.indexOf("Lentil mash"));
   });
 });
 
@@ -470,8 +481,8 @@ describe("RecipeCard — Basic badge", () => {
     expect(renderCard(recipe({ ingredientNames: [] }))).not.toContain(">Basic<");
   });
 
-  it("gives the badge the neutral tone, not a nutrition or alert tone", () => {
+  it("gives the badge the outline tone (plain info, item 637), not a nutrition or alert tone", () => {
     const html = renderCard(recipe({ ingredientNames: ["Carrot"] }));
-    expect(html).toMatch(/class="[^"]*color-neutral-soft[^"]*"[^>]*>Basic</);
+    expect(html).toMatch(/class="[^"]*inset-ring-\[var\(--color-border\)\][^"]*"[^>]*>Basic</);
   });
 });

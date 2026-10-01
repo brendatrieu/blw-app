@@ -226,7 +226,7 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
             aria-pressed={source === tab.value}
             className={`rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-medium transition-colors ${
               source === tab.value
-                ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+                ? "border-[var(--color-selected)] bg-[var(--color-selected)] text-[var(--color-selected-contrast)]"
                 : "border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)]"
             }`}
           >
@@ -280,7 +280,7 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
               aria-pressed={location === loc.value}
               className={`rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-medium transition-colors ${
                 location === loc.value
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-contrast)]"
+                  ? "border-[var(--color-selected)] bg-[var(--color-selected)] text-[var(--color-selected-contrast)]"
                   : "border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)]"
               }`}
             >

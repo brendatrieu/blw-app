@@ -223,7 +223,7 @@ describe("FoodPicker allergen markers (item 334)", () => {
     const html = renderPicker([food(), SALMON], ["food-1"]);
     const chipRow = html.slice(html.indexOf("mt-1.5 flex flex-wrap"));
     expect(chipRow).toContain("Banana");
-    expect(chipRow).not.toContain("color-danger-soft");
+    expect(chipRow).not.toContain("color-allergen-soft");
   });
 });
 

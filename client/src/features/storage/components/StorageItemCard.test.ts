@@ -300,6 +300,9 @@ describe("StorageItemCard freshness chip (item 333)", () => {
   it("shows no freshness row at all on a finished or discarded item", () => {
     const html = renderCard({ ...BASE_ITEM, status: "finished", bestBy: ymd(-1) });
     expect(html).toContain("Finished");
+    // Item 637: a status is a tinted chip, never the solid CTA fill.
+    expect(html).toContain('bg-[var(--color-success-soft)] text-[var(--color-success-soft-text)]">Finished<');
+    expect(html).not.toContain("bg-[var(--color-primary)]");
     expect(html).not.toContain(">Expired<");
     expect(html).not.toContain("Best by");
   });

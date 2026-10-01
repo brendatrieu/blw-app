@@ -134,7 +134,7 @@ export function StorageItemCard({ item, actions, linkable = true }: StorageItemC
       )}
 
       {item.status !== "active" && (
-        <Badge tone={item.status === "finished" ? "primary" : "neutral"}>
+        <Badge tone={item.status === "finished" ? "leaf" : "neutral"}>
           {item.status === "finished" ? "Finished" : "Discarded"}
         </Badge>
       )}

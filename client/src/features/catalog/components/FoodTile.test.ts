@@ -38,7 +38,7 @@ describe("FoodTile", () => {
 
   // Item 182: a food the parent added is labelled as theirs in the grid, so
   // it never passes for curated catalog content.
-  it("labels a custom food with a neutral Custom badge, and a catalog food with none", () => {
+  it("labels a custom food with an outline Custom badge, and a catalog food with none", () => {
     const custom = renderToString(
       createElement(
         MemoryRouter,
@@ -47,7 +47,7 @@ describe("FoodTile", () => {
       ),
     );
     expect(custom).toContain(">Custom<");
-    expect(custom).toContain("bg-[var(--color-neutral-soft)]");
+    expect(custom).toContain("inset-ring inset-ring-[var(--color-border)] text-[var(--color-text-muted)]\">Custom<");
     // Item 177: its own emoji wins over the slug map / category fallback.
     expect(custom).toContain("🍞");
 
