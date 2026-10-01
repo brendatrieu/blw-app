@@ -30,7 +30,8 @@ describe("AboutPage signed out (item 611)", () => {
     const html = render();
     expect(count(html, "<h1")).toBe(1);
     expect(html).toMatch(/<h1[^>]*>Little Meals<\/h1>/);
-    expect(html).toContain("A calm companion for starting solids.");
+    expect(html).toContain("Starting solids, made simpler.");
+    expect(html).not.toContain("calm companion");
   });
 
   it("lists the five features in order, each emoji hidden from assistive tech", () => {
@@ -56,11 +57,11 @@ describe("AboutPage signed out (item 611)", () => {
   it("says exactly what each feature does (copy is verbatim from the plan)", () => {
     const html = render();
     const expected = [
-      ["Storage", "what you prepped, where it is, and when to use it by."],
-      ["Foods and recipes", "find iron- and vitamin C-rich foods, with safe prep for each age."],
-      ["Allergens", "introduce the top 9 one at a time, then keep serving them."],
+      ["Storage", "track what you prepped and when to use it by."],
+      ["Foods and recipes", "iron- and vitamin C-rich foods, with prep by age."],
+      ["Allergens", "introduce the top 9 and keep them in rotation."],
       ["Meal log", "what your baby ate, how it went, and any reactions."],
-      ["Learn", "choking, allergies, storage and more, readable offline."],
+      ["Learn", "safety guides you can read offline."],
     ];
     expect(ABOUT_FEATURES.map((f) => [f.name, f.text])).toEqual(expected);
     for (const [name, text] of expected) {
@@ -68,44 +69,45 @@ describe("AboutPage signed out (item 611)", () => {
     }
   });
 
-  it("has the three section headings, features before the story", () => {
+  it("has two section headings, Features before the story, and no Good to know", () => {
     const html = render();
-    const order = ["What it helps with", "Why I made this", "Good to know"].map((t) =>
-      html.indexOf(`>${t}</h2>`),
-    );
+    const order = ["Features", "From one parent to another"].map((t) => html.indexOf(`>${t}</h2>`));
     expect(order.every((i) => i > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(count(html, "<h2")).toBe(2);
+    expect(html).not.toContain("Good to know");
+    expect(html).not.toContain("What it helps with");
+    expect(html).not.toContain("Why I made this");
   });
 
   it("tells the story with no signature", () => {
     const html = render();
     const p = '<p class="text-sm text-[var(--color-text)]">';
     expect(html).toContain(
-      `${p}I’m a parent too. When we started solids with my own baby, I tried a few apps, but none of them had quite what I needed. I kept losing track of when I’d made foods and how long they’d last. I wanted help finding foods rich in iron and vitamin C. And I wanted to keep track of introducing allergens, and of keeping them in the rotation once they were in.</p>`,
+      `${p}When my baby started solids, I tried a few apps, but none had quite what I needed. I kept losing track of what I’d prepped and how long it would last. I wanted to make sure my baby got enough iron and vitamin C. I also needed help introducing allergens, then keeping them in the rotation.</p>`,
     );
     expect(html).toContain(
-      `${p}We already keep track of so much every day. I hope Little Meals makes this part a little easier, with tools and resources to guide you along the way.</p>`,
+      `${p}Parents already juggle so much. I hope Little Meals makes this part a little easier, with tools and resources to guide you along the way.</p>`,
     );
     // The story's last paragraph is the end of its section: no sign-off line.
     expect(html).toMatch(/to guide you along the way\.<\/p><\/section>/);
   });
 
-  it("says it is not medical advice and that data can be exported or deleted", () => {
+  it("ends with a small gray italic disclaimer, not a section (owner, 2026-09-30)", () => {
     const html = render();
     expect(html).toContain(
-      "<li>Little Meals is educational, not medical advice. Check with your pediatrician.</li>",
+      '<p class="text-xs italic text-[var(--color-text-muted)]">Little Meals is educational, not medical advice. Consult your pediatrician.</p>',
     );
-    expect(html).toContain(
-      "<li>Your data is yours. You can export it or delete your account anytime in Settings.</li>",
-    );
+    expect(html.indexOf("not medical advice")).toBeGreaterThan(html.indexOf("along the way."));
+    expect(html).not.toContain("Your data is yours");
   });
 
   it("offers Create an account and Sign in at the top and again at the bottom, and no back button", () => {
     const html = render();
     expect(count(html, /<a[^>]*href="\/signup"[^>]*>Create an account<\/a>/)).toBe(2);
     expect(count(html, /<a[^>]*href="\/login"[^>]*>Sign in<\/a>/)).toBe(2);
-    expect(html.indexOf(">Create an account<")).toBeLessThan(html.indexOf(">What it helps with<"));
-    expect(html.lastIndexOf(">Sign in<")).toBeGreaterThan(html.indexOf(">Good to know<"));
+    expect(html.indexOf(">Create an account<")).toBeLessThan(html.indexOf(">Features<"));
+    expect(html.lastIndexOf(">Sign in<")).toBeGreaterThan(html.indexOf("not medical advice"));
     expect(html).not.toContain(">Back<");
   });
 });
@@ -119,7 +121,7 @@ describe("AboutPage while the session loads (item 611)", () => {
     expect(html).not.toContain('href="/signup"');
     expect(html).not.toContain('href="/login"');
     expect(html).not.toContain('<span class="sr-only">Back</span>');
-    expect(html).toContain("A calm companion for starting solids.");
+    expect(html).toContain("Starting solids, made simpler.");
   });
 });
 
@@ -131,8 +133,8 @@ describe("AboutPage signed in (item 611)", () => {
     expect(html).not.toContain('href="/signup"');
     expect(html).not.toContain('href="/login"');
     expect(count(html, "<h1")).toBe(1);
-    expect(html).toContain("A calm companion for starting solids.");
-    expect(html).toContain(">Why I made this</h2>");
+    expect(html).toContain("Starting solids, made simpler.");
+    expect(html).toContain(">From one parent to another</h2>");
   });
 
   it("goes Back to More when there is no history to pop (it is reached from More)", () => {

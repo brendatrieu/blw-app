@@ -163,6 +163,8 @@ describe("MorePage (item 274)", () => {
     const about = rows.filter((row) => row.includes(">About Little Meals<"));
     expect(about).toHaveLength(1);
     expect(about[0]).toContain('href="/about"');
+    // Describes the page without naming its old headings (owner's copy refresh, 2026-09-30).
+    expect(about[0]).toContain("What it does, and why it exists.");
     expect(rows[rows.indexOf(about[0]!) + 1]).toContain('href="/settings"');
   });
 

@@ -5,22 +5,14 @@ import { BackButton } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 
 const TITLE = "Little Meals";
-const TAGLINE = "A calm companion for starting solids.";
+const TAGLINE = "Starting solids, made simpler.";
 
 export const ABOUT_FEATURES = [
-  { emoji: "🧊", name: "Storage", text: "what you prepped, where it is, and when to use it by." },
-  {
-    emoji: "🍎",
-    name: "Foods and recipes",
-    text: "find iron- and vitamin C-rich foods, with safe prep for each age.",
-  },
-  {
-    emoji: "🪜",
-    name: "Allergens",
-    text: "introduce the top 9 one at a time, then keep serving them.",
-  },
+  { emoji: "🧊", name: "Storage", text: "track what you prepped and when to use it by." },
+  { emoji: "🍎", name: "Foods and recipes", text: "iron- and vitamin C-rich foods, with prep by age." },
+  { emoji: "🪜", name: "Allergens", text: "introduce the top 9 and keep them in rotation." },
   { emoji: "🍽️", name: "Meal log", text: "what your baby ate, how it went, and any reactions." },
-  { emoji: "🛟", name: "Learn", text: "choking, allergies, storage and more, readable offline." },
+  { emoji: "🛟", name: "Learn", text: "safety guides you can read offline." },
 ] as const;
 
 /** The two ways in, shown only to a signed-out visitor (top and bottom). */
@@ -71,7 +63,7 @@ export function AboutPage() {
         className="flex flex-col gap-3"
       >
         <h2 id="about-features" className="font-h2 text-[var(--color-text)]">
-          What it helps with
+          Features
         </h2>
         <ul className="flex flex-col gap-3">
           {ABOUT_FEATURES.map((feature) => (
@@ -89,35 +81,23 @@ export function AboutPage() {
 
       <Card padding="md" as="section" aria-labelledby="about-story" className="flex flex-col gap-3">
         <h2 id="about-story" className="font-h2 text-[var(--color-text)]">
-          Why I made this
+          From one parent to another
         </h2>
         <p className="text-sm text-[var(--color-text)]">
-          I&rsquo;m a parent too. When we started solids with my own baby, I tried a few apps, but
-          none of them had quite what I needed. I kept losing track of when I&rsquo;d made foods and
-          how long they&rsquo;d last. I wanted help finding foods rich in iron and vitamin C. And I
-          wanted to keep track of introducing allergens, and of keeping them in the rotation once
-          they were in.
+          When my baby started solids, I tried a few apps, but none had quite what I needed. I kept
+          losing track of what I&rsquo;d prepped and how long it would last. I wanted to make sure my
+          baby got enough iron and vitamin C. I also needed help introducing allergens, then keeping
+          them in the rotation.
         </p>
         <p className="text-sm text-[var(--color-text)]">
-          We already keep track of so much every day. I hope Little Meals makes this part a little
-          easier, with tools and resources to guide you along the way.
+          Parents already juggle so much. I hope Little Meals makes this part a little easier, with
+          tools and resources to guide you along the way.
         </p>
       </Card>
 
-      <Card
-        padding="md"
-        as="section"
-        aria-labelledby="about-good-to-know"
-        className="flex flex-col gap-3"
-      >
-        <h2 id="about-good-to-know" className="font-h2 text-[var(--color-text)]">
-          Good to know
-        </h2>
-        <ul className="flex list-disc flex-col gap-2 pl-5 text-sm text-[var(--color-text)]">
-          <li>Little Meals is educational, not medical advice. Check with your pediatrician.</li>
-          <li>Your data is yours. You can export it or delete your account anytime in Settings.</li>
-        </ul>
-      </Card>
+      <p className="text-xs italic text-[var(--color-text-muted)]">
+        Little Meals is educational, not medical advice. Consult your pediatrician.
+      </p>
 
       {signedOut ? <SignUpButtons /> : null}
     </div>

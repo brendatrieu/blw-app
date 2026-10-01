@@ -216,6 +216,13 @@ describe("the app's user-facing name (item 308)", () => {
     expect(manifest).not.toContain("blw-app");
   });
 
+  it("describes the app the same way in link previews and the install prompt (owner, 2026-09-30)", () => {
+    const description = "Starting solids, made simpler: storage, iron-rich foods, allergens, and a meal log, even offline.";
+    expect(read("../index.html")).toContain(`<meta name="description" content="${description}" />`);
+    expect(read("../vite.config.ts")).toContain(`description: "${description}",`);
+    for (const file of ["../index.html", "../vite.config.ts"]) expect(read(file)).not.toMatch(/calm|companion/i);
+  });
+
   it("leaves the package/workspace identifiers alone — only what a parent reads is renamed", () => {
     // The repo, the packages and the API are still @blw/*; renaming those
     // would be a rename of the codebase, not of the product.

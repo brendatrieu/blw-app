@@ -31,7 +31,7 @@ export default defineConfig({
       manifest: {
         name: "Little Meals",
         short_name: "Little Meals",
-        description: "A calm, offline-friendly companion for baby-led weaning — foods, recipes, storage, and safety guidance.",
+        description: "Starting solids, made simpler: storage, iron-rich foods, allergens, and a meal log, even offline.",
         theme_color: "#fbfaf8",
         background_color: "#fbfaf8",
         display: "standalone",
