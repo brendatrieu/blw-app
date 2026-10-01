@@ -15,7 +15,7 @@ export const ABOUT_FEATURES = [
   { emoji: "🛟", name: "Learn", text: "safety guides you can read offline." },
 ] as const;
 
-/** The two ways in, shown only to a signed-out visitor (top and bottom). */
+/** The two ways in, shown only to a signed-out visitor, once, at the top. */
 function SignUpButtons() {
   return (
     <div className="flex w-full flex-col gap-3">
@@ -100,8 +100,6 @@ export function AboutPage() {
       <p className="text-xs italic text-[var(--color-text-muted)]">
         Little Meals is educational, not medical advice. Consult your pediatrician.
       </p>
-
-      {signedOut ? <SignUpButtons /> : null}
     </div>
   );
 }

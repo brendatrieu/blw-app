@@ -102,12 +102,14 @@ describe("AboutPage signed out (item 611)", () => {
     expect(html).not.toContain("Your data is yours");
   });
 
-  it("offers Create an account and Sign in at the top and again at the bottom, and no back button", () => {
+  it("offers Create an account and Sign in once, at the top only (owner, 2026-09-30), and no back button", () => {
     const html = render();
-    expect(count(html, /<a[^>]*href="\/signup"[^>]*>Create an account<\/a>/)).toBe(2);
-    expect(count(html, /<a[^>]*href="\/login"[^>]*>Sign in<\/a>/)).toBe(2);
+    expect(count(html, /<a[^>]*href="\/signup"[^>]*>Create an account<\/a>/)).toBe(1);
+    expect(count(html, /<a[^>]*href="\/login"[^>]*>Sign in<\/a>/)).toBe(1);
     expect(html.indexOf(">Create an account<")).toBeLessThan(html.indexOf(">Features<"));
-    expect(html.lastIndexOf(">Sign in<")).toBeGreaterThan(html.indexOf("not medical advice"));
+    // Nothing after the disclaimer: it ends the page.
+    expect(html.indexOf(">Sign in<")).toBeLessThan(html.indexOf("not medical advice"));
+    expect(html).toMatch(/Consult your pediatrician\.<\/p><\/div>$/);
     expect(html).not.toContain(">Back<");
   });
 });
