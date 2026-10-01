@@ -75,7 +75,7 @@ export function StorageItemCard({ item, actions, linkable = true }: StorageItemC
         <span className="text-sm font-semibold text-[var(--color-text)]">
           <StorageItemTitle item={item} />
         </span>
-        <span className="text-xs text-[var(--color-text-muted)]">
+        <span className="text-xs tabular-nums text-[var(--color-text-muted)]">
           Prepared {preparedLabel}
           {item.quantityNote ? ` · ${item.quantityNote}` : ""}
           {item.servingsTotal != null && item.servingsLeft != null
@@ -126,7 +126,7 @@ export function StorageItemCard({ item, actions, linkable = true }: StorageItemC
               fresh; once it warns, repeating "Expired" under an Expired badge
               would say nothing new. */}
           {(freshness.source === "best_by" || freshness.state === "fresh") && (
-            <span className="text-xs text-[var(--color-text-muted)]">
+            <span className="text-xs tabular-nums text-[var(--color-text-muted)]">
               {freshness.source === "best_by" ? bestByLabel(item.bestBy!) : countdownLabel(item.expiresAt)}
             </span>
           )}

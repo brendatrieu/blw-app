@@ -16,10 +16,13 @@ function renderAt(pathname: string): string {
  * "only one tab is active" assertion.
  */
 function activeTabLabel(html: string): string | undefined {
-  const labels = [...html.matchAll(/<span class="font-caption" style="color:([^"]+)">(?:<!-- -->)?([^<]+)</g)];
+  const labels = [...html.matchAll(/<span class="font-caption" style="color:([^;"]+);font-weight:(\d+)">(?:<!-- -->)?([^<]+)</g)];
+  expect(labels).toHaveLength(5);
   const lit = labels.filter(([, color]) => color === "var(--color-apricot-text)");
   expect(lit.length).toBeLessThanOrEqual(1);
-  return lit[0]?.[2];
+  // Item 652: the lit label is 800, every other label 700.
+  for (const [, color, weight] of labels) expect(weight).toBe(color === "var(--color-apricot-text)" ? "800" : "700");
+  return lit[0]?.[3];
 }
 
 describe("BottomNav", () => {

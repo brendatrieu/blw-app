@@ -151,9 +151,12 @@ describe("AllergenDetailPage header + facts (item 187)", () => {
     expect(html).toContain("Egg");
     expect(html).toContain("Started");
     expect(html).toContain("2 of 3 servings");
+    // Item 651: the facts row is tabular.
+    expect(html).toMatch(/<div class="[^"]*\btabular-nums\b[^"]*"><span>2 of 3 servings<\/span>/);
     expect(html).toMatch(new RegExp(`First: (?:<!-- -->)?${formatAllergenDate("2026-08-01T09:00:00.000Z")}`));
     expect(html).toMatch(new RegExp(`Last served: (?:<!-- -->)?${formatAllergenDate("2026-08-20T09:00:00.000Z")}`));
     expect(html).toContain("Offer well-cooked egg in the morning at home.");
+    expect(html).toContain('<div class="flex flex-col gap-6 p-4">'); // item 649 spacing
   });
 
   // Defensive: the server cannot actually produce this row any more (an

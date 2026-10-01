@@ -24,9 +24,9 @@ export const ICON_BUTTON_EDGE_INSET = "-ml-2";
 
 /**
  * Stroke geometry shared by the header glyphs — deliberately the same
- * `viewBox`/`strokeWidth` as `AppLayout`'s sun/moon icons (24 viewBox, 1.8
- * stroke, round caps) so a back chevron and the theme toggle in the same
- * header read as one icon set rather than two weights.
+ * `viewBox`/`strokeWidth` as `AppLayout`'s gear and BottomNav's icons (24
+ * viewBox, 1.8 stroke, round caps) so a back chevron and the other header
+ * icons read as one icon set rather than two weights.
  */
 const GLYPH_PROPS = {
   "aria-hidden": true,

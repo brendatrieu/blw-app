@@ -81,7 +81,7 @@ export function FunnelIcon() {
 
 interface FunnelButtonProps {
   onClick: () => void;
-  /** Drives the little red count badge; 0 renders none. */
+  /** Drives the little apricot count dot; 0 renders none. */
   activeCount: number;
 }
 
@@ -98,7 +98,7 @@ export function FunnelButton({ onClick, activeCount }: FunnelButtonProps) {
       {activeCount > 0 && (
         <span
           aria-hidden="true"
-          className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-danger)] px-1 text-[10px] font-bold text-[var(--color-danger-contrast)]"
+          className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-apricot-graphic)] px-1 text-[10px] font-bold tabular-nums text-[var(--color-apricot-graphic-ink)]"
         >
           {activeCount}
         </span>

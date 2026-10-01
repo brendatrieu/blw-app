@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { ageInMonths } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { TourProvider } from "../features/tour/TourProvider.js";
-import { isDaytimeHour, timeOfDayGreeting } from "../lib/greeting.js";
+import { timeOfDayGreeting } from "../lib/greeting.js";
 import { BottomNav } from "./BottomNav.js";
 import { CelebrationProvider } from "./ui/Celebration.js";
 
@@ -19,31 +19,6 @@ const ICON_PROPS: SVGProps<SVGSVGElement> = {
   "aria-hidden": true,
 };
 
-function SunIcon() {
-  return (
-    // Filled golden sun — the one decorative color in the header, matching
-    // the emoji-colored icons used across the app. Fixed hexes (not tokens):
-    // gold reads on both grounds and the icon is aria-hidden decoration.
-    <svg {...ICON_PROPS} width={18} height={18} stroke="#c1912f">
-      <circle cx="12" cy="12" r="4" fill="#F9D779" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg {...ICON_PROPS} width={18} height={18} stroke="#c1912f">
-      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" fill="#F9D779" />
-    </svg>
-  );
-}
-
-/** Sun for daytime hours, moon for evening/night — same boundary as the greeting text. */
-function TimeOfDayIcon({ now = new Date() }: { now?: Date }) {
-  return isDaytimeHour(now.getHours()) ? <SunIcon /> : <MoonIcon />;
-}
-
 function GearIcon() {
   return (
     <svg {...ICON_PROPS} width={20} height={20}>
@@ -52,6 +27,10 @@ function GearIcon() {
     </svg>
   );
 }
+
+// Small uppercase apricot label above the baby name (CSS uppercases it, so
+// the copy stays "Good evening"). No sun/moon: direction A is emoji-free.
+const GREETING_CLASS = "text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
 
 function BabySwitcher() {
   const { babies, activeBaby, setActiveBabyId } = useActiveBaby();
@@ -75,26 +54,21 @@ function BabySwitcher() {
   // with a friendly greeting above it.
   if (babies.length === 1) {
     return (
-      <div className="flex flex-col gap-2">
-        <span className="flex items-center gap-1.5 text-lg font-semibold text-[var(--color-text-muted)]">
-          <TimeOfDayIcon />
-          {timeOfDayGreeting()}
-        </span>
-        <span className="font-display text-[var(--color-text)]">
-          {activeBaby?.name}
-          {ageLabel ? <span className="ml-6 text-sm font-medium text-[var(--color-text-muted)]">{ageLabel}</span> : null}
-        </span>
+      <div className="flex flex-col gap-1">
+        <span className={GREETING_CLASS}>{timeOfDayGreeting()}</span>
+        {/* The age sits beside the name, not inside it, so it stays Nunito. */}
+        <div className="flex items-baseline gap-2.5">
+          <span className="font-display text-[var(--color-text)]">{activeBaby?.name}</span>
+          {ageLabel ? <span className="text-sm text-[var(--color-text-muted)]">{ageLabel}</span> : null}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <span className="flex items-center gap-1.5 text-lg font-semibold text-[var(--color-text-muted)]">
-        <TimeOfDayIcon />
-        {timeOfDayGreeting()}
-      </span>
-      <label className="flex items-center gap-6">
+    <div className="flex flex-col gap-1">
+      <span className={GREETING_CLASS}>{timeOfDayGreeting()}</span>
+      <label className="flex items-baseline gap-2.5">
         <span className="sr-only">Active baby</span>
         <select
           className="font-display appearance-none border-0 bg-transparent p-0 text-[var(--color-text)] outline-none"
@@ -109,7 +83,7 @@ function BabySwitcher() {
             </option>
           ))}
         </select>
-        {ageLabel ? <span className="text-sm font-medium text-[var(--color-text-muted)]">{ageLabel}</span> : null}
+        {ageLabel ? <span className="text-sm text-[var(--color-text-muted)]">{ageLabel}</span> : null}
       </label>
     </div>
   );

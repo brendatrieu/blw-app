@@ -51,6 +51,41 @@ describe("AppLayout header", () => {
     expect(html).toContain("Remy");
     expect(/Good morning|Good afternoon|Good evening/.test(html)).toBe(true);
   });
+
+  // Item 650: the greeting is a small uppercase apricot label (no sun/moon
+  // icon), and the age sits beside the Fraunces name, never inside it.
+  const baby = (id: string, name: string): Baby => ({
+    id,
+    name,
+    birthDate: "2026-01-01",
+    notes: null,
+    archived: false,
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  });
+  const GREETING = /<span class="([^"]*)">(Good morning|Good afternoon|Good evening)<\/span>/;
+
+  for (const babies of [[baby("baby-1", "Remy")], [baby("baby-1", "Remy"), baby("baby-2", "Ada")]]) {
+    it(`greeting is an 11px/800/0.14em uppercase apricot label with no icon (${babies.length} baby)`, () => {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      queryClient.setQueryData(babyKeys.list(false), babies);
+      const html = renderLayout(queryClient);
+
+      const greeting = GREETING.exec(html);
+      expect(greeting, html.slice(0, 1200)).not.toBeNull();
+      expect(greeting![1]!.split(" ")).toEqual(
+        expect.arrayContaining(["text-[11px]", "font-extrabold", "uppercase", "tracking-[0.14em]", "text-[var(--color-apricot-text)]"]),
+      );
+      const header = html.slice(html.indexOf("<header"), html.indexOf("</header>"));
+      // Only the gear icon is left in the header.
+      expect(header.match(/<svg/g)).toHaveLength(1);
+      // The age label is muted 14px, regular weight, and outside the name.
+      expect(header).toMatch(/<span class="text-sm text-\[var\(--color-text-muted\)\]">\d+ months?<\/span>/);
+      expect(header).not.toMatch(/class="font-display[^"]*"[^>]*>[^<]*<span/);
+      // Item 648: the baby name (or the multi-baby picker) is the Fraunces display face.
+      expect(header).toMatch(babies.length === 1 ? /<span class="font-display [^"]*">Remy<\/span>/ : /<select class="font-display /);
+    });
+  }
 });
 
 describe("AppLayout chrome (item 310 — the tour stopped being a route)", () => {

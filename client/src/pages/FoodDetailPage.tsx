@@ -269,7 +269,7 @@ export function FoodDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-5 p-4">
+    <div className="flex flex-col gap-6 p-4">
       <BackButton fallback="/foods" />
       <div className="flex flex-col items-center gap-3 text-center">
         <span
@@ -327,14 +327,14 @@ export function FoodDetailPage() {
       )}
 
       {food.notes && (
-        <section>
+        <section className="flex flex-col gap-2.5">
           <h2 className="font-h2 text-[var(--color-text)]">Notes</h2>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">{food.notes}</p>
+          <p className="text-sm text-[var(--color-text-muted)]">{food.notes}</p>
         </section>
       )}
 
       {food.pairings.length > 0 && (
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-2.5">
           <h2 className="font-h2 text-[var(--color-text)]">Vitamin-C pairings</h2>
           {/* Stacked, not a side-scroller: a pairing's reason is a sentence
               and needs the full width to wrap (user: "this should wrap"). */}
@@ -363,7 +363,7 @@ export function FoodDetailPage() {
       )}
 
       {food.recipes.length > 0 && (
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-2.5">
           <h2 className="font-h2 text-[var(--color-text)]">Recipes with {food.name.toLowerCase()}</h2>
           <div className="flex flex-col gap-2">
             {/* Single-ingredient "Simple <food>" basics lead the list — the

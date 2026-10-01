@@ -125,5 +125,7 @@ describe("rating summaries", () => {
     const html = renderToString(createElement(RatingSummaryText, { summary }));
     expect(html).toContain('<span class="text-[var(--color-apricot-graphic)]">★</span> 4.2 (5)');
     expect(html).toContain("Rated 4.2 out of 5, 5 ratings");
+    // Item 651: rating numbers line up in a column of cards.
+    expect(html).toMatch(/^<span class="[^"]*\btabular-nums\b/);
   });
 });

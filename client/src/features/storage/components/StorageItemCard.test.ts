@@ -76,12 +76,16 @@ describe("StorageItemCard (render)", () => {
   it("shows 'N of M servings left' when the item is servings-tracked", () => {
     const html = renderCard({ ...BASE_ITEM, servingsTotal: 6, servingsLeft: 2 });
     expect(html).toContain("2 of 6 servings left");
+    // Item 651: the servings count is tabular.
+    expect(html).toMatch(/<span class="[^"]*\btabular-nums\b[^"]*">Prepared /);
   });
 
   it("shows the best-by label instead of the derived countdown when bestBy is set", () => {
     const html = renderCard({ ...BASE_ITEM, bestBy: "2026-08-29" });
     expect(html).toContain("Best by Sat, Aug 29");
     expect(html).not.toMatch(/Use within/);
+    // Item 651: the best-by / days-left line is tabular.
+    expect(html).toMatch(/<span class="[^"]*\btabular-nums\b[^"]*">Best by /);
   });
 
   it("shows the freshness badge AND the best-by date together — the badge warns, the date says why", () => {

@@ -34,7 +34,7 @@ export function useBackNavigate(fallback: string): () => void {
  * Back navigation for detail pages — the installed PWA has no browser chrome,
  * so every page that's reached by drilling in needs its own way out.
  *
- * Chevron-only (item 258): a 24px "‹" at the sun/moon icons' stroke weight
+ * Chevron-only (item 258): a 24px "‹" at the header icons' stroke weight
  * in a 44px target, with the word "Back" kept for assistive tech as
  * `sr-only` text rather than shown. It renders in `PageHeader`'s `leading`
  * slot, on the same row as the h1 — never on a line of its own above it —

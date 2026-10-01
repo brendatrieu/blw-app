@@ -35,7 +35,12 @@ function AllergenProgressSummary({ babyId }: { babyId: string }) {
           value={progressed / ALLERGEN_TOTAL}
           label={`${progressed} of ${ALLERGEN_TOTAL} allergens started or established`}
         >
-          <span className="font-h2 text-[var(--color-text)]">
+          {/* Inline: the unlayered `font:` shorthand on .font-h2 resets
+              font-variant-numeric, so a tabular-nums class would lose. */}
+          <span
+            className="font-h2 text-[var(--color-text)]"
+            style={{ fontVariantNumeric: "tabular-nums" }}
+          >
             {progressed}/{ALLERGEN_TOTAL}
           </span>
         </ProgressRing>
@@ -73,9 +78,9 @@ function StorageSection({ babyId }: { babyId: string }) {
   const topThree = (data?.items ?? []).slice(0, HOME_STORAGE_LIMIT);
 
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[var(--color-text)]">Storage</h2>
+        <h2 className="font-h2 text-[var(--color-text)]">Storage</h2>
         <Link to="/storage" className="text-xs font-medium text-[var(--color-accent)] underline">
           See all
         </Link>
@@ -141,7 +146,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-5 p-4">
+    <div className="flex flex-col gap-6 p-4">
       {/* The visible greeting lives in the shared AppLayout header; this keeps
           the document outline rooted for screen readers. */}
       <h1 className="sr-only">Home</h1>
@@ -156,8 +161,8 @@ export function DashboardPage() {
 
       <StorageSection babyId={activeBaby.id} />
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-[var(--color-text)]">Allergen progress</h2>
+      <section className="flex flex-col gap-2.5">
+        <h2 className="font-h2 text-[var(--color-text)]">Allergen progress</h2>
         <AllergenProgressSummary babyId={activeBaby.id} />
       </section>
 

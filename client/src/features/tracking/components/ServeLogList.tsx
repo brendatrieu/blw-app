@@ -225,10 +225,10 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true }: 
   const meals = useMemo(() => limitMeals(data?.items ?? [], limit), [data, limit]);
 
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-2.5">
       {(showHeading || seeAllHref) && (
         <div className="flex items-center justify-between">
-          {showHeading && <h2 className="text-sm font-semibold text-[var(--color-text)]">📖 Food log</h2>}
+          {showHeading && <h2 className="font-h2 text-[var(--color-text)]">📖 Food log</h2>}
           {seeAllHref && (
             <Link to={seeAllHref} className="text-xs font-medium text-[var(--color-accent)] underline">
               See all

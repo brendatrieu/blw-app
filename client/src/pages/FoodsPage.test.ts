@@ -134,8 +134,12 @@ describe("FoodsRoute (what /foods actually renders)", () => {
   it("arrives with the fiber filter on from /foods?fiberLevel=high", () => {
     const html = renderRouteAt("/foods?fiberLevel=high");
     expect(html).toContain('aria-label="Remove High fiber filter"');
-    // The funnel's count badge agrees with the pill row (one filter, not zero).
-    expect(html).toMatch(/class="[^"]*color-danger[^"]*"[^>]*>1</);
+    // The funnel's count badge agrees with the pill row (one filter, not
+    // zero), and is the apricot dot with its ink number, not red (item 653).
+    expect(html).toMatch(/class="[^"]*bg-\[var\(--color-apricot-graphic\)\][^"]*text-\[var\(--color-apricot-graphic-ink\)\][^"]*"[^>]*>1</);
+    // The count is a figure, so it sits on tabular digits like every other count.
+    expect(html).toMatch(/class="[^"]*tabular-nums[^"]*"[^>]*>1</);
+    expect(html).not.toContain("--color-danger");
   });
 
   it("ignores a hand-edited ?fiberLevel= value instead of filtering to nothing", () => {

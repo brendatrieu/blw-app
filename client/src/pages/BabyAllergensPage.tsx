@@ -49,7 +49,7 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
         {/* No chevron: storage rows open on tap without one, and the two
             lists should read alike. */}
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-[var(--color-text-muted)]">
         {servings && <span>{servings}</span>}
         <span>First: {formatAllergenDate(item.firstAt)}</span>
         {recency.fact && <span>{recency.fact}</span>}
@@ -145,10 +145,10 @@ export function BabyAllergensPage() {
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't find that baby's allergen progress.</p>}
 
       {data && (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-6">
           {sections.map((section) => (
-            <section key={section.key} aria-labelledby={`ladder-${section.key}`} className="flex flex-col gap-2">
-              <h2 id={`ladder-${section.key}`} className="text-sm font-semibold text-[var(--color-text)]">
+            <section key={section.key} aria-labelledby={`ladder-${section.key}`} className="flex flex-col gap-2.5">
+              <h2 id={`ladder-${section.key}`} className="font-h2 text-[var(--color-text)]">
                 {section.title}
               </h2>
               <ul className="flex flex-col gap-2">

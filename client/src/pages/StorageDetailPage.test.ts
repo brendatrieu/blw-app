@@ -62,6 +62,7 @@ describe("StorageDetailPage", () => {
     expect(html).toContain("Avocado");
     expect(html).toContain("2 of 6 servings left");
     expect(html).toContain("smells great");
+    expect(html).toContain('<div class="flex flex-col gap-6 p-4">'); // item 649 spacing
     // The card renders standalone here, not as a Link to itself.
     expect(html).not.toContain(`href="/storage/${ITEM.id}"`);
   });

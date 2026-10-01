@@ -111,7 +111,7 @@ export function RatingSummaryText({ summary, className = "" }: { summary: Rating
   if (!summary) return null;
   const ratings = summary.count === 1 ? "1 rating" : `${summary.count} ratings`;
   return (
-    <span className={`text-xs text-[var(--color-text-muted)] ${className}`}>
+    <span className={`text-xs tabular-nums text-[var(--color-text-muted)] ${className}`}>
       <span aria-hidden="true">
         {/* Item 640: the star wears the apricot identity graphic, the number stays muted. */}
         <span className="text-[var(--color-apricot-graphic)]">★</span>

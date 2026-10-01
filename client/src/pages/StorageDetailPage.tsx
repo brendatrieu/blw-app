@@ -51,7 +51,7 @@ export function StorageDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-6 p-4">
       <PageHeader
         title={<StorageItemTitle item={item} />}
         emoji={storageItemEmoji(item)}

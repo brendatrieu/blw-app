@@ -30,9 +30,9 @@ export function MealsFromBatch({ babyId, storageItemId }: MealsFromBatchProps) {
   const meals = mealsFromStorageItem(data?.items ?? [], storageItemId);
 
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-2.5">
       <div className="flex items-baseline gap-1.5">
-        <h2 className="text-sm font-semibold text-[var(--color-text)]">Meals from this batch</h2>
+        <h2 className="font-h2 text-[var(--color-text)]">Meals from this batch</h2>
         <span className="text-xs text-[var(--color-text-muted)]">(recent meals)</span>
       </div>
 

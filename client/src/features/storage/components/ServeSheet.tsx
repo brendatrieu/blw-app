@@ -88,7 +88,7 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
           >
             −
           </button>
-          <span aria-live="polite" className="min-w-6 text-center text-sm font-semibold text-[var(--color-text)]">
+          <span aria-live="polite" className="min-w-6 text-center text-sm font-semibold tabular-nums text-[var(--color-text)]">
             {servings}
           </span>
           <button

@@ -185,10 +185,13 @@ const BASE_PAIRS: Pair[] = [
   // Active nav label (the nav sits on elevated) — text on page/elevated only;
   // it is 4.12:1 on inset, so it never goes there.
   { name: "apricot text on page", fg: "color-apricot-text", bg: "color-bg" },
-  { name: "apricot text on elevated surface (active nav label)", fg: "color-apricot-text", bg: "color-bg-elevated" },
+  { name: "apricot text on elevated surface (active nav label, Home greeting)", fg: "color-apricot-text", bg: "color-bg-elevated" },
   // Rating stars and the recipe-list heart: graphics, 3:1 on page/elevated.
   { name: "apricot graphic (stars, heart) on page", fg: "color-apricot-graphic", bg: "color-bg", min: 3 },
   { name: "apricot graphic (stars, heart) on elevated surface", fg: "color-apricot-graphic", bg: "color-bg-elevated", min: 3 },
+  // Item 653: the filter-count dot is a graphic fill (gated as a state mark
+  // by the two pairs above) carrying its number in graphic-ink.
+  { name: "filter-count number (graphic-ink) on apricot graphic dot", fg: "color-apricot-graphic-ink", bg: "color-apricot-graphic" },
   // Favorited heart pill: body text on the soft chip, and the heart glyph in
   // apricot text (the graphic shade is 2.55:1 there in light) at 3:1.
   { name: "body text on apricot soft chip (Favorited pill)", fg: "color-text", bg: "color-apricot-soft" },
@@ -404,7 +407,7 @@ describe("tonal Button hover (success fill darkened with black)", () => {
   }
 });
 
-describe("Direction A token values (items 634, 636, 639, 641, 644, 645)", () => {
+describe("Direction A token values (items 634, 636, 639, 641, 644, 645, 653)", () => {
   // The owner approved exact hexes; the gate above only proves they pass,
   // so pin the values themselves (light unchanged, dark buttons deep).
   const EXPECTED: Record<string, { light: string; dark: string }> = {
@@ -417,6 +420,7 @@ describe("Direction A token values (items 634, 636, 639, 641, 644, 645)", () => 
     "color-apricot-text": { light: "#b9571a", dark: "#f7b48a" },
     "color-apricot-graphic": { light: "#e1732e", dark: "#f7b48a" },
     "color-apricot-soft": { light: "#fde3d1", dark: "#3a2a20" },
+    "color-apricot-graphic-ink": { light: "#3d1a06", dark: "#3d1a06" },
     "color-allergen-soft": { light: "#f2e3f5", dark: "#3b2541" },
     "color-allergen-soft-text": { light: "#642a6e", dark: "#f2e3f5" },
     "color-icon": { light: "#3f4a56", dark: "#b8c2cc" },

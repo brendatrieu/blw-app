@@ -698,7 +698,7 @@ function StatTile({
     >
       <span className="text-xs font-medium text-[var(--color-text-muted)]">{label}</span>
       <span className="flex flex-wrap items-baseline gap-1.5">
-        <span className="font-display text-[var(--color-text)]">{value}</span>
+        <span className="text-[1.75rem] leading-[1.15] font-extrabold tabular-nums text-[var(--color-text)]">{value}</span>
         {delta ? <DeltaChip delta={delta} /> : null}
       </span>
       <span className="text-[11px] text-[var(--color-text-muted)]">{caption}</span>

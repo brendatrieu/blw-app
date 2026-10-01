@@ -147,8 +147,8 @@ export function SymptomCheckPage() {
         </section>
       )}
 
-      <section className="flex flex-col gap-2 border-t border-[var(--color-border)] pt-4">
-        <h2 className="text-sm font-semibold text-[var(--color-text)]">Previous checks</h2>
+      <section className="flex flex-col gap-2.5 border-t border-[var(--color-border)] pt-4">
+        <h2 className="font-h2 text-[var(--color-text)]">Previous checks</h2>
         {history.isLoading && <p className="text-sm text-[var(--color-text-muted)]">Loading…</p>}
         {history.isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load past checks.</p>}
         {history.data && <SymptomHistoryList items={history.data.items} />}

@@ -192,6 +192,8 @@ describe("BabyAllergensPage established rule + reaction pause (item 370)", () =>
     for (const row of rows) {
       const html = renderWithItems([row]);
       expect(html.split(`${row.exposures} of 3 servings`).length - 1).toBe(1);
+      // Item 651: the facts row is tabular.
+      expect(html).toMatch(new RegExp(`<div class="[^"]*\\btabular-nums\\b[^"]*"><span>${row.exposures} of 3 servings</span>`));
       expect(html).not.toMatch(/\d(?:<!-- -->)? exposures?\b/);
     }
   });
@@ -395,5 +397,13 @@ describe("BabyAllergensPage sections", () => {
     ]);
     expect(sectionsOf(html)).toEqual([{ title: "Not started", rows: ["Milk", "Egg"] }]);
     expect(html).not.toContain("Due for a serve");
+  });
+
+  it("spaces its sections 24px apart (item 649)", () => {
+    const html = renderWithItems([
+      named("milk", "Milk", item({ status: "not_started" })),
+      named("egg", "Egg", item({ status: "established" })),
+    ]);
+    expect(html).toContain('<div class="flex flex-col gap-6"><section');
   });
 });

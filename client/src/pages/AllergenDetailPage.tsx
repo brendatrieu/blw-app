@@ -113,7 +113,7 @@ function AllergenDetailBody({
         action={<Badge tone={ALLERGEN_STATUS_TONE[progress.status]}>{ALLERGEN_STATUS_LABEL[progress.status]}</Badge>}
       />
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-[var(--color-text-muted)]">
         {servings && <span>{servings}</span>}
         <span>First: {formatAllergenDate(progress.firstAt)}</span>
         {/* Exact dates when there are any — a detail page can afford them
@@ -151,7 +151,7 @@ function AllergenDetailBody({
       <p className="text-sm text-[var(--color-text)]">{progress.introGuidance}</p>
 
       {foods.length > 0 && (
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-2.5">
           <h2 className="font-h2 text-[var(--color-text)]">Foods with {progress.allergenName.toLowerCase()}</h2>
           <ul className="flex flex-col gap-2">
             {foods.map((food) => (
@@ -161,7 +161,7 @@ function AllergenDetailBody({
         </section>
       )}
 
-      <section className="flex flex-col gap-2">
+      <section className="flex flex-col gap-2.5">
         {/* "Meals", not "Exposures": the facts line counts allergen-food
             SERVINGS (a meal with two egg foods is two exposures) while this
             list is one row per meal, so the two must not share a noun. */}
@@ -231,7 +231,7 @@ export function AllergenDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-6 p-4">
       <AllergenDetailBody detail={data} babyId={babyId} leading={<BackButton fallback={ladderPath} />} />
     </div>
   );

@@ -104,6 +104,12 @@ describe("DashboardPage", () => {
     expect(html).not.toContain("See storage");
     expect(html).not.toContain("👋");
     expect(html).not.toContain("months old");
+    // Item 649: the shared section heading, 10px under it, 24px between sections.
+    expect(html).toMatch(/^<div class="flex flex-col gap-6 p-4">/);
+    for (const title of ["Storage", "Allergen progress", "📖 Food log"]) {
+      expect(html, title).toContain(`<h2 class="font-h2 text-[var(--color-text)]">${title}</h2>`);
+    }
+    expect(html.match(/<section class="flex flex-col gap-2\.5">/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
   it("caps Home at three storage items and three meals, each section with a See all link", () => {
@@ -315,6 +321,11 @@ describe("DashboardPage allergen due nudge (item 365)", () => {
     expect(html).toMatch(
       new RegExp(`<a [^>]*href="/babies/${BABY.id}/allergens"[^>]*>2 allergens due for a serve</a>`),
     );
+  });
+
+  it("draws the ring's N/9 in tabular numbers, inline because .font-h2 resets font-variant-numeric (item 651)", () => {
+    const html = renderWithAllergens([allergen("peanut", 1)]);
+    expect(html).toMatch(/<span class="font-h2 [^"]*" style="font-variant-numeric:tabular-nums">\d+(?:<!-- -->)?\/(?:<!-- -->)?9<\/span>/);
   });
 
   it("keeps the nudge OUTSIDE the ring card — a link may not nest in a link", () => {

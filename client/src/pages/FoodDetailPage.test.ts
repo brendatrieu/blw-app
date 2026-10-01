@@ -138,6 +138,11 @@ describe("FoodDetailPage — catalog food (unchanged)", () => {
     expect(html).toMatch(/Iron(?:<!-- -->)?\s*(?:<!-- -->)?High/);
   });
 
+  it("spaces its sections 24px apart (item 649)", () => {
+    expect(renderFood(catalogFood())).toContain('<div class="flex flex-col gap-6 p-4">');
+    expect(renderFood(catalogFood())).toMatch(/<section class="flex flex-col gap-2\.5"><h2 class="font-h2[^"]*">Notes<\/h2>/);
+  });
+
   // Item 279: the "High fiber" badge lives on the food PAGE only — the grid
   // tiles stay badge-free (see FoodTile.test.ts).
   it("badges a high-fiber catalog food, and says nothing at a lower level", () => {

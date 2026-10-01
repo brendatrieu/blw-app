@@ -75,6 +75,8 @@ describe("ServeControl — the serve sheet's body (item 263)", () => {
     expect(html).toContain('aria-label="Servings"');
     expect(html).toContain('aria-label="Decrease servings"');
     expect(html).toContain('aria-label="Increase servings"');
+    // Item 651: the stepper count is tabular, so 9 -> 10 doesn't jiggle.
+    expect(html).toMatch(/<span aria-live="polite" class="[^"]*\btabular-nums\b[^"]*">1<\/span>/);
     // The old collapsed→confirming fork is gone with the inline row.
     expect(html).not.toContain(">Confirm<");
   });

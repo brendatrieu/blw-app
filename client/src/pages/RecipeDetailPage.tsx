@@ -184,11 +184,13 @@ export function RecipeDetailPage() {
   const customSteps = recipe.variants[0]?.steps ?? [];
 
   return (
-    <div className="flex flex-col gap-5 p-4">
+    <div className="flex flex-col gap-6 p-4">
       <div className="flex flex-col gap-2">
         {/* The chevron shares the title's row (item 258) — the recipe has no
-            PageHeader of its own, so this row IS the header. */}
-        <div className="flex items-center justify-between gap-2">
+            PageHeader of its own, so this row IS the header. It wraps so a
+            long 34px title keeps the full width and the Favorite pill drops
+            under it, instead of the title stacking a word per line. */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-1">
             <BackButton fallback={RECIPES_TAB_PATH} />
             <h1 className="font-display min-w-0 text-[var(--color-text)]">{recipe.title}</h1>
@@ -234,7 +236,7 @@ export function RecipeDetailPage() {
         </ButtonLink>
       </div>
 
-      <section className="flex flex-col gap-2">
+      <section className="flex flex-col gap-2.5">
         <h2 className="font-h2 text-[var(--color-text)]">Ingredients</h2>
         <ul className="flex flex-col gap-1.5">
           {/* The whole row is the link to the food's page, so nothing inside
@@ -320,7 +322,7 @@ export function RecipeDetailPage() {
         // by whether there is a variant. No steps, no heading and no empty
         // box: an ingredients-only recipe is a complete recipe.
         customSteps.length > 0 ? (
-          <section className="flex flex-col gap-2">
+          <section className="flex flex-col gap-2.5">
             <h2 className="font-h2 text-[var(--color-text)]">Steps</h2>
             <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
               <ol className="flex flex-col gap-1.5 text-sm text-[var(--color-text)]">
@@ -378,7 +380,7 @@ export function RecipeDetailPage() {
       )}
 
       {recipe.notes && (
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-2.5">
           <h2 className="font-h2 text-[var(--color-text)]">Notes</h2>
           <p className="text-sm whitespace-pre-line text-[var(--color-text)]">{recipe.notes}</p>
         </section>
