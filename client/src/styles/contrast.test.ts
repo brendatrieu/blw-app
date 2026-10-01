@@ -221,6 +221,10 @@ const BASE_PAIRS: Pair[] = [
 
   // Callout / disclaimer banner.
   { name: "callout icon/text on callout bg", fg: "color-callout-icon", bg: "color-callout-bg" },
+  // Choking notes callout (item 667): the red title (and its triangle icon,
+  // same color, so 4.5 covers the 3:1 graphic floor) and the ink body.
+  { name: "choking callout title/icon on callout tint", fg: "color-danger-callout-text", bg: "color-danger-callout-bg" },
+  { name: "choking callout body (ink) on callout tint", fg: "color-text", bg: "color-danger-callout-bg" },
 
   // ---- Chart palette (item 326) ----
   // Chart marks are non-text UI, so the floor is 3:1 — except the
@@ -408,7 +412,7 @@ describe("tonal Button hover (success fill darkened with black)", () => {
   }
 });
 
-describe("Direction A token values (items 634, 636, 639, 641, 644, 645, 653, 670)", () => {
+describe("Direction A token values (items 634, 636, 639, 641, 644, 645, 653, 667, 670)", () => {
   // The owner approved exact hexes; the gate above only proves they pass,
   // so pin the values themselves (item 670: buttons identical in both modes).
   const EXPECTED: Record<string, { light: string; dark: string }> = {
@@ -434,6 +438,10 @@ describe("Direction A token values (items 634, 636, 639, 641, 644, 645, 653, 670
     // Use soon chip, dark as A-Home-Dark (warm, not grey).
     "color-caution-soft": { light: "rgba(255, 236, 195, 0.9)", dark: "#3a3115" },
     "color-caution-soft-text": { light: "#6b4f10", dark: "#ffe3a3" },
+    // Choking notes callout (A-Salmon light; dark is our proposal, no dark board).
+    "color-danger-callout-bg": { light: "#fdeeec", dark: "#33201e" },
+    "color-danger-callout-border": { light: "#f3cdc8", dark: "#5a2e2a" },
+    "color-danger-callout-text": { light: "#8f1f18", dark: "#ffb4ab" },
   };
   for (const [token, { light, dark }] of Object.entries(EXPECTED)) {
     it(`--${token} is ${light} light / ${dark} dark`, () => {

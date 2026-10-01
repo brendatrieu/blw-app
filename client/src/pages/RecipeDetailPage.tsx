@@ -64,7 +64,7 @@ function FavoriteHeart({
       // toggling between the two scale values reads as a little heart-pop —
       // no keyframe needed, and it collapses to an instant swap for
       // reduced-motion users via motion-reduce:transition-none.
-      className={`inline-flex min-h-9 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3.5 py-1.5 text-sm font-medium transition-[transform,background-color,border-color,color] duration-[var(--duration-base)] ease-[var(--ease-spring)] motion-reduce:transition-none motion-reduce:scale-100 disabled:opacity-60 ${
+      className={`inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3.5 py-1.5 text-sm font-medium transition-[transform,background-color,border-color,color] duration-[var(--duration-base)] ease-[var(--ease-spring)] motion-reduce:transition-none motion-reduce:scale-100 disabled:opacity-60 ${
         favorited
           ? "scale-105 border-transparent bg-[var(--color-apricot-soft)] text-[var(--color-text)]"
           : "scale-100 border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]"
@@ -348,7 +348,7 @@ export function RecipeDetailPage() {
                   userPickedStage.current = true;
                   setActiveStage(stage.value);
                 }}
-                className={`min-h-9 rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-semibold transition-[background-color,color] duration-[var(--duration-fast)] ease-[var(--ease-spring)] motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 ${
+                className={`min-h-11 rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-semibold transition-[background-color,color] duration-[var(--duration-fast)] ease-[var(--ease-spring)] motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 ${
                   active
                     ? "bg-[var(--color-selected)] text-[var(--color-selected-contrast)] shadow-[var(--shadow-sm)]"
                     : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
