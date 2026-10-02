@@ -121,7 +121,7 @@ describe("RecipeDetailPage (catalog recipe)", () => {
     expect(html).toContain(">Iron focus<");
   });
 
-  it("spaces sections 24px apart and lets the title row wrap under a long title (item 649)", () => {
+  it("spaces sections 18px apart and lets the title row wrap under a long title (item 649)", () => {
     const html = renderRecipe(catalogRecipe());
     expect(html).toContain('<div class="flex flex-col gap-[18px] p-4">');
     // A 34px title beside the back button AND the Favorite pill stacks a word

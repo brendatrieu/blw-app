@@ -73,7 +73,8 @@ function BabySwitcher() {
       <div className="flex flex-col gap-1">
         <span className={GREETING_CLASS}>{timeOfDayGreeting()}</span>
         {/* The age sits beside the name, not inside it, so it stays Nunito. */}
-        <div className="flex items-baseline gap-2.5">
+        {/* Wraps the age under a long name instead of squeezing the name mid-word (680 B1). */}
+        <div className="flex flex-wrap items-baseline gap-x-2.5">
           <span className="font-display text-[var(--color-text)]">{activeBaby?.name}</span>
           {ageLabel ? <span className="text-sm whitespace-nowrap text-[var(--color-text-muted)]">{ageLabel}</span> : null}
         </div>
@@ -84,10 +85,19 @@ function BabySwitcher() {
   return (
     <div className="flex flex-col gap-1">
       <span className={GREETING_CLASS}>{timeOfDayGreeting()}</span>
-      <label className="flex items-baseline gap-2.5">
+      {/* A select can't wrap, so a long name would push the gear off screen
+          (680 B1). The name is drawn as wrapping text, as for one baby, and
+          the real select lies invisibly over the row, as in BabyChip; the
+          label draws the focus ring the hidden select can't. */}
+      <label className="relative flex flex-wrap items-baseline gap-x-2.5 rounded-[var(--radius-sm)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--color-accent)]">
         <span className="sr-only">Active baby</span>
+        <span aria-hidden="true" className="font-display text-[var(--color-text)]">
+          {activeBaby?.name}
+        </span>
+        {ageLabel ? <span className="text-sm whitespace-nowrap text-[var(--color-text-muted)]">{ageLabel}</span> : null}
         <select
-          className="font-display appearance-none border-0 bg-transparent p-0 text-[var(--color-text)] outline-none"
+          data-no-focus-ring
+          className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0"
           value={activeBaby?.id ?? ""}
           onChange={(event) => {
             setActiveBabyId(event.target.value || null);
@@ -99,7 +109,6 @@ function BabySwitcher() {
             </option>
           ))}
         </select>
-        {ageLabel ? <span className="text-sm whitespace-nowrap text-[var(--color-text-muted)]">{ageLabel}</span> : null}
       </label>
     </div>
   );
@@ -191,12 +200,15 @@ export function AppLayout() {
               </>
             ) : (
               <>
-                {/* 44px tall even when empty, so the row is 52px on every inner page. */}
-                <div ref={setHeaderSlot} className="flex min-h-11 shrink-0 items-center" />
-                <div className="flex min-w-0 items-center gap-1">
+                {/* Item 692: [back/X][chip] on the left, the gear alone on the
+                    right. The slot is `contents`, so with no button in it (tab
+                    pages) it takes no space and the chip starts at 16px; the
+                    44px gear keeps the row 52px tall. */}
+                <div className="flex min-w-0 items-center gap-0.5">
+                  <div ref={setHeaderSlot} className="contents" />
                   <BabyChip />
-                  <SettingsLink />
                 </div>
+                <SettingsLink />
               </>
             )}
           </header>

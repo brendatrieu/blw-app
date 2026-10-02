@@ -85,7 +85,8 @@ describe("AppLayout header", () => {
       expect(header).toMatch(/<span class="text-sm whitespace-nowrap text-\[var\(--color-text-muted\)\]">\d+ months?<\/span>/);
       expect(header).not.toMatch(/class="font-display[^"]*"[^>]*>[^<]*<span/);
       // Item 648: the baby name (or the multi-baby picker) is the Fraunces display face.
-      expect(header).toMatch(babies.length === 1 ? /<span class="font-display [^"]*">Remy<\/span>/ : /<select class="font-display /);
+      // Several babies: the name is drawn the same way, with the real select laid invisibly over the row (B1).
+      expect(header).toMatch(babies.length === 1 ? /<span class="font-display [^"]*">Remy<\/span>/ : /<span aria-hidden="true" class="font-display [^"]*">Remy<\/span>/);
     });
   }
 });
@@ -124,6 +125,52 @@ describe("AppLayout Home header: foods tried (item 680)", () => {
       expect(html).toContain(`>${months} months</span>`);
       expect(html).not.toContain("tried");
     }
+  });
+});
+
+describe("AppLayout Home name row (item 680 B1)", () => {
+  // A long name plus " · N foods tried" must wrap the age under the name, not
+  // split the name mid-word or push the gear off a 320px screen.
+  const kid = (id: string, name: string): Baby => ({
+    id,
+    name,
+    birthDate: "2026-01-01",
+    notes: null,
+    archived: false,
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  });
+  for (const babies of [[kid("baby-1", "Maximiliana")], [kid("baby-1", "Maximiliana"), kid("baby-2", "Charlotte")]]) {
+    it(`the name row wraps (${babies.length} baby)`, () => {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      queryClient.setQueryData(babyKeys.list(false), babies);
+      const html = renderLayout(queryClient);
+      const tag = babies.length === 1 ? "div" : "label";
+      const row = html.match(new RegExp(`<${tag} class="([^"]*)">(?:<span class="sr-only">Active baby</span>)?<span (?:aria-hidden="true" )?class="font-display[^"]*">Maximiliana</span>`));
+      expect(row, html.slice(0, 1500)).not.toBeNull();
+      expect(row![1]!.split(" ")).toEqual(expect.arrayContaining(["flex", "flex-wrap", "items-baseline", "gap-x-2.5"]));
+    });
+  }
+
+  it("several babies: the name is wrapping text, not the select (a select can't wrap), and the select covers the row", () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(babyKeys.list(false), [kid("baby-1", "Maximiliana"), kid("baby-2", "Charlotte")]);
+    const header = renderLayout(queryClient).split("</header>")[0]!;
+    expect(header).not.toMatch(/<select [^>]*class="[^"]*font-display/);
+    const label = header.match(/<label class="([^"]*)">/)![1]!.split(" ");
+    expect(label).toEqual(
+      expect.arrayContaining([
+        "relative",
+        "has-[:focus-visible]:outline-2",
+        "has-[:focus-visible]:outline-offset-2",
+        "has-[:focus-visible]:outline-[var(--color-accent)]",
+      ]),
+    );
+    const select = header.match(/<select ([^>]*)>/)![1]!;
+    expect(select).toContain("data-no-focus-ring");
+    expect(select).toMatch(/class="absolute inset-0 h-full w-full [^"]*opacity-0"/);
+    expect(header).toContain('<span class="sr-only">Active baby</span>');
+    expect(header).toMatch(/<option value="baby-2"[^>]*>Charlotte<\/option>/);
   });
 });
 
@@ -205,16 +252,27 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
     }
   });
 
-  it("keeps the header pinned (sticky top-0) and in order: back slot, chip, gear on the right", () => {
+  it("keeps the header pinned (sticky top-0) and in order: back/X slot, chip, then the gear alone on the right (item 692)", () => {
     for (const p of ["/", "/foods"]) {
       expect(header(layoutWith([remy], p)), p).toMatch(/^<header class="sticky top-0 z-20 flex justify-between gap-3 px-4 /);
     }
     // A-Home tops the gear with the greeting; inner rows center (item 679).
     expect(header(layoutWith([remy], "/"))).toMatch(/^<header class="[^"]*\bitems-start py-2\.5"/);
     expect(header(layoutWith([remy], "/foods"))).toMatch(/^<header class="[^"]*\bitems-center py-1"/);
-    expect(header(layoutWith([remy], "/foods"))).toMatch(
-      /<div class="flex min-h-11 shrink-0 items-center"><\/div><div class="flex min-w-0 items-center gap-1"><span [^>]*>.*?Remy.*?<\/span><a [^>]*aria-label="Settings"/s,
-    );
+    // Left group: the (empty) slot, then the chip; the gear is the header's own last child.
+    for (const babies of [[remy], [remy, ada], []]) {
+      const inner = header(layoutWith(babies, "/foods"));
+      expect(inner, `${babies.length} babies`).toMatch(
+        /^<header [^>]*><div class="flex min-w-0 items-center gap-0\.5"><div class="contents"><\/div>(?:<span |<label |<a )/,
+      );
+      expect(inner, `${babies.length} babies`).toMatch(/<\/(?:span|label|a)><\/div><a [^>]*aria-label="Settings"[^>]*>.*?<\/a>$/s);
+    }
+  });
+
+  it("the empty back/X slot takes no space, so tab pages start with the chip (item 692)", () => {
+    const slot = header(layoutWith([remy], "/foods")).match(/<div class="([^"]*)"><\/div>/)![1]!.split(" ");
+    // display: contents draws no box: no width, no min-height, no gap before the chip.
+    expect(slot).toEqual(["contents"]);
   });
 
   it("the header out-stacks card action rows, and the portaled overlays out-stack it (item 674)", () => {
@@ -246,8 +304,8 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
     const inner = layoutWith([remy], "/foods");
     expect(inner).toMatch(/<header class="[^"]*\bpy-1\b/);
     expect(inner).toContain("padding-top:calc(0.25rem + env(safe-area-inset-top))");
-    // The (empty) back-button slot keeps the row 44px tall.
-    expect(header(inner)).toMatch(/<div class="flex min-h-11 shrink-0 items-center"><\/div>/);
+    // The 44px gear keeps the row 44px tall now that the empty slot collapses (item 692).
+    expect(header(inner)).toMatch(/<a [^>]*aria-label="Settings"[^>]*class="[^"]*\bmin-h-11\b/);
     const home = layoutWith([remy], "/");
     expect(home).toMatch(/<header class="[^"]*\bpy-2\.5\b/);
     // A-Home: 18px 16px 10px, the notch inset on top.

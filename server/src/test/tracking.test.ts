@@ -738,10 +738,16 @@ describe("tracking routes", () => {
       // ...and again here, still once: distinct foods, not servings.
       const second = await postMeal(user, babyId, { foodIds: [fixtures.egg.id, fixtures.banana.id] });
       expect(await tried(babyId)).toBe(2);
+      // A third meal of a food already tried adds a meal, not a food (N05).
+      const third = await postMeal(user, babyId, { foodIds: [fixtures.banana.id] });
+      expect(await tried(babyId)).toBe(2);
       // Another baby's meals are not this baby's foods.
       expect(await tried(otherBaby)).toBe(0);
 
+      // Banana is still in the third meal; dropping that one too leaves egg alone.
       await app.inject({ method: "DELETE", url: `/api/meals/${second.id}`, headers: { cookie: user.cookie } });
+      expect(await tried(babyId)).toBe(2);
+      await app.inject({ method: "DELETE", url: `/api/meals/${third.id}`, headers: { cookie: user.cookie } });
       expect(await tried(babyId)).toBe(1);
     });
 

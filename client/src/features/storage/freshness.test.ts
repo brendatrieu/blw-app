@@ -114,9 +114,19 @@ describe("daysLeft (item 662)", () => {
   });
 
   it("still counts whole calendar days across a DST change", () => {
-    // A 23- or 25-hour day in zones that have one; rounding keeps it at 1 either way.
-    expect(daysLeft(bestByItem("2026-11-02"), new Date(2026, 10, 1, 12))).toBe(1);
-    expect(daysLeft(bestByItem("2026-03-09"), new Date(2026, 2, 8, 12))).toBe(1);
+    // Pinned to a DST zone so this bites on a UTC CI runner too (N25): Nov 1
+    // 2026 is a 25-hour day there and Mar 8 a 23-hour one; rounding keeps
+    // both at 1. Vitest runs files in forked processes, so this TZ is ours.
+    const savedTz = process.env.TZ;
+    process.env.TZ = "America/New_York";
+    try {
+      expect(new Date(2026, 2, 9).getTime() - new Date(2026, 2, 8).getTime()).toBe(23 * 60 * 60 * 1000);
+      expect(daysLeft(bestByItem("2026-11-02"), new Date(2026, 10, 1, 12))).toBe(1);
+      expect(daysLeft(bestByItem("2026-03-09"), new Date(2026, 2, 8, 12))).toBe(1);
+    } finally {
+      if (savedTz === undefined) delete process.env.TZ;
+      else process.env.TZ = savedTz;
+    }
   });
 
   it("is below zero once a best-by item has ended, zero or less for a window item", () => {

@@ -521,6 +521,14 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(yesterday).not.toContain("Today");
     });
 
+    it("says Expired, not Today, for a window item whose time ran out before the server flagged it (N24)", () => {
+      // daysLeft rounds a window item's count up, so 0 means it has ended.
+      const section = storageSection(render({ storage: [stored("x", { expired: false, useSoon: true, expiresAt: hoursOut(-5) })] }));
+      expect(section).toContain(">Expired<");
+      expect(section).not.toContain("Today");
+      expect(section).not.toContain("left<");
+    });
+
     it("still says Expired for an expired item, with no day count", () => {
       const section = storageSection(render({ storage: [stored("x", { expired: true, expiresAt: hoursOut(-5) })] }));
       expect(section).toContain(">Expired<");
