@@ -71,7 +71,7 @@ const curatedRecipes: RecipeSeed[] = [
     freezerDaysOverride: 60,
     ingredients: [
       { foodSlug: 'salmon', quantityNote: '115g (4oz) cooked, deboned salmon fillet' },
-      { foodSlug: 'iron_fortified_oats', quantityNote: '1/4 cup rolled oats' },
+      { foodSlug: 'iron_fortified_oats', quantityNote: '1/3 cup iron-fortified baby oat cereal' },
       { foodSlug: 'egg', quantityNote: '1 egg, beaten' },
     ],
     extraIngredients: [{ name: 'olive oil for the pan' }],
@@ -80,7 +80,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Soft finger-shaped patties, about the length and thickness of an adult finger, easy to gum and mash against the roof of the mouth.',
         steps: [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, or poach it for 8-10 minutes, until it is opaque and flakes easily at 145°F (63°C), then check thoroughly with your fingers for any bones and remove them all.',
-          'Flake the salmon finely into a bowl, add the oats and beaten egg, and mix until it holds together.',
+          'Flake the salmon finely into a bowl, add the oat cereal and beaten egg, and mix until it holds together.',
           'Shape into finger-length oval patties and pan-fry in a little olive oil over medium heat, about 3 minutes per side, until firm, golden, and set through to 160°F (71°C) in the center.',
           'Cool until just warm and check the texture mashes easily before serving whole or torn into strips.',
         ],
@@ -89,7 +89,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Soft patty strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, or poach it for 8-10 minutes, until it is opaque and flakes easily at 145°F (63°C), then check thoroughly with your fingers for any bones and remove them all.',
-          'Flake the salmon finely into a bowl, add the oats and beaten egg, and mix until it holds together.',
+          'Flake the salmon finely into a bowl, add the oat cereal and beaten egg, and mix until it holds together.',
           'Shape into smaller patties, or one larger patty to slice after cooking.',
           'Pan-fry in a little olive oil over medium heat, about 3 minutes per side, until firm and set to 160°F (71°C), then cool and cut into strips, or break into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Serve on a plate for baby to self-feed.',
@@ -99,7 +99,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Small bite-sized patty pieces or a mini whole patty baby can pick up and bite from.',
         steps: [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, or poach it for 8-10 minutes, until it is opaque and flakes easily at 145°F (63°C), then check thoroughly with your fingers for any bones and remove them all.',
-          'Flake the salmon finely into a bowl, add the oats and beaten egg, mix until it holds together, and shape into small mini patties suited to little hands.',
+          'Flake the salmon finely into a bowl, add the oat cereal and beaten egg, mix until it holds together, and shape into small mini patties suited to little hands.',
           'Pan-fry in a little olive oil over medium heat for about 3 minutes per side, until golden, firm, and 160°F (71°C) in the center.',
           'Cool to just-warm, check the temperature, then cut into bite-sized pieces or serve whole for baby to bite pieces off.',
           'Pair with a vitamin-C side like steamed broccoli for extra iron absorption.',
@@ -163,7 +163,7 @@ const curatedRecipes: RecipeSeed[] = [
     freezerDaysOverride: 60,
     ingredients: [
       { foodSlug: 'banana', quantityNote: '1 ripe banana, mashed' },
-      { foodSlug: 'iron_fortified_oats', quantityNote: '1/2 cup rolled oats, blended into flour' },
+      { foodSlug: 'iron_fortified_oats', quantityNote: '1/2 cup iron-fortified baby oat cereal' },
       { foodSlug: 'peanut_butter', quantityNote: '1 tablespoon smooth peanut butter' },
       { foodSlug: 'egg', quantityNote: '1 egg' },
       { foodSlug: 'cinnamon', quantityNote: 'a pinch, whisked into the batter' },
@@ -172,9 +172,8 @@ const curatedRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'Soft, thin mini pancakes cut into finger-length strips.',
         steps: [
-          'Blend the oats into a coarse flour.',
           'In a bowl, thoroughly whisk the peanut butter with a tablespoon of warm water until smooth and runny — never serve peanut butter thick or straight from the jar.',
-          'Mash the banana and mix with the egg, oat flour, thinned peanut butter, and a pinch of cinnamon into a smooth batter.',
+          'Mash the banana and mix with the egg, oat cereal, thinned peanut butter, and a pinch of cinnamon into a smooth batter.',
           'Cook small, thin pancakes in a lightly oiled non-stick pan over medium-low heat, about 2 minutes per side — bubbles should break on the surface before you flip — until fully set with no wet batter inside.',
           'Cool and cut into finger-length strips to serve.',
         ],
@@ -182,8 +181,8 @@ const curatedRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Soft pancake strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
         steps: [
-          'Blend the oats into a coarse flour, then thoroughly whisk the peanut butter with a tablespoon of warm water until smooth and runny — never serve peanut butter thick or straight from the jar.',
-          'Mash the banana and mix with the egg, oat flour, thinned peanut butter, and a pinch of cinnamon into a smooth batter, then cook small, thin pancakes over medium-low heat, about 2 minutes per side, until set right through.',
+          'Thoroughly whisk the peanut butter with a tablespoon of warm water until smooth and runny — never serve peanut butter thick or straight from the jar.',
+          'Mash the banana and mix with the egg, oat cereal, thinned peanut butter, and a pinch of cinnamon into a smooth batter, then cook small, thin pancakes over medium-low heat, about 2 minutes per side, until set right through.',
           'Cool and tear into strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
           'Serve on a plate for baby to self-feed with fingers.',
         ],
@@ -191,8 +190,8 @@ const curatedRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Small bite-sized pancake pieces or mini pancakes baby can hold.',
         steps: [
-          'Blend the oats into a coarse flour, then thoroughly whisk the peanut butter with a tablespoon of warm water until smooth and runny — never serve peanut butter thick or straight from the jar.',
-          'Mash the banana and mix with the egg, oat flour, thinned peanut butter, and a pinch of cinnamon into a smooth batter, then cook small silver-dollar-sized pancakes over medium-low heat for about 2 minutes per side, until set with no wet batter inside.',
+          'Thoroughly whisk the peanut butter with a tablespoon of warm water until smooth and runny — never serve peanut butter thick or straight from the jar.',
+          'Mash the banana and mix with the egg, oat cereal, thinned peanut butter, and a pinch of cinnamon into a smooth batter, then cook small silver-dollar-sized pancakes over medium-low heat for about 2 minutes per side, until set with no wet batter inside.',
           'Cool to just-warm, check the temperature, then cut into quarters or bite-sized strips.',
           'Serve with mashed banana on the side, no syrup or added sugar.',
         ],
@@ -291,10 +290,10 @@ const curatedRecipes: RecipeSeed[] = [
     title: 'Overnight Oats with Chia & Pear',
     minAgeMonths: 6,
     prepMinutes: 5,
-    ironFocus: true,
+    ironFocus: false,
     fridgeHoursOverride: 48,
     ingredients: [
-      { foodSlug: 'iron_fortified_oats', quantityNote: '1/3 cup rolled oats' },
+      { foodSlug: 'oats', quantityNote: '1/3 cup rolled oats' },
       { foodSlug: 'pear', quantityNote: '1/2 ripe pear' },
       { foodSlug: 'yogurt', quantityNote: '1/4 cup plain whole-milk yogurt' },
       {
@@ -435,7 +434,7 @@ const curatedRecipes: RecipeSeed[] = [
     freezerDaysOverride: 90,
     ingredients: [
       { foodSlug: 'tofu', quantityNote: '200g (7oz) firm tofu, pressed' },
-      { foodSlug: 'iron_fortified_oats', quantityNote: '1/4 cup oats, blended into fine crumbs' },
+      { foodSlug: 'iron_fortified_oats', quantityNote: '1/4 cup iron-fortified baby oat cereal' },
       { foodSlug: 'garlic', quantityNote: 'a pinch of salt-free garlic powder' },
     ],
     extraIngredients: [{ name: 'olive oil for the pan' }],
@@ -444,8 +443,8 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Soft finger-length tofu strips with a lightly crisp oat coating.',
         steps: [
           'Press the tofu to remove excess water, then slice into finger-length strips.',
-          'Blend the oats into fine crumbs and season lightly with a pinch of salt-free garlic powder.',
-          'Press each tofu strip into the oat crumbs to coat.',
+          'Season the oat cereal lightly with a pinch of salt-free garlic powder.',
+          'Press each tofu strip into the oat cereal to coat.',
           'Pan-fry in olive oil over medium heat for 2-3 minutes per side, until lightly golden and crisp at the edges, keeping the inside soft.',
           'Cool slightly and check the strip squishes easily before serving.',
         ],
@@ -454,8 +453,8 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Soft finger-length tofu strips, or small bite-sized nuggets (no bigger than ½ inch) for pincer practice.',
         steps: [
           'Press the tofu to remove excess water, then cut it into finger-length strips, or small bite-sized cubes (no bigger than ½ inch) for pincer practice.',
-          'Blend the oats into fine crumbs and season lightly with a pinch of salt-free garlic powder.',
-          'Press each piece into the oat crumbs to coat.',
+          'Season the oat cereal lightly with a pinch of salt-free garlic powder.',
+          'Press each piece into the oat cereal to coat.',
           'Pan-fry in olive oil over medium heat for 2-3 minutes per side, until lightly golden and cooked through.',
           'Cool and serve for pincer-grasp self-feeding.',
         ],
@@ -464,8 +463,8 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Small bite-sized tofu nuggets, family-style.',
         steps: [
           'Press the tofu to remove excess water, then cut it into small bite-sized cubes.',
-          'Blend the oats into fine crumbs and season lightly with a pinch of salt-free garlic powder.',
-          'Coat the cubes in the oat crumbs.',
+          'Season the oat cereal lightly with a pinch of salt-free garlic powder.',
+          'Coat the cubes in the oat cereal.',
           'Pan-fry in olive oil over medium heat for 2-3 minutes per side, or bake at 400°F (200°C) for 18-20 minutes, until golden on the outside.',
           'Cool slightly and check a cube is not hot before serving.',
           'Serve with a dipping side like plain yogurt.',
@@ -613,10 +612,10 @@ const curatedRecipes: RecipeSeed[] = [
     title: 'Apple Cinnamon Tahini Oatmeal',
     minAgeMonths: 6,
     prepMinutes: 15,
-    ironFocus: true,
+    ironFocus: false,
     fridgeHoursOverride: 48,
     ingredients: [
-      { foodSlug: 'iron_fortified_oats', quantityNote: '1/3 cup rolled oats' },
+      { foodSlug: 'oats', quantityNote: '1/3 cup rolled oats' },
       { foodSlug: 'apple', quantityNote: '1/2 apple, peeled, cored, and finely diced' },
       { foodSlug: 'tahini', quantityNote: '1 teaspoon tahini' },
       { foodSlug: 'cinnamon', quantityNote: 'a pinch' },
