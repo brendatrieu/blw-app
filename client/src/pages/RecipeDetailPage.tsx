@@ -185,7 +185,7 @@ export function RecipeDetailPage() {
   const customSteps = recipe.variants[0]?.steps ?? [];
 
   return (
-    <div className="flex flex-col gap-6 p-4">
+    <div className="flex flex-col gap-[18px] p-4">
       <div className="flex flex-col gap-2">
         {/* The recipe has no PageHeader of its own, so this row IS the
             header; the chevron portals into the app header's slot (item 654).

@@ -336,6 +336,16 @@ describe("StorageItemCard freshness chip (item 333)", () => {
     expect(html).not.toContain(">Expired<");
     expect(html).not.toContain("Best by");
   });
+
+  it("wraps the Finished/Discarded badge in a flex row so it hugs its text (item 683)", () => {
+    for (const [status, label] of [
+      ["finished", "Finished"],
+      ["discarded", "Discarded"],
+    ] as const) {
+      const html = renderCard({ ...BASE_ITEM, status });
+      expect(html, status).toMatch(new RegExp(`<div class="flex"><span class="[^"]*">${label}</span></div></li>`));
+    }
+  });
 });
 
 // Item 347: a storage container holds a whole meal, so its card reads like a

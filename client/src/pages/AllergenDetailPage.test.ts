@@ -157,7 +157,7 @@ describe("AllergenDetailPage header + facts (item 187)", () => {
     expect(html).toMatch(new RegExp(`First: (?:<!-- -->)?${formatAllergenDate("2026-08-01T09:00:00.000Z")}`));
     expect(html).toMatch(new RegExp(`Last served: (?:<!-- -->)?${formatAllergenDate("2026-08-20T09:00:00.000Z")}`));
     expect(html).toContain("Offer well-cooked egg in the morning at home.");
-    expect(html).toContain('<div class="flex flex-col gap-6 p-4">'); // item 649 spacing
+    expect(html).toContain('<div class="flex flex-col gap-[18px] p-4">'); // item 681: A-Salmon 18px sections
   });
 
   // Defensive: the server cannot actually produce this row any more (an

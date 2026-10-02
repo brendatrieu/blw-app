@@ -458,7 +458,13 @@ export const allergenProgressItemSchema = z.object({
 });
 export type AllergenProgressItem = z.infer<typeof allergenProgressItemSchema>;
 
-export const allergenProgressResponseSchema = z.object({ items: z.array(allergenProgressItemSchema) });
+export const allergenProgressResponseSchema = z.object({
+  items: z.array(allergenProgressItemSchema),
+  /** Distinct foods this baby has eaten in any logged meal (recipe meals
+   * count their ingredient foods; a since-deleted custom food still counts).
+   * Home's header reads "8 months · 23 foods tried" from it (item 680). */
+  foodsTried: z.number().int().min(0),
+});
 export type AllergenProgressResponse = z.infer<typeof allergenProgressResponseSchema>;
 
 // ---------------------------------------------------------------------------

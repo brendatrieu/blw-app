@@ -182,10 +182,16 @@ const BASE_PAIRS: Pair[] = [
   // ---- Apricot identity (items 634/635/640) ----
   // Active bottom-nav pill: ink icon on the apricot fill.
   { name: "apricot ink on apricot fill (active nav pill)", fg: "color-apricot-ink", bg: "color-apricot" },
-  // Active nav label (the nav sits on elevated) — text on page/elevated only;
-  // it is 4.12:1 on inset, so it never goes there.
-  { name: "apricot text on page", fg: "color-apricot-text", bg: "color-bg" },
-  { name: "apricot text on elevated surface (active nav label, Home greeting)", fg: "color-apricot-text", bg: "color-bg-elevated" },
+  // Apricot text goes on page/elevated only; it is 4.12:1 on inset, so it
+  // never goes there. The bottom nav is page-colored since item 687, so its
+  // labels and icons are gated on color-bg.
+  { name: "apricot text on page (Home greeting item 679, active nav label item 687)", fg: "color-apricot-text", bg: "color-bg" },
+  { name: "apricot text on elevated surface", fg: "color-apricot-text", bg: "color-bg-elevated" },
+  { name: "inactive nav label on the page-colored nav (item 687)", fg: "color-text-muted", bg: "color-bg" },
+  { name: "inactive nav icon on the page-colored nav (item 687)", fg: "color-text-muted", bg: "color-bg", min: 3 },
+  // The pill is decorative (label color and weight carry the state): dark is
+  // 1.37:1 on the page, up from 1.24:1 on the old elevated nav.
+  { name: "active nav pill against the page-colored nav (item 687)", fg: "color-apricot", bg: "color-bg", min: 1.3 },
   // Rating stars and the recipe-list heart: graphics, 3:1 on page/elevated.
   { name: "apricot graphic (stars, heart) on page", fg: "color-apricot-graphic", bg: "color-bg", min: 3 },
   { name: "apricot graphic (stars, heart) on elevated surface", fg: "color-apricot-graphic", bg: "color-bg-elevated", min: 3 },
@@ -198,13 +204,14 @@ const BASE_PAIRS: Pair[] = [
   { name: "apricot text heart on apricot soft chip", fg: "color-apricot-text", bg: "color-apricot-soft", min: 3 },
   // Slim inner-page header (items 654/655): the "Mila · 8 mo" baby chip's
   // ink label on the soft chip, the avatar initial in ink on the apricot
-  // disc, and the gear (kebab color) on the header's elevated ground.
+  // disc, and the gear (kebab color) on the header, which is page-colored
+  // since item 679.
   { name: "header baby chip label on apricot soft chip", fg: "color-text", bg: "color-apricot-soft" },
   { name: "header baby chip avatar initial (avatar ink on avatar disc)", fg: "color-avatar-ink", bg: "color-avatar" },
   // Item 675: the disc must stand apart from the chip it sits on (dark was
   // #3a2a20 on #3a2a20, 1.00:1). Decorative, so no 3:1 — light is 1.44:1.
   { name: "header baby chip avatar disc against the apricot soft chip", fg: "color-avatar", bg: "color-apricot-soft", min: 1.4 },
-  { name: "header gear icon on elevated header", fg: "color-icon", bg: "color-bg-elevated", min: 3 },
+  { name: "header gear icon on the page-colored header", fg: "color-icon", bg: "color-bg", min: 3 },
 
   // Card kebab (⋮) icon — non-text UI on every ground a card menu sits on
   // (inset is its hover fill) (item 641).

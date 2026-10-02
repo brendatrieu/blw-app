@@ -103,15 +103,26 @@ describe("daysLeft (item 662)", () => {
     expect(daysLeft(windowItem({ expiresAt: new Date(2026, SEPT, 14, 10).toISOString() }), now)).toBe(1);
   });
 
-  it("counts a best-by date to the midnight after it", () => {
-    const now = new Date(2026, SEPT, 14, 9);
-    expect(daysLeft(bestByItem("2026-09-14"), now)).toBe(1);
-    expect(daysLeft(bestByItem("2026-09-15"), now)).toBe(2);
+  it("counts a best-by date in calendar days: today 0, tomorrow 1 (item 684)", () => {
+    for (const hour of [0, 9, 23]) {
+      const now = new Date(2026, SEPT, 14, hour, 59);
+      expect(daysLeft(bestByItem("2026-09-14"), now), `${hour}h`).toBe(0);
+      expect(daysLeft(bestByItem("2026-09-15"), now), `${hour}h`).toBe(1);
+      expect(daysLeft(bestByItem("2026-09-17"), now), `${hour}h`).toBe(3);
+      expect(daysLeft(bestByItem("2026-09-13"), now), `${hour}h`).toBe(-1);
+    }
   });
 
-  it("is zero or less once the item has ended", () => {
+  it("still counts whole calendar days across a DST change", () => {
+    // A 23- or 25-hour day in zones that have one; rounding keeps it at 1 either way.
+    expect(daysLeft(bestByItem("2026-11-02"), new Date(2026, 10, 1, 12))).toBe(1);
+    expect(daysLeft(bestByItem("2026-03-09"), new Date(2026, 2, 8, 12))).toBe(1);
+  });
+
+  it("is below zero once a best-by item has ended, zero or less for a window item", () => {
     const now = new Date(2026, SEPT, 14, 9);
-    expect(daysLeft(bestByItem("2026-09-13"), now)).toBeLessThanOrEqual(0);
+    expect(daysLeft(bestByItem("2026-09-13"), now)).toBeLessThan(0);
+    expect(daysLeft(windowItem({ expiresAt: new Date(2026, SEPT, 14, 8).toISOString() }), now)).toBeLessThanOrEqual(0);
     expect(daysLeft(windowItem({ expiresAt: new Date(2026, SEPT, 12, 9).toISOString() }), now)).toBe(-2);
   });
 });

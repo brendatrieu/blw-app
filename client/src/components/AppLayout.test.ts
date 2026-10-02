@@ -6,6 +6,7 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { ageInMonths, type Baby } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
+import { trackingKeys } from "../features/tracking/hooks.js";
 import { AppLayout, shouldScrollToTop } from "./AppLayout.js";
 
 function renderLayout(queryClient: QueryClient, pathname = "/") {
@@ -75,7 +76,7 @@ describe("AppLayout header", () => {
       const greeting = GREETING.exec(html);
       expect(greeting, html.slice(0, 1200)).not.toBeNull();
       expect(greeting![1]!.split(" ")).toEqual(
-        expect.arrayContaining(["text-[11px]", "font-extrabold", "uppercase", "tracking-[0.14em]", "text-[var(--color-apricot-text)]"]),
+        expect.arrayContaining(["text-[11px]", "leading-[normal]", "font-extrabold", "uppercase", "tracking-[0.14em]", "text-[var(--color-apricot-text)]"]),
       );
       const header = html.slice(html.indexOf("<header"), html.indexOf("</header>"));
       // Only the gear icon is left in the header.
@@ -87,6 +88,43 @@ describe("AppLayout header", () => {
       expect(header).toMatch(babies.length === 1 ? /<span class="font-display [^"]*">Remy<\/span>/ : /<select class="font-display /);
     });
   }
+});
+
+describe("AppLayout Home header: foods tried (item 680)", () => {
+  const mila: Baby = {
+    id: "baby-1",
+    name: "Mila",
+    birthDate: "2026-01-01",
+    notes: null,
+    archived: false,
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+  const months = ageInMonths(mila.birthDate);
+
+  function homeWith(progress: unknown, babies: Baby[] = [mila]) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(babyKeys.list(false), babies);
+    if (progress !== undefined) queryClient.setQueryData(trackingKeys.allergenProgress("baby-1"), progress);
+    const html = renderLayout(queryClient);
+    return html.slice(html.indexOf("<header"), html.indexOf("</header>"));
+  }
+
+  it("appends '· N foods tried' to the age, singular for one, for one baby or several", () => {
+    for (const babies of [[mila], [mila, { ...mila, id: "baby-2", name: "Ada" }]]) {
+      expect(homeWith({ items: [], foodsTried: 23 }, babies)).toContain(`>${months} months · 23 foods tried</span>`);
+      expect(homeWith({ items: [], foodsTried: 1 }, babies)).toContain(`>${months} months · 1 food tried</span>`);
+      expect(homeWith({ items: [], foodsTried: 0 }, babies)).toContain(`>${months} months · 0 foods tried</span>`);
+    }
+  });
+
+  it("shows the age alone while loading or from an older cache without foodsTried", () => {
+    for (const progress of [undefined, { items: [] }]) {
+      const html = homeWith(progress);
+      expect(html).toContain(`>${months} months</span>`);
+      expect(html).not.toContain("tried");
+    }
+  });
 });
 
 describe("AppLayout slim inner-page header (items 654/655)", () => {
@@ -167,10 +205,13 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
     }
   });
 
-  it("keeps the header pinned (sticky top-0, bordered) and in order: back slot, chip, gear on the right", () => {
+  it("keeps the header pinned (sticky top-0) and in order: back slot, chip, gear on the right", () => {
     for (const p of ["/", "/foods"]) {
-      expect(header(layoutWith([remy], p)), p).toMatch(/^<header class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b /);
+      expect(header(layoutWith([remy], p)), p).toMatch(/^<header class="sticky top-0 z-20 flex justify-between gap-3 px-4 /);
     }
+    // A-Home tops the gear with the greeting; inner rows center (item 679).
+    expect(header(layoutWith([remy], "/"))).toMatch(/^<header class="[^"]*\bitems-start py-2\.5"/);
+    expect(header(layoutWith([remy], "/foods"))).toMatch(/^<header class="[^"]*\bitems-center py-1"/);
     expect(header(layoutWith([remy], "/foods"))).toMatch(
       /<div class="flex min-h-11 shrink-0 items-center"><\/div><div class="flex min-w-0 items-center gap-1"><span [^>]*>.*?Remy.*?<\/span><a [^>]*aria-label="Settings"/s,
     );
@@ -192,6 +233,15 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
     }
   });
 
+  it("is the page's own color with no line on every page, like A-Home/A-Salmon (item 679)", () => {
+    for (const p of ["/", "/foods"]) {
+      const open = header(layoutWith([remy], p)).match(/^<header [^>]*>/)![0];
+      expect(open, p).toContain("background-color:var(--color-bg);");
+      expect(open, p).not.toContain("--color-bg-elevated");
+      expect(open, p).not.toMatch(/\bborder/);
+    }
+  });
+
   it("inner pages are one slim row (py-1 + 44px targets = 52px); Home keeps its taller padding", () => {
     const inner = layoutWith([remy], "/foods");
     expect(inner).toMatch(/<header class="[^"]*\bpy-1\b/);
@@ -200,13 +250,15 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
     expect(header(inner)).toMatch(/<div class="flex min-h-11 shrink-0 items-center"><\/div>/);
     const home = layoutWith([remy], "/");
     expect(home).toMatch(/<header class="[^"]*\bpy-2\.5\b/);
-    expect(home).toContain("padding-top:calc(0.625rem + env(safe-area-inset-top))");
+    // A-Home: 18px 16px 10px, the notch inset on top.
+    expect(home).toMatch(/<header class="[^"]*\bpx-4\b/);
+    expect(home).toContain("padding-top:calc(1.125rem + env(safe-area-inset-top))");
   });
 
   it("--header-height matches that slim header, so the Foods/Recipes sticky bars dock flush under it", () => {
-    // 0.25rem + 2.75rem (44px row) + 0.25rem = 3.25rem, + the 1px border-b, + the notch inset.
+    // 0.25rem + 2.75rem (44px row) + 0.25rem = 3.25rem, + the notch inset; no border since item 679.
     const css = readFileSync(new URL("../styles/index.css", import.meta.url), "utf8");
-    expect(css).toContain("--header-height: calc(3.25rem + 1px + env(safe-area-inset-top));");
+    expect(css).toContain("--header-height: calc(3.25rem + env(safe-area-inset-top));");
   });
 });
 

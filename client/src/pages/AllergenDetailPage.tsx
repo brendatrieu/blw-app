@@ -230,7 +230,7 @@ export function AllergenDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4">
+    <div className="flex flex-col gap-[18px] p-4">
       <AllergenDetailBody detail={data} babyId={babyId} leading={<BackButton fallback={ladderPath} />} />
     </div>
   );

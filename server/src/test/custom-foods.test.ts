@@ -1076,6 +1076,21 @@ describe("custom foods", () => {
   // Allergen exposure (item 175)
   // -----------------------------------------------------------------------
   describe("allergen exposure", () => {
+    it("keeps a deleted custom food in foodsTried (item 680)", async () => {
+      const mine = await createFood(owner, { name: "Satay sauce", category: "protein" });
+      const babyId = await createBaby(owner);
+      expect((await postMeal(owner, babyId, [mine.id])).statusCode).toBe(201);
+      const deleted = await app.inject({ method: "DELETE", url: `/api/foods/${mine.id}`, headers: { cookie: owner.cookie } });
+      expect(deleted.statusCode).toBe(204);
+
+      const progress = await app.inject({
+        method: "GET",
+        url: `/api/babies/${babyId}/allergen-progress`,
+        headers: { cookie: owner.cookie },
+      });
+      expect(progress.json<AllergenProgressResponse>().foodsTried).toBe(1);
+    });
+
     it("counts a custom food's allergen exactly like a catalog food's", async () => {
       const peanutFood = await createFood(owner, {
         name: "Satay sauce",

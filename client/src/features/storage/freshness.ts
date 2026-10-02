@@ -75,13 +75,26 @@ export function resolveFreshness(item: FreshnessInput, now: Date = new Date()): 
   };
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /**
- * Whole days until `resolveFreshness`'s `endsAt`, rounded UP: anything left
- * of a day still reads "1 day left" (Home's Storage rows, item 662). Zero or
- * less means the item has ended — the caller shows Expired instead.
+ * Days left for Home's Storage rows (item 662).
+ *
+ * With a best-by date it counts CALENDAR days (item 684): best by today is 0
+ * (the caller shows "Today"), tomorrow 1, yesterday -1 (Expired). Rounded, so
+ * a DST day of 23 or 25 hours still counts as one.
+ *
+ * Without one it is whole days until the server's `expiresAt`, rounded UP:
+ * anything left of a day still reads "1 day left", and zero or less means
+ * the item has ended.
  */
 export function daysLeft(item: FreshnessInput, now: Date = new Date()): number {
-  return Math.ceil((resolveFreshness(item, now).endsAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+  if (item.bestBy) {
+    const [year, month, day] = item.bestBy.split("-").map(Number);
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.round((new Date(year!, month! - 1, day!).getTime() - startOfToday.getTime()) / DAY_MS);
+  }
+  return Math.ceil((resolveFreshness(item, now).endsAt.getTime() - now.getTime()) / DAY_MS);
 }
 
 /**

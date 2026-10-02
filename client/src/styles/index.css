@@ -271,11 +271,13 @@
 
   /* Fixed chrome heights. `--nav-height` is the bottom bar's own height; it
      is no longer also reserved as page padding, since the bar is in flow.
+     66px = A-Home's nav (item 689): 1px border + 6px top + 30px pill + 2px
+     + 16.8px label + 10px bottom (BottomNav adds the safe area).
      `--header-height` is the slim inner-page header (AppLayout: py-1 around a
-     44px row, a 1px border, plus the notch inset it pads in) — the sticky
+     44px row, no border, plus the notch inset it pads in) — the sticky
      `top` of the bars that dock under it, so no gap opens between them. */
-  --nav-height: 4.25rem;
-  --header-height: calc(3.25rem + 1px + env(safe-area-inset-top));
+  --nav-height: 4.125rem;
+  --header-height: calc(3.25rem + env(safe-area-inset-top));
 
   /* ---- Dark palette values (private) ----
      Defined unconditionally here so both the prefers-color-scheme path and

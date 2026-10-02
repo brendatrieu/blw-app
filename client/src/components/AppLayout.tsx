@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type SVGProps } from "react";
 import { Link, Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { ageInMonths } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
+import { useAllergenProgress } from "../features/tracking/hooks.js";
 import { TourProvider } from "../features/tour/TourProvider.js";
 import { timeOfDayGreeting } from "../lib/greeting.js";
 import { BabyChip } from "./BabyChip.js";
@@ -32,10 +33,15 @@ function GearIcon() {
 
 // Small uppercase apricot label above the baby name (CSS uppercases it, so
 // the copy stays "Good evening"). No sun/moon: direction A is emoji-free.
-const GREETING_CLASS = "text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
+// Normal line height, as in A-Home: the body's 1.5 pushed the name 1.5px down.
+const GREETING_CLASS =
+  "text-[11px] leading-[normal] font-extrabold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
 
 function BabySwitcher() {
   const { babies, activeBaby, setActiveBabyId } = useActiveBaby();
+  // Item 680: rides on the allergen-progress query Home already fetches. An
+  // older persisted cache has no foodsTried, so the suffix just stays hidden.
+  const foodsTried = useAllergenProgress(activeBaby?.id).data?.foodsTried;
 
   if (babies.length === 0) {
     return (
@@ -50,7 +56,15 @@ function BabySwitcher() {
   }
 
   const months = activeBaby ? ageInMonths(activeBaby.birthDate) : null;
-  const ageLabel = months === null ? null : months === 1 ? "1 month" : `${months} months`;
+  const ageLabel =
+    months === null
+      ? null
+      : [
+          months === 1 ? "1 month" : `${months} months`,
+          typeof foodsTried === "number" ? `${foodsTried} ${foodsTried === 1 ? "food" : "foods"} tried` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
 
   // A single baby needs no picker — just show whose data is on screen,
   // with a friendly greeting above it.
@@ -160,11 +174,14 @@ export function AppLayout() {
               Sheet/Dialog (z-30) portal to body, after the header, so they
               still float above it. */}
           <header
-            className={`sticky top-0 z-20 flex items-center justify-between gap-3 border-b px-4 ${isHome ? "py-2.5" : "py-1"}`}
+            // Home tops the gear with the greeting, as A-Home does.
+            className={`sticky top-0 z-20 flex justify-between gap-3 px-4 ${isHome ? "items-start py-2.5" : "items-center py-1"}`}
             style={{
-              backgroundColor: "var(--color-bg-elevated)",
-              borderColor: "var(--color-border)",
-              paddingTop: `calc(${isHome ? "0.625rem" : "0.25rem"} + env(safe-area-inset-top))`,
+              // The page's own color, no line (item 679, A-Home/A-Salmon): the
+              // bar reads as part of the page, still opaque so content
+              // scrolling under it disappears.
+              backgroundColor: "var(--color-bg)",
+              paddingTop: `calc(${isHome ? "1.125rem" : "0.25rem"} + env(safe-area-inset-top))`,
             }}
           >
             {isHome ? (

@@ -719,6 +719,32 @@ describe("tracking routes", () => {
       expect(egg).toMatchObject({ status: "started", exposures: 1 });
     });
 
+    it("counts foodsTried as distinct foods across this baby's meals, recipe meals included (item 680)", async () => {
+      const user = await signUpUser(app);
+      const babyId = await createBaby(app, user);
+      const otherBaby = await createBaby(app, user, "Sky");
+      const tried = async (id: string) =>
+        (
+          await app.inject({
+            method: "GET",
+            url: `/api/babies/${id}/allergen-progress`,
+            headers: { cookie: user.cookie },
+          })
+        ).json<AllergenProgressResponse>().foodsTried;
+
+      expect(await tried(babyId)).toBe(0);
+      // A recipe meal stores its ingredient foods, so egg counts once here...
+      await postMeal(user, babyId, { foodIds: [fixtures.egg.id], recipeId: fixtures.recipe.id });
+      // ...and again here, still once: distinct foods, not servings.
+      const second = await postMeal(user, babyId, { foodIds: [fixtures.egg.id, fixtures.banana.id] });
+      expect(await tried(babyId)).toBe(2);
+      // Another baby's meals are not this baby's foods.
+      expect(await tried(otherBaby)).toBe(0);
+
+      await app.inject({ method: "DELETE", url: `/api/meals/${second.id}`, headers: { cookie: user.cookie } });
+      expect(await tried(babyId)).toBe(1);
+    });
+
     it("follows a PATCH that swaps the allergen food out of the meal", async () => {
       const user = await signUpUser(app);
       const babyId = await createBaby(app, user);

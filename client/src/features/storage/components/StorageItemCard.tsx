@@ -132,10 +132,13 @@ export function StorageItemCard({ item, actions, linkable = true }: StorageItemC
         </div>
       )}
 
+      {/* In a flex row so the badge hugs its text, not the card's width (item 683). */}
       {item.status !== "active" && (
-        <Badge tone={item.status === "finished" ? "leaf" : "neutral"}>
-          {item.status === "finished" ? "Finished" : "Discarded"}
-        </Badge>
+        <div className="flex">
+          <Badge tone={item.status === "finished" ? "leaf" : "neutral"}>
+            {item.status === "finished" ? "Finished" : "Discarded"}
+          </Badge>
+        </div>
       )}
 
     </li>
@@ -156,7 +159,10 @@ export function servingsCount(n: number): string {
  */
 export function StorageItemRow({ item, actions }: { item: StorageItem; actions?: ReactNode }) {
   const days = daysLeft(item);
-  const expired = days <= 0 || resolveFreshness(item).state === "expired";
+  const freshness = resolveFreshness(item);
+  // A best-by item is 0 on its last day and still good ("Today", item 684);
+  // a window item's count rounds up, so 0 there means it has ended.
+  const expired = freshness.state === "expired" || days < 0 || (days === 0 && freshness.source === "window");
   const amount = item.servingsLeft != null ? servingsCount(item.servingsLeft) : item.quantityNote;
 
   return (
@@ -178,6 +184,8 @@ export function StorageItemRow({ item, actions }: { item: StorageItem; actions?:
       </Link>
       {expired ? (
         <Badge tone="dangerSoft">Expired</Badge>
+      ) : days === 0 ? (
+        <span className="shrink-0 text-base font-black text-[var(--color-apricot-text)]">Today</span>
       ) : (
         <span className="flex shrink-0 flex-col items-end">
           <span

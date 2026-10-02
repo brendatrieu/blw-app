@@ -6,7 +6,7 @@
 // it only unions into the reported status (see `unionAllergenStatus`). Every
 // route sits behind requireAuth and every baby/meal lookup is scoped to the
 // caller's own rows — a miss (wrong owner or unknown id) is 404, never 403.
-import { and, desc, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   allergenDetailParamsSchema,
@@ -403,8 +403,15 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     // Derivation lives in one place — the detail route below reads the same
     // helper, so a ladder row and the page it opens can never disagree.
     const items = await loadAllergenProgress(db, params.data.babyId);
+    // Item 680: rides on this response because Home already fetches it and
+    // every meal write already refreshes it.
+    const [tried] = await db
+      .select({ count: sql<number>`count(distinct ${mealFoods.foodId})::int` })
+      .from(mealFoods)
+      .innerJoin(meals, eq(mealFoods.mealId, meals.id))
+      .where(eq(meals.babyId, params.data.babyId));
 
-    return reply.send({ items } satisfies AllergenProgressResponse);
+    return reply.send({ items, foodsTried: tried?.count ?? 0 } satisfies AllergenProgressResponse);
   });
 
   // -----------------------------------------------------------------------

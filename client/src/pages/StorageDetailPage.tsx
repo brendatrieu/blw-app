@@ -52,7 +52,7 @@ export function StorageDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4">
+    <div className="flex flex-col gap-[18px] p-4">
       <PageHeader
         title={<StorageItemTitle item={item} />}
         emoji={<FoodPlate {...storageItemCluster(item).plates[0]!} size={40} />}

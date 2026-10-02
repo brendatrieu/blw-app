@@ -106,8 +106,9 @@ describe("DashboardPage", () => {
     expect(html).not.toContain("See storage");
     expect(html).not.toContain("👋");
     expect(html).not.toContain("months old");
-    // Item 649: the shared section heading, 10px under it, 24px between sections.
-    expect(html).toMatch(/^<div class="flex flex-col gap-6 p-4">/);
+    // The shared section heading, 10px under it (item 649); A-Home's main
+    // padding 6px 16px 16px and 18px between sections (item 681).
+    expect(html).toMatch(/^<div class="flex flex-col gap-\[18px\] px-4 pt-1\.5 pb-4">/);
     for (const title of ["Storage", "Allergens", "Food log"]) {
       expect(html, title).toContain(`<h2 class="font-h2 text-[var(--color-text)]">${title}</h2>`);
     }
@@ -365,10 +366,22 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       const html = render({ storage: [useSoon("a")] });
       const card = upNext(html)!;
       expect(card).toContain(
-        '<h2 id="up-next" class="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]">Up next</h2>',
+        '<h2 id="up-next" class="text-[11px] leading-[normal] font-extrabold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]">Up next</h2>',
       );
       expect(html.indexOf("up-next")).toBeLessThan(html.indexOf('href="/log-meal"'));
       expect(html.indexOf('href="/log-meal"')).toBeLessThan(html.indexOf(">Storage<"));
+    });
+
+    it("spaces like A-Home: label 16px down, 10px to each plate, 12px under the last (item 681)", () => {
+      const html = render({ storage: [useSoon("a"), useSoon("b"), useSoon("c"), useSoon("d")] });
+      const card = upNext(html)!;
+      expect(html).toMatch(/<section class="[^"]*flex flex-col pt-4 pr-1\.5 pb-0\.5 pl-4" aria-labelledby="up-next"|aria-labelledby="up-next" class="[^"]*flex flex-col pt-4 pr-1\.5 pb-0\.5 pl-4"/);
+      // No min-height on the label row: See all keeps 44px but only the label's height in the row.
+      expect(card).toContain('<div class="flex items-center justify-between pr-2.5"><h2 id="up-next"');
+      // relative z-10: the first row's stretched link (positioned li) would
+      // otherwise paint over See all's lower half and steal those taps.
+      expect(card).toMatch(/<div class="relative z-10 -my-\[14\.5px\]"><a[^>]*class="inline-flex min-h-11 [^"]*"[^>]*>See all/);
+      expect(card.match(/<li class="relative flex items-center gap-3 py-2\.5 /g)?.length).toBe(3);
     });
 
     it("has no big action button: one kebab and one link per row, dividers from the text", () => {
@@ -486,6 +499,28 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(section).toMatch(/text-\[22px\] leading-tight font-black tabular-nums text-\[var\(--color-text\)\]">2<\/span><span class="[^"]*">days left</);
     });
 
+    it("counts best-by days on the calendar: Today, 1 day left in apricot, then Expired (item 684)", () => {
+      const ymd = (days: number) => {
+        const d = new Date();
+        d.setDate(d.getDate() + days);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      };
+      const row = (bestBy: string) =>
+        storageSection(render({ storage: [stored("x", { bestBy, expiresAt: hoursOut(-200), expired: true })] }));
+
+      const today = row(ymd(0));
+      expect(today).toContain('<span class="shrink-0 text-base font-black text-[var(--color-apricot-text)]">Today</span>');
+      expect(today).not.toContain(">Expired<");
+      expect(today).not.toContain("left<");
+
+      expect(row(ymd(1))).toMatch(/text-\[var\(--color-apricot-text\)\]">1<\/span><span class="[^"]*">day left</);
+      expect(row(ymd(2))).toMatch(/text-\[var\(--color-text\)\]">2<\/span><span class="[^"]*">days left</);
+
+      const yesterday = row(ymd(-1));
+      expect(yesterday).toContain(">Expired<");
+      expect(yesterday).not.toContain("Today");
+    });
+
     it("still says Expired for an expired item, with no day count", () => {
       const section = storageSection(render({ storage: [stored("x", { expired: true, expiresAt: hoursOut(-5) })] }));
       expect(section).toContain(">Expired<");
@@ -562,5 +597,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     expect(logMeal).toContain("bg-[var(--color-primary)]");
     expect(addStorage).toContain("bg-[var(--color-success)]");
     for (const a of [logMeal, addStorage]) expect(a).toContain("min-h-12 px-4 py-2.5 text-base font-extrabold");
+    // 10px between them, as in A-Home (item 681).
+    expect(html).toMatch(/<div class="flex gap-2\.5"><a [^>]*href="\/log-meal"/);
   });
 });

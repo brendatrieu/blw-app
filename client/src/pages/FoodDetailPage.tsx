@@ -326,7 +326,7 @@ export function FoodDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4">
+    <div className="flex flex-col gap-[18px] p-4">
       <BackButton fallback="/foods" />
       <div className="flex flex-col items-center gap-3 text-center">
         <FoodPlate {...foodPlate(food)} size={104} />

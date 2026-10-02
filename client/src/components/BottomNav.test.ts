@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
@@ -54,7 +56,7 @@ describe("BottomNav", () => {
 
   it("draws the active tab as an apricot pill with the on-fill ink, inactive tabs bare and muted (item 635)", () => {
     const html = renderAt("/recipes");
-    const pills = [...html.matchAll(/style="background-color:([^;]+);color:([^;]+);/g)].map(([, bg, fg]) => [bg, fg]);
+    const pills = [...html.matchAll(/style="background-color:([^;]+);color:([^;"]+)"/g)].map(([, bg, fg]) => [bg, fg]);
     expect(pills).toHaveLength(5);
     expect(pills.filter(([bg]) => bg === "var(--color-apricot)")).toEqual([["var(--color-apricot)", "var(--color-apricot-ink)"]]);
     expect(pills.filter(([bg]) => bg === "transparent")).toHaveLength(4);
@@ -101,11 +103,10 @@ describe("BottomNav position (item 379 — the Storage band)", () => {
     expect(navClass).not.toContain("inset-x-0");
   });
 
-  it("keeps the same height, safe-area padding and stacking level it had while fixed", () => {
+  it("keeps its --nav-height + safe-area height and stacking level", () => {
     const html = renderAt("/");
 
     expect(html).toContain("height:calc(var(--nav-height) + env(safe-area-inset-bottom))");
-    expect(html).toContain("padding-bottom:env(safe-area-inset-bottom)");
     // Below the Sheet/Dialog overlays (z-30) and the Celebration toast (z-40).
     expect(html).toMatch(/<nav class="[^"]*\bz-10\b/);
   });
@@ -162,5 +163,51 @@ describe("resolveActiveTab (one rule for highlight AND aria-current)", () => {
     );
     expect((html.match(/aria-current="page"/g) ?? []).length).toBe(1);
     expect(html).toMatch(/aria-current="page"[^>]*href="\/more"|href="\/more"[^>]*aria-current="page"/);
+  });
+});
+
+describe("BottomNav matches A-Home's nav (items 687-689)", () => {
+  const css = readFileSync(fileURLToPath(new URL("../styles/index.css", import.meta.url)), "utf8");
+
+  it("is page-colored (not elevated) with a 1px top border (item 687)", () => {
+    const html = renderAt("/");
+    const nav = html.match(/<nav class="([^"]+)" style="([^"]+)"/);
+    expect(nav?.[1]?.split(" ")).toContain("border-t");
+    expect(nav?.[2]).toContain("background-color:var(--color-bg);");
+    expect(nav?.[2]).toContain("border-color:var(--color-border)");
+    expect(html).not.toContain("--color-bg-elevated");
+  });
+
+  it("draws Home as the mockup's simple house, no door (item 688), every glyph 22px in a 24 box", () => {
+    const html = renderAt("/");
+    const home = html.slice(html.indexOf('href="/"'), html.indexOf('href="/storage"'));
+    expect([...home.matchAll(/<path d="([^"]+)"/g)].map(([, d]) => d)).toEqual(["M3 10.5 12 3l9 7.5", "M5 9.5V20h14V9.5"]);
+    expect(home).toContain('stroke-width="1.8"');
+    expect(html.match(/<svg width="22" height="22" viewBox="0 0 24 24"/g)).toHaveLength(5);
+  });
+
+  it("pads 6px 4px 10px + safe area and top-aligns pill, 2px gap, label (item 689)", () => {
+    const html = renderAt("/");
+    const nav = html.match(/<nav class="([^"]+)" style="([^"]+)"/);
+    expect(nav?.[1]?.split(" ")).toEqual(expect.arrayContaining(["pt-1.5", "px-1", "items-stretch"]));
+    expect(nav?.[2]).toContain("padding-bottom:calc(10px + env(safe-area-inset-bottom))");
+    const links = [...html.matchAll(/<a [^>]*class="([^"]+)"/g)].map(([, c]) => (c ?? "").split(" "));
+    expect(links).toHaveLength(5);
+    for (const c of links) {
+      // min-h-11: every tab target stays at least 44px tall.
+      expect(c).toEqual(expect.arrayContaining(["justify-start", "gap-0.5", "min-h-11", "flex-1"]));
+      expect(c).not.toContain("justify-center");
+    }
+    // Every pill is the mockup's 52x30, active or not (no shrink on inactive tabs).
+    expect(html.match(/class="flex h-\[30px\] w-\[52px\] /g)).toHaveLength(5);
+    expect(html).not.toContain("scale(");
+  });
+
+  it("sizes --nav-height to the mockup's content: 1 + 6 + 30 + 2 + 16.8 + 10 = 65.8 <= 66px", () => {
+    expect(css).toMatch(/--nav-height: 4\.125rem;/);
+    // 66px less border, top and bottom padding leaves the tab 49px (>= 44px).
+    expect(66 - 1 - 6 - 10).toBeGreaterThanOrEqual(44);
+    // The label line (caption, 0.75rem/1.4) is what the 16.8 assumes.
+    expect(css).toMatch(/--font-caption: 600 0\.75rem\/1\.4 /);
   });
 });

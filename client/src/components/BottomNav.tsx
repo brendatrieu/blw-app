@@ -5,9 +5,10 @@ import { Link, useLocation } from "react-router-dom";
 // corners, matching the Sunny Sprout illustration style. Color comes from
 // `currentColor` so the active/inactive state is set entirely by the
 // wrapping <span>'s text color.
+// 22px glyphs in a 24 box, as in A-Home's nav (item 689).
 const ICON_PROPS: SVGProps<SVGSVGElement> = {
-  width: 24,
-  height: 24,
+  width: 22,
+  height: 22,
   viewBox: "0 0 24 24",
   fill: "none",
   stroke: "currentColor",
@@ -17,12 +18,12 @@ const ICON_PROPS: SVGProps<SVGSVGElement> = {
   "aria-hidden": true,
 };
 
+/** A-Home's simple house, roof and walls, no door (item 688). */
 function HomeIcon() {
   return (
     <svg {...ICON_PROPS}>
-      <path d="M4 11.5 12 4l8 7.5" />
-      <path d="M6 10v8.3a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V10" />
-      <path d="M10 19.3v-3.8a2 2 0 0 1 4 0v3.8" />
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V20h14V9.5" />
     </svg>
   );
 }
@@ -131,14 +132,17 @@ export function BottomNav() {
   // painting a band under the bar on the one tab too short to scroll. `mt-auto`
   // pins it to the bottom of a short column; z-index, height and the
   // safe-area padding are unchanged.
+  // A-Home's nav (items 687/689): page-colored with a 1px top border, padding
+  // 6px 4px 10px + the safe area, each tab top-aligned (pill, 2px, label) so
+  // the spare height sits under the labels.
   return (
     <nav
-      className="sticky bottom-0 z-10 mx-auto mt-auto flex w-full max-w-lg items-stretch border-t px-1 pt-1"
+      className="sticky bottom-0 z-10 mx-auto mt-auto flex w-full max-w-lg items-stretch border-t px-1 pt-1.5"
       style={{
-        backgroundColor: "var(--color-bg-elevated)",
+        backgroundColor: "var(--color-bg)",
         borderColor: "var(--color-border)",
         height: "calc(var(--nav-height) + env(safe-area-inset-bottom))",
-        paddingBottom: "env(safe-area-inset-bottom)",
+        paddingBottom: "calc(10px + env(safe-area-inset-bottom))",
       }}
     >
       {tabs.map(({ to, label, Icon }) => {
@@ -148,14 +152,13 @@ export function BottomNav() {
             key={to}
             to={to}
             aria-current={active ? "page" : undefined}
-            className="flex min-h-11 flex-1 flex-col items-center justify-center gap-1 text-xs"
+            className="flex min-h-11 flex-1 flex-col items-center justify-start gap-0.5 text-xs"
           >
             <span
-              className="flex h-8 w-12 items-center justify-center rounded-[var(--radius-pill)] transition-[background-color,transform] duration-[var(--duration-base)] ease-[var(--ease-spring)] motion-reduce:transition-none"
+              className="flex h-[30px] w-[52px] items-center justify-center rounded-[var(--radius-pill)] transition-[background-color] duration-[var(--duration-base)] ease-[var(--ease-spring)] motion-reduce:transition-none"
               style={{
                 backgroundColor: active ? "var(--color-apricot)" : "transparent",
                 color: active ? "var(--color-apricot-ink)" : "var(--color-text-muted)",
-                transform: active ? "scale(1)" : "scale(0.92)",
               }}
             >
               <Icon />

@@ -77,7 +77,7 @@ function UpNextRowShell({
   actions: React.ReactNode;
 }) {
   return (
-    <li className={`relative flex items-center gap-3 py-2 ${UP_NEXT_DIVIDER}`}>
+    <li className={`relative flex items-center gap-3 py-2.5 ${UP_NEXT_DIVIDER}`}>
       <Link
         to={to}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-md)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
@@ -95,7 +95,7 @@ function UpNextRowShell({
 
 // The Home greeting's small uppercase apricot label (AppLayout), for the
 // card's own label (CSS uppercases it, so the copy stays "Up next").
-const UP_NEXT_LABEL_CLASS = "text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
+const UP_NEXT_LABEL_CLASS = "text-[11px] leading-[normal] font-extrabold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
 
 /**
  * "Up next" (item 660, A-Home): what needs doing soon, each row with its own
@@ -111,12 +111,22 @@ function UpNextCard({ babyId }: { babyId: string }) {
   const ladderPath = `/babies/${babyId}/allergens`;
 
   return (
-    <Card as="section" padding="none" aria-labelledby="up-next" className="flex flex-col pt-3 pr-1.5 pb-2 pl-4">
-      <div className="flex min-h-8 items-center justify-between pr-2.5">
+    // A-Home (item 681): label 16px under the top, 10px to the first plate,
+    // 10px around each divider, 12px under the last plate. The rows' own
+    // py-2.5 carries the 10s (so each whole row stays tappable); pb-0.5 tops
+    // the last one up to 12.
+    <Card as="section" padding="none" aria-labelledby="up-next" className="flex flex-col pt-4 pr-1.5 pb-0.5 pl-4">
+      <div className="flex items-center justify-between pr-2.5">
         <h2 id="up-next" className={UP_NEXT_LABEL_CLASS}>
           Up next
         </h2>
-        {more && <SectionLink to={more === "storage" ? "/storage" : ladderPath}>See all</SectionLink>}
+        {/* A 44px target that takes only the label's height in the row; z-10 lifts
+            it over the first row's stretched link so its lower half still lands. */}
+        {more && (
+          <div className="relative z-10 -my-[14.5px]">
+            <SectionLink to={more === "storage" ? "/storage" : ladderPath}>See all</SectionLink>
+          </div>
+        )}
       </div>
       <ul className="flex flex-col">
         {rows.map((row) =>
@@ -279,13 +289,14 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4">
+    // A-Home main: 6px 16px 16px, 18px between sections (item 681).
+    <div className="flex flex-col gap-[18px] px-4 pt-1.5 pb-4">
       {/* The visible greeting lives in the shared AppLayout header; this keeps
           the document outline rooted for screen readers. */}
       <h1 className="sr-only">Home</h1>
       <UpNextCard babyId={activeBaby.id} />
       {/* Emoji-free per A-Home; sky and mint as before (item 661). */}
-      <div className="flex gap-2">
+      <div className="flex gap-2.5">
         <ButtonLink to="/log-meal" size="lg" className="flex-1">
           Log meal
         </ButtonLink>
