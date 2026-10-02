@@ -113,6 +113,13 @@ describe("how-to guides (item 601)", () => {
     expect(body).toContain("Use within 90d");
   });
 
+  it("log-a-meal step 1 doesn't place Log meal 'at the top' (Up next sits above it on Home, item 677)", () => {
+    const body = getGuide("how-to-log-a-meal")?.body ?? "";
+    const step1 = body.split(/^## /m).find((s) => s.startsWith("1. ")) ?? "";
+    expect(step1).toContain("On **Home**, tap **Log meal**.");
+    expect(step1).not.toMatch(/at the top/);
+  });
+
   it("serve step 1 warns that Free-form items have no Serve (label-only items withhold it)", () => {
     // The add-to-storage guide offers Free-form; resolveStorageItemMenuActions
     // gives a label-only item only Edit and Remove, so the serve guide says so.
