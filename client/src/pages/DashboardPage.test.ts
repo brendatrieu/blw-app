@@ -108,7 +108,7 @@ describe("DashboardPage", () => {
     expect(html).not.toContain("months old");
     // Item 649: the shared section heading, 10px under it, 24px between sections.
     expect(html).toMatch(/^<div class="flex flex-col gap-6 p-4">/);
-    for (const title of ["Storage", "Allergens", "📖 Food log"]) {
+    for (const title of ["Storage", "Allergens", "Food log"]) {
       expect(html, title).toContain(`<h2 class="font-h2 text-[var(--color-text)]">${title}</h2>`);
     }
     expect(html.match(/<section class="flex flex-col gap-2\.5">/g)?.length).toBeGreaterThanOrEqual(3);

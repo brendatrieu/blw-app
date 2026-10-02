@@ -61,7 +61,7 @@ function BabySwitcher() {
         {/* The age sits beside the name, not inside it, so it stays Nunito. */}
         <div className="flex items-baseline gap-2.5">
           <span className="font-display text-[var(--color-text)]">{activeBaby?.name}</span>
-          {ageLabel ? <span className="text-sm text-[var(--color-text-muted)]">{ageLabel}</span> : null}
+          {ageLabel ? <span className="text-sm whitespace-nowrap text-[var(--color-text-muted)]">{ageLabel}</span> : null}
         </div>
       </div>
     );
@@ -85,7 +85,7 @@ function BabySwitcher() {
             </option>
           ))}
         </select>
-        {ageLabel ? <span className="text-sm text-[var(--color-text-muted)]">{ageLabel}</span> : null}
+        {ageLabel ? <span className="text-sm whitespace-nowrap text-[var(--color-text-muted)]">{ageLabel}</span> : null}
       </label>
     </div>
   );

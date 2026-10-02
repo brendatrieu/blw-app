@@ -230,10 +230,10 @@ export function RecipeDetailPage() {
           sub-action of the other. Both are plain links carrying the recipe
           id — the full forms live at the other end. */}
       <div className="flex items-center gap-2">
-        <ButtonLink to={`/log-meal?recipe=${recipe.id}`} className="flex-1">
+        <ButtonLink to={`/log-meal?recipe=${recipe.id}`} size="lg" className="flex-1">
           Log meal
         </ButtonLink>
-        <ButtonLink to={`/storage/add?recipe=${recipe.id}`} variant="tonal" className="flex-1">
+        <ButtonLink to={`/storage/add?recipe=${recipe.id}`} variant="tonal" size="lg" className="flex-1">
           Add to storage
         </ButtonLink>
       </div>

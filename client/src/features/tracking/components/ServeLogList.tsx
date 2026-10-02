@@ -245,7 +245,7 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, gr
     <section className="flex flex-col gap-2.5">
       {(showHeading || seeAllHref) && (
         <div className="flex items-center justify-between">
-          {showHeading && <h2 className="font-h2 text-[var(--color-text)]">📖 Food log</h2>}
+          {showHeading && <h2 className="font-h2 text-[var(--color-text)]">Food log</h2>}
           {seeAllHref && <SectionLink to={seeAllHref}>See all</SectionLink>}
         </div>
       )}

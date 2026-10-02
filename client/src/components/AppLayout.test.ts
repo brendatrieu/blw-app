@@ -81,7 +81,7 @@ describe("AppLayout header", () => {
       // Only the gear icon is left in the header.
       expect(header.match(/<svg/g)).toHaveLength(1);
       // The age label is muted 14px, regular weight, and outside the name.
-      expect(header).toMatch(/<span class="text-sm text-\[var\(--color-text-muted\)\]">\d+ months?<\/span>/);
+      expect(header).toMatch(/<span class="text-sm whitespace-nowrap text-\[var\(--color-text-muted\)\]">\d+ months?<\/span>/);
       expect(header).not.toMatch(/class="font-display[^"]*"[^>]*>[^<]*<span/);
       // Item 648: the baby name (or the multi-baby picker) is the Fraunces display face.
       expect(header).toMatch(babies.length === 1 ? /<span class="font-display [^"]*">Remy<\/span>/ : /<select class="font-display /);
