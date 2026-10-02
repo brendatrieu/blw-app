@@ -7,8 +7,9 @@ import { EmptyState } from "../components/ui/EmptyState.js";
 import { SkeletonList } from "../components/ui/Skeleton.js";
 
 /**
- * The full food log (/meals), reached from Home's "See all". Home shows only
- * the newest few meals; this page is the same flat newest-first list, uncapped.
+ * The full food log (/meals), reached from the "See all" beside Home's Food
+ * log arrows. Home pages through the newest meals three at a time; this page
+ * is the same flat newest-first list, uncapped.
  */
 export function MealsPage() {
   const { activeBaby, isLoading } = useActiveBaby();

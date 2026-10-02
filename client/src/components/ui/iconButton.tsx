@@ -57,3 +57,12 @@ export function ChevronLeftGlyph() {
     </svg>
   );
 }
+
+/** The "›" chevron, `ChevronLeftGlyph` mirrored (Home's pager). */
+export function ChevronRightGlyph() {
+  return (
+    <svg {...GLYPH_PROPS}>
+      <path d="M9 18l6-6-6-6" />
+    </svg>
+  );
+}

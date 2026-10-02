@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { MealFood, MealItem } from "@blw/shared";
 import { useDeleteMeal, useMeals } from "../hooks.js";
@@ -10,6 +10,7 @@ import { Badge } from "../../catalog/components/Badge.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
 import { Card, CARD_ROW_DIVIDER } from "../../../components/ui/Card.js";
 import { SectionLink } from "../../../components/ui/SectionLink.js";
+import { Pager, pageWindow } from "../../../components/ui/Pager.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog.js";
 import { SkeletonList } from "../../../components/ui/Skeleton.js";
@@ -205,7 +206,7 @@ export function MealCard({
 
 export interface ServeLogListProps {
   babyId: string;
-  /** Show at most this many meals (newest first) — Home passes 3. */
+  /** Page size (newest first), with ‹ › for the rest — Home passes 3. Omitted = every meal. */
   limit?: number;
   /** Where the header's "See all" link goes; omitted = no link (the full log page). */
   seeAllHref?: string;
@@ -216,37 +217,46 @@ export interface ServeLogListProps {
   grouped?: boolean;
 }
 
-/** The meals Home shows before "See all" takes over. */
+/** Home's food-log page size (item 694). */
 export const HOME_MEAL_LIMIT = 3;
 
-/** Newest-first slice used by the Home section; the API already orders by servedAt desc. */
-export function limitMeals<T>(items: readonly T[], limit: number | undefined): T[] {
-  return limit === undefined ? [...items] : items.slice(0, Math.max(0, limit));
-}
+/** The most meals one fetch returns (the API's max); a full fetch reads "of 100+". */
+const MEAL_FETCH_LIMIT = 100;
 
 /**
  * The meal history: one flat newest-first list of `MealCard`s (each carrying
  * its own date line — the old per-day `<h3>` headers are gone). Rendered as a
- * Home section capped at `HOME_MEAL_LIMIT`, and uncapped on /meals. Logging
+ * Home section paged `HOME_MEAL_LIMIT` at a time, and whole on /meals. Logging
  * itself happens on the full-screen /log-meal page (see LogFoodPage /
  * LogFoodForm), which a card also reopens (as `/log-meal?edit=:id`) to edit
  * that meal in place.
  */
 export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, grouped = false }: ServeLogListProps) {
-  const { data, isLoading, isError } = useMeals(babyId, { limit: 100 });
+  const { data, isLoading, isError } = useMeals(babyId, { limit: MEAL_FETCH_LIMIT });
   // The meal itself, not its id: the delete removes the row optimistically,
   // and the question has to outlive it to show a failure.
   const [pendingDelete, setPendingDelete] = useState<MealItem | null>(null);
+  // After pendingDelete: the handler tests index useState slots by call order.
+  const [page, setPage] = useState(0);
 
   // The API returns meals newest-first; the slice preserves that order.
-  const meals = useMemo(() => limitMeals(data?.items ?? [], limit), [data, limit]);
+  const all = data?.items ?? [];
+  const pages = limit === undefined ? null : pageWindow(all.length, page, limit);
+  const meals = pages ? all.slice(pages.start, pages.end) : all;
 
   return (
     <section className="flex flex-col gap-2.5">
       {(showHeading || seeAllHref) && (
-        <div className="flex items-center justify-between">
+        // min-h-11 holds the row's height when nothing but the heading shows;
+        // flex-wrap drops the controls under it at 320px instead of scrolling.
+        <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-2">
           {showHeading && <h2 className="font-h2 text-[var(--color-text)]">Food log</h2>}
-          {seeAllHref && <SectionLink to={seeAllHref}>See all</SectionLink>}
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            {pages && (
+              <Pager label="meals" pages={pages} onPage={setPage} capped={all.length >= MEAL_FETCH_LIMIT} />
+            )}
+            {seeAllHref && <SectionLink to={seeAllHref}>See all</SectionLink>}
+          </div>
         </div>
       )}
 
@@ -268,7 +278,7 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, gr
 
       {meals.length > 0 &&
         (grouped ? (
-          <Card as="ul" padding="none" className="flex flex-col">
+          <Card as="ul" padding="none" aria-live="polite" className="flex flex-col">
             {meals.map((meal) => (
               <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} grouped />
             ))}

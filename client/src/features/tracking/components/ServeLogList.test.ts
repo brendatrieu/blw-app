@@ -10,7 +10,6 @@ import {
   emojiCluster,
   hasStorageFood,
   HOME_MEAL_LIMIT,
-  limitMeals,
   MealCard,
   ServeLogList,
   servedLine,
@@ -371,17 +370,8 @@ describe("MealCard tap-through link (item 195)", () => {
   });
 });
 
-describe("limitMeals + Home cap", () => {
-  const meals = ["a", "b", "c", "d", "e"];
-
-  it("keeps the first N (the API orders newest first) and leaves the array alone without a limit", () => {
-    expect(limitMeals(meals, 3)).toEqual(["a", "b", "c"]);
-    expect(limitMeals(meals, undefined)).toEqual(meals);
-    expect(limitMeals(meals, 0)).toEqual([]);
-    expect(limitMeals(meals, 10)).toEqual(meals);
-  });
-
-  it("Home shows three", () => {
+describe("Home paging (item 694)", () => {
+  it("Home shows three per page", () => {
     expect(HOME_MEAL_LIMIT).toBe(3);
   });
 
@@ -425,11 +415,24 @@ describe("limitMeals + Home cap", () => {
     );
   });
 
+  it("with limit 3 pages the rest: range, ‹ dimmed on page one, › live, then See all, list announced", () => {
+    const html = renderList(3, "/meals", true);
+    expect(html).toContain(">1–3 of 5<");
+    expect(html).toMatch(/<button [^>]*aria-label="Previous meals" aria-disabled="true">/);
+    expect(html).toMatch(/<button [^>]*aria-label="Next meals">/);
+    expect(html.indexOf('aria-label="Next meals"')).toBeLessThan(html.indexOf('href="/meals"'));
+    expect(html).toMatch(/<ul [^>]*aria-live="polite"/);
+  });
+
   it("without a limit renders every meal and no See all link", () => {
     const html = renderList(undefined);
     expect((html.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(5);
     expect(html).not.toContain("See all");
     expect(html).not.toContain('href="/meals"');
+    // /meals: no pager, nothing paged to announce.
+    expect(html).not.toContain("Next meals");
+    expect(html).not.toContain(" of 5");
+    expect(html).not.toContain("aria-live");
   });
 
   it("grouped (Home, item 664): one card of divided rows, each kebab named after its meal", () => {
