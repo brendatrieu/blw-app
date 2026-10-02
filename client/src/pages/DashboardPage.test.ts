@@ -76,7 +76,7 @@ describe("DashboardPage", () => {
     expect(html).toContain('aria-haspopup="menu"');
   });
 
-  it("titles the storage section 'Storage' with a See all link to /storage, and no leftover greeting card", () => {
+  it("titles the storage section 'Storage' (no See all: item 694), and no leftover greeting card", () => {
     const baby: Baby = {
       id: "baby-1",
       name: "Baby",
@@ -101,7 +101,12 @@ describe("DashboardPage", () => {
     );
 
     expect(html).toContain(">Storage<");
+    // Food log's See all; Storage's became the pager, hidden with nothing to page.
     expect(html).toContain(">See all<");
+    expect(html).not.toMatch(/<a [^>]*href="\/storage"[^>]*>See all</);
+    expect(html).not.toContain("storage items");
+    // 44px rows either way, so Home's spacing holds when the pager hides.
+    expect(html).toContain('<div class="flex min-h-11 items-center justify-between"><h2 class="font-h2 text-[var(--color-text)]">Storage</h2></div>');
     expect(html).not.toContain("Expiring soon");
     expect(html).not.toContain("See storage");
     expect(html).not.toContain("👋");
@@ -115,7 +120,7 @@ describe("DashboardPage", () => {
     expect(html.match(/<section class="flex flex-col gap-2\.5">/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
-  it("caps Home at three storage items and three meals, each section with a See all link", () => {
+  it("pages Home three storage items and three meals at a time: ‹ › on both, See all on Food log only (item 694)", () => {
     const baby: Baby = {
       id: "baby-1",
       name: "Baby",
@@ -175,8 +180,20 @@ describe("DashboardPage", () => {
     expect(html).not.toContain("Storage food 3");
     expect((html.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(3);
     expect(html).not.toContain("Meal food 3");
-    expect(html).toMatch(/<a [^>]*href="\/storage"[^>]*>See all<span aria-hidden="true">\u00a0›<\/span><\/a>/);
+    expect(html).not.toMatch(/<a [^>]*href="\/storage"[^>]*>See all</);
     expect(html).toMatch(/<a [^>]*href="\/meals"[^>]*>See all<span aria-hidden="true">\u00a0›<\/span><\/a>/);
+    for (const noun of ["storage items", "meals"]) {
+      // Page one: ‹ dimmed (aria-disabled keeps focus on it), › live.
+      expect(html, noun).toMatch(new RegExp(`<button [^>]*aria-label="Previous ${noun}" aria-disabled="true">`));
+      expect(html, noun).toMatch(new RegExp(`<button [^>]*aria-label="Next ${noun}">`));
+    }
+    expect(html.match(/>1–3 of 5</g)).toHaveLength(2);
+    expect(html.match(/<ul [^>]*aria-live="polite"/g)).toHaveLength(2);
+    // Storage: [h2][pager]; Food log: [h2][pager][See all], wrapping under the heading at 320px.
+    expect(html).toMatch(/<div class="flex min-h-11 items-center justify-between"><h2 [^>]*>Storage<\/h2><div class="-mr-2 flex shrink-0 items-center">/);
+    expect(html).toMatch(
+      /<div class="flex min-h-11 flex-wrap items-center justify-between gap-x-2"><h2 [^>]*>Food log<\/h2><div class="ml-auto flex shrink-0 items-center gap-2"><div class="-mr-2 [^"]*">(?:(?!<\/div>).)*<\/div><a [^>]*href="\/meals"/s,
+    );
     // Item 664: Home's food log is the grouped one.
     expect(html).toContain('aria-label="Meal food 0 actions"');
   });

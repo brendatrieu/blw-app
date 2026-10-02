@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { AllergenProgressItem, StorageItem } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
@@ -23,6 +24,7 @@ import { Card, CardLink } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { ProgressRing } from "../components/ui/ProgressRing.js";
 import { SectionLink } from "../components/ui/SectionLink.js";
+import { Pager, pageWindow } from "../components/ui/Pager.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 const ALLERGEN_TOTAL = 9;
@@ -213,18 +215,24 @@ function AllergenProgressSummary({ babyId }: { babyId: string }) {
   );
 }
 
-/** The storage items Home shows before "See all" takes over. */
+/** Home's storage page size; ‹ › page through the rest (item 694). */
 export const HOME_STORAGE_LIMIT = 3;
 
-function StorageSection({ babyId }: { babyId: string }) {
+export function StorageSection({ babyId }: { babyId: string }) {
   const { data, isLoading } = useStorageItems("active");
-  const topThree = (data?.items ?? []).slice(0, HOME_STORAGE_LIMIT);
+  const [page, setPage] = useState(0);
+  const items = data?.items ?? [];
+  const pages = pageWindow(items.length, page, HOME_STORAGE_LIMIT);
+  const topThree = items.slice(pages.start, pages.end);
 
   return (
     <section className="flex flex-col gap-2.5">
-      <div className="flex items-center justify-between">
+      {/* min-h-11: the row keeps the 44px it had with "See all" when the
+          pager hides (3 or fewer), so Home's spacing doesn't shift. The
+          Storage tab is the full list, so no "See all" here (item 694). */}
+      <div className="flex min-h-11 items-center justify-between">
         <h2 className="font-h2 text-[var(--color-text)]">Storage</h2>
-        <SectionLink to="/storage">See all</SectionLink>
+        <Pager label="storage items" pages={pages} onPage={setPage} />
       </div>
 
       {isLoading && <SkeletonList count={2} />}
@@ -244,7 +252,7 @@ function StorageSection({ babyId }: { babyId: string }) {
 
       {topThree.length > 0 && (
         // One rounded group of divided rows (item 662), not a card per item.
-        <Card as="ul" padding="none" className="flex flex-col">
+        <Card as="ul" padding="none" aria-live="polite" className="flex flex-col">
           {topThree.map((item) => (
             <StorageItemRow
               key={item.id}
@@ -315,7 +323,7 @@ export function DashboardPage() {
         <AllergenProgressSummary babyId={activeBaby.id} />
       </section>
 
-      <ServeLogList babyId={activeBaby.id} limit={HOME_MEAL_LIMIT} seeAllHref="/meals" grouped />
+      <ServeLogList key={activeBaby.id} babyId={activeBaby.id} limit={HOME_MEAL_LIMIT} seeAllHref="/meals" grouped />
     </div>
   );
 }
