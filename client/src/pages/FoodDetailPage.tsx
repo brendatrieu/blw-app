@@ -78,7 +78,7 @@ function FoodStatsLine({ foodId }: { foodId: string }) {
     <p className={className}>
       <span aria-hidden="true">
         <span className="text-[var(--color-apricot-graphic)]">★</span>{" "}
-        <strong className="text-[var(--color-text)]">{average}</strong>
+        <strong className="font-semibold text-[var(--color-text)]">{average}</strong>
         {` · ${[ratings, served].filter(Boolean).join(" · ")}`}
       </span>
       <span className="sr-only">

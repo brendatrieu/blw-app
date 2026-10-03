@@ -495,10 +495,10 @@ describe("FoodDetailPage rating history (item 575)", () => {
 });
 
 describe("FoodDetailPage hero stats line (item 666)", () => {
-  it("merges the average, the rating count and the served count into one line", () => {
+  it("merges the average (semibold, item 719), the rating count and the served count into one line", () => {
     const html = renderFoodWithMeals(catalogFood(), 3, [2, 4]);
     expect(html).toContain(
-      '<span aria-hidden="true"><span class="text-[var(--color-apricot-graphic)]">★</span> <strong class="text-[var(--color-text)]">3.0</strong> · 2 ratings · served 3 times</span>',
+      '<span aria-hidden="true"><span class="text-[var(--color-apricot-graphic)]">★</span> <strong class="font-semibold text-[var(--color-text)]">3.0</strong> · 2 ratings · served 3 times</span>',
     );
     expect(html).toContain('<span class="sr-only">Rated 3.0 out of 5, 2 ratings, served 3 times</span>');
     // One line: no second served fact anywhere else on the page.
@@ -507,7 +507,9 @@ describe("FoodDetailPage hero stats line (item 666)", () => {
 
   it("leaves out a part with nothing to say, and keeps singulars", () => {
     const ratedOnly = renderFoodWithMeals(catalogFood(), 0, [5]);
-    expect(ratedOnly).toContain("<strong class=\"text-[var(--color-text)]\">5.0</strong> · 1 rating</span>");
+    expect(ratedOnly).toContain(
+      '<strong class="font-semibold text-[var(--color-text)]">5.0</strong> · 1 rating</span>',
+    );
     expect(ratedOnly).toContain('<span class="sr-only">Rated 5.0 out of 5, 1 rating</span>');
     expect(ratedOnly).not.toMatch(/served/i);
     const servedOnce = renderFoodWithMeals(catalogFood(), 1, [3, 4]);

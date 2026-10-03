@@ -194,6 +194,23 @@ describe("DeleteAccountForm (render)", () => {
   });
 });
 
+describe("Settings emphasis weight (item 719)", () => {
+  // A bare <strong> is bold (700) in Jakarta; the one-step rule wants 600.
+  const strongs = (html: string) => html.match(/<strong[^>]*>/g) ?? [];
+  it('sets "your own" in the AI copy semibold', () => {
+    const html = renderInProviders(createElement(AiSection, null));
+    expect(strongs(html)).toEqual(['<strong class="font-semibold">']);
+    expect(html).toContain('<strong class="font-semibold">your own</strong>');
+  });
+
+  it("sets the confirm phrase and the cannot-be-undone line semibold", () => {
+    const html = renderInProviders(createElement(DeleteAccountForm, { onCancel: () => {} }));
+    expect(strongs(html)).toEqual(['<strong class="font-semibold">', '<strong class="font-semibold">']);
+    expect(html).toContain(`<strong class="font-semibold">${ACCOUNT_DELETE_CONFIRMATION}</strong>`);
+    expect(html).toMatch(/<strong class="font-semibold">\s*It cannot be undone/);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Privacy (item 321)
 // ---------------------------------------------------------------------------

@@ -46,7 +46,7 @@ describe("AboutPage signed out (item 611)", () => {
     ]);
     let last = -1;
     for (const f of ABOUT_FEATURES) {
-      const at = html.indexOf(`<strong>${f.name}<!-- -->:</strong>`);
+      const at = html.indexOf(`<strong class="font-semibold">${f.name}<!-- -->:</strong>`);
       expect(at, f.name).toBeGreaterThan(last);
       last = at;
       expect(html).toContain(
@@ -66,7 +66,7 @@ describe("AboutPage signed out (item 611)", () => {
     ];
     expect(ABOUT_FEATURES.map((f) => [f.name, f.text])).toEqual(expected);
     for (const [name, text] of expected) {
-      expect(html).toContain(`<strong>${name}<!-- -->:</strong> <!-- -->${text}`);
+      expect(html).toContain(`<strong class="font-semibold">${name}<!-- -->:</strong> <!-- -->${text}`);
     }
   });
 
@@ -193,5 +193,18 @@ describe("AboutPage signed in (item 611)", () => {
     );
     expect(header?.props.leading.type).toBe(BackButton);
     expect(header?.props.leading.props.fallback).toBe("/more");
+  });
+});
+
+describe("AboutPage feature names (item 719)", () => {
+  // A bare <strong> is bold (700) in Jakarta; the one-step rule wants 600.
+  it.each([
+    ["signed out", null],
+    ["signed in", { user: { id: "u1" } }],
+  ])("are semibold when %s", (_label, session) => {
+    h.session = session;
+    const html = render();
+    expect(count(html, "<strong")).toBe(ABOUT_FEATURES.length);
+    expect(count(html, '<strong class="font-semibold">')).toBe(ABOUT_FEATURES.length);
   });
 });

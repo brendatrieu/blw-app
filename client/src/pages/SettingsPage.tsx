@@ -467,8 +467,8 @@ export function AiSection() {
 
       <p className="text-sm text-[var(--color-text-muted)]">
         A few extras — the symptom helper and the recipe and weaning chats — run on Anthropic&apos;s
-        Claude. They use <strong>your own</strong> Anthropic API key, so the usage is billed to you
-        and nothing goes through a shared account. Everything else in this app works fully without
+        Claude. They use <strong className="font-semibold">your own</strong> Anthropic API key, so the usage
+        is billed to you and nothing goes through a shared account. Everything else in this app works fully without
         a key.
       </p>
 
@@ -824,7 +824,7 @@ export function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
 
   const confirmLabel: ReactNode = (
     <>
-      Type <strong>{ACCOUNT_DELETE_CONFIRMATION}</strong> to confirm
+      Type <strong className="font-semibold">{ACCOUNT_DELETE_CONFIRMATION}</strong> to confirm
     </>
   );
 
@@ -837,7 +837,9 @@ export function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
           This permanently deletes your account and everything in it — every baby profile, the whole
           food log, your allergen progress, favorites, storage,{" "}
           {AI_FEATURES_ENABLED ? "symptom checks, chats, and your Anthropic key" : "and symptom checks"}.{" "}
-          <strong>It cannot be undone and there is no backup we can restore from.</strong>
+          <strong className="font-semibold">
+            It cannot be undone and there is no backup we can restore from.
+          </strong>
         </p>
 
         <p className="text-sm text-[var(--color-text-muted)]">

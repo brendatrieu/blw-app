@@ -78,7 +78,7 @@ export function AboutPage() {
                 {feature.emoji}
               </span>
               <span>
-                <strong>{feature.name}:</strong> {feature.text}
+                <strong className="font-semibold">{feature.name}:</strong> {feature.text}
               </span>
             </li>
           ))}
