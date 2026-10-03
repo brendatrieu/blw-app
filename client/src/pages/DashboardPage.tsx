@@ -316,7 +316,9 @@ export function DashboardPage() {
       {/* The visible greeting lives in the shared AppLayout header; this keeps
           the document outline rooted for screen readers. */}
       <h1 className="sr-only">Home</h1>
-      <UpNextCard key={activeBaby.id} babyId={activeBaby.id} />
+      {/* Keyed per baby so a switch starts on page one; prefixed, like
+          ServeLogList below, so the two sibling keys never match (item 712). */}
+      <UpNextCard key={`up-next-${activeBaby.id}`} babyId={activeBaby.id} />
       {/* Emoji-free per A-Home; sky and mint as before (item 661). */}
       <div className="flex gap-2.5">
         <ButtonLink to="/log-meal" size="lg" className="flex-1">
@@ -339,7 +341,7 @@ export function DashboardPage() {
         <AllergenProgressSummary babyId={activeBaby.id} />
       </section>
 
-      <ServeLogList key={activeBaby.id} babyId={activeBaby.id} limit={HOME_MEAL_LIMIT} seeAllHref="/meals" grouped />
+      <ServeLogList key={`meals-${activeBaby.id}`} babyId={activeBaby.id} limit={HOME_MEAL_LIMIT} seeAllHref="/meals" grouped />
     </div>
   );
 }

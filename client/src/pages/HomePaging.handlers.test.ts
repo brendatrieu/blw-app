@@ -11,6 +11,7 @@ const h = vi.hoisted(() => {
     meals: [] as unknown[],
     storage: [] as unknown[],
     allergens: [] as unknown[],
+    activeBaby: null as unknown,
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states))
@@ -30,6 +31,9 @@ vi.mock("../features/tracking/hooks.js", async (importOriginal) => ({
   useDeleteMeal: () => ({ isPending: false, isError: false, mutate: () => {} }),
   useAllergenProgress: () => ({ data: { items: h.allergens }, isLoading: false }),
 }));
+vi.mock("../features/babies/useActiveBaby.js", () => ({
+  useActiveBaby: () => ({ activeBaby: h.activeBaby, isLoading: false }),
+}));
 vi.mock("../features/storage/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useStorageItems: () => ({ data: { items: h.storage }, isLoading: false }),
@@ -42,7 +46,7 @@ import { StorageItemRow } from "../features/storage/components/StorageItemCard.j
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
 import { AllergenUpNextMenu } from "../features/tracking/components/AllergenUpNextMenu.js";
 import { SectionLink } from "../components/ui/SectionLink.js";
-import { StorageSection, UP_NEXT_LIMIT, UpNextCard } from "./DashboardPage.js";
+import { DashboardPage, StorageSection, UP_NEXT_LIMIT, UpNextCard } from "./DashboardPage.js";
 
 interface El {
   type: unknown;
@@ -283,18 +287,46 @@ describe("Up next paging (item 712)", () => {
     expect(peanutMenu!.type).toBe(AllergenUpNextMenu);
     expect((peanutMenu!.props.item as { allergenSlug: string }).allergenSlug).toBe("peanut");
   });
-
-  it("is keyed by the active baby on Home, so switching babies starts at page one", async () => {
-    const { readFileSync } = await import("node:fs");
-    const src = readFileSync(new URL("./DashboardPage.tsx", import.meta.url), "utf8");
-    expect(src).toContain("<UpNextCard key={activeBaby.id} babyId={activeBaby.id} />");
-  });
 });
 
-describe("Food log paging resets per baby", () => {
-  it("keys Home's ServeLogList by the active baby, so switching babies starts at page one", async () => {
-    const { readFileSync } = await import("node:fs");
-    const src = readFileSync(new URL("./DashboardPage.tsx", import.meta.url), "utf8");
-    expect(src).toContain("<ServeLogList key={activeBaby.id} babyId={activeBaby.id}");
+// Item 712 B1: UpNextCard and ServeLogList once shared key={activeBaby.id} in
+// the same <div>, so each baby switch left a dead Up next card behind. This
+// walks Home's real element tree, so it fails on any sibling key collision.
+describe("Home's per-baby lists reset on a baby switch", () => {
+  function homeTree(babyId: string) {
+    h.activeBaby = { id: babyId, name: "Testbaby" };
+    return DashboardPage() as unknown as El;
+  }
+  function siblingKeyClashes(node: unknown, out: string[] = []): string[] {
+    if (Array.isArray(node)) {
+      const keys = node
+        .filter(
+          (c): c is { key: string } =>
+            !!c && typeof c === "object" && (c as { key?: unknown }).key != null,
+        )
+        .map((c) => c.key);
+      out.push(...keys.filter((k, i) => keys.indexOf(k) !== i));
+      for (const child of node) siblingKeyClashes(child, out);
+    } else if (node && typeof node === "object" && "props" in node) {
+      siblingKeyClashes((node as El).props.children, out);
+    }
+    return out;
+  }
+  const keyOf = (tree: El, type: unknown) =>
+    ((tree.props.children as unknown[]).flat() as { type: unknown; key: string | null }[]).find(
+      (c) => c?.type === type,
+    )?.key;
+
+  it("gives no two siblings the same key", () => {
+    expect(siblingKeyClashes(homeTree("baby-a"))).toEqual([]);
+  });
+
+  it("keys Up next and Food log by the active baby, so switching starts both at page one", () => {
+    const a = homeTree("baby-a");
+    const b = homeTree("baby-b");
+    for (const type of [UpNextCard, ServeLogList]) {
+      expect(keyOf(a, type)).toContain("baby-a");
+      expect(keyOf(b, type)).toContain("baby-b");
+    }
   });
 });
