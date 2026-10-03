@@ -117,12 +117,12 @@
      dots read at a glance (item 641). ---- */
   --color-icon: #3f4a56;
 
-  /* ---- Home's 9-segment allergen ring (item 663). Established and started
-     are status graphics, gated 3:1 on the card; the mockup's lighter
-     #7cc6a0 / #f2c66d were 2.01 / 1.61:1, so these are the lightest same
-     hues that pass. Empty is the track itself (the counts are text). ---- */
-  --color-ring-established: #47a273;
-  --color-ring-started: #c08611;
+  /* ---- Home's 9-segment allergen ring (item 663). The A-Home mockup's
+     colors (item 697, owner's call). The ring is supplementary: the same
+     counts are always written beside it ("3 established", "3 started · 3
+     not started yet"), so it is exempt from the 3:1 graphics gate. ---- */
+  --color-ring-established: #7cc6a0;
+  --color-ring-started: #f2c66d;
   --color-ring-empty: #e8e2da;
 
   /* ---- Food plates (item 657): the disc behind a food emoji, tinted by

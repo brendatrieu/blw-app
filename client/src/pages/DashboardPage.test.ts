@@ -105,8 +105,12 @@ describe("DashboardPage", () => {
     expect(html).toContain(">See all<");
     expect(html).not.toMatch(/<a [^>]*href="\/storage"[^>]*>See all</);
     expect(html).not.toContain("storage items");
-    // 44px rows either way, so Home's spacing holds when the pager hides.
-    expect(html).toContain('<div class="flex min-h-11 items-center justify-between"><h2 class="font-h2 text-[var(--color-text)]">Storage</h2></div>');
+    // Item 696: the row is the heading's height either way (no 44px floor),
+    // so the heading sits 10px above its card as in A-Home.
+    expect(html).toContain('<div class="flex items-center justify-between"><h2 class="font-h2 text-[var(--color-text)]">Storage</h2><div class="-my-[9.5px]"></div></div>');
+    expect(html).not.toContain("min-h-11 items-center justify-between");
+    // The Ladder link keeps its 44px target but overhangs the row instead of growing it.
+    expect(html).toMatch(/<div class="-my-\[9\.5px\]"><a [^>]*class="inline-flex min-h-11 [^"]*"[^>]*>Ladder/);
     expect(html).not.toContain("Expiring soon");
     expect(html).not.toContain("See storage");
     expect(html).not.toContain("👋");
@@ -190,9 +194,10 @@ describe("DashboardPage", () => {
     expect(html.match(/>1–3 of 5</g)).toHaveLength(2);
     expect(html.match(/<ul [^>]*aria-live="polite"/g)).toHaveLength(2);
     // Storage: [h2][pager]; Food log: [h2][pager][See all], wrapping under the heading at 320px.
-    expect(html).toMatch(/<div class="flex min-h-11 items-center justify-between"><h2 [^>]*>Storage<\/h2><div class="-mr-2 flex shrink-0 items-center">/);
+    // Item 696: rows are the heading's height; the controls' 44px targets overhang them.
+    expect(html).toMatch(/<div class="flex items-center justify-between"><h2 [^>]*>Storage<\/h2><div class="-my-\[9\.5px\]"><div class="-mr-2 flex shrink-0 items-center">/);
     expect(html).toMatch(
-      /<div class="flex min-h-11 flex-wrap items-center justify-between gap-x-2"><h2 [^>]*>Food log<\/h2><div class="ml-auto flex shrink-0 items-center gap-2"><div class="-mr-2 [^"]*">(?:(?!<\/div>).)*<\/div><a [^>]*href="\/meals"/s,
+      /<div class="flex flex-wrap items-center justify-between gap-x-2"><h2 [^>]*>Food log<\/h2><div class="ml-auto flex shrink-0 items-center gap-2 -my-\[9\.5px\]"><div class="-mr-2 [^"]*">(?:(?!<\/div>).)*<\/div><a [^>]*href="\/meals"/s,
     );
     // Item 664: Home's food log is the grouped one.
     expect(html).toContain('aria-label="Meal food 0 actions"');
@@ -579,7 +584,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     it("titles the section 'Allergens' with a Ladder › link to the baby's ladder", () => {
       const html = render({ allergens: ladder });
       expect(html).toMatch(
-        /<h2 class="font-h2 text-\[var\(--color-text\)\]">Allergens<\/h2><a class="inline-flex min-h-11 [^"]*" href="\/babies\/baby-1\/allergens"[^>]*>Ladder<span aria-hidden="true">\u00a0›<\/span><\/a>/,
+        /<h2 class="font-h2 text-\[var\(--color-text\)\]">Allergens<\/h2><div class="-my-\[9\.5px\]"><a class="inline-flex min-h-11 [^"]*" href="\/babies\/baby-1\/allergens"[^>]*>Ladder<span aria-hidden="true">\u00a0›<\/span><\/a><\/div>/,
       );
       expect(html).not.toContain("Allergen progress");
       expect(html).not.toContain("🌟");
@@ -591,6 +596,10 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(html).toContain("3<!-- --> established");
       expect(html).toContain("2<!-- --> started · <!-- -->1<!-- --> not started yet");
       expect(html).toContain('aria-label="3 of 9 allergens established, 2 started"');
+      // Item 697: the ring's colors are exempt from the 3:1 graphics gate
+      // (contrast.test.ts) only because these counts are VISIBLE beside it.
+      expect(html).toContain('<div class="flex flex-col gap-1 text-sm"><span class="text-base font-extrabold text-[var(--color-text)]">3<!-- --> established</span>');
+      expect(html).not.toMatch(/sr-only[^>]*>[^<]*<span[^>]*>3<!-- --> established/);
     });
 
     it("colors 9 segments: established, then started, then empty", () => {

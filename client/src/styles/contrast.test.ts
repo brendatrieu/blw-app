@@ -515,28 +515,17 @@ describe("food plates (items 657, 658)", () => {
   }
 });
 
-describe("Home allergen ring segments (item 663)", () => {
-  // The ring sits on the Allergens card (elevated). Established and started
-  // are status graphics, so 3:1 against the card. The empty segment is the
-  // track itself and is exempt, like the plate tints: the counts are always
-  // text beside the ring ("3 established", "3 started · 3 not started yet").
-  const RING_PAIRS: Pair[] = [
-    { name: "established segment on the card", fg: "color-ring-established", bg: "color-bg-elevated", min: 3 },
-    { name: "started segment on the card", fg: "color-ring-started", bg: "color-bg-elevated", min: 3 },
-  ];
-  for (const mode of ["light", "dark"] as const) {
-    for (const pair of RING_PAIRS) {
-      it(`[${mode}] ${pair.name} >= ${pair.min}:1`, () => {
-        expect(ratioOf(pair.fg, pair.bg, mode)).toBeGreaterThanOrEqual(pair.min!);
-      });
-    }
-  }
+describe("Home allergen ring segments (items 663, 697)", () => {
+  // The ring is supplementary: the counts are always text beside it
+  // ("3 established", "3 started · 3 not started yet"; pinned in
+  // DashboardPage.test.ts), so its segments are exempt from the 3:1
+  // graphics gate and use the A-Home mockup's colors (owner, item 697).
+  // Keep that text if the ring ever changes, or this exemption is wrong.
 
-  // Dark is the A-Home-Dark mockup exactly; light darkens the mockup's
-  // #7cc6a0 / #f2c66d (2.01 / 1.61:1) to the lightest same hue at 3:1.
+  // Both modes are the A-Home / A-Home-Dark mockups exactly.
   const EXPECTED: Record<string, { light: string; dark: string }> = {
-    "color-ring-established": { light: "#47a273", dark: "#6cc29c" },
-    "color-ring-started": { light: "#c08611", dark: "#e8b95c" },
+    "color-ring-established": { light: "#7cc6a0", dark: "#6cc29c" },
+    "color-ring-started": { light: "#f2c66d", dark: "#e8b95c" },
     "color-ring-empty": { light: "#e8e2da", dark: "#2c3744" },
   };
   for (const [token, { light, dark }] of Object.entries(EXPECTED)) {

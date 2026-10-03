@@ -23,7 +23,7 @@ import { ButtonLink } from "../components/ui/Button.js";
 import { Card, CardLink } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { ProgressRing } from "../components/ui/ProgressRing.js";
-import { SectionLink } from "../components/ui/SectionLink.js";
+import { HEADING_CONTROL_INSET, SectionLink } from "../components/ui/SectionLink.js";
 import { Pager, pageWindow } from "../components/ui/Pager.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
@@ -227,12 +227,14 @@ export function StorageSection({ babyId }: { babyId: string }) {
 
   return (
     <section className="flex flex-col gap-2.5">
-      {/* min-h-11: the row keeps the 44px it had with "See all" when the
-          pager hides (3 or fewer), so Home's spacing doesn't shift. The
-          Storage tab is the full list, so no "See all" here (item 694). */}
-      <div className="flex min-h-11 items-center justify-between">
+      {/* The row is the heading's height; the pager's 44px targets overhang
+          it (item 696). The Storage tab is the full list, so no "See all"
+          here (item 694). */}
+      <div className="flex items-center justify-between">
         <h2 className="font-h2 text-[var(--color-text)]">Storage</h2>
-        <Pager label="storage items" pages={pages} onPage={setPage} />
+        <div className={HEADING_CONTROL_INSET}>
+          <Pager label="storage items" pages={pages} onPage={setPage} />
+        </div>
       </div>
 
       {isLoading && <SkeletonList count={2} />}
@@ -318,7 +320,9 @@ export function DashboardPage() {
       <section className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <h2 className="font-h2 text-[var(--color-text)]">Allergens</h2>
-          <SectionLink to={`/babies/${activeBaby.id}/allergens`}>Ladder</SectionLink>
+          <div className={HEADING_CONTROL_INSET}>
+            <SectionLink to={`/babies/${activeBaby.id}/allergens`}>Ladder</SectionLink>
+          </div>
         </div>
         <AllergenProgressSummary babyId={activeBaby.id} />
       </section>

@@ -9,7 +9,7 @@ import { MealActionsMenu } from "./MealActionsMenu.js";
 import { Badge } from "../../catalog/components/Badge.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
 import { Card, CARD_ROW_DIVIDER } from "../../../components/ui/Card.js";
-import { SectionLink } from "../../../components/ui/SectionLink.js";
+import { HEADING_CONTROL_INSET, SectionLink } from "../../../components/ui/SectionLink.js";
 import { Pager, pageWindow } from "../../../components/ui/Pager.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog.js";
@@ -247,11 +247,11 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, gr
   return (
     <section className="flex flex-col gap-2.5">
       {(showHeading || seeAllHref) && (
-        // min-h-11 holds the row's height when nothing but the heading shows;
-        // flex-wrap drops the controls under it at 320px instead of scrolling.
-        <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-2">
+        // The row is the heading's height; the controls' 44px targets
+        // overhang it (item 696). flex-wrap drops them under it at 320px.
+        <div className="flex flex-wrap items-center justify-between gap-x-2">
           {showHeading && <h2 className="font-h2 text-[var(--color-text)]">Food log</h2>}
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className={`ml-auto flex shrink-0 items-center gap-2 ${HEADING_CONTROL_INSET}`}>
             {pages && (
               <Pager label="meals" pages={pages} onPage={setPage} capped={all.length >= MEAL_FETCH_LIMIT} />
             )}
