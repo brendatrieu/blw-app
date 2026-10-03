@@ -432,6 +432,8 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(card).toContain('href="/storage/a"');
       expect(card).toContain('aria-label="Up next: Food a actions"');
       expect(card).toContain('aria-hidden="true" class="relative block h-[44px] w-[48px] shrink-0"');
+      // Item 720: the row title is 17px/700 (A-Home's 800, one step lighter in Jakarta).
+      expect(card).toContain('<span class="text-[17px] font-bold text-[var(--color-text)]">Food a</span>');
     });
 
     it("leaves the servings out when they are not tracked, and says 1 serving in the singular", () => {
@@ -443,7 +445,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
 
     it("an allergen row: '<Name> is due for a serve', when it was last served, a Log meal / Open kebab", () => {
       const card = upNext(render({ allergens: [due("peanut")] }))!;
-      expect(card).toContain("Peanut is due for a serve");
+      expect(card).toContain('<span class="text-[17px] font-bold text-[var(--color-text)]">Peanut is due for a serve</span>');
       expect(card).toContain(`Last served ${ALLERGEN_MAINTENANCE_DAYS + 2} days ago`);
       expect(card).toContain('href="/babies/baby-1/allergens/peanut"');
       expect(card).toContain('aria-label="Peanut actions"');
@@ -476,6 +478,38 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       const fits = upNext(render({ storage: [useSoon("a")], allergens: [due("peanut")] }))!;
       expect(fits).not.toContain("See all");
       expect(fits).not.toContain("Up next items");
+    });
+
+    it("starts every divider under its row's plate, as Storage and Food log do (items 709, 720)", () => {
+      const meal = (i: number): MealItem => ({
+        id: `meal-${i}`,
+        babyId: BABY.id,
+        servedAt: new Date(2026, 7, 26 - i, 12, 0).toISOString(),
+        reactionNote: null,
+        notes: null,
+        recipeId: null,
+        recipeTitle: null,
+        foods: [{ id: `food-${i}`, slug: "pear", name: `Meal food ${i}`, category: "fruit", storageItemId: null }],
+      });
+      const html = render({
+        storage: [useSoon("a"), stored("b"), stored("c")],
+        allergens: [due("peanut")],
+        meals: [meal(0), meal(1)],
+      });
+      // The line's inset is the rows' own left padding: both 3.5 (14px).
+      const inset = /not-first:before:inset-x-([\d.]+) /.exec(CARD_ROW_DIVIDER)?.[1];
+      expect(inset).toBe("3.5");
+      const rows = [...html.matchAll(/<li class="([^"]*)"/g)].map((m) => m[1]!).filter((c) => c.includes(CARD_ROW_DIVIDER));
+      // Up next 2, Storage 3, Food log 2.
+      expect(rows).toHaveLength(7);
+      for (const row of rows) expect(row.split(" ")).toContain(`pl-${inset}`);
+      // ...and the plate is the first thing in each row, so the line starts under it.
+      const PLATE = '<span aria-hidden="true" class="relative block h-[44px] w-[48px] shrink-0"';
+      const firstInRow = [...html.matchAll(/<li class="[^"]*not-first:before:inset-x-3\.5[^"]*">(?:<div[^>]*>)?<a [^>]*>(.{0,80})/g)].map(
+        (m) => m[1]!,
+      );
+      expect(firstInRow).toHaveLength(7);
+      for (const start of firstInRow) expect(start.startsWith(PLATE)).toBe(true);
     });
 
     it("leaves expired items to Storage", () => {

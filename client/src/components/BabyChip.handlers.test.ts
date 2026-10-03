@@ -94,4 +94,11 @@ describe("BabyChip switcher (item 655)", () => {
     expect(findSelect(BabyChip())).toBeNull();
     expect(renderToString(createElement(BabyChip))).toContain(">R</span>");
   });
+
+  it("draws the initial extrabold (800) at 12px and the name bold (700) at 14px (item 720)", () => {
+    h.babies = [baby("b1", "remy")];
+    const html = renderToString(createElement(BabyChip));
+    expect(html).toMatch(/<span aria-hidden="true" class="[^"]* text-xs font-extrabold text-\[var\(--color-avatar-ink\)\]">R<\/span>/);
+    expect(html).toMatch(/^<span class="[^"]* text-sm font-bold text-\[var\(--color-text\)\]">/);
+  });
 });

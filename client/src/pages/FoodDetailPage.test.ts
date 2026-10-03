@@ -539,10 +539,10 @@ describe("FoodDetailPage choking notes callout (item 667)", () => {
     expect(box).not.toContain("⚠️");
   });
 
-  it("titles it in the callout red with a hidden triangle icon, the body in ink", () => {
+  it("titles it 15px/700 in the callout red with a hidden triangle icon, the body in ink (weight: item 720)", () => {
     const box = callout(renderFood(catalogFood()));
     expect(box).toMatch(
-      /<p class="[^"]*text-\[var\(--color-danger-callout-text\)\]"><svg[^>]*aria-hidden="true"[^>]*><path d="M12 4 2\.5 20h19z"><\/path>.*<\/svg>Choking notes<\/p>/s,
+      /<p class="flex items-center gap-2 text-\[15px\] font-bold text-\[var\(--color-danger-callout-text\)\]"><svg[^>]*aria-hidden="true"[^>]*><path d="M12 4 2\.5 20h19z"><\/path>.*<\/svg>Choking notes<\/p>/s,
     );
     expect(box).toContain('<p class="text-[15px] leading-[1.45] text-[var(--color-text)]">Check for bones.</p>');
   });
