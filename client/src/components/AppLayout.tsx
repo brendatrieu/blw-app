@@ -70,7 +70,7 @@ function BabySwitcher() {
   // with a friendly greeting above it.
   if (babies.length === 1) {
     return (
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col">
         <span className={GREETING_CLASS}>{timeOfDayGreeting()}</span>
         {/* The age sits beside the name, not inside it, so it stays Nunito. */}
         {/* Wraps the age under a long name instead of squeezing the name mid-word (680 B1). */}
@@ -83,7 +83,7 @@ function BabySwitcher() {
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col">
       <span className={GREETING_CLASS}>{timeOfDayGreeting()}</span>
       {/* A select can't wrap, so a long name would push the gear off screen
           (680 B1). The name is drawn as wrapping text, as for one baby, and

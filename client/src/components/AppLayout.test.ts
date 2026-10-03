@@ -79,6 +79,8 @@ describe("AppLayout header", () => {
         expect.arrayContaining(["text-[11px]", "leading-[normal]", "font-extrabold", "uppercase", "tracking-[0.14em]", "text-[var(--color-apricot-text)]"]),
       );
       const header = html.slice(html.indexOf("<header"), html.indexOf("</header>"));
+      // Owner (2026-10-02): no gap between the greeting and the name row.
+      expect(header).toContain('<div class="flex flex-col"><span class="' + greeting![1] + '">');
       // Only the gear icon is left in the header.
       expect(header.match(/<svg/g)).toHaveLength(1);
       // The age label is muted 14px, regular weight, and outside the name.
