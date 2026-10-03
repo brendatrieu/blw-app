@@ -52,6 +52,13 @@ describe("HowToLink (item 603)", () => {
     expect(html).toContain('aria-hidden="true"');
   });
 
+  // Item 699: a 44px tap target, but -my-3 cancels the 12px it adds above
+  // and below the 20px text line, so the link takes a text line's room.
+  it("keeps its 44px target without the extra layout height", () => {
+    const button = render("how-to-log-a-meal").match(/<button[^>]*>/)?.[0] ?? "";
+    expect(button).toMatch(/class="-my-3 inline-flex min-h-11 /);
+  });
+
   it("renders nothing for an unknown slug rather than a dead link", () => {
     expect(render("no-such-guide")).toBe("");
   });

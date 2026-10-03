@@ -21,7 +21,10 @@ export function HowToLink({ slug }: { slug: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex min-h-11 items-center gap-1.5 self-start text-left text-sm font-medium text-[var(--color-accent)]"
+        // Item 699: the 44px tap target stays, but `-my-3` cancels the 12px
+        // it adds above and below the 20px text line, so the link sits as
+        // close to its neighbors as a line of text would.
+        className="-my-3 inline-flex min-h-11 items-center gap-1.5 self-start text-left text-sm font-medium text-[var(--color-accent)]"
       >
         <span aria-hidden="true">📖</span>
         <span className="underline">{guide.title}</span>
