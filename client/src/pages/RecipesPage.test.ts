@@ -23,6 +23,9 @@ describe("RecipesPage (item 273)", () => {
     expect(html).toContain("🍳");
     expect(html).toContain('href="/recipes/new"');
     expect(html).toContain(">Add recipe<");
+    // Item 700: no description line under the title.
+    expect(html).not.toContain("Ours and yours");
+    expect(html).not.toMatch(/<\/h1><\/div><p /);
   });
 
   it("carries the recipe list's own controls — search, scope chips and the funnel", () => {

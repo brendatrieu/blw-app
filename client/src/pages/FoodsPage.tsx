@@ -303,7 +303,6 @@ export function FoodsPage() {
       <PageHeader
         title="Foods"
         emoji="🍎"
-        description="Iron-rich foods first — filter by category, allergen, or age."
         action={
           <ButtonLink to="/foods/new" size="sm">
             Add food

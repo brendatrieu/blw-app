@@ -15,7 +15,6 @@ export function RecipesPage() {
       <PageHeader
         title="Recipes"
         emoji="🍳"
-        description="Ours and yours — filter by age, allergen, or what's in them."
         action={
           <ButtonLink to="/recipes/new" size="sm">
             Add recipe

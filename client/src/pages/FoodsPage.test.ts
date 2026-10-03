@@ -72,6 +72,9 @@ describe("FoodsPage", () => {
     );
     expect(html).toContain('href="/foods/new"');
     expect(html).toContain(">Add food<");
+    // Item 700: no description line under the title.
+    expect(html).not.toContain("Iron-rich foods first");
+    expect(html).not.toMatch(/<\/h1><\/div><p /);
   });
 
   // Item 273: recipes moved to /recipes and their own nav tab, taking the
