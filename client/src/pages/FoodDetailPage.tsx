@@ -17,7 +17,7 @@ import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe, sortBasicRecipesFirst } from "../features/catalog/basicRecipe.js";
 import { AGE_STAGE_OPTIONS, stageForAge } from "../features/catalog/stage.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { useMeals, useRatingHistory } from "../features/tracking/hooks.js";
+import { useRatingHistory } from "../features/tracking/hooks.js";
 import { RatingHistory } from "../features/tracking/components/RatingHistory.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
@@ -52,19 +52,19 @@ export function PrepByAge({ food, defaultStage }: { food: FoodDetail; defaultSta
  * Item 666: the hero's one stats line under the badges (A-Salmon), e.g.
  * "★ 3.0 · 2 ratings · served 3 times" — the active baby's average and
  * rating count, then how often this food was served to them. A part with
- * nothing to say is left out; with neither, nothing renders. Both queries
- * share their keys with the page's other readers, so no extra request.
+ * nothing to say is left out; with neither, nothing renders. Both numbers
+ * ride on the rating-history query the graph below already makes, so no
+ * extra request.
  */
 function FoodStatsLine({ foodId }: { foodId: string }) {
   const { activeBaby } = useActiveBaby();
   const { data: history } = useRatingHistory(activeBaby?.id, { foodId });
-  // 100 is the server's max page size — best-effort count over recent meals.
-  const { data: recentMeals } = useMeals(activeBaby?.id, { limit: 100 });
   if (!activeBaby) return null;
 
   const points = history?.points ?? [];
-  const timesServed =
-    recentMeals?.items.filter((meal) => meal.foods.some((mealFood) => mealFood.id === foodId)).length ?? 0;
+  // Item 715: counted server-side over every meal this baby has had, so it
+  // is exact — no recent-page cap, and other babies never count.
+  const timesServed = history?.servedCount ?? 0;
   const times = timesServed === 1 ? "time" : "times";
   const className = "text-sm tabular-nums text-[var(--color-text-muted)]";
   if (points.length === 0) {

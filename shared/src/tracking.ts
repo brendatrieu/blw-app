@@ -252,6 +252,14 @@ export type RatingHistoryQuery = z.infer<typeof ratingHistoryQuerySchema>;
 /** Every rating, oldest meal first — the points of the detail-page graph. */
 export const ratingHistoryResponseSchema = z.object({
   points: z.array(z.object({ servedAt: z.string(), rating: starRatingSchema })),
+  /**
+   * Item 715: how many of this baby's meals have this food on them (or, for
+   * a recipe, are that recipe), counted server-side over every meal — the
+   * food page's exact "served N times". Rides on this response because every
+   * meal write already refreshes it. Optional so an older cached body still
+   * parses.
+   */
+  servedCount: z.number().int().min(0).optional(),
 });
 export type RatingHistoryResponse = z.infer<typeof ratingHistoryResponseSchema>;
 

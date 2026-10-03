@@ -255,3 +255,24 @@ export async function loadRatingHistory(
     .flatMap((row) => (row.rating === null ? [] : [{ servedAt: row.servedAt.toISOString(), rating: row.rating }]))
     .reverse();
 }
+
+/**
+ * Item 715: how many of this baby's meals had this food on them (a recipe
+ * meal counts for each of its foods, as it always did on the food page), or
+ * were this recipe — counted in the database over every meal, so the food
+ * page's "served N times" is exact rather than a count over a recent page.
+ * Deleted meals are gone from the table, so they never count.
+ */
+export async function countServed(db: Database, babyId: string, query: RatingHistoryQuery): Promise<number> {
+  const [row] = query.foodId
+    ? await db
+        .select({ count: sql<number>`count(distinct ${meals.id})::int` })
+        .from(meals)
+        .innerJoin(mealFoods, eq(mealFoods.mealId, meals.id))
+        .where(and(eq(meals.babyId, babyId), eq(mealFoods.foodId, query.foodId)))
+    : await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(meals)
+        .where(and(eq(meals.babyId, babyId), eq(meals.recipeId, query.recipeId!)));
+  return row?.count ?? 0;
+}

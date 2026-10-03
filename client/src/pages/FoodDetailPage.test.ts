@@ -94,42 +94,37 @@ const BABY: Baby = {
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
-/** Same render, but with a baby and meals (and optionally ratings) in the
- * cache, so the hero's stats line has something to count (items 282, 666). */
-function renderFoodWithMeals(food: FoodDetail, servings: number, ratings?: number[]) {
+/** Same render, but with a baby and its rating history in the cache, so the
+ * hero's stats line has something to say (items 282, 666). Item 715: the
+ * served count is the server's exact `servedCount` on that history. The
+ * meals cache holds a DIFFERENT story (one meal of this food, one of
+ * another), so a line that still counted the recent-meals page would show
+ * the wrong number. */
+function renderFoodWithMeals(food: FoodDetail, servedCount: number | undefined, ratings: number[] = []) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   queryClient.setQueryData(catalogKeys.food(food.slug), food);
   queryClient.setQueryData(babyKeys.list(false), [BABY]);
-  if (ratings) {
-    const points = ratings.map((rating, i) => ({ servedAt: new Date(2026, 7, 20 + i, 12, 0).toISOString(), rating }));
-    queryClient.setQueryData(trackingKeys.ratingHistory(BABY.id, { foodId: food.id }), { points });
-  }
-  const meals: MealItem[] = Array.from({ length: servings }, (_, i) => ({
-    id: `meal-${i}`,
+  const points = ratings.map((rating, i) => ({ servedAt: new Date(2026, 7, 20 + i, 12, 0).toISOString(), rating }));
+  queryClient.setQueryData(
+    trackingKeys.ratingHistory(BABY.id, { foodId: food.id }),
+    servedCount === undefined ? { points } : { points, servedCount },
+  );
+  const meal = (id: string, foods: MealItem["foods"]): MealItem => ({
+    id,
     babyId: BABY.id,
-    servedAt: new Date(2026, 7, 26 - i, 12, 0).toISOString(),
+    servedAt: new Date(2026, 7, 26, 12, 0).toISOString(),
     reactionNote: null,
     notes: null,
     recipeId: null,
     recipeTitle: null,
-    // The first meal lists this food second, so the count can't key on foods[0].
-    foods: [
-      ...(i === 0 ? [{ id: "other-food", slug: "kiwi", name: "Kiwi", category: "fruit" as const, storageItemId: null }] : []),
-      { id: food.id, slug: food.slug, name: food.name, category: food.category, storageItemId: null },
+    foods,
+  });
+  queryClient.setQueryData([...trackingKeys.meals(BABY.id), { limit: 100 }], {
+    items: [
+      meal("meal-0", [{ id: food.id, slug: food.slug, name: food.name, category: food.category, storageItemId: null }]),
+      meal("meal-other", [{ id: "other-food", slug: "kiwi", name: "Kiwi", category: "fruit", storageItemId: null }]),
     ],
-  }));
-  // A meal of something else, which must not count toward this food.
-  const other: MealItem = {
-    id: "meal-other",
-    babyId: BABY.id,
-    servedAt: new Date(2026, 7, 1, 12, 0).toISOString(),
-    reactionNote: null,
-    notes: null,
-    recipeId: null,
-    recipeTitle: null,
-    foods: [{ id: "other-food", slug: "kiwi", name: "Kiwi", category: "fruit", storageItemId: null }],
-  };
-  queryClient.setQueryData([...trackingKeys.meals(BABY.id), { limit: 100 }], { items: [...meals, other] });
+  });
   return renderToString(
     createElement(
       QueryClientProvider,
@@ -282,6 +277,18 @@ describe("FoodDetailPage — actions row (item 282)", () => {
     expect(renderFoodWithMeals(catalogFood(), 1)).toContain(">Served 1 time</p>");
     // Nothing served, nothing claimed.
     expect(renderFoodWithMeals(catalogFood(), 0)).not.toContain("Served");
+  });
+
+  // Item 715: the count is the server's, over every meal — not a count of
+  // the recent-meals page the client happens to hold (one meal here).
+  it("shows the server's exact count, past the old 100-meal page and with no '+'", () => {
+    const html = renderFoodWithMeals(catalogFood(), 150);
+    expect(html).toContain(">Served 150 times</p>");
+    expect(html).not.toContain("150+");
+    expect(renderFoodWithMeals(catalogFood(), 150, [4])).toContain(" · 1 rating · served 150 times</span>");
+    // An older cached history body (before servedCount) claims nothing
+    // rather than falling back to the capped page.
+    expect(renderFoodWithMeals(catalogFood(), undefined)).not.toMatch(/served/i);
   });
 });
 

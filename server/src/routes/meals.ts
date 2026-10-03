@@ -30,6 +30,7 @@ import { allergenOverrides, allergens, babies, foods, mealFoods, meals, recipes 
 import { loadAllergenDetail, loadAllergenProgress } from "../services/allergens.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import {
+  countServed,
   insertMealWithFoods,
   loadMeals,
   loadRatingHistory,
@@ -388,8 +389,11 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     const query = ratingHistoryQuerySchema.safeParse(request.query);
     if (!query.success) return badRequest(reply, query.error.flatten());
 
-    const points = await loadRatingHistory(db, params.data.babyId, query.data);
-    return reply.send({ points } satisfies RatingHistoryResponse);
+    const [points, servedCount] = await Promise.all([
+      loadRatingHistory(db, params.data.babyId, query.data),
+      countServed(db, params.data.babyId, query.data),
+    ]);
+    return reply.send({ points, servedCount } satisfies RatingHistoryResponse);
   });
 
   // -----------------------------------------------------------------------

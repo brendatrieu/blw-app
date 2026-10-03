@@ -428,6 +428,83 @@ describe("ratings", () => {
     });
   });
 
+  // Item 715: the food page's "served N times", counted in the database over
+  // every meal the baby has had.
+  describe("servedCount on the history (item 715)", () => {
+    const servedCount = async (query: string, baby = babyId, user = parent) => {
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/babies/${baby}/ratings/history${query}`,
+        headers: { cookie: user.cookie },
+      });
+      expect(response.statusCode).toBe(200);
+      return response.json<RatingHistoryResponse>().servedCount;
+    };
+
+    it("is 0 for a food or recipe this baby never had", async () => {
+      expect(await servedCount(`?foodId=${fx.egg.id}`)).toBe(0);
+      expect(await servedCount(`?recipeId=${fx.recipe.id}`)).toBe(0);
+    });
+
+    it("counts every meal with the food on it — loose, recipe, served from storage, rated or not", async () => {
+      await created({ foodIds: [fx.egg.id] });
+      await created({ foodIds: [fx.egg.id, fx.banana.id], foodRatings: { [fx.egg.id]: 3 } });
+      await created({ foodIds: [fx.egg.id, fx.banana.id], recipeId: fx.recipe.id });
+      await created({ foodIds: [fx.banana.id] });
+      const stocked = await app.inject({
+        method: "POST",
+        url: "/api/storage",
+        headers: { cookie: parent.cookie },
+        payload: { foodIds: [fx.egg.id], location: "fridge" },
+      });
+      const itemId = stocked.json<CreateStorageItemResponse>().items[0]!.id;
+      const served = await app.inject({
+        method: "POST",
+        url: `/api/storage/${itemId}/serve`,
+        headers: { cookie: parent.cookie },
+        payload: { babyId },
+      });
+      expect(served.statusCode).toBe(201);
+
+      expect(await servedCount(`?foodId=${fx.egg.id}`)).toBe(4);
+      expect(await servedCount(`?foodId=${fx.banana.id}`)).toBe(3);
+      expect(await servedCount(`?recipeId=${fx.recipe.id}`)).toBe(1);
+    });
+
+    it("is exact past the old 100-meal page: no cap", async () => {
+      const servedAt = (i: number) => new Date(Date.now() - (i + 1) * 3_600_000);
+      const rows = await db
+        .insert(schema.meals)
+        .values(Array.from({ length: 130 }, (_, i) => ({ babyId, servedAt: servedAt(i) })))
+        .returning();
+      await db.insert(schema.mealFoods).values(rows.map((row) => ({ mealId: row.id, foodId: fx.egg.id })));
+      expect(await servedCount(`?foodId=${fx.egg.id}`)).toBe(130);
+    });
+
+    it("counts only this baby's meals: a sibling's and another account's never count", async () => {
+      const sibling = await createBaby(parent, "Sky");
+      const stranger = await signUpUser(app, "Stranger");
+      const strangersBaby = await createBaby(stranger, "Wren");
+      await created({ foodIds: [fx.egg.id] });
+      await created({ foodIds: [fx.egg.id] }, sibling);
+      await created({ foodIds: [fx.egg.id] }, sibling);
+      expect((await postMeal({ foodIds: [fx.egg.id], recipeId: fx.recipe.id }, strangersBaby, stranger)).statusCode).toBe(201);
+
+      expect(await servedCount(`?foodId=${fx.egg.id}`)).toBe(1);
+      expect(await servedCount(`?foodId=${fx.egg.id}`, sibling)).toBe(2);
+      expect(await servedCount(`?recipeId=${fx.recipe.id}`)).toBe(0);
+      expect(await servedCount(`?recipeId=${fx.recipe.id}`, strangersBaby, stranger)).toBe(1);
+    });
+
+    it("drops a deleted meal from the count", async () => {
+      const first = await created({ foodIds: [fx.egg.id] });
+      await created({ foodIds: [fx.egg.id] });
+      const deleted = await app.inject({ method: "DELETE", url: `/api/meals/${first.id}`, headers: { cookie: parent.cookie } });
+      expect(deleted.statusCode).toBe(204);
+      expect(await servedCount(`?foodId=${fx.egg.id}`)).toBe(1);
+    });
+  });
+
   describe("write isolation (mutation gaps S03/S04/S20/S40/S41/S42)", () => {
     it("turning a meal into a recipe meal clears only THAT meal's food ratings (S03)", async () => {
       const mealA = await created({ foodIds: [fx.egg.id], foodRatings: { [fx.egg.id]: 5 } });
