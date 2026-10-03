@@ -401,11 +401,15 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       // Item 709: px-0.5 on the card + pl-3.5/px-3.5 inside keep the label and
       // plates 16px in (2 + 14) and the kebab 6px in (2 + pr-1).
       expect(html).toMatch(/<section class="[^"]*flex flex-col px-0\.5 pt-4 pb-0\.5" aria-labelledby="up-next"|aria-labelledby="up-next" class="[^"]*flex flex-col px-0\.5 pt-4 pb-0\.5"/);
-      // No min-height on the label row: See all keeps 44px but only the label's height in the row.
-      expect(card).toContain('<div class="flex items-center justify-between px-3.5"><h2 id="up-next"');
+      // Food log's header row (item 712): [label][pager][See all], wrapping
+      // under the label at 320px. No min-height: the controls keep 44px but
+      // take only the 13px label's height in the row, -(44 - 13) / 2.
+      expect(card).toContain('<div class="flex flex-wrap items-center justify-between gap-x-2 px-3.5"><h2 id="up-next"');
       // relative z-10: the first row's stretched link (positioned li) would
-      // otherwise paint over See all's lower half and steal those taps.
-      expect(card).toMatch(/<div class="relative z-10 -my-\[14\.5px\]"><a[^>]*class="inline-flex min-h-11 [^"]*"[^>]*>See all/);
+      // otherwise paint over the controls' lower half and steal those taps.
+      expect(card).toMatch(
+        /<div class="relative z-10 -my-\[15\.5px\] ml-auto flex shrink-0 items-center gap-2"><div class="-mr-2 flex shrink-0 items-center">(?:(?!<a ).)*<\/div><a[^>]*class="inline-flex min-h-11 [^"]*"[^>]*>See all/s,
+      );
       expect(card.match(/<li class="relative flex items-center gap-3 py-2\.5 pr-1 pl-3\.5 /g)?.length).toBe(3);
     });
 
@@ -446,7 +450,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(card).toContain("🥜");
     });
 
-    it("lists storage first, then allergens, and caps at three with See all to Storage when storage spills", () => {
+    it("lists storage first, then allergens, three a page with ‹ › and See all to Storage when storage spills (item 712)", () => {
       const html = render({
         storage: [useSoon("a"), useSoon("b"), useSoon("c"), useSoon("d")],
         allergens: [due("peanut")],
@@ -456,6 +460,11 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(card).not.toContain("Food d");
       expect(card).not.toContain("Peanut");
       expect(card).toMatch(/<a [^>]*href="\/storage"[^>]*>See all<span aria-hidden="true">/);
+      // Storage and Food log's pager: the range, ‹ dimmed on page one, › live; the list announced.
+      expect(card).toContain(">1–3 of 5<");
+      expect(card).toMatch(/<button [^>]*aria-label="Previous Up next items" aria-disabled="true">/);
+      expect(card).toMatch(/<button [^>]*aria-label="Next Up next items">/);
+      expect(card).toContain('<ul aria-live="polite" class="flex flex-col">');
     });
 
     it("sends See all to the ladder when only allergens are hidden, and shows none when nothing is", () => {
@@ -466,6 +475,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(spill).toMatch(/<a [^>]*href="\/babies\/baby-1\/allergens"[^>]*>See all<span/);
       const fits = upNext(render({ storage: [useSoon("a")], allergens: [due("peanut")] }))!;
       expect(fits).not.toContain("See all");
+      expect(fits).not.toContain("Up next items");
     });
 
     it("leaves expired items to Storage", () => {
@@ -485,6 +495,8 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(result.rows.map((row) => row.kind)).toEqual(["storage", "allergen"]);
       expect(result.more).toBeNull();
       expect(upNextRows([useSoon("a"), useSoon("b"), useSoon("c"), useSoon("d")], [], now).more).toBe("storage");
+      // Item 712: every row comes back; the card pages them.
+      expect(upNextRows([useSoon("a"), useSoon("b"), useSoon("c"), useSoon("d")], [], now).rows).toHaveLength(4);
       expect(upNextRows([], [due("a"), due("b"), due("c"), due("d")], now).more).toBe("allergens");
       expect(upNextRows([useSoon("a"), useSoon("b"), useSoon("c")], [due("peanut")], now).more).toBe("allergens");
     });

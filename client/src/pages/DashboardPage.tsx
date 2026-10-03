@@ -29,7 +29,7 @@ import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 const ALLERGEN_TOTAL = 9;
 
-/** The rows Up next shows before "See all" takes over (item 660). */
+/** Up next's page size; ‹ › page through the rest (item 712, as Storage and Food log). */
 export const UP_NEXT_LIMIT = 3;
 
 export type UpNextRow = { kind: "storage"; item: StorageItem } | { kind: "allergen"; item: AllergenProgressItem };
@@ -37,9 +37,11 @@ export type UpNextRow = { kind: "storage"; item: StorageItem } | { kind: "allerg
 /**
  * What Up next lists (item 660): storage items to use soon, in the freshness
  * order the list already has, then allergens due for a serve, in ladder
- * order — at most `UP_NEXT_LIMIT`. Expired items are left to Storage, which
- * says Expired. `more` names where the hidden rows live: Storage when any of
- * them is a storage item, otherwise the ladder; null when nothing is hidden.
+ * order. The card pages them `UP_NEXT_LIMIT` at a time (item 712). Expired
+ * items are left to Storage, which says Expired. `more` is where See all
+ * goes, judged by the rows past the first page so it holds still while you
+ * page: Storage when any of them is a storage item, otherwise the ladder;
+ * null when everything fits on one page.
  */
 export function upNextRows(
   storage: readonly StorageItem[],
@@ -54,7 +56,7 @@ export function upNextRows(
   ];
   const hidden = all.slice(UP_NEXT_LIMIT);
   return {
-    rows: all.slice(0, UP_NEXT_LIMIT),
+    rows: all,
     more: hidden.length === 0 ? null : hidden.some((row) => row.kind === "storage") ? "storage" : "allergens",
   };
 }
@@ -101,14 +103,18 @@ const UP_NEXT_LABEL_CLASS = "text-[11px] leading-[normal] font-bold uppercase tr
 /**
  * "Up next" (item 660, A-Home): what needs doing soon, each row with its own
  * kebab — no single big button. Hidden while either list is loading and when
- * nothing is due, so it never flashes in empty.
+ * nothing is due, so it never flashes in empty. Paged like Storage and Food
+ * log (item 712); keyed by baby on Home, so a switch starts on page one.
  */
-function UpNextCard({ babyId }: { babyId: string }) {
+export function UpNextCard({ babyId }: { babyId: string }) {
   const storage = useStorageItems("active");
   const progress = useAllergenProgress(babyId);
+  const [page, setPage] = useState(0);
   if (storage.isLoading || progress.isLoading) return null;
-  const { rows, more } = upNextRows(storage.data?.items ?? [], progress.data?.items ?? []);
-  if (rows.length === 0) return null;
+  const { rows: all, more } = upNextRows(storage.data?.items ?? [], progress.data?.items ?? []);
+  if (all.length === 0) return null;
+  const pages = pageWindow(all.length, page, UP_NEXT_LIMIT);
+  const rows = all.slice(pages.start, pages.end);
   const ladderPath = `/babies/${babyId}/allergens`;
 
   return (
@@ -119,19 +125,24 @@ function UpNextCard({ babyId }: { babyId: string }) {
     // the plates and label 16px in, and the kebab 6px in (pr-1), while the
     // rows span the card like Storage's so their dividers match.
     <Card as="section" padding="none" aria-labelledby="up-next" className="flex flex-col px-0.5 pt-4 pb-0.5">
-      <div className="flex items-center justify-between px-3.5">
+      {/* Food log's header row (item 712): flex-wrap drops the controls under
+          the label when they don't fit beside it (320px). */}
+      <div className="flex flex-wrap items-center justify-between gap-x-2 px-3.5">
         <h2 id="up-next" className={UP_NEXT_LABEL_CLASS}>
           Up next
         </h2>
-        {/* A 44px target that takes only the label's height in the row; z-10 lifts
-            it over the first row's stretched link so its lower half still lands. */}
+        {/* The pager and See all (Food log's pair, item 712): 44px targets that
+            take only the 13px label's height in the row, -(44 - 13) / 2; z-10
+            lifts them over the first row's stretched link so their lower half
+            still lands. */}
         {more && (
-          <div className="relative z-10 -my-[14.5px]">
+          <div className="relative z-10 -my-[15.5px] ml-auto flex shrink-0 items-center gap-2">
+            <Pager label="Up next items" pages={pages} onPage={setPage} />
             <SectionLink to={more === "storage" ? "/storage" : ladderPath}>See all</SectionLink>
           </div>
         )}
       </div>
-      <ul className="flex flex-col">
+      <ul aria-live="polite" className="flex flex-col">
         {rows.map((row) =>
           row.kind === "storage" ? (
             <UpNextRowShell
@@ -305,7 +316,7 @@ export function DashboardPage() {
       {/* The visible greeting lives in the shared AppLayout header; this keeps
           the document outline rooted for screen readers. */}
       <h1 className="sr-only">Home</h1>
-      <UpNextCard babyId={activeBaby.id} />
+      <UpNextCard key={activeBaby.id} babyId={activeBaby.id} />
       {/* Emoji-free per A-Home; sky and mint as before (item 661). */}
       <div className="flex gap-2.5">
         <ButtonLink to="/log-meal" size="lg" className="flex-1">

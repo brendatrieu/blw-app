@@ -10,6 +10,7 @@ const h = vi.hoisted(() => {
     store,
     meals: [] as unknown[],
     storage: [] as unknown[],
+    allergens: [] as unknown[],
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states))
@@ -27,6 +28,7 @@ vi.mock("../features/tracking/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useMeals: () => ({ data: { items: h.meals }, isLoading: false, isError: false }),
   useDeleteMeal: () => ({ isPending: false, isError: false, mutate: () => {} }),
+  useAllergenProgress: () => ({ data: { items: h.allergens }, isLoading: false }),
 }));
 vi.mock("../features/storage/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -37,7 +39,10 @@ import { Card } from "../components/ui/Card.js";
 import { Pager, type PageWindow } from "../components/ui/Pager.js";
 import { MealCard, ServeLogList } from "../features/tracking/components/ServeLogList.js";
 import { StorageItemRow } from "../features/storage/components/StorageItemCard.js";
-import { StorageSection } from "./DashboardPage.js";
+import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
+import { AllergenUpNextMenu } from "../features/tracking/components/AllergenUpNextMenu.js";
+import { SectionLink } from "../components/ui/SectionLink.js";
+import { StorageSection, UP_NEXT_LIMIT, UpNextCard } from "./DashboardPage.js";
 
 interface El {
   type: unknown;
@@ -179,6 +184,110 @@ describe("Storage paging", () => {
     expect(v.ids).toHaveLength(3);
     expect(v.pages?.last).toBe(0);
     expect(Pager(find(v.tree, Pager)!.props as unknown as Parameters<typeof Pager>[0])).toBeNull();
+  });
+});
+
+describe("Up next paging (item 712)", () => {
+  const HOUR = 60 * 60 * 1000;
+  const useSoon = (i: number) => ({
+    id: `soon-${i}`,
+    foods: [{ id: `f${i}`, slug: "pear", name: `Pear ${i}`, emoji: null }],
+    recipeId: null,
+    recipeTitle: null,
+    label: null,
+    bestBy: null,
+    useSoon: true,
+    expired: false,
+    expiresAt: new Date(Date.now() + 20 * HOUR).toISOString(),
+    servingsLeft: null,
+  });
+  const due = (slug: string) => ({
+    allergenSlug: slug,
+    allergenName: slug,
+    dueAt: new Date(Date.now() - 48 * HOUR).toISOString(),
+    reactionNotedAt: null,
+    overridden: false,
+    establishedAt: null,
+    lastServedAt: null,
+    lastExposureAt: null,
+  });
+  const upNext = () => {
+    h.store.i = 0;
+    const tree = (UpNextCard as unknown as (p: unknown) => unknown)({ babyId: "b" });
+    const pager = find(tree, Pager);
+    const rows = (find(tree, "ul")?.props.children ?? []) as (El & { key: string })[];
+    const seeAll = find(tree, SectionLink);
+    return {
+      pages: pager?.props.pages as PageWindow | undefined,
+      label: pager?.props.label,
+      next: () => (pager!.props.onPage as (p: number) => void)((pager!.props.pages as PageWindow).page + 1),
+      keys: rows.map((row) => row.key),
+      actions: rows.map((row) => row.props.actions as El),
+      seeAll: seeAll?.props.to,
+      tree,
+    };
+  };
+
+  beforeEach(() => {
+    h.storage = [useSoon(0), useSoon(1), useSoon(2), useSoon(3)];
+    h.allergens = [due("peanut"), due("egg"), due("milk")];
+  });
+
+  it("pages three at a time, as Storage and Food log do", () => {
+    expect(UP_NEXT_LIMIT).toBe(3);
+    const first = upNext();
+    expect(first.label).toBe("Up next items");
+    expect(first.keys).toEqual(["storage-soon-0", "storage-soon-1", "storage-soon-2"]);
+    expect(first.pages).toMatchObject({ page: 0, last: 2, total: 7 });
+    first.next();
+    expect(upNext().keys).toEqual(["storage-soon-3", "allergen-peanut", "allergen-egg"]);
+    upNext().next();
+    const last = upNext();
+    expect(last.keys).toEqual(["allergen-milk"]);
+    expect(last.pages).toMatchObject({ page: 2, start: 6, end: 7 });
+  });
+
+  it("keeps See all beside the pager, still to Storage on every page (storage spills past page one)", () => {
+    expect(upNext().seeAll).toBe("/storage");
+    upNext().next();
+    upNext().next();
+    expect(upNext().seeAll).toBe("/storage");
+    h.storage = [useSoon(0)];
+    expect(upNext().seeAll).toBe("/babies/b/allergens");
+  });
+
+  it("clamps to the new last page when rows go away (an allergen served, an item used up)", () => {
+    upNext().next();
+    upNext().next();
+    expect(upNext().keys).toEqual(["allergen-milk"]);
+    h.allergens = [due("peanut"), due("egg")];
+    const v = upNext();
+    expect(v.keys).toEqual(["storage-soon-3", "allergen-peanut", "allergen-egg"]);
+    expect(v.pages?.page).toBe(1);
+  });
+
+  it("drops the pager and See all once three or fewer are due", () => {
+    h.storage = [useSoon(0)];
+    h.allergens = [due("peanut"), due("egg")];
+    const v = upNext();
+    expect(v.keys).toHaveLength(3);
+    expect(v.pages).toBeUndefined();
+    expect(v.seeAll).toBeUndefined();
+  });
+
+  it("keeps each paged row's own kebab, for that row's item", () => {
+    upNext().next();
+    const [storageMenu, peanutMenu] = upNext().actions;
+    expect(storageMenu!.type).toBe(StorageItemActionsMenu);
+    expect((storageMenu!.props.item as { id: string }).id).toBe("soon-3");
+    expect(peanutMenu!.type).toBe(AllergenUpNextMenu);
+    expect((peanutMenu!.props.item as { allergenSlug: string }).allergenSlug).toBe("peanut");
+  });
+
+  it("is keyed by the active baby on Home, so switching babies starts at page one", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("./DashboardPage.tsx", import.meta.url), "utf8");
+    expect(src).toContain("<UpNextCard key={activeBaby.id} babyId={activeBaby.id} />");
   });
 });
 
