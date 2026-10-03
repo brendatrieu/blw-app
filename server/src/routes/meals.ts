@@ -138,7 +138,7 @@ async function validateRecipeId(db: Database, recipeId: string, userId: string):
  * would be the worse failure. `null` (clear) is always accepted: clearing a
  * rating that cannot exist is already true.
  */
-function validateRatings(
+export function validateRatings(
   recipeId: string | null,
   foodIds: readonly string[],
   foodRatings: Record<string, number | null> | undefined,

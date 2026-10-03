@@ -208,6 +208,141 @@ describe("ratings", () => {
     });
   });
 
+  // Item 718: the Serve sheet's one optional star row. The serve route takes
+  // the same rating shape as POST /meals, checks it the same way, and writes
+  // it in the serve's own transaction.
+  describe("POST /api/storage/:id/serve with a rating (item 718)", () => {
+    async function stock(payload: Record<string, unknown>): Promise<string> {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/storage",
+        headers: { cookie: parent.cookie },
+        payload: { location: "fridge", servingsTotal: 3, ...payload },
+      });
+      if (response.statusCode !== 201) throw new Error(`storage create failed: ${response.body}`);
+      return response.json<CreateStorageItemResponse>().items[0]!.id;
+    }
+    const serve = (itemId: string, payload: Record<string, unknown>) =>
+      app.inject({
+        method: "POST",
+        url: `/api/storage/${itemId}/serve`,
+        headers: { cookie: parent.cookie },
+        payload: { babyId, ...payload },
+      });
+    async function served(itemId: string, payload: Record<string, unknown>): Promise<ServeStorageItemResponse> {
+      const response = await serve(itemId, payload);
+      if (response.statusCode !== 201) throw new Error(`serve failed: ${response.body}`);
+      return response.json<ServeStorageItemResponse>();
+    }
+    async function historyOf(query: string): Promise<number[]> {
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/babies/${babyId}/ratings/history${query}`,
+        headers: { cookie: parent.cookie },
+      });
+      return response.json<RatingHistoryResponse>().points.map((point) => point.rating);
+    }
+    /** Nothing was written: no meal for the baby, and the container still full. */
+    async function expectUntouched(itemId: string) {
+      expect(await db.select().from(schema.meals).where(eq(schema.meals.babyId, babyId))).toEqual([]);
+      const [item] = await db.select().from(schema.storageItems).where(eq(schema.storageItems.id, itemId));
+      expect(item).toMatchObject({ servingsLeft: 3, status: "active" });
+    }
+
+    it("rates a food item's meal as that food, and the food's rating line and history pick it up", async () => {
+      const itemId = await stock({ foodIds: [fx.egg.id] });
+      const { meal, item } = await served(itemId, { foodRatings: { [fx.egg.id]: 4 } });
+      expect(ratingOf(meal, fx.egg.id)).toBe(4);
+      expect(meal.recipeRating).toBeNull();
+      // Same transaction as the serve itself: the servings came out too.
+      expect(item.servingsLeft).toBe(2);
+      expect((await summaries()).body.foods[fx.egg.id]).toMatchObject({ average: 4, count: 1, latest: 4 });
+      expect(await historyOf(`?foodId=${fx.egg.id}`)).toEqual([4]);
+    });
+
+    it("rates each food of a several-food item on its own, like Log meal", async () => {
+      const itemId = await stock({ foodIds: [fx.egg.id, fx.banana.id] });
+      const { meal } = await served(itemId, { foodRatings: { [fx.banana.id]: 2 } });
+      expect(ratingOf(meal, fx.banana.id)).toBe(2);
+      expect(ratingOf(meal, fx.egg.id)).toBeNull();
+    });
+
+    it("rates a recipe item's meal once, as the recipe, never per ingredient", async () => {
+      const itemId = await stock({ recipeId: fx.recipe.id });
+      const { meal } = await served(itemId, { recipeRating: 3 });
+      expect(meal.recipeId).toBe(fx.recipe.id);
+      expect(meal.recipeRating).toBe(3);
+      expect(meal.foods.map((food) => food.rating)).toEqual([null, null]);
+      expect((await summaries()).body.recipes[fx.recipe.id]).toMatchObject({ average: 3, count: 1 });
+      expect((await summaries()).body.foods).toEqual({});
+      expect(await historyOf(`?recipeId=${fx.recipe.id}`)).toEqual([3]);
+    });
+
+    it("leaves the meal unrated when the rating is omitted, or sent as null", async () => {
+      const foodItem = await stock({ foodIds: [fx.egg.id] });
+      expect((await served(foodItem, {})).meal.foods.map((food) => food.rating)).toEqual([null]);
+      expect((await served(foodItem, { foodRatings: { [fx.egg.id]: null } })).meal.foods[0]!.rating).toBeNull();
+      const recipeItem = await stock({ recipeId: fx.recipe.id });
+      expect((await served(recipeItem, { recipeRating: null })).meal.recipeRating).toBeNull();
+      expect(await summaries()).toMatchObject({ body: { foods: {}, recipes: {} } });
+    });
+
+    it("refuses a rating of the wrong kind, and writes nothing", async () => {
+      const foodItem = await stock({ foodIds: [fx.egg.id] });
+      const recipeItem = await stock({ recipeId: fx.recipe.id });
+
+      const recipeOnFood = await serve(foodItem, { recipeRating: 4 });
+      expect(recipeOnFood.statusCode).toBe(400);
+      expect(recipeOnFood.json()).toMatchObject({ details: { recipeRating: "only a recipe meal has a recipe rating" } });
+      const foodOnRecipe = await serve(recipeItem, { foodRatings: { [fx.egg.id]: 4 } });
+      expect(foodOnRecipe.statusCode).toBe(400);
+      expect(foodOnRecipe.json()).toMatchObject({
+        details: { foodRatings: "a recipe meal is rated as a recipe, not per food" },
+      });
+
+      await expectUntouched(foodItem);
+      await expectUntouched(recipeItem);
+    });
+
+    it("refuses a rating for a food that is not in the container, and writes nothing", async () => {
+      const itemId = await stock({ foodIds: [fx.egg.id] });
+      const response = await serve(itemId, { foodRatings: { [fx.egg.id]: 5, [fx.banana.id]: 3 } });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({ details: { foodRatings: "food is not on this meal", strays: [fx.banana.id] } });
+      await expectUntouched(itemId);
+    });
+
+    it.each([0, 6, 2.5, "4", -1])("refuses %j stars on either kind, and writes nothing", async (rating) => {
+      const foodItem = await stock({ foodIds: [fx.egg.id] });
+      const recipeItem = await stock({ recipeId: fx.recipe.id });
+      expect((await serve(foodItem, { foodRatings: { [fx.egg.id]: rating } })).statusCode).toBe(400);
+      expect((await serve(recipeItem, { recipeRating: rating })).statusCode).toBe(400);
+      await expectUntouched(foodItem);
+      await expectUntouched(recipeItem);
+    });
+
+    it("refuses a food rating keyed by something that is not a food id", async () => {
+      const itemId = await stock({ foodIds: [fx.egg.id] });
+      expect((await serve(itemId, { foodRatings: { egg: 4 } })).statusCode).toBe(400);
+      await expectUntouched(itemId);
+    });
+
+    it("loses the rating with the meal when the serve is undone (the meal deleted)", async () => {
+      const foodItem = await stock({ foodIds: [fx.egg.id] });
+      const recipeItem = await stock({ recipeId: fx.recipe.id });
+      const foodMeal = (await served(foodItem, { foodRatings: { [fx.egg.id]: 5 } })).meal;
+      const recipeMeal = (await served(recipeItem, { recipeRating: 2 })).meal;
+      for (const meal of [foodMeal, recipeMeal]) {
+        const deleted = await app.inject({ method: "DELETE", url: `/api/meals/${meal.id}`, headers: { cookie: parent.cookie } });
+        expect(deleted.statusCode).toBe(204);
+      }
+      expect(await summaries()).toMatchObject({ body: { foods: {}, recipes: {} } });
+      expect(await historyOf(`?foodId=${fx.egg.id}`)).toEqual([]);
+      expect(await historyOf(`?recipeId=${fx.recipe.id}`)).toEqual([]);
+      expect(await db.select().from(schema.mealFoods)).toEqual([]);
+    });
+  });
+
   describe("GET /api/babies/:babyId/ratings", () => {
     it("averages a food over loose-food meals only — a recipe's rating never counts toward its ingredients", async () => {
       await created({ foodIds: [fx.egg.id], foodRatings: { [fx.egg.id]: 4 }, servedAt: daysAgo(3) });

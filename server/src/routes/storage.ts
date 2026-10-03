@@ -36,6 +36,7 @@ import type { Database } from "../db/index.js";
 import { babies, foods, storageItemFoods, storageItems, recipeIngredients, recipes } from "../db/schema.js";
 import { choosableFoodsCondition } from "../services/foods.js";
 import { insertMealWithFoods, loadMeals, ownsBaby } from "../services/meals.js";
+import { validateRatings } from "./meals.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import {
   deriveFreshness,
@@ -511,6 +512,13 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
       });
     }
 
+    // Item 718: the meal this serve writes is rated exactly as Log meal's
+    // create rates one — a food item per food, a recipe item once as the
+    // recipe — and a rating that does not fit is a 400 before anything is
+    // written.
+    const ratings = validateRatings(item.recipeId, foodIds, body.data.foodRatings, body.data.recipeRating);
+    if (!ratings.ok) return badRequest(reply, ratings.details);
+
     const servedAt = body.data.servedAt ? new Date(body.data.servedAt) : new Date();
     const servings = body.data.servings;
 
@@ -526,7 +534,12 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
           servedAt,
           reactionNote: body.data.reactionNote,
           notes: body.data.notes,
-          foods: foodIds.map((foodId) => ({ foodId, storageItemId: item.id })),
+          recipeRating: body.data.recipeRating,
+          foods: foodIds.map((foodId) => ({
+            foodId,
+            storageItemId: item.id,
+            rating: body.data.foodRatings?.[foodId] ?? null,
+          })),
         });
 
         // The claim: ONE guarded, self-referential UPDATE that is both the

@@ -197,6 +197,9 @@ export function useStorageServe(babyId: string | undefined) {
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
       void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
+      // Item 718: a serve can carry a rating, so the food/recipe pages'
+      // rating line and history refresh like after Log meal.
+      void queryClient.invalidateQueries({ queryKey: trackingKeys.ratings(babyId) });
     },
   });
 }

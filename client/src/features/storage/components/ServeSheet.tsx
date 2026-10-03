@@ -8,6 +8,11 @@ import { Field } from "../../../components/ui/Field.js";
 import { Textarea } from "../../../components/ui/Input.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
 import { HowToLink } from "../../safety/HowToLink.js";
+import {
+  MealRatingsField,
+  RECIPE_RATING_KEY,
+  mealRatingRows,
+} from "../../tracking/components/MealRatingsField.js";
 
 /** Ceiling for the serve stepper on an untracked item (no servingsLeft to
  * bound it by) — generous enough never to feel like a real limit. */
@@ -37,6 +42,40 @@ export function buildServeInput(
     reactionNote: reactionNote.trim() || null,
     notes: notes.trim() || null,
   };
+}
+
+/**
+ * Item 718: the rating half of a serve, keyed like `MealRatingsField`'s rows
+ * (`RECIPE_RATING_KEY` or a food id). Only stars the parent actually chose
+ * are sent — nothing chosen sends no rating key at all, so an unrated serve
+ * is byte-for-byte the request it always was. A recipe item is rated once as
+ * the recipe, a food item per food: the same split the server enforces.
+ */
+export function serveRatingsInput(
+  item: Pick<StorageItem, "recipeId" | "foods">,
+  ratings: Readonly<Record<string, number | null>>,
+): { foodRatings?: Record<string, number>; recipeRating?: number } {
+  if (item.recipeId) {
+    const recipeRating = ratings[RECIPE_RATING_KEY];
+    return recipeRating == null ? {} : { recipeRating };
+  }
+  const rated = item.foods.flatMap((food) => {
+    const rating = ratings[food.id];
+    return rating == null ? [] : [[food.id, rating] as const];
+  });
+  return rated.length === 0 ? {} : { foodRatings: Object.fromEntries(rated) };
+}
+
+/** The Serve sheet's star rows: the recipe's one row on a recipe item, one
+ * per food on a food item — Log meal's `mealRatingRows`, fed the item. */
+export function serveRatingRows(item: StorageItem, ratings: Readonly<Record<string, number | null>>) {
+  return mealRatingRows(
+    item.recipeId
+      ? { title: item.recipeTitle ?? storageItemTitle(item), rating: ratings[RECIPE_RATING_KEY] ?? null }
+      : null,
+    item.foods,
+    ratings,
+  );
 }
 
 interface ServeControlProps {
@@ -71,6 +110,7 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
   const [servedAt, setServedAt] = useState(() => nowAtMinute());
   const [reactionNote, setReactionNote] = useState("");
   const [notes, setNotes] = useState("");
+  const [ratings, setRatings] = useState<Record<string, number | null>>({});
   const serve = useStorageServe(babyId);
 
   return (
@@ -115,6 +155,14 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
         <DateTimeField id="serve-when" value={servedAt} onChange={setServedAt} disabled={serve.isPending} />
       </Field>
 
+      {/* Item 718: optional, where Log meal has it (after When, above the
+          reaction note). Blank sends no rating. */}
+      <MealRatingsField
+        rows={serveRatingRows(item, ratings)}
+        onChange={(key, value) => setRatings((current) => ({ ...current, [key]: value }))}
+        disabled={serve.isPending}
+      />
+
       {/* Always visible, above the button (item 263) — the "+ Add a note"
           toggle that used to hide these is gone. Both fields are kept: the
           reaction note is what feeds allergen tracking, so hiding it behind
@@ -147,7 +195,13 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
         className="w-full"
         onClick={() =>
           serve.mutate(
-            { id: item.id, input: buildServeInput(babyId, servings, reactionNote, notes, servedAt) },
+            {
+              id: item.id,
+              input: {
+                ...buildServeInput(babyId, servings, reactionNote, notes, servedAt),
+                ...serveRatingsInput(item, ratings),
+              },
+            },
             { onSuccess: () => onServed?.() },
           )
         }

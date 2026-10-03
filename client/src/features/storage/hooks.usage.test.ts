@@ -244,6 +244,25 @@ describe("useStorageServe — meal_logged from storage", () => {
     options.onError!(new ApiError(500, "internal_error") as never);
     expect(tracked).toEqual([["meal_save_failed", { via: "storage_serve", kind: "5xx", offline: false }]]);
   });
+
+  // Item 718: a serve can carry a rating, so the food page's rating line has
+  // to refresh after one, as it does after Log meal.
+  it("refreshes this baby's ratings (summaries and every history) when a serve settles", () => {
+    const client = fakeQueryClient as unknown as { invalidateQueries: (filter: { queryKey: unknown }) => Promise<void> };
+    const original = client.invalidateQueries;
+    const keys: unknown[] = [];
+    client.invalidateQueries = (filter) => {
+      keys.push(filter.queryKey);
+      return Promise.resolve();
+    };
+    try {
+      const options = firstOptions(() => useStorageServe("baby-1"));
+      (options.onSettled as () => void)();
+    } finally {
+      client.invalidateQueries = original;
+    }
+    expect(keys).toContainEqual(["ratings", "baby-1"]);
+  });
 });
 
 describe("useStorageStatusChange — storage_item_closed", () => {

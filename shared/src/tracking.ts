@@ -109,7 +109,7 @@ export const starRatingSchema = z.number().int().min(1).max(STAR_RATING_MAX);
  * route refuses a food rating on it — as it refuses a recipe rating on a
  * loose-food meal — rather than silently dropping what the parent tapped.
  */
-const foodRatingsSchema = z.record(z.string().uuid(), starRatingSchema.nullable());
+export const foodRatingsSchema = z.record(z.string().uuid(), starRatingSchema.nullable());
 
 export const createMealInputSchema = z.object({
   foodIds: mealFoodIdsSchema,

@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { parseCalendarDate } from "./babies.js";
-import { mealItemSchema, optionalNotes, optionalReactionNote, patchNotes, servedAtSchema } from "./tracking.js";
+import {
+  foodRatingsSchema,
+  mealItemSchema,
+  optionalNotes,
+  optionalReactionNote,
+  patchNotes,
+  servedAtSchema,
+  starRatingSchema,
+} from "./tracking.js";
 
 /**
  * Home storage tracking: what's been prepared, where it's stored, and when it
@@ -344,6 +352,13 @@ export const serveStorageItemInputSchema = z.object({
   /** General note on the MEAL this serve creates — not on the storage item.
    * Never read as a reaction signal; see `optionalNotes`. */
   notes: optionalNotes,
+  /** Item 718: the same optional rating shape Log meal's create takes, and
+   * checked the same way — per food on a food item, once as the recipe on a
+   * recipe item. Omitted = the meal is unrated. */
+  foodRatings: foodRatingsSchema.optional(),
+  recipeRating: starRatingSchema
+    .nullish()
+    .transform((value) => value ?? null),
 });
 export type ServeStorageItemInput = z.input<typeof serveStorageItemInputSchema>;
 

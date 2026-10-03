@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { StorageItem } from "@blw/shared";
 import { CelebrationProvider } from "../../../components/ui/Celebration.js";
 import { SheetPanel } from "../../../components/ui/Sheet.js";
-import { buildServeInput, ServeAction, ServeControl, ServeSheet } from "./ServeSheet.js";
+import { buildServeInput, ServeAction, ServeControl, ServeSheet, serveRatingsInput } from "./ServeSheet.js";
 
 const BASE_ITEM: StorageItem = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -93,12 +93,14 @@ describe("ServeControl — the serve sheet's body (item 263)", () => {
     expect(html).toContain(">Serve<");
     expect(html.lastIndexOf("<textarea")).toBeLessThan(html.indexOf(">Serve<"));
     expect(html).not.toContain(">Cancel<");
-    // How-to guide (1, opens its own sheet) + Stepper (2) + When (1) + Serve (1) and nothing else.
-    expect((html.match(/<button/g) ?? []).length).toBe(5);
+    // How-to guide (1, opens its own sheet) + Stepper (2) + When (1) + 5 stars
+    // (item 718; Clear only appears once a star is chosen) + Serve (1).
+    expect((html.match(/<button/g) ?? []).length).toBe(10);
   });
 
   it("keeps every control at the 44px tap target", () => {
-    expect((html.match(/h-11 w-11/g) ?? []).length).toBe(2);
+    // Stepper (2) + the five stars (item 718).
+    expect((html.match(/h-11 w-11/g) ?? []).length).toBe(7);
     // The When field is a full-width button, so it takes the height alone.
     expect(html).toMatch(/id="serve-when"[^>]*class="[^"]*min-h-11/);
   });
@@ -121,6 +123,56 @@ describe("the Serve sheet's How-to link (item 714)", () => {
     // centered in it — just centered in 39px of it, 9.5 above and 14.5 below.
     expect(button).toMatch(/class="-my-3 inline-flex min-h-11 items-center [^"]* pb-\[5px\]"/);
     expect(button).not.toMatch(/\bp[ty]-|\bpb-(?!\[5px\])|\bm[tb]-/);
+  });
+});
+
+describe("the Serve sheet's star row (item 718)", () => {
+  const RECIPE_ITEM: StorageItem = {
+    ...BASE_ITEM,
+    foods: [],
+    recipeId: "22222222-2222-2222-2222-222222222222",
+    recipeTitle: "Salmon Cakes",
+  };
+
+  it("rates a food item as its food: one labeled row, between When and the reaction note", () => {
+    const html = render(createElement(ServeControl, { item: BASE_ITEM, babyId: "baby-1" }));
+    expect(html).toContain("Rating (optional)");
+    expect((html.match(/role="radiogroup"/g) ?? []).length).toBe(1);
+    expect(html).toContain('aria-label="Rating for Avocado"');
+    expect(html).toMatch(/<span class="[^"]*">Avocado<\/span>/);
+    const rating = html.indexOf("Rating (optional)");
+    expect(html.indexOf('id="serve-when"')).toBeLessThan(rating);
+    expect(rating).toBeLessThan(html.indexOf("<textarea"));
+    // Unrated to start: no star chosen, no Clear.
+    expect(html).not.toContain('aria-checked="true"');
+    expect(html).not.toContain(">Clear<");
+  });
+
+  it("rates a recipe item once, as the recipe, labeled with the recipe's name", () => {
+    const html = render(createElement(ServeControl, { item: RECIPE_ITEM, babyId: "baby-1" }));
+    expect((html.match(/role="radiogroup"/g) ?? []).length).toBe(1);
+    expect(html).toContain('aria-label="Rating for Salmon Cakes"');
+  });
+
+  it("shows no star row on a label-only item (it has nothing to rate)", () => {
+    const html = render(createElement(ServeControl, { item: { ...BASE_ITEM, foods: [], label: "Mystery" }, babyId: "b" }));
+    expect(html).not.toContain("Rating (optional)");
+    expect(html).not.toContain('role="radiogroup"');
+  });
+
+  it("sends nothing when no star is chosen, so an unrated serve is the request it always was", () => {
+    expect(serveRatingsInput(BASE_ITEM, {})).toEqual({});
+    expect(serveRatingsInput(BASE_ITEM, { "food-1": null })).toEqual({});
+    expect(serveRatingsInput(RECIPE_ITEM, {})).toEqual({});
+    expect(serveRatingsInput(RECIPE_ITEM, { recipe: null })).toEqual({});
+  });
+
+  it("sends a food item's stars as foodRatings and a recipe item's as recipeRating, never the other kind", () => {
+    expect(serveRatingsInput(BASE_ITEM, { "food-1": 4 })).toEqual({ foodRatings: { "food-1": 4 } });
+    // A key that is not this item's food (or the recipe key) never leaks out.
+    expect(serveRatingsInput(BASE_ITEM, { "food-1": 2, recipe: 5, other: 3 })).toEqual({ foodRatings: { "food-1": 2 } });
+    expect(serveRatingsInput(RECIPE_ITEM, { recipe: 3 })).toEqual({ recipeRating: 3 });
+    expect(serveRatingsInput(RECIPE_ITEM, { recipe: 3, "food-1": 5 })).toEqual({ recipeRating: 3 });
   });
 });
 

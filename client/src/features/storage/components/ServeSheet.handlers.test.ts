@@ -14,7 +14,7 @@ import type { StorageItem } from "@blw/shared";
 
 const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], i: 0 };
-  const served: Array<{ id: string; input: { servedAt: string; servings: number } }> = [];
+  const served: Array<{ id: string; input: { servedAt: string; servings: number } & Record<string, unknown> }> = [];
 
   return {
     store,
@@ -58,6 +58,7 @@ vi.mock("../hooks.js", async (importOriginal) => {
 import { ServeControl } from "./ServeSheet.js";
 import { DateTimeField } from "../../../components/ui/DateTimeField.js";
 import { Button } from "../../../components/ui/Button.js";
+import { MealRatingsField } from "../../tracking/components/MealRatingsField.js";
 
 const ITEM: StorageItem = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -156,5 +157,37 @@ describe("the Serve sheet's When field (item 354)", () => {
     // No `now` override and no custom max: the field's own Save-time guard
     // ("Time can't be in the future") is the only one in play.
     expect(field.props.now).toBeUndefined();
+  });
+});
+
+describe("the Serve sheet's star row (item 718)", () => {
+  function ratingsField(tree: Rendered): Rendered {
+    const field = find(tree, MealRatingsField);
+    if (!field) throw new Error("the serve sheet should mount its star row");
+    return field;
+  }
+
+  it("sends no rating key at all when the parent leaves the stars blank", () => {
+    h.reset();
+    serve(render());
+    expect(h.served[0]!.input).not.toHaveProperty("foodRatings");
+    expect(h.served[0]!.input).not.toHaveProperty("recipeRating");
+  });
+
+  it("sends the star the parent tapped as the item's food rating, and a cleared star as nothing", () => {
+    h.reset();
+    const field = ratingsField(render());
+    expect(field.props.rows).toEqual([{ key: "food-1", label: "Avocado", value: null }]);
+    (field.props.onChange as (key: string, value: number | null) => void)("food-1", 4);
+
+    const tree = render();
+    expect(ratingsField(tree).props.rows).toEqual([{ key: "food-1", label: "Avocado", value: 4 }]);
+    serve(tree);
+    expect(h.served[0]!.input.foodRatings).toEqual({ "food-1": 4 });
+    expect(h.served[0]!.input).not.toHaveProperty("recipeRating");
+
+    (ratingsField(render()).props.onChange as (key: string, value: number | null) => void)("food-1", null);
+    serve(render());
+    expect(h.served[1]!.input).not.toHaveProperty("foodRatings");
   });
 });
