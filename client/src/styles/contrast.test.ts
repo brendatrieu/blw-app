@@ -497,14 +497,15 @@ describe("food plates (items 657, 658)", () => {
     }
   }
 
-  // Mockup values (A-Home / A-Home-Dark / A-Salmon); fruit and grain chosen to match.
+  // Light: mockup values (A-Home / A-Salmon). Dark: the owner's Plates-Dark board
+  // (item 717); neutral unchanged, so the "+N" gate above is unaffected.
   const EXPECTED: Record<string, { light: string; dark: string }> = {
-    "color-plate-veg": { light: "#dcefe2", dark: "#1f3a2e" },
-    "color-plate-protein": { light: "#fbe3d2", dark: "#3a2a20" },
-    "color-plate-legume": { light: "#f1e9dc", dark: "#33302a" },
-    "color-plate-dairy": { light: "#fdf0c4", dark: "#3a3418" },
-    "color-plate-fruit": { light: "#fde4e1", dark: "#3a2422" },
-    "color-plate-grain": { light: "#f7e7c8", dark: "#383020" },
+    "color-plate-veg": { light: "#dcefe2", dark: "#1d4a33" },
+    "color-plate-protein": { light: "#fbe3d2", dark: "#5a2a22" },
+    "color-plate-legume": { light: "#f1e9dc", dark: "#3e3529" },
+    "color-plate-dairy": { light: "#fdf0c4", dark: "#45491b" },
+    "color-plate-fruit": { light: "#fde4e1", dark: "#4e1f3a" },
+    "color-plate-grain": { light: "#f7e7c8", dark: "#5b3a10" },
     "color-plate-neutral": { light: "#efe9e1", dark: "#2a3542" },
   };
   for (const [token, { light, dark }] of Object.entries(EXPECTED)) {
