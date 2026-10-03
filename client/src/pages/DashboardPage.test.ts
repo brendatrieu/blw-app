@@ -629,7 +629,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     expect(html).toMatch(/<a [^>]*href="\/storage\/add"[^>]*>Add to storage<\/a>/);
     expect(html).not.toContain("🍽️ Log meal");
     expect(html).not.toContain("📦 Add to storage");
-    // Sky and mint, 48px and 16px/800 as in A-Home.
+    // Sky and mint, 48px and 16px/700 (A-Home's 800, one step lighter in Jakarta).
     const logMeal = /<a [^>]*href="\/log-meal"[^>]*>/.exec(html)?.[0] ?? "";
     const addStorage = /<a [^>]*href="\/storage\/add"[^>]*>/.exec(html)?.[0] ?? "";
     expect(logMeal).toContain("bg-[var(--color-primary)]");

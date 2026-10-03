@@ -68,7 +68,7 @@ describe("AppLayout header", () => {
   const GREETING = /<span class="([^"]*)">(Good morning|Good afternoon|Good evening)<\/span>/;
 
   for (const babies of [[baby("baby-1", "Remy")], [baby("baby-1", "Remy"), baby("baby-2", "Ada")]]) {
-    it(`greeting is an 11px/800/0.14em uppercase apricot label with no icon (${babies.length} baby)`, () => {
+    it(`greeting is an 11px/700/0.14em uppercase apricot label with no icon (${babies.length} baby)`, () => {
       const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       queryClient.setQueryData(babyKeys.list(false), babies);
       const html = renderLayout(queryClient);

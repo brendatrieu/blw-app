@@ -74,6 +74,10 @@ describe("weights stepped down one, honestly (item 708)", () => {
     expect(offenders.map(({ path }) => path)).toEqual([]);
   });
 
+  it("no comment or test title still quotes an 800 weight like 16px/800 (item 721)", () => {
+    expect(sources.filter(({ text }) => /px\/800\b/.test(text)).map(({ path }) => path)).toEqual([]);
+  });
+
   it("the chart labels sit one step lighter: Donut 700, Line 600", () => {
     const text = (name: string) => sources.find(({ path }) => path === `components/charts/${name}.tsx`)!.text;
     expect(text("Donut")).toContain("fontWeight={700}");

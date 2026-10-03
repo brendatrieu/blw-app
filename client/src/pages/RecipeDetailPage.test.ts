@@ -188,7 +188,7 @@ describe("RecipeDetailPage (catalog recipe)", () => {
     expect(html).toContain(`href="/log-meal?recipe=${id}"`);
     expect(html).toContain(`href="/storage/add?recipe=${id}"`);
     expect(html).toContain(">Log meal<");
-    // The same 48px 16px/800 "lg" pair as Home and the food page.
+    // The same 48px 16px/700 "lg" pair as Home and the food page.
     for (const href of [`/log-meal?recipe=${id}`, `/storage/add?recipe=${id}`]) {
       const tag = new RegExp(`<a [^>]*href="${href.replace("?", "\\?")}"[^>]*>`).exec(html)?.[0] ?? "";
       expect(tag).toContain("min-h-12 px-4 py-2.5 text-base font-bold");
