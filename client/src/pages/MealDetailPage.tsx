@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { awaitingDetail } from "../lib/detailQuery.js";
 import type { MealItem } from "@blw/shared";
 import { useMeals, useUpdateMeal } from "../features/tracking/hooks.js";
 import {
@@ -55,7 +56,7 @@ function servedAtLabel(iso: string): string {
 export function MealDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
-  const { data, isLoading: mealsLoading } = useMeals(activeBaby?.id, { limit: 100 });
+  const meals = useMeals(activeBaby?.id, { limit: 100 });
   // Item 334 / ledger 554: each meal food carries its own allergen slugs.
   // History must not depend on the foods LIST, which hides a deleted food —
   // a past meal keeps that food's allergen chips.
@@ -65,8 +66,10 @@ export function MealDetailPage() {
   const updateMeal = useUpdateMeal(activeBaby?.id);
   const goBack = useBackNavigate("/");
 
-  const isLoading = babyLoading || mealsLoading;
-  const meal = data?.items.find((candidate) => candidate.id === id) ?? null;
+  const meal = meals.data?.items.find((candidate) => candidate.id === id) ?? null;
+  // No baby at all leaves the meals query disabled (pending for good), so
+  // only a real baby's meals are waited on; with none, the meal is missing.
+  const isLoading = babyLoading || (activeBaby !== null && awaitingDetail(meals, Boolean(meal)));
 
   // While a tap is saving, show what was tapped rather than the old value.
   const pending = updateMeal.isPending ? updateMeal.variables : undefined;

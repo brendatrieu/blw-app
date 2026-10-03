@@ -1,4 +1,5 @@
 import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { awaitingDetail } from "../lib/detailQuery.js";
 import { useFood } from "../features/catalog/hooks.js";
 import { CustomFoodForm } from "../features/catalog/components/CustomFoodForm.js";
 import { BackButton } from "../components/ui/BackButton.js";
@@ -17,10 +18,11 @@ import { Skeleton } from "../components/ui/Skeleton.js";
  */
 export function FoodEditPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { data: food, isLoading, isError } = useFood(slug);
+  const foodQuery = useFood(slug);
+  const { data: food, isError } = foodQuery;
   const navigate = useNavigate();
 
-  if (isLoading) {
+  if (awaitingDetail(foodQuery, Boolean(food))) {
     return (
       <div className="flex flex-col gap-4 p-4">
         <PageHeader title="Edit food" emoji="✏️" leading={<BackButton fallback="/foods" />} />

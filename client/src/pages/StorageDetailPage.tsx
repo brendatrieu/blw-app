@@ -1,4 +1,5 @@
 import { Navigate, useParams } from "react-router-dom";
+import { awaitingDetail } from "../lib/detailQuery.js";
 import { useStorageItems, useStorageStatusChange } from "../features/storage/hooks.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { StorageItemCard, StorageItemTitle, storageItemCluster } from "../features/storage/components/StorageItemCard.js";
@@ -31,13 +32,13 @@ export function StorageDetailPage() {
   const { activeBaby } = useActiveBaby();
   const { recentChange, setStatus, undo, isPending } = useStorageStatusChange();
 
-  const isLoading = active.isLoading || history.isLoading;
   const item =
     active.data?.items.find((candidate) => candidate.id === id) ??
     history.data?.items.find((candidate) => candidate.id === id) ??
     null;
 
-  if (isLoading) {
+  // Both views must have answered before "in neither" means missing.
+  if (awaitingDetail(active, Boolean(item)) || awaitingDetail(history, Boolean(item))) {
     return (
       <div className="flex flex-col gap-4 p-4">
         <BackButton fallback="/storage" />

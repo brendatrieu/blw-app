@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { awaitingDetail } from "../lib/detailQuery.js";
 import type { AgeStage, RecipeDetail } from "@blw/shared";
 import { ageInMonths, formatExtraIngredient } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
@@ -134,7 +135,8 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
 
 export function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: recipe, isLoading, isError } = useRecipe(id);
+  const recipeQuery = useRecipe(id);
+  const { data: recipe, isError } = recipeQuery;
   const { activeBaby, isLoading: isBabyLoading } = useActiveBaby();
   const [activeStage, setActiveStage] = useState<AgeStage>("6");
   const userPickedStage = useRef(false);
@@ -147,7 +149,7 @@ export function RecipeDetailPage() {
     setActiveStage(stage);
   }, [activeBaby, isBabyLoading]);
 
-  if (isLoading) {
+  if (awaitingDetail(recipeQuery, Boolean(recipe))) {
     return (
       <div className="flex flex-col gap-5 p-4">
         <BackButton fallback={RECIPES_TAB_PATH} />

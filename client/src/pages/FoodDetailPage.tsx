@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { awaitingDetail } from "../lib/detailQuery.js";
 import { STAR_RATING_MAX, ageInMonths, type AgeStage, type FoodDetail, type FoodListItem } from "@blw/shared";
 import {
   useDeleteCustomFood,
@@ -293,10 +294,11 @@ export function DeletedFoodNotice({ food }: { food: FoodDetail }) {
 
 export function FoodDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { data: food, isLoading, isError } = useFood(slug);
+  const foodQuery = useFood(slug);
+  const { data: food, isError } = foodQuery;
   const { activeBaby } = useActiveBaby();
 
-  if (isLoading) {
+  if (awaitingDetail(foodQuery, Boolean(food))) {
     return (
       <div className="flex flex-col gap-5 p-4">
         <BackButton fallback="/foods" />

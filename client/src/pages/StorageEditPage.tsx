@@ -1,4 +1,5 @@
 import { Navigate, useParams } from "react-router-dom";
+import { awaitingDetail } from "../lib/detailQuery.js";
 import { useStorageItems } from "../features/storage/hooks.js";
 import { EditStorageItemForm } from "../features/storage/components/EditStorageItemForm.js";
 import { useBackNavigate } from "../components/ui/BackButton.js";
@@ -16,12 +17,12 @@ import { Skeleton } from "../components/ui/Skeleton.js";
  */
 export function StorageEditPage() {
   const { id } = useParams<{ id: string }>();
-  const { data, isLoading } = useStorageItems("active");
+  const active = useStorageItems("active");
   const goBack = useBackNavigate("/storage");
 
-  const item = data?.items.find((candidate) => candidate.id === id) ?? null;
+  const item = active.data?.items.find((candidate) => candidate.id === id) ?? null;
 
-  if (isLoading) {
+  if (awaitingDetail(active, Boolean(item))) {
     return (
       <div className="flex flex-col gap-4 p-4">
         <PageHeader title="Edit storage item" emoji="✏️" leading={<CloseButton fallback="/storage" />} />

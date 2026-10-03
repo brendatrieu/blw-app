@@ -1,4 +1,5 @@
 import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { awaitingDetail } from "../lib/detailQuery.js";
 import { useRecipe } from "../features/catalog/hooks.js";
 import { CustomRecipeForm } from "../features/catalog/components/CustomRecipeForm.js";
 import { RECIPES_TAB_PATH } from "../features/catalog/constants.js";
@@ -18,10 +19,11 @@ import { Skeleton } from "../components/ui/Skeleton.js";
  */
 export function RecipeEditPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: recipe, isLoading, isError } = useRecipe(id);
+  const recipeQuery = useRecipe(id);
+  const { data: recipe, isError } = recipeQuery;
   const navigate = useNavigate();
 
-  if (isLoading) {
+  if (awaitingDetail(recipeQuery, Boolean(recipe))) {
     return (
       <div className="flex flex-col gap-4 p-4">
         <PageHeader title="Edit recipe" emoji="✏️" leading={<BackButton fallback={RECIPES_TAB_PATH} />} />
