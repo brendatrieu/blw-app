@@ -12,7 +12,7 @@ import { getGuide } from "./content.js";
  * is `/guides/<slug>`, under More. An unknown slug renders nothing;
  * `HowToLink.test.ts` pins every slug the app passes here to a real guide.
  */
-export function HowToLink({ slug }: { slug: string }) {
+export function HowToLink({ slug, className = "" }: { slug: string; className?: string }) {
   const [open, setOpen] = useState(false);
   const guide = getGuide(slug);
   if (!guide) return null;
@@ -24,7 +24,7 @@ export function HowToLink({ slug }: { slug: string }) {
         // Item 699: the 44px tap target stays, but `-my-3` cancels the 12px
         // it adds above and below the 20px text line, so the link sits as
         // close to its neighbors as a line of text would.
-        className="-my-3 inline-flex min-h-11 items-center gap-1.5 self-start text-left text-sm font-medium text-[var(--color-accent)]"
+        className={`-my-3 inline-flex min-h-11 items-center gap-1.5 self-start text-left text-sm font-medium text-[var(--color-accent)]${className ? ` ${className}` : ""}`}
       >
         <span aria-hidden="true">📖</span>
         <span className="underline">{guide.title}</span>

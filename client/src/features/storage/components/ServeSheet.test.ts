@@ -113,6 +113,17 @@ describe("ServeControl — the serve sheet's body (item 263)", () => {
   });
 });
 
+describe("the Serve sheet's How-to link (item 714)", () => {
+  it("lifts its text 2.5px above center inside the same 44px box (pb-[5px] on a centered min-h-11)", () => {
+    const html = render(createElement(ServeControl, { item: BASE_ITEM, babyId: "baby-1" }));
+    const button = html.match(/<button[^>]*>(?=<span aria-hidden="true">📖)/)?.[0] ?? "";
+    // Same box and footprint as everywhere else (44px, -my-3), text still
+    // centered in it — just centered in 39px of it, 9.5 above and 14.5 below.
+    expect(button).toMatch(/class="-my-3 inline-flex min-h-11 items-center [^"]* pb-\[5px\]"/);
+    expect(button).not.toMatch(/\bp[ty]-|\bpb-(?!\[5px\])|\bm[tb]-/);
+  });
+});
+
 describe("ServeSheet (item 263)", () => {
   it("renders nothing while closed", () => {
     const html = render(

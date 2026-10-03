@@ -57,6 +57,10 @@ describe("HowToLink (item 603)", () => {
   it("keeps its 44px target without the extra layout height", () => {
     const button = render("how-to-log-a-meal").match(/<button[^>]*>/)?.[0] ?? "";
     expect(button).toMatch(/class="-my-3 inline-flex min-h-11 /);
+    // Item 714: only the Serve sheet lifts its text inside the box; the
+    // default link keeps it centered, with no padding and no trailing class.
+    expect(button).not.toMatch(/\bp[btyl]?-/);
+    expect(button).toMatch(/text-\[var\(--color-accent\)\]"/);
   });
 
   it("renders nothing for an unknown slug rather than a dead link", () => {

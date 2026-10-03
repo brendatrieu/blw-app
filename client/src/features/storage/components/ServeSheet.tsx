@@ -75,7 +75,12 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <HowToLink slug="how-to-serve-from-storage" />
+      {/* Item 714: the link's 44px box is wedged between the header's X and
+          the −/+ stepper with no slack, so the only way to bring its text
+          nearer the title is up INSIDE the box: `pb-[5px]` lifts it 2.5px
+          above center (title text → link text 21.5 → 19, link text → −/+
+          12 → 14.5), keeping the box 44px and clear of both. */}
+      <HowToLink slug="how-to-serve-from-storage" className="pb-[5px]" />
       <div className="flex items-center gap-2">
         <span className="text-sm text-[var(--color-text)]">Servings</span>
         <div className="flex items-center gap-1.5" role="group" aria-label="Servings">
