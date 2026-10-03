@@ -114,8 +114,12 @@ function renderRecipe(recipe: RecipeDetail, history?: RatingHistoryResponse["poi
 describe("RecipeDetailPage (catalog recipe)", () => {
   it("keeps its age tabs, texture note and prep badge", () => {
     const html = renderRecipe(catalogRecipe());
-    expect(html).toContain(">6mo<");
-    expect(html).toContain(">9mo<");
+    // Item 702: the food page's age control and labels.
+    expect(html).toContain('role="radiogroup" aria-label="Age"');
+    expect(html).toContain(">6–8 mo<");
+    expect(html).toContain(">9–11 mo<");
+    expect(html).toContain(">12+ mo<");
+    expect(html).not.toContain(">6mo<");
     expect(html).toContain("Smooth purée");
     expect(html).toMatch(/>15(?:<!-- -->)? min prep</);
     expect(html).toContain(">Iron focus<");
@@ -217,7 +221,7 @@ describe("RecipeDetailPage (catalog recipe)", () => {
   // variant. The page used to open on "6" regardless — highlighting a
   // DISABLED 6mo tab above the 9-month prep, i.e. labelling shellfish as
   // 6-month food. The highlighted tab must name the prep shown below it.
-  it("opens a 9-month-only recipe on its earliest real stage, not a disabled 6mo tab", () => {
+  it("opens a 9-month-only recipe on its earliest real stage, not the dimmed 6–8 mo segment", () => {
     const html = renderRecipe(
       catalogRecipe({
         slug: "simple-shrimp",
@@ -234,12 +238,15 @@ describe("RecipeDetailPage (catalog recipe)", () => {
     // Item 644: the selected token, which stays pastel in dark mode.
     const ACTIVE = "bg-[var(--color-selected)]";
 
-    // `disabled=""` is the attribute; `disabled:` prefixes in the class list
-    // are Tailwind variants and say nothing about the button's state.
-    expect(tab("6mo")).toContain('disabled=""');
-    expect(tab("6mo")).not.toContain(ACTIVE);
-    expect(tab("9mo")).toContain(ACTIVE);
-    expect(tab("9mo")).not.toContain('disabled=""');
+    // Item 702: the missing stage is dimmed and inert (aria-disabled, so it
+    // stays announced), and the highlight lands on the stage shown below.
+    expect(tab("6–8 mo")).toContain('aria-disabled="true"');
+    expect(tab("6–8 mo")).toContain("opacity-40");
+    expect(tab("6–8 mo")).not.toContain(ACTIVE);
+    expect(tab("9–11 mo")).toContain(ACTIVE);
+    expect(tab("9–11 mo")).toContain('aria-checked="true"');
+    expect(tab("9–11 mo")).not.toContain("aria-disabled");
+    expect(tab("12+ mo")).not.toContain("aria-disabled");
     // ...and the panel below is the 9-month one it now points at.
     expect(html).toContain("Finely chopped");
     expect(html).toContain("Chop small");
@@ -254,8 +261,8 @@ describe("RecipeDetailPage (custom recipe)", () => {
     expect(html).toContain(">Steps<");
     expect(html).toContain("Cook the lentils");
     expect(html).toContain("Mash together");
-    expect(html).not.toContain(">6mo<");
-    expect(html).not.toContain(">9mo<");
+    expect(html).not.toContain(">6–8 mo<");
+    expect(html).not.toContain('aria-label="Age"');
   });
 
   // Item 240: steps are optional. A recipe saved with none keeps its single
@@ -515,8 +522,11 @@ describe("RecipeDetailPage favorite heart (item 640)", () => {
 
   it("gives the age tabs a 44px touch target too", () => {
     const html = renderWithFavorites(catalogRecipe(), false);
-    expect(html).toContain('class="min-h-11 rounded-[var(--radius-pill)] px-3.5');
-    expect(html).not.toContain('min-h-9 rounded-[var(--radius-pill)] px-3.5');
+    // Item 702: the shared full-width SegmentedControl — every stage is a
+    // 44px-tall flex-1 segment.
+    const tabs = html.match(/<button[^>]*role="radio"[^>]*>/g) ?? [];
+    expect(tabs).toHaveLength(3);
+    for (const tag of tabs) expect(tag).toContain("flex min-h-11 flex-1");
   });
 });
 

@@ -6,7 +6,7 @@ import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { RatingHistory, RatingSummaryRow } from "../features/tracking/components/RatingHistory.js";
 import { useDeleteCustomRecipe, useRecipe } from "../features/catalog/hooks.js";
 import { asCustomRecipeConflict } from "../features/catalog/api.js";
-import { clampStageToAvailable, stageForAge } from "../features/catalog/stage.js";
+import { AGE_STAGE_OPTIONS, clampStageToAvailable, stageForAge } from "../features/catalog/stage.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../features/catalog/basicRecipe.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
@@ -18,13 +18,8 @@ import { useIsFavorited, useToggleFavorite } from "../features/tracking/hooks.js
 import { BackButton } from "../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog.js";
+import { SegmentedControl } from "../components/ui/SegmentedControl.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
-
-const AGE_STAGES: { value: AgeStage; label: string }[] = [
-  { value: "6", label: "6mo" },
-  { value: "9", label: "9mo" },
-  { value: "12", label: "12mo" },
-];
 
 interface FavoriteHeartProps {
   recipeId: string;
@@ -336,30 +331,22 @@ export function RecipeDetailPage() {
         ) : null
       ) : (
       <section className="flex flex-col gap-2">
-        <div className="inline-flex w-fit gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] p-1">
-          {AGE_STAGES.map((stage) => {
-            const available = recipe.variants.some((v) => v.ageStage === stage.value);
-            const active = stage.value === resolvedStage;
-            return (
-              <button
-                key={stage.value}
-                type="button"
-                disabled={!available}
-                onClick={() => {
-                  userPickedStage.current = true;
-                  setActiveStage(stage.value);
-                }}
-                className={`min-h-11 rounded-[var(--radius-pill)] px-3.5 py-1.5 text-xs font-semibold transition-[background-color,color] duration-[var(--duration-fast)] ease-[var(--ease-spring)] motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 ${
-                  active
-                    ? "bg-[var(--color-selected)] text-[var(--color-selected-contrast)] shadow-[var(--shadow-sm)]"
-                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                }`}
-              >
-                {stage.label}
-              </button>
-            );
-          })}
-        </div>
+        {/* Item 702: the food page's full-width age bar; a stage this
+            recipe has no prep for is dimmed and can't be picked. */}
+        {resolvedStage && (
+          <SegmentedControl
+            aria-label="Age"
+            options={AGE_STAGE_OPTIONS.map((stage) => ({
+              ...stage,
+              disabled: !recipe.variants.some((v) => v.ageStage === stage.value),
+            }))}
+            value={resolvedStage}
+            onChange={(stage) => {
+              userPickedStage.current = true;
+              setActiveStage(stage);
+            }}
+          />
+        )}
 
         {activeVariant && (
           <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">

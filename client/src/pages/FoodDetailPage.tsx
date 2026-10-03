@@ -15,7 +15,7 @@ import { CUSTOM_FOOD_SOFT_NOTE, levelLabel, usedInPhrase } from "../features/cat
 import { foodPlate } from "../features/catalog/foodEmoji.js";
 import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe, sortBasicRecipesFirst } from "../features/catalog/basicRecipe.js";
-import { stageForAge } from "../features/catalog/stage.js";
+import { AGE_STAGE_OPTIONS, stageForAge } from "../features/catalog/stage.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useMeals, useRatingHistory } from "../features/tracking/hooks.js";
 import { RatingHistory } from "../features/tracking/components/RatingHistory.js";
@@ -26,13 +26,6 @@ import { ConfirmDialog } from "../components/ui/ConfirmDialog.js";
 import { Field } from "../components/ui/Field.js";
 import { SegmentedControl } from "../components/ui/SegmentedControl.js";
 import { Skeleton } from "../components/ui/Skeleton.js";
-
-// Item 668: the age tabs, and the prep column each one shows.
-const PREP_STAGES = [
-  { value: "6" as const, label: "6–8 mo", icon: null, key: "prep6m" as const },
-  { value: "9" as const, label: "9–11 mo", icon: null, key: "prep9m" as const },
-  { value: "12" as const, label: "12+ mo", icon: null, key: "prep12m" as const },
-];
 
 /**
  * Item 668: prep by age as one segmented control showing one stage's text
@@ -45,11 +38,11 @@ const PREP_STAGES = [
 export function PrepByAge({ food, defaultStage }: { food: FoodDetail; defaultStage: AgeStage }) {
   const [picked, setPicked] = useState<AgeStage | null>(null);
   // Every AgeStage has a tab, so the find always lands.
-  const stage = PREP_STAGES.find((option) => option.value === (picked ?? defaultStage))!;
+  const stage = AGE_STAGE_OPTIONS.find((option) => option.value === (picked ?? defaultStage))!;
   return (
     <section className="flex flex-col gap-3">
       <h2 className="font-h2 text-[var(--color-text)]">Prep by age</h2>
-      <SegmentedControl aria-label="Age" options={PREP_STAGES} value={stage.value} onChange={setPicked} />
+      <SegmentedControl aria-label="Age" options={AGE_STAGE_OPTIONS} value={stage.value} onChange={setPicked} />
       <p className="text-base text-[var(--color-text)]">{food[stage.key]}</p>
     </section>
   );

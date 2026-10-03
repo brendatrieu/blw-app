@@ -17,6 +17,17 @@ export function stageForAge(months: number | null | undefined): AgeStage {
 const STAGE_ORDER: AgeStage[] = ["6", "9", "12"];
 
 /**
+ * Item 702: the one age control's options, shared by the food page's "Prep
+ * by age" and the recipe page's steps, so both read "6–8 mo / 9–11 mo /
+ * 12+ mo". `key` is the food's prep column for that stage.
+ */
+export const AGE_STAGE_OPTIONS = [
+  { value: "6" as const, label: "6–8 mo", icon: null, key: "prep6m" as const },
+  { value: "9" as const, label: "9–11 mo", icon: null, key: "prep9m" as const },
+  { value: "12" as const, label: "12+ mo", icon: null, key: "prep12m" as const },
+];
+
+/**
  * Clamps a requested stage to one the recipe actually carries.
  *
  * Most catalog recipes carry all three stages, but a food held back on the

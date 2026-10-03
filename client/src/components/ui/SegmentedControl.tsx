@@ -4,6 +4,8 @@ export interface SegmentedControlOption<Value extends string> {
   value: Value;
   label: string;
   icon: ReactNode;
+  /** Shown dimmed and can't be picked (item 702: a stage a recipe has no prep for). */
+  disabled?: boolean;
 }
 
 interface SegmentedControlProps<Value extends string> {
@@ -35,19 +37,25 @@ export function SegmentedControl<Value extends string>({
     >
       {options.map((option) => {
         const selected = option.value === value;
+        // aria-disabled, not `disabled`, so the option stays focusable and a
+        // screen reader still announces it (as unavailable) in the group.
+        const disabled = option.disabled === true;
         return (
           <button
             key={option.value}
             type="button"
             role="radio"
             aria-checked={selected}
+            aria-disabled={disabled || undefined}
             onClick={() => {
-              onChange(option.value);
+              if (!disabled) onChange(option.value);
             }}
             className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] px-3 py-2 text-sm font-medium transition-colors duration-[var(--duration-fast)] ${
               selected
                 ? "bg-[var(--color-selected)] text-[var(--color-selected-contrast)]"
-                : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                : disabled
+                  ? "cursor-not-allowed text-[var(--color-text-muted)] opacity-40"
+                  : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >
             {option.icon}

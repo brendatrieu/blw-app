@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { clampStageToAvailable, stageForAge } from "./stage.js";
+import { AGE_STAGE_OPTIONS, clampStageToAvailable, stageForAge } from "./stage.js";
+
+describe("AGE_STAGE_OPTIONS (item 702)", () => {
+  it("is the one age control's labels, shared by the food and recipe pages", () => {
+    expect(AGE_STAGE_OPTIONS.map((o) => [o.value, o.label, o.key])).toEqual([
+      ["6", "6–8 mo", "prep6m"],
+      ["9", "9–11 mo", "prep9m"],
+      ["12", "12+ mo", "prep12m"],
+    ]);
+  });
+});
 
 describe("stageForAge", () => {
   it.each([
