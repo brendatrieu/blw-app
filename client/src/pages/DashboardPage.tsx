@@ -37,28 +37,21 @@ export type UpNextRow = { kind: "storage"; item: StorageItem } | { kind: "allerg
 /**
  * What Up next lists (item 660): storage items to use soon, in the freshness
  * order the list already has, then allergens due for a serve, in ladder
- * order. The card pages them `UP_NEXT_LIMIT` at a time (item 712). Expired
- * items are left to Storage, which says Expired. `more` is where See all
- * goes, judged by the rows past the first page so it holds still while you
- * page: Storage when any of them is a storage item, otherwise the ladder;
- * null when everything fits on one page.
+ * order. The card pages them `UP_NEXT_LIMIT` at a time (item 712), with no
+ * See all: the rows mix storage and allergens, so no one page lists them all
+ * (item 722). Expired items are left to Storage, which says Expired.
  */
 export function upNextRows(
   storage: readonly StorageItem[],
   allergens: AllergenProgressItem[],
   now: Date = new Date(),
-): { rows: UpNextRow[]; more: "storage" | "allergens" | null } {
-  const all: UpNextRow[] = [
+): UpNextRow[] {
+  return [
     ...storage
       .filter((item) => resolveFreshness(item, now).state === "use_soon")
       .map((item) => ({ kind: "storage" as const, item })),
     ...dueAllergens(allergens, now).map((item) => ({ kind: "allergen" as const, item })),
   ];
-  const hidden = all.slice(UP_NEXT_LIMIT);
-  return {
-    rows: all,
-    more: hidden.length === 0 ? null : hidden.some((row) => row.kind === "storage") ? "storage" : "allergens",
-  };
 }
 
 /** One Up next row: a stretched link to the thing, its kebab above it. The
@@ -111,7 +104,7 @@ export function UpNextCard({ babyId }: { babyId: string }) {
   const progress = useAllergenProgress(babyId);
   const [page, setPage] = useState(0);
   if (storage.isLoading || progress.isLoading) return null;
-  const { rows: all, more } = upNextRows(storage.data?.items ?? [], progress.data?.items ?? []);
+  const all = upNextRows(storage.data?.items ?? [], progress.data?.items ?? []);
   if (all.length === 0) return null;
   const pages = pageWindow(all.length, page, UP_NEXT_LIMIT);
   const rows = all.slice(pages.start, pages.end);
@@ -125,20 +118,21 @@ export function UpNextCard({ babyId }: { babyId: string }) {
     // the plates and label 16px in, and the kebab 6px in (pr-1), while the
     // rows span the card like Storage's so their dividers match.
     <Card as="section" padding="none" aria-labelledby="up-next" className="flex flex-col px-0.5 pt-4 pb-0.5">
-      {/* Food log's header row (item 712): flex-wrap drops the controls under
-          the label when they don't fit beside it (320px). */}
+      {/* Food log's header row (item 712): flex-wrap would drop the pager
+          under the label if it ever stopped fitting beside it; at 320px it
+          still fits (item 722). */}
       <div className="flex flex-wrap items-center justify-between gap-x-2 px-3.5">
         <h2 id="up-next" className={UP_NEXT_LABEL_CLASS}>
           Up next
         </h2>
-        {/* The pager and See all (Food log's pair, item 712): 44px targets that
+        {/* The pager alone (item 722; Food log's, item 712): 44px targets that
             take only the 13px label's height in the row, -(44 - 13) / 2; z-10
             lifts them over the first row's stretched link so their lower half
-            still lands. */}
-        {more && (
-          <div className="relative z-10 -my-[15.5px] ml-auto flex shrink-0 items-center gap-2">
+            still lands (bar the ›'s bottom ~3px, where the first row's kebab
+            sits). */}
+        {pages.last > 0 && (
+          <div className="relative z-10 -my-[15.5px] ml-auto flex shrink-0 items-center">
             <Pager label="Up next items" pages={pages} onPage={setPage} />
-            <SectionLink to={more === "storage" ? "/storage" : ladderPath}>See all</SectionLink>
           </div>
         )}
       </div>

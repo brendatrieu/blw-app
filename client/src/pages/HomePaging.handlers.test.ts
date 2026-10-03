@@ -251,13 +251,15 @@ describe("Up next paging (item 712)", () => {
     expect(last.pages).toMatchObject({ page: 2, start: 6, end: 7 });
   });
 
-  it("keeps See all beside the pager, still to Storage on every page (storage spills past page one)", () => {
-    expect(upNext().seeAll).toBe("/storage");
+  it("has no See all on any page, whatever spills: the rows mix storage and allergens (item 722)", () => {
+    expect(upNext().pages).toBeDefined();
+    expect(upNext().seeAll).toBeUndefined();
     upNext().next();
     upNext().next();
-    expect(upNext().seeAll).toBe("/storage");
+    expect(upNext().seeAll).toBeUndefined();
     h.storage = [useSoon(0)];
-    expect(upNext().seeAll).toBe("/babies/b/allergens");
+    expect(upNext().pages).toBeDefined();
+    expect(upNext().seeAll).toBeUndefined();
   });
 
   it("clamps to the new last page when rows go away (an allergen served, an item used up)", () => {
@@ -270,7 +272,7 @@ describe("Up next paging (item 712)", () => {
     expect(v.pages?.page).toBe(1);
   });
 
-  it("drops the pager and See all once three or fewer are due", () => {
+  it("drops the pager once three or fewer are due", () => {
     h.storage = [useSoon(0)];
     h.allergens = [due("peanut"), due("egg")];
     const v = upNext();
