@@ -22,8 +22,8 @@ function mealTimingLabel(servedAt: string): string {
  * meals were served from this exact storage item — see `mealsFromStorageItem`
  * for the membership rule. Pulled from the same best-effort recent-meals
  * window `FoodDetailPage`'s "times served" count uses (the 100-row page-size
- * ceiling, not an exact lifetime total), hence the muted "recent meals"
- * qualifier rather than claiming completeness.
+ * ceiling, not an exact lifetime total). The heading carries no "(recent
+ * meals)" qualifier (item 704, owner's pick).
  */
 export function MealsFromBatch({ babyId, storageItemId }: MealsFromBatchProps) {
   const { data, isLoading } = useMeals(babyId, { limit: 100 });
@@ -31,10 +31,7 @@ export function MealsFromBatch({ babyId, storageItemId }: MealsFromBatchProps) {
 
   return (
     <section className="flex flex-col gap-2.5">
-      <div className="flex items-baseline gap-1.5">
-        <h2 className="font-h2 text-[var(--color-text)]">Meals from this batch</h2>
-        <span className="text-xs text-[var(--color-text-muted)]">(recent meals)</span>
-      </div>
+      <h2 className="font-h2 text-[var(--color-text)]">Meals from this batch</h2>
 
       {isLoading && <SkeletonList count={2} />}
 

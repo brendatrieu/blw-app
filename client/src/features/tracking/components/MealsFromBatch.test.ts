@@ -36,6 +36,14 @@ function renderWithMeals(meals: MealItem[]) {
   );
 }
 
+describe("MealsFromBatch heading (item 704)", () => {
+  it("is exactly 'Meals from this batch', with no '(recent meals)' qualifier", () => {
+    const html = renderWithMeals([meal({})]);
+    expect(html).toContain('<h2 class="font-h2 text-[var(--color-text)]">Meals from this batch</h2>');
+    expect(html).not.toContain("recent meals");
+  });
+});
+
 describe("MealsFromBatch reactionNote (item 148)", () => {
   it("shows the reaction note distinctly, matching MealCard's 'Reaction:' idiom", () => {
     const html = renderWithMeals([meal({ reactionNote: "mild rash around mouth" })]);
