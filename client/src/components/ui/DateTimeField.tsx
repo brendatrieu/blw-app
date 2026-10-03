@@ -341,11 +341,20 @@ export function WheelColumn({
   // "just mounted" (the mount effect already handles the latter).
   const prevCountRef = useRef(count);
 
+  // Every programmatic move is INSTANT (ledger 713). A smooth scrollTo here
+  // races the scroll-settle below, which commits whatever row the column is
+  // passing when scroll events pause for 120ms: on the phone (WebKit) the
+  // animated scroll was read mid-way or re-snapped back, so a tapped row
+  // jumped back to the old value. An instant scroll lands exactly on the
+  // row's snap point, so its one scroll event settles on the row just chosen.
+  function scrollToRow(row: number) {
+    scrollRef.current?.scrollTo({ top: row * WHEEL_ROW_HEIGHT, behavior: "auto" });
+  }
+
   // Preset scroll position once, on mount (the Sheet mounts this column fresh
   // every time it opens, carrying the field's current value as the draft).
   useEffect(() => {
-    const startRow = loop ? absoluteRowRef.current : index;
-    scrollRef.current?.scrollTo({ top: startRow * WHEEL_ROW_HEIGHT, behavior: "auto" });
+    scrollToRow(loop ? absoluteRowRef.current : index);
     // Intentionally mount-only: this presets the wheel's scroll position from
     // the draft the Sheet opened with. It must NOT re-run as `index` changes
     // from then on, or every scroll/keyboard step would fight the user by
@@ -365,7 +374,7 @@ export function WheelColumn({
     prevCountRef.current = count;
     const { row } = reindexForCountChange(index, count, loop);
     if (loop) absoluteRowRef.current = row;
-    scrollRef.current?.scrollTo({ top: row * WHEEL_ROW_HEIGHT, behavior: "auto" });
+    scrollToRow(row);
     // Deliberately keyed on `count` alone (not `index`/`loop`, which this
     // effect also reads): it must fire only when the item count itself
     // changes, not on every ordinary index update from scrolling/stepping.
@@ -378,21 +387,21 @@ export function WheelColumn({
   function stepTo(nextIndex: number) {
     const clamped = Math.min(Math.max(nextIndex, 0), count - 1);
     onIndexChange(clamped);
-    scrollRef.current?.scrollTo({ top: clamped * WHEEL_ROW_HEIGHT, behavior: "smooth" });
+    scrollToRow(clamped);
   }
 
   function stepLoop(delta: number) {
     const { trueIndex, absRow } = stepLoopIndex(absoluteRowRef.current, delta, count);
     absoluteRowRef.current = absRow;
     onIndexChange(trueIndex);
-    scrollRef.current?.scrollTo({ top: absRow * WHEEL_ROW_HEIGHT, behavior: "smooth" });
+    scrollToRow(absRow);
   }
 
   function handleRowTap(row: number) {
     const target = rowTapTarget(row, count, loop);
     if (loop) absoluteRowRef.current = target.absRow;
     onIndexChange(target.trueIndex);
-    scrollRef.current?.scrollTo({ top: target.absRow * WHEEL_ROW_HEIGHT, behavior: "smooth" });
+    scrollToRow(target.absRow);
   }
 
   function handleScroll() {

@@ -176,7 +176,8 @@ describe("item 270 — wheel row taps", () => {
     expect(rows.every((r) => typeof r.props.onClick === "function")).toBe(true);
     rows[38]!.props.onClick?.();
     expect(onIndexChange).toHaveBeenCalledWith(2); // 38 % 12
-    expect(scrolls.at(-1)).toEqual({ top: 38 * WHEEL_ROW_HEIGHT, behavior: "smooth" });
+    // Instant, never smooth (ledger 713): an animated scroll raced the settle.
+    expect(scrolls.at(-1)).toEqual({ top: 38 * WHEEL_ROW_HEIGHT, behavior: "auto" });
     expect(h.store.refs[2]!.current).toBe(38); // absoluteRowRef = tapped copy, not middle (26)
   });
 
@@ -193,6 +194,60 @@ describe("item 270 — wheel row taps", () => {
     expect(rows.length).toBe(6);
     rows[4]!.props.onClick?.();
     expect(onIndexChange).toHaveBeenCalledWith(4);
-    expect(scrolls.at(-1)).toEqual({ top: 4 * WHEEL_ROW_HEIGHT, behavior: "smooth" });
+    expect(scrolls.at(-1)).toEqual({ top: 4 * WHEEL_ROW_HEIGHT, behavior: "auto" });
+  });
+});
+
+describe("ledger 713 — a tapped row survives the 120ms scroll-settle (no jump back)", () => {
+  type Col = { scrollTop: number; scrollTo: (o: { top: number; behavior?: string }) => void };
+  function setup(props: Record<string, unknown>) {
+    h.reset();
+    const render = () => {
+      h.store.i = 0;
+      h.store.r = 0;
+      return (WheelColumn as unknown as (p: unknown) => Rendered & { props: { onScroll?: () => void; onKeyDown?: (e: unknown) => void } })(props);
+    };
+    render();
+    const scrolls: { top: number; behavior?: string }[] = [];
+    // A column that, like a browser, moves to where it is told and then fires
+    // its scroll event (the component's onScroll) — the settle reads scrollTop.
+    const col: Col = {
+      scrollTop: 0,
+      scrollTo: (o) => {
+        scrolls.push(o);
+        col.scrollTop = o.top;
+      },
+    };
+    h.store.refs[0]!.current = col;
+    return { render, col, scrolls };
+  }
+
+  it.each([
+    ["loop (Hour/Minute/Month/Day)", true, 12, 38, 2],
+    ["plain (Date/AM-PM/Year)", false, 6, 4, 4],
+  ])("%s column: tap, scroll event, settle -> still the tapped value", (_name, loop, count, row, trueIndex) => {
+    vi.useFakeTimers();
+    try {
+      const onIndexChange = vi.fn();
+      const items = Array.from({ length: count }, (_, i) => ({ key: String(i), label: String(i) }));
+      const { render, col, scrolls } = setup({ ariaLabel: "X", items, index: 0, onIndexChange, valueNow: 0, valueMin: 0, valueMax: count - 1, loop });
+      const tree = render();
+      (tree.props.children as Rendered[])[row]!.props.onClick?.();
+      tree.props.onScroll?.(); // the tap's own scroll event
+      vi.advanceTimersByTime(120);
+      expect(onIndexChange.mock.calls.map((c) => c[0])).toEqual([trueIndex, trueIndex]);
+      expect(scrolls.every((s) => s.behavior === "auto")).toBe(true);
+      // The loop column re-centers silently onto the SAME true index.
+      expect(col.scrollTop / WHEEL_ROW_HEIGHT % count).toBe(trueIndex);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keyboard steps are instant too (same settle race)", () => {
+    const items = Array.from({ length: 6 }, (_, i) => ({ key: String(i), label: String(i) }));
+    const { render, scrolls } = setup({ ariaLabel: "X", items, index: 2, onIndexChange: vi.fn(), valueNow: 2, valueMin: 0, valueMax: 5 });
+    render().props.onKeyDown?.({ key: "ArrowDown", preventDefault: () => {} });
+    expect(scrolls.at(-1)).toEqual({ top: 3 * WHEEL_ROW_HEIGHT, behavior: "auto" });
   });
 });
