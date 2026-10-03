@@ -142,6 +142,21 @@ describe("AboutPage while the session loads (item 611)", () => {
   });
 });
 
+describe("AboutPage width (item 703)", () => {
+  // AppLayout's column is max-w-lg and a page pads p-4; About matches it
+  // whether or not it sits inside that layout.
+  it.each([
+    ["signed out", null],
+    ["signed in", { user: { id: "u1" } }],
+  ])("is the app's width when %s", (_label, session) => {
+    h.session = session;
+    const root = render().match(/^<div class="([^"]*)"/)?.[1]?.split(" ") ?? [];
+    expect(root).toEqual(expect.arrayContaining(["mx-auto", "max-w-lg", "p-4"]));
+    expect(root).not.toContain("max-w-sm");
+    expect(root).not.toContain("p-6");
+  });
+});
+
 describe("AboutPage signed in (item 611)", () => {
   it("shows a back button and no sign-up buttons, with the same content", () => {
     h.session = { user: { id: "u1" } };

@@ -43,7 +43,9 @@ export function AboutPage() {
   const signedOut = !isPending && !session;
 
   return (
-    <div className="mx-auto flex min-h-full max-w-sm flex-col gap-6 p-6">
+    // Item 703: as wide as every page inside AppLayout (its max-w-lg column,
+    // a page's p-4), signed in or out.
+    <div className="mx-auto flex min-h-full max-w-lg flex-col gap-6 p-4">
       {!signedIn ? (
         <div className="flex flex-col items-center gap-4 text-center">
           {/* The home-screen icon above the name (owner, 2026-09-30); decorative — the h1 names it. */}
