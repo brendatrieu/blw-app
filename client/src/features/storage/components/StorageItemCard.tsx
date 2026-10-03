@@ -71,7 +71,7 @@ export function StorageItemCard({ item, actions, linkable = true }: StorageItemC
           it becomes are the same thing twice. */}
       <FoodPlates {...cluster} />
       <div className="flex flex-col">
-        <span className="text-sm font-semibold text-[var(--color-text)]">
+        <span className="text-sm font-medium text-[var(--color-text)]">
           <StorageItemTitle item={item} />
         </span>
         <span className="text-xs tabular-nums text-[var(--color-text-muted)]">
@@ -173,7 +173,7 @@ export function StorageItemRow({ item, actions }: { item: StorageItem; actions?:
       >
         <FoodPlates {...storageItemCluster(item)} />
         <span className="flex min-w-0 flex-col">
-          <span className="font-bold text-[var(--color-text)]">
+          <span className="font-semibold text-[var(--color-text)]">
             <StorageItemTitle item={item} />
           </span>
           <span className="text-sm text-[var(--color-text-muted)]">
@@ -185,15 +185,15 @@ export function StorageItemRow({ item, actions }: { item: StorageItem; actions?:
       {expired ? (
         <Badge tone="dangerSoft">Expired</Badge>
       ) : days === 0 ? (
-        <span className="shrink-0 text-base font-black text-[var(--color-apricot-text)]">Today</span>
+        <span className="shrink-0 text-base font-extrabold text-[var(--color-apricot-text)]">Today</span>
       ) : (
         <span className="flex shrink-0 flex-col items-end">
           <span
-            className={`text-[22px] leading-tight font-black tabular-nums ${days <= 1 ? "text-[var(--color-apricot-text)]" : "text-[var(--color-text)]"}`}
+            className={`text-[22px] leading-tight font-extrabold tabular-nums ${days <= 1 ? "text-[var(--color-apricot-text)]" : "text-[var(--color-text)]"}`}
           >
             {days}
           </span>
-          <span className="text-xs font-bold whitespace-nowrap text-[var(--color-text-muted)]">
+          <span className="text-xs font-semibold whitespace-nowrap text-[var(--color-text-muted)]">
             {days === 1 ? "day left" : "days left"}
           </span>
         </span>
@@ -210,7 +210,7 @@ export function StorageItemRow({ item, actions }: { item: StorageItem; actions?:
  * caution pair contrast.test.ts already gates. */
 export function UseSoonBadge() {
   return (
-    <span className="inline-flex h-5 items-center gap-[3px] rounded-[var(--radius-pill)] bg-[var(--color-caution-soft)] px-[7px] text-xs font-extrabold whitespace-nowrap text-[var(--color-caution-soft-text)]">
+    <span className="inline-flex h-5 items-center gap-[3px] rounded-[var(--radius-pill)] bg-[var(--color-caution-soft)] px-[7px] text-xs font-bold whitespace-nowrap text-[var(--color-caution-soft-text)]">
       <svg
         aria-hidden="true"
         className="h-3 w-3 shrink-0"

@@ -350,7 +350,7 @@ export function FoodDetailPage() {
           red title with a triangle, body in ink. */}
       {!food.isCustom && food.chokingNotes && (
         <div className="flex flex-col gap-1.5 rounded-2xl border border-[var(--color-danger-callout-border)] bg-[var(--color-danger-callout-bg)] px-4 py-3.5">
-          <p className="flex items-center gap-2 text-[15px] font-extrabold text-[var(--color-danger-callout-text)]">
+          <p className="flex items-center gap-2 text-[15px] font-bold text-[var(--color-danger-callout-text)]">
             <svg
               width="18"
               height="18"

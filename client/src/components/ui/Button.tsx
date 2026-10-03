@@ -28,9 +28,9 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 const SIZE_CLASSES: Record<ButtonSize, string> = {
   // `lg`: the page's main pair (Log meal / Add to storage on Home, the food
   // page and the recipe page), 48px and 16px/800 as in the A mockups.
-  lg: "min-h-12 px-4 py-2.5 text-base font-extrabold",
-  md: "min-h-11 px-4 py-2 text-sm font-semibold",
-  sm: "min-h-9 px-3 py-1.5 text-sm font-semibold",
+  lg: "min-h-12 px-4 py-2.5 text-base font-bold",
+  md: "min-h-11 px-4 py-2 text-sm font-medium",
+  sm: "min-h-9 px-3 py-1.5 text-sm font-medium",
 };
 
 // Chunky, rounded, springy: a quick scale-down on press (skipped for

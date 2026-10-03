@@ -40,8 +40,8 @@ function MultiComboboxMarkers({ markers }: { markers: MultiComboboxMarker[] | un
           key={label}
           className={
             tone === "outline"
-              ? "inline-flex shrink-0 items-center rounded-[var(--radius-pill)] inset-ring inset-ring-[var(--color-border)] px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-text-muted)]"
-              : "inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-allergen-soft)] px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-allergen-soft-text)]"
+              ? "inline-flex shrink-0 items-center rounded-[var(--radius-pill)] inset-ring inset-ring-[var(--color-border)] px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-[var(--color-text-muted)]"
+              : "inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-allergen-soft)] px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-[var(--color-allergen-soft-text)]"
           }
         >
           {label}
@@ -878,7 +878,7 @@ export function MultiCombobox({
           {showCountBadge && (
             <span
               id={countBadgeId}
-              className="pointer-events-none shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-primary-soft)] px-2 py-0.5 text-xs font-semibold whitespace-nowrap text-[var(--color-primary-soft-text)]"
+              className="pointer-events-none shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-primary-soft)] px-2 py-0.5 text-xs font-medium whitespace-nowrap text-[var(--color-primary-soft-text)]"
             >
               {value.length} selected
             </span>

@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@fontsource-variable/nunito/wght.css";
+@import "@fontsource-variable/plus-jakarta-sans/wght.css";
 @import "@fontsource-variable/fraunces/opsz.css";
 
 /*
@@ -252,22 +252,21 @@
   --duration-slow: 320ms;
 
   /* ---- Type ----
-     Nunito Variable, self-hosted via @fontsource-variable (no external
-     origin — the woff2 files are bundled by Vite as local assets), with a
-     rounded system stack as fallback so the app still feels friendly
-     before/without the webfont. */
-  --font-family-base:
-    "Nunito Variable", ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", system-ui, -apple-system,
-    "Helvetica Neue", Arial, sans-serif;
+     Plus Jakarta Sans Variable (item 708, the owner's font Option 1),
+     self-hosted via @fontsource-variable (no external origin — the woff2
+     files are bundled by Vite as local assets), with a plain sans stack as
+     fallback. Weights sit one step lighter than the rounded face it replaced
+     (900→800 … 600→500); the section heading stays 700. */
+  --font-family-base: "Plus Jakarta Sans Variable", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   /* Fraunces (opsz axis, so it auto-sizes its optical size like the mockups)
-     for page titles and the Home baby name only; Nunito everywhere else. */
+     for page titles and the Home baby name only; Jakarta everywhere else. */
   --font-family-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
 
   --font-display: 700 2.125rem/1.1 var(--font-family-display);
-  --font-h1: 700 1.25rem/1.3 var(--font-family-base);
-  --font-h2: 800 1.25rem/1.25 var(--font-family-base); /* the shared section heading */
+  --font-h1: 600 1.25rem/1.3 var(--font-family-base);
+  --font-h2: 700 1.25rem/1.25 var(--font-family-base); /* the shared section heading */
   --font-body: 400 1rem/1.5 var(--font-family-base);
-  --font-caption: 600 0.75rem/1.4 var(--font-family-base);
+  --font-caption: 500 0.75rem/1.4 var(--font-family-base);
 
   /* Fixed chrome heights. `--nav-height` is the bottom bar's own height; it
      is no longer also reserved as page padding, since the bar is in flow.

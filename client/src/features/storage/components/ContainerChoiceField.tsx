@@ -33,7 +33,7 @@ export function ContainerChoiceField({ foodIds, value, onChange }: ContainerChoi
 
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-semibold text-[var(--color-text)]">{CONTAINER_CHOICE_LABEL}</span>
+      <span className="text-sm font-medium text-[var(--color-text)]">{CONTAINER_CHOICE_LABEL}</span>
       <SegmentedControl
         aria-label={CONTAINER_CHOICE_LABEL}
         value={value}

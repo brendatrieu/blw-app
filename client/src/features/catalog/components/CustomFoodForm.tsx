@@ -300,7 +300,7 @@ export function CustomFoodForm({
       </Field>
 
       <div className="flex flex-col gap-1.5">
-        <span id={`${idPrefix}-allergens-label`} className="text-sm font-semibold text-[var(--color-text)]">
+        <span id={`${idPrefix}-allergens-label`} className="text-sm font-medium text-[var(--color-text)]">
           Allergens
         </span>
         <p className="text-xs text-[var(--color-text-muted)]">

@@ -130,10 +130,10 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
         <TriageLegend />
       </div>
       <fieldset className="flex flex-col gap-4">
-        <legend className="text-sm font-semibold text-[var(--color-text)]">What are you seeing?</legend>
+        <legend className="text-sm font-medium text-[var(--color-text)]">What are you seeing?</legend>
         {groups.map(({ group, entries }) => (
           <div key={group} className="flex flex-col gap-1.5">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
               {SYMPTOM_GROUP_LABELS[group]}
             </h3>
             <div className="flex flex-col gap-1">
@@ -251,7 +251,7 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-lg bg-[var(--color-primary)] px-4 py-3 text-sm font-semibold text-[var(--color-primary-contrast)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="rounded-lg bg-[var(--color-primary)] px-4 py-3 text-sm font-medium text-[var(--color-primary-contrast)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isPending ? "Checking…" : "Check the last 7 days"}
       </button>

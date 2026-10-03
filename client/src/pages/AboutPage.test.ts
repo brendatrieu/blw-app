@@ -12,6 +12,7 @@ vi.mock("../lib/auth.js", () => ({
 import { ABOUT_FEATURES, AboutPage } from "./AboutPage.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
+import { safeTop } from "../components/AppLayout.js";
 
 function render(): string {
   return renderToString(
@@ -154,6 +155,20 @@ describe("AboutPage width (item 703)", () => {
     expect(root).toEqual(expect.arrayContaining(["mx-auto", "max-w-lg", "p-4"]));
     expect(root).not.toContain("max-w-sm");
     expect(root).not.toContain("p-6");
+  });
+});
+
+describe("AboutPage top inset (item 710)", () => {
+  // Outside AppLayout, so no header clears the iOS status bar for it: the root
+  // pads its own top with AppLayout's safeTop, 1rem (p-4's) plus the inset.
+  it.each([
+    ["signed out", null],
+    ["signed in", { user: { id: "u1" } }],
+  ])("clears the status bar when %s", (_label, session) => {
+    h.session = session;
+    const style = render().match(/^<div class="[^"]*" style="([^"]*)"/)?.[1];
+    expect(style).toBe(`padding-top:${safeTop("1rem")}`);
+    expect(safeTop("1rem")).toBe("calc(1rem + env(safe-area-inset-top))");
   });
 });
 

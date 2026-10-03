@@ -167,7 +167,7 @@ export function Line({
             y={round(lastY < PAD_T + 14 ? lastY + 14 : lastY - 8)}
             textAnchor={single ? "middle" : "end"}
             fontSize={11}
-            fontWeight={700}
+            fontWeight={600}
             fill="var(--color-text)"
           >
             {formatCount(values[last] ?? 0)}

@@ -35,7 +35,7 @@ export function Field({ label, htmlFor, error, hint, description, children }: Fi
   const optional = splitOptionalLabel(label);
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-sm font-semibold text-[var(--color-text)]">
+      <label htmlFor={htmlFor} className="text-sm font-medium text-[var(--color-text)]">
         {optional ? (
           <>
             {optional.base}{" "}

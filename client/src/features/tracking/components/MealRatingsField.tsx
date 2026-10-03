@@ -57,7 +57,7 @@ export function MealRatingsField({
   if (rows.length === 0) return null;
   return (
     <div role="group" aria-labelledby="meal-ratings-heading" className="flex flex-col gap-1">
-      <span id="meal-ratings-heading" className="text-sm font-semibold text-[var(--color-text)]">
+      <span id="meal-ratings-heading" className="text-sm font-medium text-[var(--color-text)]">
         Rating (optional)
       </span>
       {rows.map((row) => (

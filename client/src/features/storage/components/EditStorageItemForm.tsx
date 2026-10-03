@@ -94,7 +94,7 @@ export function EditStorageItemForm({ item, onDone }: EditStorageItemFormProps) 
     // `noValidate`: this form answers its own field rule inline (item 236).
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-sm font-semibold text-[var(--color-text)]">Location</span>
+        <span className="text-sm font-medium text-[var(--color-text)]">Location</span>
         <div className="flex gap-1.5">
           {LOCATIONS.map((loc) => (
             <button

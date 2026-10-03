@@ -1,5 +1,6 @@
 // Feature 2 type pass (items 648, 649): Fraunces for page titles only, and
-// one shared Nunito 800 / 20px section heading.
+// one shared 20px section heading. Item 708 (font Option 1): Plus Jakarta Sans
+// is the base face for everything else, one weight step lighter.
 import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
@@ -10,10 +11,19 @@ const token = (name: string) =>
     ?.replace(/\s+/g, " ")
     .trim();
 
-describe("type tokens (items 648, 649)", () => {
-  it("self-hosts Fraunces with its optical-size axis, beside Nunito", () => {
-    expect(css).toContain('@import "@fontsource-variable/nunito/wght.css";');
+describe("type tokens (items 648, 649, 708)", () => {
+  it("self-hosts Plus Jakarta Sans beside Fraunces (opsz axis); the old rounded face is gone", () => {
+    expect(css).toContain('@import "@fontsource-variable/plus-jakarta-sans/wght.css";');
     expect(css).toContain('@import "@fontsource-variable/fraunces/opsz.css";');
+    const pkg = readFileSync(new URL("../../package.json", import.meta.url), "utf8");
+    const deps = Object.keys(JSON.parse(pkg).dependencies).filter((name) => name.startsWith("@fontsource"));
+    expect(deps.sort()).toEqual(["@fontsource-variable/fraunces", "@fontsource-variable/plus-jakarta-sans"]);
+    expect(css).not.toMatch(/nunito|ui-rounded/i);
+  });
+
+  it("--font-family-base leads with Plus Jakarta Sans and falls back to a plain sans (item 708)", () => {
+    expect(token("font-family-base")).toMatch(/^"Plus Jakarta Sans Variable",.*\bsans-serif$/);
+    expect(css).not.toContain("--font-family-heading");
   });
 
   it("--font-family-display leads with Fraunces and falls back to a serif", () => {
@@ -29,14 +39,45 @@ describe("type tokens (items 648, 649)", () => {
     expect(css).toMatch(/\.font-display \{[^}]*overflow-wrap: anywhere;[^}]*\}/);
   });
 
-  it("Nunito stays everywhere else: every other ramp token is the base family", () => {
-    for (const name of ["font-h1", "font-h2", "font-body", "font-caption"]) {
-      expect(token(name), name).toMatch(/var\(--font-family-base\)$/);
-    }
+  it("the rest of the ramp is the base family, one step lighter (item 708: h1 600, caption 500, body 400)", () => {
+    expect(token("font-h1")).toBe("600 1.25rem/1.3 var(--font-family-base)");
+    expect(token("font-body")).toBe("400 1rem/1.5 var(--font-family-base)");
+    expect(token("font-caption")).toBe("500 0.75rem/1.4 var(--font-family-base)");
   });
 
-  it("--font-h2 is the shared section heading: Nunito 800, 20px", () => {
-    expect(token("font-h2")).toBe("800 1.25rem/1.25 var(--font-family-base)");
+  it("--font-h2 is the shared section heading: base family 700, 20px (kept at 700 by item 708)", () => {
+    expect(token("font-h2")).toBe("700 1.25rem/1.25 var(--font-family-base)");
+    expect(css).toMatch(/\.font-h2 \{\s*font: var\(--font-h2\);\s*\}/);
+  });
+
+  it("only --font-display uses Fraunces", () => {
+    expect(css.match(/var\(--font-family-display\)/g)).toHaveLength(1);
+  });
+
+  it("Tailwind's --font-weight-* scale is not redefined: renamed classes mean what they say (item 708)", () => {
+    expect(css).not.toMatch(/--font-weight-/);
+  });
+});
+
+describe("weights stepped down one, honestly (item 708)", () => {
+  const root = new URL("../", import.meta.url);
+  const sources = (readdirSync(root, { recursive: true }) as string[])
+    .filter((path) => /\.tsx?$/.test(path) && !path.endsWith("type.test.ts"))
+    .map((path) => ({ path: path.replaceAll("\\", "/"), text: readFileSync(new URL(path, root), "utf8") }));
+
+  it("no client source uses font-black (900 became font-extrabold)", () => {
+    expect(sources.filter(({ text }) => /(?<![\w-])font-black(?![\w-])/.test(text)).map(({ path }) => path)).toEqual([]);
+  });
+
+  it("no inline weight is 800 or 900 any more", () => {
+    const offenders = sources.filter(({ text }) => /fontWeight(?:=\{|:\s*)[^}\n]*\b(?:800|900)\b/.test(text));
+    expect(offenders.map(({ path }) => path)).toEqual([]);
+  });
+
+  it("the chart labels sit one step lighter: Donut 700, Line 600", () => {
+    const text = (name: string) => sources.find(({ path }) => path === `components/charts/${name}.tsx`)!.text;
+    expect(text("Donut")).toContain("fontWeight={700}");
+    expect(text("Line")).toContain("fontWeight={600}");
   });
 });
 
@@ -51,7 +92,7 @@ describe("Fraunces is for page titles and the Home baby name only (item 648)", (
     "pages/RecipeDetailPage.tsx",
     "pages/SignupPage.tsx",
   ];
-  it("only title files use .font-display (an admin stat number stays Nunito)", () => {
+  it("only title files use .font-display (an admin stat number stays the base face)", () => {
     const users = (readdirSync(root, { recursive: true }) as string[])
       .filter((path) => /\.tsx$/.test(path) && !/\.test\.tsx?$/.test(path))
       .filter((path) => /\bfont-display\b/.test(readFileSync(new URL(path, root), "utf8")))

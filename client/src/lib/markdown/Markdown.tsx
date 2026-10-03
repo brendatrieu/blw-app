@@ -13,7 +13,7 @@ import remarkGfm from "remark-gfm";
 const components: Components = {
   h2: ({ node: _node, ...props }) => <h2 className="font-h2 mt-2 text-[var(--color-text)]" {...props} />,
   h3: ({ node: _node, ...props }) => (
-    <h3 className="mt-1 text-base font-bold text-[var(--color-text)]" {...props} />
+    <h3 className="mt-1 text-base font-semibold text-[var(--color-text)]" {...props} />
   ),
   p: ({ node: _node, ...props }) => <p className="text-[var(--color-text)]" {...props} />,
   ul: ({ node: _node, ...props }) => (
@@ -24,7 +24,7 @@ const components: Components = {
   ),
   li: ({ node: _node, ...props }) => <li className="pl-1 [&>p]:inline" {...props} />,
   strong: ({ node: _node, ...props }) => (
-    <strong className="font-semibold text-[var(--color-text)]" {...props} />
+    <strong className="font-medium text-[var(--color-text)]" {...props} />
   ),
   hr: () => <hr className="border-[var(--color-border)]" />,
   a: ({ node: _node, href, children, ...rest }) => {
@@ -81,7 +81,7 @@ const components: Components = {
   ),
   th: ({ node: _node, ...props }) => (
     <th
-      className="border-b border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 py-1.5 font-semibold text-[var(--color-text)]"
+      className="border-b border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 py-1.5 font-medium text-[var(--color-text)]"
       {...props}
     />
   ),

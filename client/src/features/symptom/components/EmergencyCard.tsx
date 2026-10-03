@@ -29,10 +29,10 @@ export function EmergencyCard({ level, reasons, steps, disclaimer, onDismiss }: 
     >
       <div className="mx-auto flex min-h-full max-w-lg flex-col gap-5 p-5">
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-bold uppercase tracking-widest opacity-90">
+          <span className="text-xs font-semibold uppercase tracking-widest opacity-90">
             {emergency ? "Emergency" : "Needs to be seen today"}
           </span>
-          <h1 id="symptom-alert-heading" className="text-2xl font-bold leading-tight">
+          <h1 id="symptom-alert-heading" className="text-2xl font-semibold leading-tight">
             {emergency
               ? "Call emergency services now"
               : "Get your baby seen today"}
@@ -42,7 +42,7 @@ export function EmergencyCard({ level, reasons, steps, disclaimer, onDismiss }: 
         {emergency && (
           <a
             href="tel:911"
-            className="rounded-lg bg-white px-4 py-3 text-center text-base font-bold"
+            className="rounded-lg bg-white px-4 py-3 text-center text-base font-semibold"
             style={{ color: palette.background }}
           >
             Call 911
@@ -51,7 +51,7 @@ export function EmergencyCard({ level, reasons, steps, disclaimer, onDismiss }: 
 
         {reasons.length > 0 && (
           <section className="rounded-lg bg-black/20 p-4">
-            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide opacity-90">Why</h2>
+            <h2 className="mb-2 text-sm font-medium uppercase tracking-wide opacity-90">Why</h2>
             <ul className="flex list-disc flex-col gap-1.5 pl-5 text-sm leading-relaxed">
               {reasons.map((reason) => (
                 <li key={reason}>{reason}</li>
@@ -61,7 +61,7 @@ export function EmergencyCard({ level, reasons, steps, disclaimer, onDismiss }: 
         )}
 
         <section className="rounded-lg bg-black/20 p-4">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide opacity-90">
+          <h2 className="mb-2 text-sm font-medium uppercase tracking-wide opacity-90">
             {emergency ? "While you wait for help" : "What to do now"}
           </h2>
           <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm leading-relaxed">

@@ -323,7 +323,7 @@ describe("BabyAllergensPage sections", () => {
   function sectionsOf(html: string): { title: string; rows: string[] }[] {
     return [...html.matchAll(/<section[^>]*>(.*?)<\/section>/gs)].map(([, body]) => ({
       title: /<h2[^>]*>(.*?)<\/h2>/s.exec(body!)![1]!,
-      rows: [...body!.matchAll(/text-sm font-semibold text-\[var\(--color-text\)\]">([^<]+)<\/span>/g)].map((m) => m[1]!),
+      rows: [...body!.matchAll(/text-sm font-medium text-\[var\(--color-text\)\]">([^<]+)<\/span>/g)].map((m) => m[1]!),
     }));
   }
 

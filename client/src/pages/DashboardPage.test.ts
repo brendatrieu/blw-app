@@ -7,6 +7,7 @@ import { ALLERGEN_MAINTENANCE_DAYS, type AllergenProgressItem, type Baby, type S
 import { babyKeys } from "../features/babies/api.js";
 import { storageKeys } from "../features/storage/hooks.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
+import { CARD_ROW_DIVIDER } from "../components/ui/Card.js";
 import { DashboardPage, HOME_STORAGE_LIMIT, UP_NEXT_LIMIT, upNextRows } from "./DashboardPage.js";
 import type { MealItem } from "@blw/shared";
 
@@ -388,7 +389,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       const html = render({ storage: [useSoon("a")] });
       const card = upNext(html)!;
       expect(card).toContain(
-        '<h2 id="up-next" class="text-[11px] leading-[normal] font-extrabold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]">Up next</h2>',
+        '<h2 id="up-next" class="text-[11px] leading-[normal] font-bold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]">Up next</h2>',
       );
       expect(html.indexOf("up-next")).toBeLessThan(html.indexOf('href="/log-meal"'));
       expect(html.indexOf('href="/log-meal"')).toBeLessThan(html.indexOf(">Storage<"));
@@ -397,22 +398,25 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     it("spaces like A-Home: label 16px down, 10px to each plate, 12px under the last (item 681)", () => {
       const html = render({ storage: [useSoon("a"), useSoon("b"), useSoon("c"), useSoon("d")] });
       const card = upNext(html)!;
-      expect(html).toMatch(/<section class="[^"]*flex flex-col pt-4 pr-1\.5 pb-0\.5 pl-4" aria-labelledby="up-next"|aria-labelledby="up-next" class="[^"]*flex flex-col pt-4 pr-1\.5 pb-0\.5 pl-4"/);
+      // Item 709: px-0.5 on the card + pl-3.5/px-3.5 inside keep the label and
+      // plates 16px in (2 + 14) and the kebab 6px in (2 + pr-1).
+      expect(html).toMatch(/<section class="[^"]*flex flex-col px-0\.5 pt-4 pb-0\.5" aria-labelledby="up-next"|aria-labelledby="up-next" class="[^"]*flex flex-col px-0\.5 pt-4 pb-0\.5"/);
       // No min-height on the label row: See all keeps 44px but only the label's height in the row.
-      expect(card).toContain('<div class="flex items-center justify-between pr-2.5"><h2 id="up-next"');
+      expect(card).toContain('<div class="flex items-center justify-between px-3.5"><h2 id="up-next"');
       // relative z-10: the first row's stretched link (positioned li) would
       // otherwise paint over See all's lower half and steal those taps.
       expect(card).toMatch(/<div class="relative z-10 -my-\[14\.5px\]"><a[^>]*class="inline-flex min-h-11 [^"]*"[^>]*>See all/);
-      expect(card.match(/<li class="relative flex items-center gap-3 py-2\.5 /g)?.length).toBe(3);
+      expect(card.match(/<li class="relative flex items-center gap-3 py-2\.5 pr-1 pl-3\.5 /g)?.length).toBe(3);
     });
 
-    it("has no big action button: one kebab and one link per row, dividers from the text", () => {
+    it("has no big action button: one kebab and one link per row, dividers under the plates like Storage (item 709)", () => {
       const card = upNext(render({ storage: [useSoon("a"), useSoon("b")], allergens: [due("peanut")] }))!;
       const rows = card.match(/<li /g)?.length ?? 0;
       expect(rows).toBe(3);
       expect(card.match(/<button /g)?.length).toBe(rows);
       expect(card.match(/<a /g)?.length).toBe(rows);
-      expect(card.match(/not-first:before:left-\[60px\]/g)?.length).toBe(rows);
+      expect(card.split(CARD_ROW_DIVIDER).length - 1).toBe(rows);
+      expect(card).not.toContain("left-[60px]");
     });
 
     it("a storage row: plates, name, the Use soon chip and 'N servings left' on one line, its own kebab", () => {
@@ -517,8 +521,8 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       const section = storageSection(
         render({ storage: [stored("one", { expiresAt: hoursOut(20) }), stored("two", { expiresAt: hoursOut(30) })] }),
       );
-      expect(section).toMatch(/text-\[22px\] leading-tight font-black tabular-nums text-\[var\(--color-apricot-text\)\]">1<\/span><span class="[^"]*whitespace-nowrap[^"]*">day left</);
-      expect(section).toMatch(/text-\[22px\] leading-tight font-black tabular-nums text-\[var\(--color-text\)\]">2<\/span><span class="[^"]*">days left</);
+      expect(section).toMatch(/text-\[22px\] leading-tight font-extrabold tabular-nums text-\[var\(--color-apricot-text\)\]">1<\/span><span class="[^"]*whitespace-nowrap[^"]*">day left</);
+      expect(section).toMatch(/text-\[22px\] leading-tight font-extrabold tabular-nums text-\[var\(--color-text\)\]">2<\/span><span class="[^"]*">days left</);
     });
 
     it("counts best-by days on the calendar: Today, 1 day left in apricot, then Expired (item 684)", () => {
@@ -531,7 +535,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
         storageSection(render({ storage: [stored("x", { bestBy, expiresAt: hoursOut(-200), expired: true })] }));
 
       const today = row(ymd(0));
-      expect(today).toContain('<span class="shrink-0 text-base font-black text-[var(--color-apricot-text)]">Today</span>');
+      expect(today).toContain('<span class="shrink-0 text-base font-extrabold text-[var(--color-apricot-text)]">Today</span>');
       expect(today).not.toContain(">Expired<");
       expect(today).not.toContain("left<");
 
@@ -592,13 +596,13 @@ describe("DashboardPage Today layout (items 660-664)", () => {
 
     it("centers the ESTABLISHED count, with the counts written out beside the ring", () => {
       const html = render({ allergens: ladder });
-      expect(html).toContain('<span class="text-xl font-black tabular-nums text-[var(--color-text)]">3<!-- -->/<!-- -->9</span>');
+      expect(html).toContain('<span class="text-xl font-extrabold tabular-nums text-[var(--color-text)]">3<!-- -->/<!-- -->9</span>');
       expect(html).toContain("3<!-- --> established");
       expect(html).toContain("2<!-- --> started · <!-- -->1<!-- --> not started yet");
       expect(html).toContain('aria-label="3 of 9 allergens established, 2 started"');
       // Item 697: the ring's colors are exempt from the 3:1 graphics gate
       // (contrast.test.ts) only because these counts are VISIBLE beside it.
-      expect(html).toContain('<div class="flex flex-col gap-1 text-sm"><span class="text-base font-extrabold text-[var(--color-text)]">3<!-- --> established</span>');
+      expect(html).toContain('<div class="flex flex-col gap-1 text-sm"><span class="text-base font-bold text-[var(--color-text)]">3<!-- --> established</span>');
       expect(html).not.toMatch(/sr-only[^>]*>[^<]*<span[^>]*>3<!-- --> established/);
     });
 
@@ -630,7 +634,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     const addStorage = /<a [^>]*href="\/storage\/add"[^>]*>/.exec(html)?.[0] ?? "";
     expect(logMeal).toContain("bg-[var(--color-primary)]");
     expect(addStorage).toContain("bg-[var(--color-success)]");
-    for (const a of [logMeal, addStorage]) expect(a).toContain("min-h-12 px-4 py-2.5 text-base font-extrabold");
+    for (const a of [logMeal, addStorage]) expect(a).toContain("min-h-12 px-4 py-2.5 text-base font-bold");
     // 10px between them, as in A-Home (item 681).
     expect(html).toMatch(/<div class="flex gap-2\.5"><a [^>]*href="\/log-meal"/);
   });

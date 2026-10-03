@@ -173,7 +173,7 @@ export function FeedbackInbox() {
                 <div className="flex flex-col gap-0.5">
                   <a
                     href={`mailto:${item.senderEmail}`}
-                    className="text-sm font-semibold break-all text-[var(--color-text)] underline decoration-[var(--color-border)] underline-offset-2"
+                    className="text-sm font-medium break-all text-[var(--color-text)] underline decoration-[var(--color-border)] underline-offset-2"
                   >
                     {item.senderEmail}
                   </a>

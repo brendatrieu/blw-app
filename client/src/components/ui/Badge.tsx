@@ -42,7 +42,7 @@ export function Badge({ children, tone = "neutral", title }: BadgeProps) {
   return (
     <span
       title={title}
-      className={`inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${TONE_CLASSES[tone]}`}
+      className={`inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ${TONE_CLASSES[tone]}`}
     >
       {children}
     </span>

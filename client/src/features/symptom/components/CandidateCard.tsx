@@ -31,13 +31,13 @@ export function CandidateCard({ candidate, rank }: { candidate: SymptomCandidate
     <li className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col">
-          <Link to={`/foods/${candidate.foodSlug}`} className="text-sm font-semibold text-[var(--color-text)] underline">
+          <Link to={`/foods/${candidate.foodSlug}`} className="text-sm font-medium text-[var(--color-text)] underline">
             {rank}. {candidate.foodName}
           </Link>
           <span className="text-xs text-[var(--color-text-muted)]">{candidate.windowFit}</span>
         </div>
         <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${LIKELIHOOD_CLASS[candidate.likelihood]}`}
+          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${LIKELIHOOD_CLASS[candidate.likelihood]}`}
         >
           {LIKELIHOOD_LABELS[candidate.likelihood]}
         </span>

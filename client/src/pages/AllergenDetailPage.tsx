@@ -67,7 +67,7 @@ function ExposureRow({ exposure }: { exposure: AllergenDetailExposure }) {
     // `CardLink` is safe here where the food rows need the split.
     <li>
       <CardLink to={`/log-meal?edit=${exposure.mealId}`} padding="sm" className="flex flex-col gap-1">
-        <span className="text-sm font-semibold text-[var(--color-text)]">
+        <span className="text-sm font-medium text-[var(--color-text)]">
           {servedLine(exposure.servedAt)}
         </span>
         <span className="text-xs text-[var(--color-text-muted)]">

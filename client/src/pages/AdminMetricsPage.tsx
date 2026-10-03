@@ -442,7 +442,7 @@ function FiltersPanel({ data }: { data: AdminMetricsResponse }) {
             summary={`Share of the ${formatCount(filters.events)} filter changes that used each key.`}
             valueHeader="Share of filter changes"
           />
-          <h3 className="text-sm font-semibold text-[var(--color-text)]">Combinations with no results</h3>
+          <h3 className="text-sm font-medium text-[var(--color-text)]">Combinations with no results</h3>
           {filters.zeroResultCombos.length === 0 ? (
             <p className="text-sm text-[var(--color-text-muted)]">Every combination found something.</p>
           ) : (
@@ -698,7 +698,7 @@ function StatTile({
     >
       <span className="text-xs font-medium text-[var(--color-text-muted)]">{label}</span>
       <span className="flex flex-wrap items-baseline gap-1.5">
-        <span className="text-[1.75rem] leading-[1.15] font-extrabold tabular-nums text-[var(--color-text)]">{value}</span>
+        <span className="text-[1.75rem] leading-[1.15] font-bold tabular-nums text-[var(--color-text)]">{value}</span>
         {delta ? <DeltaChip delta={delta} /> : null}
       </span>
       <span className="text-[11px] text-[var(--color-text-muted)]">{caption}</span>
@@ -723,7 +723,7 @@ const DELTA_GLYPHS: Record<Delta["direction"], string> = { up: "▲", down: "▼
 function DeltaChip({ delta }: { delta: Delta }) {
   return (
     <span
-      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
+      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-medium ${
         DELTA_TONE_CLASSES[delta.tone]
       }`}
     >

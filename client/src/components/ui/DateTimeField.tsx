@@ -454,7 +454,7 @@ export function WheelColumn({
             data-wheel-row={row}
             onClick={() => handleRowTap(row)}
             className={`flex cursor-pointer items-center justify-center px-1 text-sm transition-colors duration-[var(--duration-fast)] snap-center ${
-              trueIndex === index ? "font-semibold text-[var(--color-text)]" : "text-[var(--color-text-muted)]"
+              trueIndex === index ? "font-medium text-[var(--color-text)]" : "text-[var(--color-text-muted)]"
             }`}
             style={{ height: WHEEL_ROW_HEIGHT }}
           >

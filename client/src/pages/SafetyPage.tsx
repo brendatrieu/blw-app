@@ -35,7 +35,7 @@ export function ArticleLinks({ articles, base }: { articles: SafetyArticle[]; ba
     <div className="flex flex-col gap-2">
       {articles.map((article) => (
         <CardLink key={article.slug} to={`${base}/${article.slug}`} padding="sm" className="flex flex-col gap-1">
-          <span className="text-base font-semibold text-[var(--color-text)]">{article.title}</span>
+          <span className="text-base font-medium text-[var(--color-text)]">{article.title}</span>
           <span className="text-sm text-[var(--color-text-muted)]">{article.summary}</span>
         </CardLink>
       ))}

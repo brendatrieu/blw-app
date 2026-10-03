@@ -34,7 +34,7 @@ export function RecipeCard({ recipe, rating }: { recipe: RecipeListItem; rating?
   return (
     <CardLink to={`/recipes/${recipe.id}`} padding="sm" className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-base font-semibold text-[var(--color-text)]">{recipe.title}</span>
+        <span className="text-base font-medium text-[var(--color-text)]">{recipe.title}</span>
         {recipe.isFavorite && (
           <span aria-hidden="true" className="shrink-0 text-sm leading-none text-[var(--color-apricot-graphic)]">
             ♥

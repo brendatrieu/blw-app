@@ -22,8 +22,8 @@ function activeTabLabel(html: string): string | undefined {
   expect(labels).toHaveLength(5);
   const lit = labels.filter(([, color]) => color === "var(--color-apricot-text)");
   expect(lit.length).toBeLessThanOrEqual(1);
-  // Item 652: the lit label is 800, every other label 700.
-  for (const [, color, weight] of labels) expect(weight).toBe(color === "var(--color-apricot-text)" ? "800" : "700");
+  // Item 652: the lit label is bolder; item 708 stepped both down one (700 / 600).
+  for (const [, color, weight] of labels) expect(weight).toBe(color === "var(--color-apricot-text)" ? "700" : "600");
   return lit[0]?.[3];
 }
 
@@ -208,6 +208,6 @@ describe("BottomNav matches A-Home's nav (items 687-689)", () => {
     // 66px less border, top and bottom padding leaves the tab 49px (>= 44px).
     expect(66 - 1 - 6 - 10).toBeGreaterThanOrEqual(44);
     // The label line (caption, 0.75rem/1.4) is what the 16.8 assumes.
-    expect(css).toMatch(/--font-caption: 600 0\.75rem\/1\.4 /);
+    expect(css).toMatch(/--font-caption: 500 0\.75rem\/1\.4 /);
   });
 });

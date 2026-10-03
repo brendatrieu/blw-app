@@ -118,7 +118,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
               {active.emoji}
             </span>
           ) : null}
-          <span className="text-sm font-semibold text-[var(--color-text)]">{active.title}</span>
+          <span className="text-sm font-medium text-[var(--color-text)]">{active.title}</span>
         </div>
       ) : null}
     </CelebrationContext.Provider>

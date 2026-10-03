@@ -108,7 +108,7 @@ function RowContent({ row }: { row: MoreRow }) {
         {row.emoji}
       </span>
       <span className="flex flex-1 flex-col gap-0.5">
-        <span className="text-sm font-semibold text-[var(--color-text)]">{row.label}</span>
+        <span className="text-sm font-medium text-[var(--color-text)]">{row.label}</span>
         <span className="text-xs text-[var(--color-text-muted)]">{row.description}</span>
       </span>
       {row.badge ? <RowChip>{row.badge}</RowChip> : null}

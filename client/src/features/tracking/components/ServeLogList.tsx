@@ -156,7 +156,7 @@ export function MealCard({
         {/* Every food's name, comma-joined, a deleted one marked. Deliberately
             NOT the recipe title: that gets its own line underneath, so the
             title always answers "what did baby eat?". */}
-        <span className="text-sm font-semibold text-[var(--color-text)]">
+        <span className="text-sm font-medium text-[var(--color-text)]">
           <FoodNames foods={meal.foods} />
         </span>
         {meal.recipeTitle && (

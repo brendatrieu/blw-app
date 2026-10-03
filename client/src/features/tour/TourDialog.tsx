@@ -141,7 +141,7 @@ export function TourDialog({ onClose, source }: TourDialogProps) {
           <button
             type="button"
             onClick={() => exit("skip")}
-            className="inline-flex min-h-11 items-center justify-center px-3 text-sm font-semibold text-[var(--color-text-muted)]"
+            className="inline-flex min-h-11 items-center justify-center px-3 text-sm font-medium text-[var(--color-text-muted)]"
           >
             Skip
           </button>
@@ -179,7 +179,7 @@ export function TourDialog({ onClose, source }: TourDialogProps) {
             >
               {slide.emoji}
             </span>
-            <h2 className="text-xl font-semibold text-[var(--color-text)]">{slide.title}</h2>
+            <h2 className="text-xl font-medium text-[var(--color-text)]">{slide.title}</h2>
             <p className="text-sm text-[var(--color-text-muted)]">{slide.body}</p>
           </section>
         ))}

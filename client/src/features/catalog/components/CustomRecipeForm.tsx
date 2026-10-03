@@ -565,7 +565,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
           which a one-line chip has nowhere to put — so each one is a pair of
           boxes shaped like the ingredient quantities just above. */}
       <div className="flex flex-col gap-1.5">
-        <span id={`${idPrefix}-extra-label`} className="text-sm font-semibold text-[var(--color-text)]">
+        <span id={`${idPrefix}-extra-label`} className="text-sm font-medium text-[var(--color-text)]">
           Additional ingredients{" "}
           <span className="font-normal text-[var(--color-text-muted)]">(optional)</span>
         </span>
@@ -637,7 +637,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <span id={`${idPrefix}-steps-label`} className="text-sm font-semibold text-[var(--color-text)]">
+        <span id={`${idPrefix}-steps-label`} className="text-sm font-medium text-[var(--color-text)]">
           Steps <span className="font-normal text-[var(--color-text-muted)]">(optional)</span>
         </span>
         <ol {...stepListProps} className="flex flex-col gap-2" aria-labelledby={`${idPrefix}-steps-label`}>

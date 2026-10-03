@@ -166,7 +166,7 @@ export function BottomNav() {
             {/* Weight inline: .font-caption's unlayered `font:` shorthand beats a font-* class (item 652). */}
             <span
               className="font-caption"
-              style={{ color: active ? "var(--color-apricot-text)" : "var(--color-text-muted)", fontWeight: active ? 800 : 700 }}
+              style={{ color: active ? "var(--color-apricot-text)" : "var(--color-text-muted)", fontWeight: active ? 700 : 600 }}
             >
               {label}
             </span>

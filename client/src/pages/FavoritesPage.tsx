@@ -12,7 +12,7 @@ function FavoriteCard({ item }: { item: FavoriteItem }) {
   return (
     <CardLink to={`/recipes/${item.recipeId}`} padding="sm" className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="flex items-center gap-2 text-base font-semibold text-[var(--color-text)]">
+        <span className="flex items-center gap-2 text-base font-medium text-[var(--color-text)]">
           <span aria-hidden="true" className="text-xl leading-none">
             💛
           </span>

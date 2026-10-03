@@ -20,7 +20,7 @@ import {
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
 import { FoodPlates } from "../features/catalog/components/FoodPlate.js";
 import { ButtonLink } from "../components/ui/Button.js";
-import { Card, CardLink } from "../components/ui/Card.js";
+import { Card, CARD_ROW_DIVIDER, CardLink } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { ProgressRing } from "../components/ui/ProgressRing.js";
 import { HEADING_CONTROL_INSET, SectionLink } from "../components/ui/SectionLink.js";
@@ -59,11 +59,10 @@ export function upNextRows(
   };
 }
 
-/** One Up next row: a stretched link to the thing, its kebab above it. */
-// A-Home: the line between Up next rows starts at the text (plate 48 + gap 12),
-// not at the card edge like the storage rows.
-const UP_NEXT_DIVIDER =
-  "not-first:before:absolute not-first:before:top-0 not-first:before:right-2.5 not-first:before:left-[60px] not-first:before:h-px not-first:before:bg-[var(--color-divider)]";
+/** One Up next row: a stretched link to the thing, its kebab above it. The
+ * same row box as Storage's (`StorageItemRow`), so `CARD_ROW_DIVIDER` starts
+ * the line under the plate's left edge and ends it as far in from the right
+ * (item 709; it used to start at the text). */
 
 function UpNextRowShell({
   to,
@@ -79,14 +78,14 @@ function UpNextRowShell({
   actions: React.ReactNode;
 }) {
   return (
-    <li className={`relative flex items-center gap-3 py-2.5 ${UP_NEXT_DIVIDER}`}>
+    <li className={`relative flex items-center gap-3 py-2.5 pr-1 pl-3.5 ${CARD_ROW_DIVIDER}`}>
       <Link
         to={to}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-md)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
       >
         {plates}
         <span className="flex min-w-0 flex-col gap-[3px]">
-          <span className="text-[17px] font-extrabold text-[var(--color-text)]">{title}</span>
+          <span className="text-[17px] font-bold text-[var(--color-text)]">{title}</span>
           {detail}
         </span>
       </Link>
@@ -97,7 +96,7 @@ function UpNextRowShell({
 
 // The Home greeting's small uppercase apricot label (AppLayout), for the
 // card's own label (CSS uppercases it, so the copy stays "Up next").
-const UP_NEXT_LABEL_CLASS = "text-[11px] leading-[normal] font-extrabold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
+const UP_NEXT_LABEL_CLASS = "text-[11px] leading-[normal] font-bold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
 
 /**
  * "Up next" (item 660, A-Home): what needs doing soon, each row with its own
@@ -116,9 +115,11 @@ function UpNextCard({ babyId }: { babyId: string }) {
     // A-Home (item 681): label 16px under the top, 10px to the first plate,
     // 10px around each divider, 12px under the last plate. The rows' own
     // py-2.5 carries the 10s (so each whole row stays tappable); pb-0.5 tops
-    // the last one up to 12.
-    <Card as="section" padding="none" aria-labelledby="up-next" className="flex flex-col pt-4 pr-1.5 pb-0.5 pl-4">
-      <div className="flex items-center justify-between pr-2.5">
+    // the last one up to 12. Sides (item 709): px-0.5 + the row's pl-3.5 keep
+    // the plates and label 16px in, and the kebab 6px in (pr-1), while the
+    // rows span the card like Storage's so their dividers match.
+    <Card as="section" padding="none" aria-labelledby="up-next" className="flex flex-col px-0.5 pt-4 pb-0.5">
+      <div className="flex items-center justify-between px-3.5">
         <h2 id="up-next" className={UP_NEXT_LABEL_CLASS}>
           Up next
         </h2>
@@ -201,12 +202,12 @@ function AllergenProgressSummary({ babyId }: { babyId: string }) {
         segments={segments}
         label={`${established} of ${ALLERGEN_TOTAL} allergens established, ${started} started`}
       >
-        <span className="text-xl font-black tabular-nums text-[var(--color-text)]">
+        <span className="text-xl font-extrabold tabular-nums text-[var(--color-text)]">
           {established}/{ALLERGEN_TOTAL}
         </span>
       </ProgressRing>
       <div className="flex flex-col gap-1 text-sm">
-        <span className="text-base font-extrabold text-[var(--color-text)]">{established} established</span>
+        <span className="text-base font-bold text-[var(--color-text)]">{established} established</span>
         <span className="text-[var(--color-text-muted)]">
           {started} started · {notStarted} not started yet
         </span>

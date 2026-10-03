@@ -93,7 +93,7 @@ function ThreadList() {
 
       {picking && (
         <Card className="flex flex-col gap-2">
-          <p className="text-sm font-semibold text-[var(--color-text)]">Start a new chat</p>
+          <p className="text-sm font-medium text-[var(--color-text)]">Start a new chat</p>
           {(["recipe", "blw"] as const satisfies readonly ChatKind[]).map((kind) => (
             <button
               key={kind}
@@ -106,7 +106,7 @@ function ThreadList() {
                 {KIND_EMOJI[kind]}
               </span>
               <span className="flex flex-col items-start gap-0.5">
-                <span className="text-sm font-semibold text-[var(--color-text)]">{KIND_LABEL[kind]}</span>
+                <span className="text-sm font-medium text-[var(--color-text)]">{KIND_LABEL[kind]}</span>
                 <span className="text-xs text-[var(--color-text-muted)]">{KIND_DESCRIPTION[kind]}</span>
               </span>
             </button>
@@ -138,7 +138,7 @@ function ThreadList() {
                 {KIND_EMOJI[thread.kind]}
               </span>
               <span className="flex flex-1 flex-col gap-0.5">
-                <span className="text-sm font-semibold text-[var(--color-text)]">{KIND_LABEL[thread.kind]}</span>
+                <span className="text-sm font-medium text-[var(--color-text)]">{KIND_LABEL[thread.kind]}</span>
                 <span className="text-xs text-[var(--color-text-muted)]">{formatThreadDate(thread.createdAt)}</span>
               </span>
               <Badge tone={KIND_BADGE_TONE[thread.kind]}>{thread.kind === "recipe" ? "Recipe" : "BLW Q&A"}</Badge>
@@ -168,7 +168,7 @@ function EmergencyCard({ message }: { message: string }) {
       role="alert"
       className="flex flex-col gap-1 rounded-[var(--radius-lg)] border-2 border-[var(--color-danger)] bg-[var(--color-callout-bg)] p-3"
     >
-      <p className="text-sm font-bold text-[var(--color-danger)]">Possible emergency</p>
+      <p className="text-sm font-semibold text-[var(--color-danger)]">Possible emergency</p>
       <p className="text-sm text-[var(--color-text)]">{message}</p>
     </div>
   );
@@ -215,7 +215,7 @@ function ThreadConversation({ threadId }: { threadId: string }) {
       <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4">
         <Link
           to="/chat"
-          className="text-sm font-semibold text-[var(--color-accent)] underline-offset-2 hover:underline"
+          className="text-sm font-medium text-[var(--color-accent)] underline-offset-2 hover:underline"
         >
           {"← Chats"}
         </Link>

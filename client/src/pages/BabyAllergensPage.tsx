@@ -40,7 +40,7 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
     <div className="flex flex-1 flex-col gap-2">
       <div className="flex items-center gap-3">
         <FoodPlate emoji={allergenEmoji(item.allergenSlug)} tint={allergenTint(item.allergenSlug)} size={40} />
-        <span className="flex-1 text-sm font-semibold text-[var(--color-text)]">{item.allergenName}</span>
+        <span className="flex-1 text-sm font-medium text-[var(--color-text)]">{item.allergenName}</span>
         <Badge tone={ALLERGEN_STATUS_TONE[item.status]}>{ALLERGEN_STATUS_LABEL[item.status]}</Badge>
         {/* No chevron: storage rows open on tap without one, and the two
             lists should read alike. */}

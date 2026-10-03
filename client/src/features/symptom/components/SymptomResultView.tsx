@@ -8,7 +8,7 @@ function Section({ title, items }: { title: string; items: string[] }) {
   if (items.length === 0) return null;
   return (
     <section className="flex flex-col gap-1.5">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">{title}</h3>
+      <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{title}</h3>
       <ul className="flex list-disc flex-col gap-1 pl-5 text-sm leading-relaxed text-[var(--color-text)]">
         {items.map((item) => (
           <li key={item}>{item}</li>
@@ -26,7 +26,7 @@ function AlarmRecap({ result, onReopen }: { result: SymptomResult; onReopen: () 
       className="flex flex-col gap-2 rounded-lg p-4"
       style={alarmStyle(emergency ? "emergency" : "urgent_care")}
     >
-      <p className="text-sm font-semibold">
+      <p className="text-sm font-medium">
         {emergency ? "This needs emergency help now." : "This needs a clinician today."}
       </p>
       <button
@@ -71,7 +71,7 @@ export function SymptomResultView({ result, onReopenAlarm }: SymptomResultViewPr
       )}
 
       <section className="flex flex-col gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
           Foods that fit the timing
         </h3>
         <CandidateList candidates={result.candidates} />

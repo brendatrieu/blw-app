@@ -184,6 +184,13 @@ describe("AddStorageItemForm (render)", () => {
     expect(html).toMatch(/Quantity note(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
   });
 
+  // Item 708: Jakarta is wider; at px-3 the three tabs wrapped at 320.
+  it("keeps the three source tabs at px-2.5 so they stay one line each at 320", () => {
+    const tabs = [...renderForm().matchAll(/<button type="button" aria-pressed="(?:true|false)" class="([^"]*)">(From a food|From a recipe|Free-form)</g)];
+    expect(tabs.map(([, , label]) => label)).toEqual(["From a food", "From a recipe", "Free-form"]);
+    for (const [, cls] of tabs) expect(cls).toMatch(/\bpx-2\.5 py-1 text-xs\b/);
+  });
+
   it("renders the Notes field", () => {
     const html = renderForm();
     expect(html).toMatch(/Notes(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);

@@ -218,13 +218,15 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
     // by the browser's native bubble (item 236).
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
       <div className="flex gap-1.5">
+        {/* px-2.5, not px-3 (item 708): in Plus Jakarta Sans the three chips
+            need 296px at px-3 and wrapped to two lines at 320 (288px row). */}
         {SOURCE_TABS.map((tab) => (
           <button
             key={tab.value}
             type="button"
             onClick={() => setSource(tab.value)}
             aria-pressed={source === tab.value}
-            className={`rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-[var(--radius-pill)] border px-2.5 py-1 text-xs font-medium transition-colors ${
               source === tab.value
                 ? "border-[var(--color-selected)] bg-[var(--color-selected)] text-[var(--color-selected-contrast)]"
                 : "border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)]"
@@ -270,7 +272,7 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
       )}
 
       <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-sm font-semibold text-[var(--color-text)]">Location</span>
+        <span className="text-sm font-medium text-[var(--color-text)]">Location</span>
         <div className="flex gap-1.5">
           {LOCATIONS.map((loc) => (
             <button

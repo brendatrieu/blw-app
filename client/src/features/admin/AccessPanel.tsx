@@ -132,7 +132,7 @@ export function AccessPanel() {
               className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2"
             >
               <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="flex items-center gap-1.5 text-sm font-semibold break-all text-[var(--color-text)]">
+                <span className="flex items-center gap-1.5 text-sm font-medium break-all text-[var(--color-text)]">
                   {collaborator.email}
                   {collaborator.isSelf ? (
                     <span className="rounded-full bg-[var(--color-primary-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--color-primary-soft-text)]">

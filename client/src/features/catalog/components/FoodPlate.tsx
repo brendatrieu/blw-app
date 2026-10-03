@@ -68,7 +68,7 @@ export function FoodPlates({ plates, overflow }: EmojiCluster) {
             emoji={discs[index]!.emoji}
             tint={discs[index]!.tint}
             size={size}
-            className={`absolute${index > 0 ? " ring-2 ring-[var(--color-bg-elevated)]" : ""}${isCount ? " font-black tabular-nums text-[var(--color-text)]" : ""}`}
+            className={`absolute${index > 0 ? " ring-2 ring-[var(--color-bg-elevated)]" : ""}${isCount ? " font-extrabold tabular-nums text-[var(--color-text)]" : ""}`}
             style={{ left, top, ...(isCount && { fontSize: 12 }) }}
           />
         );

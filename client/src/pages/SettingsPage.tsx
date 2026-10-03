@@ -253,7 +253,7 @@ export function BabyRow({ baby }: { baby: Baby }) {
     <>
       <Card className={`flex flex-col gap-2 ${baby.archived ? "opacity-60" : ""}`}>
         <div className="flex items-baseline justify-between gap-2">
-          <span className="flex items-center gap-2 font-semibold text-[var(--color-text)]">
+          <span className="flex items-center gap-2 font-medium text-[var(--color-text)]">
             <span aria-hidden="true">👶</span>
             {baby.name}
           </span>
@@ -497,7 +497,7 @@ export function AiSection() {
 
       {configured ? (
         <Card className="flex flex-col gap-2">
-          <span className="font-semibold text-[var(--color-text)]">
+          <span className="font-medium text-[var(--color-text)]">
             Key on file: {maskAiKey(status.data?.last4 ?? "")}
           </span>
           <span className="text-xs text-[var(--color-text-muted)]">
@@ -518,7 +518,7 @@ export function AiSection() {
 
       <Card>
         <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
-          <h3 className="text-sm font-semibold text-[var(--color-text)]">{configured ? "Replace key" : "Add your key"}</h3>
+          <h3 className="text-sm font-medium text-[var(--color-text)]">{configured ? "Replace key" : "Add your key"}</h3>
 
           <Field label="Anthropic API key" htmlFor="anthropic-api-key" error={errors.apiKey}>
             <Input
@@ -729,7 +729,7 @@ export function PrivacySection() {
       </h2>
 
       <div className="flex min-h-11 items-center justify-between gap-3">
-        <span id="share-usage-data-label" className="text-sm font-semibold text-[var(--color-text)]">
+        <span id="share-usage-data-label" className="text-sm font-medium text-[var(--color-text)]">
           {PRIVACY_SWITCH_LABEL}
         </span>
         <Switch
@@ -831,7 +831,7 @@ export function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
   return (
     <Card className="border-2 border-[var(--color-danger)]">
       <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
-        <h3 className="text-sm font-bold text-[var(--color-danger)]">Delete this account</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-danger)]">Delete this account</h3>
 
         <p className="text-sm text-[var(--color-text)]">
           This permanently deletes your account and everything in it — every baby profile, the whole

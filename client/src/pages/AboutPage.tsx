@@ -3,6 +3,7 @@ import { ButtonLink } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
+import { safeTop } from "../components/AppLayout.js";
 
 const TITLE = "Little Meals";
 const TAGLINE = "Starting solids, made simpler.";
@@ -44,8 +45,9 @@ export function AboutPage() {
 
   return (
     // Item 703: as wide as every page inside AppLayout (its max-w-lg column,
-    // a page's p-4), signed in or out.
-    <div className="mx-auto flex min-h-full max-w-lg flex-col gap-6 p-4">
+    // a page's p-4), signed in or out. Item 710: no AppLayout header above it,
+    // so it clears the iOS status bar itself, with the header's safeTop.
+    <div className="mx-auto flex min-h-full max-w-lg flex-col gap-6 p-4" style={{ paddingTop: safeTop("1rem") }}>
       {!signedIn ? (
         <div className="flex flex-col items-center gap-4 text-center">
           {/* The home-screen icon above the name (owner, 2026-09-30); decorative — the h1 names it. */}

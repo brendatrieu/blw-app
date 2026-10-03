@@ -15,7 +15,7 @@ export function StorageStatusBanner({ change, onUndo }: StorageStatusBannerProps
   return (
     <div className="flex items-center justify-between gap-2 rounded-[var(--radius-md)] bg-[var(--color-callout-bg)] px-3 py-2 text-sm text-[var(--color-text)]">
       <span>{storageStatusChangeLabel(change)}</span>
-      <button type="button" onClick={onUndo} className="font-semibold text-[var(--color-accent)] underline">
+      <button type="button" onClick={onUndo} className="font-medium text-[var(--color-accent)] underline">
         Undo
       </button>
     </div>

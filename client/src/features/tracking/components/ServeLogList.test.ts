@@ -119,7 +119,7 @@ describe("timeLabel", () => {
 describe("MealCard title (item 192, ledger 555)", () => {
   const titleOf = (foods: MealFood[]) => {
     const html = renderMealCard({ ...baseMeal, recipeId: "r1", recipeTitle: "Iron-Rich Purée", foods });
-    return /<span class="text-sm font-semibold text-\[var\(--color-text\)\]">([\s\S]*?)<\/span><span/.exec(html)![1]!.replace(/<!-- -->/g, "");
+    return /<span class="text-sm font-medium text-\[var\(--color-text\)\]">([\s\S]*?)<\/span><span/.exec(html)![1]!.replace(/<!-- -->/g, "");
   };
 
   it("comma-joins every food name", () => {
@@ -411,7 +411,7 @@ describe("Home paging (item 694)", () => {
     expect(html).not.toContain("Food 3");
     // A-Home's link style: 14px bold accent, no underline, a decorative chevron, 44px tall.
     expect(html).toMatch(
-      /<a class="inline-flex min-h-11 items-center text-sm font-bold text-\[var\(--color-accent\)\]" href="\/meals"[^>]*>See all<span aria-hidden="true">\u00a0›<\/span><\/a>/,
+      /<a class="inline-flex min-h-11 items-center text-sm font-semibold text-\[var\(--color-accent\)\]" href="\/meals"[^>]*>See all<span aria-hidden="true">\u00a0›<\/span><\/a>/,
     );
   });
 

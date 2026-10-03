@@ -161,7 +161,7 @@ export function LeftoversFields({
       )}
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-semibold text-[var(--color-text)]">Location</span>
+        <span className="text-sm font-medium text-[var(--color-text)]">Location</span>
         <SegmentedControl
           aria-label="Location"
           value={location}
@@ -524,7 +524,7 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
               card (user feedback), and a checkbox read as form data — a
               switch says "on/off decision" without the card costume. */}
           <div className="flex min-h-11 items-center justify-between gap-3">
-            <span id="log-food-leftovers-label" className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text)]">
+            <span id="log-food-leftovers-label" className="flex items-center gap-2 text-sm font-medium text-[var(--color-text)]">
               <span aria-hidden="true" className="text-lg leading-none">📦</span>
               Save leftovers to storage
             </span>

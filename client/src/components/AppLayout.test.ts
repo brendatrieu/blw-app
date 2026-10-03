@@ -76,7 +76,7 @@ describe("AppLayout header", () => {
       const greeting = GREETING.exec(html);
       expect(greeting, html.slice(0, 1200)).not.toBeNull();
       expect(greeting![1]!.split(" ")).toEqual(
-        expect.arrayContaining(["text-[11px]", "leading-[normal]", "font-extrabold", "uppercase", "tracking-[0.14em]", "text-[var(--color-apricot-text)]"]),
+        expect.arrayContaining(["text-[11px]", "leading-[normal]", "font-bold", "uppercase", "tracking-[0.14em]", "text-[var(--color-apricot-text)]"]),
       );
       const header = html.slice(html.indexOf("<header"), html.indexOf("</header>"));
       // Owner (2026-10-02): no gap between the greeting and the name row.

@@ -313,7 +313,7 @@ describe("StorageItemCard freshness chip (item 333)", () => {
       "items-center",
       "gap-[3px]",
       "px-[7px]",
-      "font-extrabold",
+      "font-bold",
       "whitespace-nowrap",
       "bg-[var(--color-caution-soft)]",
       "text-[var(--color-caution-soft-text)]",

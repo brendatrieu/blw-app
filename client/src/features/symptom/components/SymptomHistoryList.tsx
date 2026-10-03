@@ -31,7 +31,7 @@ function HistoryRow({ item }: { item: SymptomCheckHistoryItem }) {
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex flex-col gap-1 text-left">
         <span className="flex items-center gap-2">
           <span
-            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
               isAlarmTriageLevel(item.triageLevel) ? "" : "bg-[var(--color-bg)] text-[var(--color-text)]"
             }`}
             style={isAlarmTriageLevel(item.triageLevel) ? alarmStyle(item.triageLevel) : undefined}

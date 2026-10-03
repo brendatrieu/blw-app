@@ -13,7 +13,7 @@ export const HEADING_CONTROL_INSET = "-my-[9.5px]";
  */
 export function SectionLink({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <Link to={to} className="inline-flex min-h-11 items-center text-sm font-bold text-[var(--color-accent)]">
+    <Link to={to} className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--color-accent)]">
       {children}
       <span aria-hidden="true">&nbsp;›</span>
     </Link>

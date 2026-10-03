@@ -86,7 +86,7 @@ export function Donut({ slices, centreValue, centreLabel, title, summary, valueH
         y={SIZE / 2}
         textAnchor="middle"
         fontSize={22}
-        fontWeight={800}
+        fontWeight={700}
         fill="var(--color-text)"
       >
         {centreValue}

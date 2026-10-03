@@ -15,7 +15,7 @@ export function BabyChip() {
     return (
       <Link
         to="/settings"
-        className="inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-2"
+        className="inline-flex min-h-11 items-center text-sm font-medium underline underline-offset-2"
         style={{ color: "var(--color-accent)" }}
       >
         Add a baby
@@ -28,11 +28,11 @@ export function BabyChip() {
   const chip = (
     <span
       aria-hidden={babies.length > 1 ? true : undefined}
-      className="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-full bg-[var(--color-apricot-soft)] pl-1.5 pr-3 text-sm font-extrabold text-[var(--color-text)]"
+      className="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-full bg-[var(--color-apricot-soft)] pl-1.5 pr-3 text-sm font-bold text-[var(--color-text)]"
     >
       <span
         aria-hidden="true"
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-avatar)] text-xs font-black text-[var(--color-avatar-ink)]"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-avatar)] text-xs font-extrabold text-[var(--color-avatar-ink)]"
       >
         {initial}
       </span>

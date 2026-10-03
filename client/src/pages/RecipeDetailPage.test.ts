@@ -191,7 +191,7 @@ describe("RecipeDetailPage (catalog recipe)", () => {
     // The same 48px 16px/800 "lg" pair as Home and the food page.
     for (const href of [`/log-meal?recipe=${id}`, `/storage/add?recipe=${id}`]) {
       const tag = new RegExp(`<a [^>]*href="${href.replace("?", "\\?")}"[^>]*>`).exec(html)?.[0] ?? "";
-      expect(tag).toContain("min-h-12 px-4 py-2.5 text-base font-extrabold");
+      expect(tag).toContain("min-h-12 px-4 py-2.5 text-base font-bold");
     }
     expect(html).toContain(">Add to storage<");
     expect(html.indexOf(">Log meal<")).toBeLessThan(html.indexOf(">Add to storage<"));

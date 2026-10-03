@@ -35,7 +35,7 @@ function GearIcon() {
 // the copy stays "Good evening"). No sun/moon: direction A is emoji-free.
 // Normal line height, as in A-Home: the body's 1.5 pushed the name 1.5px down.
 const GREETING_CLASS =
-  "text-[11px] leading-[normal] font-extrabold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
+  "text-[11px] leading-[normal] font-bold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
 
 function BabySwitcher() {
   const { babies, activeBaby, setActiveBabyId } = useActiveBaby();
@@ -47,7 +47,7 @@ function BabySwitcher() {
     return (
       <Link
         to="/settings"
-        className="text-sm font-semibold underline underline-offset-2"
+        className="text-sm font-medium underline underline-offset-2"
         style={{ color: "var(--color-accent)" }}
       >
         Add a baby
@@ -72,7 +72,7 @@ function BabySwitcher() {
     return (
       <div className="flex flex-col">
         <span className={GREETING_CLASS}>{timeOfDayGreeting()}</span>
-        {/* The age sits beside the name, not inside it, so it stays Nunito. */}
+        {/* The age sits beside the name, not inside it, so it stays Plus Jakarta Sans. */}
         {/* Wraps the age under a long name instead of squeezing the name mid-word (680 B1). */}
         <div className="flex flex-wrap items-baseline gap-x-2.5">
           <span className="font-display text-[var(--color-text)]">{activeBaby?.name}</span>
@@ -135,6 +135,13 @@ function SettingsLink() {
  * page already scrolled down. Back/forward (POP) keeps the browser's own
  * restored position so returning to a list lands where the user left it.
  */
+/** A top padding of `base` plus the iOS safe area (viewport-fit=cover with a
+ * black-translucent status bar draws the page under the clock). The header
+ * below uses it, and so does AboutPage, which sits outside this layout (item 710). */
+export function safeTop(base: string): string {
+  return `calc(${base} + env(safe-area-inset-top))`;
+}
+
 export function shouldScrollToTop(navigationType: "PUSH" | "POP" | "REPLACE"): boolean {
   return navigationType !== "POP";
 }
@@ -190,7 +197,7 @@ export function AppLayout() {
               // bar reads as part of the page, still opaque so content
               // scrolling under it disappears.
               backgroundColor: "var(--color-bg)",
-              paddingTop: `calc(${isHome ? "1.125rem" : "0.25rem"} + env(safe-area-inset-top))`,
+              paddingTop: safeTop(isHome ? "1.125rem" : "0.25rem"),
             }}
           >
             {isHome ? (

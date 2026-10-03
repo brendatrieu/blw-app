@@ -114,7 +114,7 @@ export function OverriddenHint({ babyId, allergenSlug }: AllergenActionProps) {
         type="button"
         disabled={undo.isPending}
         onClick={() => undo.mutate(allergenSlug)}
-        className="font-semibold text-[var(--color-accent)] underline disabled:opacity-60"
+        className="font-medium text-[var(--color-accent)] underline disabled:opacity-60"
       >
         {undo.isPending ? "Undoing…" : "Undo"}
       </button>

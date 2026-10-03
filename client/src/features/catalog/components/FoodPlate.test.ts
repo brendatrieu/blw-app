@@ -81,7 +81,7 @@ describe("FoodPlates (item 658)", () => {
     const d = discs(html);
     expect(d.map(spot)).toEqual(["12,0", "0,20", "24,20"]);
     expect(d[2]).toContain("var(--color-plate-neutral)");
-    expect(d[2]).toContain("font-black tabular-nums text-[var(--color-text)]");
+    expect(d[2]).toContain("font-extrabold tabular-nums text-[var(--color-text)]");
     expect(d[2]).toContain("font-size:12px");
     expect(d[2]).toContain(RING);
     expect(html).toContain(">+3</span>");

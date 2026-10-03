@@ -84,11 +84,11 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
             aria-label="Decrease servings"
             disabled={serve.isPending}
             onClick={() => setServings((s) => clampServings(s - 1, maxServings))}
-            className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] text-sm font-semibold text-[var(--color-text)] disabled:opacity-60"
+            className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] text-sm font-medium text-[var(--color-text)] disabled:opacity-60"
           >
             −
           </button>
-          <span aria-live="polite" className="min-w-6 text-center text-sm font-semibold tabular-nums text-[var(--color-text)]">
+          <span aria-live="polite" className="min-w-6 text-center text-sm font-medium tabular-nums text-[var(--color-text)]">
             {servings}
           </span>
           <button
@@ -96,7 +96,7 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
             aria-label="Increase servings"
             disabled={serve.isPending}
             onClick={() => setServings((s) => clampServings(s + 1, maxServings))}
-            className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] text-sm font-semibold text-[var(--color-text)] disabled:opacity-60"
+            className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] text-sm font-medium text-[var(--color-text)] disabled:opacity-60"
           >
             +
           </button>
