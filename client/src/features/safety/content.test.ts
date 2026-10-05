@@ -122,6 +122,47 @@ describe("how-to guides (item 601)", () => {
     expect(stars).toContain("\n\nTap one to five stars, five for a big hit.\n\n");
   });
 
+  // Item 735: owner-approved copy, word for word (serve: minus the 730-only parts).
+  it("log-a-meal and serve-from-storage read exactly as approved", () => {
+    const steps = (slug: string) => (getGuide(slug)?.body ?? "").split(/^## /m).slice(1);
+    const meal = steps("how-to-log-a-meal");
+    expect(meal[0]).toContain(
+      "\n\nTap **Food** and type to search. Select each food your baby had, then tap **Done**. Made a recipe? Pick it under **Recipe (optional)** and its ingredients fill in for you.\n\n",
+    );
+    expect(meal[1]).toMatch(
+      /^2\. Set the time\n\n\*\*When\*\* defaults to the current time\. If the meal was earlier, tap it, scroll to the day and time, and tap \*\*Done\*\*\.\n\n!\[/,
+    );
+    expect(meal[3]).toMatch(/^4\. Add a reaction or a note \(optional\)\n/);
+    const serve = steps("how-to-serve-from-storage");
+    expect(serve[0]).toContain(
+      "\n\nUse **−** and **+** to set how many **Servings** your baby had. Change the serve time if you served earlier.\n\n",
+    );
+    expect(serve[1]).toMatch(/^2\. Rate it with stars \(optional\)\n\nTap one to five stars, five for a big hit\.\n\n!\[/);
+    expect(serve[2]).toMatch(/^3\. Add a reaction or a note \(optional\)\n/);
+    expect(serve[3]).toMatch(
+      /^4\. Tap Serve\n\nThe servings left go down, and the meal lands in your \*\*Food log\*\* marked \*\*From storage\*\*\.\n\n!\[/,
+    );
+    // 730 has not landed: no "Serve more than one item" step yet.
+    expect(serve.join("")).not.toContain("Add more");
+  });
+
+  // Item 735 audit: every step whose action can be skipped says "(optional)".
+  // The rest are required by their forms (or, like allergens, must be asked).
+  it("marks exactly the skippable steps (optional)", () => {
+    const optional = guideArticles.flatMap((guide) =>
+      [...guide.body.matchAll(/^## \d+\. (.+ \(optional\))$/gm)].map((m) => `${guide.slug}: ${m[1]}`),
+    );
+    expect(optional).toEqual([
+      "how-to-custom-recipe: Add amounts and extras (optional)",
+      "how-to-custom-recipe: Write the steps (optional)",
+      "how-to-log-a-meal: Rate it with stars (optional)",
+      "how-to-log-a-meal: Add a reaction or a note (optional)",
+      "how-to-add-to-storage: Add amounts (optional)",
+      "how-to-serve-from-storage: Rate it with stars (optional)",
+      "how-to-serve-from-storage: Add a reaction or a note (optional)",
+    ]);
+  });
+
   // Item 725: a guide is opened from the form it explains (its HowToLink) or
   // from More, so none of them says where to start. Step 1 is the form's own
   // first field, and the three "open the form" screenshots are gone.
