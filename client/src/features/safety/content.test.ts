@@ -133,6 +133,10 @@ describe("how-to guides (item 601)", () => {
       /^2\. Set the time\n\n\*\*When\*\* defaults to the current time\. If the meal was earlier, tap it, scroll to the day and time, and tap \*\*Done\*\*\.\n\n!\[/,
     );
     expect(meal[3]).toMatch(/^4\. Add a reaction or a note \(optional\)\n/);
+    // Item 743: the stars shot lists Banana (three) above Avocado (five); the alt follows it.
+    expect(meal[2]).toContain(
+      "![Under Rating (optional), Banana has three stars and Avocado has five, each with a Clear link.](/guides/meal-3-stars.webp)",
+    );
     const serve = steps("how-to-serve-from-storage");
     expect(serve[0]).toContain(
       "\n\nUse **−** and **+** to set how many **Servings** your baby had. **When** defaults to the current time. If you served earlier, tap it, scroll to the day and time, and tap **Done**.\n\n",
