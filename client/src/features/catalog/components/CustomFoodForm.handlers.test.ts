@@ -57,6 +57,7 @@ import { CustomFoodForm } from "./CustomFoodForm.js";
 import { FoodPicker } from "./FoodPicker.js";
 import { MultiCombobox } from "../../../components/ui/MultiCombobox.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
+import { HowToLink } from "../../safety/HowToLink.js";
 
 interface Rendered {
   type: unknown;
@@ -156,5 +157,17 @@ describe("FoodPicker hands the sheet's own closer to the form (item 352)", () =>
     (form.props.onNavigateAway as () => void)();
 
     expect(sheet(renderPicker()).props.open).toBe(false);
+  });
+});
+
+// Item 733: the sheet's How-to link sits first and lifts its text inside its
+// 44px box exactly like the Serve sheet's (item 714, ServeSheet.test.ts).
+describe("the Add a custom food sheet's How-to link (item 733)", () => {
+  it("is the sheet's first child, with the Serve sheet's pb-[5px] lift", () => {
+    h.reset();
+    const [link] = sheet(renderPicker()).props.children as [Rendered, ...Rendered[]];
+    expect(link.type).toBe(HowToLink);
+    expect(link.props.slug).toBe("how-to-add-custom-food");
+    expect(link.props.className).toBe("pb-[5px]");
   });
 });
