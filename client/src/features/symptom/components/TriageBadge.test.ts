@@ -47,6 +47,29 @@ describe("TriageLegend", () => {
   });
 });
 
+describe("TriageLegend size (item 745)", () => {
+  it("sets the intro and both lines at 14px like the form's labels, with no 12px text left", () => {
+    const html = renderToString(createElement(TriageLegend));
+    expect(html).toContain('<p class="text-sm text-[var(--color-text-muted)]">Symptoms marked like this need care on their own:</p>');
+    expect(html.match(/<p class="flex items-center gap-2 text-sm text-\[var\(--color-text\)\]">/g)).toHaveLength(2);
+    expect(html).not.toContain("text-xs");
+  });
+});
+
+describe("SymptomSurveyForm body-area chips (item 745)", () => {
+  it("renders every body-area chip at 14px", () => {
+    const html = renderToString(
+      createElement(SymptomSurveyForm, { onSubmit: () => {}, isPending: false, errorMessage: null }),
+    );
+    const chips = html.match(/<button type="button" aria-pressed="(?:true|false)" class="[^"]*"/g) ?? [];
+    expect(chips.length).toBeGreaterThan(3);
+    for (const chip of chips) {
+      expect(chip).toContain("rounded-full border px-3 py-1 text-sm ");
+      expect(chip).not.toContain("text-xs");
+    }
+  });
+});
+
 describe("SymptomSurveyForm", () => {
   it("renders the legend above the checklist and a badge for every solo-triage symptom", () => {
     const html = renderToString(

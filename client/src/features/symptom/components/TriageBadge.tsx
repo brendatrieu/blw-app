@@ -51,9 +51,9 @@ const LEGEND: ReadonlyArray<{ level: AlarmLevel; text: string }> = [
 export function TriageLegend() {
   return (
     <div role="group" className="flex flex-col gap-3" aria-label="What the symptom marks mean">
-      <p className="text-xs text-[var(--color-text-muted)]">Symptoms marked like this need care on their own:</p>
+      <p className="text-sm text-[var(--color-text-muted)]">Symptoms marked like this need care on their own:</p>
       {LEGEND.map((entry) => (
-        <p key={entry.level} className="flex items-center gap-2 text-xs text-[var(--color-text)]">
+        <p key={entry.level} className="flex items-center gap-2 text-sm text-[var(--color-text)]">
           <TriageBadge level={entry.level} />
           {entry.text}
         </p>
