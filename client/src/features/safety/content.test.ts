@@ -280,9 +280,11 @@ describe("dark guide screenshots", () => {
 
   // Item 738: the three shots whose UI changed in 736 were retaken at the
   // committed crop (located against the old light image), so their framing,
-  // and so their size, is what it was.
+  // and so their size, is what it was. meal-2-when shows the log-meal page's
+  // Rating label behind the Time sheet's overlay, so it was retaken too.
   it("keeps the retaken 736 shots at their original crop size", () => {
     const expected: Record<string, number[]> = {
+      "meal-2-when": [780, 1002],
       "meal-3-stars": [780, 328],
       "serve-2-stars": [780, 220],
       "serve-3-notes": [780, 444],
