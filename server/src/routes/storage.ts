@@ -61,7 +61,7 @@ function conflict(reply: FastifyReply, message: string): FastifyReply {
  * written — throwing is how they are taken back.
  */
 class ServeAborted extends Error {
-  constructor(readonly outcome: { code: 404 } | { code: 409; message: string }) {
+  constructor(readonly outcome: { code: 404 } | { code: 409; message: string } | { code: 400; details: unknown }) {
     super("serve aborted");
     this.name = "ServeAborted";
   }
@@ -257,8 +257,9 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     if (foodIds) {
       // Choosable by THIS user — the catalog plus their own custom foods,
       // not deleted ones. Another account's custom food reads as an unknown
-      // id. Create-only (an edit never resends foods), so a deleted food can
-      // only arrive from a stale picker and is refused like any unknown one.
+      // id, and a deleted food can only arrive from a stale picker and is
+      // refused like any unknown one. PATCH applies the same rule to the foods
+      // an edit ADDS (item 729).
       const foodRows = await db
         .select({ id: foods.id })
         .from(foods)
@@ -360,11 +361,45 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
         servingsLeft: storageItems.servingsLeft,
         preparedAt: storageItems.preparedAt,
         bestBy: storageItems.bestBy,
+        recipeId: storageItems.recipeId,
       })
       .from(storageItems)
       .where(and(eq(storageItems.id, params.data.id), eq(storageItems.userId, currentUserId(request))))
       .limit(1);
     if (!existing) return notFound(reply);
+
+    // Item 729: what a container holds is editable, but never what KIND of
+    // container it is. Foods only on a food item (a recipe item keeps its
+    // recipe, a label-only one stays label-only); a name only on a
+    // label-only item.
+    const heldFoodIds = ((await loadStorageItemFoods(db, [params.data.id])).get(params.data.id) ?? []).map(
+      (food) => food.id,
+    );
+    const isFoodItem = heldFoodIds.length > 0 && existing.recipeId === null;
+    const isLabelOnly = heldFoodIds.length === 0 && existing.recipeId === null;
+    const foodIds = body.data.foodIds ? [...new Set(body.data.foodIds)] : null;
+    if (foodIds && !isFoodItem) {
+      return badRequest(reply, { foodIds: "only a food container's foods can be edited" });
+    }
+    if (body.data.label !== undefined && !isLabelOnly) {
+      return badRequest(reply, { label: "only a label-only item can be renamed" });
+    }
+    if (foodIds) {
+      // The same rule as create for anything NEW: choosable by this user
+      // (catalog + their own custom foods, not deleted). A food the
+      // container already holds may stay even if its owner has since deleted
+      // it — the edit form resends it as a "(deleted)" chip.
+      const added = foodIds.filter((id) => !heldFoodIds.includes(id));
+      if (added.length > 0) {
+        const foodRows = await db
+          .select({ id: foods.id })
+          .from(foods)
+          .where(and(inArray(foods.id, added), choosableFoodsCondition(currentUserId(request))));
+        const known = new Set(foodRows.map((f) => f.id));
+        const unknownFoodIds = added.filter((id) => !known.has(id));
+        if (unknownFoodIds.length > 0) return badRequest(reply, { foodIds: "unknown food", unknownFoodIds });
+      }
+    }
 
     // Judged on the MERGED pair, not on what this patch happens to carry:
     // moving Prepared forward past an existing best-by is the same mistake
@@ -383,6 +418,7 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     if (body.data.quantityNote !== undefined) patch.quantityNote = body.data.quantityNote;
     if (body.data.bestBy !== undefined) patch.bestBy = body.data.bestBy;
     if (body.data.notes !== undefined) patch.notes = body.data.notes;
+    if (body.data.label !== undefined) patch.label = body.data.label;
 
     if (body.data.servingsTotal !== undefined || body.data.servingsLeft !== undefined) {
       const total = body.data.servingsTotal !== undefined ? body.data.servingsTotal : existing.servingsTotal;
@@ -417,16 +453,30 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
       patch.statusChangedAt = new Date();
     }
 
-    const updated = await db
-      .update(storageItems)
-      .set(patch)
-      .where(and(eq(storageItems.id, params.data.id), eq(storageItems.userId, currentUserId(request))))
-      .returning();
+    // One transaction, and the row is locked FIRST: a serve locks the same
+    // row before it reads the contents, so the two serialize and a serve
+    // never logs a half-replaced container.
+    const found = await db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select({ id: storageItems.id })
+        .from(storageItems)
+        .where(and(eq(storageItems.id, params.data.id), eq(storageItems.userId, currentUserId(request))))
+        .for("update");
+      if (!locked) return false;
+      if (Object.keys(patch).length > 0) {
+        await tx.update(storageItems).set(patch).where(eq(storageItems.id, locked.id));
+      }
+      if (foodIds) {
+        await tx.delete(storageItemFoods).where(eq(storageItemFoods.storageItemId, locked.id));
+        await tx
+          .insert(storageItemFoods)
+          .values(foodIds.map((foodId, position) => ({ storageItemId: locked.id, foodId, position })));
+      }
+      return true;
+    });
+    if (!found) return notFound(reply);
 
-    const row = updated[0];
-    if (!row) return notFound(reply);
-
-    return reply.send(await loadStorageItem(db, row.id));
+    return reply.send(await loadStorageItem(db, params.data.id));
   });
 
   // -----------------------------------------------------------------------
@@ -449,13 +499,13 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
 
     const userId = currentUserId(request);
 
-    // Only the things that decide WHAT gets logged are read up front (a
-    // storage item's food/recipe can never be edited). Everything the serve
-    // is allowed to depend on — status, and how many servings are left — is
-    // read and written inside the transaction below, so nothing computed out
-    // here from a stale snapshot can reach the decrement.
+    // Only existence is checked up front. WHAT gets logged (the container's
+    // contents, editable since item 729), its status and how many servings
+    // are left are all read inside the transaction below, after the row is
+    // locked, so nothing computed out here from a stale snapshot can reach
+    // the meal or the decrement.
     const [item] = await db
-      .select({ id: storageItems.id, recipeId: storageItems.recipeId })
+      .select({ id: storageItems.id })
       .from(storageItems)
       .where(and(eq(storageItems.id, params.data.id), eq(storageItems.userId, userId)))
       .limit(1);
@@ -487,38 +537,6 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
       babyId = only.id;
     }
 
-    // What was eaten. A food-sourced item is everything in it, in saved
-    // order — one meal with all of them, each linked back to this container;
-    // a recipe-sourced one expands to the recipe's ingredient foods (the only
-    // place the server expands a recipe — hand-logged meals send their own
-    // list).
-    const itemFoods = (await loadStorageItemFoods(db, [item.id])).get(item.id) ?? [];
-    let foodIds: string[];
-    if (itemFoods.length > 0) {
-      foodIds = itemFoods.map((food) => food.id);
-    } else if (item.recipeId) {
-      const ingredients = await db
-        .select({ foodId: recipeIngredients.foodId })
-        .from(recipeIngredients)
-        .where(eq(recipeIngredients.recipeId, item.recipeId))
-        .orderBy(asc(recipeIngredients.id));
-      foodIds = [...new Set(ingredients.map((row) => row.foodId))];
-      if (foodIds.length === 0) {
-        return badRequest(reply, { recipeId: "this recipe has no ingredient foods to log" });
-      }
-    } else {
-      return badRequest(reply, {
-        id: "a label-only storage item has no food to log — add a food or a recipe to serve it",
-      });
-    }
-
-    // Item 718: the meal this serve writes is rated exactly as Log meal's
-    // create rates one — a food item per food, a recipe item once as the
-    // recipe — and a rating that does not fit is a 400 before anything is
-    // written.
-    const ratings = validateRatings(item.recipeId, foodIds, body.data.foodRatings, body.data.recipeRating);
-    if (!ratings.ok) return badRequest(reply, ratings.details);
-
     const servedAt = body.data.servedAt ? new Date(body.data.servedAt) : new Date();
     const servings = body.data.servings;
 
@@ -527,10 +545,54 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     let mealId: string;
     try {
       mealId = await db.transaction(async (tx) => {
+        // Lock the row before reading what is in it. A contents edit (PATCH)
+        // locks the same row first, so the two serialize: this serve logs
+        // either the old contents or the new ones, never a mix, and never
+        // contents that changed after its ratings were checked.
+        const [locked] = await tx
+          .select({ recipeId: storageItems.recipeId })
+          .from(storageItems)
+          .where(and(eq(storageItems.id, item.id), eq(storageItems.userId, userId)))
+          .for("update");
+        if (!locked) throw new ServeAborted({ code: 404 });
+
+        // What was eaten. A food-sourced item is everything in it, in saved
+        // order — one meal with all of them, each linked back to this
+        // container; a recipe-sourced one expands to the recipe's ingredient
+        // foods (the only place the server expands a recipe — hand-logged
+        // meals send their own list).
+        const itemFoods = (await loadStorageItemFoods(tx, [item.id])).get(item.id) ?? [];
+        let foodIds: string[];
+        if (itemFoods.length > 0) {
+          foodIds = itemFoods.map((food) => food.id);
+        } else if (locked.recipeId) {
+          const ingredients = await tx
+            .select({ foodId: recipeIngredients.foodId })
+            .from(recipeIngredients)
+            .where(eq(recipeIngredients.recipeId, locked.recipeId))
+            .orderBy(asc(recipeIngredients.id));
+          foodIds = [...new Set(ingredients.map((row) => row.foodId))];
+          if (foodIds.length === 0) {
+            throw new ServeAborted({ code: 400, details: { recipeId: "this recipe has no ingredient foods to log" } });
+          }
+        } else {
+          throw new ServeAborted({
+            code: 400,
+            details: { id: "a label-only storage item has no food to log — add a food or a recipe to serve it" },
+          });
+        }
+
+        // Item 718: the meal this serve writes is rated exactly as Log meal's
+        // create rates one — a food item per food, a recipe item once as the
+        // recipe — and a rating that does not fit (including one for a food
+        // an edit just took out) is a 400 before anything is written.
+        const ratings = validateRatings(locked.recipeId, foodIds, body.data.foodRatings, body.data.recipeRating);
+        if (!ratings.ok) throw new ServeAborted({ code: 400, details: ratings.details });
+
         const id = await insertMealWithFoods(tx, {
           babyId,
           // Attribution follows the storage item, food-sourced or not.
-          recipeId: item.recipeId,
+          recipeId: locked.recipeId,
           servedAt,
           reactionNote: body.data.reactionNote,
           notes: body.data.notes,
@@ -612,7 +674,10 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
       if (error instanceof ServeAborted) {
         // The transaction rolled back, so the meal that was inserted a few
         // lines above is gone with it.
-        return error.outcome.code === 404 ? notFound(reply) : conflict(reply, error.outcome.message);
+        const { outcome } = error;
+        if (outcome.code === 404) return notFound(reply);
+        if (outcome.code === 400) return badRequest(reply, outcome.details);
+        return conflict(reply, outcome.message);
       }
       throw error;
     }

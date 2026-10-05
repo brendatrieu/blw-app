@@ -1,5 +1,6 @@
-import { useState } from "react";
-import type { StorageItem, StorageLocation } from "@blw/shared";
+import { useMemo, useState } from "react";
+import type { StorageItem, StorageLocation, UpdateStorageItemInput } from "@blw/shared";
+import { FoodPicker } from "../../catalog/components/FoodPicker.js";
 import { useUpdateStorageItem } from "../hooks.js";
 import { LOCATIONS } from "../format.js";
 import { BEST_BY_BEFORE_PREPARED_MESSAGE, isBestByBeforePrepared } from "../freshness.js";
@@ -10,14 +11,27 @@ import { DateField } from "../../../components/ui/DateField.js";
 import { Button } from "../../../components/ui/Button.js";
 import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 
-/** The one field on this form that can be answered wrongly — everything else
- * is either seeded from the item or optional-and-free-form. */
-export type EditStorageItemField = "bestBy";
+/** The fields on this form that can be answered wrongly: a food container
+ * emptied of foods, a Free-form item's name cleared, and best by. */
+export type EditStorageItemField = "food" | "label" | "bestBy";
 export type EditStorageItemErrors = FormErrors<EditStorageItemField>;
 
-export const EDIT_STORAGE_ITEM_FIELD_ORDER: readonly EditStorageItemField[] = ["bestBy"];
+export const EDIT_STORAGE_ITEM_FIELD_ORDER: readonly EditStorageItemField[] = ["food", "label", "bestBy"];
+
+/** What kind of container this is decides which "what" field the form shows
+ * (item 729): foods are editable, a recipe is not, a label-only (Free-form)
+ * item can be renamed. Never changes on edit. */
+export type StorageItemKind = "food" | "recipe" | "label";
+
+export function storageItemKind(item: Pick<StorageItem, "foods" | "recipeId">): StorageItemKind {
+  if (item.recipeId) return "recipe";
+  return item.foods.length > 0 ? "food" : "label";
+}
 
 export interface EditStorageItemValues {
+  kind: StorageItemKind;
+  foodIds: string[];
+  label: string;
   /** "" when the optional field is unset. */
   bestBy: string;
   preparedAt: Date;
@@ -33,10 +47,33 @@ export interface EditStorageItemValues {
  */
 export function validateEditStorageItem(values: EditStorageItemValues): EditStorageItemErrors {
   const errors: EditStorageItemErrors = {};
+  // The same answers the Add form gives for the same mistakes.
+  if (values.kind === "food" && values.foodIds.length === 0) errors.food = "Add at least one food";
+  if (values.kind === "label" && values.label.trim().length === 0) errors.label = "Enter what it is";
   if (isBestByBeforePrepared(values.bestBy, values.preparedAt)) {
     errors.bestBy = BEST_BY_BEFORE_PREPARED_MESSAGE;
   }
   return errors;
+}
+
+/**
+ * The contents half of the PATCH (item 729): foods only when a food
+ * container's list actually changed (so an untouched Save never rewrites the
+ * join rows), a name only for a label-only item. Pure so the rule is pinned.
+ */
+export function buildContentsPatch(
+  item: Pick<StorageItem, "foods" | "recipeId" | "label">,
+  foodIds: string[],
+  label: string,
+): Pick<UpdateStorageItemInput, "foodIds" | "label"> {
+  const kind = storageItemKind(item);
+  if (kind === "label") return { label: label.trim() };
+  if (kind === "food") {
+    const before = item.foods.map((food) => food.id);
+    const changed = before.length !== foodIds.length || before.some((id, index) => id !== foodIds[index]);
+    return changed ? { foodIds } : {};
+  }
+  return {};
 }
 
 interface EditStorageItemFormProps {
@@ -45,13 +82,18 @@ interface EditStorageItemFormProps {
 }
 
 /**
- * The storage "edit" form, byte-compatible with the one that used to live in
- * the inline EditStorageItemSheet: location segments, wheel "Prepared" field
+ * The storage "edit" form: what's in it (item 729 — a food container's foods,
+ * or a Free-form item's name), location segments, wheel "Prepared" field
  * preset from the item's stored value, and quantity note. Now rendered
  * full-screen by StorageEditPage, which supplies `onDone` for both a
  * successful save and Cancel.
  */
 export function EditStorageItemForm({ item, onDone }: EditStorageItemFormProps) {
+  const kind = storageItemKind(item);
+  const [foodIds, setFoodIds] = useState(() => item.foods.map((food) => food.id));
+  const [label, setLabel] = useState(item.label ?? "");
+  // A food its owner has since deleted stays a "(deleted)" chip — see `KeptFood`.
+  const keptFoods = useMemo(() => item.foods.filter((food) => food.deleted), [item.foods]);
   const [location, setLocation] = useState<StorageLocation>(item.location);
   const [preparedAt, setPreparedAt] = useState(() => nowAtMinute(new Date(item.preparedAt)));
   const [quantityNote, setQuantityNote] = useState(item.quantityNote ?? "");
@@ -64,10 +106,10 @@ export function EditStorageItemForm({ item, onDone }: EditStorageItemFormProps) 
   // message appears under Best by only after a failed submit, and that
   // submit focuses the field.
   const { errors: shownErrors, attemptSubmit } = useSubmitValidation(
-    { bestBy, preparedAt },
+    { kind, foodIds, label, bestBy, preparedAt },
     validateEditStorageItem,
     EDIT_STORAGE_ITEM_FIELD_ORDER,
-    { bestBy: "storage-edit-best-by" },
+    { food: "storage-edit-food", label: "storage-edit-label", bestBy: "storage-edit-best-by" },
   );
 
   function handleSubmit(event: React.FormEvent) {
@@ -78,6 +120,7 @@ export function EditStorageItemForm({ item, onDone }: EditStorageItemFormProps) 
       {
         id: item.id,
         input: {
+          ...buildContentsPatch(item, foodIds, label),
           location,
           preparedAt: preparedAt.toISOString(),
           quantityNote: quantityNote.trim() || null,
@@ -93,6 +136,38 @@ export function EditStorageItemForm({ item, onDone }: EditStorageItemFormProps) 
   return (
     // `noValidate`: this form answers its own field rule inline (item 236).
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
+      {/* Item 729: a recipe item keeps its recipe, so it has no field here. */}
+      {kind === "food" && (
+        <Field
+          label="What's in it"
+          htmlFor="storage-edit-food"
+          error={shownErrors.food}
+          hint="Changes apply to future serves. Meals already served keep what they had."
+        >
+          <FoodPicker
+            id="storage-edit-food"
+            value={foodIds}
+            onChange={setFoodIds}
+            keptFoods={keptFoods}
+            placeholder="Add a food…"
+            chipsFirst
+          />
+        </Field>
+      )}
+
+      {kind === "label" && (
+        <Field label="What is it?" htmlFor="storage-edit-label" error={shownErrors.label}>
+          <Input
+            id="storage-edit-label"
+            type="text"
+            required
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="e.g. Leftover lentil soup"
+          />
+        </Field>
+      )}
+
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="text-sm font-medium text-[var(--color-text)]">Location</span>
         <div className="flex gap-1.5">

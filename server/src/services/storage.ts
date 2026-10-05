@@ -10,6 +10,7 @@
 import { asc, eq, inArray, sql } from "drizzle-orm";
 import type { StorageItemFood, StorageLocation } from "@blw/shared";
 import type { Database } from "../db/index.js";
+import type { Transaction } from "./meals.js";
 import { foods, recipeIngredients, storageGuidelines, storageItemFoods } from "../db/schema.js";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -43,7 +44,9 @@ export interface StorageItemFoodRow extends StorageItemFood {
  * simply has no entry in the map.
  */
 export async function loadStorageItemFoods(
-  db: Database,
+  // `select` only, so the serve route can read contents inside its
+  // transaction (item 729: contents are editable now).
+  db: Database | Transaction,
   itemIds: string[],
 ): Promise<Map<string, StorageItemFoodRow[]>> {
   const byItemId = new Map<string, StorageItemFoodRow[]>();

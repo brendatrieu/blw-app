@@ -224,6 +224,16 @@ export type CreateStorageItemInput = z.input<typeof createStorageItemInputSchema
 
 export const updateStorageItemInputSchema = z
   .object({
+    /**
+     * Item 729: replaces a FOOD container's contents (in the order given).
+     * Same bounds as create; the route also requires every newly added food
+     * to be choosable by the caller, and refuses it on a recipe or label-only
+     * item (an edit never switches what kind of container it is). Meals
+     * already served keep their own food rows, so past meals are untouched.
+     */
+    foodIds: z.array(z.string().uuid()).min(1).max(25).optional(),
+    /** Renames a label-only (Free-form) item; refused on any other kind. */
+    label: labelSchema.optional(),
     location: storageLocationSchema.optional(),
     preparedAt: preparedAtSchema.optional(),
     quantityNote: optionalQuantityNote.optional(),

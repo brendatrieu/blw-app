@@ -70,6 +70,10 @@ interface FoodPickerProps {
   onChange: (next: string[]) => void;
   /** The entry's own deleted foods — see `KeptFood`. */
   keptFoods?: KeptFood[];
+  /** Overrides "Search foods…" once the list has loaded. */
+  placeholder?: string;
+  /** See `MultiCombobox`'s `chipsFirst`. */
+  chipsFirst?: boolean;
 }
 
 /**
@@ -85,7 +89,7 @@ interface FoodPickerProps {
  * `useFoods()` here reads — so appending its id to `value` selects a food the
  * option list can already resolve to a chip, with no refetch in between.
  */
-export function FoodPicker({ id, value, onChange, keptFoods }: FoodPickerProps) {
+export function FoodPicker({ id, value, onChange, keptFoods, placeholder, chipsFirst }: FoodPickerProps) {
   const { data, isLoading } = useFoods();
   // null = the sheet is closed; a string (possibly "") = it's open with that
   // name prefilled. Not a boolean + separate query, so the two can't disagree.
@@ -102,9 +106,10 @@ export function FoodPicker({ id, value, onChange, keptFoods }: FoodPickerProps) 
         value={value}
         onChange={onChange}
         disabled={isLoading}
-        placeholder={isLoading ? "Loading foods…" : "Search foods…"}
+        placeholder={isLoading ? "Loading foods…" : (placeholder ?? "Search foods…")}
         onCreate={setCreateQuery}
         createLabel={addCustomFoodLabel}
+        chipsFirst={chipsFirst}
       />
       <Sheet open={createQuery !== null} onClose={() => setCreateQuery(null)} title="Add a custom food" showClose>
         {/* Item 726: first in the sheet, like the Serve sheet's link — and

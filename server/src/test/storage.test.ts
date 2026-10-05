@@ -508,26 +508,210 @@ describe("storage routes", () => {
     });
   });
 
-  describe("PATCH /api/storage/:id cannot change a container's source", () => {
-  it("rejects foodIds, recipeId and label on a patch", async () => {
-    const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
-    for (const payload of [
-      { foodIds: [fixtures.chicken.id] },
-      { recipeId: "00000000-0000-0000-0000-000000000000" },
-      { label: "renamed" },
-    ]) {
-      const res = await app.inject({
-        method: "PATCH",
-        url: `/api/storage/${created.body.id}`,
-        headers: { cookie: user.cookie },
-        payload,
-      });
-      expect(res.statusCode, JSON.stringify(payload)).toBe(400);
+  // Item 729: a food container's contents are editable; what KIND of
+  // container it is never is, and past meals keep the foods they logged.
+  describe("PATCH /api/storage/:id contents", () => {
+    async function customFood(ownerCookieEmail: string, slug: string, deleted = false) {
+      const [owner] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, ownerCookieEmail));
+      const [food] = await db
+        .insert(schema.foods)
+        .values({
+          slug,
+          name: slug,
+          category: "veg",
+          ironLevel: "low",
+          vitaminCLevel: "low",
+          chokingRisk: "low",
+          minAgeMonths: 6,
+          prep6m: "mash",
+          prep9m: "chop",
+          prep12m: "chop",
+          storageCategory: "produce_cooked_soft",
+          ownerId: owner!.id,
+          deletedAt: deleted ? new Date() : null,
+        })
+        .returning();
+      return food!;
     }
-    const after = (await getStorage(app, user.cookie)).items.find((i) => i.id === created.body.id);
-    expect(after?.foods.map((f) => f.slug)).toEqual(["banana"]);
+
+    async function heldSlugs(id: string) {
+      return (await getStorage(app, user.cookie)).items.find((i) => i.id === id)?.foods.map((f) => f.slug);
+    }
+
+    it("replaces a food container's foods in the order given, deduping, and leaves past meals alone", async () => {
+      const babyId = await createBaby(app, user);
+      const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+      const served = await app.inject({
+        method: "POST",
+        url: `/api/storage/${created.body.id}/serve`,
+        headers: { cookie: user.cookie },
+        payload: { babyId },
+      });
+      expect(served.statusCode).toBe(201);
+
+      const edited = await patchItem(user.cookie, created.body.id, {
+        foodIds: [fixtures.chicken.id, fixtures.rice.id, fixtures.chicken.id],
+      });
+      expect(edited.statusCode).toBe(200);
+      expect(edited.body?.foods.map((f) => f.slug)).toEqual(["chicken", "rice"]);
+      expect(await heldSlugs(created.body.id)).toEqual(["chicken", "rice"]);
+
+      // The meal served before the edit still holds exactly what it logged.
+      const mealFoods = await db.select({ foodId: schema.mealFoods.foodId }).from(schema.mealFoods);
+      expect(mealFoods.map((row) => row.foodId)).toEqual([fixtures.banana.id]);
+    });
+
+    it("serves what the container holds NOW, after an edit", async () => {
+      const babyId = await createBaby(app, user);
+      const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+      await patchItem(user.cookie, created.body.id, { foodIds: [fixtures.rice.id] });
+
+      const served = await app.inject({
+        method: "POST",
+        url: `/api/storage/${created.body.id}/serve`,
+        headers: { cookie: user.cookie },
+        payload: { babyId },
+      });
+      expect(served.statusCode).toBe(201);
+      expect(served.json<ServeStorageItemResponse>().meal.foods.map((f) => f.slug)).toEqual(["rice"]);
+    });
+
+    it("400s a serve rating a food an edit took out, and writes nothing", async () => {
+      const babyId = await createBaby(app, user);
+      const created = await postStorageItem(app, user.cookie, {
+        foodIds: [fixtures.banana.id, fixtures.rice.id],
+        location: "fridge",
+        servingsTotal: 3,
+      });
+      // The Serve sheet was opened on banana + rice; the container is edited
+      // before it is submitted.
+      await patchItem(user.cookie, created.body.id, { foodIds: [fixtures.rice.id] });
+
+      const served = await app.inject({
+        method: "POST",
+        url: `/api/storage/${created.body.id}/serve`,
+        headers: { cookie: user.cookie },
+        payload: { babyId, foodRatings: { [fixtures.banana.id]: 5 } },
+      });
+      expect(served.statusCode).toBe(400);
+      expect(await db.select().from(schema.meals)).toHaveLength(0);
+      const [row] = await db.select().from(schema.storageItems).where(eq(schema.storageItems.id, created.body.id));
+      expect(row?.servingsLeft).toBe(3);
+    });
+
+    it("rejects an empty list, a foreign custom food and a deleted one, changing nothing", async () => {
+      const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+      const other = await signUpUser(app, "Other");
+      const foreign = await customFood(other.email, "their-squash");
+      const gone = await customFood(user.email, "my-old-squash", true);
+
+      for (const foodIds of [[], [foreign.id], [fixtures.banana.id, gone.id], [UNKNOWN_ID]]) {
+        const res = await patchItem(user.cookie, created.body.id, { foodIds });
+        expect(res.statusCode, JSON.stringify(foodIds)).toBe(400);
+      }
+      expect(await heldSlugs(created.body.id)).toEqual(["banana"]);
+    });
+
+    it("accepts the parent's own custom food, and keeps one already held after its owner deleted it", async () => {
+      const mine = await customFood(user.email, "my-squash");
+      const created = await postStorageItem(app, user.cookie, { foodIds: [mine.id], location: "fridge" });
+      await db.update(schema.foods).set({ deletedAt: new Date() }).where(eq(schema.foods.id, mine.id));
+
+      const res = await patchItem(user.cookie, created.body.id, { foodIds: [mine.id, fixtures.banana.id] });
+      expect(res.statusCode).toBe(200);
+      expect(res.body?.foods.map((f) => [f.slug, f.deleted])).toEqual([
+        ["my-squash", true],
+        ["banana", false],
+      ]);
+    });
+
+    it("never switches kinds: no foods on a recipe or label-only item, no recipeId, no rename of a food item", async () => {
+      const foodItem = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+      const recipeItem = await postStorageItem(app, user.cookie, { recipeId: fixtures.recipe.id, location: "fridge" });
+      const labelItem = await postStorageItem(app, user.cookie, { label: "Leftover soup", location: "fridge" });
+
+      for (const [id, payload] of [
+        [recipeItem.body.id, { foodIds: [fixtures.banana.id] }],
+        [labelItem.body.id, { foodIds: [fixtures.banana.id] }],
+        [foodItem.body.id, { recipeId: fixtures.recipe.id }],
+        [foodItem.body.id, { label: "renamed" }],
+        [recipeItem.body.id, { label: "renamed" }],
+      ] as const) {
+        const res = await patchItem(user.cookie, id, payload);
+        expect(res.statusCode, JSON.stringify(payload)).toBe(400);
+      }
+      const items = (await getStorage(app, user.cookie)).items;
+      expect(items.find((i) => i.id === recipeItem.body.id)).toMatchObject({ foods: [], recipeId: fixtures.recipe.id, label: null });
+      expect(items.find((i) => i.id === labelItem.body.id)).toMatchObject({ foods: [], recipeId: null, label: "Leftover soup" });
+      expect(items.find((i) => i.id === foodItem.body.id)).toMatchObject({ label: null, recipeId: null });
+    });
+
+    it("renames a label-only (Free-form) item, and refuses an empty name", async () => {
+      const labelItem = await postStorageItem(app, user.cookie, { label: "Leftover soup", location: "fridge" });
+      const renamed = await patchItem(user.cookie, labelItem.body.id, { label: "  Lentil soup " });
+      expect(renamed.statusCode).toBe(200);
+      expect(renamed.body?.label).toBe("Lentil soup");
+      expect((await patchItem(user.cookie, labelItem.body.id, { label: "  " })).statusCode).toBe(400);
+    });
+
+    // PGlite has one connection, so two requests cannot truly interleave.
+    // This stands in for the race: an edit commits AFTER the serve request
+    // began but BEFORE its transaction opened. A serve that read the contents
+    // up front (as it did before item 729) would log the old banana; one
+    // that reads them inside its transaction logs what is really there.
+    it("reads the contents inside its transaction, so an edit landing mid-request is what gets logged", async () => {
+      let beforeTx: (() => Promise<void>) | null = null;
+      const racing = await createTestApp({}, {}, (real) =>
+        new Proxy(real, {
+          get(target, prop) {
+            const value = Reflect.get(target, prop) as unknown;
+            if (prop !== "transaction" || typeof value !== "function") {
+              return typeof value === "function" ? (value as (...a: unknown[]) => unknown).bind(target) : value;
+            }
+            return async (...args: unknown[]) => {
+              const hook = beforeTx;
+              beforeTx = null;
+              if (hook) await hook();
+              return (value as (...a: unknown[]) => unknown).apply(target, args);
+            };
+          },
+        }),
+      );
+      try {
+        const local = await seedFixtures(racing.db);
+        const localUser = await signUpUser(racing.app);
+        const babyId = await createBaby(racing.app, localUser);
+        const created = await postStorageItem(racing.app, localUser.cookie, {
+          foodIds: [local.banana.id],
+          location: "fridge",
+        });
+        const itemId = created.body.id;
+        beforeTx = async () => {
+          await racing.db.delete(schema.storageItemFoods).where(eq(schema.storageItemFoods.storageItemId, itemId));
+          await racing.db.insert(schema.storageItemFoods).values({ storageItemId: itemId, foodId: local.rice.id, position: 0 });
+        };
+
+        const served = await racing.app.inject({
+          method: "POST",
+          url: `/api/storage/${itemId}/serve`,
+          headers: { cookie: localUser.cookie },
+          payload: { babyId },
+        });
+        expect(served.statusCode).toBe(201);
+        expect(served.json<ServeStorageItemResponse>().meal.foods.map((f) => f.slug)).toEqual(["rice"]);
+      } finally {
+        await racing.close();
+      }
+    });
+
+    it("404s another account's item, changing nothing", async () => {
+      const created = await postStorageItem(app, user.cookie, { foodIds: [fixtures.banana.id], location: "fridge" });
+      const intruder = await signUpUser(app, "Intruder");
+      const res = await patchItem(intruder.cookie, created.body.id, { foodIds: [fixtures.rice.id] });
+      expect(res.statusCode).toBe(404);
+      expect(await heldSlugs(created.body.id)).toEqual(["banana"]);
+    });
   });
-});
 
 describe("ownership", () => {
     it("404s PATCH on another account's storage item and leaves it unchanged", async () => {

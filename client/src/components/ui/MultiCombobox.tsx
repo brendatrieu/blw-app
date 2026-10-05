@@ -94,6 +94,12 @@ interface MultiComboboxProps {
    * clip a floating menu (the delete question's "Replace with…", item 610).
    */
   inline?: boolean;
+  /**
+   * Chips ABOVE the search field, with its placeholder kept on screen and no
+   * "N selected" badge — the edit-storage "What's in it" field (item 729),
+   * where the chips are the answer and the field below is "Add a food…".
+   */
+  chipsFirst?: boolean;
 }
 
 /** Case-insensitive substring match of `query` against each option's label. */
@@ -729,6 +735,7 @@ export function MultiCombobox({
   createLabel,
   mode = "multi",
   inline = false,
+  chipsFirst = false,
 }: MultiComboboxProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -749,7 +756,8 @@ export function MultiCombobox({
     () => deriveComboboxView({ options, value, ui, mode, hasCreate: Boolean(onCreate), listboxId }),
     [options, value, ui, mode, onCreate, listboxId],
   );
-  const { filtered, createRowVisible, rows, highlighted: effectiveHighlighted, showCountBadge } = view;
+  const { filtered, createRowVisible, rows, highlighted: effectiveHighlighted } = view;
+  const showCountBadge = view.showCountBadge && !chipsFirst;
   const selectedOptions = useMemo(
     () => value.map((v) => options.find((o) => o.value === v)).filter((o): o is MultiComboboxOption => Boolean(o)),
     [value, options],
@@ -822,8 +830,56 @@ export function MultiCombobox({
     }
   }
 
+  // Removable chips, below the field by default, above it with `chipsFirst`.
+  const chips =
+    value.length >= 1 ? (
+      <div className={`${chipsFirst ? "mb-1.5" : "mt-1.5"} flex flex-wrap gap-1.5`}>
+        {selectedOptions.map((option) => (
+          <span
+            key={option.value}
+            className="inline-flex min-h-8 items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] py-1 pr-1 pl-2.5 text-sm text-[var(--color-text)]"
+          >
+            {option.emoji ? <span aria-hidden="true">{option.emoji}</span> : null}
+            {option.label}
+            {/* The same markers the menu row shows: a chip is what stays on
+                screen once the menu is closed, so the mark has to survive
+                the selection, not just precede it. */}
+            <MultiComboboxMarkers markers={option.markers} />
+            <button
+              type="button"
+              aria-label={`Remove ${option.label}`}
+              disabled={disabled}
+              onClick={(event) => {
+                event.stopPropagation();
+                // The bare selection change, with no menu/query side
+                // effects: removing a chip is not "choosing an option", so
+                // it must never clear the query or close the menu. Inline
+                // rather than a shared `toggleOption` helper — a named one
+                // was what the option row and the Enter branch got wired to
+                // by mistake in the first place.
+                onChange(toggleValue(value, option.value));
+              }}
+              className="group flex shrink-0 items-center justify-center rounded-full p-[10px] -m-[10px] disabled:cursor-not-allowed"
+            >
+              {/* Visual size stays 24px (h-6 w-6); the button's own padding
+                  above extends the actual hit target to 44px without
+                  growing the chip, and the negative margin pulls the extra
+                  box back so surrounding layout doesn't shift. */}
+              <span
+                aria-hidden="true"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--color-text-muted)] group-hover:bg-[var(--color-border)] group-hover:text-[var(--color-text)]"
+              >
+                ×
+              </span>
+            </button>
+          </span>
+        ))}
+      </div>
+    ) : null;
+
   return (
     <div ref={containerRef} className="relative">
+      {chipsFirst && chips}
       <div className="relative">
         <div
           onClick={() => {
@@ -861,7 +917,7 @@ export function MultiCombobox({
             data-no-focus-ring=""
             disabled={disabled}
             value={query}
-            placeholder={selectedOptions.length === 0 ? placeholder : undefined}
+            placeholder={chipsFirst || selectedOptions.length === 0 ? placeholder : undefined}
             onFocus={() => setUi(applyOpen)}
             // `applyQuery` also clears any explicit arrow/hover highlight, so
             // `resolveEffectiveHighlight` re-lands on the FIRST match of the
@@ -924,50 +980,7 @@ export function MultiCombobox({
         )}
       </div>
 
-      {value.length >= 1 && (
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {selectedOptions.map((option) => (
-            <span
-              key={option.value}
-              className="inline-flex min-h-8 items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] py-1 pr-1 pl-2.5 text-sm text-[var(--color-text)]"
-            >
-              {option.emoji ? <span aria-hidden="true">{option.emoji}</span> : null}
-              {option.label}
-              {/* The same markers the menu row shows: a chip is what stays on
-                  screen once the menu is closed, so the mark has to survive
-                  the selection, not just precede it. */}
-              <MultiComboboxMarkers markers={option.markers} />
-              <button
-                type="button"
-                aria-label={`Remove ${option.label}`}
-                disabled={disabled}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  // The bare selection change, with no menu/query side
-                  // effects: removing a chip is not "choosing an option", so
-                  // it must never clear the query or close the menu. Inline
-                  // rather than a shared `toggleOption` helper — a named one
-                  // was what the option row and the Enter branch got wired to
-                  // by mistake in the first place.
-                  onChange(toggleValue(value, option.value));
-                }}
-                className="group flex shrink-0 items-center justify-center rounded-full p-[10px] -m-[10px] disabled:cursor-not-allowed"
-              >
-                {/* Visual size stays 24px (h-6 w-6); the button's own padding
-                    above extends the actual hit target to 44px without
-                    growing the chip, and the negative margin pulls the extra
-                    box back so surrounding layout doesn't shift. */}
-                <span
-                  aria-hidden="true"
-                  className="flex h-6 w-6 items-center justify-center rounded-full text-[var(--color-text-muted)] group-hover:bg-[var(--color-border)] group-hover:text-[var(--color-text)]"
-                >
-                  ×
-                </span>
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
+      {!chipsFirst && chips}
     </div>
   );
 }
