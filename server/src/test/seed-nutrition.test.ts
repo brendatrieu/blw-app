@@ -61,6 +61,9 @@ const EXPECTED_FIBER_LEVEL: Record<string, "high" | "moderate" | "low"> = {
   // Item 508 (fdcId 170397, boiled without salt). Broccoli beside it is `high`,
   // and a row that copied broccoli's would fail here.
   cauliflower: "moderate", // 2.3 g, boiled
+  // Item 728 (fdcId 170001, boiled, drained, without salt). Raw onion (170000) is 1.7 g,
+  // which would bucket `moderate`: the served form decides it.
+  onion: "low", // 1.4 g, boiled
 };
 
 describe("seeded fiber levels", () => {

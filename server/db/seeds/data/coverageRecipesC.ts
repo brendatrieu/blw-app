@@ -20,6 +20,13 @@ import type { RecipeSeed } from './types'
 // Item 510 appends two more for `cauliflower` (item 508), the same way: its `Simple cauliflower`
 // basic is the third. Every cooking time is copied from a basic — cauliflower's own steam and
 // roast times, and simple-lentils' simmer — so nothing here is timed from scratch.
+//
+// Item 728 appends three for `onion`. Onion has no `Simple onion` basic (owner's call, see
+// NO_BASIC_RECIPE_FOODS in basic-recipes.test.ts), so all three of its recipes are real
+// dishes. Times are copied from simple-lentils, simple-sweet-potato,
+// beef-potato-carrot-cottage-mash and turkey-sweet-potato-pepper-hash, and the onion roast
+// (400°F for 30-40 minutes) is Purdue Extension's. Draft and sources:
+// .workflow/scratch/onion/DRAFT-v2.md
 export const coverageRecipesC: RecipeSeed[] = [
   {
     slug: 'butternut-squash-almond-soup',
@@ -413,6 +420,145 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Wash the cauliflower and cut it into florets, then steam them for 8-10 minutes, or roast them at 400°F (200°C) for 25-30 minutes, until fork-tender and just golden on top.',
           'Trim off any crispy or burnt edges from roasted florets, then cut them into small bite-sized florets and toss them with the finely grated cheese while hot, or mash them with the cheese, loosened with a little breast milk, formula, or water.',
           'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'red-lentil-tomato-onion-dal',
+    title: 'Red Lentil, Tomato & Onion Dal',
+    minAgeMonths: 6,
+    prepMinutes: 25,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'lentils', quantityNote: '1/4 cup dried red lentils (about 1/2 cup cooked)' },
+      { foodSlug: 'onion', quantityNote: '1/4 small yellow or sweet onion, peeled, root end cut off, and very finely chopped' },
+      { foodSlug: 'tomato', quantityNote: '1 small tomato, skinned, deseeded, and chopped' },
+    ],
+    extraIngredients: [{ name: 'water, for cooking and thinning' }],
+    variants: {
+      '6': {
+        textureNote: 'A smooth, loose dal of red lentils, tomato, and onion, thin enough to drip slowly off a spoon.',
+        steps: [
+          'Rinse the lentils and put them in a pan with the very finely chopped onion, chopped tomato, and plenty of unsalted water.',
+          'Simmer over low heat for 15-20 minutes, until the lentils collapse and the onion is completely soft and squashes easily between two fingers — onion is always cooked soft, never raw.',
+          'Blend or mash until smooth, thinning with a little of the cooking water until it is loose and scoopable rather than stiff.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'A thicker dal with soft lentils and onion and a little texture left, for spoon practice.',
+        steps: [
+          'Rinse the lentils and put them in a pan with the very finely chopped onion, chopped tomato, and plenty of unsalted water.',
+          'Simmer over low heat for 15-20 minutes, until the lentils squash easily between two fingers and the onion is completely soft — onion is always cooked soft, never raw.',
+          'Mash lightly, leaving some texture, and loosen it with a little of the cooking water if it is stiff, thinning it until it is soft and scoopable.',
+          'Cool to just-warm and serve thick in a bowl with a spoon for baby to practice with, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Family-style dal, thick and soft, with no added salt.',
+        steps: [
+          'Rinse the lentils and put them in a pan with the finely chopped onion, chopped tomato, and plenty of unsalted water.',
+          'Simmer over low heat for 15-20 minutes, until the lentils are soft and the onion is tender.',
+          'Stir well, thinning it with a splash of the cooking water if it is too thick.',
+          'Cool to just-warm and serve in small spoonfuls, or pre-load a spoon for baby to practice with, with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'roasted-sweet-potato-onion-wedges',
+    title: 'Roasted Sweet Potato & Onion Wedges',
+    minAgeMonths: 6,
+    prepMinutes: 50,
+    ironFocus: false,
+    ingredients: [
+      { foodSlug: 'sweet_potato', quantityNote: '1 small sweet potato' },
+      { foodSlug: 'onion', quantityNote: '1/2 small yellow or sweet onion' },
+    ],
+    extraIngredients: [{ name: 'olive oil', quantityNote: 'a drizzle of' }],
+    variants: {
+      '6': {
+        textureNote: 'Soft roasted sweet potato wedges and a large soft onion wedge, each squashing easily between two fingers.',
+        steps: [
+          'Peel the onion and slice off just the dry, hairy tip of the root, then halve the onion through the root end and cut each half into 3 thick wedges, so a little root end holds each wedge together.',
+          'Peel the sweet potato and cut it into thick, finger-length wedges.',
+          'Toss the onion wedges in a little olive oil and roast them at 400°F (200°C) for 10 minutes, then add the sweet potato wedges and roast everything for 25-30 minutes more, turning once, until every wedge squashes easily between two fingers — raw or under-cooked onion is firm and slippery.',
+          'Cut the firm root end off each onion wedge, along with any crispy or dark edges; if the layers come apart, keep them as large soft slices.',
+          'Cool to just-warm, check the temperature, and hand baby a sweet potato wedge and an onion wedge or slice to hold, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft wedges, or small bite-sized pieces of sweet potato and onion (no bigger than ½ inch) for pincer practice.',
+        steps: [
+          'Peel the onion and slice off just the dry, hairy tip of the root, then halve the onion through the root end and cut each half into 3 thick wedges, so a little root end holds each wedge together.',
+          'Peel the sweet potato and cut it into thick, finger-length wedges.',
+          'Toss the onion wedges in a little olive oil and roast them at 400°F (200°C) for 10 minutes, then add the sweet potato wedges and roast for 25-30 minutes more, turning once, until every wedge squashes easily between two fingers.',
+          'Cut the firm root end off each onion wedge, along with any crispy edges, then serve the wedges or cut some of the sweet potato and onion into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small bite-sized pieces of roasted sweet potato and soft onion, family-style.',
+        steps: [
+          'Peel the onion and slice off just the dry, hairy tip of the root, then halve the onion through the root end and cut each half into 3 wedges, so a little root end holds each wedge together.',
+          'Peel the sweet potato and dice it into small bite-sized pieces.',
+          'Toss the onion wedges in a little olive oil and roast them at 400°F (200°C) for 10 minutes, then add the diced sweet potato and roast for 20-25 minutes more, until both are fork-tender.',
+          'Cut the firm root end off each onion wedge, along with any crispy or burnt edges, then cut the onion into small bite-sized pieces and toss it with the sweet potato.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'beef-bell-pepper-onion-skillet',
+    title: 'Beef, Bell Pepper & Onion Skillet',
+    minAgeMonths: 6,
+    prepMinutes: 40,
+    ironFocus: true,
+    fridgeHoursOverride: 24,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'beef', quantityNote: '1/2 cup lean ground beef' },
+      { foodSlug: 'bell_pepper', quantityNote: '1/2 red bell pepper' },
+      { foodSlug: 'onion', quantityNote: '1/4 small yellow or sweet onion' },
+    ],
+    extraIngredients: [
+      { name: 'olive oil', quantityNote: 'a drizzle of' },
+      { name: 'water' },
+    ],
+    variants: {
+      '6': {
+        textureNote: 'Soft, moist ground beef with bell pepper and onion, broken up very fine and mashed so nothing needs chewing.',
+        steps: [
+          'Peel the onion, cut off the root end, and chop the onion very finely; deseed the bell pepper, peel off its tough skin with a vegetable peeler, and chop it very finely too.',
+          'Warm a little olive oil in a pan and cook the onion and bell pepper over medium heat for 8-10 minutes, stirring often, until both are completely soft — onion and bell pepper are always cooked soft, never raw.',
+          'Add the ground beef and brown it over medium heat for 5-7 minutes, breaking it up very small, until no pink is left and it reads 160°F (71°C) on a thermometer.',
+          'Add a splash of water, then simmer over low heat for 12-15 minutes, until the beef is very tender and the onion squashes easily between two fingers.',
+          'Mash it well with a fork, adding a little more water if needed, so it is moist and soft rather than dry or stringy.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft ground beef with small bite-sized pieces of bell pepper and onion (no bigger than ½ inch), to scoop or pick up.',
+        steps: [
+          'Peel the onion, cut off the root end, and chop the onion finely; deseed the bell pepper, peel off its tough skin with a vegetable peeler, and chop it into small bite-sized pieces (no bigger than ½ inch).',
+          'Warm a little olive oil in a pan and cook the onion and bell pepper over medium heat for 8-10 minutes, stirring often, until both are completely soft.',
+          'Add the ground beef and brown it over medium heat for 5-7 minutes, breaking it up small, until no pink is left and it reads 160°F (71°C) on a thermometer.',
+          'Add a splash of water and simmer over low heat for 12-15 minutes, until the beef is tender and the bell pepper and onion squash easily between two fingers.',
+          'Cool to just-warm and serve in a bowl to scoop by hand or with a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Family-style ground beef, bell pepper, and onion in small, soft bite-sized pieces, with no added salt.',
+        steps: [
+          'Peel the onion, cut off the root end, and chop the onion finely; deseed the bell pepper, peel off any tough skin, and dice it into small bite-sized pieces.',
+          'Warm a little olive oil in a pan and cook the onion and bell pepper over medium heat for 8-10 minutes, until soft.',
+          'Add the ground beef and brown it over medium heat for 5-7 minutes, until it reads 160°F (71°C) on a thermometer.',
+          'Add a splash of water and simmer over low heat for 12-15 minutes, until the beef is tender and the vegetables are soft.',
+          'Cool to just-warm and serve with a spoon or fork to practice with, with no added salt.',
         ],
       },
     },

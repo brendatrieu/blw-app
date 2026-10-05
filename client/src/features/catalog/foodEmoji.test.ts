@@ -55,7 +55,7 @@ describe("getCategoryEmoji", () => {
  */
 const CATALOG_SLUGS = [
   "beef", "chicken_thigh", "salmon", "sardines", "egg", "lentils", "chickpeas", "black_beans", "tofu",
-  "iron_fortified_oats", "spinach", "quinoa", "broccoli", "cauliflower", "bell_pepper", "strawberry", "orange", "lemon", "kiwi",
+  "iron_fortified_oats", "spinach", "quinoa", "broccoli", "cauliflower", "onion", "bell_pepper", "strawberry", "orange", "lemon", "kiwi",
   "mango", "tomato", "sweet_potato", "butternut_squash", "peanut_butter", "almond_butter", "tahini",
   "yogurt", "cheese", "wheat_toast", "wheat_pasta", "shrimp", "avocado", "banana", "apple", "pear",
   "blueberry", "carrot", "potato", "zucchini", "green_beans", "peas", "rice", "watermelon", "chicken", "turkey",
@@ -67,8 +67,8 @@ const CATALOG_SLUGS = [
 ];
 
 describe("emoji coverage for the seeded catalog", () => {
-  it("has an explicit emoji for all 76 catalog slugs", () => {
-    expect(CATALOG_SLUGS).toHaveLength(76);
+  it("has an explicit emoji for all 77 catalog slugs", () => {
+    expect(CATALOG_SLUGS).toHaveLength(77);
     expect(new Set(CATALOG_SLUGS).size).toBe(CATALOG_SLUGS.length);
 
     // With no category passed, the only fallback left is the generic plate —
@@ -220,6 +220,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "lentils": "legume",
         "mango": "fruit",
         "oats": "grain",
+        "onion": "veg",
         "orange": "fruit",
         "oregano": "veg",
         "paprika": "grain",

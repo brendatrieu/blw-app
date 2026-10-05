@@ -3,6 +3,8 @@ import type { RecipeSeed } from './types'
 // One single-ingredient "Simple <food>" recipe per catalog food (ledger item 253),
 // with one exception: `category: 'spice'` foods have NO basic (item 331). A spice
 // is a seasoning, not a serving — "Simple cinnamon" would be a recipe for a pinch.
+// Neither do lemon and onion (items 484, 728), which are only ever ingredients of
+// composite recipes.
 //
 // These exist so every food in the catalog has an obvious "just serve the food"
 // entry point: the steps EXPAND that food's own prep text for the stage

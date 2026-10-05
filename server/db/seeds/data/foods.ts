@@ -1,6 +1,6 @@
 import type { FoodSeed } from './types'
 
-// ~76 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
+// ~77 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
 // staples. minAgeMonths is 6 for nearly everything (BLW typically starts around 6 months when
 // baby shows readiness signs); shellfish is held to 9 months per the allergen ladder ordering.
 // Prep guidance is age-specific: 6-8m favors palmar-grasp finger shapes and thinned textures,
@@ -291,6 +291,34 @@ export const foods: FoodSeed[] = [
       'Steam or roast until tender and cut into small bite-sized florets, or pre-load a fork with a soft piece for utensil practice.',
     chokingNotes: 'Raw or under-cooked cauliflower is firm and hard to chew — always steam until it mashes easily before serving.',
     notes: 'Rich in vitamin C, which helps baby absorb iron — pair it with lentils, beef, or another iron-rich food.',
+    allergens: [],
+    storageCategory: 'produce_cooked_soft',
+  },
+  {
+    // Item 728. Prep and choking copy from Solid Starts' onion page; levels from USDA
+    // FoodData Central 170001 (onions, cooked, boiled, drained, without salt): iron 0.24 mg,
+    // vitamin C 5.2 mg, fiber 1.4 g per 100 g — low / low / low on the catalog's thresholds
+    // (raw, 170000, is 1.7 g fiber: the served form decides it). Solid Starts gives no cook
+    // times; the onion roast (400°F for 30-40 minutes) is Purdue Extension's "Roasted Onion
+    // and Vegetables", and the pan-softening time (medium heat, 8-10 minutes) is
+    // turkey-sweet-potato-pepper-hash's own, inside Mississippi State Extension's 5-10.
+    // No "Simple onion" basic (owner, item 728): see NO_BASIC_RECIPE_FOODS.
+    slug: 'onion',
+    name: 'Onion',
+    category: 'veg',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'low',
+    chokingRisk: 'moderate',
+    minAgeMonths: 6,
+    prep6m:
+      'Roast thick wedges until very soft and they squash easily between two fingers, then serve a large wedge to hold, or stir finely chopped cooked onion through a mash, eggs, or lentils — never raw.',
+    prep9m:
+      'Cook until soft and serve as a soft wedge, or cut into small bite-sized pieces (no bigger than ½ inch) or soft, thin slices for pincer practice, on their own or stirred into family food.',
+    prep12m:
+      'Cook until tender and serve in small bite-sized pieces or soft slices, or stirred through family meals; hold off on raw onion and crispy fried onion for now.',
+    chokingNotes: 'Raw onion is firm and slippery and can be a choking hazard — always cook it until it squashes easily between two fingers, and never serve it raw. Small, round onions such as pearl onions are a higher risk, so never serve one whole.',
+    notes: 'Cooking turns onion soft and sweet, and it is one of the easiest salt-free ways to make lentils, eggs, or ground meat taste like family food. Yellow or sweet onions are the mildest; red onion works too. Skip onion salt, and if you reach for onion powder, check the label says onion only.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },

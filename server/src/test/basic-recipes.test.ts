@@ -356,8 +356,12 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
    * squeezed into hummus or a pasta, and a "Simple lemon" recipe read as odd. They
    * keep their real category (lemon stays a fruit, so its vitamin C still counts)
    * but, like spices, get no basic recipe of their own.
+   *
+   * Item 728, owner's decision: onion joins it. Onion is cook-required, so the
+   * basic-stage cooking rule cannot read it; "cooks a cook-required no-basic
+   * food" below puts that promise on every recipe that carries it instead.
    */
-  const NO_BASIC_RECIPE_FOODS: readonly string[] = ["lemon"];
+  const NO_BASIC_RECIPE_FOODS: readonly string[] = ["lemon", "onion"];
 
   it("keeps the no-basic-recipe exemption honest", async () => {
     const foods = await db
@@ -489,9 +493,9 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     expect(wrong).toEqual([]);
 
     // The exact row count, so deleting one stage of one recipe fails HERE even
-    // though the recipe count is untouched: 122 six-month recipes x 3 stages +
+    // though the recipe count is untouched: 125 six-month recipes x 3 stages +
     // 3 nine-month recipes (simple-shrimp and the two shrimp dishes) x 2.
-    expect(variantRows.length).toBe(372);
+    expect(variantRows.length).toBe(381);
   });
 
   it("gives every catalog variant 3-6 steps and a texture note", async () => {
@@ -610,7 +614,7 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     // not just the curated 15. The basics used to be exempt because they call their
     // one food by a part ("the trimmed breast"); they now name the food in the steps.
     const variants = await catalogVariants();
-    // 125 recipes, 372 variants (see the time/temperature guard below); a
+    // 128 recipes, 381 variants (see the time/temperature guard below); a
     // collapse here would make the check below pass vacuously.
     expect(variants.length).toBeGreaterThan(350);
     const extraRows = await db
@@ -784,11 +788,11 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
 
   it("gives every cooking step a temperature or a time", async () => {
     const variants = await catalogVariants();
-    // 125 recipes: the curated 15, the 47 coverage recipes added for the
-    // "3 recipes per food" rule (items 338-339, 343, 357, 510), and 63 basics (62 x 3
-    // stages + shrimp's 2) — one per non-spice food except lemon (items 331,
-    // 342, 356, 484, 509).
-    expect(new Set(variants.map((v) => v.slug)).size).toBe(125);
+    // 128 recipes: the curated 15, the 50 coverage recipes added for the
+    // "3 recipes per food" rule (items 338-339, 343, 357, 510, 728), and 63 basics (62 x 3
+    // stages + shrimp's 2) — one per non-spice food except lemon and onion (items 331,
+    // 342, 356, 484, 509, 728).
+    expect(new Set(variants.map((v) => v.slug)).size).toBe(128);
 
     const cookingSteps = variants.flatMap((v) =>
       v.instructions
@@ -1012,6 +1016,32 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     // started returning nothing would fail here instead of passing vacuously.
     expect(inScope.length).toBeGreaterThan(90);
     const uncooked = inScope.filter(([, v]) => !stageCooks(v.instructions)).map(([key]) => key);
+    expect(uncooked).toEqual([]);
+  });
+
+  it("cooks a cook-required no-basic food in a step that names it, at every stage of every recipe", async () => {
+    // Item 728. A no-basic food has no stage of its own for the rule above to
+    // read, so every recipe carrying it must have a step that both names a
+    // cooking method and names the food, and say how long or how done.
+    const cookRequired = await cookRequiredFoods();
+    const noBasicCooked = NO_BASIC_RECIPE_FOODS.filter((slug) => cookRequired.includes(slug));
+    expect(noBasicCooked).toContain("onion");
+
+    const names = (slug: string) => new RegExp(`\\b${slug.replace(/_/g, "[\\s-]+")}s?\\b`, "i");
+    const cooksIt = (steps: readonly string[], slug: string) =>
+      steps.some((s) => namesCookingMethod(s) && names(slug).test(s)) && steps.some((s) => TIME.test(s));
+    // Guard the guard: a stage that cooks only the lentils must fail.
+    expect(cooksIt(["Simmer the lentils over low heat for 15 minutes.", "Stir in the chopped onion and serve."], "onion")).toBe(false);
+    expect(cooksIt(["Simmer the lentils and onion over low heat for 15-20 minutes, until soft."], "onion")).toBe(true);
+
+    const variants = await catalogVariants();
+    const inScope = variants.filter((v) => v.foodSlugs.some((slug) => noBasicCooked.includes(slug)));
+    expect(inScope.length).toBeGreaterThanOrEqual(9);
+    const uncooked = inScope.flatMap((v) =>
+      noBasicCooked
+        .filter((slug) => v.foodSlugs.includes(slug) && !cooksIt(v.instructions, slug))
+        .map((slug) => `${v.slug}/${v.ageStage}: ${slug}`),
+    );
     expect(uncooked).toEqual([]);
   });
 
