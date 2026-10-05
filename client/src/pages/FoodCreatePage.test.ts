@@ -40,6 +40,15 @@ describe("FoodCreatePage", () => {
     expect(render("/foods/new")).not.toContain("Anything you make or buy");
   });
 
+  // Item 726: the guide link sits under the header and above the form, the
+  // way it does on the other full-screen forms.
+  it("links its how-to guide between the header and the form", () => {
+    const html = render("/foods/new");
+    const link = html.indexOf("How to add a custom food");
+    expect(link).toBeGreaterThan(html.indexOf("</h1>"));
+    expect(link).toBeLessThan(html.indexOf(">Name<"));
+  });
+
   it("prefills the name from ?name=, the way the no-results empty state links here", () => {
     expect(render("/foods/new?name=Kale%20chips")).toContain('value="Kale chips"');
   });

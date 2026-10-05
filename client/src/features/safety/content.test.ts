@@ -60,6 +60,7 @@ describe("safety article manifest", () => {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
 
 const EXPECTED_GUIDES = [
+  "how-to-add-custom-food",
   "how-to-custom-recipe",
   "how-to-log-a-meal",
   "how-to-add-to-storage",
@@ -118,6 +119,7 @@ describe("how-to guides (item 601)", () => {
   // first field, and the three "open the form" screenshots are gone.
   it("start at the form's first field, never at how to reach the form", () => {
     expect(guideArticles.map((guide) => guide.body.match(/^## 1\. (.+)$/m)?.[1])).toEqual([
+      "Name it",
       "Name it and pick an age",
       "Pick the foods",
       "Choose what you're storing",

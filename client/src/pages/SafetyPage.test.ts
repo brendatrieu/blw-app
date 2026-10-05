@@ -50,7 +50,7 @@ describe("How-to guides under More (item 608)", () => {
     expect(html).toContain("How-to guides");
     const links = hrefs(html);
     expect(links).toEqual(guideArticles.map((guide) => `/guides/${guide.slug}`));
-    expect(links).toHaveLength(4);
+    expect(links).toHaveLength(5);
     expect(html).toContain("Back");
   });
 

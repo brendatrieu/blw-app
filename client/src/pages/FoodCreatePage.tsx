@@ -2,6 +2,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { CustomFoodForm } from "../features/catalog/components/CustomFoodForm.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
+import { HowToLink } from "../features/safety/HowToLink.js";
 
 /**
  * `/foods/new` — the full-screen way to add a custom food (item 178),
@@ -29,6 +30,7 @@ export function FoodCreatePage() {
         description="A single ingredient you make or buy that isn't in the catalog."
         leading={<BackButton fallback="/foods" />}
       />
+      <HowToLink slug="how-to-add-custom-food" />
       <CustomFoodForm
         idPrefix="food-new"
         initialName={searchParams.get("name") ?? ""}

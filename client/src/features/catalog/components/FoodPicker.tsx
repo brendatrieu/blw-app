@@ -10,6 +10,7 @@ import {
   type MultiComboboxOption,
 } from "../../../components/ui/MultiCombobox.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
+import { HowToLink } from "../../safety/HowToLink.js";
 
 /**
  * One food as the picker shows it: the id is what meals and storage items are
@@ -106,6 +107,8 @@ export function FoodPicker({ id, value, onChange, keptFoods }: FoodPickerProps) 
         createLabel={addCustomFoodLabel}
       />
       <Sheet open={createQuery !== null} onClose={() => setCreateQuery(null)} title="Add a custom food" showClose>
+        {/* Item 726: first in the sheet, like the Serve sheet's link. */}
+        <HowToLink slug="how-to-add-custom-food" />
         <CustomFoodForm
           idPrefix={`${id}-custom`}
           initialName={createQuery ?? ""}

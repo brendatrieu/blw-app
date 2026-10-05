@@ -32,9 +32,12 @@ const render = (slug: string) =>
   renderToString(createElement(MemoryRouter, null, createElement(HowToLink, { slug })));
 
 describe("HowToLink (item 603)", () => {
-  it("sits on the four screens, each pointing at a real guide", () => {
+  it("sits on the six screens, each pointing at a real guide", () => {
     expect(howToLinkUses()).toEqual([
+      // Item 726: the full-screen add-food page and the picker's sheet.
+      ["features/catalog/components/FoodPicker.tsx", "how-to-add-custom-food"],
       ["features/storage/components/ServeSheet.tsx", "how-to-serve-from-storage"],
+      ["pages/FoodCreatePage.tsx", "how-to-add-custom-food"],
       ["pages/LogFoodPage.tsx", "how-to-log-a-meal"],
       ["pages/RecipeCreatePage.tsx", "how-to-custom-recipe"],
       ["pages/StorageAddPage.tsx", "how-to-add-to-storage"],
