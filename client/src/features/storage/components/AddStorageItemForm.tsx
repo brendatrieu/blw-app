@@ -13,7 +13,10 @@ import { DateField } from "../../../components/ui/DateField.js";
 import { Button } from "../../../components/ui/Button.js";
 import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 
-type Source = "food" | "recipe" | "label";
+/** Item 731: Free-form is retired for NEW items — a name not in the food list
+ * is added as a custom food from the food search instead. Existing label-only
+ * items still list, rename and Remove (EditStorageItemForm). */
+type Source = "food" | "recipe";
 
 /** One key per source tab (only the visible tab's field can ever error), plus
  * the one optional field that can still be answered WRONG. */
@@ -21,13 +24,12 @@ export type AddStorageItemField = Source | "bestBy";
 export type AddStorageItemErrors = FormErrors<AddStorageItemField>;
 
 /** Visual field order — what a failed submit focuses first (item 235). */
-export const ADD_STORAGE_ITEM_FIELD_ORDER: readonly AddStorageItemField[] = ["food", "recipe", "label", "bestBy"];
+export const ADD_STORAGE_ITEM_FIELD_ORDER: readonly AddStorageItemField[] = ["food", "recipe", "bestBy"];
 
 export interface AddStorageItemValues {
   source: Source;
   foodIds: string[];
   recipeId: string;
-  label: string;
   /** "" when the optional field is unset. */
   bestBy: string;
   preparedAt: Date;
@@ -51,12 +53,8 @@ export function validateAddStorageItem(values: AddStorageItemValues): AddStorage
   const errors: AddStorageItemErrors = {};
   if (values.source === "food") {
     if (values.foodIds.length === 0) errors.food = "Add at least one food";
-  } else if (values.source === "recipe") {
-    if (!values.recipeId) errors.recipe = "Recipe is required";
-  } else if (values.label.trim().length === 0) {
-    // The field asks "What is it?", so the answer is phrased as the ask
-    // rather than as "<Field> is required" (item 238).
-    errors.label = "Enter what it is";
+  } else if (!values.recipeId) {
+    errors.recipe = "Recipe is required";
   }
   if (isBestByBeforePrepared(values.bestBy, values.preparedAt)) {
     errors.bestBy = BEST_BY_BEFORE_PREPARED_MESSAGE;
@@ -98,7 +96,6 @@ export function buildStorageCreateInput(values: StorageCreateValues): CreateStor
     separateItems:
       onFoodTab && offersContainerChoice(values.foodIds) ? values.containerChoice === "separate" : undefined,
     recipeId: values.source === "recipe" ? values.recipeId : undefined,
-    label: values.source === "label" ? values.label.trim() : undefined,
     preparedAt: values.preparedAt.toISOString(),
     location: values.location,
     quantityNote: values.quantityNote.trim() || undefined,
@@ -140,7 +137,6 @@ export function resolveStoragePrefill(params: URLSearchParams): StoragePrefill {
 const SOURCE_TABS: { value: Source; label: string }[] = [
   { value: "food", label: "From a food" },
   { value: "recipe", label: "From a recipe" },
-  { value: "label", label: "Free-form" },
 ];
 
 interface AddStorageItemFormProps {
@@ -163,7 +159,6 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
   const [source, setSource] = useState<Source>(prefill?.source ?? "food");
   const [foodIds, setFoodIds] = useState<string[]>(prefill?.foodId ? [prefill.foodId] : []);
   const [recipeId, setRecipeId] = useState(prefill?.recipeId ?? "");
-  const [label, setLabel] = useState("");
   // Item 348: several foods go into ONE container unless the parent says
   // otherwise. Only read while the food tab is open with two or more foods
   // picked — see `offersContainerChoice`.
@@ -180,13 +175,12 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
   // Item 235: "Add to storage" stays enabled, the missing answer shows under
   // whichever source field is on screen, and a failed submit focuses it.
   const { errors: shownErrors, attemptSubmit } = useSubmitValidation(
-    { source, foodIds, recipeId, label, bestBy, preparedAt },
+    { source, foodIds, recipeId, bestBy, preparedAt },
     validateAddStorageItem,
     ADD_STORAGE_ITEM_FIELD_ORDER,
     {
       food: "storage-add-food",
       recipe: "storage-add-recipe",
-      label: "storage-add-label",
       bestBy: "storage-add-best-by",
     },
   );
@@ -201,7 +195,6 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
         foodIds,
         containerChoice,
         recipeId,
-        label,
         preparedAt,
         location,
         quantityNote,
@@ -218,8 +211,8 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
     // by the browser's native bubble (item 236).
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
       <div className="flex gap-1.5">
-        {/* px-2.5, not px-3 (item 708): in Plus Jakarta Sans the three chips
-            need 296px at px-3 and wrapped to two lines at 320 (288px row). */}
+        {/* px-2.5 (item 708): sized when a third chip, Free-form, shared the
+            row (retired in item 731); kept so the two chips look the same. */}
         {SOURCE_TABS.map((tab) => (
           <button
             key={tab.value}
@@ -255,19 +248,6 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
       {source === "recipe" && (
         <Field label="Recipe" htmlFor="storage-add-recipe" error={shownErrors.recipe}>
           <RecipePicker id="storage-add-recipe" value={recipeId} onChange={setRecipeId} />
-        </Field>
-      )}
-
-      {source === "label" && (
-        <Field label="What is it?" htmlFor="storage-add-label" error={shownErrors.label}>
-          <Input
-            id="storage-add-label"
-            type="text"
-            required
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="e.g. Leftover lentil soup"
-          />
         </Field>
       )}
 

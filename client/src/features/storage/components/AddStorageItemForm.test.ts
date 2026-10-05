@@ -21,7 +21,6 @@ function values(overrides: Partial<AddStorageItemValues> = {}): AddStorageItemVa
     source: "food",
     foodIds: ["food-1"],
     recipeId: "",
-    label: "",
     bestBy: "",
     preparedAt: new Date(2026, 8, 14, 10, 0),
     ...overrides,
@@ -32,7 +31,6 @@ describe("validateAddStorageItem", () => {
   it("accepts each source tab once its own field is answered", () => {
     expect(validateAddStorageItem(values())).toEqual({});
     expect(validateAddStorageItem(values({ source: "recipe", recipeId: "recipe-1" }))).toEqual({});
-    expect(validateAddStorageItem(values({ source: "label", label: "Lentil soup" }))).toEqual({});
   });
 
   it("asks for a food on the food tab, phrased as a list error", () => {
@@ -43,17 +41,11 @@ describe("validateAddStorageItem", () => {
     expect(validateAddStorageItem(values({ source: "recipe" })).recipe).toBe("Recipe is required");
   });
 
-  it("asks what it is on the free-form tab, treating whitespace as blank", () => {
-    expect(validateAddStorageItem(values({ source: "label" })).label).toBe("Enter what it is");
-    expect(validateAddStorageItem(values({ source: "label", label: "   " })).label).toBe("Enter what it is");
-  });
-
   // Only the tab on screen is judged: a food id left behind by a tab the
   // parent moved away from is not an error (and is not sent either).
   it("judges only the visible tab", () => {
     expect(validateAddStorageItem(values({ source: "recipe", foodIds: [], recipeId: "recipe-1" }))).toEqual({});
-    expect(validateAddStorageItem(values({ source: "label", foodIds: [], label: "Soup" }))).toEqual({});
-    expect(validateAddStorageItem(values({ source: "food", recipeId: "", label: "" }))).toEqual({});
+    expect(validateAddStorageItem(values({ source: "food", recipeId: "" }))).toEqual({});
   });
 
   // Item 333: best-by now decides the Use soon / Expired chip, so a date
@@ -177,17 +169,20 @@ describe("AddStorageItemForm (render)", () => {
     const html = renderForm();
     expect(html).toContain("From a food");
     expect(html).toContain("From a recipe");
-    expect(html).toContain("Free-form");
+    // Item 731: Free-form is retired for new items.
+    expect(html).not.toContain("Free-form");
+    expect(html).not.toContain("What is it?");
     expect(html).toContain(">Food<");
     expect(html).toContain(">Location<");
     expect(html).toContain(">Prepared<");
     expect(html).toMatch(/Quantity note(?:<!-- -->)?\s*<span[^>]*>\(optional\)<\/span>/);
   });
 
-  // Item 708: Jakarta is wider; at px-3 the three tabs wrapped at 320.
-  it("keeps the three source tabs at px-2.5 so they stay one line each at 320", () => {
+  // Item 708: Jakarta is wider; at px-3 three tabs wrapped at 320. Item 731
+  // leaves two, still at px-2.5.
+  it("offers exactly From a food and From a recipe, at px-2.5", () => {
     const tabs = [...renderForm().matchAll(/<button type="button" aria-pressed="(?:true|false)" class="([^"]*)">(From a food|From a recipe|Free-form)</g)];
-    expect(tabs.map(([, , label]) => label)).toEqual(["From a food", "From a recipe", "Free-form"]);
+    expect(tabs.map(([, , label]) => label)).toEqual(["From a food", "From a recipe"]);
     for (const [, cls] of tabs) expect(cls).toMatch(/\bpx-2\.5 py-1 text-xs\b/);
   });
 
@@ -283,7 +278,6 @@ describe("buildStorageCreateInput", () => {
       foodIds: ["food-1"],
       containerChoice: "one",
       recipeId: "",
-      label: "",
       bestBy: "",
       preparedAt,
       location: "fridge",
@@ -315,20 +309,14 @@ describe("buildStorageCreateInput", () => {
     ).toBeUndefined();
   });
 
-  it("never sends the flag — or any food — from the recipe or free-form tab", () => {
+  it("never sends the flag — or any food — from the recipe tab, and never a label", () => {
     const recipe = buildStorageCreateInput(
       createValues({ source: "recipe", recipeId: "recipe-1", foodIds: ["food-1", "food-2"], containerChoice: "separate" }),
     );
     expect(recipe.separateItems).toBeUndefined();
     expect(recipe.foodIds).toBeUndefined();
     expect(recipe.recipeId).toBe("recipe-1");
-
-    const labelOnly = buildStorageCreateInput(
-      createValues({ source: "label", label: "  Lentil soup  ", foodIds: ["food-1", "food-2"] }),
-    );
-    expect(labelOnly.separateItems).toBeUndefined();
-    expect(labelOnly.foodIds).toBeUndefined();
-    expect(labelOnly.label).toBe("Lentil soup");
+    expect(recipe.label).toBeUndefined();
   });
 
   it("carries the rest of the form through, trimming the optional text fields to undefined when blank", () => {
