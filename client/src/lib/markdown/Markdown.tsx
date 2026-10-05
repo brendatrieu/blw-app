@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { OptionalLabel } from "../../components/ui/Field.js";
 import { darkMediaQuery } from "../../theme.js";
 
 // Shared renderer for markdown content authored in `content/` (currently the
@@ -12,7 +13,13 @@ import { darkMediaQuery } from "../../theme.js";
 // of the page.
 
 const components: Components = {
-  h2: ({ node: _node, ...props }) => <h2 className="font-h2 mt-2 text-[var(--color-text)]" {...props} />,
+  // Item 736: a guide step heading's trailing "(optional)" gets the app's one
+  // quiet treatment, the same as a form label's.
+  h2: ({ node: _node, children, ...props }) => (
+    <h2 className="font-h2 mt-2 text-[var(--color-text)]" {...props}>
+      <OptionalLabel label={children} />
+    </h2>
+  ),
   h3: ({ node: _node, ...props }) => (
     <h3 className="mt-1 text-base font-semibold text-[var(--color-text)]" {...props} />
   ),

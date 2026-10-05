@@ -25,7 +25,7 @@ import { PageHeader } from "../components/ui/PageHeader.js";
 import { Card } from "../components/ui/Card.js";
 import { Button } from "../components/ui/Button.js";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog.js";
-import { Field } from "../components/ui/Field.js";
+import { Field, OptionalLabel } from "../components/ui/Field.js";
 import { KeepButton } from "../components/ui/KeepButton.js";
 import { Input, Textarea } from "../components/ui/Input.js";
 import { Sheet } from "../components/ui/Sheet.js";
@@ -462,7 +462,11 @@ export function AiSection() {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="font-h2 flex items-center gap-2 text-[var(--color-text)]">
-        <span aria-hidden="true">✨</span> AI features (optional)
+        <span aria-hidden="true">✨</span>
+        {/* One flex item, so the flex gap doesn't widen the space before "(optional)". */}
+        <span>
+          <OptionalLabel label="AI features (optional)" />
+        </span>
       </h2>
 
       <p className="text-sm text-[var(--color-text-muted)]">

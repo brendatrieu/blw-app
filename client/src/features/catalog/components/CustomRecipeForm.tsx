@@ -17,7 +17,7 @@ import {
 import { CUSTOM_RECIPE_AGE_OPTIONS, withDeletedMark } from "../constants.js";
 import { useCreateCustomRecipe, useFoods, useUpdateCustomRecipe } from "../hooks.js";
 import { FoodPicker } from "./FoodPicker.js";
-import { Field } from "../../../components/ui/Field.js";
+import { Field, OptionalLabel } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
 import { Select } from "../../../components/ui/Select.js";
 import { Button } from "../../../components/ui/Button.js";
@@ -566,8 +566,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
           boxes shaped like the ingredient quantities just above. */}
       <div className="flex flex-col gap-1.5">
         <span id={`${idPrefix}-extra-label`} className="text-sm font-medium text-[var(--color-text)]">
-          Additional ingredients{" "}
-          <span className="font-normal text-[var(--color-text-muted)]">(optional)</span>
+          <OptionalLabel label="Additional ingredients (optional)" />
         </span>
         <p className="text-xs text-[var(--color-text-muted)]">
           Pantry staples with no food of their own — oil, water, a pinch of dried herbs.
@@ -638,7 +637,7 @@ export function CustomRecipeForm({ recipe, idPrefix = "custom-recipe", onSaved }
 
       <div className="flex flex-col gap-1.5">
         <span id={`${idPrefix}-steps-label`} className="text-sm font-medium text-[var(--color-text)]">
-          Steps <span className="font-normal text-[var(--color-text-muted)]">(optional)</span>
+          <OptionalLabel label="Steps (optional)" />
         </span>
         <ol {...stepListProps} className="flex flex-col gap-2" aria-labelledby={`${idPrefix}-steps-label`}>
           {values.steps.map((step, index) => (

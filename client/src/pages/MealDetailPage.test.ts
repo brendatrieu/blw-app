@@ -244,7 +244,7 @@ describe("MealDetailPage ratings (item 574)", () => {
       reactionNote: "rash",
       foods: [{ ...MEAL.foods[0]!, rating: 5 }, MEAL.foods[1]!],
     });
-    const stars = html.indexOf("Rating (optional)");
+    const stars = html.indexOf("Rating<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
     expect(stars).toBeGreaterThan(-1);
     expect(stars).toBeLessThan(html.indexOf("Reaction:"));
     expect(html).toContain('aria-label="Rating for Avocado"');

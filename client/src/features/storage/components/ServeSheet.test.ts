@@ -83,9 +83,9 @@ describe("ServeControl — the serve sheet's body (item 263)", () => {
 
   it("shows both note fields inline — the '+ Add a note' toggle is gone", () => {
     expect(html).not.toContain("Add a note");
-    expect(html).toContain("Reaction (optional)");
+    expect(html).toContain("Reaction<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
     expect(html).toContain("Only for hives, vomiting, rash or other reaction signs.");
-    expect(html).toContain("Note (optional)");
+    expect(html).toContain("Note<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
     expect((html.match(/<textarea/g) ?? []).length).toBe(2);
   });
 
@@ -136,11 +136,11 @@ describe("the Serve sheet's star row (item 718)", () => {
 
   it("rates a food item as its food: one labeled row, between When and the reaction note", () => {
     const html = render(createElement(ServeControl, { item: BASE_ITEM, babyId: "baby-1" }));
-    expect(html).toContain("Rating (optional)");
+    expect(html).toContain("Rating<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
     expect((html.match(/role="radiogroup"/g) ?? []).length).toBe(1);
     expect(html).toContain('aria-label="Rating for Avocado"');
     expect(html).toMatch(/<span class="[^"]*">Avocado<\/span>/);
-    const rating = html.indexOf("Rating (optional)");
+    const rating = html.indexOf("Rating<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
     expect(html.indexOf('id="serve-when"')).toBeLessThan(rating);
     expect(rating).toBeLessThan(html.indexOf("<textarea"));
     // Unrated to start: no star chosen, no Clear.
@@ -156,7 +156,7 @@ describe("the Serve sheet's star row (item 718)", () => {
 
   it("shows no star row on a label-only item (it has nothing to rate)", () => {
     const html = render(createElement(ServeControl, { item: { ...BASE_ITEM, foods: [], label: "Mystery" }, babyId: "b" }));
-    expect(html).not.toContain("Rating (optional)");
+    expect(html).not.toContain("Rating<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
     expect(html).not.toContain('role="radiogroup"');
   });
 

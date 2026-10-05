@@ -627,7 +627,7 @@ describe("LogFoodForm ratings (item 574)", () => {
 
   it("puts the stars after When and ABOVE the reaction note, one row per food on a loose-food meal", () => {
     const html = render(base);
-    const stars = html.indexOf("Rating (optional)");
+    const stars = html.indexOf("Rating<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
     expect(stars).toBeGreaterThan(html.indexOf('id="log-food-when"'));
     expect(stars).toBeLessThan(html.indexOf(">Reaction<!-- -->"));
     expect(html).toContain('aria-label="Rating for Avocado"');

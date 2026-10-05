@@ -24,6 +24,23 @@ export function splitOptionalLabel(label: ReactNode): { base: string; suffix: st
 }
 
 /**
+ * The one "(optional)" treatment (item 736): the label keeps its context's
+ * color and weight, and a trailing "(optional)" renders normal-weight and
+ * muted. Field labels, hand-rolled labels and headings, and the guides'
+ * Markdown step headings all render through this.
+ */
+export function OptionalLabel({ label }: { label: ReactNode }) {
+  const optional = splitOptionalLabel(label);
+  if (!optional) return <>{label}</>;
+  return (
+    <>
+      {optional.base}{" "}
+      <span className="font-normal text-[var(--color-text-muted)]">{optional.suffix}</span>
+    </>
+  );
+}
+
+/**
  * Label + control + error/hint wrapper. Wraps whatever control is passed as
  * `children` (typically `Input` or `Select`, but any labeled control works)
  * so every hand-rolled form in the app shares one label/spacing/error
@@ -32,18 +49,10 @@ export function splitOptionalLabel(label: ReactNode): { base: string; suffix: st
  * field name carries the visual emphasis, not the qualifier.
  */
 export function Field({ label, htmlFor, error, hint, description, children }: FieldProps) {
-  const optional = splitOptionalLabel(label);
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={htmlFor} className="text-sm font-medium text-[var(--color-text)]">
-        {optional ? (
-          <>
-            {optional.base}{" "}
-            <span className="font-normal text-[var(--color-text-muted)]">{optional.suffix}</span>
-          </>
-        ) : (
-          label
-        )}
+        <OptionalLabel label={label} />
       </label>
       {description ? <p className="text-xs text-[var(--color-text-muted)]">{description}</p> : null}
       {children}

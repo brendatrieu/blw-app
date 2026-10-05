@@ -1,4 +1,5 @@
 import { StarRating } from "../../../components/ui/StarRating.js";
+import { OptionalLabel } from "../../../components/ui/Field.js";
 
 /** The key of the one row a recipe meal has. Never a food id (those are uuids). */
 export const RECIPE_RATING_KEY = "recipe";
@@ -58,7 +59,7 @@ export function MealRatingsField({
   return (
     <div role="group" aria-labelledby="meal-ratings-heading" className="flex flex-col gap-1">
       <span id="meal-ratings-heading" className="text-sm font-medium text-[var(--color-text)]">
-        Rating (optional)
+        <OptionalLabel label="Rating (optional)" />
       </span>
       {rows.map((row) => (
         <div key={row.key} className="flex flex-col">

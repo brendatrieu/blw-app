@@ -227,6 +227,28 @@ describe("Markdown images", () => {
   });
 });
 
+// Item 736: a step heading's trailing "(optional)" gets the forms' quiet treatment.
+describe("Markdown step headings", () => {
+  const render = (content: string) =>
+    renderToString(createElement(MemoryRouter, null, createElement(Markdown, { content })));
+
+  it("mutes a trailing (optional) and leaves other headings as plain text", () => {
+    expect(render("## 3. Add amounts (optional)")).toContain(
+      '<h2 class="font-h2 mt-2 text-[var(--color-text)]">3. Add amounts<!-- --> <span class="font-normal text-[var(--color-text-muted)]">(optional)</span></h2>',
+    );
+    expect(render("## 1. Name it")).toContain('<h2 class="font-h2 mt-2 text-[var(--color-text)]">1. Name it</h2>');
+  });
+
+  it("does so in every guide: one quiet suffix per (optional) step", () => {
+    for (const guide of guideArticles) {
+      const html = render(guide.body);
+      const marked = guide.body.match(/^## .+\(optional\)$/gm)?.length ?? 0;
+      expect(html.match(/<\/span><\/h2>/g)?.length ?? 0, guide.slug).toBe(marked);
+      expect(html, guide.slug).not.toMatch(/ \(optional\)<\/h2>/);
+    }
+  });
+});
+
 // Item 727: each guide screenshot has a -dark twin, and the renderer shows the
 // one matching the app's resolved theme (in-app data-theme first, else the OS).
 describe("dark guide screenshots", () => {

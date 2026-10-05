@@ -4,7 +4,7 @@ import { useStorageServe } from "../hooks.js";
 import { clampServings, storageItemTitle } from "../format.js";
 import { Button } from "../../../components/ui/Button.js";
 import { DateTimeField, nowAtMinute } from "../../../components/ui/DateTimeField.js";
-import { Field } from "../../../components/ui/Field.js";
+import { Field, OptionalLabel } from "../../../components/ui/Field.js";
 import { Textarea } from "../../../components/ui/Input.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
 import { HowToLink } from "../../safety/HowToLink.js";
@@ -168,7 +168,9 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
           reaction note is what feeds allergen tracking, so hiding it behind
           a tap was the problem, not the field itself. */}
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-[var(--color-text-muted)]">Reaction (optional)</span>
+        <span className="font-medium text-[var(--color-text)]">
+          <OptionalLabel label="Reaction (optional)" />
+        </span>
         <span className="text-xs text-[var(--color-text-muted)]">Only for hives, vomiting, rash or other reaction signs.</span>
         <Textarea
           value={reactionNote}
@@ -178,7 +180,9 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-[var(--color-text-muted)]">Note (optional)</span>
+        <span className="font-medium text-[var(--color-text)]">
+          <OptionalLabel label="Note (optional)" />
+        </span>
         <Textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}

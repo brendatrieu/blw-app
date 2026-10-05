@@ -1,7 +1,10 @@
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { Field, splitOptionalLabel } from "./Field.js";
+import { Field, OptionalLabel, splitOptionalLabel } from "./Field.js";
 
 describe("splitOptionalLabel", () => {
   it("splits a trailing (optional) off a string label", () => {
@@ -85,5 +88,56 @@ describe("Field (render)", () => {
     );
     expect(html).not.toContain("font-normal text-[var(--color-text-muted)]");
     expect(html).toContain("Food");
+  });
+});
+
+// Item 736: "(optional)" looks the same everywhere. Every "(optional)" the app
+// renders goes through Field's label or OptionalLabel (so the suffix is the
+// one quiet span), and no label carrying it is muted as a whole.
+describe("one (optional) treatment everywhere (item 736)", () => {
+  const srcRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const files = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return files(full);
+      return /\.tsx$/.test(entry.name) && !/\.test\./.test(entry.name) ? [full] : [];
+    });
+
+  it("renders OptionalLabel as the label text plus the quiet suffix, and a plain label untouched", () => {
+    const wrap = (label: string) => renderToString(createElement("span", null, createElement(OptionalLabel, { label })));
+    expect(wrap("Rating (optional)")).toBe(
+      '<span>Rating<!-- --> <span class="font-normal text-[var(--color-text-muted)]">(optional)</span></span>',
+    );
+    expect(wrap("When")).toBe("<span>When</span>");
+  });
+
+  it("every (optional) in the client source is a Field label or an OptionalLabel label", () => {
+    const offenders: string[] = [];
+    let sites = 0;
+    for (const file of files(srcRoot)) {
+      const code = readFileSync(file, "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/^\s*\/\/.*$/gm, "");
+      const all = code.match(/\(optional\)/g)?.length ?? 0;
+      const ok = code.match(/label=(?:"[^"\n]*\(optional\)"|\{`[^`\n]*\(optional\)`\})/g)?.length ?? 0;
+      sites += ok;
+      if (all !== ok) offenders.push(path.relative(srcRoot, file));
+    }
+    expect(offenders).toEqual([]);
+    expect(sites).toBeGreaterThanOrEqual(25);
+  });
+
+  it("no element wrapping an OptionalLabel is muted as a whole", () => {
+    let checked = 0;
+    for (const file of files(srcRoot)) {
+      const code = readFileSync(file, "utf8");
+      for (const m of code.matchAll(/className="([^"]*)">\s*<OptionalLabel/g)) {
+        checked++;
+        expect(m[1], path.relative(srcRoot, file)).not.toContain("color-text-muted");
+        expect(m[1], path.relative(srcRoot, file)).toContain("text-[var(--color-text)]");
+      }
+    }
+    // Field, ServeSheet x2, MealRatingsField, SymptomSurveyForm x2, CustomRecipeForm x2.
+    expect(checked).toBe(8);
   });
 });

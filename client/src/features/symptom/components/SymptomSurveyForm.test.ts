@@ -37,6 +37,18 @@ describe("symptomCheckboxId", () => {
 });
 
 describe("SymptomSurveyForm (render)", () => {
+  // Item 736: question labels read in the text color (Field's label color), and
+  // "(optional)" alone is quiet, the same as every other form.
+  it("labels its questions in the text color, with only (optional) muted", () => {
+    const html = renderForm();
+    expect(html).not.toContain('class="text-xs font-medium text-[var(--color-text-muted)]"');
+    for (const label of ["Where on the body?", "Anything else you noticed?"]) {
+      expect(html).toContain(
+        `class="text-xs font-medium text-[var(--color-text)]">${label}<!-- --> <span class="font-normal text-[var(--color-text-muted)]">(optional)</span>`,
+      );
+    }
+  });
+
   // Item 235: the submit stays enabled with nothing ticked, so a tap can say
   // "Add at least one symptom" instead of doing nothing at all.
   it("leaves the submit enabled with nothing ticked, and shows no error markup before a submit attempt", () => {
