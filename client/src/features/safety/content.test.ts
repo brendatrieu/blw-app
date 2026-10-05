@@ -112,7 +112,7 @@ describe("how-to guides (item 601)", () => {
       "\n\nPick what you're storing: a food or a recipe. Search and tap your pick, or several foods for a mixed container. If a food isn't in the list, the search offers to add it as a custom food.\n\n",
     );
     expect(storage.find((s) => s.startsWith("2. "))).toContain(
-      "\n\nTap **Fridge**, **Freezer**, or **Counter**. Change the prepared time if you made it earlier.\n\n",
+      "\n\nTap **Fridge**, **Freezer**, or **Counter**. **Prepared** defaults to the current time. If you made the batch earlier, tap it, scroll to the day and time, and tap **Done**.\n\n",
     );
     expect(storage.find((s) => s.startsWith("4. "))).toContain(
       "\n\nWhen complete, your item is listed on the **Storage** page with the servings left and when to use it by.\n\n",
@@ -135,7 +135,7 @@ describe("how-to guides (item 601)", () => {
     expect(meal[3]).toMatch(/^4\. Add a reaction or a note \(optional\)\n/);
     const serve = steps("how-to-serve-from-storage");
     expect(serve[0]).toContain(
-      "\n\nUse **−** and **+** to set how many **Servings** your baby had. Change the serve time if you served earlier.\n\n",
+      "\n\nUse **−** and **+** to set how many **Servings** your baby had. **When** defaults to the current time. If you served earlier, tap it, scroll to the day and time, and tap **Done**.\n\n",
     );
     expect(serve[1]).toMatch(/^2\. Rate it with stars \(optional\)\n\nTap one to five stars, five for a big hit\.\n\n!\[/);
     expect(serve[2]).toMatch(/^3\. Add a reaction or a note \(optional\)\n/);
