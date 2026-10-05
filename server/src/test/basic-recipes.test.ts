@@ -1050,7 +1050,7 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     expect(uncooked).toEqual([]);
   });
 
-  it("keeps the owner's onion decisions (items 728, 740)", async () => {
+  it("keeps the owner's onion decisions (items 728, 740, 744)", async () => {
     const variants = (await catalogVariants()).filter((v) => v.foodSlugs.includes("onion"));
     const bands = (slug: string) => variants.filter((v) => v.slug === slug);
     // Every band is self-contained: the wedges and the skillet each peel the
@@ -1073,6 +1073,17 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     const dal6 = bands("red-lentil-tomato-onion-dal").find((v) => v.ageStage === "6");
     expect(dal6?.instructions[0]).toBe(
       "Rinse the lentils and put them in a pan with the very finely chopped onion, chopped tomato, and plenty of unsalted water.",
+    );
+    // Item 744: the dal's onion ingredient line peels it and cuts off the root
+    // end (owner decision 728), word for word.
+    const [dalOnion] = await db
+      .select({ quantityNote: schema.recipeIngredients.quantityNote })
+      .from(schema.recipeIngredients)
+      .innerJoin(schema.recipes, eq(schema.recipeIngredients.recipeId, schema.recipes.id))
+      .innerJoin(schema.foods, eq(schema.recipeIngredients.foodId, schema.foods.id))
+      .where(and(eq(schema.recipes.slug, "red-lentil-tomato-onion-dal"), eq(schema.foods.slug, "onion")));
+    expect(dalOnion?.quantityNote).toBe(
+      "1/4 small yellow or sweet onion, peeled, root end cut off, and very finely chopped",
     );
     // Choking risk is "moderate" (owner): not "low", and not "high" either.
     const [onion] = await db
