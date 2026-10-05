@@ -31,8 +31,11 @@ const components: Components = {
     <ol className="flex flex-col gap-1 pl-5 text-[var(--color-text)] list-decimal" {...props} />
   ),
   li: ({ node: _node, ...props }) => <li className="pl-1 [&>p]:inline" {...props} />,
-  strong: ({ node: _node, ...props }) => (
-    <strong className="font-medium text-[var(--color-text)]" {...props} />
+  // Item 741: so does a bold UI name in guide prose, like **Notes (optional)**.
+  strong: ({ node: _node, children, ...props }) => (
+    <strong className="font-medium text-[var(--color-text)]" {...props}>
+      <OptionalLabel label={children} />
+    </strong>
   ),
   hr: () => <hr className="border-[var(--color-border)]" />,
   a: ({ node: _node, href, children, ...rest }) => {

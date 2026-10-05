@@ -249,6 +249,31 @@ describe("Markdown step headings", () => {
   });
 });
 
+// Item 741: a bold UI name ending in "(optional)" in guide prose gets the same
+// quiet suffix; other bold text is untouched.
+describe("Markdown bold (optional)", () => {
+  const render = (content: string) =>
+    renderToString(createElement(MemoryRouter, null, createElement(Markdown, { content })));
+
+  it("mutes the suffix of a bold UI name and leaves other bold text alone", () => {
+    expect(render("Add it in **Notes (optional)**, then tap **Save**.")).toContain(
+      '<strong class="font-medium text-[var(--color-text)]">Notes<!-- --> <span class="font-normal text-[var(--color-text-muted)]">(optional)</span></strong>, then tap <strong class="font-medium text-[var(--color-text)]">Save</strong>.',
+    );
+  });
+
+  it("does so in every guide: one quiet suffix per bold (optional) name", () => {
+    let total = 0;
+    for (const guide of guideArticles) {
+      const html = render(guide.body);
+      const marked = guide.body.match(/\*\*[^*]+\(optional\)\*\*/g)?.length ?? 0;
+      total += marked;
+      expect(html.match(/\(optional\)<\/span><\/strong>/g)?.length ?? 0, guide.slug).toBe(marked);
+      expect(html, guide.slug).not.toMatch(/ \(optional\)<\/strong>/);
+    }
+    expect(total).toBe(3); // Recipe, Emoji, Notes
+  });
+});
+
 // Item 727: each guide screenshot has a -dark twin, and the renderer shows the
 // one matching the app's resolved theme (in-app data-theme first, else the OS).
 describe("dark guide screenshots", () => {
