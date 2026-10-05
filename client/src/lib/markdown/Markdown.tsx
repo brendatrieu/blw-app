@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { darkMediaQuery } from "../../theme.js";
 
 // Shared renderer for markdown content authored in `content/` (currently the
 // safety library; the plan's ask-anything chat cites the same articles
@@ -52,15 +53,32 @@ const components: Components = {
   // runtime cache), and never without alt text. Anything else renders nothing.
   // Eager, not lazy: the cache only keeps images that were fetched, so a guide
   // opened once must fetch every step's screenshot to be readable offline.
+  //
+  // Item 727: every /guides/<name>.webp has a <name>-dark.webp twin, and the
+  // reader sees the one matching the app's resolved theme. The MDX names the
+  // light file. The browser fetches only the <source> that matches, and the
+  // <img> src is already that same file (resolved here, before it reaches the
+  // DOM), so no engine can fetch the other one first or flash it. In "system"
+  // mode the media query keeps tracking the OS live.
   img: ({ node: _node, src, alt }) => {
     if (typeof src !== "string" || !src.startsWith("/") || src.startsWith("//") || !alt?.trim()) return null;
-    return (
+    const dark = /^\/guides\/[a-z0-9-]+\.webp$/.test(src) ? src.replace(/\.webp$/, "-dark.webp") : null;
+    const media = darkMediaQuery();
+    const image = (
       <img
-        src={src}
+        src={dark && typeof matchMedia === "function" && matchMedia(media).matches ? dark : src}
         alt={alt}
         loading="eager"
         className="block w-full max-w-[390px] rounded-lg border border-[var(--color-border)]"
       />
+    );
+    if (!dark) return image;
+    return (
+      <picture className="block">
+        <source srcSet={dark} media={media} />
+        <source srcSet={src} />
+        {image}
+      </picture>
     );
   },
   blockquote: ({ node: _node, children }) => (

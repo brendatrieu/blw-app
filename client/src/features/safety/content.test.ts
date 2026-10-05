@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { getGuide, getSafetyArticle, guideArticles, safetyArticles } from "./content.js";
 import { Markdown } from "../../lib/markdown/Markdown.js";
 import { resolveStorageItemMenuActions } from "../storage/format.js";
@@ -183,5 +183,74 @@ describe("Markdown images", () => {
     expect(render("![](/guides/x.webp)")).not.toContain("<img");
     expect(render("![Remote](https://example.com/x.png)")).not.toContain("<img");
     expect(render("![Protocol-relative](//example.com/x.png)")).not.toContain("<img");
+  });
+});
+
+// Item 727: each guide screenshot has a -dark twin, and the renderer shows the
+// one matching the app's resolved theme (in-app data-theme first, else the OS).
+describe("dark guide screenshots", () => {
+  const render = (content: string) =>
+    renderToString(createElement(MemoryRouter, null, createElement(Markdown, { content })));
+  // Pixel size from the WebP header: VP8X stores width-1/height-1 as 24-bit LE
+  // at bytes 24/27; a simple lossy VP8 file stores 14-bit sizes at 26/28.
+  const size = (file: string) => {
+    const b = readFileSync(file);
+    const chunk = b.toString("ascii", 12, 16);
+    if (chunk === "VP8X") return [b.readUIntLE(24, 3) + 1, b.readUIntLE(27, 3) + 1];
+    expect(chunk, file).toBe("VP8 ");
+    return [b.readUInt16LE(26) & 0x3fff, b.readUInt16LE(28) & 0x3fff];
+  };
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("every guide image has a <name>-dark.webp twin with the same pixel size, and the MDX names only the light file", () => {
+    for (const guide of guideArticles) {
+      expect(guide.body, guide.slug).not.toContain("-dark.webp");
+      for (const [, , src = ""] of guide.body.matchAll(IMAGE_RE)) {
+        const light = path.join(repoRoot, "client/public", src);
+        const dark = light.replace(/\.webp$/, "-dark.webp");
+        expect(existsSync(dark), dark).toBe(true);
+        expect(size(dark), src).toEqual(size(light));
+      }
+    }
+  });
+
+  it("follows the OS through a <source> media query when the app is on System", () => {
+    const html = render("![A screenshot of the form](/guides/x-1-y.webp)");
+    expect(html).toContain(
+      '<picture class="block"><source srcSet="/guides/x-1-y-dark.webp" media="(prefers-color-scheme: dark)"/><source srcSet="/guides/x-1-y.webp"/><img src="/guides/x-1-y.webp"',
+    );
+    expect(html.match(/<img /g)).toHaveLength(1);
+  });
+
+  it("follows the in-app override, and the <img> src is already the matching file (one download, no flash)", () => {
+    for (const [theme, media, src] of [
+      ["dark", "all", "/guides/x-1-y-dark.webp"],
+      ["light", "not all", "/guides/x-1-y.webp"],
+    ] as const) {
+      vi.stubGlobal("document", { documentElement: { getAttribute: (name: string) => (name === "data-theme" ? theme : null) } });
+      vi.stubGlobal("matchMedia", (query: string) => ({ matches: query === "all" }));
+      const html = render("![A screenshot of the form](/guides/x-1-y.webp)");
+      expect(html, theme).toContain(`<source srcSet="/guides/x-1-y-dark.webp" media="${media}"/>`);
+      expect(html, theme).toContain(`<img src="${src}"`);
+    }
+  });
+
+  it("resolves the OS preference for the <img> src on System", () => {
+    vi.stubGlobal("document", { documentElement: { getAttribute: () => null } });
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query === "(prefers-color-scheme: dark)" }));
+    expect(render("![A screenshot of the form](/guides/x-1-y.webp)")).toContain('<img src="/guides/x-1-y-dark.webp"');
+  });
+
+  it("leaves other images alone (no twin is assumed outside /guides/*.webp)", () => {
+    const html = render("![A diagram](/images/x.png)");
+    expect(html).not.toContain("<picture");
+    expect(html).toContain('src="/images/x.png"');
+  });
+
+  it("precaches no images: both variants reach the offline cache only when viewed", () => {
+    const config = readFileSync(path.join(repoRoot, "client/vite.config.ts"), "utf8");
+    expect(config).not.toMatch(/globPatterns|webp/);
+    expect(config).toMatch(/request\.destination === "image",\s*handler: "CacheFirst"/);
   });
 });
