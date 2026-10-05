@@ -104,30 +104,55 @@ describe("how-to guides (item 601)", () => {
     }
   });
 
-  it("add-to-storage step 2 only asks for Done on the multi-select food path (the recipe picker closes on tap)", () => {
+  it("add-to-storage step 1 only asks for Done on the multi-select food path (the recipe picker closes on tap)", () => {
     const body = getGuide("how-to-add-to-storage")?.body ?? "";
-    const step2 = body.split(/^## /m).find((s) => s.startsWith("2. ")) ?? "";
-    expect(step2).toContain("The recipe list closes by itself.");
-    expect(step2).toMatch(/For foods you can pick several, then tap \*\*Done\*\*\./);
-    expect(step2).not.toContain("tap your pick, then tap **Done**");
+    const step1 = body.split(/^## /m).find((s) => s.startsWith("1. ")) ?? "";
+    expect(step1).toContain("The recipe list closes by itself.");
+    expect(step1).toMatch(/For foods you can pick several, then tap \*\*Done\*\*\./);
+    expect(step1).not.toContain("tap your pick, then tap **Done**");
     expect(body).toContain("Use within 90d");
   });
 
-  it("log-a-meal step 1 doesn't place Log meal 'at the top' (Up next sits above it on Home, item 677)", () => {
-    const body = getGuide("how-to-log-a-meal")?.body ?? "";
-    const step1 = body.split(/^## /m).find((s) => s.startsWith("1. ")) ?? "";
-    expect(step1).toContain("On **Home**, tap **Log meal**.");
-    expect(step1).not.toMatch(/at the top/);
+  // Item 725: a guide is opened from the form it explains (its HowToLink) or
+  // from More, so none of them says where to start. Step 1 is the form's own
+  // first field, and the three "open the form" screenshots are gone.
+  it("start at the form's first field, never at how to reach the form", () => {
+    expect(guideArticles.map((guide) => guide.body.match(/^## 1\. (.+)$/m)?.[1])).toEqual([
+      "Name it and pick an age",
+      "Pick the foods",
+      "Choose what you're storing",
+      "Set the servings and time",
+    ]);
+    for (const guide of guideArticles) {
+      expect(guide.body, guide.slug).not.toMatch(/On \*\*Home\*\*|in the bottom bar/);
+      for (const retired of ["meal-1-open", "serve-1-menu", "recipe-1-add"]) {
+        expect(guide.body).not.toContain(retired);
+        expect(existsSync(path.join(repoRoot, `client/public/guides/${retired}.webp`)), retired).toBe(false);
+      }
+    }
   });
 
-  it("serve step 1 warns that Free-form items have no Serve (label-only items withhold it)", () => {
+  it("image file numbers match their step numbers", () => {
+    for (const guide of guideArticles) {
+      for (const section of guide.body.split(/^## /m).slice(1)) {
+        const step = section.match(/^(\d+)\. /)?.[1];
+        const src = section.match(/\]\(\/guides\/[a-z]+-(\d+)-/)?.[1];
+        expect(src, `${guide.slug} step ${step}`).toBe(step);
+      }
+    }
+  });
+
+  it("add-to-storage warns that Free-form items have no Serve (label-only items withhold it)", () => {
     // The add-to-storage guide offers Free-form; resolveStorageItemMenuActions
-    // gives a label-only item only Edit and Remove, so the serve guide says so.
+    // gives a label-only item only Edit and Remove, so the step that offers
+    // it says so (item 725; it used to sit in the serve guide's retired step 1).
     expect(resolveStorageItemMenuActions({ status: "active", foods: [], recipeTitle: null }).serve).toBe(false);
-    expect(getGuide("how-to-add-to-storage")?.body).toContain("**Free-form**");
-    const body = getGuide("how-to-serve-from-storage")?.body ?? "";
+    const body = getGuide("how-to-add-to-storage")?.body ?? "";
     const step1 = body.split(/^## /m).find((s) => s.startsWith("1. ")) ?? "";
-    expect(step1).toContain("**Free-form** items can't be served, so tap **Remove** when they're gone.");
+    expect(step1).toContain(
+      "For foods you can pick several, then tap **Done**. **Free-form** items can't be served, so tap **Remove** when they're used up.",
+    );
+    expect(getGuide("how-to-serve-from-storage")?.body).not.toContain("Free-form");
   });
 
   it("renders every screenshot as an <img> with its alt text", () => {

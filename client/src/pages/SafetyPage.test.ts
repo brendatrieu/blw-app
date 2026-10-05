@@ -57,7 +57,7 @@ describe("How-to guides under More (item 608)", () => {
   it("/guides/:slug renders the guide, screenshots included", () => {
     const html = at("/guides/how-to-log-a-meal");
     expect(html).toContain("How to log a meal");
-    expect(html).toContain('src="/guides/meal-1-open.webp"');
+    expect(html).toContain('src="/guides/meal-1-foods.webp"');
     expect(html).not.toContain("Not found");
   });
 
