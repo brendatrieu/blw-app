@@ -158,24 +158,32 @@ describe("EditStorageItemForm (render)", () => {
 
 // Item 729: what goes into the PATCH for the container's contents.
 describe("buildContentsPatch", () => {
-  const foodItem = { foods: ITEM.foods, recipeId: null, label: null };
+  const seed = { foodIds: ["food-1"], label: "" };
 
   it("sends nothing for an untouched food list, so a plain Save never rewrites it", () => {
-    expect(buildContentsPatch(foodItem, ["food-1"], "")).toEqual({});
+    expect(buildContentsPatch("food", seed, ["food-1"], "")).toEqual({});
   });
 
   it("sends the whole list, in order, once it changes (added, removed or reordered)", () => {
-    expect(buildContentsPatch(foodItem, ["food-1", "food-2"], "")).toEqual({ foodIds: ["food-1", "food-2"] });
-    const two = { ...foodItem, foods: [...ITEM.foods, { id: "food-2", slug: "pea", name: "Pea", emoji: null }] };
-    expect(buildContentsPatch(two, ["food-2", "food-1"], "")).toEqual({ foodIds: ["food-2", "food-1"] });
-    expect(buildContentsPatch(two, ["food-2"], "")).toEqual({ foodIds: ["food-2"] });
+    expect(buildContentsPatch("food", seed, ["food-1", "food-2"], "")).toEqual({ foodIds: ["food-1", "food-2"] });
+    const two = { foodIds: ["food-1", "food-2"], label: "" };
+    expect(buildContentsPatch("food", two, ["food-2", "food-1"], "")).toEqual({ foodIds: ["food-2", "food-1"] });
+    expect(buildContentsPatch("food", two, ["food-2"], "")).toEqual({ foodIds: ["food-2"] });
   });
 
-  it("renames a Free-form item, trimmed, and never touches a recipe item", () => {
-    expect(buildContentsPatch({ foods: [], recipeId: null, label: "Soup" }, [], "  Lentil soup ")).toEqual({
+  // B2: judged against the seed, not the refetched item. Another device grew
+  // the list to [a,b,c,d]; this form still shows [a,b] untouched, so Save
+  // must send nothing rather than erase c and d.
+  it("sends nothing for untouched chips even when a refetch brought newer contents", () => {
+    expect(buildContentsPatch("food", { foodIds: ["a", "b"], label: "" }, ["a", "b"], "")).toEqual({});
+  });
+
+  it("renames a Free-form item, trimmed, only when the name was edited; never touches a recipe item", () => {
+    expect(buildContentsPatch("label", { foodIds: [], label: "Soup" }, [], "  Lentil soup ")).toEqual({
       label: "Lentil soup",
     });
-    expect(buildContentsPatch({ foods: [], recipeId: "r-1", label: null }, ["x"], "y")).toEqual({});
+    expect(buildContentsPatch("label", { foodIds: [], label: "Soup" }, [], "Soup")).toEqual({});
+    expect(buildContentsPatch("recipe", { foodIds: [], label: "" }, ["x"], "y")).toEqual({});
   });
 
   it("reads a legacy item with foods AND a recipe as a recipe item", () => {

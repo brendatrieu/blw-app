@@ -59,17 +59,21 @@ export function validateEditStorageItem(values: EditStorageItemValues): EditStor
 /**
  * The contents half of the PATCH (item 729): foods only when a food
  * container's list actually changed (so an untouched Save never rewrites the
- * join rows), a name only for a label-only item. Pure so the rule is pinned.
+ * join rows), a name only when a label-only item was renamed. "Changed" is
+ * judged against what the form was SEEDED with, never the current item prop:
+ * a background refetch can bring another device's newer contents, and the
+ * stale chips must not overwrite them on an untouched Save. Pure so the rule
+ * is pinned.
  */
 export function buildContentsPatch(
-  item: Pick<StorageItem, "foods" | "recipeId" | "label">,
+  kind: StorageItemKind,
+  seed: { foodIds: string[]; label: string },
   foodIds: string[],
   label: string,
 ): Pick<UpdateStorageItemInput, "foodIds" | "label"> {
-  const kind = storageItemKind(item);
-  if (kind === "label") return { label: label.trim() };
+  if (kind === "label") return label === seed.label ? {} : { label: label.trim() };
   if (kind === "food") {
-    const before = item.foods.map((food) => food.id);
+    const before = seed.foodIds;
     const changed = before.length !== foodIds.length || before.some((id, index) => id !== foodIds[index]);
     return changed ? { foodIds } : {};
   }
@@ -90,8 +94,10 @@ interface EditStorageItemFormProps {
  */
 export function EditStorageItemForm({ item, onDone }: EditStorageItemFormProps) {
   const kind = storageItemKind(item);
-  const [foodIds, setFoodIds] = useState(() => item.foods.map((food) => food.id));
-  const [label, setLabel] = useState(item.label ?? "");
+  // Seeded once; `buildContentsPatch` compares against this, not `item` (B2).
+  const [seed] = useState(() => ({ foodIds: item.foods.map((food) => food.id), label: item.label ?? "" }));
+  const [foodIds, setFoodIds] = useState(seed.foodIds);
+  const [label, setLabel] = useState(seed.label);
   // A food its owner has since deleted stays a "(deleted)" chip — see `KeptFood`.
   const keptFoods = useMemo(() => item.foods.filter((food) => food.deleted), [item.foods]);
   const [location, setLocation] = useState<StorageLocation>(item.location);
@@ -120,7 +126,7 @@ export function EditStorageItemForm({ item, onDone }: EditStorageItemFormProps) 
       {
         id: item.id,
         input: {
-          ...buildContentsPatch(item, foodIds, label),
+          ...buildContentsPatch(kind, seed, foodIds, label),
           location,
           preparedAt: preparedAt.toISOString(),
           quantityNote: quantityNote.trim() || null,
