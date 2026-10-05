@@ -28,6 +28,8 @@ async function loadRunSeeds(): Promise<(db: Database) => Promise<void>> {
  * "Simple <food>" basic counts as one of the three; spices have no basic
  * (item 331), which is why their floor is lower. Lemon has no basic either
  * (item 484) but keeps the fruit floor, so all three of its uses are composite.
+ * Onion has no basic either (item 728, owner's call: no "Simple onion") and
+ * keeps the floor the same way, through its three composite recipes.
  *
  * Counted over `recipe_ingredients` links, never over `extra_ingredients`
  * free text: a recipe that merely mentions cumin in a step or lists it as a

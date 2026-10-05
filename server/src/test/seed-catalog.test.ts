@@ -22,7 +22,7 @@ async function loadRunSeeds(): Promise<(db: Database) => Promise<void>> {
   return mod.runSeeds;
 }
 
-/** Catalog size after the spices batch (329-332), the plain nuts (item 342) and cauliflower (item 508). */
+/** Catalog size after the spices batch (329-332), the plain nuts (item 342), cauliflower (item 508) and onion (item 728). */
 const CATALOG_FOOD_COUNT = 77;
 
 /** The 12 spice/herb rows, in seed order. */

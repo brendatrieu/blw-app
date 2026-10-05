@@ -135,6 +135,7 @@ describe("getExtraIngredientEmoji", () => {
       "warm water, breast milk, or formula, to thin the cashew butter",
       "warm water, breast milk, or formula, to thin the seed butter",
       "warm water, to soak and blend the ground cashew meal",
+      "water",
       "water or milk to moisten the bread",
       "water or no-salt-added stock",
       "water or olive oil, to loosen",

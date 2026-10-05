@@ -41,7 +41,7 @@ const CURATED_SLUGS = [
 
 /**
  * Ledger item 266. Runs over the seeded catalog, which is every recipe file
- * (recipes.ts exports the curated 15, the 47 coverage recipes and the 63
+ * (recipes.ts exports the curated 15, the 50 coverage recipes and the 63
  * basics), so a step added to any of them is covered.
  */
 const COOKING_VERB = /\b(?:roast|bake|steam|boil|simmer|saut[eé]|fry|poach|scramble|toast|cook)\b/i;
@@ -1029,9 +1029,14 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
 
     const names = (slug: string) => new RegExp(`\\b${slug.replace(/_/g, "[\\s-]+")}s?\\b`, "i");
     const cooksIt = (steps: readonly string[], slug: string) =>
-      steps.some((s) => namesCookingMethod(s) && names(slug).test(s)) && steps.some((s) => TIME.test(s));
-    // Guard the guard: a stage that cooks only the lentils must fail.
+      steps.some((s) => namesCookingMethod(s) && names(slug).test(s.split(" — ")[0]!)) &&
+      steps.some((s) => TIME.test(s));
+    // Guard the guard: a stage that cooks only the lentils must fail, and so
+    // must one that names the food only in a trailing " — " warning clause.
     expect(cooksIt(["Simmer the lentils over low heat for 15 minutes.", "Stir in the chopped onion and serve."], "onion")).toBe(false);
+    expect(
+      cooksIt(["Roast the sweet potato at 400°F (200°C) for 30 minutes — raw onion is firm and slippery."], "onion"),
+    ).toBe(false);
     expect(cooksIt(["Simmer the lentils and onion over low heat for 15-20 minutes, until soft."], "onion")).toBe(true);
 
     const variants = await catalogVariants();
@@ -1043,6 +1048,38 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
         .map((slug) => `${v.slug}/${v.ageStage}: ${slug}`),
     );
     expect(uncooked).toEqual([]);
+  });
+
+  it("keeps the owner's onion decisions (items 728, 740)", async () => {
+    const variants = (await catalogVariants()).filter((v) => v.foodSlugs.includes("onion"));
+    const bands = (slug: string) => variants.filter((v) => v.slug === slug);
+    // Every band is self-contained: the wedges and the skillet each peel the
+    // onion (and the wedges halve it through the root) in every band, rather
+    // than pointing back at another band. The dal peels in its ingredient line.
+    const wedges = bands("roasted-sweet-potato-onion-wedges");
+    const skillet = bands("beef-bell-pepper-onion-skillet");
+    expect(wedges.length).toBe(3);
+    expect(skillet.length).toBe(3);
+    for (const v of wedges) {
+      expect(
+        v.instructions.some((s) => /^Peel the onion\b.*\bhalve the onion through the root end\b/.test(s)),
+        `wedges/${v.ageStage}`,
+      ).toBe(true);
+    }
+    for (const v of skillet) {
+      expect(v.instructions[0], `skillet/${v.ageStage}`).toMatch(/^Peel the onion, cut off the root end, and chop the onion\b/);
+    }
+    // The dal's 6-8 month step 1 is the owner's sentence, word for word.
+    const dal6 = bands("red-lentil-tomato-onion-dal").find((v) => v.ageStage === "6");
+    expect(dal6?.instructions[0]).toBe(
+      "Rinse the lentils and put them in a pan with the very finely chopped onion, chopped tomato, and plenty of unsalted water.",
+    );
+    // Choking risk is "moderate" (owner): not "low", and not "high" either.
+    const [onion] = await db
+      .select({ chokingRisk: schema.foods.chokingRisk })
+      .from(schema.foods)
+      .where(and(eq(schema.foods.slug, "onion"), isNull(schema.foods.ownerId)));
+    expect(onion?.chokingRisk).toBe("moderate");
   });
 
   it("never offers a cook-required food raw, in any recipe", async () => {
