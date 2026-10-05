@@ -107,8 +107,9 @@ export function FoodPicker({ id, value, onChange, keptFoods }: FoodPickerProps) 
         createLabel={addCustomFoodLabel}
       />
       <Sheet open={createQuery !== null} onClose={() => setCreateQuery(null)} title="Add a custom food" showClose>
-        {/* Item 726: first in the sheet, like the Serve sheet's link. */}
-        <HowToLink slug="how-to-add-custom-food" />
+        {/* Item 726: first in the sheet, like the Serve sheet's link — and
+            spaced like it too (item 733: pb-[5px] → 19/14.5). */}
+        <HowToLink slug="how-to-add-custom-food" className="pb-[5px]" />
         <CustomFoodForm
           idPrefix={`${id}-custom`}
           initialName={createQuery ?? ""}
