@@ -69,27 +69,43 @@ export function SheetPanel({ title, showClose = false, onClose, children, panelR
       aria-modal="true"
       aria-label={typeof title === "string" ? title : undefined}
       tabIndex={-1}
-      className="sheet-panel scroll-momentum relative z-10 flex max-h-[85vh] w-full max-w-lg flex-col gap-3 overflow-y-auto rounded-t-[var(--radius-lg)] border-t border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4 shadow-[var(--shadow-lg)] outline-none scroll-thin"
+      className="sheet-panel scroll-momentum relative z-10 flex max-h-[85vh] w-full max-w-lg scroll-pt-28 flex-col gap-3 overflow-y-auto rounded-t-[var(--radius-lg)] border-t border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 shadow-[var(--shadow-lg)] outline-none scroll-thin"
       style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
     >
-      <div className="mx-auto h-1.5 w-10 shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-border)]" aria-hidden="true" />
-      {/* The close X sits at the LEFT of the header row, before the title —
-          the same slot and footprint pages give `CloseButton` (item 258). */}
-      {title || showClose ? (
-        <div className="flex items-center gap-1">
-          {showClose ? (
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={onClose}
-              className={`${ICON_BUTTON_CLASSES} ${ICON_BUTTON_EDGE_INSET}`}
-            >
-              <CloseGlyph />
-            </button>
-          ) : null}
-          {title ? <h2 className="font-h2 min-w-0 text-[var(--color-text)]">{title}</h2> : null}
-        </div>
-      ) : null}
+      {/* Item 737: the handle and header row stay pinned while a long body
+          scrolls, so the X never leaves the screen. Sticky inside the panel's
+          own scroll (never position: fixed, which iOS mis-places), with the
+          panel's top padding moved inside it (pt-4) so it pins at the very
+          top edge in every engine. At rest it lays out exactly as before.
+          Below it, a 12px fade (after:) keeps scrolled text from being sliced
+          right under the title; it takes no taps, so HowToLink's 44px target,
+          which reaches 12px up into the gap (-my-3), still gets them. At rest
+          it only covers that empty gap, in the panel's own color.
+          scroll-pt-28 (taller than a two-line header) keeps a focused field
+          from scrolling in under it. */}
+      <div
+        data-sheet-header=""
+        className="sticky top-0 z-10 -mx-4 flex shrink-0 flex-col gap-3 bg-[var(--color-bg-elevated)] px-4 pt-4 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-3 after:bg-linear-to-b after:from-[var(--color-bg-elevated)] after:to-transparent"
+      >
+        <div className="mx-auto h-1.5 w-10 shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-border)]" aria-hidden="true" />
+        {/* The close X sits at the LEFT of the header row, before the title —
+            the same slot and footprint pages give `CloseButton` (item 258). */}
+        {title || showClose ? (
+          <div className="flex items-center gap-1">
+            {showClose ? (
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={onClose}
+                className={`${ICON_BUTTON_CLASSES} ${ICON_BUTTON_EDGE_INSET}`}
+              >
+                <CloseGlyph />
+              </button>
+            ) : null}
+            {title ? <h2 className="font-h2 min-w-0 text-[var(--color-text)]">{title}</h2> : null}
+          </div>
+        ) : null}
+      </div>
       {children}
     </div>
   );
