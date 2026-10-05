@@ -278,6 +278,22 @@ describe("dark guide screenshots", () => {
     }
   });
 
+  // Item 738: the three shots whose UI changed in 736 were retaken at the
+  // committed crop (located against the old light image), so their framing,
+  // and so their size, is what it was.
+  it("keeps the retaken 736 shots at their original crop size", () => {
+    const expected: Record<string, number[]> = {
+      "meal-3-stars": [780, 328],
+      "serve-2-stars": [780, 220],
+      "serve-3-notes": [780, 444],
+    };
+    for (const [name, dims] of Object.entries(expected)) {
+      for (const file of [`${name}.webp`, `${name}-dark.webp`]) {
+        expect(size(path.join(repoRoot, "client/public/guides", file)), file).toEqual(dims);
+      }
+    }
+  });
+
   it("follows the OS through a <source> media query when the app is on System", () => {
     const html = render("![A screenshot of the form](/guides/x-1-y.webp)");
     expect(html).toContain(
