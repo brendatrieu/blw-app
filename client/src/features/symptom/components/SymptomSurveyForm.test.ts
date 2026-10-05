@@ -44,9 +44,22 @@ describe("SymptomSurveyForm (render)", () => {
     expect(html).not.toContain('class="text-xs font-medium text-[var(--color-text-muted)]"');
     for (const label of ["Where on the body?", "Anything else you noticed?"]) {
       expect(html).toContain(
-        `class="text-xs font-medium text-[var(--color-text)]">${label}<!-- --> <span class="font-normal text-[var(--color-text-muted)]">(optional)</span>`,
+        `class="text-sm font-medium text-[var(--color-text)]">${label}<!-- --> <span class="font-normal text-[var(--color-text-muted)]">(optional)</span>`,
       );
     }
+  });
+
+  // Item 742: every question label is the standard form label size (Field's
+  // text-sm font-medium), the same as "What are you seeing?". None stays 12px.
+  it("sizes all five question labels like a Field label", () => {
+    const html = renderForm();
+    expect(html).toContain('<legend class="text-sm font-medium text-[var(--color-text)]">What are you seeing?</legend>');
+    for (const label of ["How bad is it?", "When did it start?", "How long after the last meal did it start?"]) {
+      expect(html).toContain(`<span class="text-sm font-medium text-[var(--color-text)]">${label}</span>`);
+    }
+    expect(html).toContain('<legend class="text-sm font-medium text-[var(--color-text)]">Where on the body?<!-- -->');
+    expect(html).toContain('<span class="text-sm font-medium text-[var(--color-text)]">Anything else you noticed?<!-- -->');
+    expect(html).not.toContain('class="text-xs font-medium text-[var(--color-text)]"');
   });
 
   // Item 235: the submit stays enabled with nothing ticked, so a tap can say

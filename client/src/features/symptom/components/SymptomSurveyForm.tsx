@@ -165,7 +165,7 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
       </fieldset>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text)]">How bad is it?</span>
+        <span className="text-sm font-medium text-[var(--color-text)]">How bad is it?</span>
         <select
           value={severity}
           onChange={(event) => setSeverity(event.target.value as Severity)}
@@ -180,14 +180,14 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text)]">When did it start?</span>
+        <span className="text-sm font-medium text-[var(--color-text)]">When did it start?</span>
         {/* The server rejects an onset more than 14 days back — don't offer
             wheel rows that can only produce a 400. */}
         <DateTimeField value={onsetAt} onChange={setOnsetAt} daysBack={14} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text)]">
+        <span className="text-sm font-medium text-[var(--color-text)]">
           How long after the last meal did it start?
         </span>
         <select
@@ -204,7 +204,7 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
       </label>
 
       <fieldset className="flex flex-col gap-1.5">
-        <legend className="text-xs font-medium text-[var(--color-text)]">
+        <legend className="text-sm font-medium text-[var(--color-text)]">
           <OptionalLabel label="Where on the body? (optional)" />
         </legend>
         <div className="flex flex-wrap gap-1.5">
@@ -230,7 +230,7 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
       </fieldset>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-xs font-medium text-[var(--color-text)]">
+        <span className="text-sm font-medium text-[var(--color-text)]">
           <OptionalLabel label="Anything else you noticed? (optional)" />
         </span>
         <textarea
