@@ -53,6 +53,7 @@ vi.mock("../hooks.js", async (importOriginal) => {
 });
 
 import { EditStorageItemForm } from "./EditStorageItemForm.js";
+import { FoodPicker } from "../../catalog/components/FoodPicker.js";
 
 interface Rendered {
   type: unknown;
@@ -86,6 +87,20 @@ function render(item: StorageItem): Rendered {
   return (EditStorageItemForm as unknown as (props: unknown) => Rendered)({ item, onDone: () => {} });
 }
 
+/** Depth-first search of the returned element tree (children are not rendered). */
+function find(node: unknown, match: (el: Rendered) => boolean): Rendered | undefined {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const hit = find(child, match);
+      if (hit) return hit;
+    }
+    return undefined;
+  }
+  if (!node || typeof node !== "object" || !("props" in node)) return undefined;
+  const el = node as Rendered;
+  return match(el) ? el : find(el.props.children, match);
+}
+
 function submit(tree: Rendered): UpdateStorageItemInput {
   (tree.props.onSubmit as (event: { preventDefault: () => void }) => void)({ preventDefault: () => {} });
   expect(h.updated).toHaveLength(1);
@@ -107,5 +122,29 @@ describe("EditStorageItemForm untouched Save after a refetch (B2, item 729)", ()
     render(soup);
     const input = submit(render({ ...soup, label: "Lentil soup" }));
     expect(input).not.toHaveProperty("label");
+  });
+});
+
+// B3 (item 729): a real edit has to reach the PATCH. Without these, a picker
+// whose onChange went nowhere, or a submit that always passed the seed, still
+// passed every test while silently dropping the parent's change.
+describe("EditStorageItemForm real contents edits reach the PATCH (B3, item 729)", () => {
+  it("sends the new food list after foods are added and removed in the picker", () => {
+    h.reset();
+    const picker = find(render(ITEM), (el) => el.type === FoodPicker);
+    expect(picker).toBeDefined();
+    (picker!.props.onChange as (ids: string[]) => void)(["broccoli", "peas"]);
+    const input = submit(render(ITEM));
+    expect(input.foodIds).toEqual(["broccoli", "peas"]);
+  });
+
+  it("sends the trimmed new name after a Free-form item is renamed", () => {
+    h.reset();
+    const soup = { ...ITEM, foods: [], label: "Soup" };
+    const name = find(render(soup), (el) => el.props.id === "storage-edit-label");
+    expect(name).toBeDefined();
+    (name!.props.onChange as (event: { target: { value: string } }) => void)({ target: { value: "  Lentil soup  " } });
+    const input = submit(render(soup));
+    expect(input.label).toBe("Lentil soup");
   });
 });
