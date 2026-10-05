@@ -7,7 +7,6 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getGuide, getSafetyArticle, guideArticles, safetyArticles } from "./content.js";
 import { Markdown } from "../../lib/markdown/Markdown.js";
-import { resolveStorageItemMenuActions } from "../storage/format.js";
 
 const EXPECTED_SLUGS = [
   "gagging-vs-choking",
@@ -105,13 +104,22 @@ describe("how-to guides (item 601)", () => {
     }
   });
 
-  it("add-to-storage step 1 only asks for Done on the multi-select food path (the recipe picker closes on tap)", () => {
-    const body = getGuide("how-to-add-to-storage")?.body ?? "";
-    const step1 = body.split(/^## /m).find((s) => s.startsWith("1. ")) ?? "";
-    expect(step1).toContain("The recipe list closes by itself.");
-    expect(step1).toMatch(/For foods you can pick several, then tap \*\*Done\*\*\./);
-    expect(step1).not.toContain("tap your pick, then tap **Done**");
-    expect(body).toContain("Use within 90d");
+  // Item 732: owner-approved step text, word for word.
+  it("add-to-storage steps 1, 2 and 4 and log-a-meal's stars step read exactly as approved", () => {
+    const steps = (slug: string) => (getGuide(slug)?.body ?? "").split(/^## /m);
+    const storage = steps("how-to-add-to-storage");
+    expect(storage.find((s) => s.startsWith("1. "))).toContain(
+      "\n\nPick what you're storing: a food or a recipe. Search and tap your pick, or several foods for a mixed container. If a food isn't in the list, the search offers to add it as a custom food.\n\n",
+    );
+    expect(storage.find((s) => s.startsWith("2. "))).toContain(
+      "\n\nTap **Fridge**, **Freezer**, or **Counter**. Change the prepared time if you made it earlier.\n\n",
+    );
+    expect(storage.find((s) => s.startsWith("4. "))).toContain(
+      "\n\nWhen complete, your item is listed on the **Storage** page with the servings left and when to use it by.\n\n",
+    );
+    expect(getGuide("how-to-add-to-storage")?.body).toContain("Use within 90d");
+    const stars = steps("how-to-log-a-meal").find((s) => s.startsWith("3. ")) ?? "";
+    expect(stars).toContain("\n\nTap one to five stars, five for a big hit.\n\n");
   });
 
   // Item 725: a guide is opened from the form it explains (its HowToLink) or
@@ -144,17 +152,9 @@ describe("how-to guides (item 601)", () => {
     }
   });
 
-  it("add-to-storage warns that Free-form items have no Serve (label-only items withhold it)", () => {
-    // The add-to-storage guide offers Free-form; resolveStorageItemMenuActions
-    // gives a label-only item only Edit and Remove, so the step that offers
-    // it says so (item 725; it used to sit in the serve guide's retired step 1).
-    expect(resolveStorageItemMenuActions({ status: "active", foods: [], recipeTitle: null }).serve).toBe(false);
-    const body = getGuide("how-to-add-to-storage")?.body ?? "";
-    const step1 = body.split(/^## /m).find((s) => s.startsWith("1. ")) ?? "";
-    expect(step1).toContain(
-      "For foods you can pick several, then tap **Done**. **Free-form** items can't be served, so tap **Remove** when they're used up.",
-    );
-    expect(getGuide("how-to-serve-from-storage")?.body).not.toContain("Free-form");
+  // Item 731: Add to storage no longer offers Free-form, so no guide does.
+  it("no guide mentions Free-form", () => {
+    for (const guide of guideArticles) expect(guide.body, guide.slug).not.toContain("Free-form");
   });
 
   it("renders every screenshot as an <img> with its alt text", () => {
