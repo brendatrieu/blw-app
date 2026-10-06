@@ -649,9 +649,12 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(html).not.toMatch(/sr-only[^>]*>[^<]*<span[^>]*>3<!-- --> established/);
     });
 
+    /** The ring's stroke tokens, clockwise from the top. */
+    const strokesOf = (html: string) => [...html.matchAll(/<circle [^>]*stroke="var\(--color-([\w-]+)\)"/g)].map((m) => m[1]);
+
     it("colors 9 segments: established, then started, then empty", () => {
       const html = render({ allergens: ladder });
-      const strokes = [...html.matchAll(/<circle [^>]*stroke="var\(--color-ring-(\w+)\)"/g)].map((m) => m[1]);
+      const strokes = strokesOf(html).map((token) => token!.replace(/^ring-/, ""));
       expect(strokes).toEqual([
         "established",
         "established",
@@ -663,6 +666,57 @@ describe("DashboardPage Today layout (items 660-664)", () => {
         "empty",
         "empty",
       ]);
+    });
+    describe("due for a serve (item 747)", () => {
+      // 9 allergens: 9 established, 2 of them past their maintenance week.
+      const allDone = ["peanut", "egg", "milk", "wheat", "soy", "fish", "shellfish", "tree_nut"].map((slug) => allergen(slug, 1));
+      const twoDue = [...allDone.slice(0, 7), due("sesame"), due("tree_nut")];
+      const dueLine = (n: number) =>
+        `<span class="flex items-center gap-1.5 text-[var(--color-text-muted)]"><span aria-hidden="true" class="size-2 shrink-0 rounded-full bg-[var(--color-apricot-graphic)]"></span>${n} due for a serve</span>`;
+
+      it("draws due segments in apricot after the not-due established ones, before started and empty", () => {
+        const mixed = [allergen("peanut", 1), due("egg"), allergen("milk", 2), allergen("wheat", 2, "started"), { ...allergen("fish", 0, "not_started"), exposures: 0 }];
+        expect(strokesOf(render({ allergens: mixed }))).toEqual([
+          "ring-established",
+          "ring-established",
+          "apricot-graphic",
+          "ring-started",
+          "ring-empty",
+          "ring-empty",
+          "ring-empty",
+          "ring-empty",
+          "ring-empty",
+        ]);
+        expect(strokesOf(render({ allergens: twoDue }))).toEqual([...Array(7).fill("ring-established"), "apricot-graphic", "apricot-graphic"]);
+      });
+
+      it("adds 'N due for a serve' with an apricot dot between the counts, and says it in the ring's label", () => {
+        const html = render({ allergens: twoDue });
+        expect(html).toContain(
+          `<span class="text-base font-bold text-[var(--color-text)]">9<!-- --> established</span>${dueLine(2)}<span class="text-[var(--color-text-muted)]">0<!-- --> started`,
+        );
+        expect(html).toContain('aria-label="9 of 9 allergens established, 2 due for a serve, 0 started"');
+        // The center still reads established/9.
+        expect(html).toContain('<span class="text-xl font-extrabold tabular-nums text-[var(--color-text)]">9<!-- -->/<!-- -->9</span>');
+        expect(render({ allergens: [due("egg"), allergen("milk", 1)] })).toContain(dueLine(1));
+        expect(render({ allergens: [due("egg"), allergen("milk", 1)] })).toContain(
+          'aria-label="2 of 9 allergens established, 1 due for a serve, 0 started"',
+        );
+      });
+
+      it("shows no due line, no apricot and the old label when nothing is due", () => {
+        const html = render({ allergens: ladder });
+        expect(html).not.toContain("due for a serve");
+        expect(html).not.toContain("apricot-graphic");
+        expect(html).toContain('aria-label="3 of 9 allergens established, 2 started"');
+      });
+
+      it("does not count a row paused for a reaction as due (Up next's rule)", () => {
+        const paused = { ...due("egg"), reactionNotedAt: agoIso(ALLERGEN_MAINTENANCE_DAYS + 2) };
+        const html = render({ allergens: [paused, due("milk"), allergen("peanut", 1)] });
+        expect(html).toContain(dueLine(1));
+        expect(strokesOf(html).slice(0, 3)).toEqual(["ring-established", "ring-established", "apricot-graphic"]);
+      });
     });
   });
 

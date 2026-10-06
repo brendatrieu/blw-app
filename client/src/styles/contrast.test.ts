@@ -518,10 +518,12 @@ describe("food plates (items 657, 658)", () => {
 
 describe("Home allergen ring segments (items 663, 697)", () => {
   // The ring is supplementary: the counts are always text beside it
-  // ("3 established", "3 started · 3 not started yet"; pinned in
-  // DashboardPage.test.ts), so its segments are exempt from the 3:1
-  // graphics gate and use the A-Home mockup's colors (owner, item 697).
+  // ("3 established", "2 due for a serve", "3 started · 3 not started yet";
+  // pinned in DashboardPage.test.ts), so its segments are exempt from the
+  // 3:1 graphics gate and use the A-Home mockup's colors (owner, item 697).
   // Keep that text if the ring ever changes, or this exemption is wrong.
+  // The due segments (item 747) are --color-apricot-graphic, pinned above;
+  // the "N due for a serve" line names them whenever any are drawn.
 
   // Both modes are the A-Home / A-Home-Dark mockups exactly.
   const EXPECTED: Record<string, { light: string; dark: string }> = {

@@ -119,8 +119,10 @@
 
   /* ---- Home's 9-segment allergen ring (item 663). The A-Home mockup's
      colors (item 697, owner's call). The ring is supplementary: the same
-     counts are always written beside it ("3 established", "3 started · 3
-     not started yet"), so it is exempt from the 3:1 graphics gate. ---- */
+     counts are always written beside it ("3 established", "2 due for a
+     serve", "3 started · 3 not started yet"), so it is exempt from the 3:1
+     graphics gate. Due segments (item 747) reuse --color-apricot-graphic,
+     with a matching dot on the "N due for a serve" line. ---- */
   --color-ring-established: #7cc6a0;
   --color-ring-started: #f2c66d;
   --color-ring-empty: #e8e2da;
