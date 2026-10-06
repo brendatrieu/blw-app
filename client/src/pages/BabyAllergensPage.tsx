@@ -104,9 +104,10 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
  * new ladder status fails typecheck here instead of dropping off the page. */
 const STATUS_SECTIONS: Record<AllergenStatus, true> = { started: true, not_started: true, established: true };
 
-/** The muted line under "Due for a serve" (item 746): why a serve is due,
- * without saying a week is enough or required. */
-export const DUE_SECTION_HINT =
+/** Why an established allergen comes back as "Due for a serve" (items 746,
+ * 748): in the page's notes, so it shows whether or not anything is due, and
+ * worded so a week is neither "enough" nor "required" — it's when we remind. */
+export const LADDER_REGULAR_SERVE_COPY =
   "Serving allergens regularly helps keep them in your baby's diet. We'll remind you when it's been a week since the last serve.";
 
 export function BabyAllergensPage() {
@@ -120,11 +121,10 @@ export function BabyAllergensPage() {
   const due = dueAllergens(items);
   const notDue = items.filter((item) => !due.includes(item));
   const sections = [
-    { key: "due", title: "Due for a serve", hint: DUE_SECTION_HINT, items: due },
+    { key: "due", title: "Due for a serve", items: due },
     ...(Object.keys(STATUS_SECTIONS) as AllergenStatus[]).map((status) => ({
       key: status,
       title: ALLERGEN_STATUS_LABEL[status],
-      hint: null,
       items: notDue.filter((item) => item.status === status),
     })),
   ].filter((section) => section.items.length > 0);
@@ -137,7 +137,7 @@ export function BabyAllergensPage() {
         leading={<BackButton fallback="/" />}
         description={
           <>
-            {ALLERGEN_RULE_COPY}
+            {ALLERGEN_RULE_COPY} {LADDER_REGULAR_SERVE_COPY}
             <span className="mt-1 block">Already established? Mark it so your progress reflects it.</span>
           </>
         }
@@ -153,7 +153,6 @@ export function BabyAllergensPage() {
               <h2 id={`ladder-${section.key}`} className="font-h2 text-[var(--color-text)]">
                 {section.title}
               </h2>
-              {section.hint && <p className="text-sm text-[var(--color-text-muted)]">{section.hint}</p>}
               <ul className="flex flex-col gap-2">
                 {section.items.map((item) => (
                   <AllergenRow key={item.allergenSlug} item={item} babyId={babyId} />
