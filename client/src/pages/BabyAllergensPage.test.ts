@@ -401,6 +401,27 @@ describe("BabyAllergensPage sections", () => {
     expect(html).not.toContain("Due for a serve");
   });
 
+  it("explains 'Due for a serve' in one muted line under its title, only while that section shows (item 746)", () => {
+    const hint =
+      "Serving allergens regularly helps keep them in your baby&#x27;s diet. We&#x27;ll remind you when it&#x27;s been a week since the last serve.";
+    const html = renderWithItems([
+      named("wheat", "Wheat", servedDaysAgo(9)),
+      named("fish", "Fish", item({ status: "started", exposures: 1 })),
+      named("milk", "Milk", servedDaysAgo(1)),
+    ]);
+    expect(html).toContain(
+      `<h2 id="ladder-due" class="font-h2 text-[var(--color-text)]">Due for a serve</h2><p class="text-sm text-[var(--color-text-muted)]">${hint}</p><ul`,
+    );
+    expect(html.split(hint).length - 1).toBe(1);
+    // No due rows (a reaction-paused overdue row is not due): no section, no line.
+    const none = renderWithItems([
+      named("egg", "Egg", { ...servedDaysAgo(10), reactionNotedAt: agoIso(10) }),
+      named("milk", "Milk", servedDaysAgo(1)),
+    ]);
+    expect(none).not.toContain("Due for a serve");
+    expect(none).not.toContain("Serving allergens regularly");
+  });
+
   it("spaces its sections 24px apart (item 649)", () => {
     const html = renderWithItems([
       named("milk", "Milk", item({ status: "not_started" })),

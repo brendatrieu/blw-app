@@ -104,6 +104,11 @@ function AllergenRow({ item, babyId }: { item: AllergenProgressItem; babyId: str
  * new ladder status fails typecheck here instead of dropping off the page. */
 const STATUS_SECTIONS: Record<AllergenStatus, true> = { started: true, not_started: true, established: true };
 
+/** The muted line under "Due for a serve" (item 746): why a serve is due,
+ * without saying a week is enough or required. */
+export const DUE_SECTION_HINT =
+  "Serving allergens regularly helps keep them in your baby's diet. We'll remind you when it's been a week since the last serve.";
+
 export function BabyAllergensPage() {
   const { id: babyId } = useParams<{ id: string }>();
   const { data, isLoading, isError } = useAllergenProgress(babyId);
@@ -115,10 +120,11 @@ export function BabyAllergensPage() {
   const due = dueAllergens(items);
   const notDue = items.filter((item) => !due.includes(item));
   const sections = [
-    { key: "due", title: "Due for a serve", items: due },
+    { key: "due", title: "Due for a serve", hint: DUE_SECTION_HINT, items: due },
     ...(Object.keys(STATUS_SECTIONS) as AllergenStatus[]).map((status) => ({
       key: status,
       title: ALLERGEN_STATUS_LABEL[status],
+      hint: null,
       items: notDue.filter((item) => item.status === status),
     })),
   ].filter((section) => section.items.length > 0);
@@ -147,6 +153,7 @@ export function BabyAllergensPage() {
               <h2 id={`ladder-${section.key}`} className="font-h2 text-[var(--color-text)]">
                 {section.title}
               </h2>
+              {section.hint && <p className="text-sm text-[var(--color-text-muted)]">{section.hint}</p>}
               <ul className="flex flex-col gap-2">
                 {section.items.map((item) => (
                   <AllergenRow key={item.allergenSlug} item={item} babyId={babyId} />
