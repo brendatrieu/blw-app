@@ -25,11 +25,10 @@ import { choosableFoodsCondition } from "../services/foods.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import { deriveIronFocus, loadRecipeNutrition, nutritionFor } from "../services/recipeNutrition.js";
 import {
+  containerWindowHours,
   deriveFreshness,
-  loadRecipeIngredientCategories,
-  loadStorageGuidelines,
+  loadContainerRecipes,
   loadStorageItemFoods,
-  resolveStorageWindowHours,
 } from "../services/storage.js";
 
 // ---------------------------------------------------------------------------
@@ -161,35 +160,20 @@ function buildStorageTool(db: Database, userId: string) {
         db,
         rows.map((row) => row.id),
       );
-      const categoryByRecipeId = await loadRecipeIngredientCategories(db, [
-        ...new Set(
-          rows.filter((row) => !foodsByItemId.has(row.id) && row.recipeId).map((row) => row.recipeId as string),
-        ),
-      ]);
-      const categoriesFor = (row: (typeof rows)[number]): string[] => {
-        const itemFoods = foodsByItemId.get(row.id);
-        if (itemFoods && itemFoods.length > 0) return itemFoods.map((food) => food.storageCategory);
-        const fromRecipe = row.recipeId ? categoryByRecipeId.get(row.recipeId) : undefined;
-        return fromRecipe ? [fromRecipe] : [];
-      };
-      const guidelineByCategory = await loadStorageGuidelines(db, [...new Set(rows.flatMap(categoriesFor))]);
+      const recipesByItemId = await loadContainerRecipes(db, rows);
+      const windowByItemId = await containerWindowHours(db, rows, foodsByItemId, recipesByItemId);
 
       const now = Date.now();
       const items = rows.map((row) => {
-        const windowHours = resolveStorageWindowHours(
-          {
-            location: row.location,
-            categories: categoriesFor(row),
-            recipeOverrides: { fridgeHours: row.recipeFridgeHoursOverride, freezerDays: row.recipeFreezerOverride },
-          },
-          guidelineByCategory,
-        );
+        const windowHours = windowByItemId.get(row.id) as number;
         // Same order, and the same joined name, the card's title uses — so
-        // the model and the screen call one container one thing.
+        // the model and the screen call one container one thing. A container
+        // of several recipes (ledger 753) names them all, " + " joined.
         const joinedFoodNames = (foodsByItemId.get(row.id) ?? []).map((food) => food.name).join(", ");
+        const recipeNames = (recipesByItemId.get(row.id) ?? []).map((recipe) => recipe.title).join(" + ");
 
         return {
-          name: row.label ?? row.recipeTitle ?? (joinedFoodNames || "prepared item"),
+          name: row.label ?? (recipeNames || joinedFoodNames || "prepared item"),
           location: row.location,
           // The parent's own best-by date, when set, overrides the window —
           // exactly as it does on the card.

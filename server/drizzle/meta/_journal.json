@@ -148,6 +148,13 @@
       "when": 1791384990891,
       "tag": "0020_meal_recipes",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791403377105,
+      "tag": "0021_storage_item_recipes",
+      "breakpoints": true
     }
   ]
 }

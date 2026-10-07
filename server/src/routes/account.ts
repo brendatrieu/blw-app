@@ -46,7 +46,7 @@ import {
   userPreferences,
 } from "../db/schema.js";
 import { loadMealRecipeRows } from "../services/meals.js";
-import { loadStorageItemFoods } from "../services/storage.js";
+import { loadContainerRecipes, loadStorageItemFoods } from "../services/storage.js";
 
 /**
  * Deletion verifies a password, which makes it a credential oracle. The
@@ -274,6 +274,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       db,
       storageRows.map((row) => row.id),
     );
+    const storageRecipesByItemId = await loadContainerRecipes(db, storageRows);
 
     // Foods this account added itself. Only the fields the parent chose:
     // the curated columns on a custom row are inert placeholders the app
@@ -492,6 +493,10 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         foods: (storageFoodsByItemId.get(row.id) ?? []).map((food) => ({ foodId: food.id, foodName: food.name })),
         recipeId: row.recipeId,
         recipeTitle: row.recipeTitle,
+        recipes: (storageRecipesByItemId.get(row.id) ?? []).map((recipe) => ({
+          recipeId: recipe.id,
+          recipeTitle: recipe.title,
+        })),
         label: row.label,
         preparedAt: row.preparedAt.toISOString(),
         location: row.location,
@@ -680,7 +685,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       // CASCADE chain, so one delete takes it all:
       //   user -> babies -> meals -> meal_foods, meal_recipes, meal_storage_items
       //   user -> babies -> symptom_checks
-      //   user -> storage_items -> meal_storage_items
+      //   user -> storage_items -> meal_storage_items, storage_item_recipes
       //   user -> babies -> allergen_overrides
       //   user -> favorites, storage_items, user_ai_keys, user_preferences
       //   user -> usage_events                (anonymous, but still theirs)

@@ -11,7 +11,15 @@ import { and, asc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import type { StorageItemFood, StorageLocation } from "@blw/shared";
 import type { Database } from "../db/index.js";
 import type { Transaction } from "./meals.js";
-import { foods, recipeIngredients, storageGuidelines, storageItemFoods, storageItems } from "../db/schema.js";
+import {
+  foods,
+  recipeIngredients,
+  recipes,
+  storageGuidelines,
+  storageItemFoods,
+  storageItemRecipes,
+  storageItems,
+} from "../db/schema.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -74,6 +82,142 @@ export async function loadStorageItemFoods(
     else byItemId.set(row.storageItemId, [row]);
   }
   return byItemId;
+}
+
+/** A recipe a container was made from, with its own window overrides. */
+export interface ContainerRecipe {
+  id: string;
+  title: string;
+  fridgeHoursOverride: number | null;
+  freezerDaysOverride: number | null;
+}
+
+/** The columns of a container row (joined to its `recipe_id` recipe) that
+ * `loadContainerRecipes` and `containerWindowHours` read. */
+export interface ContainerRow {
+  id: string;
+  recipeId: string | null;
+  recipeTitle: string | null;
+  recipeFridgeHoursOverride: number | null;
+  recipeFreezerOverride: number | null;
+  location: StorageLocation;
+}
+
+/**
+ * Every recipe each container was made from, in the parent's order: the
+ * `storage_item_recipes` rows of a several-recipe container (ledger 753), or
+ * else its one `recipe_id`, or none. One query for the whole list.
+ */
+export async function loadContainerRecipes(
+  db: Database | Transaction,
+  rows: readonly (Pick<ContainerRow, "id" | "recipeId" | "recipeTitle"> &
+    Partial<Pick<ContainerRow, "recipeFridgeHoursOverride" | "recipeFreezerOverride">>)[],
+): Promise<Map<string, ContainerRecipe[]>> {
+  const several = new Map<string, ContainerRecipe[]>();
+  if (rows.length > 0) {
+    const joined = await db
+      .select({
+        storageItemId: storageItemRecipes.storageItemId,
+        id: recipes.id,
+        title: recipes.title,
+        fridgeHoursOverride: recipes.fridgeHoursOverride,
+        freezerDaysOverride: recipes.freezerDaysOverride,
+      })
+      .from(storageItemRecipes)
+      .innerJoin(recipes, eq(storageItemRecipes.recipeId, recipes.id))
+      .where(
+        inArray(
+          storageItemRecipes.storageItemId,
+          rows.map((row) => row.id),
+        ),
+      )
+      .orderBy(asc(storageItemRecipes.position), asc(storageItemRecipes.recipeId));
+    for (const { storageItemId, ...recipe } of joined) {
+      const list = several.get(storageItemId);
+      if (list) list.push(recipe);
+      else several.set(storageItemId, [recipe]);
+    }
+  }
+  return new Map(
+    rows.map((row) => [
+      row.id,
+      several.get(row.id) ??
+        (row.recipeId
+          ? [
+              {
+                id: row.recipeId,
+                title: row.recipeTitle ?? "",
+                fridgeHoursOverride: row.recipeFridgeHoursOverride ?? null,
+                freezerDaysOverride: row.recipeFreezerOverride ?? null,
+              },
+            ]
+          : []),
+    ]),
+  );
+}
+
+/**
+ * How many hours each container is good for — the one rule the storage cards
+ * and the AI `get_storage` tool share. A container with foods of its own
+ * resolves from every food (with its recipe's overrides, as it always did);
+ * one made from recipes resolves each recipe from its first ingredient and its
+ * own overrides, and the SHORTEST window wins, as it does across foods.
+ */
+export async function containerWindowHours(
+  db: Database,
+  rows: readonly ContainerRow[],
+  foodsByItemId: ReadonlyMap<string, StorageItemFoodRow[]>,
+  recipesByItemId: ReadonlyMap<string, ContainerRecipe[]>,
+): Promise<Map<string, number>> {
+  const recipeOnly = rows.filter((row) => !foodsByItemId.get(row.id)?.length);
+  const categoryByRecipeId = await loadRecipeIngredientCategories(db, [
+    ...new Set(recipeOnly.flatMap((row) => (recipesByItemId.get(row.id) ?? []).map((recipe) => recipe.id))),
+  ]);
+  const categoriesOf = (row: ContainerRow): string[] => {
+    const itemFoods = foodsByItemId.get(row.id);
+    if (itemFoods?.length) return itemFoods.map((food) => food.storageCategory);
+    return (recipesByItemId.get(row.id) ?? []).flatMap((recipe) => {
+      const category = categoryByRecipeId.get(recipe.id);
+      return category ? [category] : [];
+    });
+  };
+  const guidelineByCategory = await loadStorageGuidelines(db, [...new Set(rows.flatMap(categoriesOf))]);
+
+  return new Map(
+    rows.map((row) => {
+      const itemFoods = foodsByItemId.get(row.id);
+      const recipeList = recipesByItemId.get(row.id) ?? [];
+      if (itemFoods?.length || recipeList.length <= 1) {
+        return [
+          row.id,
+          resolveStorageWindowHours(
+            {
+              location: row.location,
+              categories: categoriesOf(row),
+              recipeOverrides: { fridgeHours: row.recipeFridgeHoursOverride, freezerDays: row.recipeFreezerOverride },
+            },
+            guidelineByCategory,
+          ),
+        ];
+      }
+      return [
+        row.id,
+        Math.min(
+          ...recipeList.map((recipe) => {
+            const category = categoryByRecipeId.get(recipe.id);
+            return resolveStorageWindowHours(
+              {
+                location: row.location,
+                categories: category ? [category] : [],
+                recipeOverrides: { fridgeHours: recipe.fridgeHoursOverride, freezerDays: recipe.freezerDaysOverride },
+              },
+              guidelineByCategory,
+            );
+          }),
+        ),
+      ];
+    }),
+  );
 }
 
 /**

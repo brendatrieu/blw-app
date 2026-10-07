@@ -125,6 +125,10 @@ export const exportStorageItemSchema = z.object({
   foods: z.array(z.object({ foodId: z.string(), foodName: z.string() })),
   recipeId: z.string().nullable(),
   recipeTitle: z.string().nullable(),
+  /** v18 (ledger 753): every recipe the container was made from, in order;
+   * one container can hold the leftovers of several. `recipeId` /
+   * `recipeTitle` are the first. Empty for a food or label-only container. */
+  recipes: z.array(z.object({ recipeId: z.string(), recipeTitle: z.string() })),
   label: z.string().nullable(),
   preparedAt: z.string(),
   location: z.string(),

@@ -16,8 +16,10 @@ import {
   type MealItem,
   type ServeStorageItemResponse,
   type ServeStorageResponse,
+  type StorageItem,
 } from "@blw/shared";
 import { createTestApp, insertMeals, signUpUser, type TestUser } from "./helpers.js";
+import { buildChatTools } from "../ai/tools.js";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
 
@@ -503,5 +505,117 @@ describe("multi-part serve and servings back (ledger 753 + 751)", () => {
     });
     expect(deleted.statusCode).toBe(204);
     expect(await count(schema.mealStorageItems)).toBe(0);
+  });
+
+  describe("leftovers of a several-recipe meal (ledger 753, Q2)", () => {
+    const postStorage = (payload: Record<string, unknown>) =>
+      app.inject({
+        method: "POST",
+        url: "/api/storage",
+        headers: { cookie: parent.cookie },
+        payload: { location: "fridge", ...payload },
+      });
+    async function stored(payload: Record<string, unknown>): Promise<StorageItem[]> {
+      const response = await postStorage(payload);
+      if (response.statusCode !== 201) throw new Error(`storage create failed: ${response.body}`);
+      return response.json<CreateStorageItemResponse>().items;
+    }
+    async function parentId(): Promise<string> {
+      const [row] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, parent.email));
+      return row!.id;
+    }
+
+    it("saves ONE container holding every recipe in order, or one container per recipe", async () => {
+      const [one, ...rest] = await stored({ recipeIds: [fx.porridge.id, fx.pancakes.id, fx.porridge.id], servingsTotal: 4 });
+      expect(rest).toEqual([]);
+      // The first recipe is the container's recipe, so the shipped app still
+      // sees a recipe container.
+      expect(one).toMatchObject({ recipeId: fx.porridge.id, recipeTitle: "Porridge", foods: [], servingsLeft: 4 });
+      expect(one!.recipes).toEqual([
+        { id: fx.porridge.id, title: "Porridge" },
+        { id: fx.pancakes.id, title: "Pancakes" },
+      ]);
+
+      const separate = await stored({ recipeIds: [fx.porridge.id, fx.pancakes.id], separateItems: true, servingsTotal: 2 });
+      expect(separate.map((item) => [item.recipeTitle, item.recipes, item.servingsTotal])).toEqual([
+        ["Porridge", [{ id: fx.porridge.id, title: "Porridge" }], 2],
+        ["Pancakes", [{ id: fx.pancakes.id, title: "Pancakes" }], 2],
+      ]);
+      // A one-recipe container needs no extra rows.
+      expect((await db.select().from(schema.storageItemRecipes)).length).toBe(2);
+    });
+
+    it("400s recipeIds with foods or with recipeId, an unknown recipe, and another account's recipe", async () => {
+      expect((await postStorage({ recipeIds: [fx.pancakes.id], foodIds: [fx.pear.id] })).statusCode).toBe(400);
+      expect((await postStorage({ recipeIds: [fx.pancakes.id], recipeId: fx.porridge.id })).statusCode).toBe(400);
+      const unknown = "00000000-0000-4000-8000-000000000000";
+      const response = await postStorage({ recipeIds: [fx.pancakes.id, unknown] });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toMatchObject({ details: { recipeIds: "unknown recipe", unknownRecipeIds: [unknown] } });
+      // The single-recipe shape keeps its old 400.
+      expect((await postStorage({ recipeId: unknown })).json()).toMatchObject({ details: { recipeId: "unknown recipe" } });
+
+      const stranger = await signUpUser(app);
+      const [strangerRow] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, stranger.email));
+      const [theirs] = await db
+        .insert(schema.recipes)
+        .values({ slug: "theirs", title: "Theirs", minAgeMonths: 6, prepMinutes: 5, ownerId: strangerRow!.id })
+        .returning();
+      expect((await postStorage({ recipeIds: [fx.pancakes.id, theirs!.id] })).statusCode).toBe(400);
+      expect((await db.select().from(schema.storageItems)).length).toBe(0);
+    });
+
+    it("serves every recipe in it, and gives it back only when an edit takes ALL of them off", async () => {
+      const [both] = await stored({ recipeIds: [fx.porridge.id, fx.pancakes.id], servingsTotal: 3 });
+      const result = await served({ babyId, parts: [{ storageItemId: both!.id }], foodIds: [fx.pear.id] });
+      expect(result.meal.recipes?.map((recipe) => recipe.title)).toEqual(["Porridge", "Pancakes"]);
+      expect(result.meal.foods.map((food) => [food.name, food.storageItemId])).toEqual([
+        ["Banana", both!.id],
+        ["Egg", both!.id],
+        ["Oats", both!.id],
+        ["Pear", null],
+      ]);
+
+      await patched(result.meal.id, { recipeIds: [fx.pancakes.id] });
+      expect(await box(both!.id)).toMatchObject({ left: 2 });
+      await patched(result.meal.id, { recipeIds: [] });
+      expect(await box(both!.id)).toMatchObject({ left: 3 });
+    });
+
+    it("gives it the shortest window of its recipes, on the card and in the AI tool", async () => {
+      const [quick] = await db
+        .insert(schema.recipes)
+        .values({ slug: "quick", title: "Quick Eggs", minAgeMonths: 6, prepMinutes: 5, fridgeHoursOverride: 6 })
+        .returning();
+      await db.insert(schema.recipeIngredients).values({ recipeId: quick!.id, foodId: fx.egg.id, quantityNote: "1" });
+      const preparedAt = new Date(Date.now() - 7 * 3600 * 1000);
+      const [both] = await stored({ recipeIds: [fx.porridge.id, quick!.id], preparedAt: preparedAt.toISOString() });
+      // Porridge alone would last the category's 48 h; Quick Eggs cuts it to 6.
+      expect(both).toMatchObject({ expired: true, expiresAt: new Date(preparedAt.getTime() + 6 * 3600 * 1000).toISOString() });
+
+      const tools = buildChatTools(db, await parentId(), null);
+      const items = JSON.parse(String(await tools.get_storage.run({}))).items as { name: string; expired: boolean }[];
+      expect(items).toEqual([expect.objectContaining({ name: "Porridge + Quick Eggs", expired: true })]);
+    });
+
+    it("blocks deleting a recipe a container names past its first, and exports every recipe", async () => {
+      const [mine] = await db
+        .insert(schema.recipes)
+        .values({ slug: "mine", title: "My Mash", minAgeMonths: 6, prepMinutes: 5, ownerId: await parentId() })
+        .returning();
+      const [both] = await stored({ recipeIds: [fx.porridge.id, mine!.id] });
+
+      const blocked = await app.inject({ method: "DELETE", url: `/api/recipes/${mine!.id}`, headers: { cookie: parent.cookie } });
+      expect(blocked.statusCode).toBe(409);
+      expect(blocked.json()).toMatchObject({ storageCount: 1 });
+
+      const exported = accountExportSchema.parse(
+        (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: parent.cookie } })).json(),
+      );
+      expect(exported.storageItems.find((item) => item.id === both!.id)?.recipes).toEqual([
+        { recipeId: fx.porridge.id, recipeTitle: "Porridge" },
+        { recipeId: mine!.id, recipeTitle: "My Mash" },
+      ]);
+    });
   });
 });

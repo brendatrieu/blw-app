@@ -186,8 +186,13 @@ describe("migration 0020 — meal_recipes + meal_storage_items", () => {
     expect(await mealRecipeRows(client)).toEqual(afterFirst);
     // No backfill for servings: what a past serve took was never stored.
     expect(await rows(client, `SELECT * FROM "meal_storage_items"`)).toEqual([]);
-    // drizzle recorded 0020 once.
-    expect(await rows(client, `SELECT count(*)::int AS "n" FROM "drizzle"."__drizzle_migrations"`)).toEqual([{ n: 21 }]);
+    // 0021 (ledger 753) is add-only with no backfill: no container holds two
+    // recipes before it.
+    expect(await rows(client, `SELECT * FROM "storage_item_recipes"`)).toEqual([]);
+    // drizzle recorded every migration once, 0020 and 0021 included.
+    expect(await rows(client, `SELECT count(*)::int AS "n" FROM "drizzle"."__drizzle_migrations"`)).toEqual([
+      { n: (await readJournal()).entries.length },
+    ]);
 
     // Every meal reads back through the API exactly as it did before 0020.
     const items = await loadMeals(db, view.map((row) => row.id as string));

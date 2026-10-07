@@ -37,17 +37,23 @@ import {
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
-import { babies, foods, mealStorageItems, storageItemFoods, storageItems, recipes } from "../db/schema.js";
+import {
+  babies,
+  foods,
+  mealStorageItems,
+  storageItemFoods,
+  storageItemRecipes,
+  storageItems,
+  recipes,
+} from "../db/schema.js";
 import { choosableFoodsCondition } from "../services/foods.js";
 import { ingredientUnion, insertMeal, loadIngredientFoodIds, loadMeals, ownsBaby } from "../services/meals.js";
 import { mapRecipeRequest, validateFoodIds, validateRatings, validateRecipeIds } from "./meals.js";
-import { visibleRecipesCondition } from "../services/recipes.js";
 import {
+  containerWindowHours,
   deriveFreshness,
-  loadRecipeIngredientCategories,
-  loadStorageGuidelines,
+  loadContainerRecipes,
   loadStorageItemFoods,
-  resolveStorageWindowHours,
 } from "../services/storage.js";
 
 function badRequest(reply: FastifyReply, details: unknown): FastifyReply {
@@ -139,38 +145,15 @@ async function hydrateStorageItems(db: Database, rows: StorageRow[]): Promise<St
     db,
     rows.map((row) => row.id),
   );
-
-  // Rows with no foods of their own but a recipe derive their category from
-  // that recipe's first ingredient.
-  const categoryByRecipeId = await loadRecipeIngredientCategories(db, [
-    ...new Set(
-      rows.filter((row) => !foodsByItemId.has(row.id) && row.recipeId).map((row) => row.recipeId as string),
-    ),
-  ]);
-
-  // Every food in the container speaks: the shortest window among them is
-  // what the item gets (`resolveStorageWindowHours`).
-  const categoriesFor = (row: StorageRow): string[] => {
-    const itemFoods = foodsByItemId.get(row.id);
-    if (itemFoods && itemFoods.length > 0) return itemFoods.map((food) => food.storageCategory);
-    const fromRecipe = row.recipeId ? categoryByRecipeId.get(row.recipeId) : undefined;
-    return fromRecipe ? [fromRecipe] : [];
-  };
-
-  const guidelineByCategory = await loadStorageGuidelines(db, [...new Set(rows.flatMap(categoriesFor))]);
+  const recipesByItemId = await loadContainerRecipes(db, rows);
+  // Every food (or recipe) in the container speaks: the shortest window
+  // among them is what the item gets.
+  const windowByItemId = await containerWindowHours(db, rows, foodsByItemId, recipesByItemId);
 
   const now = Date.now();
 
   return rows.map((row) => {
-    const windowHours = resolveStorageWindowHours(
-      {
-        location: row.location,
-        categories: categoriesFor(row),
-        recipeOverrides: { fridgeHours: row.recipeFridgeHoursOverride, freezerDays: row.recipeFreezerOverride },
-      },
-      guidelineByCategory,
-    );
-    const freshness = deriveFreshness(row.preparedAt, windowHours, now, row.bestBy);
+    const freshness = deriveFreshness(row.preparedAt, windowByItemId.get(row.id) as number, now, row.bestBy);
 
     const item: StorageItem = {
       id: row.id,
@@ -187,6 +170,9 @@ async function hydrateStorageItems(db: Database, rows: StorageRow[]): Promise<St
       })),
       recipeId: row.recipeId,
       recipeTitle: row.recipeTitle,
+      // Ledger 753: every recipe, in order (one container can hold the
+      // leftovers of several); `recipeId`/`recipeTitle` stay the first.
+      recipes: (recipesByItemId.get(row.id) ?? []).map((recipe) => ({ id: recipe.id, title: recipe.title })),
       preparedAt: row.preparedAt.toISOString(),
       location: row.location,
       status: row.status,
@@ -334,12 +320,27 @@ async function serveParts(db: Database, req: ServeRequest): Promise<string> {
     const recipeCheck = await validateRecipeIds(tx, freshRecipeIds, userId, "recipeIds");
     if (!recipeCheck.ok) throw new ServeAborted({ code: 400, details: recipeCheck.details });
 
-    // The meal's recipes: each container's recipe in `parts` order, then the
-    // fresh ones. Two containers of one recipe, or a fresh recipe that is
-    // also in storage, are ONE recipe on the meal (one star row).
-    const recipeIds = [
-      ...new Set([...locked.flatMap((row) => (row.recipeId ? [row.recipeId] : [])), ...freshRecipeIds]),
-    ];
+    // Each container's recipes: a several-recipe container's rows in order
+    // (ledger 753), else its one recipe.
+    const severalRows = await tx
+      .select({ storageItemId: storageItemRecipes.storageItemId, recipeId: storageItemRecipes.recipeId })
+      .from(storageItemRecipes)
+      .where(
+        inArray(
+          storageItemRecipes.storageItemId,
+          locked.map((row) => row.id),
+        ),
+      )
+      .orderBy(asc(storageItemRecipes.position), asc(storageItemRecipes.recipeId));
+    const recipesOf = (row: (typeof locked)[number]): string[] => {
+      const several = severalRows.filter((entry) => entry.storageItemId === row.id).map((entry) => entry.recipeId);
+      return several.length > 0 ? several : row.recipeId ? [row.recipeId] : [];
+    };
+
+    // The meal's recipes: each container's in `parts` order, then the fresh
+    // ones. Two containers of one recipe, or a fresh recipe that is also in
+    // storage, are ONE recipe on the meal (one star row).
+    const recipeIds = [...new Set([...locked.flatMap(recipesOf), ...freshRecipeIds])];
     if (recipeIds.length > MEAL_RECIPES_MAX) {
       throw new ServeAborted({ code: 400, details: { recipeIds: `at most ${MEAL_RECIPES_MAX} recipes per meal` } });
     }
@@ -356,13 +357,14 @@ async function serveParts(db: Database, req: ServeRequest): Promise<string> {
     const linkByFoodId = new Map<string, string | null>();
     for (const row of locked) {
       const held = itemFoods.get(row.id)?.map((food) => food.id);
-      if (!held?.length && !row.recipeId) {
+      const partRecipes = recipesOf(row);
+      if (!held?.length && partRecipes.length === 0) {
         throw new ServeAborted({
           code: 400,
           details: { id: "a label-only storage item has no food to log — add a food or a recipe to serve it" },
         });
       }
-      for (const foodId of held?.length ? held : (ingredientsByRecipe.get(row.recipeId as string) ?? [])) {
+      for (const foodId of held?.length ? held : ingredientUnion(ingredientsByRecipe, partRecipes)) {
         if (!linkByFoodId.has(foodId)) linkByFoodId.set(foodId, row.id);
       }
     }
@@ -531,15 +533,20 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
       const unknownFoodIds = foodIds.filter((id) => !knownFoodIds.has(id));
       if (unknownFoodIds.length > 0) return badRequest(reply, { foodIds: "unknown food", unknownFoodIds });
     }
-    if (body.data.recipeId) {
-      // Visible to THIS user — the catalog plus their own custom recipes.
-      const [recipe] = await db
-        .select({ id: recipes.id })
-        .from(recipes)
-        .where(and(eq(recipes.id, body.data.recipeId), visibleRecipesCondition(currentUserId(request))))
-        .limit(1);
-      if (!recipe) return badRequest(reply, { recipeId: "unknown recipe" });
-    }
+    // Visible to THIS user — the catalog plus their own custom recipes. One
+    // query for a single `recipeId` or a several-recipe list (ledger 753).
+    const recipeIdList = body.data.recipeIds
+      ? [...new Set(body.data.recipeIds)]
+      : body.data.recipeId
+        ? [body.data.recipeId]
+        : [];
+    const recipeCheck = await validateRecipeIds(
+      db,
+      recipeIdList,
+      currentUserId(request),
+      body.data.recipeIds ? "recipeIds" : "recipeId",
+    );
+    if (!recipeCheck.ok) return badRequest(reply, recipeCheck.details);
 
     const userId = currentUserId(request);
     const preparedAt = body.data.preparedAt ? new Date(body.data.preparedAt) : new Date();
@@ -547,9 +554,17 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     // What this submission becomes. A container holds the whole meal, so
     // several foods are ONE item with one join row each, in the order they
     // were submitted — unless the parent chose "Separate containers", which
-    // is one single-food item per food. A recipe- or label-sourced item is
-    // one item with no foods of its own, as before.
-    const groups: string[][] = foodIds ? (body.data.separateItems ? foodIds.map((id) => [id]) : [foodIds]) : [[]];
+    // is one single-food item per food. Several recipes work the same way
+    // (ledger 753): one container naming them all, or one per recipe. A
+    // recipe- or label-sourced item has no foods of its own, as before.
+    type Group = { foodIds: string[]; recipeIds: string[] };
+    const groups: Group[] = foodIds
+      ? body.data.separateItems
+        ? foodIds.map((id) => ({ foodIds: [id], recipeIds: [] }))
+        : [{ foodIds, recipeIds: [] }]
+      : body.data.separateItems && recipeIdList.length > 0
+        ? recipeIdList.map((id) => ({ foodIds: [], recipeIds: [id] }))
+        : [{ foodIds: [], recipeIds: recipeIdList }];
 
     // Ids are minted here rather than read back from `returning()` so each
     // group is paired with its own item by identity, never by relying on a
@@ -560,10 +575,12 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     // join row lands, or none of them do.
     await db.transaction(async (tx) => {
       await tx.insert(storageItems).values(
-        insertedIds.map((id) => ({
+        insertedIds.map((id, index) => ({
           id,
           userId,
-          recipeId: body.data.recipeId,
+          // The first recipe; on a several-recipe container this mirrors
+          // `storage_item_recipes` position 0.
+          recipeId: groups[index]!.recipeIds[0] ?? null,
           label: body.data.label,
           preparedAt,
           location: body.data.location,
@@ -578,13 +595,23 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
       );
 
       const joinRows = groups.flatMap((group, groupIndex) =>
-        group.map((foodId, position) => ({
+        group.foodIds.map((foodId, position) => ({
           storageItemId: insertedIds[groupIndex] as string,
           foodId,
           position,
         })),
       );
       if (joinRows.length > 0) await tx.insert(storageItemFoods).values(joinRows);
+      const recipeRows = groups.flatMap((group, groupIndex) =>
+        group.recipeIds.length < 2
+          ? []
+          : group.recipeIds.map((recipeId, position) => ({
+              storageItemId: insertedIds[groupIndex] as string,
+              recipeId,
+              position,
+            })),
+      );
+      if (recipeRows.length > 0) await tx.insert(storageItemRecipes).values(recipeRows);
     });
 
     const rows = await db

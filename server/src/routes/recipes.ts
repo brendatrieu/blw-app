@@ -16,7 +16,7 @@
 // exactly ONE `recipe_variants` row, filed at the stage its "suitable from"
 // age falls in, and `isCustom` tells the client to render them as a single
 // "Steps" section instead of age tabs.
-import { and, asc, eq, ilike, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   ageStageForMonths,
@@ -52,6 +52,7 @@ import {
   foodAllergens,
   foods,
   meals,
+  storageItemRecipes,
   storageItems,
   recipeIngredients,
   recipeVariants,
@@ -585,7 +586,20 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     const [storageRow] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(storageItems)
-      .where(eq(storageItems.recipeId, existing.id));
+      // A several-recipe container (ledger 753) names a recipe past its first
+      // only in `storage_item_recipes`, which would otherwise cascade away.
+      .where(
+        or(
+          eq(storageItems.recipeId, existing.id),
+          inArray(
+            storageItems.id,
+            db
+              .select({ id: storageItemRecipes.storageItemId })
+              .from(storageItemRecipes)
+              .where(eq(storageItemRecipes.recipeId, existing.id)),
+          ),
+        ),
+      );
 
     const mealCount = mealRow?.count ?? 0;
     const storageCount = storageRow?.count ?? 0;

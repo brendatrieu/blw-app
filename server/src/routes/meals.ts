@@ -36,6 +36,7 @@ import {
   mealStorageItems,
   meals,
   recipes,
+  storageItemRecipes,
   storageItems,
 } from "../db/schema.js";
 import { returnServings } from "../services/storage.js";
@@ -276,7 +277,7 @@ export function mapRecipeRequest(
  * PATCH step 5 (ledger 751, DESIGN-B §5a). A served container leaves the meal
  * when this edit takes it off: a recipe container when its recipe was on the
  * meal and no longer is (fridge and freezer containers of one recipe both
- * leave), a food container when the edit removes the LAST food linked to it.
+ * leave; a several-recipe container once none of its recipes is left), a food container when the edit removes the LAST food linked to it.
  * Removing some of a container's foods, or an ingredient chip while its
  * recipe stays, returns nothing — that part was still served.
  *
@@ -306,14 +307,31 @@ async function returnRemovedParts(
     .innerJoin(storageItems, eq(mealStorageItems.storageItemId, storageItems.id))
     .where(eq(mealStorageItems.mealId, mealId));
   if (served.length === 0) return;
+  // A several-recipe container (ledger 753) leaves once NONE of its recipes
+  // is on the meal any more.
+  const several = await tx
+    .select({ storageItemId: storageItemRecipes.storageItemId, recipeId: storageItemRecipes.recipeId })
+    .from(storageItemRecipes)
+    .where(
+      inArray(
+        storageItemRecipes.storageItemId,
+        served.map((row) => row.storageItemId),
+      ),
+    );
+  const recipesOf = (row: (typeof served)[number]): string[] => {
+    const list = several.filter((entry) => entry.storageItemId === row.storageItemId).map((entry) => entry.recipeId);
+    return list.length > 0 ? list : row.recipeId ? [row.recipeId] : [];
+  };
 
   const before = new Set(change.linksBefore);
   const after = new Set(change.linksAfter);
-  const removed = served.filter((row) =>
-    row.recipeId
-      ? change.previousRecipeIds.includes(row.recipeId) && !change.finalRecipeIds.includes(row.recipeId)
-      : before.has(row.storageItemId) && !after.has(row.storageItemId),
-  );
+  const removed = served.filter((row) => {
+    const containerRecipes = recipesOf(row);
+    return containerRecipes.length > 0
+      ? containerRecipes.some((id) => change.previousRecipeIds.includes(id)) &&
+          !containerRecipes.some((id) => change.finalRecipeIds.includes(id))
+      : before.has(row.storageItemId) && !after.has(row.storageItemId);
+  });
   if (removed.length === 0) return;
 
   await returnServings(tx, userId, removed);

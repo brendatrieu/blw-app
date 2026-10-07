@@ -2,6 +2,7 @@ import { z } from "zod";
 import { parseCalendarDate } from "./babies.js";
 import {
   foodRatingsSchema,
+  MEAL_RECIPES_MAX,
   mealItemSchema,
   mealRecipeIdsSchema,
   optionalNotes,
@@ -177,11 +178,17 @@ export const createStorageItemInputSchema = z
       .nullish()
       .transform((value) => value ?? null),
     /**
-     * "Separate containers": each picked food becomes its own single-food
-     * storage item instead of one item holding all of them. Only meaningful
-     * with two or more `foodIds` (one food is one container either way), and
-     * meaningless for a recipe item — which is why it is rejected next to
-     * `recipeId` rather than quietly ignored.
+     * Ledger 753: leftovers of a meal made from several recipes, in the order
+     * picked. ONE container holding them all (its `recipeId` is the first),
+     * or with `separateItems` one recipe container per recipe.
+     */
+    recipeIds: z.array(z.string().uuid()).min(1).max(MEAL_RECIPES_MAX).optional(),
+    /**
+     * "Separate containers": each picked food (or each of `recipeIds`)
+     * becomes its own storage item instead of one item holding all of them.
+     * Only meaningful with two or more (one is one container either way), and
+     * meaningless for a single `recipeId` item — which is why it is rejected
+     * next to `recipeId` rather than quietly ignored.
      */
     separateItems: z
       .boolean()
@@ -198,16 +205,20 @@ export const createStorageItemInputSchema = z
     /** Free-form note about the container, separate from `quantityNote`. */
     notes: optionalNotes,
   })
-  .refine((value) => Boolean(value.foodIds || value.recipeId || value.label), {
+  .refine((value) => Boolean(value.foodIds || value.recipeId || value.recipeIds || value.label), {
     message: "At least one of foodIds, recipeId, or label is required",
     path: ["foodIds"],
+  })
+  .refine((value) => !(value.recipeId && value.recipeIds), {
+    message: "Send either recipeId or recipeIds, not both",
+    path: ["recipeIds"],
   })
   // Foods XOR recipe. A recipe item names no foods of its own — its
   // ingredients are derived at serve time — so the two sources can never
   // describe the same container. `label` stays allowed beside either (the
   // Add form offers it, and pre-migration rows carry one); a label with
   // neither is the label-only container.
-  .refine((value) => !(value.foodIds && value.recipeId), {
+  .refine((value) => !(value.foodIds && (value.recipeId || value.recipeIds)), {
     message: "A storage item holds either foods or a recipe, not both",
     path: ["recipeId"],
   })
@@ -293,6 +304,13 @@ export const storageItemSchema = z.object({
   foods: z.array(storageItemFoodSchema),
   recipeId: z.string().uuid().nullable(),
   recipeTitle: z.string().nullable(),
+  /**
+   * Ledger 753: every recipe the container was made from, in order — one
+   * container can hold the leftovers of several. `recipeId`/`recipeTitle`
+   * above are the first. Empty for a food or label-only container. Optional
+   * so an older cached body still parses.
+   */
+  recipes: z.array(z.object({ id: z.string().uuid(), title: z.string() })).optional(),
   preparedAt: z.string(),
   location: storageLocationSchema,
   status: storageStatusSchema,

@@ -569,6 +569,30 @@ export const storageItemFoods = pgTable(
   ],
 );
 
+// Ledger 753 (Q2): ONE container holding leftovers of two or more recipes, in
+// the order the parent picked them. Only such containers have rows here; a
+// one-recipe container is just `storage_items.recipe_id`, which on a
+// several-recipe container mirrors the first row so every older reader (and
+// the shipped app) still sees a recipe container. `recipe_id` cascades only
+// for account delete: the recipe-delete route refuses a recipe any container
+// still names.
+export const storageItemRecipes = pgTable(
+  "storage_item_recipes",
+  {
+    storageItemId: uuid("storage_item_id")
+      .notNull()
+      .references(() => storageItems.id, { onDelete: "cascade" }),
+    recipeId: uuid("recipe_id")
+      .notNull()
+      .references(() => recipes.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.storageItemId, t.recipeId] }),
+    index("storage_item_recipes_recipe_id_idx").on(t.recipeId),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // AI layer: BYO Anthropic key storage, symptom-check history, and the two
 // chat surfaces (recipe assistant + ask-anything BLW chat).
