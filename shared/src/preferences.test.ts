@@ -177,6 +177,7 @@ describe("account export v16", () => {
       id: "s1",
       recipeId: null,
       recipeTitle: null,
+      recipes: [],
       label: null,
       preparedAt: "2026-09-13T10:00:00.000Z",
       location: "fridge",
