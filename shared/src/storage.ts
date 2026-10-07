@@ -3,9 +3,11 @@ import { parseCalendarDate } from "./babies.js";
 import {
   foodRatingsSchema,
   mealItemSchema,
+  mealRecipeIdsSchema,
   optionalNotes,
   optionalReactionNote,
   patchNotes,
+  recipeRatingsSchema,
   servedAtSchema,
   starRatingSchema,
 } from "./tracking.js";
@@ -341,6 +343,15 @@ export type CreateStorageItemResponse = z.infer<typeof createStorageItemResponse
  * when the item tracks servings, takes that many out of it. Logging a meal
  * the ordinary way never touches storage.
  */
+/** How many servings one container gave this sitting. */
+const serveServingsSchema = z
+  .number()
+  .int("Servings must be a whole number")
+  .min(1, "Servings must be at least 1")
+  .max(99, "Servings must be 99 or fewer")
+  .optional()
+  .default(1);
+
 export const serveStorageItemInputSchema = z.object({
   /**
    * Which baby ate it. Optional only for the single-baby case: omitted, the
@@ -349,13 +360,7 @@ export const serveStorageItemInputSchema = z.object({
    */
   babyId: z.string().uuid().optional(),
   /** How many servings this sitting used up. */
-  servings: z
-    .number()
-    .int("Servings must be a whole number")
-    .min(1, "Servings must be at least 1")
-    .max(99, "Servings must be 99 or fewer")
-    .optional()
-    .default(1),
+  servings: serveServingsSchema,
   /** Defaults to now on the server when omitted. */
   servedAt: servedAtSchema.optional(),
   reactionNote: optionalReactionNote,
@@ -378,3 +383,56 @@ export const serveStorageItemResponseSchema = z.object({
   item: storageItemSchema,
 });
 export type ServeStorageItemResponse = z.infer<typeof serveStorageItemResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// POST /api/storage/serve (ledger 753)
+// ---------------------------------------------------------------------------
+
+/** At most this many containers in one serve. */
+export const SERVE_PARTS_MAX = 10;
+
+export const servePartSchema = z.object({
+  storageItemId: z.string().uuid(),
+  servings: serveServingsSchema,
+});
+
+/**
+ * One sitting served from several containers at once, plus fresh foods and
+ * fresh recipes that were not in storage. All or nothing: one meal, every
+ * container's servings taken in the same transaction, and any failure (a
+ * finished or empty container, a bad id, a misplaced rating) writes nothing.
+ * Undo is DELETE /api/meals/:id with the returned meal's id, which gives the
+ * servings back.
+ */
+export const serveStorageInputSchema = z.object({
+  /** Same rule as the single-item serve: optional only for a one-baby account. */
+  babyId: z.string().uuid().optional(),
+  /** The containers, each at most once. Recipe order on the meal follows them. */
+  parts: z
+    .array(servePartSchema)
+    .min(1)
+    .max(SERVE_PARTS_MAX)
+    .refine((parts) => new Set(parts.map((part) => part.storageItemId)).size === parts.length, {
+      message: "Each storage item can be served once per meal",
+    }),
+  /** Fresh foods, not from storage. */
+  foodIds: z.array(z.string().uuid()).max(25).optional(),
+  /** Fresh recipes, not from storage: their current ingredients join the meal. */
+  recipeIds: mealRecipeIdsSchema.optional(),
+  servedAt: servedAtSchema.optional(),
+  reactionNote: optionalReactionNote,
+  notes: optionalNotes,
+  /** The same rating rule as Log meal: a food rated as part of a served
+   * recipe is a 400. */
+  foodRatings: foodRatingsSchema.optional(),
+  recipeRatings: recipeRatingsSchema.optional(),
+});
+export type ServeStorageInput = z.input<typeof serveStorageInputSchema>;
+
+/** The meal that was created, plus every container as it now stands, in
+ * `parts` order. `items[i].status === "finished"` means this serve emptied it. */
+export const serveStorageResponseSchema = z.object({
+  meal: mealItemSchema,
+  items: z.array(storageItemSchema),
+});
+export type ServeStorageResponse = z.infer<typeof serveStorageResponseSchema>;

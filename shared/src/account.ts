@@ -96,6 +96,10 @@ export const exportMealSchema = z.object({
   notes: z.string().nullable(),
   createdAt: z.string(),
   foods: z.array(exportMealFoodSchema),
+  /** v18 (ledger 751). How many servings this meal took from each storage
+   * container, ordered by `storageItemId`. Empty for a meal not served from
+   * storage, and for one served before this was recorded. */
+  servedFromStorage: z.array(z.object({ storageItemId: z.string(), servings: z.number().int() })),
 });
 
 export const exportFavoriteSchema = z.object({

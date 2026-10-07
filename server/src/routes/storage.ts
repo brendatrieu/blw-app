@@ -24,19 +24,23 @@ import {
   isBestByBeforePreparedDay,
   storageItemIdParamSchema,
   storageQuerySchema,
+  serveStorageInputSchema,
   serveStorageItemInputSchema,
   updateStorageItemInputSchema,
+  MEAL_FOODS_MAX,
+  MEAL_RECIPES_MAX,
   type CreateStorageItemResponse,
   type StorageItem,
   type StorageResponse,
   type ServeStorageItemResponse,
+  type ServeStorageResponse,
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
-import { babies, foods, storageItemFoods, storageItems, recipeIngredients, recipes } from "../db/schema.js";
+import { babies, foods, mealStorageItems, storageItemFoods, storageItems, recipes } from "../db/schema.js";
 import { choosableFoodsCondition } from "../services/foods.js";
 import { ingredientUnion, insertMeal, loadIngredientFoodIds, loadMeals, ownsBaby } from "../services/meals.js";
-import { mapRecipeRequest, validateRatings } from "./meals.js";
+import { mapRecipeRequest, validateFoodIds, validateRatings, validateRecipeIds } from "./meals.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import {
   deriveFreshness,
@@ -61,7 +65,12 @@ function conflict(reply: FastifyReply, message: string): FastifyReply {
  * written — throwing is how they are taken back.
  */
 class ServeAborted extends Error {
-  constructor(readonly outcome: { code: 404 } | { code: 409; message: string } | { code: 400; details: unknown }) {
+  constructor(
+    readonly outcome:
+      | { code: 404 }
+      | { code: 409; message: string; storageItemId: string }
+      | { code: 400; details: unknown },
+  ) {
     super("serve aborted");
     this.name = "ServeAborted";
   }
@@ -211,6 +220,260 @@ async function loadStorageItem(db: Database, id: string): Promise<StorageItem> {
     throw new Error("Hydration of a just-written storage item produced no item");
   }
   return item;
+}
+
+/**
+ * Which baby ate it. An explicit babyId is ownership-checked like any other
+ * id (a miss is 404); omitted, the account's single active baby is the only
+ * unambiguous answer.
+ */
+async function resolveBabyId(
+  db: Database,
+  userId: string,
+  babyId: string | undefined,
+): Promise<{ ok: true; babyId: string } | { ok: false; code: 404 } | { ok: false; code: 400; details: unknown }> {
+  if (babyId) return (await ownsBaby(db, babyId, userId)) ? { ok: true, babyId } : { ok: false, code: 404 };
+  const owned = await db
+    .select({ id: babies.id })
+    .from(babies)
+    .where(and(eq(babies.userId, userId), isNull(babies.archivedAt)))
+    .orderBy(asc(babies.birthDate), asc(babies.createdAt))
+    .limit(2);
+  const only = owned.length === 1 ? owned[0] : undefined;
+  if (only) return { ok: true, babyId: only.id };
+  return {
+    ok: false,
+    code: 400,
+    details: {
+      babyId:
+        owned.length === 0
+          ? "no baby profile to log this meal against"
+          : "babyId is required when the account has more than one baby",
+    },
+  };
+}
+
+interface ServeRequest {
+  userId: string;
+  babyId: string;
+  /** Containers in the parent's order; each at most once. */
+  parts: { storageItemId: string; servings: number }[];
+  /** Fresh, not from storage. */
+  freshFoodIds: string[];
+  freshRecipeIds: string[];
+  servedAt: Date;
+  reactionNote: string | null;
+  notes: string | null;
+  foodRatings: Record<string, number | null> | undefined;
+  /** The new shape, or the single-item route's legacy `recipeRating`, which is
+   * read as the rating of the container's recipe exactly as before. */
+  ratings: { recipeRatings: Record<string, number | null> | undefined } | { legacyRecipeRating: number | undefined };
+}
+
+const NO_SERVINGS_LEFT = "This storage item has no servings left — mark it finished or edit its servings first.";
+const notServable = (status: string) => `This storage item is ${status} and cannot be served. Restore it first.`;
+
+/**
+ * The one serve (ledger 753, DESIGN-B §5), behind both serve routes. In ONE
+ * transaction: lock every container in id order (so two multi-serves can
+ * never deadlock), refuse the whole serve if any is not servable, read what
+ * each holds UNDER the lock (contents are editable, item 729), write one meal,
+ * take each container's servings, and record what was really taken in
+ * `meal_storage_items` so deleting the meal can give it back (ledger 751).
+ * Any failure throws ServeAborted and nothing is written. Returns the meal id.
+ */
+async function serveParts(db: Database, req: ServeRequest): Promise<string> {
+  const { userId } = req;
+  return db.transaction(async (tx) => {
+    // FOR NO KEY UPDATE, not FOR UPDATE: it still queues behind another serve
+    // and the storage PATCH lock, but not behind the FOR KEY SHARE a
+    // meal_foods insert's foreign-key check takes on a container (a meal edit
+    // re-inserting its foods), so the two cannot deadlock.
+    const lockedRows = await tx
+      .select({
+        id: storageItems.id,
+        recipeId: storageItems.recipeId,
+        status: storageItems.status,
+        servingsLeft: storageItems.servingsLeft,
+        servingsTotal: storageItems.servingsTotal,
+      })
+      .from(storageItems)
+      .where(
+        and(
+          inArray(
+            storageItems.id,
+            req.parts.map((part) => part.storageItemId),
+          ),
+          eq(storageItems.userId, userId),
+        ),
+      )
+      .orderBy(asc(storageItems.id))
+      .for("no key update");
+    const lockedById = new Map(lockedRows.map((row) => [row.id, row]));
+    const locked = req.parts.map((part) => {
+      const row = lockedById.get(part.storageItemId);
+      if (!row) throw new ServeAborted({ code: 404 });
+      return row;
+    });
+
+    // Only an active container with something left in it can be served.
+    for (const row of locked) {
+      if (row.status !== "active") {
+        throw new ServeAborted({ code: 409, message: notServable(row.status), storageItemId: row.id });
+      }
+      if (row.servingsTotal !== null && (row.servingsLeft ?? 0) <= 0) {
+        throw new ServeAborted({ code: 409, message: NO_SERVINGS_LEFT, storageItemId: row.id });
+      }
+    }
+
+    if (req.freshFoodIds.length > 0) {
+      const fresh = await validateFoodIds(tx, req.freshFoodIds, userId);
+      if (!fresh.ok) throw new ServeAborted({ code: 400, details: fresh.details });
+    }
+    const freshRecipeIds = [...new Set(req.freshRecipeIds)];
+    const recipeCheck = await validateRecipeIds(tx, freshRecipeIds, userId, "recipeIds");
+    if (!recipeCheck.ok) throw new ServeAborted({ code: 400, details: recipeCheck.details });
+
+    // The meal's recipes: each container's recipe in `parts` order, then the
+    // fresh ones. Two containers of one recipe, or a fresh recipe that is
+    // also in storage, are ONE recipe on the meal (one star row).
+    const recipeIds = [
+      ...new Set([...locked.flatMap((row) => (row.recipeId ? [row.recipeId] : [])), ...freshRecipeIds]),
+    ];
+    if (recipeIds.length > MEAL_RECIPES_MAX) {
+      throw new ServeAborted({ code: 400, details: { recipeIds: `at most ${MEAL_RECIPES_MAX} recipes per meal` } });
+    }
+    const ingredientsByRecipe = await loadIngredientFoodIds(tx, recipeIds);
+
+    // What each container holds, exactly today's single-serve rule: its own
+    // foods when it has any (a recipe container holding foods keeps both), or
+    // else its recipe's current ingredients. A food in two parts keeps the
+    // FIRST part's link; fresh foods and fresh recipes' foods have none.
+    const itemFoods = await loadStorageItemFoods(
+      tx,
+      locked.map((row) => row.id),
+    );
+    const linkByFoodId = new Map<string, string | null>();
+    for (const row of locked) {
+      const held = itemFoods.get(row.id)?.map((food) => food.id);
+      if (!held?.length && !row.recipeId) {
+        throw new ServeAborted({
+          code: 400,
+          details: { id: "a label-only storage item has no food to log — add a food or a recipe to serve it" },
+        });
+      }
+      for (const foodId of held?.length ? held : (ingredientsByRecipe.get(row.recipeId as string) ?? [])) {
+        if (!linkByFoodId.has(foodId)) linkByFoodId.set(foodId, row.id);
+      }
+    }
+    for (const recipeId of freshRecipeIds) {
+      for (const foodId of ingredientsByRecipe.get(recipeId) ?? []) {
+        if (!linkByFoodId.has(foodId)) linkByFoodId.set(foodId, null);
+      }
+    }
+    for (const foodId of req.freshFoodIds) {
+      if (!linkByFoodId.has(foodId)) linkByFoodId.set(foodId, null);
+    }
+    // A recipe with no ingredient foods is fine beside other foods; it is
+    // today's 400 only when the meal would have no food at all.
+    if (linkByFoodId.size === 0) {
+      throw new ServeAborted({ code: 400, details: { recipeId: "this recipe has no ingredient foods to log" } });
+    }
+    if (linkByFoodId.size > MEAL_FOODS_MAX) {
+      throw new ServeAborted({ code: 400, details: { foodIds: `at most ${MEAL_FOODS_MAX} foods per meal` } });
+    }
+    const foodIds = [...linkByFoodId.keys()];
+
+    // Rated exactly as Log meal's create rates a meal (DESIGN-B §2, nothing
+    // was on the meal before): a food is rateable unless it is an ingredient
+    // of a served recipe. The single-item route's legacy `recipeRating` is
+    // read the way create reads an older app's.
+    let recipeRatings: Record<string, number | null> | undefined;
+    if ("legacyRecipeRating" in req.ratings) {
+      const mapped = mapRecipeRequest({ recipeRating: req.ratings.legacyRecipeRating }, recipeIds);
+      if (!mapped.ok) throw new ServeAborted({ code: 400, details: mapped.details });
+      recipeRatings = mapped.value.recipeRatings;
+    } else {
+      recipeRatings = req.ratings.recipeRatings;
+    }
+    const ingredients = ingredientUnion(ingredientsByRecipe, recipeIds);
+    const ratings = validateRatings({
+      recipeIds,
+      ingredientsOfFinal: ingredients,
+      ingredientsOfAdded: ingredients,
+      stored: new Map(),
+      foodIds,
+      foodRatings: req.foodRatings,
+      recipeRatings,
+    });
+    if (!ratings.ok) throw new ServeAborted({ code: 400, details: ratings.details });
+
+    const mealId = await insertMeal(tx, {
+      babyId: req.babyId,
+      recipes: recipeIds.map((recipeId) => ({ recipeId, rating: recipeRatings?.[recipeId] ?? null })),
+      servedAt: req.servedAt,
+      reactionNote: req.reactionNote,
+      notes: req.notes,
+      foods: foodIds.map((foodId) => ({
+        foodId,
+        storageItemId: linkByFoodId.get(foodId) ?? null,
+        rating: req.foodRatings?.[foodId] ?? null,
+      })),
+    });
+
+    const taken: { mealId: string; storageItemId: string; servings: number }[] = [];
+    for (const [index, part] of req.parts.entries()) {
+      const before = locked[index]!;
+      // The claim: ONE guarded, self-referential UPDATE that is both the
+      // status check and the decrement. The rows are already locked and
+      // checked above, so this cannot miss today; it stays as the safety net
+      // it always was, computing the new count from the row's own value.
+      //   status = 'active'      → finished/discarded never serve
+      //   servings_total is null → untracked items pass, decrementing nothing
+      //   or servings_left > 0   → a tracked item must have something left
+      const [claimed] = await tx
+        .update(storageItems)
+        .set({
+          servingsLeft: sql`case
+            when ${storageItems.servingsTotal} is null then ${storageItems.servingsLeft}
+            else greatest(${storageItems.servingsLeft} - ${part.servings}, 0)
+          end`,
+        })
+        .where(
+          and(
+            eq(storageItems.id, part.storageItemId),
+            eq(storageItems.userId, userId),
+            eq(storageItems.status, "active"),
+            sql`(${storageItems.servingsTotal} is null or ${storageItems.servingsLeft} > 0)`,
+          ),
+        )
+        .returning();
+      if (!claimed) throw new ServeAborted({ code: 409, message: NO_SERVINGS_LEFT, storageItemId: part.storageItemId });
+
+      // An emptied container finishes exactly like the manual finish flow,
+      // on the count the database RETURNED.
+      if (claimed.servingsTotal !== null && claimed.servingsLeft === 0) {
+        await tx
+          .update(storageItems)
+          .set({ status: "finished", statusChangedAt: new Date() })
+          .where(eq(storageItems.id, part.storageItemId));
+      }
+
+      // What this serve really took: min(asked, left) on a tracked container,
+      // 0 on an untracked one (there is nothing to give back).
+      taken.push({
+        mealId,
+        storageItemId: part.storageItemId,
+        servings:
+          claimed.servingsTotal !== null && before.servingsLeft !== null && claimed.servingsLeft !== null
+            ? before.servingsLeft - claimed.servingsLeft
+            : 0,
+      });
+    }
+    await tx.insert(mealStorageItems).values(taken);
+
+    return mealId;
+  });
 }
 
 export function registerStorageRoutes(app: FastifyInstance, db: Database): void {
@@ -482,13 +745,10 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
   // -----------------------------------------------------------------------
   // POST /api/storage/:id/serve
   //
-  // The one explicit bridge between storage and the meal log: it writes a
-  // meal whose every food row points back at this container, and takes the
-  // servings it used out of the container. Logging a meal any other way
-  // never decrements anything.
-  //
-  // Only an `active` item with something left in it can be served; anything
-  // else is a 409 and leaves every row untouched.
+  // The single-container serve the shipped app calls. Since ledger 753 it is
+  // a one-part call into the same `serveParts` as the multi-part route below,
+  // so it also records what it took (meal_storage_items) and a later delete
+  // of the meal gives that back. Request and response are unchanged.
   // -----------------------------------------------------------------------
   app.post("/api/storage/:id/serve", { preHandler: app.requireAuth }, async (request, reply) => {
     const params = storageItemIdParamSchema.safeParse(request.params);
@@ -499,11 +759,8 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
 
     const userId = currentUserId(request);
 
-    // Only existence is checked up front. WHAT gets logged (the container's
-    // contents, editable since item 729), its status and how many servings
-    // are left are all read inside the transaction below, after the row is
-    // locked, so nothing computed out here from a stale snapshot can reach
-    // the meal or the decrement.
+    // Existence first, as it always was: an unknown item is a 404 before the
+    // baby is even looked at. Everything else is read under the lock.
     const [item] = await db
       .select({ id: storageItems.id })
       .from(storageItems)
@@ -511,187 +768,29 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
       .limit(1);
     if (!item) return notFound(reply);
 
-    // Which baby ate it. An explicit babyId is ownership-checked like any
-    // other id (a miss is 404); omitted, the account's single active baby is
-    // the only unambiguous answer.
-    let babyId: string;
-    if (body.data.babyId) {
-      if (!(await ownsBaby(db, body.data.babyId, userId))) return notFound(reply);
-      babyId = body.data.babyId;
-    } else {
-      const owned = await db
-        .select({ id: babies.id })
-        .from(babies)
-        .where(and(eq(babies.userId, userId), isNull(babies.archivedAt)))
-        .orderBy(asc(babies.birthDate), asc(babies.createdAt))
-        .limit(2);
-      const only = owned.length === 1 ? owned[0] : undefined;
-      if (!only) {
-        return badRequest(reply, {
-          babyId:
-            owned.length === 0
-              ? "no baby profile to log this meal against"
-              : "babyId is required when the account has more than one baby",
-        });
-      }
-      babyId = only.id;
-    }
+    const baby = await resolveBabyId(db, userId, body.data.babyId);
+    if (!baby.ok) return baby.code === 404 ? notFound(reply) : badRequest(reply, baby.details);
 
-    const servedAt = body.data.servedAt ? new Date(body.data.servedAt) : new Date();
-    const servings = body.data.servings;
-
-    // One transaction: the meal, its foods, and the container it came out of
-    // move together or not at all.
     let mealId: string;
     try {
-      mealId = await db.transaction(async (tx) => {
-        // Lock the row before reading what is in it. A contents edit (PATCH)
-        // locks the same row first, so the two serialize: this serve logs
-        // either the old contents or the new ones, never a mix, and never
-        // contents that changed after its ratings were checked.
-        const [locked] = await tx
-          .select({ recipeId: storageItems.recipeId })
-          .from(storageItems)
-          .where(and(eq(storageItems.id, item.id), eq(storageItems.userId, userId)))
-          .for("update");
-        if (!locked) throw new ServeAborted({ code: 404 });
-
-        // What was eaten. A food-sourced item is everything in it, in saved
-        // order — one meal with all of them, each linked back to this
-        // container; a recipe-sourced one expands to the recipe's ingredient
-        // foods (the only place the server expands a recipe — hand-logged
-        // meals send their own list).
-        const itemFoods = (await loadStorageItemFoods(tx, [item.id])).get(item.id) ?? [];
-        let foodIds: string[];
-        if (itemFoods.length > 0) {
-          foodIds = itemFoods.map((food) => food.id);
-        } else if (locked.recipeId) {
-          const ingredients = await tx
-            .select({ foodId: recipeIngredients.foodId })
-            .from(recipeIngredients)
-            .where(eq(recipeIngredients.recipeId, locked.recipeId))
-            .orderBy(asc(recipeIngredients.id));
-          foodIds = [...new Set(ingredients.map((row) => row.foodId))];
-          if (foodIds.length === 0) {
-            throw new ServeAborted({ code: 400, details: { recipeId: "this recipe has no ingredient foods to log" } });
-          }
-        } else {
-          throw new ServeAborted({
-            code: 400,
-            details: { id: "a label-only storage item has no food to log — add a food or a recipe to serve it" },
-          });
-        }
-
-        // Item 718: the meal this serve writes is rated exactly as Log meal's
-        // create rates one — a food item per food, a recipe item once as the
-        // recipe — and a rating that does not fit (including one for a food
-        // an edit just took out) is a 400 before anything is written.
-        // Ledger 752: the same rule as create (no recipe was on the meal
-        // before, so a food is rateable unless it is an ingredient of the
-        // container's recipe), with the single `recipeRating` read the way
-        // create reads an older app's.
-        const recipeIds = locked.recipeId ? [locked.recipeId] : [];
-        const mapped = mapRecipeRequest({ recipeRating: body.data.recipeRating ?? undefined }, recipeIds);
-        if (!mapped.ok) throw new ServeAborted({ code: 400, details: mapped.details });
-        const ingredients = ingredientUnion(await loadIngredientFoodIds(tx, recipeIds), recipeIds);
-        const ratings = validateRatings({
-          recipeIds,
-          ingredientsOfFinal: ingredients,
-          ingredientsOfAdded: ingredients,
-          stored: new Map(),
-          foodIds,
-          foodRatings: body.data.foodRatings,
-          recipeRatings: mapped.value.recipeRatings,
-        });
-        if (!ratings.ok) throw new ServeAborted({ code: 400, details: ratings.details });
-
-        const id = await insertMeal(tx, {
-          babyId,
-          // Attribution follows the storage item, food-sourced or not.
-          recipes: recipeIds.map((recipeId) => ({ recipeId, rating: mapped.value.recipeRatings?.[recipeId] ?? null })),
-          servedAt,
-          reactionNote: body.data.reactionNote,
-          notes: body.data.notes,
-          foods: foodIds.map((foodId) => ({
-            foodId,
-            storageItemId: item.id,
-            rating: body.data.foodRatings?.[foodId] ?? null,
-          })),
-        });
-
-        // The claim: ONE guarded, self-referential UPDATE that is both the
-        // status check and the decrement, so there is no read-then-write gap
-        // for a concurrent serve to slip into. The new value is computed by
-        // the database from the row's own current value — never from a
-        // number this process read earlier — which is what makes two
-        // simultaneous serves of the last serving impossible to lose. Under
-        // READ COMMITTED the second UPDATE blocks on the first's row lock,
-        // then re-evaluates its WHERE against the just-committed row: it
-        // either sees servings_left = 0 (or status = 'finished') and matches
-        // nothing — 409 — or decrements from the real remaining count.
-        //
-        // The WHERE is the whole guard:
-        //   status = 'active'                 → items 106: finished/discarded never serve
-        //   servings_total is null            → untracked items pass, decrementing nothing
-        //   or servings_left > 0              → a tracked item must have something left
-        const [claimed] = await tx
-          .update(storageItems)
-          .set({
-            servingsLeft: sql`case
-              when ${storageItems.servingsTotal} is null then ${storageItems.servingsLeft}
-              else greatest(${storageItems.servingsLeft} - ${servings}, 0)
-            end`,
-          })
-          .where(
-            and(
-              eq(storageItems.id, item.id),
-              eq(storageItems.userId, userId),
-              eq(storageItems.status, "active"),
-              sql`(${storageItems.servingsTotal} is null or ${storageItems.servingsLeft} > 0)`,
-            ),
-          )
-          .returning();
-
-        if (!claimed) {
-          // Nothing was claimed, so nothing was changed — status is never
-          // silently overwritten on the way out. Re-read (inside the same
-          // transaction) only to say WHY.
-          const [current] = await tx
-            .select({ status: storageItems.status })
-            .from(storageItems)
-            .where(and(eq(storageItems.id, item.id), eq(storageItems.userId, userId)))
-            .limit(1);
-          if (!current) throw new ServeAborted({ code: 404 });
-          throw new ServeAborted({
-            code: 409,
-            message:
-              current.status === "active"
-                ? "This storage item has no servings left — mark it finished or edit its servings first."
-                : `This storage item is ${current.status} and cannot be served. Restore it first.`,
-          });
-        }
-
-        // An emptied container finishes exactly like the manual finish flow:
-        // status + statusChangedAt, moved to History and never deleted. The
-        // threshold is the value the database RETURNED, not one this process
-        // computed, so a serve that raced another still finishes on the true
-        // remaining count.
-        if (claimed.servingsTotal !== null && claimed.servingsLeft === 0) {
-          await tx
-            .update(storageItems)
-            .set({ status: "finished", statusChangedAt: new Date() })
-            .where(eq(storageItems.id, item.id));
-        }
-
-        return id;
+      mealId = await serveParts(db, {
+        userId,
+        babyId: baby.babyId,
+        parts: [{ storageItemId: item.id, servings: body.data.servings }],
+        freshFoodIds: [],
+        freshRecipeIds: [],
+        servedAt: body.data.servedAt ? new Date(body.data.servedAt) : new Date(),
+        reactionNote: body.data.reactionNote,
+        notes: body.data.notes,
+        foodRatings: body.data.foodRatings,
+        ratings: { legacyRecipeRating: body.data.recipeRating ?? undefined },
       });
     } catch (error) {
       if (error instanceof ServeAborted) {
-        // The transaction rolled back, so the meal that was inserted a few
-        // lines above is gone with it.
         const { outcome } = error;
         if (outcome.code === 404) return notFound(reply);
         if (outcome.code === 400) return badRequest(reply, outcome.details);
+        // Byte for byte what this route always answered.
         return conflict(reply, outcome.message);
       }
       throw error;
@@ -701,5 +800,53 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
     if (!meal) throw new Error("Served meal was inserted but could not be read back");
 
     return reply.code(201).send({ meal, item: await loadStorageItem(db, item.id) } satisfies ServeStorageItemResponse);
+  });
+
+  // -----------------------------------------------------------------------
+  // POST /api/storage/serve (ledger 753)
+  //
+  // One sitting from several containers, plus fresh foods and fresh recipes.
+  // One meal, all or nothing: a 409 names the container that could not be
+  // served and nothing is written. Undo is DELETE /api/meals/:id.
+  // -----------------------------------------------------------------------
+  app.post("/api/storage/serve", { preHandler: app.requireAuth }, async (request, reply) => {
+    const body = serveStorageInputSchema.safeParse(request.body ?? {});
+    if (!body.success) return badRequest(reply, body.error.flatten());
+
+    const userId = currentUserId(request);
+    const baby = await resolveBabyId(db, userId, body.data.babyId);
+    if (!baby.ok) return baby.code === 404 ? notFound(reply) : badRequest(reply, baby.details);
+
+    let mealId: string;
+    try {
+      mealId = await serveParts(db, {
+        userId,
+        babyId: baby.babyId,
+        parts: body.data.parts,
+        freshFoodIds: body.data.foodIds ?? [],
+        freshRecipeIds: body.data.recipeIds ?? [],
+        servedAt: body.data.servedAt ? new Date(body.data.servedAt) : new Date(),
+        reactionNote: body.data.reactionNote,
+        notes: body.data.notes,
+        foodRatings: body.data.foodRatings,
+        ratings: { recipeRatings: body.data.recipeRatings },
+      });
+    } catch (error) {
+      if (error instanceof ServeAborted) {
+        const { outcome } = error;
+        if (outcome.code === 404) return notFound(reply);
+        if (outcome.code === 400) return badRequest(reply, outcome.details);
+        return reply
+          .code(409)
+          .send({ error: "conflict", message: outcome.message, storageItemId: outcome.storageItemId });
+      }
+      throw error;
+    }
+
+    const meal = (await loadMeals(db, [mealId])).get(mealId);
+    if (!meal) throw new Error("Served meal was inserted but could not be read back");
+    const items = await Promise.all(body.data.parts.map((part) => loadStorageItem(db, part.storageItemId)));
+
+    return reply.code(201).send({ meal, items } satisfies ServeStorageResponse);
   });
 }

@@ -7,11 +7,11 @@
 // own copy of the fallback window and its own hand-rolled expiry maths, with
 // a comment admitting it was "kept in sync by hand". It is not duplicated any
 // more; there is one window rule and one freshness rule, here.
-import { asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import type { StorageItemFood, StorageLocation } from "@blw/shared";
 import type { Database } from "../db/index.js";
 import type { Transaction } from "./meals.js";
-import { foods, recipeIngredients, storageGuidelines, storageItemFoods } from "../db/schema.js";
+import { foods, recipeIngredients, storageGuidelines, storageItemFoods, storageItems } from "../db/schema.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -207,4 +207,66 @@ export function deriveFreshness(
     useSoon: !expired && now >= preparedMs + windowHours * HOUR_MS * USE_SOON_THRESHOLD,
     expired,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Servings back (ledger 751, DESIGN-B §5a)
+// ---------------------------------------------------------------------------
+
+/** What one serve took from one container (`meal_storage_items`). */
+export interface ServedFromStorage {
+  storageItemId: string;
+  servings: number;
+}
+
+/**
+ * Gives the servings a meal took back to its containers, when the meal is
+ * deleted (which is also Undo) or an edit removes a served part. The caller
+ * already holds the meal row's lock and deletes the rows it passes here, so
+ * the same servings can never come back twice.
+ *
+ * Per container, as it is now: a removed (`discarded`) one and one whose
+ * tracking was turned off get nothing; an active or finished one gets
+ * `least(left + n, total)`, and a finished one is active again (in this app
+ * only a serve ever finishes a container). Containers are locked in id order
+ * first, the one lock order every serve uses too.
+ */
+export async function returnServings(tx: Transaction, userId: string, rows: readonly ServedFromStorage[]): Promise<void> {
+  const taken = rows.filter((row) => row.servings > 0).sort((a, b) => (a.storageItemId < b.storageItemId ? -1 : 1));
+  if (taken.length === 0) return;
+
+  await tx
+    .select({ id: storageItems.id })
+    .from(storageItems)
+    .where(
+      and(
+        inArray(
+          storageItems.id,
+          taken.map((row) => row.storageItemId),
+        ),
+        eq(storageItems.userId, userId),
+      ),
+    )
+    .orderBy(asc(storageItems.id))
+    .for("no key update");
+
+  for (const row of taken) {
+    // Every SET expression reads the row as it was before this UPDATE, so the
+    // status test in the last two is the old status.
+    await tx
+      .update(storageItems)
+      .set({
+        servingsLeft: sql`least(${storageItems.servingsLeft} + ${row.servings}, ${storageItems.servingsTotal})`,
+        status: sql`case when ${storageItems.status} = 'finished' then 'active' else ${storageItems.status} end`,
+        statusChangedAt: sql`case when ${storageItems.status} = 'finished' then now() else ${storageItems.statusChangedAt} end`,
+      })
+      .where(
+        and(
+          eq(storageItems.id, row.storageItemId),
+          eq(storageItems.userId, userId),
+          ne(storageItems.status, "discarded"),
+          isNotNull(storageItems.servingsTotal),
+        ),
+      );
+  }
 }

@@ -26,7 +26,19 @@ import {
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
-import { allergenOverrides, allergens, babies, foods, mealFoods, mealRecipes, meals, recipes } from "../db/schema.js";
+import {
+  allergenOverrides,
+  allergens,
+  babies,
+  foods,
+  mealFoods,
+  mealRecipes,
+  mealStorageItems,
+  meals,
+  recipes,
+  storageItems,
+} from "../db/schema.js";
+import { returnServings } from "../services/storage.js";
 import { loadAllergenDetail, loadAllergenProgress } from "../services/allergens.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import {
@@ -41,6 +53,7 @@ import {
   ownsBaby,
   writeMealMirror,
   type Queryable,
+  type Transaction,
 } from "../services/meals.js";
 
 const DEFAULT_LIMIT = 50;
@@ -77,7 +90,7 @@ type Validated<T> = { ok: true; value: T } | { ok: false; details: unknown };
  * it already has, but a deleted food can never be added to a new or edited
  * meal — it reads as unknown, like any food the caller cannot choose.
  */
-async function validateFoodIds(
+export async function validateFoodIds(
   db: Queryable,
   rawFoodIds: string[],
   userId: string,
@@ -128,7 +141,7 @@ async function validateAllergenKey(db: Database, rawKey: unknown): Promise<Valid
  * for the whole list. `field` names the key the 400 is about, so an older
  * app's single `recipeId` still gets `{recipeId: "unknown recipe"}`.
  */
-async function validateRecipeIds(
+export async function validateRecipeIds(
   db: Queryable,
   recipeIds: readonly string[],
   userId: string,
@@ -257,6 +270,62 @@ export function mapRecipeRequest(
     else if (body.recipeRating !== null) return { ok: false, code: 400, details: ONLY_RECIPE_MEALS };
   }
   return { ok: true, value: { recipeIds, recipeRatings, field: "recipeId" } };
+}
+
+/**
+ * PATCH step 5 (ledger 751, DESIGN-B §5a). A served container leaves the meal
+ * when this edit takes it off: a recipe container when its recipe was on the
+ * meal and no longer is (fridge and freezer containers of one recipe both
+ * leave), a food container when the edit removes the LAST food linked to it.
+ * Removing some of a container's foods, or an ingredient chip while its
+ * recipe stays, returns nothing — that part was still served.
+ *
+ * ponytail: a food container whose foods ALL overlapped an earlier part of
+ * the same serve has no link, and custom-food Replace can merge a container's
+ * last link away; such a part only comes back on delete. Upgrade path: store
+ * the part's food ids on the meal_storage_items row.
+ */
+async function returnRemovedParts(
+  tx: Transaction,
+  userId: string,
+  mealId: string,
+  change: {
+    previousRecipeIds: readonly string[];
+    finalRecipeIds: readonly string[];
+    linksBefore: readonly (string | null)[];
+    linksAfter: readonly (string | null)[];
+  },
+): Promise<void> {
+  const served = await tx
+    .select({
+      storageItemId: mealStorageItems.storageItemId,
+      servings: mealStorageItems.servings,
+      recipeId: storageItems.recipeId,
+    })
+    .from(mealStorageItems)
+    .innerJoin(storageItems, eq(mealStorageItems.storageItemId, storageItems.id))
+    .where(eq(mealStorageItems.mealId, mealId));
+  if (served.length === 0) return;
+
+  const before = new Set(change.linksBefore);
+  const after = new Set(change.linksAfter);
+  const removed = served.filter((row) =>
+    row.recipeId
+      ? change.previousRecipeIds.includes(row.recipeId) && !change.finalRecipeIds.includes(row.recipeId)
+      : before.has(row.storageItemId) && !after.has(row.storageItemId),
+  );
+  if (removed.length === 0) return;
+
+  await returnServings(tx, userId, removed);
+  await tx.delete(mealStorageItems).where(
+    and(
+      eq(mealStorageItems.mealId, mealId),
+      inArray(
+        mealStorageItems.storageItemId,
+        removed.map((row) => row.storageItemId),
+      ),
+    ),
+  );
 }
 
 /** Thrown inside the PATCH transaction to roll it back with a reply. */
@@ -522,6 +591,20 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
             .where(and(eq(mealFoods.mealId, locked.id), eq(mealFoods.foodId, foodId)));
         }
 
+        // Ledger 751 (DESIGN-B §5a): an edit that takes a served part off the
+        // meal gives that container's servings back, once — its record goes
+        // with it. Only an edit of the recipes or the foods can do that.
+        if (mapped.value.recipeIds !== undefined || foodIds) {
+          await returnRemovedParts(tx, userId, locked.id, {
+            previousRecipeIds,
+            finalRecipeIds,
+            linksBefore: previousFoods.map((row) => row.storageItemId),
+            linksAfter: foodIds
+              ? foodIds.map((foodId) => previousByFoodId.get(foodId)?.storageItemId ?? null)
+              : previousFoods.map((row) => row.storageItemId),
+          });
+        }
+
         // Last, from the rows just written.
         await writeMealMirror(tx, locked.id);
         return locked.id;
@@ -547,13 +630,29 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     const params = mealIdParamSchema.safeParse(request.params);
     if (!params.success) return notFound(reply);
 
-    // meal_foods rows go with it through ON DELETE CASCADE.
-    const deleted = await db
-      .delete(meals)
-      .where(ownedMealCondition(db, params.data.id, currentUserId(request)))
-      .returning();
+    // Ledger 751: deleting a meal (which is also Undo of a serve) gives back
+    // what it took from storage. One transaction, the meal row locked first,
+    // so two deletes of one meal queue: the second finds it gone and 404s,
+    // and the servings come back once. meal_foods, meal_recipes and
+    // meal_storage_items go with the meal through ON DELETE CASCADE.
+    const userId = currentUserId(request);
+    const found = await db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select({ id: meals.id })
+        .from(meals)
+        .where(ownedMealCondition(db, params.data.id, userId))
+        .for("update");
+      if (!locked) return false;
+      const served = await tx
+        .select({ storageItemId: mealStorageItems.storageItemId, servings: mealStorageItems.servings })
+        .from(mealStorageItems)
+        .where(eq(mealStorageItems.mealId, locked.id));
+      await returnServings(tx, userId, served);
+      await tx.delete(meals).where(eq(meals.id, locked.id));
+      return true;
+    });
 
-    if (deleted.length === 0) return notFound(reply);
+    if (!found) return notFound(reply);
     return reply.code(204).send();
   });
 

@@ -31,6 +31,7 @@ import {
   foodAllergens,
   foods,
   mealFoods,
+  mealStorageItems,
   meals,
   storageItemFoods,
   storageItems,
@@ -181,6 +182,31 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       const existing = foodsByMealId.get(row.mealId);
       if (existing) existing.push(entry);
       else foodsByMealId.set(row.mealId, [entry]);
+    }
+
+    // Ledger 751: what each served meal took from each container. Nothing
+    // else stores that number, so it is the parent's own record.
+    const servedByMealId = new Map<string, { storageItemId: string; servings: number }[]>();
+    if (mealRows.length) {
+      const servedRows = await db
+        .select({
+          mealId: mealStorageItems.mealId,
+          storageItemId: mealStorageItems.storageItemId,
+          servings: mealStorageItems.servings,
+        })
+        .from(mealStorageItems)
+        .where(
+          inArray(
+            mealStorageItems.mealId,
+            mealRows.map((row) => row.id),
+          ),
+        )
+        .orderBy(asc(mealStorageItems.storageItemId));
+      for (const { mealId, ...entry } of servedRows) {
+        const existing = servedByMealId.get(mealId);
+        if (existing) existing.push(entry);
+        else servedByMealId.set(mealId, [entry]);
+      }
     }
 
     // Hangs off babies exactly like meals do, so it is scoped by the same
@@ -451,6 +477,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         notes: row.notes,
         createdAt: row.createdAt.toISOString(),
         foods: foodsByMealId.get(row.id) ?? [],
+        servedFromStorage: servedByMealId.get(row.id) ?? [],
       })),
       favorites: favoriteRows.map((row) => ({
         recipeId: row.recipeId,
