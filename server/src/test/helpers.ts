@@ -139,6 +139,11 @@ export async function insertMeals(db: Database, seeds: MealSeed[]): Promise<stri
       })
       .returning();
     if (!meal) throw new Error("meal insert returned no row");
+    // Ledger 752: a recipe meal's recipe lives in `meal_recipes` (the
+    // column above is only its legacy mirror).
+    if (seed.recipeId) {
+      await db.insert(schema.mealRecipes).values({ mealId: meal.id, recipeId: seed.recipeId, position: 0 });
+    }
 
     await db
       .insert(schema.mealFoods)

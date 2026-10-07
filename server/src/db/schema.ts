@@ -360,6 +360,10 @@ export const meals = pgTable(
       .references(() => babies.id, { onDelete: "cascade" }),
     // Attribution only: the foods actually eaten always come from
     // `meal_foods`, never from the recipe's ingredient list at read time.
+    // Since 0020 (ledger 752) the recipes live in `meal_recipes`; this column
+    // and `recipe_rating` are the LEGACY MIRROR of its position-0 row:
+    // written by every meal write, never read except by the boot heal
+    // (db/migrate.ts), so rolling back to a pre-0020 image still works.
     recipeId: uuid("recipe_id").references(() => recipes.id, { onDelete: "set null" }),
     // Stored with time (not date-only): the symptom checker computes
     // hours_before_onset over a 168h window, which needs hour precision.
@@ -371,7 +375,8 @@ export const meals = pgTable(
     // signal, so writing here can never make a food look reactive.
     notes: text("notes"),
     // Item 571: the baby's 1-5 star rating of the RECIPE, only on a recipe
-    // meal (recipe_id set). NULL = not rated, never 0. Deliberately no
+    // meal (recipe_id set). Legacy mirror of meal_recipes position 0 since
+    // 0020 (see recipe_id). NULL = not rated, never 0. Deliberately no
     // cross-column CHECK against recipe_id: the recipe FK is ON DELETE SET
     // NULL, and PATCH clears this whenever recipeId becomes null instead.
     recipeRating: smallint("recipe_rating"),
@@ -398,16 +403,65 @@ export const mealFoods = pgTable(
     // deleting the storage item never removes eaten-food history — the meal
     // simply loses its link back to the container it came from.
     storageItemId: uuid("storage_item_id").references(() => storageItems.id, { onDelete: "set null" }),
-    // Item 571: the baby's 1-5 star rating of THIS food, only on a
-    // loose-food meal (the meal's recipe_id is NULL). NULL = not rated,
-    // never 0. A recipe meal's rating lives on meals.recipe_rating and never
-    // counts toward its ingredient foods.
+    // Item 571: the baby's 1-5 star rating of THIS food. NULL = not rated,
+    // never 0. Since 0020 (ledger 752) any food that is not an ingredient of
+    // the meal's recipes can carry one (an "extra" beside the recipes); a
+    // food rated as part of its recipe never does — the recipe's stars live
+    // on `meal_recipes.rating` and never count toward its ingredient foods.
     rating: smallint("rating"),
   },
   (t) => [
     uniqueIndex("meal_foods_meal_food_idx").on(t.mealId, t.foodId),
     index("meal_foods_food_id_idx").on(t.foodId),
     check("meal_foods_rating_range", sql`${t.rating} BETWEEN 1 AND 5`),
+  ],
+);
+
+// Ledger 752: the recipes a meal was made from, one row per (meal, recipe),
+// carrying THAT recipe's 1-5 star rating (NULL = not rated, never 0) and the
+// order the parent picked them in. Every read orders by
+// (position, recipe_id), so "the first recipe" (meal title, legacy mirror,
+// old-app view) is deterministic. `meals.recipe_id` / `recipe_rating` mirror
+// the first row. The recipe FK cascades only for account delete: the recipe
+// delete route refuses a recipe any meal still uses.
+export const mealRecipes = pgTable(
+  "meal_recipes",
+  {
+    mealId: uuid("meal_id")
+      .notNull()
+      .references(() => meals.id, { onDelete: "cascade" }),
+    recipeId: uuid("recipe_id")
+      .notNull()
+      .references(() => recipes.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    rating: smallint("rating"),
+  },
+  (t) => [
+    primaryKey({ columns: [t.mealId, t.recipeId] }),
+    index("meal_recipes_recipe_id_idx").on(t.recipeId),
+    check("meal_recipes_rating_range", sql`${t.rating} BETWEEN 1 AND 5`),
+  ],
+);
+
+// Ledger 751: how many servings one serve took from each container, one row
+// per (meal, container). Written only by the serve flow; a meal delete (Undo)
+// or an edit that removes a served part gives exactly these back, once.
+// Created empty by 0020: what a past serve took was never stored.
+export const mealStorageItems = pgTable(
+  "meal_storage_items",
+  {
+    mealId: uuid("meal_id")
+      .notNull()
+      .references(() => meals.id, { onDelete: "cascade" }),
+    storageItemId: uuid("storage_item_id")
+      .notNull()
+      .references(() => storageItems.id, { onDelete: "cascade" }),
+    servings: integer("servings").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.mealId, t.storageItemId] }),
+    index("meal_storage_items_storage_item_id_idx").on(t.storageItemId),
+    check("meal_storage_items_servings_range", sql`${t.servings} >= 0`),
   ],
 );
 

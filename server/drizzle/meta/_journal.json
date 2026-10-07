@@ -141,6 +141,13 @@
       "when": 1790529231934,
       "tag": "0019_meal_ratings",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791384990891,
+      "tag": "0020_meal_recipes",
+      "breakpoints": true
     }
   ]
 }
