@@ -6,62 +6,98 @@
 // Keeping both flows on one insert helper is what guarantees a served meal
 // is byte-for-byte the same kind of row as a hand-logged one — the only
 // difference is `meal_foods.storage_item_id`.
+//
+// Ledger 752: a meal's recipes live in `meal_recipes` (several per meal, each
+// with its own rating, in picked order). `meals.recipe_id` / `recipe_rating`
+// are only a legacy mirror of the first one, written here and never read.
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
-import type { MealItem, RatingHistoryQuery, RatingHistoryResponse, RatingSummary, RatingsResponse } from "@blw/shared";
+import type { MealItem, MealRecipe, RatingHistoryQuery, RatingHistoryResponse, RatingSummary, RatingsResponse } from "@blw/shared";
 import type { Database } from "../db/index.js";
-import { allergens, babies, foodAllergens, foods, mealFoods, meals, recipes } from "../db/schema.js";
+import {
+  allergens,
+  babies,
+  foodAllergens,
+  foods,
+  mealFoods,
+  mealRecipes,
+  meals,
+  recipeIngredients,
+  recipes,
+} from "../db/schema.js";
 
 /**
  * The transaction handle `db.transaction()` hands its callback. Named here so
  * a caller can open the transaction (to bundle other writes into it) and
- * still pass the handle to `insertMealWithFoods`.
+ * still pass the handle to `insertMeal`.
  */
 export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/** Either the database or an open transaction — for reads that run in both. */
+export type Queryable = Database | Transaction;
 
 /** One food of a new meal, optionally carrying its storage provenance. */
 export interface MealFoodInsert {
   foodId: string;
   /** Set only by the storage serve flow. */
   storageItemId?: string | null;
-  /** 1-5, loose-food meals only (the route enforces that). */
+  /** 1-5, only on a food that is not an ingredient of the meal's recipes
+   * (the route enforces that). */
+  rating?: number | null;
+}
+
+/** One recipe of a new meal, with its 1-5 rating or null. */
+export interface MealRecipeInsert {
+  recipeId: string;
   rating?: number | null;
 }
 
 export interface MealInsert {
   babyId: string;
-  /** Attribution only — never expanded into foods at read time. */
-  recipeId: string | null;
+  /** In picked order (position 0 first), deduped by the caller. Attribution
+   * only — never expanded into foods at read time. */
+  recipes: MealRecipeInsert[];
   servedAt: Date;
   reactionNote: string | null;
   /** General note. Distinct from `reactionNote`, which is the only field the
    * AI symptom/snapshot pipeline reads as a reaction signal. */
   notes: string | null;
-  /** 1-5, recipe meals only (the route enforces that). */
-  recipeRating?: number | null;
   /** At least one; callers dedupe by foodId before calling. */
   foods: MealFoodInsert[];
 }
 
 /**
- * Inserts one meal and its `meal_foods` children inside the caller's
- * transaction, returning the new meal id. All-or-nothing is the caller's
- * transaction boundary, not this function's.
+ * Inserts one meal, its `meal_recipes` and its `meal_foods` children inside
+ * the caller's transaction, returning the new meal id. The legacy mirror
+ * (`meals.recipe_id` / `recipe_rating`) is the first recipe. All-or-nothing
+ * is the caller's transaction boundary, not this function's.
  */
-export async function insertMealWithFoods(tx: Transaction, input: MealInsert): Promise<string> {
-  if (input.foods.length === 0) throw new Error("insertMealWithFoods needs at least one food");
+export async function insertMeal(tx: Transaction, input: MealInsert): Promise<string> {
+  if (input.foods.length === 0) throw new Error("insertMeal needs at least one food");
 
+  const first = input.recipes[0];
   const [meal] = await tx
     .insert(meals)
     .values({
       babyId: input.babyId,
-      recipeId: input.recipeId,
+      recipeId: first?.recipeId ?? null,
       servedAt: input.servedAt,
       reactionNote: input.reactionNote,
       notes: input.notes,
-      recipeRating: input.recipeRating ?? null,
+      recipeRating: first?.rating ?? null,
     })
     .returning();
   if (!meal) throw new Error("Meal insert returned no row");
+
+  if (input.recipes.length > 0) {
+    await tx.insert(mealRecipes).values(
+      input.recipes.map((recipe, position) => ({
+        mealId: meal.id,
+        recipeId: recipe.recipeId,
+        position,
+        rating: recipe.rating ?? null,
+      })),
+    );
+  }
 
   await tx.insert(mealFoods).values(
     input.foods.map((food) => ({
@@ -73,6 +109,61 @@ export async function insertMealWithFoods(tx: Transaction, input: MealInsert): P
   );
 
   return meal.id;
+}
+
+/** A meal's recipes in their one canonical order: (position, recipe_id). */
+export async function loadMealRecipeRows(
+  db: Queryable,
+  mealIds: string[],
+): Promise<{ mealId: string; recipeId: string; title: string; rating: number | null }[]> {
+  if (mealIds.length === 0) return [];
+  return db
+    .select({ mealId: mealRecipes.mealId, recipeId: mealRecipes.recipeId, title: recipes.title, rating: mealRecipes.rating })
+    .from(mealRecipes)
+    .innerJoin(recipes, eq(mealRecipes.recipeId, recipes.id))
+    .where(inArray(mealRecipes.mealId, mealIds))
+    .orderBy(asc(mealRecipes.mealId), asc(mealRecipes.position), asc(mealRecipes.recipeId));
+}
+
+/**
+ * Rewrites the legacy mirror from the meal's `meal_recipes` rows as they
+ * stand: the first row by (position, recipe_id), or both null. Every write
+ * that changes a meal's recipes or their ratings calls this LAST.
+ */
+export async function writeMealMirror(tx: Transaction, mealId: string): Promise<void> {
+  const [first] = await tx
+    .select({ recipeId: mealRecipes.recipeId, rating: mealRecipes.rating })
+    .from(mealRecipes)
+    .where(eq(mealRecipes.mealId, mealId))
+    .orderBy(asc(mealRecipes.position), asc(mealRecipes.recipeId))
+    .limit(1);
+  await tx
+    .update(meals)
+    .set({ recipeId: first?.recipeId ?? null, recipeRating: first?.rating ?? null })
+    .where(eq(meals.id, mealId));
+}
+
+/** The CURRENT ingredient foods of each recipe, in one query. A recipe with
+ * no ingredients maps to an empty set. */
+export async function loadIngredientFoodIds(
+  db: Queryable,
+  recipeIds: readonly string[],
+): Promise<Map<string, Set<string>>> {
+  const byRecipe = new Map<string, Set<string>>(recipeIds.map((id) => [id, new Set<string>()]));
+  if (recipeIds.length === 0) return byRecipe;
+  const rows = await db
+    .select({ recipeId: recipeIngredients.recipeId, foodId: recipeIngredients.foodId })
+    .from(recipeIngredients)
+    .where(inArray(recipeIngredients.recipeId, [...recipeIds]));
+  for (const row of rows) byRecipe.get(row.recipeId)?.add(row.foodId);
+  return byRecipe;
+}
+
+/** Union of the ingredient sets of `recipeIds`. */
+export function ingredientUnion(byRecipe: ReadonlyMap<string, ReadonlySet<string>>, recipeIds: readonly string[]): Set<string> {
+  const union = new Set<string>();
+  for (const id of recipeIds) for (const foodId of byRecipe.get(id) ?? []) union.add(foodId);
+  return union;
 }
 
 /**
@@ -90,13 +181,22 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
       servedAt: meals.servedAt,
       reactionNote: meals.reactionNote,
       notes: meals.notes,
-      recipeId: meals.recipeId,
-      recipeTitle: recipes.title,
-      recipeRating: meals.recipeRating,
     })
     .from(meals)
-    .leftJoin(recipes, eq(meals.recipeId, recipes.id))
     .where(inArray(meals.id, mealIds));
+
+  const recipeRows = await loadMealRecipeRows(db, mealIds);
+  const recipesByMealId = new Map<string, MealRecipe[]>();
+  for (const row of recipeRows) {
+    const list = recipesByMealId.get(row.mealId) ?? [];
+    list.push({ id: row.recipeId, title: row.title, rating: row.rating });
+    recipesByMealId.set(row.mealId, list);
+  }
+  // `inRecipe` reads each recipe's CURRENT ingredients, like the rating rule.
+  const ingredientsByRecipe = await loadIngredientFoodIds(db, [...new Set(recipeRows.map((row) => row.recipeId))]);
+  const ingredientsByMealId = new Map(
+    [...recipesByMealId].map(([mealId, list]) => [mealId, ingredientUnion(ingredientsByRecipe, list.map((r) => r.id))]),
+  );
 
   const foodRows = await db
     .select({
@@ -134,20 +234,26 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
   }
 
   const byMealId = new Map<string, MealItem>(
-    mealRows.map((row) => [
-      row.id,
-      {
-        id: row.id,
-        babyId: row.babyId,
-        servedAt: row.servedAt.toISOString(),
-        reactionNote: row.reactionNote,
-        notes: row.notes,
-        recipeId: row.recipeId,
-        recipeTitle: row.recipeTitle ?? null,
-        recipeRating: row.recipeRating,
-        foods: [],
-      },
-    ]),
+    mealRows.map((row) => {
+      const mealRecipeList = recipesByMealId.get(row.id) ?? [];
+      const first = mealRecipeList[0];
+      return [
+        row.id,
+        {
+          id: row.id,
+          babyId: row.babyId,
+          servedAt: row.servedAt.toISOString(),
+          reactionNote: row.reactionNote,
+          notes: row.notes,
+          recipes: mealRecipeList,
+          // The single-recipe view older app versions read: the first recipe.
+          recipeId: first?.id ?? null,
+          recipeTitle: first?.title ?? null,
+          recipeRating: first?.rating ?? null,
+          foods: [],
+        },
+      ];
+    }),
   );
 
   for (const row of foodRows) {
@@ -163,6 +269,7 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
       deleted: row.deleted,
       allergens: allergensByFoodId.get(row.id) ?? [],
       rating: row.rating,
+      inRecipe: ingredientsByMealId.get(row.mealId)?.has(row.id) ?? false,
     });
   }
 

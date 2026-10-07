@@ -6,7 +6,7 @@
 // it only unions into the reported status (see `unionAllergenStatus`). Every
 // route sits behind requireAuth and every baby/meal lookup is scoped to the
 // caller's own rows — a miss (wrong owner or unknown id) is 404, never 403.
-import { and, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, notInArray, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   allergenDetailParamsSchema,
@@ -26,16 +26,21 @@ import {
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
-import { allergenOverrides, allergens, babies, foods, mealFoods, meals, recipes } from "../db/schema.js";
+import { allergenOverrides, allergens, babies, foods, mealFoods, mealRecipes, meals, recipes } from "../db/schema.js";
 import { loadAllergenDetail, loadAllergenProgress } from "../services/allergens.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import {
   countServed,
-  insertMealWithFoods,
+  ingredientUnion,
+  insertMeal,
+  loadIngredientFoodIds,
+  loadMealRecipeRows,
   loadMeals,
   loadRatingHistory,
   loadRatingSummaries,
   ownsBaby,
+  writeMealMirror,
+  type Queryable,
 } from "../services/meals.js";
 
 const DEFAULT_LIMIT = 50;
@@ -73,7 +78,7 @@ type Validated<T> = { ok: true; value: T } | { ok: false; details: unknown };
  * meal — it reads as unknown, like any food the caller cannot choose.
  */
 async function validateFoodIds(
-  db: Database,
+  db: Queryable,
   rawFoodIds: string[],
   userId: string,
   keptFoodIds: ReadonlySet<string> = new Set(),
@@ -117,45 +122,149 @@ async function validateAllergenKey(db: Database, rawKey: unknown): Promise<Valid
 }
 
 /**
- * A recipe id is attribution, but it still has to name a recipe this user can
- * see: the catalog plus their own. Another account's custom recipe reads as
- * an unknown id, exactly as its foods do in `validateFoodIds`.
+ * Recipe ids are attribution, but each still has to name a recipe this user
+ * can see: the catalog plus their own. Another account's custom recipe reads
+ * as an unknown id, exactly as its foods do in `validateFoodIds`. One query
+ * for the whole list. `field` names the key the 400 is about, so an older
+ * app's single `recipeId` still gets `{recipeId: "unknown recipe"}`.
  */
-async function validateRecipeId(db: Database, recipeId: string, userId: string): Promise<Validated<string>> {
-  const [recipe] = await db
+async function validateRecipeIds(
+  db: Queryable,
+  recipeIds: readonly string[],
+  userId: string,
+  field: "recipeId" | "recipeIds",
+): Promise<Validated<null>> {
+  if (recipeIds.length === 0) return { ok: true, value: null };
+  const rows = await db
     .select({ id: recipes.id })
     .from(recipes)
-    .where(and(eq(recipes.id, recipeId), visibleRecipesCondition(userId)))
-    .limit(1);
-  if (!recipe) return { ok: false, details: { recipeId: "unknown recipe" } };
-  return { ok: true, value: recipeId };
+    .where(and(inArray(recipes.id, [...recipeIds]), visibleRecipesCondition(userId)));
+  const known = new Set(rows.map((row) => row.id));
+  const unknownRecipeIds = recipeIds.filter((id) => !known.has(id));
+  if (unknownRecipeIds.length === 0) return { ok: true, value: null };
+  return {
+    ok: false,
+    details: field === "recipeId" ? { recipeId: "unknown recipe" } : { recipeIds: "unknown recipe", unknownRecipeIds },
+  };
+}
+
+/** The meal's rating state that one write is checked against (DESIGN-B §2). */
+export interface RatingCheck {
+  /** F: the meal's recipes after the write. */
+  recipeIds: readonly string[];
+  /** ing(F): current ingredient foods of those recipes. */
+  ingredientsOfFinal: ReadonlySet<string>;
+  /** ing(A): current ingredient foods of the recipes this write ADDS. */
+  ingredientsOfAdded: ReadonlySet<string>;
+  /** stored(f): each food's rating before the write (empty on create/serve). */
+  stored: ReadonlyMap<string, number | null>;
+  /** The meal's foods after the write. */
+  foodIds: readonly string[];
+  foodRatings?: Readonly<Record<string, number | null>> | undefined;
+  recipeRatings?: Readonly<Record<string, number | null>> | undefined;
 }
 
 /**
- * Item 572: a rating must fit the meal it lands on. A loose-food meal (no
- * recipe) is rated per food, and each rated food must be on the meal; a
- * recipe meal is rated once, as the recipe. A misplaced rating is a 400
- * rather than silently dropped — the parent tapped it, so losing it quietly
- * would be the worse failure. `null` (clear) is always accepted: clearing a
- * rating that cannot exist is already true.
+ * Ledger 752 (DESIGN-B §2): a food can carry its own stars when it is not an
+ * ingredient of any of the meal's recipes, or when it already holds a rating
+ * and no recipe this write adds lists it (a rated extra that later became an
+ * ingredient stays visible AND editable).
  */
-export function validateRatings(
-  recipeId: string | null,
-  foodIds: readonly string[],
-  foodRatings: Record<string, number | null> | undefined,
-  recipeRating: number | null | undefined,
-): Validated<null> {
-  const rated = Object.entries(foodRatings ?? {}).filter(([, rating]) => rating !== null);
-  if (recipeId !== null && rated.length > 0) {
-    return { ok: false, details: { foodRatings: "a recipe meal is rated as a recipe, not per food" } };
+export function isRateableFood(foodId: string, check: Pick<RatingCheck, "ingredientsOfFinal" | "ingredientsOfAdded" | "stored">): boolean {
+  if (!check.ingredientsOfFinal.has(foodId)) return true;
+  return check.stored.get(foodId) != null && !check.ingredientsOfAdded.has(foodId);
+}
+
+/**
+ * Item 572 / ledger 752: every rating must fit the meal it lands on. A food
+ * rating needs the food on the meal and rateable; a recipe rating needs the
+ * recipe on the meal. A misplaced rating is a 400 rather than silently
+ * dropped — the parent tapped it, so losing it quietly would be the worse
+ * failure. `null` (clear) is always accepted: clearing a rating that cannot
+ * exist is already true. One rule for create, PATCH and serve.
+ */
+export function validateRatings(check: RatingCheck): Validated<null> {
+  const onMealRecipes = new Set(check.recipeIds);
+  const strayRecipes = Object.entries(check.recipeRatings ?? {})
+    .filter(([recipeId, rating]) => rating !== null && !onMealRecipes.has(recipeId))
+    .map(([recipeId]) => recipeId);
+  if (strayRecipes.length > 0) {
+    return { ok: false, details: { recipeRatings: "recipe is not on this meal", strays: strayRecipes } };
   }
-  if (recipeId === null && recipeRating != null) {
-    return { ok: false, details: { recipeRating: "only a recipe meal has a recipe rating" } };
-  }
-  const onMeal = new Set(foodIds);
+  const rated = Object.entries(check.foodRatings ?? {}).filter(([, rating]) => rating !== null);
+  const onMeal = new Set(check.foodIds);
   const strays = rated.filter(([foodId]) => !onMeal.has(foodId)).map(([foodId]) => foodId);
   if (strays.length > 0) return { ok: false, details: { foodRatings: "food is not on this meal", strays } };
+  const inRecipe = rated.filter(([foodId]) => !isRateableFood(foodId, check)).map(([foodId]) => foodId);
+  if (inRecipe.length > 0) return { ok: false, details: { foodRatings: "rated as part of its recipe", foods: inRecipe } };
   return { ok: true, value: null };
+}
+
+/** What a request asks of the meal's recipes, in the new shape. */
+interface RecipeRequest {
+  /** The new recipe set in order, or undefined to leave it as it is. */
+  recipeIds: string[] | undefined;
+  recipeRatings: Record<string, number | null> | undefined;
+  /** Which shape the request used, so a 400 names the key it sent. */
+  field: "recipeId" | "recipeIds";
+}
+
+type RecipeMapping = { ok: true; value: RecipeRequest } | { ok: false; code: 400 | 409; details: unknown };
+
+const ONLY_RECIPE_MEALS = { recipeRating: "only a recipe meal has a recipe rating" } as const;
+
+/**
+ * DESIGN-B §4: the one place the LEGACY single-recipe shape (`recipeId`,
+ * `recipeRating`, sent by older app versions and their offline queue) is read
+ * into the new one. `current` is the meal's recipe set before the write
+ * (empty on create). On a meal with 0 or 1 recipe this is exactly the old
+ * behaviour; on a meal with 2+ recipes an older app may change everything
+ * except the recipes it cannot see — any recipe change is a 409 and nothing
+ * is written. The new shape passes through, deduped.
+ */
+export function mapRecipeRequest(
+  body: {
+    recipeIds?: string[] | undefined;
+    recipeRatings?: Record<string, number | null> | undefined;
+    recipeId?: string | null | undefined;
+    recipeRating?: number | null | undefined;
+  },
+  current: readonly string[],
+): RecipeMapping {
+  if (body.recipeId === undefined && body.recipeRating === undefined) {
+    return {
+      ok: true,
+      value: {
+        recipeIds: body.recipeIds === undefined ? undefined : [...new Set(body.recipeIds)],
+        recipeRatings: body.recipeRatings,
+        field: "recipeIds",
+      },
+    };
+  }
+
+  let recipeIds: string[] | undefined;
+  if (body.recipeId !== undefined && body.recipeId !== (current[0] ?? null)) {
+    if (current.length >= 2) {
+      return { ok: false, code: 409, details: "this meal has more than one recipe" };
+    }
+    recipeIds = body.recipeId === null ? [] : [body.recipeId];
+  }
+
+  let recipeRatings: Record<string, number | null> | undefined;
+  if (body.recipeRating !== undefined) {
+    const first = (recipeIds ?? current)[0];
+    if (first !== undefined) recipeRatings = { [first]: body.recipeRating };
+    else if (body.recipeRating !== null) return { ok: false, code: 400, details: ONLY_RECIPE_MEALS };
+  }
+  return { ok: true, value: { recipeIds, recipeRatings, field: "recipeId" } };
+}
+
+/** Thrown inside the PATCH transaction to roll it back with a reply. */
+class MealEditAborted extends Error {
+  constructor(readonly outcome: { code: 404 } | { code: 409; message: string } | { code: 400; details: unknown }) {
+    super("meal edit aborted");
+    this.name = "MealEditAborted";
+  }
 }
 
 export function registerMealRoutes(app: FastifyInstance, db: Database): void {
@@ -202,30 +311,52 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     const body = createMealInputSchema.safeParse(request.body);
     if (!body.success) return badRequest(reply, body.error.flatten());
 
-    const children = await validateFoodIds(db, body.data.foodIds, currentUserId(request));
+    const userId = currentUserId(request);
+    const children = await validateFoodIds(db, body.data.foodIds, userId);
     if (!children.ok) return badRequest(reply, children.details);
 
-    if (body.data.recipeId) {
-      const recipe = await validateRecipeId(db, body.data.recipeId, currentUserId(request));
-      if (!recipe.ok) return badRequest(reply, recipe.details);
-    }
+    // On create the legacy fields arrive as null when absent (the schema's
+    // transforms), so null is read as "not sent".
+    const mapped = mapRecipeRequest(
+      {
+        recipeIds: body.data.recipeIds,
+        recipeRatings: body.data.recipeRatings,
+        recipeId: body.data.recipeId ?? undefined,
+        recipeRating: body.data.recipeRating ?? undefined,
+      },
+      [],
+    );
+    if (!mapped.ok) return badRequest(reply, mapped.details);
+    const recipeIds = mapped.value.recipeIds ?? [];
 
-    const ratings = validateRatings(body.data.recipeId, children.value, body.data.foodRatings, body.data.recipeRating);
+    const recipeCheck = await validateRecipeIds(db, recipeIds, userId, mapped.value.field);
+    if (!recipeCheck.ok) return badRequest(reply, recipeCheck.details);
+
+    const ingredients = ingredientUnion(await loadIngredientFoodIds(db, recipeIds), recipeIds);
+    const ratings = validateRatings({
+      recipeIds,
+      ingredientsOfFinal: ingredients,
+      ingredientsOfAdded: ingredients,
+      stored: new Map(),
+      foodIds: children.value,
+      foodRatings: body.data.foodRatings,
+      recipeRatings: mapped.value.recipeRatings,
+    });
     if (!ratings.ok) return badRequest(reply, ratings.details);
 
     const servedAt = body.data.servedAt ? new Date(body.data.servedAt) : new Date();
 
-    // One transaction so a meal is all-or-nothing: either the meal and every
-    // one of its foods land, or nothing does. Hand-logged meals never link to
-    // a storage item — that link is what the serve endpoint alone creates.
+    // One transaction so a meal is all-or-nothing: either the meal, its
+    // recipes and every one of its foods land, or nothing does. Hand-logged
+    // meals never link to a storage item — that link is what the serve
+    // endpoint alone creates.
     const mealId = await db.transaction((tx) =>
-      insertMealWithFoods(tx, {
+      insertMeal(tx, {
         babyId: params.data.babyId,
-        recipeId: body.data.recipeId,
+        recipes: recipeIds.map((recipeId) => ({ recipeId, rating: mapped.value.recipeRatings?.[recipeId] ?? null })),
         servedAt,
         reactionNote: body.data.reactionNote,
         notes: body.data.notes,
-        recipeRating: body.data.recipeRating,
         foods: children.value.map((foodId) => ({ foodId, rating: body.data.foodRatings?.[foodId] ?? null })),
       }),
     );
@@ -242,108 +373,173 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     const params = mealIdParamSchema.safeParse(request.params);
     if (!params.success) return notFound(reply);
 
-    const [existing] = await db
-      .select({ id: meals.id, recipeId: meals.recipeId })
-      .from(meals)
-      .where(ownedMealCondition(db, params.data.id, currentUserId(request)))
-      .limit(1);
-    if (!existing) return notFound(reply);
+    const userId = currentUserId(request);
 
-    const body = updateMealInputSchema.safeParse(request.body);
-    if (!body.success) return badRequest(reply, body.error.flatten());
+    // DESIGN-B §4: the whole edit runs in ONE transaction behind a lock on the
+    // meal row, because every rule below reads state first (the recipe set,
+    // the stored ratings, which recipe is first). The meal page fires one
+    // PATCH per star tap, so two taps on two recipes now serialize instead of
+    // one overwriting the other's read. A rejection throws MealEditAborted to
+    // roll everything back.
+    let mealId: string;
+    try {
+      mealId = await db.transaction(async (tx) => {
+        const [locked] = await tx
+          .select({ id: meals.id })
+          .from(meals)
+          .where(ownedMealCondition(db, params.data.id, userId))
+          .for("update");
+        if (!locked) throw new MealEditAborted({ code: 404 });
 
-    const onMeal = await db
-      .select({ foodId: mealFoods.foodId })
-      .from(mealFoods)
-      .where(eq(mealFoods.mealId, existing.id));
-    const kept = new Set(onMeal.map((row) => row.foodId));
-    let foodIds: string[] | null = null;
-    if (body.data.foodIds) {
-      const children = await validateFoodIds(db, body.data.foodIds, currentUserId(request), kept);
-      if (!children.ok) return badRequest(reply, children.details);
-      foodIds = children.value;
-    }
+        const body = updateMealInputSchema.safeParse(request.body);
+        if (!body.success) throw new MealEditAborted({ code: 400, details: body.error.flatten() });
 
-    if (body.data.recipeId) {
-      const recipe = await validateRecipeId(db, body.data.recipeId, currentUserId(request));
-      if (!recipe.ok) return badRequest(reply, recipe.details);
-    }
-
-    // Ratings are checked against the meal as it will be AFTER this edit.
-    const finalRecipeId = body.data.recipeId !== undefined ? body.data.recipeId : existing.recipeId;
-    const ratings = validateRatings(
-      finalRecipeId,
-      foodIds ?? [...kept],
-      body.data.foodRatings,
-      body.data.recipeRating,
-    );
-    if (!ratings.ok) return badRequest(reply, ratings.details);
-
-    // One transaction so the column updates and the child replacement can
-    // never be observed half-applied.
-    await db.transaction(async (tx) => {
-      const columns: Partial<typeof meals.$inferInsert> = {};
-      if (body.data.servedAt !== undefined) columns.servedAt = new Date(body.data.servedAt);
-      if (body.data.reactionNote !== undefined) columns.reactionNote = body.data.reactionNote;
-      if (body.data.notes !== undefined) columns.notes = body.data.notes;
-      if (body.data.recipeId !== undefined) columns.recipeId = body.data.recipeId;
-      // A recipe rating belongs to the recipe it was given for: a changed or
-      // removed recipe drops it unless this same edit rates the new one.
-      if (body.data.recipeRating !== undefined) columns.recipeRating = body.data.recipeRating;
-      else if (finalRecipeId !== existing.recipeId) columns.recipeRating = null;
-      if (Object.keys(columns).length > 0) {
-        await tx.update(meals).set(columns).where(eq(meals.id, existing.id));
-      }
-
-      if (foodIds) {
-        // Replacing the children wholesale would throw away each row's
-        // storage provenance, so it is carried forward per food: a food that
-        // survives the edit keeps the storage item it was served from, and a
-        // food swapped in during the edit was not served from anywhere and
-        // gets null. Read before the delete — the rows are gone after it.
-        const previous = await tx
+        const before = await loadMealRecipeRows(tx, [locked.id]);
+        const previousRecipeIds = before.map((row) => row.recipeId);
+        const previousFoods = await tx
           .select({ foodId: mealFoods.foodId, storageItemId: mealFoods.storageItemId, rating: mealFoods.rating })
           .from(mealFoods)
-          .where(eq(mealFoods.mealId, existing.id));
-        const previousByFoodId = new Map(previous.map((row) => [row.foodId, row]));
+          .where(eq(mealFoods.mealId, locked.id));
+        const previousByFoodId = new Map(previousFoods.map((row) => [row.foodId, row]));
 
-        await tx.delete(mealFoods).where(eq(mealFoods.mealId, existing.id));
-        await tx.insert(mealFoods).values(
-          foodIds.map((foodId) => ({
-            mealId: existing.id,
-            foodId,
-            // Ratings ride along the same way, so editing a meal's foods
-            // never silently wipes what the parent rated.
-            storageItemId: previousByFoodId.get(foodId)?.storageItemId ?? null,
-            rating: previousByFoodId.get(foodId)?.rating ?? null,
-          })),
-        );
-      }
+        const mapped = mapRecipeRequest(body.data, previousRecipeIds);
+        if (!mapped.ok) {
+          throw new MealEditAborted(
+            mapped.code === 409
+              ? { code: 409, message: String(mapped.details) }
+              : { code: 400, details: mapped.details },
+          );
+        }
 
-      if (finalRecipeId !== null) {
-        // Turned into a recipe meal: its per-food ratings no longer apply
-        // (validateRatings already refused new ones).
-        if (existing.recipeId === null) {
+        let foodIds: string[] | null = null;
+        if (body.data.foodIds) {
+          const children = await validateFoodIds(tx, body.data.foodIds, userId, new Set(previousByFoodId.keys()));
+          if (!children.ok) throw new MealEditAborted({ code: 400, details: children.details });
+          foodIds = children.value;
+        }
+
+        const finalRecipeIds = mapped.value.recipeIds ?? previousRecipeIds;
+        const added = finalRecipeIds.filter((id) => !previousRecipeIds.includes(id));
+        const recipeCheck = await validateRecipeIds(tx, added, userId, mapped.value.field);
+        if (!recipeCheck.ok) throw new MealEditAborted({ code: 400, details: recipeCheck.details });
+
+        // Ratings are checked against the meal as it will be AFTER this edit.
+        const ingredientsByRecipe = await loadIngredientFoodIds(tx, finalRecipeIds);
+        const ingredientsOfAdded = ingredientUnion(ingredientsByRecipe, added);
+        const ratings = validateRatings({
+          recipeIds: finalRecipeIds,
+          ingredientsOfFinal: ingredientUnion(ingredientsByRecipe, finalRecipeIds),
+          ingredientsOfAdded,
+          stored: new Map(previousFoods.map((row) => [row.foodId, row.rating])),
+          foodIds: foodIds ?? [...previousByFoodId.keys()],
+          foodRatings: body.data.foodRatings,
+          recipeRatings: mapped.value.recipeRatings,
+        });
+        if (!ratings.ok) throw new MealEditAborted({ code: 400, details: ratings.details });
+
+        const columns: Partial<typeof meals.$inferInsert> = {};
+        if (body.data.servedAt !== undefined) columns.servedAt = new Date(body.data.servedAt);
+        if (body.data.reactionNote !== undefined) columns.reactionNote = body.data.reactionNote;
+        if (body.data.notes !== undefined) columns.notes = body.data.notes;
+        if (Object.keys(columns).length > 0) {
+          await tx.update(meals).set(columns).where(eq(meals.id, locked.id));
+        }
+
+        if (mapped.value.recipeIds !== undefined) {
+          // A new list replaces the set and renumbers 0..n-1 in list order. A
+          // recipe that stays keeps its rating; a removed recipe's rating
+          // goes with its row; an added one starts unrated unless this same
+          // edit rates it (below).
+          if (finalRecipeIds.length === 0) {
+            await tx.delete(mealRecipes).where(eq(mealRecipes.mealId, locked.id));
+          } else {
+            await tx
+              .delete(mealRecipes)
+              .where(and(eq(mealRecipes.mealId, locked.id), notInArray(mealRecipes.recipeId, finalRecipeIds)));
+          }
+          for (const [position, recipeId] of finalRecipeIds.entries()) {
+            if (previousRecipeIds.includes(recipeId)) {
+              await tx
+                .update(mealRecipes)
+                .set({ position })
+                .where(and(eq(mealRecipes.mealId, locked.id), eq(mealRecipes.recipeId, recipeId)));
+            } else {
+              await tx.insert(mealRecipes).values({ mealId: locked.id, recipeId, position, rating: null });
+            }
+          }
+        }
+
+        // Merged per recipe: one targeted UPDATE per key, so a star tap on
+        // one recipe never rewrites another's.
+        for (const [recipeId, rating] of Object.entries(mapped.value.recipeRatings ?? {})) {
+          await tx
+            .update(mealRecipes)
+            .set({ rating })
+            .where(and(eq(mealRecipes.mealId, locked.id), eq(mealRecipes.recipeId, recipeId)));
+        }
+
+        if (foodIds) {
+          // Replacing the children wholesale would throw away each row's
+          // storage provenance, so it is carried forward per food: a food that
+          // survives the edit keeps the storage item it was served from, and a
+          // food swapped in during the edit was not served from anywhere and
+          // gets null.
+          await tx.delete(mealFoods).where(eq(mealFoods.mealId, locked.id));
+          await tx.insert(mealFoods).values(
+            foodIds.map((foodId) => ({
+              mealId: locked.id,
+              foodId,
+              // Ratings ride along the same way, so editing a meal's foods
+              // never silently wipes what the parent rated.
+              storageItemId: previousByFoodId.get(foodId)?.storageItemId ?? null,
+              rating: previousByFoodId.get(foodId)?.rating ?? null,
+            })),
+          );
+        }
+
+        // A recipe this edit ADDS rates its ingredient foods from now on, so
+        // their own stars go (the generalization of "became a recipe meal
+        // clears food ratings"). A note, time, rating-only or food-only edit
+        // adds no recipe and clears nothing.
+        if (ingredientsOfAdded.size > 0) {
           await tx
             .update(mealFoods)
             .set({ rating: null })
-            .where(and(eq(mealFoods.mealId, existing.id), isNotNull(mealFoods.rating)));
+            .where(
+              and(
+                eq(mealFoods.mealId, locked.id),
+                inArray(mealFoods.foodId, [...ingredientsOfAdded]),
+                isNotNull(mealFoods.rating),
+              ),
+            );
         }
-      } else {
+
+        // Merged per food: a food absent from the map keeps its rating.
         for (const [foodId, rating] of Object.entries(body.data.foodRatings ?? {})) {
           await tx
             .update(mealFoods)
             .set({ rating })
-            .where(and(eq(mealFoods.mealId, existing.id), eq(mealFoods.foodId, foodId)));
+            .where(and(eq(mealFoods.mealId, locked.id), eq(mealFoods.foodId, foodId)));
         }
-      }
-    });
 
-    const item = (await loadMeals(db, [existing.id])).get(existing.id);
+        // Last, from the rows just written.
+        await writeMealMirror(tx, locked.id);
+        return locked.id;
+      });
+    } catch (error) {
+      if (error instanceof MealEditAborted) {
+        const { outcome } = error;
+        if (outcome.code === 404) return notFound(reply);
+        if (outcome.code === 409) return reply.code(409).send({ error: "conflict", message: outcome.message });
+        return badRequest(reply, outcome.details);
+      }
+      throw error;
+    }
+
+    const item = (await loadMeals(db, [mealId])).get(mealId);
     if (!item) throw new Error("Meal was updated but could not be read back");
     return reply.send(item);
   });
-
   // -----------------------------------------------------------------------
   // DELETE /api/meals/:id
   // -----------------------------------------------------------------------

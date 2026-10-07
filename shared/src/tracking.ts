@@ -92,9 +92,20 @@ export type MealsQuery = z.infer<typeof mealsQuerySchema>;
  * The final food list for the meal. The client sends what was actually
  * eaten — recipe ingredients are pre-filled and removable client-side, so
  * the server never expands a recipe itself. Duplicates are deduped by the
- * route (and by `meal_foods`' unique index) rather than rejected.
+ * route (and by `meal_foods`' unique index) rather than rejected. Up to 50
+ * since ledger 752: two recipes plus extras can pass 25, and PATCH resends
+ * every food.
  */
-export const mealFoodIdsSchema = z.array(z.string().uuid()).min(1).max(25);
+export const MEAL_FOODS_MAX = 50;
+export const mealFoodIdsSchema = z.array(z.string().uuid()).min(1).max(MEAL_FOODS_MAX);
+
+/**
+ * Ledger 752: the recipes a meal was made from, in the order picked (the
+ * first is the meal's title and what older app versions see). Duplicates are
+ * deduped by the route. Every id must be a recipe the caller can see.
+ */
+export const MEAL_RECIPES_MAX = 10;
+export const mealRecipeIdsSchema = z.array(z.string().uuid()).max(MEAL_RECIPES_MAX);
 
 /**
  * Item 572: a baby's star rating, a whole number of stars from 1 to 5.
@@ -104,31 +115,57 @@ export const STAR_RATING_MAX = 5;
 export const starRatingSchema = z.number().int().min(1).max(STAR_RATING_MAX);
 
 /**
- * Per-food ratings on a LOOSE-FOOD meal (no recipe), keyed by food id; `null`
- * clears. A recipe meal is rated once, as a recipe (`recipeRating`), and the
- * route refuses a food rating on it — as it refuses a recipe rating on a
- * loose-food meal — rather than silently dropping what the parent tapped.
+ * Per-food ratings keyed by food id; `null` clears. Since ledger 752 a food
+ * can be rated when it is NOT an ingredient of any of the meal's recipes (an
+ * extra beside them, or every food of a loose-food meal), or when it already
+ * holds a rating and no recipe this edit adds lists it. A food rated as part
+ * of its recipe is refused with a 400 rather than silently dropped.
  */
 export const foodRatingsSchema = z.record(z.string().uuid(), starRatingSchema.nullable());
 
-export const createMealInputSchema = z.object({
-  foodIds: mealFoodIdsSchema,
-  /** Attribution only — never expanded into foods server-side. */
-  recipeId: z
-    .string()
-    .uuid()
-    .nullish()
-    .transform((value) => value ?? null),
-  /** Defaults to now on the server when omitted. */
-  servedAt: servedAtSchema.optional(),
-  reactionNote: optionalReactionNote,
-  /** General note — never read as a reaction signal. See `optionalNotes`. */
-  notes: optionalNotes,
-  foodRatings: foodRatingsSchema.optional(),
-  recipeRating: starRatingSchema
-    .nullish()
-    .transform((value) => value ?? null),
-});
+/** Ledger 752: one rating per recipe on the meal, keyed by recipe id; `null`
+ * clears. Merged per key on PATCH. */
+export const recipeRatingsSchema = z.record(z.string().uuid(), starRatingSchema.nullable());
+
+const MIXED_RECIPE_SHAPES = "Send either recipeIds/recipeRatings or recipeId/recipeRating, not both";
+
+export const createMealInputSchema = z
+  .object({
+    foodIds: mealFoodIdsSchema,
+    /** Ledger 752: the meal's recipes, in order. Attribution only — never
+     * expanded into foods server-side. */
+    recipeIds: mealRecipeIdsSchema.optional(),
+    /** Ledger 752: a rating per recipe on the meal. */
+    recipeRatings: recipeRatingsSchema.optional(),
+    /** LEGACY single-recipe shape (older app versions and their offline queue):
+     * read as `recipeIds: [recipeId]`. Attribution only. */
+    recipeId: z
+      .string()
+      .uuid()
+      .nullish()
+      .transform((value) => value ?? null),
+    /** Defaults to now on the server when omitted. */
+    servedAt: servedAtSchema.optional(),
+    reactionNote: optionalReactionNote,
+    /** General note — never read as a reaction signal. See `optionalNotes`. */
+    notes: optionalNotes,
+    foodRatings: foodRatingsSchema.optional(),
+    /** LEGACY: the single recipe's rating, read as `recipeRatings`. */
+    recipeRating: starRatingSchema
+      .nullish()
+      .transform((value) => value ?? null),
+  })
+  // The legacy fields are already null when absent (the transforms above), so
+  // "legacy sent" is `!== null` here — `!== undefined` would refuse every
+  // new-shape create.
+  .refine(
+    (value) =>
+      !(
+        (value.recipeId !== null || value.recipeRating !== null) &&
+        (value.recipeIds !== undefined || value.recipeRatings !== undefined)
+      ),
+    { message: MIXED_RECIPE_SHAPES },
+  );
 export type CreateMealInput = z.input<typeof createMealInputSchema>;
 
 /**
@@ -148,6 +185,14 @@ export const updateMealInputSchema = z
   .object({
     /** Replaces the meal's foods wholesale when present. */
     foodIds: mealFoodIdsSchema.optional(),
+    /** Ledger 752: replaces the meal's recipe set when present, in this
+     * order. A recipe that stays keeps its rating. */
+    recipeIds: mealRecipeIdsSchema.optional(),
+    /** Ledger 752: merged per recipe; a recipe absent from the map keeps its
+     * rating. Keys must be recipes on the meal after this edit. */
+    recipeRatings: recipeRatingsSchema.optional(),
+    /** LEGACY (older app versions): the meal's single recipe. On a meal with
+     * two or more recipes, anything but the first recipe is a 409. */
     recipeId: z.string().uuid().nullable().optional(),
     servedAt: servedAtSchema.optional(),
     reactionNote: patchReactionNote,
@@ -155,12 +200,21 @@ export const updateMealInputSchema = z
     /** Merged per food: a food absent from the map keeps its rating. A food
      * that survives a `foodIds` replacement keeps its rating too. */
     foodRatings: foodRatingsSchema.optional(),
-    /** Cleared server-side whenever the recipe changes without a new one. */
+    /** LEGACY: the first recipe's rating. Cleared server-side whenever the
+     * recipe changes without a new one. */
     recipeRating: starRatingSchema.nullable().optional(),
   })
   .refine((value) => Object.values(value).some((field) => field !== undefined), {
     message: "At least one field must be provided",
-  });
+  })
+  .refine(
+    (value) =>
+      !(
+        (value.recipeId !== undefined || value.recipeRating !== undefined) &&
+        (value.recipeIds !== undefined || value.recipeRatings !== undefined)
+      ),
+    { message: MIXED_RECIPE_SHAPES },
+  );
 export type UpdateMealInput = z.input<typeof updateMealInputSchema>;
 
 /**
@@ -190,11 +244,24 @@ export const mealFoodSchema = z.object({
    * keeps its allergen chips even after the food is deleted (and so hidden
    * from the foods list). Optional so an older cached body still parses. */
   allergens: z.array(z.string()).optional(),
-  /** This food's rating on a loose-food meal; always null on a recipe meal.
-   * Optional so an older cached body still parses. */
+  /** This food's own rating; null when unrated and for a food rated as part
+   * of its recipe. Optional so an older cached body still parses. */
   rating: starRatingSchema.nullable().optional(),
+  /** Ledger 752: whether this food is an ingredient of one of the meal's
+   * recipes (rated through the recipe, so it shows a star row only when it
+   * already holds a rating of its own). Optional so an older cached body
+   * still parses. */
+  inRecipe: z.boolean().optional(),
 });
 export type MealFood = z.infer<typeof mealFoodSchema>;
+
+/** Ledger 752: one recipe of a meal, with this meal's rating of it. */
+export const mealRecipeSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  rating: starRatingSchema.nullable(),
+});
+export type MealRecipe = z.infer<typeof mealRecipeSchema>;
 
 export const mealItemSchema = z.object({
   id: z.string().uuid(),
@@ -203,10 +270,14 @@ export const mealItemSchema = z.object({
   reactionNote: z.string().nullable(),
   /** General note, distinct from `reactionNote` — see `optionalNotes`. */
   notes: z.string().nullable(),
+  /** Ledger 752: every recipe of the meal, first-picked first. Optional so
+   * an older cached body still parses. */
+  recipes: z.array(mealRecipeSchema).optional(),
+  /** The FIRST recipe (`recipes[0]`), kept for older app versions. */
   recipeId: z.string().uuid().nullable(),
   recipeTitle: z.string().nullable(),
-  /** The recipe's rating on a recipe meal; always null on a loose-food meal.
-   * Optional so an older cached body still parses. */
+  /** The first recipe's rating; always null on a loose-food meal. Optional
+   * so an older cached body still parses. */
   recipeRating: starRatingSchema.nullable().optional(),
   /** Always at least one food, ordered by name for a stable render. */
   foods: z.array(mealFoodSchema),

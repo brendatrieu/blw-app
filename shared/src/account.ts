@@ -20,7 +20,7 @@ import { userPreferencesSchema } from "./preferences.js";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 17;
+export const ACCOUNT_EXPORT_VERSION = 18;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -69,23 +69,31 @@ export const exportMealFoodSchema = z.object({
   slug: z.string(),
   name: z.string(),
   storageItemId: z.string().nullable(),
-  /** v17. The baby's 1-5 star rating of this food on a loose-food meal;
-   * null when not rated (there is no 0) and always null on a recipe meal. */
+  /** v17. The baby's 1-5 star rating of this food; null when not rated
+   * (there is no 0). v18: a food's own stars, so never set for a food rated
+   * as part of its recipe. */
+  rating: z.number().int().nullable(),
+});
+
+/** v18. One recipe of a meal, with the baby's 1-5 rating of it (null when
+ * not rated), in the order the parent picked them. */
+export const exportMealRecipeSchema = z.object({
+  recipeId: z.string(),
+  recipeTitle: z.string(),
   rating: z.number().int().nullable(),
 });
 
 export const exportMealSchema = z.object({
   id: z.string(),
   babyId: z.string(),
-  recipeId: z.string().nullable(),
-  recipeTitle: z.string().nullable(),
+  /** v18. Every recipe of the meal, first-picked first; empty for a
+   * loose-food meal. Replaces v17's single `recipeId` / `recipeTitle` /
+   * `recipeRating`, which only ever described one recipe. */
+  recipes: z.array(exportMealRecipeSchema),
   servedAt: z.string(),
   reactionNote: z.string().nullable(),
   /** General, non-clinical note on the meal itself. Added in v3. */
   notes: z.string().nullable(),
-  /** v17. The baby's 1-5 star rating of the recipe on a recipe meal; null
-   * when not rated and always null on a loose-food meal. */
-  recipeRating: z.number().int().nullable(),
   createdAt: z.string(),
   foods: z.array(exportMealFoodSchema),
 });
@@ -299,6 +307,7 @@ export type ExportProfile = z.infer<typeof exportProfileSchema>;
 export type ExportBaby = z.infer<typeof exportBabySchema>;
 export type ExportMeal = z.infer<typeof exportMealSchema>;
 export type ExportMealFood = z.infer<typeof exportMealFoodSchema>;
+export type ExportMealRecipe = z.infer<typeof exportMealRecipeSchema>;
 export type ExportFavorite = z.infer<typeof exportFavoriteSchema>;
 export type ExportStorageItem = z.infer<typeof exportStorageItemSchema>;
 export type ExportAllergenOverride = z.infer<typeof exportAllergenOverrideSchema>;

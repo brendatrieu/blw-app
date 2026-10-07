@@ -216,8 +216,12 @@ describe("tracking routes", () => {
           allergens: ["egg"],
           // Not rated (item 572): null, never 0.
           rating: null,
+          // An ingredient of the meal's recipe (ledger 752).
+          inRecipe: true,
         },
       ]);
+      // Ledger 752: the recipe list beside the single-recipe fields.
+      expect(created.recipes).toEqual([{ id: fixtures.recipe.id, title: "Egg Toast Fingers", rating: null }]);
 
       const listBody = await listMeals(user, babyId);
       expect(listBody.items).toHaveLength(1);
@@ -285,10 +289,10 @@ describe("tracking routes", () => {
       expect(response.statusCode).toBe(400);
     });
 
-    it("rejects more than 25 foodIds with 400", async () => {
+    it("rejects more than 50 foodIds with 400 (25 until ledger 752)", async () => {
       const user = await signUpUser(app);
       const babyId = await createBaby(app, user);
-      const tooMany = Array.from({ length: 26 }, () => fixtures.egg.id);
+      const tooMany = Array.from({ length: 51 }, () => fixtures.egg.id);
 
       const response = await app.inject({
         method: "POST",
@@ -514,7 +518,7 @@ describe("tracking routes", () => {
 
       expect((await patch({})).statusCode).toBe(400);
       expect((await patch({ foodIds: [] })).statusCode).toBe(400);
-      expect((await patch({ foodIds: Array.from({ length: 26 }, () => fixtures.egg.id) })).statusCode).toBe(400);
+      expect((await patch({ foodIds: Array.from({ length: 51 }, () => fixtures.egg.id) })).statusCode).toBe(400);
       expect((await patch({ foodIds: [UNKNOWN_ID] })).statusCode).toBe(400);
       expect((await patch({ recipeId: UNKNOWN_ID })).statusCode).toBe(400);
       expect((await patch({ servedAt: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString() })).statusCode).toBe(

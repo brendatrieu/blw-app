@@ -35,8 +35,8 @@ import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
 import { babies, foods, storageItemFoods, storageItems, recipeIngredients, recipes } from "../db/schema.js";
 import { choosableFoodsCondition } from "../services/foods.js";
-import { insertMealWithFoods, loadMeals, ownsBaby } from "../services/meals.js";
-import { validateRatings } from "./meals.js";
+import { ingredientUnion, insertMeal, loadIngredientFoodIds, loadMeals, ownsBaby } from "../services/meals.js";
+import { mapRecipeRequest, validateRatings } from "./meals.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import {
   deriveFreshness,
@@ -586,17 +586,32 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
         // create rates one — a food item per food, a recipe item once as the
         // recipe — and a rating that does not fit (including one for a food
         // an edit just took out) is a 400 before anything is written.
-        const ratings = validateRatings(locked.recipeId, foodIds, body.data.foodRatings, body.data.recipeRating);
+        // Ledger 752: the same rule as create (no recipe was on the meal
+        // before, so a food is rateable unless it is an ingredient of the
+        // container's recipe), with the single `recipeRating` read the way
+        // create reads an older app's.
+        const recipeIds = locked.recipeId ? [locked.recipeId] : [];
+        const mapped = mapRecipeRequest({ recipeRating: body.data.recipeRating ?? undefined }, recipeIds);
+        if (!mapped.ok) throw new ServeAborted({ code: 400, details: mapped.details });
+        const ingredients = ingredientUnion(await loadIngredientFoodIds(tx, recipeIds), recipeIds);
+        const ratings = validateRatings({
+          recipeIds,
+          ingredientsOfFinal: ingredients,
+          ingredientsOfAdded: ingredients,
+          stored: new Map(),
+          foodIds,
+          foodRatings: body.data.foodRatings,
+          recipeRatings: mapped.value.recipeRatings,
+        });
         if (!ratings.ok) throw new ServeAborted({ code: 400, details: ratings.details });
 
-        const id = await insertMealWithFoods(tx, {
+        const id = await insertMeal(tx, {
           babyId,
           // Attribution follows the storage item, food-sourced or not.
-          recipeId: locked.recipeId,
+          recipes: recipeIds.map((recipeId) => ({ recipeId, rating: mapped.value.recipeRatings?.[recipeId] ?? null })),
           servedAt,
           reactionNote: body.data.reactionNote,
           notes: body.data.notes,
-          recipeRating: body.data.recipeRating,
           foods: foodIds.map((foodId) => ({
             foodId,
             storageItemId: item.id,

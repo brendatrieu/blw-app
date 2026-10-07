@@ -554,7 +554,7 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(17);
+    expect(bundle.exportVersion).toBe(18);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -590,7 +590,7 @@ describe("account export", () => {
 
     expect(bundle.meals[0]?.foods.map((food) => food.name)).toEqual(["Broccoli", "Sweet potato"]);
     expect(bundle.meals[0]?.foods.map((food) => food.slug)).toEqual(["broccoli", "sweet-potato"]);
-    expect(bundle.meals[0]?.recipeTitle).toBe("Sweet Potato Strips");
+    expect(bundle.meals[0]?.recipes.map((recipe) => recipe.recipeTitle)).toEqual(["Sweet Potato Strips"]);
     expect(bundle.favorites[0]?.recipeTitle).toBe("Sweet Potato Strips");
 
     const active = bundle.storageItems.find((item) => item.status === "active");
@@ -705,7 +705,7 @@ describe("account export", () => {
     const bundle = accountExportSchema.parse(
       (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: user.cookie } })).json(),
     );
-    expect(bundle.exportVersion).toBe(17);
+    expect(bundle.exportVersion).toBe(18);
     expect(bundle.customFoods).toHaveLength(1);
     expect(bundle.customFoods[0]).toMatchObject({ id: food.id, name: "Satay sauce" });
     expect(Date.parse(bundle.customFoods[0]!.deletedAt!)).not.toBeNaN();

@@ -297,7 +297,7 @@ describe("ratings", () => {
       const foodOnRecipe = await serve(recipeItem, { foodRatings: { [fx.egg.id]: 4 } });
       expect(foodOnRecipe.statusCode).toBe(400);
       expect(foodOnRecipe.json()).toMatchObject({
-        details: { foodRatings: "a recipe meal is rated as a recipe, not per food" },
+        details: { foodRatings: "rated as part of its recipe", foods: [fx.egg.id] },
       });
 
       await expectUntouched(foodItem);
@@ -595,16 +595,19 @@ describe("ratings", () => {
     });
   });
 
-  it("exports every rating (v17)", async () => {
+  it("exports every rating (v17, recipes per meal since v18)", async () => {
     await created({ foodIds: [fx.egg.id, fx.banana.id], foodRatings: { [fx.banana.id]: 3 } });
     await created({ foodIds: [fx.egg.id], recipeId: fx.recipe.id, recipeRating: 5 });
     const response = await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: parent.cookie } });
     const bundle = accountExportSchema.parse(response.json());
-    const shapes = bundle.meals.map((meal) => [meal.recipeRating, meal.foods.map((food) => [food.slug, food.rating])]);
+    const shapes = bundle.meals.map((meal) => [
+      meal.recipes.map((recipe) => [recipe.recipeTitle, recipe.rating]),
+      meal.foods.map((food) => [food.slug, food.rating]),
+    ]);
     expect(shapes).toEqual(
       expect.arrayContaining([
-        [null, [["banana", 3], ["egg", null]]],
-        [5, [["egg", null]]],
+        [[], [["banana", 3], ["egg", null]]],
+        [[["Egg Banana Pancakes", 5]], [["egg", null]]],
       ]),
     );
   });

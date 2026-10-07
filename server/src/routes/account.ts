@@ -44,6 +44,7 @@ import {
   userAiKeys,
   userPreferences,
 } from "../db/schema.js";
+import { loadMealRecipeRows } from "../services/meals.js";
 import { loadStorageItemFoods } from "../services/storage.js";
 
 /**
@@ -119,16 +120,12 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
           .select({
             id: meals.id,
             babyId: meals.babyId,
-            recipeId: meals.recipeId,
-            recipeTitle: recipes.title,
             servedAt: meals.servedAt,
             reactionNote: meals.reactionNote,
             notes: meals.notes,
-            recipeRating: meals.recipeRating,
             createdAt: meals.createdAt,
           })
           .from(meals)
-          .leftJoin(recipes, eq(meals.recipeId, recipes.id))
           .where(inArray(meals.babyId, babyIds))
           .orderBy(asc(meals.servedAt))
       : [];
@@ -154,6 +151,20 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
           )
           .orderBy(asc(foods.name))
       : [];
+
+    // v18: every recipe of each meal, first-picked first, in one pass. The
+    // legacy `meals.recipe_id` / `recipe_rating` mirror is not the parent's
+    // data and is not exported.
+    const recipesByMealId = new Map<string, { recipeId: string; recipeTitle: string; rating: number | null }[]>();
+    for (const row of await loadMealRecipeRows(
+      db,
+      mealRows.map((meal) => meal.id),
+    )) {
+      const entry = { recipeId: row.recipeId, recipeTitle: row.title, rating: row.rating };
+      const existing = recipesByMealId.get(row.mealId);
+      if (existing) existing.push(entry);
+      else recipesByMealId.set(row.mealId, [entry]);
+    }
 
     const foodsByMealId = new Map<
       string,
@@ -434,12 +445,10 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       meals: mealRows.map((row) => ({
         id: row.id,
         babyId: row.babyId,
-        recipeId: row.recipeId,
-        recipeTitle: row.recipeTitle,
+        recipes: recipesByMealId.get(row.id) ?? [],
         servedAt: row.servedAt.toISOString(),
         reactionNote: row.reactionNote,
         notes: row.notes,
-        recipeRating: row.recipeRating,
         createdAt: row.createdAt.toISOString(),
         foods: foodsByMealId.get(row.id) ?? [],
       })),
@@ -642,7 +651,9 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
 
       // Almost everything the account owns hangs off `user` by an ON DELETE
       // CASCADE chain, so one delete takes it all:
-      //   user -> babies -> meals -> meal_foods, babies -> symptom_checks
+      //   user -> babies -> meals -> meal_foods, meal_recipes, meal_storage_items
+      //   user -> babies -> symptom_checks
+      //   user -> storage_items -> meal_storage_items
       //   user -> babies -> allergen_overrides
       //   user -> favorites, storage_items, user_ai_keys, user_preferences
       //   user -> usage_events                (anonymous, but still theirs)

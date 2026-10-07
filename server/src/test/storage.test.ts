@@ -1267,6 +1267,8 @@ describe("ownership", () => {
           allergens: [],
           // A served meal is never rated at serve time (item 572).
           rating: null,
+          // A food container has no recipe (ledger 752).
+          inRecipe: false,
         },
       ]);
       // Default servings is 1.
