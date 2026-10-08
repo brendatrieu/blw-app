@@ -272,6 +272,41 @@ restore the `.env` file from wherever you keep it outside the VM (a password
 manager — it's never in git), then run the restore procedure before
 `docker compose up -d --wait` starts serving traffic.
 
+## Failed start and rollback
+
+The container's start command is `node dist/db/migrate.js && tsx db/seeds/index.ts && node dist/index.js`
+(Dockerfile). If a migration fails there:
+
+1. `migrate.js` logs "Migration failed:" and exits 1, so the app never starts.
+2. The database is untouched: drizzle runs every pending migration in one
+   transaction, which rolls back (the boot heal `healMealRecipes` that runs
+   after it is its own transaction and fails the same way).
+3. `restart: unless-stopped` restarts it into the same failure (a crash loop),
+   `docker compose up -d --wait` fails, and the Deploy job turns red.
+4. **The site is down** (Caddy answers 502). `up -d` has already replaced the
+   old container. "Production keeps the previous release" is true only when
+   the image BUILD fails (typecheck), never when the start fails.
+
+Take a backup before any deploy that adds a migration (`/opt/blw/backup.sh`,
+section 7) and copy it off the VM.
+
+Recovery: push a fix or a revert, or pin the previous image on the VM (every
+image is also tagged with its commit sha):
+
+```bash
+cd /opt/blw
+docker pull ghcr.io/brendatrieu/blw-app:<prev-sha>
+docker tag ghcr.io/brendatrieu/blw-app:<prev-sha> ghcr.io/brendatrieu/blw-app:latest
+docker compose up -d --wait
+```
+
+Do not re-run the failed Deploy job afterwards: it pulls the bad `latest` again.
+
+Rollback limit for 0020/0021 (several recipes per meal): rolling back to the
+image before 0020 is safe while the installed app still sends one recipe per
+meal (the boot heal folds back what the older image wrote). Once the app that
+sends `recipeIds` ships, never roll back past the first image with 0020.
+
 ## Uptime monitoring
 
 The container healthcheck polls `GET /api/health`, which is deliberately cheap
