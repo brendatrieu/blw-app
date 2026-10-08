@@ -36,7 +36,7 @@ const moreLinks: MoreRow[] = [
   {
     to: "/guides",
     label: "How-to guides",
-    description: "Step by step: recipes, meals, and storage.",
+    description: "Step by step: foods, recipes, meals, and storage.",
     emoji: "📖",
   },
   { to: "/favorites", label: "Favorites", description: "Recipes you've saved.", emoji: "❤️" },

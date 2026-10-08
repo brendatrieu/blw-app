@@ -13,7 +13,7 @@ export function GuidesPage() {
       <PageHeader
         title="How-to guides"
         emoji="📖"
-        description="Step by step: recipes, meals, and storage."
+        description="Step by step: foods, recipes, meals, and storage."
         leading={<BackButton fallback="/more" />}
       />
       <ArticleLinks articles={guideArticles} base="/guides" />
