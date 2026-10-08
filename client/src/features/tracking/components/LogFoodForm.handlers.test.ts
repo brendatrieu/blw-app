@@ -475,6 +475,50 @@ describe("Edit meal with several recipes (ledger 759)", () => {
     expect(save().input).toMatchObject({ recipeIds: [SALMON], recipeRatings: { rB: null } });
   });
 
+  it("taking a saved recipe off while another saved one still loads keeps the Egg they share (VERIFY-3L B1)", () => {
+    h.reset();
+    seedRecipes();
+    const lentil = h.details[LENTIL]!;
+    delete h.details[LENTIL]; // Lentil Patties' ingredients have not landed yet
+    render(edit);
+    render(edit);
+    pickRecipes([LENTIL], edit);
+    // Nothing was adopted yet, so taking Salmon Cakes off drops nothing.
+    expect(foodsOn(edit)).toEqual(["lentils", "egg", "salmon", "banana"]);
+    h.details[LENTIL] = lentil;
+    render(edit);
+    render(edit);
+    expect(foodsOn(edit)).toEqual(["lentils", "egg", "salmon", "banana"]);
+    expect(save().input).toMatchObject({ foodIds: ["lentils", "egg", "salmon", "banana"], recipeIds: [LENTIL] });
+    // Lentil Patties adopted Egg once it landed: taking it off now takes Egg too.
+    pickRecipes([], edit);
+    expect(foodsOn(edit)).toEqual(["salmon", "banana"]);
+  });
+
+  it("a saved recipe taken off and picked again fills its ingredients back in", () => {
+    h.reset();
+    seedRecipes();
+    render(edit);
+    pickRecipes([LENTIL], edit);
+    expect(foodsOn(edit)).toEqual(["lentils", "egg", "banana"]);
+    pickRecipes([LENTIL, SALMON], edit);
+    render(edit);
+    expect(foodsOn(edit)).toEqual(["lentils", "egg", "banana", "salmon"]);
+  });
+
+  it("a stored rating on a saved recipe's ingredient keeps its editable row, and clearing it is sent", () => {
+    h.reset();
+    seedRecipes();
+    const drift = {
+      meal: { ...meal, recipes: [{ id: SALMON, title: "Salmon Cakes", rating: null }], foods: meal.foods.map((food) => ({ ...food, rating: food.id === "egg" ? 3 : null })) },
+    };
+    render(drift);
+    expect(rowLabels(drift)).toEqual(["Salmon Cakes", "Lentils", "Egg", "Banana"]);
+    rate("egg", null, drift);
+    (render(drift).props.onSubmit as (event: { preventDefault: () => void }) => void)({ preventDefault: () => {} });
+    expect(h.updates[0]!.input).toMatchObject({ foodRatings: { egg: null } });
+  });
+
   it("a meal from an older cached body (no recipes list) edits as its one recipe", () => {
     h.reset();
     seedRecipes();

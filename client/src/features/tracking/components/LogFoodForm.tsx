@@ -381,13 +381,22 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
   // Runs after every render and is idempotent: a recipe whose ingredients
   // have landed is handled once (it then has an owners entry). Waits for the
   // foods list, which maps ingredient slugs to selectable food ids.
+  // DESIGN-B §6: the saved recipes adopt only once EVERY one still picked has
+  // loaded. Adopting one early let it own a food the saved recipes share
+  // (Egg), so taking it off dropped that food while the other still loaded.
+  // A saved recipe taken off before then owns nothing, so it drops nothing.
   useEffect(() => {
     if (slugToFoodId.size === 0) return;
+    const adoptReady = recipeIds.every(
+      (id) => !adoptOnLoadRef.current?.has(id) || loadedRecipes.some((recipe) => recipe.id === id),
+    );
     let state = { foodIds, owners: chipOwnersRef.current };
     for (const recipe of loadedRecipes) {
       if (recipe.id in state.owners) continue;
+      const adopt = adoptOnLoadRef.current?.has(recipe.id);
+      if (adopt && !adoptReady) continue;
       const ingredientIds = recipeIngredientFoodIds(recipe.ingredients, slugToFoodId);
-      const apply = adoptOnLoadRef.current?.has(recipe.id) ? adoptRecipeChips : addRecipeChips;
+      const apply = adopt ? adoptRecipeChips : addRecipeChips;
       state = apply(state.foodIds, state.owners, recipe.id, ingredientIds);
     }
     chipOwnersRef.current = state.owners;
