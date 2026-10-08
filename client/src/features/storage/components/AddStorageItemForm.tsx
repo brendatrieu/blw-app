@@ -237,7 +237,7 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
       )}
 
       {source === "food" && (
-        <ContainerChoiceField foodIds={foodIds} value={containerChoice} onChange={setContainerChoice} />
+        <ContainerChoiceField ids={foodIds} value={containerChoice} onChange={setContainerChoice} />
       )}
 
       {/* The same searchable picker the log form uses, over EVERY recipe.

@@ -153,12 +153,13 @@ export const CONTAINER_CHOICE_OPTIONS: SegmentedControlOption<ContainerChoice>[]
 /**
  * Whether the "Save as" choice is offered at all. One food is one container
  * either way, so the control would be a question with one real answer —
- * it appears only at two or more foods (item 348).
+ * it appears only at two or more foods (item 348), or two or more recipes
+ * for a meal's leftovers (ledger 759).
  *
  * The SAME predicate gates the payload: below it, `separateItems` is never
  * sent, so a parent who picked "Separate containers" and then removed a food
  * cannot leave a stale flag behind on a single-food save.
  */
-export function offersContainerChoice(foodIds: readonly string[]): boolean {
-  return foodIds.length >= 2;
+export function offersContainerChoice(ids: readonly string[]): boolean {
+  return ids.length >= 2;
 }

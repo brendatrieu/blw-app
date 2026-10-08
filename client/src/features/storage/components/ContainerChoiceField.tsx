@@ -7,9 +7,10 @@ import {
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.js";
 
 export interface ContainerChoiceFieldProps {
-  /** The foods the submission would save. The control shows itself only from
-   * two up — see `offersContainerChoice`. */
-  foodIds: readonly string[];
+  /** The foods (or, for a meal's leftovers, the recipes — ledger 759) the
+   * submission would save. The control shows itself only from two up — see
+   * `offersContainerChoice`. */
+  ids: readonly string[];
   value: ContainerChoice;
   onChange: (choice: ContainerChoice) => void;
 }
@@ -28,8 +29,8 @@ export interface ContainerChoiceFieldProps {
  * A `radiogroup`, not a labelable control, so the heading is a plain span and
  * the group carries its own `aria-label`.
  */
-export function ContainerChoiceField({ foodIds, value, onChange }: ContainerChoiceFieldProps) {
-  if (!offersContainerChoice(foodIds)) return null;
+export function ContainerChoiceField({ ids, value, onChange }: ContainerChoiceFieldProps) {
+  if (!offersContainerChoice(ids)) return null;
 
   return (
     <div className="flex flex-col gap-1.5">

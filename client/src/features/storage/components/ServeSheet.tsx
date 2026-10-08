@@ -15,7 +15,7 @@ import { FoodPlate } from "../../catalog/components/FoodPlate.js";
 import { foodPlate } from "../../catalog/foodEmoji.js";
 import { useRecipeDetails } from "../../catalog/hooks.js";
 import { HowToLink } from "../../safety/HowToLink.js";
-import { MealRatingsField, type MealRatingRow } from "../../tracking/components/MealRatingsField.js";
+import { MealRatingsField, RECIPE_ROW_PREFIX, type MealRatingRow } from "../../tracking/components/MealRatingsField.js";
 
 /** Ceiling for the serve stepper on an untracked item (no servingsLeft to
  * bound it by) — generous enough never to feel like a real limit. */
@@ -35,9 +35,6 @@ export interface FreshRecipe {
   id: string;
   title: string;
 }
-
-/** Recipe star rows are keyed apart from food ids (both are uuids). */
-export const RECIPE_ROW_PREFIX = "recipe:";
 
 /**
  * The meal's recipes, in the server's order (DESIGN-B §5): each container's

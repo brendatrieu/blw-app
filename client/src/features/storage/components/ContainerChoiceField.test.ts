@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { ContainerChoiceField } from "./ContainerChoiceField.js";
 
 function render(foodIds: string[], value: "one" | "separate" = "one") {
-  return renderToString(createElement(ContainerChoiceField, { foodIds, value, onChange: () => {} }));
+  return renderToString(createElement(ContainerChoiceField, { ids: foodIds, value, onChange: () => {} }));
 }
 
 // Item 348: leftovers from a three-food meal become ONE container unless the

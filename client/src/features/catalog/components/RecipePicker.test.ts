@@ -136,6 +136,26 @@ describe("RecipePicker (render)", () => {
     expect(html).not.toContain('aria-describedby="log-food-recipe-count"');
   });
 
+  // Ledger 759: Log meal's "Recipes (optional)" holds several recipes.
+  it("multiple: every picked recipe is its own removable chip, in pick order", () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(catalogKeys.recipesList({}), {
+      recipes: [recipe(), recipe({ id: "recipe-2", title: "Lentil mash" })],
+    });
+    const html = renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(RecipePicker, { id: "log-food-recipe", multiple: true, value: ["recipe-2", "recipe-1"], onChange: () => {} }),
+      ),
+    );
+    const lentil = html.indexOf('aria-label="Remove Lentil mash"');
+    expect(lentil).toBeGreaterThan(-1);
+    expect(html.indexOf('aria-label="Remove Banana porridge"')).toBeGreaterThan(lentil);
+    // Multi mode: the field says how many are picked, as the Food field does.
+    expect(html).toContain('aria-describedby="log-food-recipe-count"');
+  });
+
   // Markers render on the menu row AND on the selected chip; a server render
   // only ever produces the closed field, so the chip is where the Custom mark
   // is visible to this suite.

@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CreateStorageItemInput, MealItem, StorageLocation } from "@blw/shared";
-import { useFoods, useRecipe } from "../../catalog/hooks.js";
+import { useFoods, useRecipeDetails } from "../../catalog/hooks.js";
 import { FoodPicker } from "../../catalog/components/FoodPicker.js";
 import { RecipePicker } from "../../catalog/components/RecipePicker.js";
 import { useCreateMeal, useUpdateMeal } from "../hooks.js";
-import { applyRecipeIngredients, recipeIngredientFoodIds } from "../recipeChips.js";
-import { MealRatingsField, RECIPE_RATING_KEY, mealRatingRows, mealRatingsInput } from "./MealRatingsField.js";
+import {
+  addRecipeChips,
+  adoptRecipeChips,
+  recipeIngredientFoodIds,
+  removeRecipeChips,
+  type RecipeChipOwners,
+} from "../recipeChips.js";
+import { mealRecipes } from "../mealRecipes.js";
+import { MealRatingsField, RECIPE_ROW_PREFIX, mealFormRatingRows, mealFormRatingsInput } from "./MealRatingsField.js";
 import { useCreateStorageItem } from "../../storage/hooks.js";
 import { LOCATIONS, offersContainerChoice, type ContainerChoice } from "../../storage/format.js";
 import { ContainerChoiceField } from "../../storage/components/ContainerChoiceField.js";
@@ -24,14 +31,17 @@ import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
  * consumes it, never in the input's shape. */
 export interface MealSubmitInput {
   foodIds: string[];
-  recipeId: string | null;
+  /** Ledger 759: the meal's recipes, in the order picked. Always this shape,
+   * never the legacy single `recipeId`, so an edit of a several-recipe meal
+   * can never meet the server's old-app 409. */
+  recipeIds: string[];
   servedAt: string;
   reactionNote: string | null;
   /** General note, distinct from `reactionNote` — see `optionalNotes` in shared/tracking. */
   notes: string | null;
-  /** Item 574 — built by `mealRatingsInput`: per food, or the recipe's. */
-  foodRatings?: Record<string, number | null>;
-  recipeRating?: number | null;
+  /** Built by `mealFormRatingsInput` from the visible star rows. */
+  recipeRatings: Record<string, number | null>;
+  foodRatings: Record<string, number | null>;
 }
 
 export type MealSubmitAction =
@@ -52,44 +62,42 @@ export function resolveMealSubmit(mealId: string | undefined, input: MealSubmitI
 
 /**
  * What the "+ Save leftovers to storage" toggle saves, inferred from the meal
- * being logged (item 152): a recipe wins outright when one is selected (its
- * ingredients are the leftovers, even if the user has also tweaked the food
- * chips); otherwise it is EVERY selected food.
+ * being logged (item 152): the recipes win outright when any is selected
+ * (their ingredients are the leftovers, even if the user has also tweaked the
+ * food chips); otherwise it is EVERY selected food.
  *
  * There is no third "which one?" branch any more (item 348). A container
  * holds a whole meal now, so a three-food meal's leftovers are one container
  * of three foods — the question the old "Which food?" select asked (and made
  * the parent answer by throwing two of the three away) no longer has a
  * reason to exist. What replaces it is a choice the parent may ignore: one
- * container, or one per food.
+ * container, or one per food — and, since ledger 759, the same choice for
+ * the leftovers of two or more recipes.
  */
-export type LeftoverSourceKind = { kind: "recipe" } | { kind: "foods"; foodIds: string[] };
+export type LeftoverSourceKind = { kind: "recipe"; recipeIds: string[] } | { kind: "foods"; foodIds: string[] };
 
-export function resolveLeftoverSource(recipeId: string | null, foodIds: string[]): LeftoverSourceKind {
-  if (recipeId) return { kind: "recipe" };
+export function resolveLeftoverSource(recipeIds: string[], foodIds: string[]): LeftoverSourceKind {
+  if (recipeIds.length > 0) return { kind: "recipe", recipeIds };
   return { kind: "foods", foodIds };
 }
 
-/** The leftover source once the recipe branch has its concrete id attached —
- * what `buildLeftoverStorageInput` actually needs. */
-export type ResolvedLeftoverSource = { kind: "recipe"; recipeId: string } | { kind: "foods"; foodIds: string[] };
-
 /**
  * Builds the `createStorageItem` payload for a leftovers-from-this-meal save
- * (item 153): recipe-sourced carries `recipeId`, food-sourced carries EVERY
- * selected food's id (item 348) — never both. `notes`/`quantityNote` are
+ * (item 153): one recipe carries `recipeId`, two or more carry `recipeIds`
+ * (ledger 759: one container holding them all, or one per recipe),
+ * food-sourced carries EVERY selected food's id (item 348) — never both. `notes`/`quantityNote` are
  * deliberately omitted (not auto-copied from the meal) rather than sent as
  * `null`/`""`, so the storage item starts with none of its own. Pure so the
  * exact payload shape — and the recipe/foods branch split — is
  * mutation-tested without a DOM environment.
  *
  * `separateItems` rides along only where the control that sets it is
- * actually shown (`offersContainerChoice`): with one food it is meaningless,
- * and a flag left over from a food the parent has since removed must not
- * reach the server.
+ * actually shown (`offersContainerChoice`): with one food or one recipe it is
+ * meaningless, and a flag left over from a food the parent has since removed
+ * must not reach the server.
  */
 export function buildLeftoverStorageInput(
-  source: ResolvedLeftoverSource,
+  source: LeftoverSourceKind,
   location: StorageLocation,
   servingsTotal: string,
   bestBy: string,
@@ -99,7 +107,9 @@ export function buildLeftoverStorageInput(
   const trimmedServings = servingsTotal.trim();
   return {
     ...(source.kind === "recipe"
-      ? { recipeId: source.recipeId }
+      ? offersContainerChoice(source.recipeIds)
+        ? { recipeIds: source.recipeIds, separateItems }
+        : { recipeId: source.recipeIds[0]! }
       : {
           foodIds: source.foodIds,
           ...(offersContainerChoice(source.foodIds) ? { separateItems } : {}),
@@ -116,7 +126,7 @@ const LEFTOVER_LOCATION_OPTIONS = LOCATIONS.map((loc) => ({ value: loc.value, la
 export interface LeftoversFieldsProps {
   source: LeftoverSourceKind;
   /** "One container" or "Separate containers" — only ever asked, and only
-   * ever read, when the source is two or more foods. */
+   * ever read, when the source is two or more foods or recipes. */
   containerChoice: ContainerChoice;
   onContainerChoiceChange: (choice: ContainerChoice) => void;
   location: StorageLocation;
@@ -132,7 +142,8 @@ export interface LeftoversFieldsProps {
 
 /**
  * The expanded controls behind "+ Save leftovers to storage": the "Save as"
- * choice (only with two or more foods — see `offersContainerChoice`), the
+ * choice (only with two or more foods or recipes — see
+ * `offersContainerChoice`), the
  * location segments, and the same optional servings/best-by fields
  * `AddStorageItemForm` uses. Exported standalone so it can be render-tested
  * directly (item 154) without needing DOM interaction to expand the toggle
@@ -152,13 +163,11 @@ export function LeftoversFields({
 }: LeftoversFieldsProps) {
   return (
     <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
-      {source.kind === "foods" && (
-        <ContainerChoiceField
-          foodIds={source.foodIds}
-          value={containerChoice}
-          onChange={onContainerChoiceChange}
-        />
-      )}
+      <ContainerChoiceField
+        ids={source.kind === "foods" ? source.foodIds : source.recipeIds}
+        value={containerChoice}
+        onChange={onContainerChoiceChange}
+      />
 
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-[var(--color-text)]">Location</span>
@@ -199,27 +208,25 @@ export interface LogFoodFormProps {
   /** Create-mode prefill (e.g. "Log meal" from a food's detail page seeds
    * that food); ignored when editing an existing meal. */
   initialFoodIds?: string[];
-  /** Create-mode prefill for the recipe ("Log meal" from a recipe page, i.e.
+  /** Create-mode prefill for a recipe ("Log meal" from a recipe page, i.e.
    * `/log-meal?recipe=<id>` — item 213); ignored when editing. Its
    * ingredients fan out into food chips exactly as a hand-picked recipe's do. */
   initialRecipeId?: string;
 }
 
 /**
- * The quick-log form: pick foods (and optionally a recipe, whose ingredients
+ * The quick-log form: pick foods (and optionally recipes, whose ingredients
  * add themselves as removable chips), a served-at time, and an optional
  * reaction note. Rendered full-screen by LogFoodPage, which passes the
  * page's own back-navigation as `onDone` for both success and Cancel, and
  * which also supplies `meal` when the page was opened in edit mode
  * (`/log-meal?edit=:id`).
  *
- * The recipe field is a searchable single-select over every recipe the
- * parent can see — catalog and their own, favorites floated to the top
- * (item 213). It replaced a `Select` of favorited recipes only, which was a
- * workaround for there being no recipes endpoint and which quietly made a
- * just-written custom recipe unloggable until it had been favorited.
- * `RecipeDetail` (fetched on selection via `useRecipe`, since the list
- * carries no quantities) still supplies the ingredients to turn into chips.
+ * "Recipes (optional)" is a searchable multi-select (ledger 759) over every
+ * recipe the parent can see — catalog and their own, favorites floated to
+ * the top (item 213). Each pick's `RecipeDetail` (fetched via
+ * `useRecipeDetails`, since the list carries no ingredients) supplies the
+ * ingredients to turn into chips.
  */
 /**
  * What a submit gesture may do once a create-mode save has progressed.
@@ -287,16 +294,21 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
   const isEditing = Boolean(meal);
 
   const [foodIds, setFoodIds] = useState<string[]>(() => meal?.foods.map((food) => food.id) ?? initialFoodIds ?? []);
-  const [recipeId, setRecipeId] = useState<string>(() => meal?.recipeId ?? initialRecipeId ?? "");
+  // Ledger 759: the saved meal's recipes (edit mode), first-picked first.
+  const savedRecipes = useMemo(() => (meal ? mealRecipes(meal) : []), [meal]);
+  const savedRecipeIds = savedRecipes.map((recipe) => recipe.id);
+  const [recipeIds, setRecipeIds] = useState<string[]>(() =>
+    meal ? mealRecipes(meal).map((recipe) => recipe.id) : initialRecipeId ? [initialRecipeId] : [],
+  );
   const [servedAt, setServedAt] = useState(() => (meal ? nowAtMinute(new Date(meal.servedAt)) : nowAtMinute()));
   const [reactionNote, setReactionNote] = useState(() => meal?.reactionNote ?? "");
   const [notes, setNotes] = useState(() => meal?.notes ?? "");
-  // Item 574: kept per food id, so a chip removed and re-added keeps its
-  // stars; only the foods still on the meal are ever sent.
-  const [foodRatings, setFoodRatings] = useState<Record<string, number | null>>(() =>
-    Object.fromEntries((meal?.foods ?? []).map((food) => [food.id, food.rating ?? null])),
-  );
-  const [recipeRating, setRecipeRating] = useState<number | null>(() => meal?.recipeRating ?? null);
+  // Item 574: kept per star-row key (a food id, or `recipe:<id>`), so a chip
+  // removed and re-added keeps its stars; only the visible rows are sent.
+  const [ratings, setRatings] = useState<Record<string, number | null>>(() => ({
+    ...Object.fromEntries((meal?.foods ?? []).map((food) => [food.id, food.rating ?? null])),
+    ...Object.fromEntries((meal ? mealRecipes(meal) : []).map((recipe) => [`${RECIPE_ROW_PREFIX}${recipe.id}`, recipe.rating])),
+  }));
 
   // Leftovers-to-storage (items 152-153) — create mode only; `isEditing` gates
   // every bit of this out of edit-mode renders entirely.
@@ -321,68 +333,90 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
   const mealSavedRef = useRef(false);
 
   const foods = foodsData?.foods ?? [];
-  const { data: recipeDetail } = useRecipe(recipeId || undefined);
+  const recipeDetails = useRecipeDetails(recipeIds);
+  const loadedRecipes = recipeDetails.flatMap((query) =>
+    query.data && recipeIds.includes(query.data.id) ? [query.data] : [],
+  );
   // Editing a meal that holds a food its owner has since deleted: the list no
   // longer offers it, so the picker is handed it to keep showing its chip.
   const keptFoods = useMemo(() => meal?.foods.filter((food) => food.deleted), [meal]);
 
   const slugToFoodId = useMemo(() => new Map(foods.map((food) => [food.slug, food.id])), [foods]);
   const foodNameById = new Map([...(meal?.foods ?? []), ...foods].map((food) => [food.id, food.name]));
-  const ratingRows = mealRatingRows(
-    recipeId ? { title: recipeDetail?.title ?? meal?.recipeTitle ?? "Recipe", rating: recipeRating } : null,
+  const recipeTitles = new Map([
+    ...savedRecipes.map((recipe) => [recipe.id, recipe.title] as const),
+    ...loadedRecipes.map((recipe) => [recipe.id, recipe.title] as const),
+  ]);
+  const ratingRows = mealFormRatingRows(
+    recipeIds.map((id) => ({ id, title: recipeTitles.get(id) ?? "Recipe" })),
     foodIds.flatMap((id) => {
       const name = foodNameById.get(id);
       return name ? [{ id, name }] : [];
     }),
-    foodRatings,
+    // Ingredient food ids exactly as the server reads them (DESIGN-B §2).
+    new Map(loadedRecipes.map((recipe) => [recipe.id, recipe.ingredients.map((ingredient) => ingredient.foodId)])),
+    savedRecipeIds,
+    Object.fromEntries((meal?.foods ?? []).map((food) => [food.id, food.rating])),
+    ratings,
   );
 
   function handleRatingChange(key: string, value: number | null) {
-    if (key === RECIPE_RATING_KEY) setRecipeRating(value);
-    else setFoodRatings((current) => ({ ...current, [key]: value }));
+    setRatings((current) => ({ ...current, [key]: value }));
   }
 
-  const leftoverSource = resolveLeftoverSource(recipeId || null, foodIds);
+  const leftoverSource = resolveLeftoverSource(recipeIds, foodIds);
 
-  // Tracks which currently-selected foods came from the active recipe (so
-  // clearing/switching removes exactly those, per `applyRecipeIngredients`)
-  // without needing a re-render to read it, and independent of the
-  // async `recipeDetail` fetch's own lifecycle. A ref, not state: updating it
-  // must never itself trigger the effect below.
-  const appliedRecipeFoodIdsRef = useRef<string[]>([]);
-  // Edit mode can open with a recipe already attached to the meal. The first
-  // time that recipe's ingredients resolve, they're adopted as the tracked
-  // "recipe-owned" set silently (no foodIds change) — the meal's saved foods
-  // are already correct and must not be second-guessed against a recipe that
-  // may have been edited, or had extras removed, since this meal was logged.
-  // Any later resolution (a real user selection) applies the merge normally.
-  const initialMealRecipeId = meal?.recipeId ?? null;
-  const hasAdoptedInitialRecipeRef = useRef(false);
+  // Ledger 759: which foods each picked recipe put on the meal (see
+  // recipeChips.ts), so taking a recipe off removes only the foods it alone
+  // added. A ref, not state: updating it must never itself re-render.
+  const chipOwnersRef = useRef<RecipeChipOwners>({});
+  // Edit mode opens with the saved meal's recipes. Each one ADOPTS its
+  // ingredients silently when they resolve (no foodIds change) — the saved
+  // foods are already correct and must not be second-guessed against a
+  // recipe edited since, or re-grow a chip the parent removed. A recipe the
+  // parent takes off leaves this set, so picking it again adds as usual.
+  const adoptOnLoadRef = useRef<Set<string> | null>(null);
+  adoptOnLoadRef.current ??= new Set(savedRecipeIds);
 
+  // Runs after every render and is idempotent: a recipe whose ingredients
+  // have landed is handled once (it then has an owners entry). Waits for the
+  // foods list, which maps ingredient slugs to selectable food ids.
   useEffect(() => {
-    if (!recipeId || !recipeDetail || recipeDetail.id !== recipeId) return;
-    const nextIds = recipeIngredientFoodIds(recipeDetail.ingredients, slugToFoodId);
-    const previous = appliedRecipeFoodIdsRef.current;
-    const alreadyApplied = nextIds.length === previous.length && nextIds.every((id, index) => id === previous[index]);
-    if (alreadyApplied) return;
-
-    const isInitialAdopt = !hasAdoptedInitialRecipeRef.current && recipeId === initialMealRecipeId;
-    hasAdoptedInitialRecipeRef.current = true;
-    appliedRecipeFoodIdsRef.current = nextIds;
-    if (!isInitialAdopt) {
-      setFoodIds((current) => applyRecipeIngredients(current, previous, nextIds));
+    if (slugToFoodId.size === 0) return;
+    let state = { foodIds, owners: chipOwnersRef.current };
+    for (const recipe of loadedRecipes) {
+      if (recipe.id in state.owners) continue;
+      const ingredientIds = recipeIngredientFoodIds(recipe.ingredients, slugToFoodId);
+      const apply = adoptOnLoadRef.current?.has(recipe.id) ? adoptRecipeChips : addRecipeChips;
+      state = apply(state.foodIds, state.owners, recipe.id, ingredientIds);
     }
-  }, [recipeId, recipeDetail, slugToFoodId, initialMealRecipeId]);
+    chipOwnersRef.current = state.owners;
+    if (state.foodIds !== foodIds) setFoodIds(state.foodIds);
+  });
 
-  function handleRecipeChange(nextRecipeId: string) {
-    setRecipeId(nextRecipeId);
-    // Item 579: the stars belong to the recipe they were given to — a
-    // different recipe (or none) starts unrated.
-    if (nextRecipeId !== recipeId) setRecipeRating(null);
-    if (nextRecipeId === "") {
-      setFoodIds((current) => applyRecipeIngredients(current, appliedRecipeFoodIdsRef.current, []));
-      appliedRecipeFoodIdsRef.current = [];
-      hasAdoptedInitialRecipeRef.current = true;
+  function handleRecipesChange(nextRecipeIds: string[]) {
+    const removed = recipeIds.filter((id) => !nextRecipeIds.includes(id));
+    const remaining = new Map(
+      loadedRecipes
+        .filter((recipe) => nextRecipeIds.includes(recipe.id))
+        .map((recipe) => [recipe.id, recipeIngredientFoodIds(recipe.ingredients, slugToFoodId)]),
+    );
+    let state = { foodIds, owners: chipOwnersRef.current };
+    for (const id of removed) {
+      state = removeRecipeChips(state.foodIds, state.owners, id, remaining);
+      adoptOnLoadRef.current?.delete(id);
+    }
+    chipOwnersRef.current = state.owners;
+    setFoodIds(state.foodIds);
+    setRecipeIds(nextRecipeIds);
+    // Item 579: the stars belong to the recipe they were given to — one taken
+    // off loses them, and picking it again starts unrated.
+    if (removed.length > 0) {
+      setRatings((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(([key]) => !removed.some((id) => key === `${RECIPE_ROW_PREFIX}${id}`)),
+        ),
+      );
     }
   }
 
@@ -396,15 +430,6 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
     LOG_FOOD_FIELD_ORDER,
     { foods: "log-food-food", leftoverBestBy: "log-food-leftover-best-by" },
   );
-
-  /** Attaches the recipe branch's concrete id — the only place a
-   * `LeftoverSourceKind` becomes a `ResolvedLeftoverSource` ready for
-   * `buildLeftoverStorageInput`. Null means there is nothing to save, which
-   * only the zero-food case can produce (and the toggle is disabled there). */
-  function resolveFinalLeftoverSource(): ResolvedLeftoverSource | null {
-    if (leftoverSource.kind === "recipe") return recipeId ? { kind: "recipe", recipeId } : null;
-    return leftoverSource.foodIds.length > 0 ? { kind: "foods", foodIds: leftoverSource.foodIds } : null;
-  }
 
   /** Attempts the storage half of a leftovers save; both success and Retry
    * (item 153) funnel through here so they behave identically. Never touches
@@ -441,11 +466,11 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
     if (!attemptSubmit()) return;
     const input: MealSubmitInput = {
       foodIds,
-      recipeId: recipeId || null,
+      recipeIds,
       servedAt: servedAt.toISOString(),
       reactionNote: reactionNote.trim() || null,
       notes: notes.trim() || null,
-      ...mealRatingsInput(recipeId || null, foodIds, foodRatings, recipeRating),
+      ...mealFormRatingsInput(ratingRows),
     };
     const action = resolveMealSubmit(meal?.id, input);
     switch (action.kind) {
@@ -453,7 +478,10 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
         updateMeal.mutate({ id: action.id, input: action.input }, { onSuccess: onDone });
         break;
       case "create": {
-        const finalSource = leftoversOpen ? resolveFinalLeftoverSource() : null;
+        // Nothing to save only at zero foods and no recipe (the switch is
+        // disabled there anyway).
+        const finalSource =
+          leftoversOpen && (leftoverSource.kind === "recipe" || leftoverSource.foodIds.length > 0) ? leftoverSource : null;
         createMeal.mutate(action.input, {
           onSuccess: () => {
             mealSavedRef.current = true;
@@ -484,8 +512,8 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
         <FoodPicker id="log-food-food" value={foodIds} onChange={setFoodIds} keptFoods={keptFoods} />
       </Field>
 
-      <Field label="Recipe (optional)" htmlFor="log-food-recipe">
-        <RecipePicker id="log-food-recipe" value={recipeId} onChange={handleRecipeChange} />
+      <Field label="Recipes (optional)" htmlFor="log-food-recipe">
+        <RecipePicker id="log-food-recipe" multiple value={recipeIds} onChange={handleRecipesChange} />
       </Field>
 
       <Field label="When" htmlFor="log-food-when">

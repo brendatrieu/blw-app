@@ -51,15 +51,24 @@ export function recipePickerOptions(recipes: RecipeListItem[]): MultiComboboxOpt
     }));
 }
 
-interface RecipePickerProps {
-  id: string;
-  /** "" = no recipe attached. */
-  value: string;
-  onChange: (next: string) => void;
-}
+type RecipePickerProps = { id: string } & (
+  | {
+      multiple?: false;
+      /** "" = no recipe attached. */
+      value: string;
+      onChange: (next: string) => void;
+    }
+  | {
+      /** Ledger 759: Log meal's "Recipes (optional)" — several recipes, in
+       * the order picked. */
+      multiple: true;
+      value: string[];
+      onChange: (next: string[]) => void;
+    }
+);
 
 /**
- * Searchable single-select over every recipe the parent can see — the
+ * Searchable select over every recipe the parent can see — the
  * catalog plus their own (item 213). It replaced a native `<select>` of
  * *favorited* recipes only, which quietly made a just-written custom recipe
  * unloggable until it had been favorited first.
@@ -70,24 +79,26 @@ interface RecipePickerProps {
  * Same query key, so the Recipes tab keeps its cache — only this observer
  * refetches on mount.
  *
- * Single-select is `MultiCombobox` in `mode="single"`, driven through
+ * Single-select (the default; a storage container's recipe) is
+ * `MultiCombobox` in `mode="single"`, driven through
  * `resolveSingleSelection`: picking a second recipe replaces the first, and
  * toggling the current one off clears the field (the "None" option the old
  * select needed). Single mode is also what closes the menu on a pick (item
- * 230) — there is no second recipe to type.
+ * 230) — there is no second recipe to type. `multiple` (ledger 759) is the
+ * plain multi-select: a meal can be made from several recipes.
  */
-export function RecipePicker({ id, value, onChange }: RecipePickerProps) {
+export function RecipePicker(props: RecipePickerProps) {
   const { data, isLoading } = useRecipes({}, { fresh: true });
   const recipes = data?.recipes ?? [];
   const options = useMemo(() => recipePickerOptions(recipes), [recipes]);
 
   return (
     <MultiCombobox
-      id={id}
-      mode="single"
+      id={props.id}
+      mode={props.multiple ? "multi" : "single"}
       options={options}
-      value={value ? [value] : []}
-      onChange={(next) => onChange(resolveSingleSelection(next))}
+      value={props.multiple ? props.value : props.value ? [props.value] : []}
+      onChange={(next) => (props.multiple ? props.onChange(next) : props.onChange(resolveSingleSelection(next)))}
       disabled={isLoading}
       placeholder={isLoading ? "Loading recipes…" : "Search recipes…"}
       emptyMessage="No recipes match"

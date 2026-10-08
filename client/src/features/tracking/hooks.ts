@@ -34,7 +34,7 @@ import {
   foodCountBucket,
   isBackdatedMark,
   isOffline,
-  lookupRecipeKind,
+  mealRecipeKindProps,
   mealViaFromLocation,
 } from "../../lib/usage/properties.js";
 
@@ -268,7 +268,8 @@ export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage
     onSuccess: (created, input, context) => {
       track("meal_logged", {
         food_count: foodCountBucket(input.foodIds.length),
-        recipe_kind: lookupRecipeKind(queryClient, input.recipeId),
+        // Ledger 759: two or more recipes are `several` (+ `includes_basic`).
+        ...mealRecipeKindProps(queryClient, input.recipeIds ?? (input.recipeId ? [input.recipeId] : [])),
         from_storage: false,
         via: mealViaFromLocation(),
         leftovers_saved: usage.leftoversSaved,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RecipeIngredient } from "@blw/shared";
-import { applyRecipeIngredients, recipeIngredientFoodIds } from "./recipeChips.js";
+import { addRecipeChips, adoptRecipeChips, recipeIngredientFoodIds, removeRecipeChips } from "./recipeChips.js";
 
 function ingredient(foodSlug: string): RecipeIngredient {
   return {
@@ -38,35 +38,58 @@ describe("recipeIngredientFoodIds", () => {
   });
 });
 
-describe("applyRecipeIngredients", () => {
-  it("adds a freshly-selected recipe's ingredients to an empty selection", () => {
-    expect(applyRecipeIngredients([], [], ["a", "b"])).toEqual(["a", "b"]);
+// Ledger 759: several recipes per meal. "Removing a recipe removes only foods
+// it alone added."
+describe("recipe chips with several recipes (ledger 759)", () => {
+  it("a pick appends only the ingredients not already on the meal, and owns just those", () => {
+    expect(addRecipeChips(["egg", "extra"], {}, "A", ["oats", "egg", "oats"])).toEqual({
+      foodIds: ["egg", "extra", "oats"],
+      owners: { A: ["oats"] },
+    });
   });
 
-  it("keeps a user-added extra when a recipe is selected alongside it", () => {
-    expect(applyRecipeIngredients(["extra"], [], ["a", "b"])).toEqual(["extra", "a", "b"]);
+  it("removing a recipe drops the foods it added and nothing the parent picked by hand", () => {
+    const one = addRecipeChips(["egg"], {}, "A", ["egg", "oats"]);
+    expect(removeRecipeChips(one.foodIds, one.owners, "A", new Map())).toEqual({ foodIds: ["egg"], owners: {} });
   });
 
-  it("removes only the previous recipe's foods when clearing the recipe, keeping extras", () => {
-    expect(applyRecipeIngredients(["a", "b", "extra"], ["a", "b"], [])).toEqual(["extra"]);
+  it("a food two recipes share stays while either is picked, then goes with the last", () => {
+    let state = addRecipeChips([], {}, "A", ["egg", "oats"]);
+    state = addRecipeChips(state.foodIds, state.owners, "B", ["egg", "salmon"]);
+    expect(state.foodIds).toEqual(["egg", "oats", "salmon"]);
+
+    state = removeRecipeChips(state.foodIds, state.owners, "A", new Map([["B", ["egg", "salmon"]]]));
+    expect(state.foodIds).toEqual(["egg", "salmon"]);
+    expect(state.owners).toEqual({ B: ["salmon", "egg"] });
+
+    state = removeRecipeChips(state.foodIds, state.owners, "B", new Map());
+    expect(state.foodIds).toEqual([]);
   });
 
-  it("switching recipes drops the old recipe's foods and adds the new one's", () => {
-    expect(applyRecipeIngredients(["a", "b", "extra"], ["a", "b"], ["b", "c"])).toEqual(["b", "extra", "c"]);
+  it("removing the second recipe leaves the first recipe's foods alone", () => {
+    let state = addRecipeChips([], {}, "A", ["egg", "oats"]);
+    state = addRecipeChips(state.foodIds, state.owners, "B", ["egg", "salmon"]);
+    state = removeRecipeChips(state.foodIds, state.owners, "B", new Map([["A", ["egg", "oats"]]]));
+    expect(state).toEqual({ foodIds: ["egg", "oats"], owners: { A: ["egg", "oats"] } });
   });
 
-  it("a food shared by both recipes stays selected without re-toggling", () => {
-    expect(applyRecipeIngredients(["a", "b"], ["a", "b"], ["b", "c"])).toEqual(["b", "c"]);
+  it("a recipe still loading inherits nothing (it adds what it needs when it lands)", () => {
+    const state = addRecipeChips([], {}, "A", ["egg"]);
+    expect(removeRecipeChips(state.foodIds, state.owners, "A", new Map([["B", ["egg"]]])).foodIds).toEqual([]);
   });
 
-  it("a food the user manually unchecked from the old recipe stays removed when nothing new needs it", () => {
-    // "a" was a recipe food the user unchecked by hand, so it's already gone
-    // from currentFoodIds even though it's still in previousRecipeFoodIds —
-    // clearing/switching must not resurrect it.
-    expect(applyRecipeIngredients(["b"], ["a", "b"], [])).toEqual([]);
+  it("edit mode adopts the saved meal's ingredients without adding the ones the parent removed", () => {
+    // Saved meal: Egg + Banana; the recipe also calls for Oats, removed back then.
+    const state = adoptRecipeChips(["egg", "banana"], {}, "A", ["egg", "oats"]);
+    expect(state).toEqual({ foodIds: ["egg", "banana"], owners: { A: ["egg"] } });
+    expect(removeRecipeChips(state.foodIds, state.owners, "A", new Map()).foodIds).toEqual(["banana"]);
   });
 
-  it("is a no-op when the recipe selection doesn't change", () => {
-    expect(applyRecipeIngredients(["a", "b", "extra"], ["a", "b"], ["a", "b"])).toEqual(["a", "b", "extra"]);
+  it("two saved recipes sharing a food: the first adopts it, and it stays until both are gone", () => {
+    let state = adoptRecipeChips(["egg", "oats", "salmon"], {}, "A", ["egg", "oats"]);
+    state = adoptRecipeChips(state.foodIds, state.owners, "B", ["egg", "salmon"]);
+    expect(state.owners).toEqual({ A: ["egg", "oats"], B: ["salmon"] });
+    state = removeRecipeChips(state.foodIds, state.owners, "A", new Map([["B", ["egg", "salmon"]]]));
+    expect(state.foodIds).toEqual(["egg", "salmon"]);
   });
 });

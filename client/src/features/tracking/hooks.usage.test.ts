@@ -65,6 +65,7 @@ function optionsFor(create: () => unknown): Options {
 const INPUT: {
   foodIds: string[];
   recipeId: string | null;
+  recipeIds?: string[];
   servedAt: string;
   reactionNote: string | null;
   notes: string | null;
@@ -145,6 +146,15 @@ describe("useCreateMeal — meal_logged", () => {
   it("records offline saves as offline", () => {
     vi.stubGlobal("navigator", { onLine: false });
     expect(succeed()[0]![1]).toMatchObject({ offline: true });
+  });
+  // Ledger 759: the Log meal form sends `recipeIds`; two or more are
+  // `several`, one reads as that recipe's kind.
+  it("reads the recipe kind off recipeIds", () => {
+    const two = succeed({ recipeIds: ["r1", "r2"] })[0]![1];
+    expect(two).toMatchObject({ recipe_kind: "several", includes_basic: false });
+    tracked.length = 0;
+    expect(succeed({ recipeIds: ["r1"] })[0]![1]).toMatchObject({ recipe_kind: "catalog" });
+    expect(succeed({ recipeIds: ["r1"] })[0]![1]).not.toHaveProperty("includes_basic");
   });
 });
 
