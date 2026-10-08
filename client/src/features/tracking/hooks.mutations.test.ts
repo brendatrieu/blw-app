@@ -29,10 +29,11 @@ vi.mock("../../components/ui/Celebration.js", () => ({
 }));
 
 const apiCalls: Array<[string, unknown[]]> = [];
+let deleteMealImpl: (...args: unknown[]) => Promise<unknown> = async () => undefined;
 vi.mock("./api.js", () => ({
   createMeal: async () => ({}),
   updateMeal: async () => ({}),
-  deleteMeal: async () => ({}),
+  deleteMeal: (...args: unknown[]) => deleteMealImpl(...args),
   fetchMeals: async () => ({ items: [] }),
   fetchAllergenProgress: async () => ({ items: [] }),
   fetchAllergenDetail: async () => ({}),
@@ -47,6 +48,7 @@ vi.mock("./api.js", () => ({
   deleteFavorite: async () => ({}),
 }));
 
+import { ApiError } from "../../lib/api.js";
 import {
   trackingKeys,
   useCreateMeal,
@@ -141,5 +143,49 @@ describe("meal mutations refresh the baby's ratings", () => {
     (captured[0]!.onSettled as () => void)();
 
     expect(invalidated).toContainEqual(trackingKeys.ratings(BABY_ID));
+  });
+});
+
+// Ledger 760: a meal delete (and the Serve sheet's Undo, which IS one) can
+// give containers their servings back, so storage refreshes too; an edit can
+// take a served part off the meal, so it does as well.
+describe("meal edits and deletes refresh storage (ledger 760)", () => {
+  it.each([
+    ["useUpdateMeal", () => useUpdateMeal(BABY_ID)],
+    ["useDeleteMeal", () => useDeleteMeal(BABY_ID)],
+  ])("%s invalidates every storage view on settle", (_name, create) => {
+    captured.length = 0;
+    create();
+    invalidated.length = 0;
+    (captured[0]!.onSettled as () => void)();
+    expect(invalidated).toContainEqual(["storage"]);
+  });
+});
+
+describe("useDeleteMeal treats a meal that is already gone as deleted (ledger 760)", () => {
+  it("resolves on a 404 (double-tapped Undo, or deleted elsewhere first)", async () => {
+    deleteMealImpl = async () => {
+      throw new ApiError(404, "not_found");
+    };
+    try {
+      await expect(mutationFnFor(() => useDeleteMeal(BABY_ID))("meal-1" as never)).resolves.toBeUndefined();
+    } finally {
+      deleteMealImpl = async () => undefined;
+    }
+  });
+
+  it("still fails on anything else, so a real failure rolls the list back", async () => {
+    deleteMealImpl = async () => {
+      throw new ApiError(500, "internal_error");
+    };
+    try {
+      await expect(mutationFnFor(() => useDeleteMeal(BABY_ID))("meal-1" as never)).rejects.toMatchObject({ status: 500 });
+      deleteMealImpl = async () => {
+        throw new TypeError("Failed to fetch");
+      };
+      await expect(mutationFnFor(() => useDeleteMeal(BABY_ID))("meal-1" as never)).rejects.toBeInstanceOf(TypeError);
+    } finally {
+      deleteMealImpl = async () => undefined;
+    }
   });
 });

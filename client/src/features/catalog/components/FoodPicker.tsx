@@ -74,6 +74,8 @@ interface FoodPickerProps {
   placeholder?: string;
   /** See `MultiCombobox`'s `chipsFirst`. */
   chipsFirst?: boolean;
+  /** See `MultiCombobox`'s `inline` (the Serve sheet's Add more, ledger 760). */
+  inline?: boolean;
 }
 
 /**
@@ -89,7 +91,7 @@ interface FoodPickerProps {
  * `useFoods()` here reads — so appending its id to `value` selects a food the
  * option list can already resolve to a chip, with no refetch in between.
  */
-export function FoodPicker({ id, value, onChange, keptFoods, placeholder, chipsFirst }: FoodPickerProps) {
+export function FoodPicker({ id, value, onChange, keptFoods, placeholder, chipsFirst, inline }: FoodPickerProps) {
   const { data, isLoading } = useFoods();
   // null = the sheet is closed; a string (possibly "") = it's open with that
   // name prefilled. Not a boolean + separate query, so the two can't disagree.
@@ -110,6 +112,7 @@ export function FoodPicker({ id, value, onChange, keptFoods, placeholder, chipsF
         onCreate={setCreateQuery}
         createLabel={addCustomFoodLabel}
         chipsFirst={chipsFirst}
+        inline={inline}
       />
       <Sheet open={createQuery !== null} onClose={() => setCreateQuery(null)} title="Add a custom food" showClose>
         {/* Item 726: first in the sheet, like the Serve sheet's link — and

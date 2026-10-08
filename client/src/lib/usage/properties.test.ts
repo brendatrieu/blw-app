@@ -17,6 +17,7 @@ import {
   isChunkLoadError,
   isOffline,
   lookupRecipeKind,
+  mealRecipeKindProps,
   mealViaFromLocation,
   readLocation,
   recipeKindFromRecipe,
@@ -216,6 +217,16 @@ describe("recipe_kind", () => {
       recipes: [{ id: "r2", isCustom: false, ingredientNames: ["Oats"] }],
     });
     expect(lookupRecipeKind(queryClient, "r2")).toBe("basic");
+  });
+
+  it("reads two or more recipes as 'several', saying whether any is a basic (ledger 754/760)", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(catalogKeys.recipe("basic"), { isCustom: false, ingredients: [{}] });
+    queryClient.setQueryData(catalogKeys.recipe("dish"), { isCustom: false, ingredients: [{}, {}] });
+    expect(mealRecipeKindProps(queryClient, [])).toEqual({ recipe_kind: "none" });
+    expect(mealRecipeKindProps(queryClient, ["basic"])).toEqual({ recipe_kind: "basic" });
+    expect(mealRecipeKindProps(queryClient, ["dish", "basic"])).toEqual({ recipe_kind: "several", includes_basic: true });
+    expect(mealRecipeKindProps(queryClient, ["dish", "unknown"])).toEqual({ recipe_kind: "several", includes_basic: false });
   });
 
   it("is 'none' without a recipe, and 'catalog' for one nothing has cached", () => {

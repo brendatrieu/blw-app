@@ -48,6 +48,21 @@ export function servingsLabel(servingsLeft: number, servingsTotal: number): stri
 }
 
 /**
+ * A container's quiet second line in the Serve sheet and its Add more list
+ * (MR-Serve, ledger 760): "Fridge · 7 of 8 left", or the quantity note on an
+ * untracked one ("Fridge · 2 jars"), or just the location.
+ */
+export function servePartHint(
+  item: { location: StorageLocation; servingsLeft: number | null; servingsTotal: number | null; quantityNote: string | null },
+): string {
+  const location = LOCATION_LABEL[item.location];
+  if (item.servingsLeft != null && item.servingsTotal != null) {
+    return `${location} · ${item.servingsLeft} of ${item.servingsTotal} left`;
+  }
+  return item.quantityNote ? `${location} · ${item.quantityNote}` : location;
+}
+
+/**
  * "Best by <Mon, Aug 29>" label for a set best-by date. `bestBy` is a plain
  * "YYYY-MM-DD" calendar date — parsed as local calendar fields (not a UTC
  * instant) so it displays as the intended day regardless of the viewer's

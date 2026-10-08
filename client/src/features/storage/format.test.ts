@@ -8,6 +8,7 @@ import {
   offersContainerChoice,
   storageItemTitle,
   resolveStorageItemMenuActions,
+  servePartHint,
   servingsLabel,
 } from "./format.js";
 
@@ -203,5 +204,17 @@ describe("CONTAINER_CHOICE_OPTIONS", () => {
       "One container",
       "Separate containers",
     ]);
+  });
+});
+
+describe("servePartHint (MR-Serve, ledger 760)", () => {
+  const item = { location: "fridge" as const, servingsLeft: null, servingsTotal: null, quantityNote: null };
+  it("says where the container is and how many of its servings are left", () => {
+    expect(servePartHint({ ...item, servingsLeft: 7, servingsTotal: 8 })).toBe("Fridge · 7 of 8 left");
+    expect(servePartHint({ ...item, location: "freezer", servingsLeft: 5, servingsTotal: 6 })).toBe("Freezer · 5 of 6 left");
+  });
+  it("falls back to the quantity note, or just the place, when servings are not tracked", () => {
+    expect(servePartHint({ ...item, quantityNote: "2 jars" })).toBe("Fridge · 2 jars");
+    expect(servePartHint(item)).toBe("Fridge");
   });
 });

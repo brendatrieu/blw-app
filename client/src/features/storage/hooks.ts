@@ -7,14 +7,15 @@ import type {
   StorageResponse,
   StorageStatus,
   StorageView,
-  ServeStorageItemInput,
+  ServeStorageInput,
+  ServeStorageResponse,
   UpdateStorageItemInput,
 } from "@blw/shared";
-import { createStorageItem, fetchStorage, serveStorageItem, updateStorageItem } from "./api.js";
+import { createStorageItem, fetchStorage, serveStorage, updateStorageItem } from "./api.js";
 import { storageItemTitle } from "./format.js";
 import { sortActiveByFreshness } from "./freshness.js";
 import { useCelebration } from "../../components/ui/Celebration.js";
-import { celebrateForNewMeal, snapshotMealCelebrationContext, trackingKeys } from "../tracking/hooks.js";
+import { celebrateForNewMeal, snapshotMealCelebrationContext, trackingKeys, useDeleteMeal } from "../tracking/hooks.js";
 import { track } from "../../lib/usage/track.js";
 import {
   ageDaysBucket,
@@ -24,7 +25,7 @@ import {
   foodCountBucket,
   freshnessAtChange,
   isOffline,
-  lookupRecipeKind,
+  mealRecipeKindProps,
   storageAddViaFromLocation,
   storageClosedVia,
   storageSourceFromInput,
@@ -137,29 +138,31 @@ export function useUpdateStorageItem() {
 }
 
 /**
- * Serving a storage item creates a meal in the same stroke, so it drives the
- * exact same celebration moments as logging one directly — see
- * `celebrateForNewMeal` in the tracking feature, which this mirrors rather
- * than duplicates (never both this AND `useCreateMeal` firing for the same
- * action; a serve never goes through `useCreateMeal`).
+ * Serving creates a meal in the same stroke, so it drives the exact same
+ * celebration moments as logging one directly — see `celebrateForNewMeal` in
+ * the tracking feature, which this mirrors rather than duplicates (never both
+ * this AND `useCreateMeal` firing for the same action; a serve never goes
+ * through `useCreateMeal`).
+ *
+ * Ledger 760: one serve can take from several containers at once (plus fresh
+ * foods and recipes), all or nothing, through POST /api/storage/serve.
  *
  * Both segments of the storage cache are invalidated on settle: a tracked
- * item that hits 0 servings flips to "finished" server-side and disappears
- * from Active into History in the same response, so both views need a
- * refetch regardless of which one the card was rendered in.
+ * container that hits 0 servings flips to "finished" server-side and moves
+ * from Active into History in the same response.
  */
 export function useStorageServe(babyId: string | undefined) {
   const queryClient = useQueryClient();
   const { celebrate } = useCelebration();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: ServeStorageItemInput }) => serveStorageItem(id, input),
+    mutationFn: (input: ServeStorageInput) => serveStorage(input),
     onMutate: () => snapshotMealCelebrationContext(queryClient, babyId),
-    onSuccess: ({ meal, item }, variables, context) => {
+    onSuccess: ({ meal, items }, input, context) => {
       // A serve IS a logged meal, so it sends the same event the log form
       // does — same props, `from_storage` true, `via: storage_serve`.
       track("meal_logged", {
         food_count: foodCountBucket(meal.foods.length),
-        recipe_kind: lookupRecipeKind(queryClient, meal.recipeId),
+        ...mealRecipeKindProps(queryClient, meal.recipes?.map((recipe) => recipe.id) ?? (meal.recipeId ? [meal.recipeId] : [])),
         from_storage: true,
         via: "storage_serve",
         leftovers_saved: false,
@@ -168,13 +171,16 @@ export function useStorageServe(babyId: string | undefined) {
         // The Serve sheet asks when (item 354), so a serve is bucketed the
         // same way a directly logged meal is — read off the input rather
         // than hard-coded to "now".
-        backdated: backdatedBucket(variables.input.servedAt ?? new Date()),
+        backdated: backdatedBucket(input.servedAt ?? new Date()),
         offline: isOffline(),
       });
       // A tracked container that hit zero servings flips to `finished`
       // server-side in this same response. That is a close, and the serve
-      // path is the only way it happens without anyone pressing Remove.
-      if (item.status !== "active") {
+      // path is the only way it happens without anyone pressing Remove. Every
+      // part was active when the server locked it, so a non-active one here
+      // is one THIS serve emptied.
+      for (const item of items) {
+        if (item.status === "active") continue;
         track("storage_item_closed", {
           to: item.status,
           via: "serve_depleted",
@@ -292,4 +298,52 @@ export function useStorageStatusChange() {
   }
 
   return { recentChange, setStatus, undo, isPending: updateItem.isPending };
+}
+
+/**
+ * The serve banner's text (ledger 750/760, owner-approved): "Served: {first}"
+ * for one container, "Served: {first} + {n} more" for several, where n counts
+ * the OTHER containers only — fresh foods and recipes are not counted.
+ */
+export function serveUndoLabel(titles: readonly string[]): string {
+  const [first, ...rest] = titles;
+  return rest.length === 0 ? `Served: ${first}` : `Served: ${first} + ${rest.length} more`;
+}
+
+export interface RecentServe {
+  mealId: string;
+  label: string;
+}
+
+/**
+ * The 6 s Undo after a serve (ledger 760), the `useStorageStatusChange`
+ * pattern: `announce` the serve's response, render the banner while
+ * `recentServe` is set, `undo` deletes the meal. The server gives every
+ * container its servings back from its own record, in one transaction, and
+ * skips one the parent has removed since (ledger 751/762); a delete that
+ * finds the meal already gone counts as done (`useDeleteMeal`).
+ */
+export function useServeUndo(babyId: string | undefined) {
+  const [recentServe, setRecentServe] = useState<RecentServe | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout>>();
+  const deleteMeal = useDeleteMeal(babyId);
+
+  useEffect(() => {
+    return () => clearTimeout(undoTimer.current);
+  }, []);
+
+  function announce({ meal, items }: ServeStorageResponse) {
+    clearTimeout(undoTimer.current);
+    setRecentServe({ mealId: meal.id, label: serveUndoLabel(items.map(storageItemTitle)) });
+    undoTimer.current = setTimeout(() => setRecentServe(null), UNDO_WINDOW_MS);
+  }
+
+  function undo() {
+    if (!recentServe) return;
+    deleteMeal.mutate(recentServe.mealId);
+    clearTimeout(undoTimer.current);
+    setRecentServe(null);
+  }
+
+  return { recentServe, announce, undo };
 }

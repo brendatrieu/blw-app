@@ -37,6 +37,7 @@ vi.mock("../features/babies/useActiveBaby.js", () => ({
 vi.mock("../features/storage/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useStorageItems: () => ({ data: { items: h.storage }, isLoading: false }),
+  useServeUndo: () => ({ recentServe: null, announce: () => {}, undo: () => {} }),
 }));
 
 import { Card } from "../components/ui/Card.js";

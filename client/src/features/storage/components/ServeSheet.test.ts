@@ -6,7 +6,15 @@ import { describe, expect, it } from "vitest";
 import type { StorageItem } from "@blw/shared";
 import { CelebrationProvider } from "../../../components/ui/Celebration.js";
 import { SheetPanel } from "../../../components/ui/Sheet.js";
-import { buildServeInput, ServeAction, ServeControl, ServeSheet, serveRatingsInput } from "./ServeSheet.js";
+import {
+  buildServeInput,
+  ServeControl,
+  ServeSheet,
+  serveRatingRows,
+  serveRatingsInput,
+  servedRecipes,
+  type ServePart,
+} from "./ServeSheet.js";
 
 const BASE_ITEM: StorageItem = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -28,6 +36,41 @@ const BASE_ITEM: StorageItem = {
   notes: null,
 };
 
+// MR-Serve's sitting: two recipe containers, a container of foods, and a
+// fresh banana. Egg is in "Broccoli + Egg" AND an ingredient of Salmon Cakes.
+const LENTIL = "aaaaaaaa-0000-0000-0000-000000000001";
+const SALMON = "aaaaaaaa-0000-0000-0000-000000000002";
+const LENTIL_ITEM: StorageItem = {
+  ...BASE_ITEM,
+  id: "bbbbbbbb-0000-0000-0000-000000000001",
+  foods: [],
+  recipeId: LENTIL,
+  recipeTitle: "Lentil Patties",
+  servingsTotal: 8,
+  servingsLeft: 7,
+};
+const SALMON_ITEM: StorageItem = {
+  ...LENTIL_ITEM,
+  id: "bbbbbbbb-0000-0000-0000-000000000002",
+  recipeId: SALMON,
+  recipeTitle: "Salmon Cakes",
+  location: "freezer",
+};
+const BROCCOLI_EGG: StorageItem = {
+  ...BASE_ITEM,
+  id: "bbbbbbbb-0000-0000-0000-000000000003",
+  foods: [
+    { id: "food-broccoli", slug: "broccoli", name: "Broccoli", emoji: null },
+    { id: "food-egg", slug: "egg", name: "Egg", emoji: null },
+  ],
+};
+const BANANA = { id: "food-banana", slug: "banana", name: "Banana", category: "fruit" as const, emoji: null };
+const PARTS: ServePart[] = [
+  { item: LENTIL_ITEM, servings: 1 },
+  { item: SALMON_ITEM, servings: 2 },
+  { item: BROCCOLI_EGG, servings: 1 },
+];
+
 function render(element: ReturnType<typeof createElement>) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderToString(
@@ -41,21 +84,29 @@ function render(element: ReturnType<typeof createElement>) {
 
 const SERVED_AT = new Date("2026-08-21T12:34:00.000Z");
 
-describe("buildServeInput (item 108)", () => {
-  it("passes babyId and servings through and trims both notes to null when blank", () => {
-    expect(buildServeInput("baby-1", 3, "  ", "", SERVED_AT)).toEqual({
+describe("buildServeInput (ledger 760: POST /api/storage/serve)", () => {
+  it("sends every container with its own servings, in the Serving list's order, and trims both notes to null when blank", () => {
+    expect(buildServeInput("baby-1", PARTS, [], [], "  ", "", SERVED_AT)).toEqual({
       babyId: "baby-1",
-      servings: 3,
+      parts: [
+        { storageItemId: LENTIL_ITEM.id, servings: 1 },
+        { storageItemId: SALMON_ITEM.id, servings: 2 },
+        { storageItemId: BROCCOLI_EGG.id, servings: 1 },
+      ],
       servedAt: "2026-08-21T12:34:00.000Z",
       reactionNote: null,
       notes: null,
     });
   });
 
-  it("keeps trimmed note text", () => {
-    expect(buildServeInput("baby-1", 1, " mild rash ", " froze the rest ", SERVED_AT)).toEqual({
+  it("adds fresh foods and recipes only when there are some, and keeps trimmed note text", () => {
+    expect(
+      buildServeInput("baby-1", PARTS.slice(0, 1), [BANANA], [{ id: SALMON, title: "Salmon Cakes" }], " mild rash ", " froze the rest ", SERVED_AT),
+    ).toEqual({
       babyId: "baby-1",
-      servings: 1,
+      parts: [{ storageItemId: LENTIL_ITEM.id, servings: 1 }],
+      foodIds: ["food-banana"],
+      recipeIds: [SALMON],
       servedAt: "2026-08-21T12:34:00.000Z",
       reactionNote: "mild rash",
       notes: "froze the rest",
@@ -64,54 +115,125 @@ describe("buildServeInput (item 108)", () => {
 
   it("sends the chosen time as an ISO string, so the server takes it verbatim (item 354)", () => {
     const chosen = new Date("2026-08-21T09:05:00.000Z");
-    expect(buildServeInput("baby-1", 1, "", "", chosen).servedAt).toBe(chosen.toISOString());
+    expect(buildServeInput("baby-1", PARTS, [], [], "", "", chosen).servedAt).toBe(chosen.toISOString());
   });
 });
 
-describe("ServeControl — the serve sheet's body (item 263)", () => {
-  const html = render(createElement(ServeControl, { item: BASE_ITEM, babyId: "baby-1" }));
+describe("servedRecipes — the meal's recipes in the server's order (DESIGN-B §5)", () => {
+  it("lists each container's recipes in Serving order, then the fresh ones, once each", () => {
+    expect(servedRecipes(PARTS, [{ id: "r-fresh", title: "Oat Pancakes" }])).toEqual([
+      { id: LENTIL, title: "Lentil Patties" },
+      { id: SALMON, title: "Salmon Cakes" },
+      { id: "r-fresh", title: "Oat Pancakes" },
+    ]);
+    // Fridge and freezer containers of one recipe, and a fresh one of it too:
+    // one recipe on the meal, so one star row.
+    const freezerLentils = { item: { ...LENTIL_ITEM, id: "bbbbbbbb-0000-0000-0000-000000000009" }, servings: 1 };
+    expect(servedRecipes([PARTS[0]!, freezerLentils], [{ id: LENTIL, title: "Lentil Patties" }])).toEqual([
+      { id: LENTIL, title: "Lentil Patties" },
+    ]);
+  });
 
-  it("opens straight onto the stepper: no inner Serve/Confirm two-step any more", () => {
-    expect(html).toContain('aria-label="Servings"');
+  it("reads every recipe of a several-recipe leftovers container (ledger 753)", () => {
+    const both = { ...LENTIL_ITEM, recipes: [{ id: LENTIL, title: "Lentil Patties" }, { id: SALMON, title: "Salmon Cakes" }] };
+    expect(servedRecipes([{ item: both, servings: 1 }], []).map((recipe) => recipe.id)).toEqual([LENTIL, SALMON]);
+  });
+});
+
+describe("serveRatingRows — DESIGN-B §2's one rule (ledger 760)", () => {
+  const SALMON_INGREDIENTS = new Set(["food-salmon", "food-egg", "food-oats"]);
+
+  it("MR-Serve: one row per recipe, then one per food not in any served recipe (Egg is rated through Salmon Cakes)", () => {
+    expect(serveRatingRows(PARTS, [BANANA], [], SALMON_INGREDIENTS, {})).toEqual([
+      { key: `recipe:${LENTIL}`, label: "Lentil Patties", value: null },
+      { key: `recipe:${SALMON}`, label: "Salmon Cakes", value: null },
+      { key: "food-broccoli", label: "Broccoli", value: null },
+      { key: "food-banana", label: "Banana", value: null },
+    ]);
+  });
+
+  it("shows no food row while a served recipe's ingredients are still loading", () => {
+    expect(serveRatingRows(PARTS, [BANANA], [], null, {}).map((row) => row.key)).toEqual([`recipe:${LENTIL}`, `recipe:${SALMON}`]);
+  });
+
+  it("rates a food-only serve per food, without waiting on anything", () => {
+    expect(serveRatingRows([{ item: BASE_ITEM, servings: 1 }], [], [], null, { "food-1": 4 })).toEqual([
+      { key: "food-1", label: "Avocado", value: 4 },
+    ]);
+  });
+
+  it("a fresh food that is also in a container gets one row", () => {
+    const egg = { id: "food-egg", slug: "egg", name: "Egg", category: "protein" as const, emoji: null };
+    expect(serveRatingRows([PARTS[2]!], [egg], [], new Set(), {}).map((row) => row.key)).toEqual(["food-broccoli", "food-egg"]);
+  });
+});
+
+describe("serveRatingsInput — only stars the parent chose, on rows they can see", () => {
+  it("sends nothing when no star is chosen, so an unrated serve has no rating key", () => {
+    expect(serveRatingsInput(serveRatingRows(PARTS, [BANANA], [], new Set(), {}))).toEqual({});
+    expect(serveRatingsInput([{ key: "food-1", label: "Avocado", value: null }])).toEqual({});
+  });
+
+  it("splits recipe rows into recipeRatings and food rows into foodRatings", () => {
+    const rows = serveRatingRows(PARTS, [BANANA], [], new Set(["food-egg"]), {
+      [`recipe:${SALMON}`]: 5,
+      "food-broccoli": 3,
+      "food-egg": 2, // not a row (an ingredient), so never sent
+    });
+    expect(serveRatingsInput(rows)).toEqual({ recipeRatings: { [SALMON]: 5 }, foodRatings: { "food-broccoli": 3 } });
+  });
+});
+
+const RATING_HEADING = 'Rating<!-- --> <span class="font-normal text-[var(--color-text-muted)]">(optional)</span>';
+
+describe("ServeControl — the serve sheet's body (MR-Serve, ledger 760)", () => {
+  const html = render(createElement(ServeControl, { item: { ...BASE_ITEM, servingsTotal: 8, servingsLeft: 7 }, babyId: "baby-1" }));
+
+  it("opens on the Serving list: the tapped container with its own −/+ and its place and servings left", () => {
+    expect(html).toContain('id="serve-serving"');
+    expect(html).toContain(">Serving</span>");
+    expect(html).toContain('aria-label="Servings: Avocado"');
     expect(html).toContain('aria-label="Decrease servings"');
     expect(html).toContain('aria-label="Increase servings"');
+    expect(html).toContain(">Fridge · 7 of 8 left</span>");
     // Item 651: the stepper count is tabular, so 9 -> 10 doesn't jiggle.
     expect(html).toMatch(/<span aria-live="polite" class="[^"]*\btabular-nums\b[^"]*">1<\/span>/);
-    // The old collapsed→confirming fork is gone with the inline row.
     expect(html).not.toContain(">Confirm<");
   });
 
-  it("shows both note fields inline — the '+ Add a note' toggle is gone", () => {
-    expect(html).not.toContain("Add a note");
-    expect(html).toContain("Reaction<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
+  it("offers '+ Add more' under the list, before When", () => {
+    expect(html).toContain(">+ Add more</button>");
+    expect(html.indexOf(">+ Add more<")).toBeLessThan(html.indexOf('id="serve-when"'));
+    expect(html.indexOf(">Serving<")).toBeLessThan(html.indexOf(">+ Add more<"));
+    // The Add more sheet only exists once it is tapped.
+    expect(html).not.toContain('role="dialog"');
+  });
+
+  it("shows both note fields inline, label normal and '(optional)' muted (item 736)", () => {
+    expect(html).toContain('Reaction<!-- --> <span class="font-normal text-[var(--color-text-muted)]">(optional)</span>');
     expect(html).toContain("Only for hives, vomiting, rash or other reaction signs.");
-    expect(html).toContain("Note<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
+    expect(html).toContain('Note<!-- --> <span class="font-normal text-[var(--color-text-muted)]">(optional)</span>');
     expect((html.match(/<textarea/g) ?? []).length).toBe(2);
   });
 
   it("puts the notes ABOVE a single primary Serve button, with no Cancel", () => {
-    expect(html).toContain(">Serve<");
-    expect(html.lastIndexOf("<textarea")).toBeLessThan(html.indexOf(">Serve<"));
+    expect(html).toContain(">Serve</button>");
+    expect(html.lastIndexOf("<textarea")).toBeLessThan(html.indexOf(">Serve</button>"));
     expect(html).not.toContain(">Cancel<");
-    // How-to guide (1, opens its own sheet) + Stepper (2) + When (1) + 5 stars
-    // (item 718; Clear only appears once a star is chosen) + Serve (1).
-    expect((html.match(/<button/g) ?? []).length).toBe(10);
+    // How-to (1) + stepper (2) + Add more (1) + When (1) + 5 stars + Serve (1).
+    expect((html.match(/<button/g) ?? []).length).toBe(11);
   });
 
-  it("keeps every control at the 44px tap target", () => {
-    // Stepper (2) + the five stars (item 718).
+  it("keeps the stepper and stars at the 44px tap target, and Add more 48px tall", () => {
     expect((html.match(/h-11 w-11/g) ?? []).length).toBe(7);
-    // The When field is a full-width button, so it takes the height alone.
+    expect(html).toMatch(/class="flex min-h-12 [^"]*border-dashed[^"]*"[^>]*>\+ Add more/);
     expect(html).toMatch(/id="serve-when"[^>]*class="[^"]*min-h-11/);
   });
 
-  it("asks WHEN it was served, above the note fields (item 354)", () => {
+  it("asks WHEN it was served, above the stars and the note fields (item 354)", () => {
     expect(html).toContain(">When</label>");
-    expect(html).toContain('id="serve-when"');
-    expect(html).toContain('for="serve-when"');
-    // Its picker sheet only exists once the field is tapped.
-    expect(html).not.toContain('role="dialog"');
-    expect(html.indexOf('id="serve-when"')).toBeLessThan(html.indexOf("<textarea"));
+    expect(html.indexOf('id="serve-when"')).toBeLessThan(html.indexOf(RATING_HEADING));
+    expect(html.indexOf(RATING_HEADING)).toBeLessThan(html.indexOf("<textarea"));
   });
 });
 
@@ -119,110 +241,68 @@ describe("the Serve sheet's How-to link (item 714)", () => {
   it("lifts its text 2.5px above center inside the same 44px box (pb-[5px] on a centered min-h-11)", () => {
     const html = render(createElement(ServeControl, { item: BASE_ITEM, babyId: "baby-1" }));
     const button = html.match(/<button[^>]*>(?=<span aria-hidden="true">📖)/)?.[0] ?? "";
-    // Same box and footprint as everywhere else (44px, -my-3), text still
-    // centered in it — just centered in 39px of it, 9.5 above and 14.5 below.
     expect(button).toMatch(/class="-my-3 inline-flex min-h-11 items-center [^"]* pb-\[5px\]"/);
     expect(button).not.toMatch(/\bp[ty]-|\bpb-(?!\[5px\])|\bm[tb]-/);
+    expect(html).toContain("How to serve from storage");
   });
 });
 
-describe("the Serve sheet's star row (item 718)", () => {
-  const RECIPE_ITEM: StorageItem = {
-    ...BASE_ITEM,
-    foods: [],
-    recipeId: "22222222-2222-2222-2222-222222222222",
-    recipeTitle: "Salmon Cakes",
-  };
-
-  it("rates a food item as its food: one labeled row, between When and the reaction note", () => {
+describe("the Serve sheet's star rows on first open", () => {
+  it("rates a food container per food", () => {
     const html = render(createElement(ServeControl, { item: BASE_ITEM, babyId: "baby-1" }));
-    expect(html).toContain("Rating<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
     expect((html.match(/role="radiogroup"/g) ?? []).length).toBe(1);
     expect(html).toContain('aria-label="Rating for Avocado"');
-    expect(html).toMatch(/<span class="[^"]*">Avocado<\/span>/);
-    const rating = html.indexOf("Rating<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
-    expect(html.indexOf('id="serve-when"')).toBeLessThan(rating);
-    expect(rating).toBeLessThan(html.indexOf("<textarea"));
-    // Unrated to start: no star chosen, no Clear.
     expect(html).not.toContain('aria-checked="true"');
     expect(html).not.toContain(">Clear<");
   });
 
-  it("rates a recipe item once, as the recipe, labeled with the recipe's name", () => {
-    const html = render(createElement(ServeControl, { item: RECIPE_ITEM, babyId: "baby-1" }));
+  it("rates a recipe container once, as the recipe", () => {
+    const html = render(createElement(ServeControl, { item: SALMON_ITEM, babyId: "baby-1" }));
     expect((html.match(/role="radiogroup"/g) ?? []).length).toBe(1);
     expect(html).toContain('aria-label="Rating for Salmon Cakes"');
-  });
-
-  it("shows no star row on a label-only item (it has nothing to rate)", () => {
-    const html = render(createElement(ServeControl, { item: { ...BASE_ITEM, foods: [], label: "Mystery" }, babyId: "b" }));
-    expect(html).not.toContain("Rating<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
-    expect(html).not.toContain('role="radiogroup"');
-  });
-
-  it("sends nothing when no star is chosen, so an unrated serve is the request it always was", () => {
-    expect(serveRatingsInput(BASE_ITEM, {})).toEqual({});
-    expect(serveRatingsInput(BASE_ITEM, { "food-1": null })).toEqual({});
-    expect(serveRatingsInput(RECIPE_ITEM, {})).toEqual({});
-    expect(serveRatingsInput(RECIPE_ITEM, { recipe: null })).toEqual({});
-  });
-
-  it("sends a food item's stars as foodRatings and a recipe item's as recipeRating, never the other kind", () => {
-    expect(serveRatingsInput(BASE_ITEM, { "food-1": 4 })).toEqual({ foodRatings: { "food-1": 4 } });
-    // A key that is not this item's food (or the recipe key) never leaks out.
-    expect(serveRatingsInput(BASE_ITEM, { "food-1": 2, recipe: 5, other: 3 })).toEqual({ foodRatings: { "food-1": 2 } });
-    expect(serveRatingsInput(RECIPE_ITEM, { recipe: 3 })).toEqual({ recipeRating: 3 });
-    expect(serveRatingsInput(RECIPE_ITEM, { recipe: 3, "food-1": 5 })).toEqual({ recipeRating: 3 });
+    // Its plate is the stand-in a recipe container gets on Storage.
+    expect(html).toContain(">🍲</span>");
   });
 });
 
-describe("ServeSheet (item 263)", () => {
+describe("ServeSheet", () => {
   it("renders nothing while closed", () => {
-    const html = render(
-      createElement(ServeSheet, { item: BASE_ITEM, babyId: "baby-1", open: false, onClose: () => {} }),
-    );
+    const html = render(createElement(ServeSheet, { item: BASE_ITEM, babyId: "baby-1", open: false, onClose: () => {} }));
     expect(html).not.toContain('role="dialog"');
   });
 
   // The open sheet portals into `document.body`, which the node test env
-  // doesn't have — so the wiring is read off the element ServeSheet returns
-  // (the `BackButton` history tests use the same plain-call idiom), and the
-  // markup it produces is pinned through `SheetPanel` below.
-  it("titles itself 'Serve <item>' and asks for the header X", () => {
+  // doesn't have — so the wiring is read off the element ServeSheet returns.
+  it("is titled just 'Serve' (MR-Serve) and asks for the header X", () => {
     const element = ServeSheet({ item: BASE_ITEM, babyId: "baby-1", open: true, onClose: () => {} }) as ReactElement<{
       title: string;
       showClose: boolean;
       open: boolean;
     }>;
-    expect(element.props.title).toBe("Serve Avocado");
+    expect(element.props.title).toBe("Serve");
     expect(element.props.showClose).toBe(true);
     expect(element.props.open).toBe(true);
   });
 
+  it("closes itself, then hands the serve to the page's Undo", () => {
+    const calls: string[] = [];
+    const element = ServeSheet({
+      item: BASE_ITEM,
+      babyId: "baby-1",
+      open: true,
+      onClose: () => calls.push("close"),
+      onServed: (response) => calls.push(`served ${response.meal.id}`),
+    }) as ReactElement<{ children: ReactElement<{ onServed: (response: unknown) => void }> }>;
+    element.props.children.props.onServed({ meal: { id: "m1" }, items: [] });
+    expect(calls).toEqual(["close", "served m1"]);
+  });
+
   it("puts the sheet's close X at the LEFT of its header row, before the title", () => {
-    const html = renderToString(
-      createElement(SheetPanel, { title: "Serve Avocado", showClose: true, onClose: () => {}, children: "body" }),
-    );
-    expect(html).toContain('role="dialog"');
-    expect(html).toContain('aria-label="Serve Avocado"');
-    expect(html).toContain("Serve Avocado</h2>");
-    expect(html).toContain('aria-label="Close"');
-    expect(html.indexOf('aria-label="Close"')).toBeLessThan(html.indexOf("</h2>"));
-    // Same 44px footprint pages give their header chevron/X (item 258/260).
+    const html = renderToString(createElement(SheetPanel, { title: "Serve", showClose: true, onClose: () => {}, children: "body" }));
+    expect(html).toContain('aria-label="Serve"');
+    expect(html.indexOf('aria-label="Close"')).toBeLessThan(html.indexOf("Serve</h2>"));
     expect(html).toMatch(/aria-label="Close"[^>]*class="[^"]*h-11 w-11/);
-  });
-
-  it("leaves every other sheet's header untouched (showClose is opt-in)", () => {
-    const html = renderToString(createElement(SheetPanel, { title: "Time", onClose: () => {}, children: "body" }));
-    expect(html).toContain("Time</h2>");
-    expect(html).not.toContain('aria-label="Close"');
-  });
-});
-
-describe("ServeAction — the detail page's Serve button (item 263)", () => {
-  it("renders a Serve button with its sheet closed", () => {
-    const html = render(createElement(ServeAction, { item: BASE_ITEM, babyId: "baby-1" }));
-    expect(html).toContain(">Serve<");
-    expect(html).not.toContain('role="dialog"');
+    // Item 737: the header stays pinned while the long sheet scrolls.
+    expect(html).toMatch(/data-sheet-header="" class="sticky top-0/);
   });
 });

@@ -55,7 +55,7 @@ vi.mock("../../lib/usage/track.js", async (importOriginal) => {
 });
 
 import { ApiError } from "../../lib/api.js";
-import { useCreateStorageItem, useStorageServe, useStorageStatusChange } from "./hooks.js";
+import { serveUndoLabel, useCreateStorageItem, useServeUndo, useStorageServe, useStorageStatusChange } from "./hooks.js";
 
 const fakeQueryClient = {
   getQueryData: () => undefined,
@@ -190,21 +190,21 @@ describe("useCreateStorageItem — storage_item_added", () => {
 });
 
 describe("useStorageServe — meal_logged from storage", () => {
-  function serve(itemAfter: Record<string, unknown>, servedAt?: string) {
+  function serve(items: Array<Record<string, unknown>>, servedAt?: string, meal: Record<string, unknown> = {}) {
     const options = firstOptions(() => useStorageServe("baby-1"));
     options.onSuccess!(
       {
-        meal: { id: "m1", foods: [{ id: "f1" }], recipeId: null, notes: null, reactionNote: null },
-        item: itemAfter,
+        meal: { id: "m1", foods: [{ id: "f1" }], recipes: [], recipeId: null, notes: null, reactionNote: null, ...meal },
+        items,
       } as never,
-      { id: "s1", input: { babyId: "baby-1", servings: 1, servedAt } } as never,
+      { babyId: "baby-1", parts: items.map((item) => ({ storageItemId: item.id, servings: 1 })), servedAt } as never,
       { hadAnyMeals: true } as never,
     );
     return tracked;
   }
 
   it("logs the meal with from_storage and the storage_serve entry point", () => {
-    expect(serve({ ...ITEM, servingsLeft: 1 })).toEqual([
+    expect(serve([{ ...ITEM, servingsLeft: 1 }])).toEqual([
       [
         "meal_logged",
         {
@@ -224,11 +224,11 @@ describe("useStorageServe — meal_logged from storage", () => {
 
   it("buckets the sheet's When field, now that a serve can be backdated (item 354)", () => {
     const servedAt = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
-    expect(serve({ ...ITEM, servingsLeft: 1 }, servedAt)[0]![1]).toMatchObject({ backdated: "<1d" });
+    expect(serve([{ ...ITEM, servingsLeft: 1 }], servedAt)[0]![1]).toMatchObject({ backdated: "<1d" });
   });
 
   it("also closes the container when the serve emptied it", () => {
-    const events = serve({ ...ITEM, status: "finished", servingsLeft: 0 });
+    const events = serve([{ ...ITEM, status: "finished", servingsLeft: 0 }]);
     expect(events.map(([name]) => name)).toEqual(["meal_logged", "storage_item_closed"]);
     expect(events[1]![1]).toEqual({
       to: "finished",
@@ -237,6 +237,32 @@ describe("useStorageServe — meal_logged from storage", () => {
       // Prepared on the 8th, served on the 13th.
       age_days_bucket: "4-7",
     });
+  });
+
+  // Ledger 760: one serve, several containers — one meal event, and one close
+  // for EACH container this serve emptied (and none for the others).
+  it("sends one meal_logged and one close per container the serve emptied", () => {
+    const events = serve([
+      { ...ITEM, id: "s1", status: "finished", servingsLeft: 0 },
+      { ...ITEM, id: "s2", servingsLeft: 3 },
+      { ...ITEM, id: "s3", status: "finished", servingsLeft: 0 },
+    ]);
+    expect(events.map(([name]) => name)).toEqual(["meal_logged", "storage_item_closed", "storage_item_closed"]);
+  });
+
+  it("reads a two-recipe serve as `several`, with whether one is a basic (ledger 754)", () => {
+    const meal = {
+      recipes: [
+        { id: "r1", title: "Lentil Patties", rating: null },
+        { id: "r2", title: "Salmon Cakes", rating: null },
+      ],
+      recipeId: "r1",
+    };
+    expect(serve([ITEM], undefined, meal)[0]![1]).toMatchObject({ recipe_kind: "several", includes_basic: false });
+    tracked.length = 0;
+    expect(serve([ITEM], undefined, { recipes: [{ id: "r1", title: "Lentil Patties", rating: null }], recipeId: "r1" })[0]![1]).toEqual(
+      expect.not.objectContaining({ includes_basic: expect.anything() }),
+    );
   });
 
   it("reports a failed serve as a meal_save_failed, with no message", () => {
@@ -314,5 +340,61 @@ describe("useStorageStatusChange — storage_item_closed", () => {
     expect(json).not.toContain("oats");
     expect(json).not.toContain("Oats");
     expect(json).not.toContain("s1");
+  });
+});
+
+// Ledger 760: the serve's Undo banner. Owner-approved wording; {n} counts the
+// OTHER containers only, never fresh foods or recipes.
+describe("serveUndoLabel", () => {
+  it("names one container alone, and the first plus a count of the others", () => {
+    expect(serveUndoLabel(["Lentil Patties"])).toBe("Served: Lentil Patties");
+    expect(serveUndoLabel(["Lentil Patties", "Salmon Cakes"])).toBe("Served: Lentil Patties + 1 more");
+    expect(serveUndoLabel(["Lentil Patties", "Salmon Cakes", "Broccoli + Egg"])).toBe("Served: Lentil Patties + 2 more");
+  });
+});
+
+describe("useServeUndo — 6 s Undo that deletes the served meal (ledger 760)", () => {
+  function render() {
+    h.store.i = 0;
+    h.store.r = 0;
+    return useServeUndo("baby-1");
+  }
+  const RESPONSE = {
+    meal: { id: "meal-9" },
+    items: [
+      { ...ITEM, label: null, recipeTitle: "Lentil Patties" },
+      { ...ITEM, label: "Pear purée cubes" },
+    ],
+  } as never;
+
+  it("shows nothing until a serve is announced, then the serve's label", () => {
+    vi.useRealTimers();
+    vi.useFakeTimers();
+    expect(render().recentServe).toBeNull();
+    render().announce(RESPONSE);
+    expect(render().recentServe).toEqual({ mealId: "meal-9", label: "Served: Lentil Patties + 1 more" });
+  });
+
+  it("goes away on its own after 6 seconds, not before", () => {
+    vi.useRealTimers();
+    vi.useFakeTimers();
+    render().announce(RESPONSE);
+    vi.advanceTimersByTime(5_999);
+    expect(render().recentServe).not.toBeNull();
+    vi.advanceTimersByTime(1);
+    expect(render().recentServe).toBeNull();
+  });
+
+  it("Undo deletes that meal, once, and closes the banner", () => {
+    vi.useRealTimers();
+    vi.useFakeTimers();
+    render().announce(RESPONSE);
+    mutateCalls.length = 0;
+    render().undo();
+    expect(mutateCalls.map((call) => call.variables)).toEqual(["meal-9"]);
+    expect(render().recentServe).toBeNull();
+    // A second tap on a banner that is gone does nothing.
+    render().undo();
+    expect(mutateCalls).toHaveLength(1);
   });
 });

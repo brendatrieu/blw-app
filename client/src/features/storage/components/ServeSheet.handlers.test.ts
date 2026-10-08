@@ -1,9 +1,7 @@
-// Drives ServeControl's OWN state without a DOM, to pin the one thing item
-// 354 turns on: which `servedAt` actually reaches the serve mutation. A
-// renderToString suite can only see a first render of a sheet nobody has
-// touched, so it can prove the When field is THERE but never that tapping it
-// changes the payload — and the server defaults an omitted `servedAt` to now,
-// so a dropped value would still write a plausible-looking meal.
+// Drives ServeControl's OWN state without a DOM: what actually reaches the
+// serve request after the parent steps servings, adds more, removes a fresh
+// item, picks a time and taps stars (items 354, 718; ledger 760). A
+// renderToString suite only sees a first render nobody has touched.
 //
 // Harness idiom: the vi.hoisted hook store from TourDialog.handlers.test.ts /
 // AddStorageItemForm.handlers.test.ts. React's `useState` is replaced with a
@@ -14,11 +12,12 @@ import type { StorageItem } from "@blw/shared";
 
 const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], i: 0 };
-  const served: Array<{ id: string; input: { servedAt: string; servings: number } & Record<string, unknown> }> = [];
-
+  const served: Array<{ input: Record<string, unknown>; onSuccess?: (response: unknown) => void }> = [];
   return {
     store,
     served,
+    /** recipe id -> its ingredient food ids; a missing id is "still loading". */
+    ingredients: new Map<string, string[]>(),
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states)) store.states[i] = typeof init === "function" ? (init as () => unknown)() : init;
@@ -46,8 +45,8 @@ vi.mock("../hooks.js", async (importOriginal) => {
   return {
     ...actual,
     useStorageServe: () => ({
-      mutate: (variables: unknown) => {
-        h.served.push(variables as (typeof h.served)[number]);
+      mutate: (input: Record<string, unknown>, options?: { onSuccess?: (response: unknown) => void }) => {
+        h.served.push({ input, onSuccess: options?.onSuccess });
       },
       isPending: false,
       isError: false,
@@ -55,7 +54,20 @@ vi.mock("../hooks.js", async (importOriginal) => {
   };
 });
 
+vi.mock("../../catalog/hooks.js", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    useRecipeDetails: (ids: string[]) =>
+      ids.map((id) => {
+        const foods = h.ingredients.get(id);
+        return { data: foods ? { ingredients: foods.map((foodId) => ({ foodId })) } : undefined };
+      }),
+  };
+});
+
 import { ServeControl } from "./ServeSheet.js";
+import { AddMoreSheet } from "./AddMoreSheet.js";
 import { DateTimeField } from "../../../components/ui/DateTimeField.js";
 import { Button } from "../../../components/ui/Button.js";
 import { MealRatingsField } from "../../tracking/components/MealRatingsField.js";
@@ -74,120 +86,191 @@ const ITEM: StorageItem = {
   useSoon: false,
   expired: false,
   quantityNote: null,
-  servingsTotal: null,
-  servingsLeft: null,
+  servingsTotal: 3,
+  servingsLeft: 2,
   bestBy: null,
   notes: null,
 };
+const SALMON = "aaaaaaaa-0000-0000-0000-000000000002";
+const SALMON_ITEM: StorageItem = {
+  ...ITEM,
+  id: "22222222-2222-2222-2222-222222222222",
+  foods: [],
+  recipeId: SALMON,
+  recipeTitle: "Salmon Cakes",
+  servingsTotal: null,
+  servingsLeft: null,
+};
+const BANANA = { id: "food-banana", slug: "banana", name: "Banana", category: "fruit", emoji: null };
 
 interface Rendered {
   type: unknown;
   props: Record<string, unknown>;
 }
 
-/** The first element of this component type anywhere in the returned tree. */
-function find(node: unknown, type: unknown): Rendered | null {
-  if (node === null || node === undefined || typeof node !== "object") return null;
+/** Every element anywhere in the returned tree that matches — children AND
+ * element-valued props (the Serving row frame takes its control as a prop). */
+function findAll(node: unknown, match: (element: Rendered) => boolean, out: Rendered[] = []): Rendered[] {
+  if (node === null || node === undefined || typeof node !== "object") return out;
   if (Array.isArray(node)) {
-    for (const child of node) {
-      const found = find(child, type);
-      if (found) return found;
-    }
-    return null;
+    for (const child of node) findAll(child, match, out);
+    return out;
   }
   const element = node as Rendered;
-  if (element.type === type) return element;
-  return find(element.props?.children, type);
+  if (match(element)) out.push(element);
+  for (const value of Object.values(element.props ?? {})) findAll(value, match, out);
+  return out;
 }
+const byType = (type: unknown) => (element: Rendered) => element.type === type;
+const byLabel = (label: string) => (element: Rendered) => element.props?.["aria-label"] === label;
 
-/** Renders the real body against the hook store — state survives between
- * calls, so a second render sees whatever the first one's callbacks set. */
-function render(): Rendered {
+function render(item: StorageItem = ITEM, onServed?: (response: unknown) => void): Rendered {
   h.store.i = 0;
-  return (ServeControl as unknown as (props: unknown) => Rendered)({ item: ITEM, babyId: "baby-1" });
+  return (ServeControl as unknown as (props: unknown) => Rendered)({ item, babyId: "baby-1", onServed });
 }
 
-function whenField(tree: Rendered): Rendered {
-  const field = find(tree, DateTimeField);
-  if (!field) throw new Error("the serve sheet should mount a When field");
-  return field;
+function click(tree: Rendered, match: (element: Rendered) => boolean) {
+  const [target] = findAll(tree, match);
+  if (!target) throw new Error("no such control");
+  (target.props.onClick as () => void)();
 }
 
-function serve(tree: Rendered) {
-  const button = find(tree, Button);
-  if (!button) throw new Error("the serve sheet should mount its Serve button");
-  (button.props.onClick as () => void)();
+function serve() {
+  click(render(), byType(Button));
+  return h.served[h.served.length - 1]!.input;
+}
+
+function addMore(picks: { items?: StorageItem[]; foods?: unknown[]; recipes?: { id: string; title: string }[] }) {
+  click(render(), (element) => element.props?.children === "+ Add more");
+  const [sheet] = findAll(render(), byType(AddMoreSheet));
+  if (!sheet) throw new Error("+ Add more should open the Add more sheet");
+  (sheet.props.onAdd as (value: unknown) => void)({ items: [], foods: [], recipes: [], ...picks });
 }
 
 describe("the Serve sheet's When field (item 354)", () => {
   it("defaults to now, so a parent who ignores the field still logs the current minute", () => {
     h.reset();
     const before = Date.now();
-    serve(render());
-
-    expect(h.served).toHaveLength(1);
-    const servedAt = Date.parse(h.served[0]!.input.servedAt);
+    const servedAt = Date.parse(serve().servedAt as string);
     expect(servedAt).toBeLessThanOrEqual(Date.now());
-    // `nowAtMinute` truncates the seconds, so the default sits in the current
-    // minute — never ahead of now, never more than a minute behind it.
     expect(before - servedAt).toBeLessThan(60_000);
     expect(new Date(servedAt).getSeconds()).toBe(0);
-    expect(new Date(servedAt).getMilliseconds()).toBe(0);
   });
 
   it("sends the time the parent picked, not the moment they pressed Serve", () => {
     h.reset();
     const chosen = new Date("2026-08-21T09:05:00.000Z");
-    (whenField(render()).props.onChange as (value: Date) => void)(chosen);
-
-    const tree = render();
-    expect(whenField(tree).props.value).toEqual(chosen);
-    serve(tree);
-
-    expect(h.served[0]!.input.servedAt).toBe(chosen.toISOString());
-    // The rest of the payload is untouched by the new field.
-    expect(h.served[0]!.id).toBe(ITEM.id);
-    expect(h.served[0]!.input.servings).toBe(1);
-  });
-
-  it("hands the future-time guard to DateTimeField rather than re-implementing it", () => {
-    h.reset();
-    const field = whenField(render());
-    expect(field.props.id).toBe("serve-when");
-    // No `now` override and no custom max: the field's own Save-time guard
-    // ("Time can't be in the future") is the only one in play.
-    expect(field.props.now).toBeUndefined();
+    const [field] = findAll(render(), byType(DateTimeField));
+    expect(field!.props.id).toBe("serve-when");
+    // No `now` override: the field's own future-time guard is the only one.
+    expect(field!.props.now).toBeUndefined();
+    (field!.props.onChange as (value: Date) => void)(chosen);
+    expect(serve()).toMatchObject({
+      servedAt: chosen.toISOString(),
+      parts: [{ storageItemId: ITEM.id, servings: 1 }],
+    });
   });
 });
 
-describe("the Serve sheet's star row (item 718)", () => {
-  function ratingsField(tree: Rendered): Rendered {
-    const field = find(tree, MealRatingsField);
-    if (!field) throw new Error("the serve sheet should mount its star row");
+describe("the Serving list (ledger 760)", () => {
+  it("steps each container's servings on its own, within [1, servings left]", () => {
+    h.reset();
+    addMore({ items: [SALMON_ITEM] });
+    for (let i = 0; i < 4; i++) click(render(), byLabel("Increase servings")); // the first container: 2 left
+    const increases = findAll(render(), byLabel("Increase servings"));
+    expect(increases).toHaveLength(2);
+    for (let i = 0; i < 3; i++) (findAll(render(), byLabel("Increase servings"))[1]!.props.onClick as () => void)();
+    click(render(), byLabel("Decrease servings")); // the first, back to 1
+    click(render(), byLabel("Decrease servings")); // and never below 1
+    expect(serve().parts).toEqual([
+      { storageItemId: ITEM.id, servings: 1 },
+      // Untracked: up to 99.
+      { storageItemId: SALMON_ITEM.id, servings: 4 },
+    ]);
+  });
+
+  it("adds what Add more picked: containers at 1 serving, then fresh foods and recipes; and ✕ takes a fresh one back out", () => {
+    h.reset();
+    addMore({ items: [SALMON_ITEM], foods: [BANANA], recipes: [{ id: "r-oat", title: "Oat Pancakes" }] });
+    // Picking the same fresh food again does not list it twice.
+    addMore({ foods: [BANANA] });
+    const tree = render();
+    expect(findAll(tree, (element) => element.props?.children === "Fresh, not from storage")).toHaveLength(2);
+    expect(findAll(tree, byLabel("Servings: Salmon Cakes"))).toHaveLength(1);
+    expect(serve()).toMatchObject({
+      parts: [
+        { storageItemId: ITEM.id, servings: 1 },
+        { storageItemId: SALMON_ITEM.id, servings: 1 },
+      ],
+      foodIds: ["food-banana"],
+      recipeIds: ["r-oat"],
+    });
+
+    click(render(), byLabel("Remove Banana"));
+    click(render(), byLabel("Remove Oat Pancakes"));
+    const input = serve();
+    expect(input).not.toHaveProperty("foodIds");
+    expect(input).not.toHaveProperty("recipeIds");
+  });
+
+  it("tells Add more which containers are already listed, so it never offers them again", () => {
+    h.reset();
+    addMore({ items: [SALMON_ITEM] });
+    click(render(), (element) => element.props?.children === "+ Add more");
+    const [sheet] = findAll(render(), byType(AddMoreSheet));
+    expect(sheet!.props.servingIds).toEqual([ITEM.id, SALMON_ITEM.id]);
+    (sheet!.props.onClose as () => void)();
+    expect(findAll(render(), byType(AddMoreSheet))).toHaveLength(0);
+  });
+
+  it("hands the server's answer to onServed after a successful serve", () => {
+    h.reset();
+    const seen: unknown[] = [];
+    click(render(ITEM, (response) => seen.push(response)), byType(Button));
+    h.served[0]!.onSuccess!({ meal: { id: "m1" }, items: [] });
+    expect(seen).toEqual([{ meal: { id: "m1" }, items: [] }]);
+  });
+});
+
+describe("the Serve sheet's star rows (item 718, DESIGN-B §2)", () => {
+  function ratingsField(): Rendered {
+    const [field] = findAll(render(), byType(MealRatingsField));
+    if (!field) throw new Error("the serve sheet should mount its star rows");
     return field;
   }
+  const tap = (key: string, value: number | null) =>
+    (ratingsField().props.onChange as (key: string, value: number | null) => void)(key, value);
 
   it("sends no rating key at all when the parent leaves the stars blank", () => {
     h.reset();
-    serve(render());
-    expect(h.served[0]!.input).not.toHaveProperty("foodRatings");
-    expect(h.served[0]!.input).not.toHaveProperty("recipeRating");
+    const input = serve();
+    expect(input).not.toHaveProperty("foodRatings");
+    expect(input).not.toHaveProperty("recipeRatings");
   });
 
-  it("sends the star the parent tapped as the item's food rating, and a cleared star as nothing", () => {
+  it("sends a tapped food star, and a cleared one as nothing", () => {
     h.reset();
-    const field = ratingsField(render());
-    expect(field.props.rows).toEqual([{ key: "food-1", label: "Avocado", value: null }]);
-    (field.props.onChange as (key: string, value: number | null) => void)("food-1", 4);
+    expect(ratingsField().props.rows).toEqual([{ key: "food-1", label: "Avocado", value: null }]);
+    tap("food-1", 4);
+    expect(serve().foodRatings).toEqual({ "food-1": 4 });
+    tap("food-1", null);
+    expect(serve()).not.toHaveProperty("foodRatings");
+  });
 
-    const tree = render();
-    expect(ratingsField(tree).props.rows).toEqual([{ key: "food-1", label: "Avocado", value: 4 }]);
-    serve(tree);
-    expect(h.served[0]!.input.foodRatings).toEqual({ "food-1": 4 });
-    expect(h.served[0]!.input).not.toHaveProperty("recipeRating");
-
-    (ratingsField(render()).props.onChange as (key: string, value: number | null) => void)("food-1", null);
-    serve(render());
-    expect(h.served[1]!.input).not.toHaveProperty("foodRatings");
+  it("rates a recipe once, by its id, and drops a food's row once it turns out to be that recipe's ingredient", () => {
+    h.reset();
+    h.ingredients.clear();
+    tap("food-1", 3);
+    addMore({ items: [SALMON_ITEM], foods: [BANANA] });
+    // Salmon Cakes' ingredients have not loaded: only the recipe row.
+    expect(ratingsField().props.rows).toEqual([{ key: `recipe:${SALMON}`, label: "Salmon Cakes", value: null }]);
+    h.ingredients.set(SALMON, ["food-1", "food-salmon"]);
+    expect((ratingsField().props.rows as { key: string }[]).map((row) => row.key)).toEqual([`recipe:${SALMON}`, "food-banana"]);
+    tap(`recipe:${SALMON}`, 5);
+    const input = serve();
+    expect(input.recipeRatings).toEqual({ [SALMON]: 5 });
+    // Avocado's earlier star is not sent: it is rated through Salmon Cakes now.
+    expect(input).not.toHaveProperty("foodRatings");
+    h.ingredients.clear();
   });
 });

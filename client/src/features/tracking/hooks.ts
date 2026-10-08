@@ -26,6 +26,7 @@ import {
   type MealsQuery,
 } from "./api.js";
 import { useCelebration, type CelebrationOptions } from "../../components/ui/Celebration.js";
+import { ApiError } from "../../lib/api.js";
 import { track } from "../../lib/usage/track.js";
 import {
   backdatedBucket,
@@ -321,6 +322,9 @@ export function useUpdateMeal(babyId: string | undefined) {
       }
     },
     onSettled: () => {
+      // Ledger 751/760: an edit that takes a served container's part off the
+      // meal gives that container its servings back.
+      void queryClient.invalidateQueries({ queryKey: ["storage"] });
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
       invalidateAllergenQueries(queryClient, babyId);
@@ -329,10 +333,21 @@ export function useUpdateMeal(babyId: string | undefined) {
   });
 }
 
+/**
+ * Deleting a meal — also the Serve sheet's Undo (ledger 760). A served
+ * meal's containers get their servings back server-side, so storage is
+ * refreshed too. A 404 means the meal is already gone (a double tap, Undo
+ * after a delete elsewhere): that is the outcome asked for, so it is done,
+ * not an error.
+ */
 export function useDeleteMeal(babyId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => deleteMeal(id),
+    mutationFn: (id: string) =>
+      deleteMeal(id).catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 404) return;
+        throw error;
+      }),
     onMutate: async (id) => {
       if (!babyId) return undefined;
       await queryClient.cancelQueries({ queryKey: trackingKeys.meals(babyId) });
@@ -348,6 +363,7 @@ export function useDeleteMeal(babyId: string | undefined) {
       });
     },
     onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["storage"] });
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
       invalidateAllergenQueries(queryClient, babyId);

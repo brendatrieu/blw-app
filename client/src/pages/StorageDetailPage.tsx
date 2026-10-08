@@ -1,6 +1,11 @@
 import { Navigate, useParams } from "react-router-dom";
 import { awaitingDetail } from "../lib/detailQuery.js";
-import { useStorageItems, useStorageStatusChange } from "../features/storage/hooks.js";
+import {
+  storageStatusChangeLabel,
+  useServeUndo,
+  useStorageItems,
+  useStorageStatusChange,
+} from "../features/storage/hooks.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { StorageItemCard, StorageItemTitle, storageItemCluster } from "../features/storage/components/StorageItemCard.js";
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
@@ -31,6 +36,7 @@ export function StorageDetailPage() {
   const history = useStorageItems("history");
   const { activeBaby } = useActiveBaby();
   const { recentChange, setStatus, undo, isPending } = useStorageStatusChange();
+  const serveUndo = useServeUndo(activeBaby?.id);
 
   const item =
     active.data?.items.find((candidate) => candidate.id === id) ??
@@ -60,7 +66,8 @@ export function StorageDetailPage() {
         leading={<BackButton fallback="/storage" />}
       />
 
-      {recentChange && <StorageStatusBanner change={recentChange} onUndo={undo} />}
+      {recentChange && <StorageStatusBanner label={storageStatusChangeLabel(recentChange)} onUndo={undo} />}
+      {serveUndo.recentServe && <StorageStatusBanner label={serveUndo.recentServe.label} onUndo={serveUndo.undo} />}
 
       <ul className="flex flex-col gap-2">
         {/* Same kebab as Home and the Storage tab (user: cards carry the
@@ -77,6 +84,7 @@ export function StorageDetailPage() {
               busy={isPending}
               onRemove={() => setStatus(item, "discarded", true)}
               onRestore={() => setStatus(item, "active", false)}
+              onServed={serveUndo.announce}
             />
           }
         />

@@ -4,8 +4,8 @@ import type {
   StorageItem,
   StorageResponse,
   StorageView,
-  ServeStorageItemInput,
-  ServeStorageItemResponse,
+  ServeStorageInput,
+  ServeStorageResponse,
   UpdateStorageItemInput,
 } from "@blw/shared";
 import { apiGet, apiPatch, apiPost } from "../../lib/api.js";
@@ -28,6 +28,8 @@ export function updateStorageItem(id: string, input: UpdateStorageItemInput): Pr
   return apiPatch<StorageItem>(`/api/storage/${id}`, input);
 }
 
-export function serveStorageItem(id: string, input: ServeStorageItemInput): Promise<ServeStorageItemResponse> {
-  return apiPost<ServeStorageItemResponse>(`/api/storage/${id}/serve`, input);
+/** One sitting from one or more containers, plus fresh foods and recipes
+ * (ledger 760). Undo is `deleteMeal` with the returned meal's id. */
+export function serveStorage(input: ServeStorageInput): Promise<ServeStorageResponse> {
+  return apiPost<ServeStorageResponse>("/api/storage/serve", input);
 }

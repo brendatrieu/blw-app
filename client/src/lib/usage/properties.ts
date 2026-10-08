@@ -268,6 +268,19 @@ export function lookupRecipeKind(queryClient: QueryClient, recipeId: string | nu
   return "catalog";
 }
 
+/**
+ * `meal_logged`'s recipe props for a meal's recipe ids (ledger 754/760): one
+ * recipe reads as before; two or more are `several`, with `includes_basic`
+ * saying whether any of them is a one-ingredient basic.
+ */
+export function mealRecipeKindProps(
+  queryClient: QueryClient,
+  recipeIds: readonly string[],
+): { recipe_kind: RecipeKind; includes_basic?: boolean } {
+  if (recipeIds.length < 2) return { recipe_kind: lookupRecipeKind(queryClient, recipeIds[0]) };
+  return { recipe_kind: "several", includes_basic: recipeIds.some((id) => lookupRecipeKind(queryClient, id) === "basic") };
+}
+
 // ---------------------------------------------------------------------------
 // Failures
 // ---------------------------------------------------------------------------
