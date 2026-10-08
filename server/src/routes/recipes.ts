@@ -51,7 +51,7 @@ import {
   favorites,
   foodAllergens,
   foods,
-  meals,
+  mealRecipes,
   storageItemRecipes,
   storageItems,
   recipeIngredients,
@@ -579,39 +579,48 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     // UI needs to say what is in the way. Favorites are NOT in this list:
     // un-favoriting is not a decision worth blocking a delete on, so the
     // caller's own row is simply removed below.
-    const [mealRow] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(meals)
-      .where(eq(meals.recipeId, existing.id));
-    const [storageRow] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(storageItems)
-      // A several-recipe container (ledger 753) names a recipe past its first
-      // only in `storage_item_recipes`, which would otherwise cascade away.
-      .where(
-        or(
-          eq(storageItems.recipeId, existing.id),
-          inArray(
-            storageItems.id,
-            db
-              .select({ id: storageItemRecipes.storageItemId })
-              .from(storageItemRecipes)
-              .where(eq(storageItemRecipes.recipeId, existing.id)),
+    //
+    // Ledger 754 (DESIGN-B §6): the counts run INSIDE the delete transaction,
+    // behind a lock on the recipe row. A meal or container written meanwhile
+    // takes FOR KEY SHARE on this row through its foreign key, so it either
+    // lands first (and is counted: 409) or waits and then fails its FK check
+    // — never a silent cascade of `meal_recipes` / `storage_item_recipes`.
+    const conflict = await db.transaction(async (tx) => {
+      await tx.select({ id: recipes.id }).from(recipes).where(eq(recipes.id, existing.id)).for("update");
+      // Every meal the recipe is on, at any position (several recipes per
+      // meal, ledger 752): `meal_recipes`, not the legacy first-recipe mirror.
+      const [mealRow] = await tx
+        .select({ count: sql<number>`count(distinct ${mealRecipes.mealId})::int` })
+        .from(mealRecipes)
+        .where(eq(mealRecipes.recipeId, existing.id));
+      const [storageRow] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(storageItems)
+        // A several-recipe container (ledger 753) names a recipe past its first
+        // only in `storage_item_recipes`, which would otherwise cascade away.
+        .where(
+          or(
+            eq(storageItems.recipeId, existing.id),
+            inArray(
+              storageItems.id,
+              tx
+                .select({ id: storageItemRecipes.storageItemId })
+                .from(storageItemRecipes)
+                .where(eq(storageItemRecipes.recipeId, existing.id)),
+            ),
           ),
-        ),
-      );
+        );
 
-    const mealCount = mealRow?.count ?? 0;
-    const storageCount = storageRow?.count ?? 0;
-    if (mealCount > 0 || storageCount > 0) {
-      return reply.code(409).send({ error: "conflict", mealCount, storageCount });
-    }
+      const mealCount = mealRow?.count ?? 0;
+      const storageCount = storageRow?.count ?? 0;
+      if (mealCount > 0 || storageCount > 0) return { mealCount, storageCount };
 
-    await db.transaction(async (tx) => {
       await tx.delete(favorites).where(and(eq(favorites.userId, userId), eq(favorites.recipeId, existing.id)));
       // `recipe_ingredients` and `recipe_variants` cascade from here.
       await tx.delete(recipes).where(and(eq(recipes.id, existing.id), eq(recipes.ownerId, userId)));
+      return null;
     });
+    if (conflict) return reply.code(409).send({ error: "conflict", ...conflict });
 
     return reply.code(204).send();
   });

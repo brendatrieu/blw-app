@@ -12,12 +12,16 @@ import {
   type Baby,
   type CreateStorageItemResponse,
   type FoodDetail,
+  type AllergenProgressResponse,
   type MealItem,
+  type RatingHistoryResponse,
+  type RatingsResponse,
   type ServeStorageItemResponse,
 } from "@blw/shared";
 import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
+import { buildExposureSnapshot } from "../ai/snapshot.js";
 
 async function seedFixtures(db: Database) {
   await db
@@ -520,6 +524,82 @@ describe("several recipes per meal (ledger 752)", () => {
       expect(meal).toMatchObject({ recipeId: fx.pancakes.id, recipeRating: 4 });
       expect(await storedRows(meal.id)).toEqual([{ recipeId: fx.pancakes.id, position: 0, rating: 4 }]);
       expect(await mirror(meal.id)).toEqual({ recipeId: fx.pancakes.id, recipeRating: 4 });
+    });
+  });
+
+  // Ledger 754: every reader of a meal's recipe goes through `meal_recipes`,
+  // so the second recipe of a meal (which the legacy mirror never names)
+  // counts everywhere the first one does.
+  describe("readers (ledger 754)", () => {
+    const ratings = async () => {
+      const response = await app.inject({ method: "GET", url: `/api/babies/${babyId}/ratings`, headers: { cookie: parent.cookie } });
+      expect(response.statusCode).toBe(200);
+      return response.json<RatingsResponse>();
+    };
+    const history = async (query: string) => {
+      const response = await app.inject({
+        method: "GET",
+        url: `/api/babies/${babyId}/ratings/history?${query}`,
+        headers: { cookie: parent.cookie },
+      });
+      expect(response.statusCode).toBe(200);
+      return response.json<RatingHistoryResponse>();
+    };
+
+    it("summaries count every recipe of a meal at any position, and an extra's own stars on a recipe meal", async () => {
+      await twoRecipeMeal(); // pancakes 4, porridge 2 (position 1), pear 5 (extra)
+      await created({ foodIds: [fx.pear.id], foodRatings: { [fx.pear.id]: 3 }, servedAt: "2026-01-01T08:00:00.000Z" });
+      await created({ foodIds: [fx.oats.id, fx.banana.id], recipeIds: [fx.porridge.id], recipeRatings: { [fx.porridge.id]: 4 }, servedAt: "2026-01-02T08:00:00.000Z" });
+
+      const summary = await ratings();
+      expect(summary.recipes[fx.pancakes.id]).toMatchObject({ count: 1, average: 4, latest: 4 });
+      expect(summary.recipes[fx.porridge.id]).toMatchObject({ count: 2, average: 3, latest: 2 });
+      expect(summary.foods[fx.pear.id]).toMatchObject({ count: 2, average: 4, latest: 5 });
+      // A recipe's stars never count toward its ingredients.
+      expect(Object.keys(summary.foods)).toEqual([fx.pear.id]);
+    });
+
+    it("history and served count follow the recipe at any position, and drop it when an edit takes it off", async () => {
+      const meal = await twoRecipeMeal();
+      await created({ foodIds: [fx.oats.id], recipeIds: [fx.porridge.id], servedAt: "2026-01-02T08:00:00.000Z" });
+
+      expect(await history(`recipeId=${fx.porridge.id}`)).toEqual({
+        points: [{ servedAt: meal.servedAt, rating: 2 }],
+        servedCount: 2,
+      });
+      expect((await history(`recipeId=${fx.pancakes.id}`)).servedCount).toBe(1);
+      // Banana is in both recipes but on the meal once: one meal, counted once.
+      expect((await history(`foodId=${fx.banana.id}`)).servedCount).toBe(1);
+      expect(await history(`foodId=${fx.pear.id}`)).toEqual({ points: [{ servedAt: meal.servedAt, rating: 5 }], servedCount: 1 });
+
+      await patched(meal.id, { recipeIds: [fx.pancakes.id] });
+      expect(await history(`recipeId=${fx.porridge.id}`)).toEqual({ points: [], servedCount: 1 });
+    });
+
+    it("two recipes sharing an allergen food give ONE exposure for the meal, in the ladder and the AI snapshot", async () => {
+      const [eggAllergen] = await db
+        .insert(schema.allergens)
+        .values({ slug: "egg", name: "Egg", introGuidance: "Well-cooked egg." })
+        .returning();
+      await db.insert(schema.foodAllergens).values({ foodId: fx.egg.id, allergenId: eggAllergen!.id });
+      // Pancakes and Egg Toast both contain egg.
+      const meal = await created({ foodIds: [fx.egg.id, fx.banana.id], recipeIds: [fx.pancakes.id, fx.toast.id] });
+      expect(meal.foods.filter((food) => food.id === fx.egg.id)).toHaveLength(1);
+
+      const progress = await app.inject({
+        method: "GET",
+        url: `/api/babies/${babyId}/allergen-progress`,
+        headers: { cookie: parent.cookie },
+      });
+      const body = progress.json<AllergenProgressResponse>();
+      expect(body.items.find((item) => item.allergenSlug === "egg")?.exposures).toBe(1);
+      expect(body.foodsTried).toBe(2);
+
+      // The symptom-check snapshot reads meal_foods too: egg once, first exposure.
+      const snapshot = await buildExposureSnapshot(db, babyId, new Date(Date.parse(meal.servedAt) + 60_000));
+      expect(snapshot.filter((item) => item.foodSlug === "egg")).toEqual([
+        expect.objectContaining({ timesServedEver: 1, firstExposure: true, allergenClass: "egg" }),
+      ]);
     });
   });
 

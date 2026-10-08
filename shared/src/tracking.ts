@@ -293,9 +293,11 @@ export type MealsResponse = z.infer<typeof mealsResponseSchema>;
 
 /**
  * Item 573: one baby's ratings of one food or recipe. A food's summary counts
- * only its ratings on LOOSE-FOOD meals — a recipe's rating never counts
- * toward its ingredient foods. `latest` is the rating on the most recently
- * served rated meal, and `lastRatedAt` is when that meal was served.
+ * the food's own stars (a loose food, or an extra beside a meal's recipes) —
+ * a recipe's rating never counts toward its ingredient foods. A recipe's
+ * counts its stars on every meal it was part of (ledger 754). `latest` is the
+ * rating on the most recently served rated meal, and `lastRatedAt` is when
+ * that meal was served.
  */
 export const ratingSummarySchema = z.object({
   average: z.number(),
@@ -325,7 +327,7 @@ export const ratingHistoryResponseSchema = z.object({
   points: z.array(z.object({ servedAt: z.string(), rating: starRatingSchema })),
   /**
    * Item 715: how many of this baby's meals have this food on them (or, for
-   * a recipe, are that recipe), counted server-side over every meal — the
+   * a recipe, have that recipe among their recipes), counted server-side over every meal — the
    * food page's exact "served N times". Rides on this response because every
    * meal write already refreshes it. Optional so an older cached body still
    * parses.

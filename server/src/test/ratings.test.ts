@@ -344,22 +344,20 @@ describe("ratings", () => {
   });
 
   describe("GET /api/babies/:babyId/ratings", () => {
-    it("averages a food over loose-food meals only — a recipe's rating never counts toward its ingredients", async () => {
+    it("averages a food over its own stars — a recipe's rating never counts toward its ingredients", async () => {
       await created({ foodIds: [fx.egg.id], foodRatings: { [fx.egg.id]: 4 }, servedAt: daysAgo(3) });
       await created({ foodIds: [fx.egg.id, fx.banana.id], foodRatings: { [fx.egg.id]: 5 }, servedAt: daysAgo(1) });
-      const recipeMeal = await created({
+      await created({
         foodIds: [fx.egg.id, fx.banana.id],
         recipeId: fx.recipe.id,
         recipeRating: 1,
         servedAt: daysAgo(2),
       });
       await created({ foodIds: [fx.egg.id, fx.banana.id], recipeId: fx.recipe.id, recipeRating: 2, servedAt: daysAgo(4) });
-      // Even a stray per-food rating on a recipe meal (the API never writes
-      // one) is not read as a rating of the ingredient.
-      await db
-        .update(schema.mealFoods)
-        .set({ rating: 1 })
-        .where(and(eq(schema.mealFoods.mealId, recipeMeal.id), eq(schema.mealFoods.foodId, fx.egg.id)));
+      // Ledger 754: there is no `recipe_id IS NULL` filter any more — the
+      // write rule keeps an ingredient's own stars off a recipe meal, so every
+      // stored food rating is the food's own (an extra beside the recipes
+      // counts: meal-recipes.test.ts "readers").
 
       const { body } = await summaries();
       expect(body.foods).toEqual({

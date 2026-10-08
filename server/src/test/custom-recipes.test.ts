@@ -1350,6 +1350,38 @@ describe("custom recipes", () => {
       expect(await db.select().from(schema.recipes).where(eq(schema.recipes.id, recipe.id))).toHaveLength(1);
     });
 
+    it("409s while the recipe is a meal's SECOND recipe, and deletes it once an edit takes it off (ledger 754)", async () => {
+      const recipe = await createRecipe(owner, recipePayload());
+      const babyId = await createBaby(owner);
+
+      // Position 1: the legacy `meals.recipe_id` mirror names only the first.
+      const meal = await app.inject({
+        method: "POST",
+        url: `/api/babies/${babyId}/meals`,
+        headers: { cookie: owner.cookie },
+        payload: { foodIds: [fixtures.banana.id], recipeIds: [fixtures.catalogRecipe.id, recipe.id] },
+      });
+      expect(meal.statusCode).toBe(201);
+      const mealId = meal.json<{ id: string }>().id;
+
+      const del = () => app.inject({ method: "DELETE", url: `/api/recipes/${recipe.id}`, headers: { cookie: owner.cookie } });
+      const blocked = await del();
+      expect(blocked.statusCode).toBe(409);
+      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 1, storageCount: 0 });
+      // Nothing cascaded: the meal still has both recipes.
+      expect(await db.select().from(schema.mealRecipes).where(eq(schema.mealRecipes.mealId, mealId))).toHaveLength(2);
+
+      const edit = await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${mealId}`,
+        headers: { cookie: owner.cookie },
+        payload: { recipeIds: [fixtures.catalogRecipe.id] },
+      });
+      expect(edit.statusCode).toBe(200);
+      expect((await del()).statusCode).toBe(204);
+      expect(await db.select().from(schema.recipes).where(eq(schema.recipes.id, recipe.id))).toEqual([]);
+    });
+
     // Item 240, the edit half: a parent can take every step back off a
     // recipe they already saved, and put them back later.
 

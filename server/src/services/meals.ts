@@ -10,7 +10,7 @@
 // Ledger 752: a meal's recipes live in `meal_recipes` (several per meal, each
 // with its own rating, in picked order). `meals.recipe_id` / `recipe_rating`
 // are only a legacy mirror of the first one, written here and never read.
-import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { MealItem, MealRecipe, RatingHistoryQuery, RatingHistoryResponse, RatingSummary, RatingsResponse } from "@blw/shared";
 import type { Database } from "../db/index.js";
 import {
@@ -287,11 +287,13 @@ export async function ownsBaby(db: Database, babyId: string, userId: string): Pr
 }
 
 /**
- * One row per rating, newest meal first: every rated food on this baby's
- * LOOSE-FOOD meals, or every rated recipe meal. The `recipe_id IS NULL`
- * filter on the food side is the chair call of item 573 — a recipe's rating
- * never counts toward its ingredient foods (PATCH also clears food ratings
- * when a meal becomes a recipe meal, so this is belt and braces).
+ * One row per rating, newest meal first. Foods: every food rating on any of
+ * this baby's meals. Item 573's "a recipe's rating never counts toward its
+ * ingredient foods" still holds, now by the write rule instead of a filter
+ * here (ledger 754, DESIGN-B §2): a food rated as part of a recipe has no
+ * rating of its own (adding a recipe clears its ingredients' stars), so
+ * every stored food rating is the parent's own, e.g. a loose extra beside
+ * the meal's recipes.
  */
 function ratedFoodRows(db: Database, babyId: string, foodId?: string) {
   return db
@@ -301,7 +303,6 @@ function ratedFoodRows(db: Database, babyId: string, foodId?: string) {
     .where(
       and(
         eq(meals.babyId, babyId),
-        isNull(meals.recipeId),
         isNotNull(mealFoods.rating),
         foodId === undefined ? undefined : eq(mealFoods.foodId, foodId),
       ),
@@ -309,16 +310,17 @@ function ratedFoodRows(db: Database, babyId: string, foodId?: string) {
     .orderBy(desc(meals.servedAt), desc(meals.id));
 }
 
+/** Recipes: every rated recipe of every meal, whatever its position (754). */
 function ratedRecipeRows(db: Database, babyId: string, recipeId?: string) {
   return db
-    .select({ id: meals.recipeId, rating: meals.recipeRating, servedAt: meals.servedAt })
-    .from(meals)
+    .select({ id: mealRecipes.recipeId, rating: mealRecipes.rating, servedAt: meals.servedAt })
+    .from(mealRecipes)
+    .innerJoin(meals, eq(mealRecipes.mealId, meals.id))
     .where(
       and(
         eq(meals.babyId, babyId),
-        isNotNull(meals.recipeId),
-        isNotNull(meals.recipeRating),
-        recipeId === undefined ? undefined : eq(meals.recipeId, recipeId),
+        isNotNull(mealRecipes.rating),
+        recipeId === undefined ? undefined : eq(mealRecipes.recipeId, recipeId),
       ),
     )
     .orderBy(desc(meals.servedAt), desc(meals.id));
@@ -366,7 +368,7 @@ export async function loadRatingHistory(
 /**
  * Item 715: how many of this baby's meals had this food on them (a recipe
  * meal counts for each of its foods, as it always did on the food page), or
- * were this recipe — counted in the database over every meal, so the food
+ * had this recipe on them, at any position (ledger 754) — counted in the database over every meal, so the food
  * page's "served N times" is exact rather than a count over a recent page.
  * Deleted meals are gone from the table, so they never count.
  */
@@ -378,8 +380,9 @@ export async function countServed(db: Database, babyId: string, query: RatingHis
         .innerJoin(mealFoods, eq(mealFoods.mealId, meals.id))
         .where(and(eq(meals.babyId, babyId), eq(mealFoods.foodId, query.foodId)))
     : await db
-        .select({ count: sql<number>`count(*)::int` })
+        .select({ count: sql<number>`count(distinct ${meals.id})::int` })
         .from(meals)
-        .where(and(eq(meals.babyId, babyId), eq(meals.recipeId, query.recipeId!)));
+        .innerJoin(mealRecipes, eq(mealRecipes.mealId, meals.id))
+        .where(and(eq(meals.babyId, babyId), eq(mealRecipes.recipeId, query.recipeId!)));
   return row?.count ?? 0;
 }
