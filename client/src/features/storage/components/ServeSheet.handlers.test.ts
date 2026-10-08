@@ -256,6 +256,14 @@ describe("the Serving list (ledger 760)", () => {
     expect(serve().recipeIds).toEqual(["r-dal"]);
   });
 
+  it("✕ on the second of two fresh recipes keeps the first (not just 'drop the first')", () => {
+    h.reset();
+    addMore({ recipes: [{ id: "r-oat", title: "Oat Pancakes" }, { id: "r-dal", title: "Red Lentil Dal" }] });
+    click(render(), byLabel("Remove Red Lentil Dal"));
+    expect(findAll(render(), byLabel("Remove Oat Pancakes"))).toHaveLength(1);
+    expect(serve().recipeIds).toEqual(["r-oat"]);
+  });
+
   it("closes Add more once its picks are added", () => {
     h.reset();
     addMore({ foods: [BANANA] });
