@@ -248,6 +248,29 @@ describe("the Serving list (ledger 760)", () => {
     expect(serve().foodIds).toEqual(["food-pear"]);
   });
 
+  it("✕ on one of two fresh recipes takes out only that recipe", () => {
+    h.reset();
+    addMore({ recipes: [{ id: "r-oat", title: "Oat Pancakes" }, { id: "r-dal", title: "Red Lentil Dal" }] });
+    click(render(), byLabel("Remove Oat Pancakes"));
+    expect(findAll(render(), byLabel("Remove Red Lentil Dal"))).toHaveLength(1);
+    expect(serve().recipeIds).toEqual(["r-dal"]);
+  });
+
+  it("closes Add more once its picks are added", () => {
+    h.reset();
+    addMore({ foods: [BANANA] });
+    expect(findAll(render(), byType(AddMoreSheet))).toHaveLength(0);
+  });
+
+  it("disables −/+ while the request is in flight, like Serve", () => {
+    h.reset();
+    h.mutation.isPending = true;
+    const tree = render();
+    const steppers = [...findAll(tree, byLabel("Decrease servings")), ...findAll(tree, byLabel("Increase servings"))];
+    expect(steppers).toHaveLength(2);
+    for (const stepper of steppers) expect(stepper.props.disabled).toBe(true);
+  });
+
   it("shows 'Couldn't serve — try again.' when the serve fails (a 409 lands here)", () => {
     h.reset();
     expect(findAll(render(), (element) => element.props?.children === "Couldn't serve — try again.")).toHaveLength(0);

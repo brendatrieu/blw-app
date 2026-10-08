@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { storageStatusChangeLabel } from "../hooks.js";
 import { StorageStatusBanner } from "./StorageStatusBanner.js";
 
@@ -26,5 +26,15 @@ describe("StorageStatusBanner (item 147, shared undo UI)", () => {
     const html = renderToString(createElement(StorageStatusBanner, { label: "Served: Peas", onUndo: () => {} }));
     // A 20px line + 2 x 12px = 44px tall; the text + 2 x 8px wide.
     expect(html).toMatch(/<button type="button" class="relative [^"]*after:absolute after:-inset-x-2 after:-inset-y-3"[^>]*>Undo</);
+  });
+
+  it("calls onUndo exactly once when Undo is pressed (both Undos: Remove and serve)", () => {
+    const onUndo = vi.fn();
+    const tree = StorageStatusBanner({ label: "Served: Peas", onUndo }) as { props: { children: unknown[] } };
+    const button = tree.props.children.find(
+      (child) => (child as { type?: unknown })?.type === "button",
+    ) as { props: { onClick: () => void } };
+    button.props.onClick();
+    expect(onUndo).toHaveBeenCalledTimes(1);
   });
 });

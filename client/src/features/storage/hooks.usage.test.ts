@@ -385,6 +385,18 @@ describe("useServeUndo — 6 s Undo that deletes the served meal (ledger 760)", 
     expect(render().recentServe).toBeNull();
   });
 
+  it("a second serve inside the 6 s restarts the clock, so its banner gets its own 6 s", () => {
+    vi.useRealTimers();
+    vi.useFakeTimers();
+    render().announce(RESPONSE);
+    vi.advanceTimersByTime(4_000);
+    render().announce(RESPONSE);
+    vi.advanceTimersByTime(5_999);
+    expect(render().recentServe).not.toBeNull();
+    vi.advanceTimersByTime(1);
+    expect(render().recentServe).toBeNull();
+  });
+
   it("Undo deletes that meal, once, and closes the banner", () => {
     vi.useRealTimers();
     vi.useFakeTimers();
