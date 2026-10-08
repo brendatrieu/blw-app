@@ -58,7 +58,7 @@ six buckets is as much as it can ever carry.
 |---|---|---|
 | `session_started` | boot, or the first event after 30 minutes idle | — |
 | `screen_viewed` | route change | `route_pattern`, `from_route` |
-| `meal_logged` | a meal that persisted (log form or a storage serve) | `food_count`, `recipe_kind`, `from_storage`, `via`, `leftovers_saved`, `has_notes`, `is_first_meal`, `backdated`, `offline` |
+| `meal_logged` | a meal that persisted (log form or a storage serve) | `food_count`, `recipe_kind` (`none`/`basic`/`catalog`/`custom`, or `several` for 2+ recipes), `includes_basic` (only with `several`: any of them a one-ingredient basic; optional), `from_storage`, `via`, `leftovers_saved`, `has_notes`, `is_first_meal`, `backdated`, `offline` |
 | `meal_save_failed` | a meal create/edit/serve that failed | `via`, `kind`, `offline` |
 | `storage_item_added` | a container saved (one event per container, so a "Separate containers" save of three foods sends three) | `location`, `source`, `via`, `has_servings`, `has_best_by`, `food_count` (food containers only), `split` |
 | `storage_item_closed` | a status change, including restore and undo | `to`, `via`, `freshness_at_change`, `age_days_bucket` |

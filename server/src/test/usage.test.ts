@@ -84,6 +84,61 @@ describe("POST /api/usage", () => {
     expect(rows[0]?.receivedAt).toBeInstanceOf(Date);
   });
 
+  // Ledger 754: a meal with two or more recipes is `recipe_kind: "several"`,
+  // with `includes_basic` saying whether one of them is a basic. Optional, so
+  // the shipped app's events (without it) keep landing.
+  it("accepts recipe_kind several with includes_basic, and refuses a non-boolean includes_basic", async () => {
+    const props = (extra: Record<string, unknown>) => ({
+      food_count: "4-5",
+      recipe_kind: "several",
+      from_storage: true,
+      via: "storage_serve",
+      leftovers_saved: false,
+      has_notes: false,
+      is_first_meal: false,
+      backdated: "now",
+      offline: false,
+      ...extra,
+    });
+    const meal = (extra: Record<string, unknown>) => usageEnvelope({ name: "meal_logged", route: "/storage", props: props(extra) });
+
+    expect((await post({ events: [meal({ includes_basic: true }), meal({})] }, user.cookie)).statusCode).toBe(204);
+    expect((await post({ events: [meal({ includes_basic: "yes" })] }, user.cookie)).statusCode).toBe(400);
+    const rows = await db.select().from(schema.usageEvents);
+    expect(rows.map((row) => (row.props as Record<string, unknown>).includes_basic)).toEqual(
+      expect.arrayContaining([true, undefined]),
+    );
+    expect(rows).toHaveLength(2);
+  });
+
+  // Ledger 754: a meal with two or more recipes is `recipe_kind: "several"`,
+  // with `includes_basic` saying whether one of them is a basic. Optional, so
+  // the shipped app's events (without it) keep landing.
+  it("accepts recipe_kind several with includes_basic, and refuses a non-boolean includes_basic", async () => {
+    const meal = (extra: Record<string, unknown>) =>
+      usageEnvelope({
+        name: "meal_logged",
+        route: "/storage",
+        props: {
+          food_count: "4-5",
+          recipe_kind: "several",
+          from_storage: true,
+          via: "storage_serve",
+          leftovers_saved: false,
+          has_notes: false,
+          is_first_meal: false,
+          backdated: "now",
+          offline: false,
+          ...extra,
+        },
+      });
+
+    expect((await post({ events: [meal({ includes_basic: true }), meal({})] }, user.cookie)).statusCode).toBe(204);
+    expect((await post({ events: [meal({ includes_basic: "yes" })] }, user.cookie)).statusCode).toBe(400);
+    const rows = await db.select().from(schema.usageEvents);
+    expect(rows.map((row) => (row.props as Record<string, unknown>).includes_basic).sort()).toEqual([true, undefined]);
+  });
+
   it("takes the user id from the session and never from the body", async () => {
     const other = await signUpUser(app, "Other Parent");
     const otherId = await userIdFor(db, other.email);

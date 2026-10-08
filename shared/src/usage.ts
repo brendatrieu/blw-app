@@ -149,8 +149,9 @@ export const babyCountBucketSchema = z.enum(["0", "1", "2+"]);
  * on the client, never hand-wired per button. */
 export const mealViaSchema = z.enum(["log_page", "food_page", "recipe_page", "storage_serve"]);
 /** Recipe attribution on a meal: none, one of the generated one-ingredient
- * basics, a curated catalog recipe, or one the parent wrote. */
-export const recipeKindSchema = z.enum(["none", "basic", "catalog", "custom"]);
+ * basics, a curated catalog recipe, one the parent wrote, or (ledger 754)
+ * two or more recipes on one meal. */
+export const recipeKindSchema = z.enum(["none", "basic", "catalog", "custom", "several"]);
 /** Why a write failed, at the coarsest grain that still separates "the
  * network was gone" from "we sent something wrong" from "we broke". */
 export const failureKindSchema = z.enum(["network", "4xx", "5xx"]);
@@ -212,6 +213,11 @@ const eventProps = {
     .object({
       food_count: foodCountBucketSchema,
       recipe_kind: recipeKindSchema,
+      /** Ledger 754: sent only with `recipe_kind: "several"` — whether any of
+       * the meal's recipes is a one-ingredient basic, so the basics metric
+       * (docs/decisions.md) still sees a basic served beside another recipe.
+       * Optional: older apps never send it. */
+      includes_basic: z.boolean().optional(),
       from_storage: z.boolean(),
       via: mealViaSchema,
       leftovers_saved: z.boolean(),
