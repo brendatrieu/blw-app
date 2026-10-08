@@ -18,6 +18,7 @@ import {
   type ServeStorageItemResponse,
   type ServeStorageResponse,
   type StorageItem,
+  type StorageResponse,
 } from "@blw/shared";
 import { createTestApp, insertMeals, signUpUser, type TestUser } from "./helpers.js";
 import { buildChatTools } from "../ai/tools.js";
@@ -535,6 +536,70 @@ describe("multi-part serve and servings back (ledger 753 + 751)", () => {
       expect(await box(eggBox)).toMatchObject({ left: 2 });
       expect((await deleteMeal(result.meal.id)).statusCode).toBe(204);
       expect(await box(eggBox)).toMatchObject({ left: 3 });
+    });
+  });
+
+  // Ledger 762, owner 2026-10-08: "user removed it and it should not be in
+  // storage anymore". A container the parent removed (the app's Remove writes
+  // `discarded`) gets nothing back from an edit, a delete or Undo, and never
+  // comes back to Storage, whether the serve finished it or not.
+  describe("a removed container stays removed (ledger 762)", () => {
+    const remove = (id: string) =>
+      app.inject({
+        method: "PATCH",
+        url: `/api/storage/${id}`,
+        headers: { cookie: parent.cookie },
+        payload: { status: "discarded" },
+      });
+    async function full(id: string) {
+      const [row] = await db.select().from(schema.storageItems).where(eq(schema.storageItems.id, id));
+      return row!;
+    }
+    async function activeIds(): Promise<string[]> {
+      const response = await app.inject({ method: "GET", url: "/api/storage?view=active", headers: { cookie: parent.cookie } });
+      expect(response.statusCode).toBe(200);
+      return response.json<StorageResponse>().items.map((item) => item.id);
+    }
+
+    it("an edit that takes its part off, then Undo: no servings back, still discarded, not in Storage", async () => {
+      const finishedBox = await container({ recipeId: fx.pancakes.id, servingsTotal: 1 });
+      const partlyUsed = await container({ foodIds: [fx.pear.id], servingsTotal: 4 });
+      const kept = await container({ recipeId: fx.porridge.id, servingsTotal: 3 });
+      const result = await served({
+        babyId,
+        parts: [{ storageItemId: finishedBox }, { storageItemId: partlyUsed, servings: 2 }, { storageItemId: kept }],
+        foodIds: [fx.carrot.id],
+      });
+      expect((await remove(finishedBox)).statusCode).toBe(200);
+      expect((await remove(partlyUsed)).statusCode).toBe(200);
+      const before = [await full(finishedBox), await full(partlyUsed)];
+      expect(before.map((row) => [row.status, row.servingsLeft])).toEqual([
+        ["discarded", 0],
+        ["discarded", 2],
+      ]);
+
+      // The edit takes both removed parts off (pancakes and the pear box).
+      await patched(result.meal.id, { recipeIds: [fx.porridge.id], foodIds: [fx.carrot.id] });
+      expect([await full(finishedBox), await full(partlyUsed)]).toEqual(before);
+
+      // Undo (= delete) gives the kept container back and nothing else.
+      expect((await deleteMeal(result.meal.id)).statusCode).toBe(204);
+      expect([await full(finishedBox), await full(partlyUsed)]).toEqual(before);
+      expect(await box(kept)).toEqual({ left: 3, total: 3, status: "active" });
+      const active = await activeIds();
+      expect(active).toContain(kept);
+      expect(active).not.toContain(finishedBox);
+      expect(active).not.toContain(partlyUsed);
+    });
+
+    it("Undo straight after the serve: no servings back, still discarded, not in Storage", async () => {
+      const id = await container({ foodIds: [fx.pear.id], servingsTotal: 2 });
+      const result = await served({ babyId, parts: [{ storageItemId: id }] });
+      expect((await remove(id)).statusCode).toBe(200);
+      const before = await full(id);
+      expect((await deleteMeal(result.meal.id)).statusCode).toBe(204);
+      expect(await full(id)).toEqual(before);
+      expect(await activeIds()).not.toContain(id);
     });
   });
 
