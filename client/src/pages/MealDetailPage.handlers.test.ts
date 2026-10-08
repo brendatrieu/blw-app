@@ -70,6 +70,22 @@ const LOOSE: MealItem = {
   ],
 };
 
+// Ledger 761: two recipes; Egg is an unrated ingredient (no row of its own).
+const SEVERAL: MealItem = {
+  ...LOOSE,
+  recipeId: "r1",
+  recipeTitle: "Lentil Patties",
+  recipeRating: 3,
+  recipes: [
+    { id: "r1", title: "Lentil Patties", rating: 3 },
+    { id: "r2", title: "Salmon Cakes", rating: null },
+  ],
+  foods: [
+    { ...LOOSE.foods[0]!, rating: null, inRecipe: true },
+    { ...LOOSE.foods[1]!, inRecipe: false },
+  ],
+};
+
 function field(meal: MealItem, pending?: unknown): El {
   h.meal = meal;
   h.pending = pending;
@@ -93,10 +109,49 @@ describe("MealDetailPage stars (item 574)", () => {
     ]);
   });
 
-  it("saves the recipe's tap as a recipe rating on a recipe meal", () => {
+  it("saves a recipe's tap as recipeRatings, never the legacy recipeRating (ledger 761)", () => {
     const el = field({ ...LOOSE, recipeId: "r1", recipeTitle: "Pancakes", recipeRating: 1 });
-    tap(el, "recipe", 4);
-    expect(h.mutations).toEqual([{ id: LOOSE.id, input: { recipeRating: 4 } }]);
+    tap(el, "recipe:r1", 4);
+    expect(h.mutations).toEqual([{ id: LOOSE.id, input: { recipeRatings: { r1: 4 } } }]);
+  });
+
+  it("on a meal with several recipes, each row saves its own recipe", () => {
+    const el = field(SEVERAL);
+    expect((el.props.rows as MealRatingRow[]).map((row) => row.key)).toEqual(["recipe:r1", "recipe:r2", "food-2"]);
+    tap(el, "recipe:r2", 5);
+    tap(el, "recipe:r1", null);
+    expect(h.mutations).toEqual([
+      { id: LOOSE.id, input: { recipeRatings: { r2: 5 } } },
+      { id: LOOSE.id, input: { recipeRatings: { r1: null } } },
+    ]);
+  });
+
+  it("shows a recipe's tapped value while it saves, and only that recipe's", () => {
+    const rows = field(SEVERAL, { id: LOOSE.id, input: { recipeRatings: { r2: 1 } } }).props.rows as MealRatingRow[];
+    expect(rows.map((row) => [row.key, row.value])).toEqual([
+      ["recipe:r1", 3],
+      ["recipe:r2", 1],
+      ["food-2", null],
+    ]);
+  });
+
+  it("ignores a save in flight for another meal", () => {
+    const rows = field(SEVERAL, { id: "other", input: { recipeRatings: { r2: 1 } } }).props.rows as MealRatingRow[];
+    expect(rows[1]).toEqual({ key: "recipe:r2", label: "Salmon Cakes", value: null });
+  });
+
+  it("keeps a rated ingredient's row while its Clear saves", () => {
+    const meal: MealItem = {
+      ...SEVERAL,
+      foods: [{ ...SEVERAL.foods[0]!, rating: 2 }, SEVERAL.foods[1]!],
+    };
+    const rows = field(meal, { id: LOOSE.id, input: { foodRatings: { "food-1": null } } }).props.rows as MealRatingRow[];
+    expect(rows.map((row) => [row.key, row.value])).toEqual([
+      ["recipe:r1", 3],
+      ["recipe:r2", null],
+      ["food-1", null],
+      ["food-2", null],
+    ]);
   });
 
   it("shows the tapped value while the save is in flight", () => {

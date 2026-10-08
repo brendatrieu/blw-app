@@ -70,6 +70,32 @@ describe("MealDetailPage title", () => {
     );
   });
 
+  // Ledger 761: "{A} + {B}" for two, "{A} + {n} more" for three or more.
+  const titled = (titles: string[]) =>
+    headingOf(
+      renderMeal({
+        ...MEAL,
+        recipeId: "r0",
+        recipeTitle: titles[0]!,
+        recipes: titles.map((title, i) => ({ id: `r${i}`, title, rating: null })),
+      }),
+    );
+
+  it("joins two recipes with ' + '", () => {
+    expect(titled(["Lentil Patties", "Salmon Cakes"])).toContain("Lentil Patties + Salmon Cakes");
+  });
+
+  it("names the first recipe and counts the rest from three on", () => {
+    expect(titled(["Lentil Patties", "Salmon Cakes", "Oat Bars"])).toContain("Lentil Patties + 2 more");
+    expect(titled(["Lentil Patties", "Salmon Cakes", "Oat Bars", "Pea Mash"])).toContain("Lentil Patties + 3 more");
+    expect(titled(["Lentil Patties", "Salmon Cakes", "Oat Bars"])).not.toContain("Salmon Cakes");
+  });
+
+  it("clamps the title to two lines with an ellipsis", () => {
+    expect(titled(["Lentil Patties", "Salmon Cakes"])).toContain('<span class="line-clamp-2 min-w-0 break-words">');
+    expect(headingOf(renderMeal(MEAL))).toContain('<span class="line-clamp-2 min-w-0 break-words">Avocado');
+  });
+
   it("falls back to a comma-joined foods summary otherwise", () => {
     expect(headingOf(renderMeal(MEAL))).toContain("Avocado, Chicken");
   });
@@ -257,6 +283,39 @@ describe("MealDetailPage ratings (item 574)", () => {
     expect(html.match(/role="radiogroup"/g)).toHaveLength(1);
     expect(html).toContain('aria-label="Rating for Iron-Rich Purée"');
     expect(html).toMatch(/aria-checked="true" aria-label="3 stars"/);
+  });
+});
+
+describe("MealDetailPage, several recipes (ledger 761)", () => {
+  const SEVERAL: MealItem = {
+    ...MEAL,
+    recipeId: "r1",
+    recipeTitle: "Lentil Patties",
+    recipeRating: 4,
+    recipes: [
+      { id: "r1", title: "Lentil Patties", rating: 4 },
+      { id: "r2", title: "Salmon Cakes", rating: 5 },
+    ],
+    foods: [
+      { id: "f-egg", slug: "egg", name: "Egg", category: "protein", storageItemId: null, rating: null, inRecipe: true },
+      { id: "f-brc", slug: "broccoli", name: "Broccoli", category: "veg", storageItemId: null, rating: 3, inRecipe: false },
+      { id: "f-oat", slug: "oats", name: "Oats", category: "grain", storageItemId: null, rating: 2, inRecipe: true },
+      { id: "f-ban", slug: "banana", name: "Banana", category: "fruit", storageItemId: null, rating: null, inRecipe: false },
+    ],
+  };
+
+  it("shows one 🍳 line per recipe and the 🍳 plate", () => {
+    const html = renderMeal(SEVERAL).replace(/<!-- -->/g, "");
+    expect(html).toContain(">🍳 Lentil Patties</span>");
+    expect(html).toContain(">🍳 Salmon Cakes</span>");
+  });
+
+  it("rates each recipe, then each food not rated through a recipe (DESIGN-B §2)", () => {
+    const html = renderMeal(SEVERAL);
+    const labels = [...html.matchAll(/role="radiogroup" aria-label="Rating for ([^"]+)"/g)].map((m) => m[1]);
+    // Egg is an unrated ingredient: no row. Oats is an ingredient that
+    // already holds its own rating: its row stays.
+    expect(labels).toEqual(["Lentil Patties", "Salmon Cakes", "Broccoli", "Oats", "Banana"]);
   });
 });
 

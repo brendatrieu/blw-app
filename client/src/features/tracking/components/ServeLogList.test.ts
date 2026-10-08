@@ -119,7 +119,7 @@ describe("timeLabel", () => {
 describe("MealCard title (item 192, ledger 555)", () => {
   const titleOf = (foods: MealFood[]) => {
     const html = renderMealCard({ ...baseMeal, recipeId: "r1", recipeTitle: "Iron-Rich Purée", foods });
-    return /<span class="text-sm font-medium text-\[var\(--color-text\)\]">([\s\S]*?)<\/span><span/.exec(html)![1]!.replace(/<!-- -->/g, "");
+    return /<span class="line-clamp-2 text-sm font-medium text-\[var\(--color-text\)\]">([\s\S]*?)<\/span><span/.exec(html)![1]!.replace(/<!-- -->/g, "");
   };
 
   it("comma-joins every food name", () => {
@@ -275,6 +275,26 @@ describe("MealCard (render, storage-card styling — item 192)", () => {
     const html = renderMealCard({ ...baseMeal, recipeId: "recipe-1", recipeTitle: "Iron-Rich Purée" });
     expect(html).toContain("🍳");
     expect(html).toContain("Iron-Rich Purée");
+  });
+
+  it("shows one 🍳 line per recipe, in the meal's order (ledger 761)", () => {
+    const html = renderMealCard({
+      ...baseMeal,
+      recipeId: "r1",
+      recipeTitle: "Lentil Patties",
+      recipes: [
+        { id: "r1", title: "Lentil Patties", rating: null },
+        { id: "r2", title: "Salmon Cakes", rating: 4 },
+      ],
+    }).replace(/<!-- -->/g, "");
+    expect(html.match(/🍳/g)).toHaveLength(2);
+    expect(html).toContain('<span class="text-xs font-medium text-[var(--color-text-muted)]">🍳 Lentil Patties</span>');
+    expect(html.indexOf("🍳 Lentil Patties")).toBeLessThan(html.indexOf("🍳 Salmon Cakes"));
+  });
+
+  it("clamps the foods line to two lines with an ellipsis (ledger 761)", () => {
+    const html = renderMealCard(baseMeal);
+    expect(html).toMatch(/<span class="line-clamp-2 text-sm font-medium text-\[var\(--color-text\)\]">Avocado/);
   });
 
   it("omits the recipe title line when the meal has none", () => {

@@ -5,9 +5,10 @@ import type { MealItem } from "@blw/shared";
 import { useMeals, useUpdateMeal } from "../features/tracking/hooks.js";
 import {
   MealRatingsField,
-  RECIPE_RATING_KEY,
+  RECIPE_ROW_PREFIX,
   mealRatingRows,
 } from "../features/tracking/components/MealRatingsField.js";
+import { mealRecipes, recipesTitle } from "../features/tracking/mealRecipes.js";
 import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
@@ -20,12 +21,17 @@ import { Button, ButtonLink } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
-/** Header title for a meal: its recipe title when logged from one, otherwise
- * a comma-joined summary of the foods served (a deleted one marked, muted) —
- * the same "best available name" idiom `storageItemTitle` uses for a storage
- * item. */
+/** Header title for a meal: its recipes when logged from any ("A",
+ * "A + B", "A + {n} more", ledger 761), otherwise a comma-joined summary of
+ * the foods served (a deleted one marked, muted) — the same "best available
+ * name" idiom `storageItemTitle` uses for a storage item. Clamped to two
+ * lines with "…"; the whole text stays in the heading for screen readers. */
 function MealTitle({ meal }: { meal: MealItem }) {
-  return meal.recipeTitle ?? <FoodNames foods={meal.foods} />;
+  return (
+    <span className="line-clamp-2 min-w-0 break-words">
+      {recipesTitle(mealRecipes(meal)) ?? <FoodNames foods={meal.foods} />}
+    </span>
+  );
 }
 
 /** Full weekday/date plus time, e.g. "Wednesday, August 26 · 2:05 PM" — more
@@ -71,15 +77,14 @@ export function MealDetailPage() {
   // only a real baby's meals are waited on; with none, the meal is missing.
   const isLoading = babyLoading || (activeBaby !== null && awaitingDetail(meals, Boolean(meal)));
 
-  // While a tap is saving, show what was tapped rather than the old value.
-  const pending = updateMeal.isPending ? updateMeal.variables : undefined;
-  const pendingRecipeRating = (current: MealItem) =>
-    pending?.id === current.id && pending.input.recipeRating !== undefined
-      ? pending.input.recipeRating
-      : (current.recipeRating ?? null);
-  const pendingFoodRating = (current: MealItem, foodId: string) => {
-    const tapped = pending?.id === current.id ? pending.input.foodRatings?.[foodId] : undefined;
-    return tapped !== undefined ? tapped : (current.foods.find((food) => food.id === foodId)?.rating ?? null);
+  // While a tap is saving, show what was tapped rather than the old value,
+  // keyed like the star rows.
+  const pending = updateMeal.isPending && updateMeal.variables?.id === id ? updateMeal.variables.input : undefined;
+  const pendingRatings: Record<string, number | null> = {
+    ...pending?.foodRatings,
+    ...Object.fromEntries(
+      Object.entries(pending?.recipeRatings ?? {}).map(([recipeId, value]) => [`${RECIPE_ROW_PREFIX}${recipeId}`, value]),
+    ),
   };
 
   if (isLoading) {
@@ -96,13 +101,15 @@ export function MealDetailPage() {
     return <Navigate to="/" replace />;
   }
 
+  const recipes = mealRecipes(meal);
+
   return (
     <div className="flex flex-col gap-4 p-4">
       <PageHeader
         title={<MealTitle meal={meal} />}
         emoji={
           <FoodPlate
-            {...(meal.recipeTitle ? { emoji: "🍳", tint: "neutral" as const } : foodPlate(meal.foods[0]!))}
+            {...(recipes.length > 0 ? { emoji: "🍳", tint: "neutral" as const } : foodPlate(meal.foods[0]!))}
             size={40}
           />
         }
@@ -136,20 +143,26 @@ export function MealDetailPage() {
           ))}
         </div>
 
-        {meal.recipeTitle && (
-          <span className="text-xs font-medium text-[var(--color-text-muted)]">🍳 {meal.recipeTitle}</span>
+        {recipes.length > 0 && (
+          <div className="flex flex-col gap-0.5">
+            {recipes.map((recipe) => (
+              <span key={recipe.id} className="text-xs font-medium text-[var(--color-text-muted)]">
+                🍳 {recipe.title}
+              </span>
+            ))}
+          </div>
         )}
 
         <MealRatingsField
-          rows={mealRatingRows(
-            meal.recipeId ? { title: meal.recipeTitle ?? "Recipe", rating: pendingRecipeRating(meal) } : null,
-            meal.foods,
-            Object.fromEntries(meal.foods.map((food) => [food.id, pendingFoodRating(meal, food.id)])),
-          )}
+          rows={mealRatingRows(recipes, meal.foods, pendingRatings)}
+          // One key per tap, in the new shape: the legacy `recipeRating`
+          // only ever reaches the first recipe.
           onChange={(key, value) =>
             updateMeal.mutate({
               id: meal.id,
-              input: key === RECIPE_RATING_KEY ? { recipeRating: value } : { foodRatings: { [key]: value } },
+              input: key.startsWith(RECIPE_ROW_PREFIX)
+                ? { recipeRatings: { [key.slice(RECIPE_ROW_PREFIX.length)]: value } }
+                : { foodRatings: { [key]: value } },
             })
           }
         />

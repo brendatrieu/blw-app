@@ -1,32 +1,44 @@
 import { StarRating } from "../../../components/ui/StarRating.js";
 import { OptionalLabel } from "../../../components/ui/Field.js";
 
-/** The key of the one row a recipe meal has. Never a food id (those are uuids). */
-export const RECIPE_RATING_KEY = "recipe";
-
 export interface MealRatingRow {
-  /** A food id, `RECIPE_RATING_KEY`, or `RECIPE_ROW_PREFIX` + a recipe id. */
+  /** A food id, or `RECIPE_ROW_PREFIX` + a recipe id. */
   key: string;
   label: string;
   value: number | null;
 }
 
-/**
- * Item 574: which star rows a meal shows. A recipe meal is rated once, as the
- * recipe; a loose-food meal once per food, in the order its foods are shown.
- */
-export function mealRatingRows(
-  recipe: { title: string; rating: number | null } | null,
-  foods: readonly { id: string; name: string }[],
-  foodRatings: Readonly<Record<string, number | null>>,
-): MealRatingRow[] {
-  if (recipe) return [{ key: RECIPE_RATING_KEY, label: recipe.title, value: recipe.rating }];
-  return foods.map((food) => ({ key: food.id, label: food.name, value: foodRatings[food.id] ?? null }));
-}
-
 /** Ledger 759/760: a recipe's star row key, kept apart from food ids (both
  * are uuids) on forms that rate several recipes. */
 export const RECIPE_ROW_PREFIX = "recipe:";
+
+/**
+ * Items 574 / 761: a saved meal's star rows (the meal page), DESIGN-B §2.
+ * One row per recipe, in the meal's order, then one per food that shows:
+ * `!inRecipe || rating != null` (a food rated through its recipe has no row,
+ * unless it already holds a rating of its own). A body cached before the
+ * server sent `inRecipe` reads every food of a recipe meal as an ingredient
+ * (no food rows) and every food of a loose meal as rateable, as it showed
+ * then. `pending` holds tapped values not saved yet, by row key; a row's
+ * presence follows the SAVED rating, so a Clear in flight keeps its row.
+ */
+export function mealRatingRows(
+  recipes: readonly { id: string; title: string; rating: number | null }[],
+  foods: readonly { id: string; name: string; rating?: number | null; inRecipe?: boolean }[],
+  pending: Readonly<Record<string, number | null>> = {},
+): MealRatingRow[] {
+  const value = (key: string, saved: number | null) => (key in pending ? pending[key]! : saved);
+  const rows: MealRatingRow[] = recipes.map((recipe) => {
+    const key = `${RECIPE_ROW_PREFIX}${recipe.id}`;
+    return { key, label: recipe.title, value: value(key, recipe.rating) };
+  });
+  for (const food of foods) {
+    const saved = food.rating ?? null;
+    if ((food.inRecipe ?? recipes.length > 0) && saved == null) continue;
+    rows.push({ key: food.id, label: food.name, value: value(food.id, saved) });
+  }
+  return rows;
+}
 
 /**
  * Ledger 759: the Log meal / Edit meal star rows, by DESIGN-B §2's one rule.

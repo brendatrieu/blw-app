@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { MealFood, MealItem } from "@blw/shared";
 import { useDeleteMeal, useMeals } from "../hooks.js";
+import { mealRecipes } from "../mealRecipes.js";
 import { emojiCluster, type EmojiCluster } from "../../catalog/foodEmoji.js";
 import { FoodNames } from "../../catalog/components/DeletedMark.js";
 import { FoodPlates } from "../../catalog/components/FoodPlate.js";
@@ -153,15 +154,18 @@ export function MealCard({
     <>
       <FoodPlates {...emojiCluster(meal.foods)} />
       <div className="flex flex-col">
-        {/* Every food's name, comma-joined, a deleted one marked. Deliberately
-            NOT the recipe title: that gets its own line underneath, so the
-            title always answers "what did baby eat?". */}
-        <span className="text-sm font-medium text-[var(--color-text)]">
+        {/* Every food's name, comma-joined, a deleted one marked, clamped to
+            two lines with "…" (ledger 761). Deliberately NOT the recipe
+            titles: each gets its own line underneath, so the title always
+            answers "what did baby eat?". */}
+        <span className="line-clamp-2 text-sm font-medium text-[var(--color-text)]">
           <FoodNames foods={meal.foods} />
         </span>
-        {meal.recipeTitle && (
-          <span className="text-xs font-medium text-[var(--color-text-muted)]">🍳 {meal.recipeTitle}</span>
-        )}
+        {mealRecipes(meal).map((recipe) => (
+          <span key={recipe.id} className="text-xs font-medium text-[var(--color-text-muted)]">
+            🍳 {recipe.title}
+          </span>
+        ))}
         <span className="text-xs text-[var(--color-text-muted)]">{servedLine(meal.servedAt)}</span>
       </div>
     </>
