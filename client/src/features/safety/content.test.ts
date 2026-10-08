@@ -122,12 +122,12 @@ describe("how-to guides (item 601)", () => {
     expect(stars).toContain("\n\nTap one to five stars, five for a big hit.\n\n");
   });
 
-  // Item 735: owner-approved copy, word for word (serve: minus the 730-only parts).
+  // Items 735 and 763: owner-approved copy, word for word.
   it("log-a-meal and serve-from-storage read exactly as approved", () => {
     const steps = (slug: string) => (getGuide(slug)?.body ?? "").split(/^## /m).slice(1);
     const meal = steps("how-to-log-a-meal");
     expect(meal[0]).toContain(
-      "\n\nTap **Food** and type to search. Select each food your baby had, then tap **Done**. Made a recipe? Pick it under **Recipe (optional)** and its ingredients fill in for you.\n\n",
+      "\n\nTap **Food** and type to search. Select each food your baby had, then tap **Done**. Made one or more recipes? Pick them under **Recipes (optional)** and their ingredients fill in for you.\n\n",
     );
     expect(meal[1]).toMatch(
       /^2\. Set the time\n\n\*\*When\*\* defaults to the current time\. If the meal was earlier, tap it, scroll to the day and time, and tap \*\*Done\*\*\.\n\n!\[/,
@@ -141,13 +141,19 @@ describe("how-to guides (item 601)", () => {
     expect(serve[0]).toContain(
       "\n\nUse **−** and **+** to set how many **Servings** your baby had. **When** defaults to the current time. If you served earlier, tap it, scroll to the day and time, and tap **Done**.\n\n",
     );
-    expect(serve[1]).toMatch(/^2\. Rate it with stars \(optional\)\n\nTap one to five stars, five for a big hit\.\n\n!\[/);
-    expect(serve[2]).toMatch(/^3\. Add a reaction or a note \(optional\)\n/);
-    expect(serve[3]).toMatch(
-      /^4\. Tap Serve\n\nThe servings left go down, and the meal lands in your \*\*Food log\*\* marked \*\*From storage\*\*\.\n\n!\[/,
+    expect(serve[0]).toContain(
+      "![The Serve sheet with Sweet Potato Lentil Patties under Serving, Servings at 1, and When showing today at 11:59 AM.](/guides/serve-1-servings.webp)",
     );
-    // 730 has not landed: no "Serve more than one item" step yet.
-    expect(serve.join("")).not.toContain("Add more");
+    // Item 763: several items per serve (ledger 760) get their own step 2.
+    expect(serve[1]).toBe(
+      "2. Serve more than one item (optional)\n\nTap **+ Add more** to serve something else with it: another item from storage, or a fresh food or recipe that isn't in storage.\n\n![Under Serving, Sweet Potato Lentil Patties and Broccoli, Carrot each have their own Servings, and a fresh Banana is added.](/guides/serve-2-more.webp)\n\n",
+    );
+    expect(serve[2]).toMatch(/^3\. Rate it with stars \(optional\)\n\nTap one to five stars, five for a big hit\.\n\n!\[/);
+    expect(serve[3]).toMatch(/^4\. Add a reaction or a note \(optional\)\n/);
+    expect(serve[4]).toMatch(
+      /^5\. Tap Serve\n\nThe servings left go down, and the meal lands in your \*\*Food log\*\* marked \*\*From storage\*\*\.\n\n!\[/,
+    );
+    expect(serve).toHaveLength(5);
   });
 
   // Item 735 audit: every step whose action can be skipped says "(optional)".
@@ -162,6 +168,7 @@ describe("how-to guides (item 601)", () => {
       "how-to-log-a-meal: Rate it with stars (optional)",
       "how-to-log-a-meal: Add a reaction or a note (optional)",
       "how-to-add-to-storage: Add amounts (optional)",
+      "how-to-serve-from-storage: Serve more than one item (optional)",
       "how-to-serve-from-storage: Rate it with stars (optional)",
       "how-to-serve-from-storage: Add a reaction or a note (optional)",
     ]);
@@ -274,7 +281,7 @@ describe("Markdown bold (optional)", () => {
       expect(html.match(/\(optional\)<\/span><\/strong>/g)?.length ?? 0, guide.slug).toBe(marked);
       expect(html, guide.slug).not.toMatch(/ \(optional\)<\/strong>/);
     }
-    expect(total).toBe(3); // Recipe, Emoji, Notes
+    expect(total).toBe(3); // Recipes, Emoji, Notes
   });
 });
 
@@ -315,8 +322,9 @@ describe("dark guide screenshots", () => {
     const expected: Record<string, number[]> = {
       "meal-2-when": [780, 1002],
       "meal-3-stars": [780, 328],
-      "serve-2-stars": [780, 220],
-      "serve-3-notes": [780, 444],
+      // Renumbered by 763 (a new step 2), bytes unchanged.
+      "serve-3-stars": [780, 220],
+      "serve-4-notes": [780, 444],
     };
     for (const [name, dims] of Object.entries(expected)) {
       for (const file of [`${name}.webp`, `${name}-dark.webp`]) {
