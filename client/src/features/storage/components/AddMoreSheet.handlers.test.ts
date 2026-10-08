@@ -135,6 +135,12 @@ describe("addMoreStorageItems — what 'From storage' offers (items 730, 760)", 
       PEAR_FOODS.id,
     ]);
   });
+
+  it("leaves out a tracked container with no servings left: the server would refuse the whole serve (409)", () => {
+    const empty = { ...PEAR_FOODS, id: "66666666-6666-6666-6666-666666666666", servingsTotal: 2, servingsLeft: 0 };
+    const untracked = { ...SALMON, id: "77777777-7777-7777-7777-777777777777", servingsTotal: null, servingsLeft: null };
+    expect(addMoreStorageItems([empty, untracked, PEAR_FOODS], []).map((item) => item.id)).toEqual([untracked.id, PEAR_FOODS.id]);
+  });
 });
 
 describe("AddMoreSheet (MR-Add-More, ledger 760)", () => {
@@ -184,6 +190,21 @@ describe("AddMoreSheet (MR-Add-More, ledger 760)", () => {
         recipes: [{ id: "r-oat", title: "Oat Pancakes" }],
       },
     ]);
+  });
+
+  it("enables Add for a fresh food alone, or a fresh recipe alone — no container needed", () => {
+    reset([BASE, SALMON]);
+    (one(render(), SegmentedControl).props.onChange as (value: string) => void)("food");
+    (one(render(), FoodPicker).props.onChange as (ids: string[]) => void)(["food-pear"]);
+    expect(one(render(), Button).props.disabled).toBe(false);
+
+    reset([BASE, SALMON]);
+    (one(render(), SegmentedControl).props.onChange as (value: string) => void)("recipe");
+    (one(render(), MultiCombobox).props.onChange as (ids: string[]) => void)(["r-dal"]);
+    const add = one(render(), Button);
+    expect(add.props.disabled).toBe(false);
+    (add.props.onClick as () => void)();
+    expect(added).toEqual([{ items: [], foods: [], recipes: [{ id: "r-dal", title: "Red Lentil Dal" }] }]);
   });
 
   it("unticking takes a container back out", () => {

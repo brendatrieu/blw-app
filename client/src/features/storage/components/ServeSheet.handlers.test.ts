@@ -12,10 +12,13 @@ import type { StorageItem } from "@blw/shared";
 
 const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], i: 0 };
+  const mutation = { isPending: false, isError: false };
   const served: Array<{ input: Record<string, unknown>; onSuccess?: (response: unknown) => void }> = [];
   return {
     store,
     served,
+    /** What the mocked serve mutation reports. */
+    mutation,
     /** recipe id -> its ingredient food ids; a missing id is "still loading". */
     ingredients: new Map<string, string[]>(),
     useState: (init: unknown) => {
@@ -31,6 +34,8 @@ const h = vi.hoisted(() => {
       store.states = [];
       store.i = 0;
       served.length = 0;
+      mutation.isPending = false;
+      mutation.isError = false;
     },
   };
 });
@@ -48,8 +53,12 @@ vi.mock("../hooks.js", async (importOriginal) => {
       mutate: (input: Record<string, unknown>, options?: { onSuccess?: (response: unknown) => void }) => {
         h.served.push({ input, onSuccess: options?.onSuccess });
       },
-      isPending: false,
-      isError: false,
+      get isPending() {
+        return h.mutation.isPending;
+      },
+      get isError() {
+        return h.mutation.isError;
+      },
     }),
   };
 });
@@ -213,6 +222,47 @@ describe("the Serving list (ledger 760)", () => {
     expect(input).not.toHaveProperty("recipeIds");
   });
 
+  it("caps a tracked container at the servings LEFT, not its total", () => {
+    h.reset();
+    for (let i = 0; i < 3; i++) click(render(), byLabel("Increase servings")); // 2 of 3 left
+    expect(serve().parts).toEqual([{ storageItemId: ITEM.id, servings: 2 }]);
+  });
+
+  it("a container's − steps only that container", () => {
+    h.reset();
+    addMore({ items: [SALMON_ITEM] });
+    click(render(), byLabel("Increase servings")); // the first: 2
+    for (let i = 0; i < 2; i++) (findAll(render(), byLabel("Increase servings"))[1]!.props.onClick as () => void)(); // the second: 3
+    (findAll(render(), byLabel("Decrease servings"))[1]!.props.onClick as () => void)();
+    expect(serve().parts).toEqual([
+      { storageItemId: ITEM.id, servings: 2 },
+      { storageItemId: SALMON_ITEM.id, servings: 2 },
+    ]);
+  });
+
+  it("✕ on one fresh food takes out only that food", () => {
+    h.reset();
+    addMore({ foods: [BANANA, { ...BANANA, id: "food-pear", slug: "pear", name: "Pear" }] });
+    click(render(), byLabel("Remove Banana"));
+    expect(findAll(render(), byLabel("Remove Pear"))).toHaveLength(1);
+    expect(serve().foodIds).toEqual(["food-pear"]);
+  });
+
+  it("shows 'Couldn't serve — try again.' when the serve fails (a 409 lands here)", () => {
+    h.reset();
+    expect(findAll(render(), (element) => element.props?.children === "Couldn't serve — try again.")).toHaveLength(0);
+    h.mutation.isError = true;
+    expect(findAll(render(), (element) => element.props?.children === "Couldn't serve — try again.")).toHaveLength(1);
+  });
+
+  it("disables Serve and reads 'Serving…' while the request is in flight, so it cannot be sent twice", () => {
+    h.reset();
+    h.mutation.isPending = true;
+    const [button] = findAll(render(), byType(Button));
+    expect(button!.props.disabled).toBe(true);
+    expect(button!.props.children).toBe("Serving…");
+  });
+
   it("tells Add more which containers are already listed, so it never offers them again", () => {
     h.reset();
     addMore({ items: [SALMON_ITEM] });
@@ -271,6 +321,24 @@ describe("the Serve sheet's star rows (item 718, DESIGN-B §2)", () => {
     expect(input.recipeRatings).toEqual({ [SALMON]: 5 });
     // Avocado's earlier star is not sent: it is rated through Salmon Cakes now.
     expect(input).not.toHaveProperty("foodRatings");
+    h.ingredients.clear();
+  });
+
+  it("drops a fresh food's row when it is an ingredient of a FRESH recipe", () => {
+    h.reset();
+    h.ingredients.clear();
+    h.ingredients.set("r-oat", ["food-banana"]);
+    addMore({ foods: [BANANA], recipes: [{ id: "r-oat", title: "Oat Pancakes" }] });
+    expect((ratingsField().props.rows as { key: string }[]).map((row) => row.key)).toEqual(["recipe:r-oat", "food-1"]);
+    h.ingredients.clear();
+  });
+
+  it("shows no food rows until EVERY served recipe's ingredients have loaded", () => {
+    h.reset();
+    h.ingredients.clear();
+    h.ingredients.set(SALMON, ["food-salmon"]); // loaded; Oat Pancakes is not
+    addMore({ items: [SALMON_ITEM], foods: [BANANA], recipes: [{ id: "r-oat", title: "Oat Pancakes" }] });
+    expect((ratingsField().props.rows as { key: string }[]).map((row) => row.key)).toEqual([`recipe:${SALMON}`, "recipe:r-oat"]);
     h.ingredients.clear();
   });
 });

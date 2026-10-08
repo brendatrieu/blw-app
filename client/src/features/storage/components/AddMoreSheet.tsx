@@ -30,10 +30,19 @@ export interface AddMorePicks {
 
 /**
  * The containers "From storage" lists (items 730/760): active, servable (a
- * Free-form label has nothing to log) and not already in the Serving list.
+ * Free-form label has nothing to log), with a serving left (a tracked
+ * container at 0 — after a Restore or a resize — is the server's 409 at
+ * routes/storage.ts, which would sink the whole sitting) and not already in
+ * the Serving list.
  */
 export function addMoreStorageItems(items: readonly StorageItem[], servingIds: readonly string[]): StorageItem[] {
-  return items.filter((item) => item.status === "active" && !isLabelOnly(item) && !servingIds.includes(item.id));
+  return items.filter(
+    (item) =>
+      item.status === "active" &&
+      !isLabelOnly(item) &&
+      !(item.servingsTotal !== null && (item.servingsLeft ?? 0) <= 0) &&
+      !servingIds.includes(item.id),
+  );
 }
 
 /** The picks in the order they were made, resolved against what is loaded. */
