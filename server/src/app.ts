@@ -61,6 +61,18 @@ function stripRateLimitHeaders(reply: FastifyReply): void {
   reply.removeHeader("x-ratelimit-reset");
 }
 
+/**
+ * Postgres' foreign_key_violation (23503) on a `recipe_id` column, however
+ * the driver wraps it. Constraint names are drizzle's
+ * `<table>_recipe_id_recipes_id_fk`.
+ */
+export function isRecipeGoneViolation(error: unknown): boolean {
+  type PgError = { code?: unknown; constraint?: unknown; cause?: PgError };
+  const outer = error as PgError | undefined;
+  const pg = outer?.code === "23503" ? outer : outer?.cause;
+  return pg?.code === "23503" && typeof pg.constraint === "string" && pg.constraint.endsWith("_recipe_id_recipes_id_fk");
+}
+
 export interface BuildAppOptions {
   env?: Env;
   // Injectable so tests can pass an isolated (e.g. in-memory PGlite) instance
@@ -131,6 +143,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
    * contract those callers were written against.
    */
   app.setErrorHandler<FastifyError>((error, request, reply) => {
+    // The losing save of a recipe-delete race (DRYRUN-PG R4, ledger 758): the
+    // recipe passed the save's check, then the delete committed first, so the
+    // save's foreign key fails and the whole save rolls back. That is a
+    // conflict the parent can retry, not a server fault.
+    if (isRecipeGoneViolation(error)) {
+      return reply.code(409).send({ error: "conflict", message: "That recipe was just deleted." });
+    }
+
     const statusCode = error.statusCode ?? 500;
 
     if (statusCode < 500) {

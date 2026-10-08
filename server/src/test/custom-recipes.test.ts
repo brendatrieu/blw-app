@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { PGlite } from "@electric-sql/pglite";
 import type { FastifyInstance } from "fastify";
@@ -1442,6 +1442,54 @@ describe("custom recipes", () => {
       expect(mealCount, trace).toBeGreaterThan(lock);
       expect(storageCount, trace).toBeGreaterThan(lock);
       expect(end, trace).toBeGreaterThan(Math.max(mealCount, storageCount));
+    });
+
+    // Ledger 758 (DRYRUN-PG R4): when the delete commits first, the losing
+    // save's foreign key fails. That answers 409, not 500, and writes nothing.
+    // PGlite cannot interleave two requests, so a trigger deletes the recipe
+    // inside the save, between its recipe check and its meal_recipes insert.
+    it("answers 409 to a meal save that loses a race with the recipe's delete, and writes nothing (ledger 758)", async () => {
+      const babyId = await createBaby(owner);
+      const kept = await app.inject({
+        method: "POST",
+        url: `/api/babies/${babyId}/meals`,
+        headers: { cookie: owner.cookie },
+        payload: { foodIds: [fixtures.banana.id], recipeIds: [fixtures.catalogRecipe.id] },
+      });
+      expect(kept.statusCode).toBe(201);
+      const keptId = kept.json<{ id: string }>().id;
+      const recipe = await createRecipe(owner, recipePayload());
+      await db.execute(
+        sql.raw(`create function race_delete_recipe() returns trigger language plpgsql as $$
+          begin delete from recipes where id = new.recipe_id; return new; end $$`),
+      );
+      await db.execute(
+        sql.raw(`create trigger race_delete_recipe before insert on meal_recipes for each row
+          when (new.recipe_id = '${recipe.id}') execute function race_delete_recipe()`),
+      );
+      const mealsBefore = await db.select().from(schema.meals);
+      const rowsBefore = await db.select().from(schema.mealRecipes);
+
+      const created = await app.inject({
+        method: "POST",
+        url: `/api/babies/${babyId}/meals`,
+        headers: { cookie: owner.cookie },
+        payload: { foodIds: [fixtures.banana.id], recipeIds: [recipe.id] },
+      });
+      const edited = await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${keptId}`,
+        headers: { cookie: owner.cookie },
+        payload: { recipeIds: [fixtures.catalogRecipe.id, recipe.id] },
+      });
+      for (const response of [created, edited]) {
+        expect(response.statusCode).toBe(409);
+        expect(response.json()).toEqual({ error: "conflict", message: "That recipe was just deleted." });
+      }
+      // Each save rolled back whole, the trigger's delete with it.
+      expect(await db.select().from(schema.meals)).toEqual(mealsBefore);
+      expect(await db.select().from(schema.mealRecipes)).toEqual(rowsBefore);
+      expect(await db.select().from(schema.recipes).where(eq(schema.recipes.id, recipe.id))).toHaveLength(1);
     });
 
     // Item 240, the edit half: a parent can take every step back off a

@@ -3,8 +3,9 @@
 // serve took, and servings coming back when the meal is deleted (= Undo) or
 // an edit takes a served part off it. The shipped app's single-item serve
 // must keep its request and response byte for byte, and now records too.
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { asc, eq } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import type { FastifyInstance } from "fastify";
 import {
   ACCOUNT_DELETE_CONFIRMATION,
@@ -271,6 +272,40 @@ describe("multi-part serve and servings back (ledger 753 + 751)", () => {
       expect(await count(schema.meals)).toBe(0);
     });
 
+    it("caps foods across parts like Log meal: 51 is a 400 that writes nothing, 50 is fine", async () => {
+      const ids = (
+        await db
+          .insert(schema.foods)
+          .values(
+            Array.from({ length: 51 }, (_, i) => ({
+              slug: `extra-${i}`,
+              name: `Extra ${i}`,
+              category: "fruit" as const,
+              ironLevel: "low" as const,
+              vitaminCLevel: "moderate" as const,
+              chokingRisk: "low" as const,
+              minAgeMonths: 6,
+              prep6m: "strip",
+              prep9m: "chop",
+              prep12m: "slice",
+              storageCategory: "produce_cooked",
+            })),
+          )
+          .returning()
+      ).map((row) => row.id);
+      const a = await container({ foodIds: ids.slice(0, 25), servingsTotal: 2 });
+      const b = await container({ foodIds: ids.slice(25, 50), servingsTotal: 2 });
+      const tooMany = await serveMany({ babyId, parts: [{ storageItemId: a }, { storageItemId: b }], foodIds: [ids[50]] });
+      expect(tooMany.statusCode).toBe(400);
+      expect(tooMany.json()).toMatchObject({ details: { foodIds: "at most 50 foods per meal" } });
+      expect([await box(a), await box(b)]).toEqual([
+        { left: 2, total: 2, status: "active" },
+        { left: 2, total: 2, status: "active" },
+      ]);
+      expect(await count(schema.meals)).toBe(0);
+      expect((await serveMany({ babyId, parts: [{ storageItemId: a }, { storageItemId: b }] })).statusCode).toBe(201);
+    });
+
     it("rates as Log meal does: an ingredient of a served recipe is rated through it, an extra on its own", async () => {
       const pancakesBox = await container({ recipeId: fx.pancakes.id });
       const asIngredient = await serveMany({
@@ -394,6 +429,22 @@ describe("multi-part serve and servings back (ledger 753 + 751)", () => {
       expect(await box(untracked)).toEqual({ left: null, total: null, status: "active" });
     });
 
+    it("leaves a FINISHED container whose tracking was turned off finished, and changes nothing on it", async () => {
+      const off = await container({ foodIds: [fx.pear.id], servingsTotal: 1 });
+      const result = await served({ babyId, parts: [{ storageItemId: off }] });
+      await app.inject({
+        method: "PATCH",
+        url: `/api/storage/${off}`,
+        headers: { cookie: parent.cookie },
+        payload: { servingsTotal: null },
+      });
+      const [before] = await db.select().from(schema.storageItems).where(eq(schema.storageItems.id, off));
+      expect(before?.status).toBe("finished");
+      expect((await deleteMeal(result.meal.id)).statusCode).toBe(204);
+      const [after] = await db.select().from(schema.storageItems).where(eq(schema.storageItems.id, off));
+      expect(after).toEqual(before);
+    });
+
     it("204s a meal with no record (served before this shipped) and changes no container", async () => {
       const id = await container({ foodIds: [fx.pear.id], servingsTotal: 3 });
       await setBox(id, { servingsLeft: 1 });
@@ -484,6 +535,115 @@ describe("multi-part serve and servings back (ledger 753 + 751)", () => {
       expect(await box(eggBox)).toMatchObject({ left: 2 });
       expect((await deleteMeal(result.meal.id)).statusCode).toBe(204);
       expect(await box(eggBox)).toMatchObject({ left: 3 });
+    });
+  });
+
+  // DESIGN-B §5a "Concurrency": one lock order everywhere, the meal row first,
+  // then containers in id order FOR NO KEY UPDATE. PGlite serializes
+  // transactions, so these pin the statements (and the plan); the Postgres
+  // races themselves ran in the 757 dry run.
+  describe("lock order", () => {
+    function spy() {
+      const seen: string[] = [];
+      const original = PgDialect.prototype.sqlToQuery;
+      const handle = vi.spyOn(PgDialect.prototype, "sqlToQuery").mockImplementation(function (this: PgDialect, ...args) {
+        const query = original.apply(this, args);
+        seen.push(query.sql.toLowerCase());
+        return query;
+      });
+      return { seen, restore: () => handle.mockRestore() };
+    }
+    const anyLock = (s: string) => / for (update|no key update|share|key share)$/.test(s);
+    const containerLock = (s: string) =>
+      /^select .* from "storage_items" .*order by "storage_items"\."id" asc for no key update$/.test(s);
+    const mealLock = (s: string) => /^select .* from "meals" .* for update$/.test(s);
+
+    it("serve: ONE id-ordered NO KEY UPDATE on every container before any write; never FOR UPDATE; no meal locked", async () => {
+      const a = await container({ recipeId: fx.pancakes.id, servingsTotal: 3 });
+      const b = await container({ foodIds: [fx.pear.id], servingsTotal: 3 });
+      const c = await container({ foodIds: [fx.oats.id] });
+      const s = spy();
+      try {
+        await served({ babyId, parts: [{ storageItemId: c }, { storageItemId: a }, { storageItemId: b }], foodIds: [fx.carrot.id] });
+      } finally {
+        s.restore();
+      }
+      const locks = s.seen.filter(anyLock);
+      expect(locks.filter(containerLock)).toHaveLength(1);
+      expect(locks.filter((q) => !containerLock(q))).toEqual([]);
+      const lockAt = s.seen.findIndex(containerLock);
+      const firstWrite = s.seen.findIndex((q) => /^(insert|update|delete)/.test(q));
+      expect(lockAt).toBeGreaterThanOrEqual(0);
+      expect(firstWrite).toBeGreaterThan(lockAt);
+    });
+
+    it("Postgres locks those rows in id order: LockRows sits above the Sort in the plan", async () => {
+      const a = await container({ foodIds: [fx.pear.id], servingsTotal: 3 });
+      const b = await container({ foodIds: [fx.oats.id], servingsTotal: 3 });
+      const s = spy();
+      try {
+        await served({ babyId, parts: [{ storageItemId: b }, { storageItemId: a }] });
+      } finally {
+        s.restore();
+      }
+      const lockSql = s.seen.find(containerLock);
+      expect(lockSql).toBeTruthy();
+      const [user] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, parent.email));
+      const client = (
+        db as unknown as { $client: { query: (q: string, p: unknown[]) => Promise<{ rows: Record<string, string>[] }> } }
+      ).$client;
+      const plan = (await client.query(`explain ${lockSql!}`, [b, a, user!.id])).rows.map((r) => Object.values(r)[0]);
+      const lockRows = plan.findIndex((line) => /LockRows/.test(line!));
+      const sort = plan.findIndex((line) => /Sort|Index Scan using storage_items_pkey/.test(line!));
+      expect(lockRows, plan.join("\n")).toBe(0);
+      expect(sort, plan.join("\n")).toBeGreaterThan(lockRows);
+    });
+
+    it("DELETE and a part-removing PATCH: the meal row FOR UPDATE first, then the containers, then the writes", async () => {
+      const a = await container({ recipeId: fx.pancakes.id, servingsTotal: 3 });
+      const b = await container({ recipeId: fx.porridge.id, servingsTotal: 3 });
+      const one = await served({ babyId, parts: [{ storageItemId: b }, { storageItemId: a }] });
+      for (const action of ["patch", "delete"] as const) {
+        const s = spy();
+        try {
+          if (action === "patch") await patched(one.meal.id, { recipeIds: [fx.porridge.id] });
+          else expect((await deleteMeal(one.meal.id)).statusCode).toBe(204);
+        } finally {
+          s.restore();
+        }
+        const firstLock = s.seen.findIndex(anyLock);
+        expect(mealLock(s.seen[firstLock]!), s.seen.join("\n")).toBe(true);
+        const containers = s.seen.findIndex(containerLock);
+        expect(containers).toBeGreaterThan(firstLock);
+        const containerWrite = s.seen.findIndex((q) => /^update "storage_items"/.test(q));
+        expect(containerWrite).toBeGreaterThan(containers);
+        expect(s.seen.some((q) => q.includes('from "storage_items"') && q.endsWith(" for update"))).toBe(false);
+      }
+    });
+
+    it("interleaved: 8 overlapping serves in opposite orders, then every meal deleted twice in parallel", async () => {
+      const a = await container({ foodIds: [fx.pear.id], servingsTotal: 4 });
+      const b = await container({ foodIds: [fx.oats.id], servingsTotal: 4 });
+      const results = await Promise.all(
+        Array.from({ length: 8 }, (_, i) =>
+          serveMany({
+            babyId,
+            parts: i % 2 ? [{ storageItemId: a }, { storageItemId: b }] : [{ storageItemId: b }, { storageItemId: a }],
+          }),
+        ),
+      );
+      expect(results.map((r) => r.statusCode).sort()).toEqual([201, 201, 201, 201, 409, 409, 409, 409]);
+      expect([await box(a), await box(b)]).toEqual([
+        { left: 0, total: 4, status: "finished" },
+        { left: 0, total: 4, status: "finished" },
+      ]);
+      const mealIds = results.filter((r) => r.statusCode === 201).map((r) => r.json<ServeStorageResponse>().meal.id);
+      const deletes = await Promise.all([...mealIds, ...mealIds].map((id) => deleteMeal(id)));
+      expect(deletes.map((r) => r.statusCode).sort()).toEqual([204, 204, 204, 204, 404, 404, 404, 404]);
+      expect([await box(a), await box(b)]).toEqual([
+        { left: 4, total: 4, status: "active" },
+        { left: 4, total: 4, status: "active" },
+      ]);
     });
   });
 
