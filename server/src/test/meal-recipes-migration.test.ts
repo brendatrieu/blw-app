@@ -322,6 +322,31 @@ describe("healMealRecipes — what a rolled-back (pre-0020) image leaves behind"
     await healMealRecipes(db);
     expect(await mealRecipeRows(client)).toEqual(before);
   });
+
+  // NULL is a value here: `<>` would never match a cleared rating, so the
+  // old stars would come back after a roll-forward.
+  it("folds back a rating the old image CLEARED on the same recipe", async () => {
+    await client.exec(`UPDATE "meals" SET "recipe_rating" = NULL WHERE "id" = '${meal(5)}'`);
+    await healMealRecipes(db);
+    expect(await rowsOf(meal(5))).toEqual([{ recipe_id: CATALOG_RECIPE, position: 0, rating: null }]);
+  });
+
+  // The heal runs in one transaction: a failure after its DELETE must not
+  // leave the meal with no row (it fails the boot; the next boot repairs).
+  it("a heal that fails part-way changes nothing, and the next run repairs", async () => {
+    // Repairing this needs the DELETE (old row) and then the INSERT (new recipe).
+    await client.exec(`UPDATE "meals" SET "recipe_id" = '${OTHER_RECIPE}', "recipe_rating" = 3 WHERE "id" = '${meal(2)}'`);
+    await client.exec(`
+      CREATE FUNCTION heal_test_boom() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'heal test boom'; END $$;
+      CREATE TRIGGER heal_test_boom BEFORE INSERT ON "meal_recipes" FOR EACH ROW EXECUTE FUNCTION heal_test_boom();`);
+    const before = await mealRecipeRows(client);
+    await expect(healMealRecipes(db)).rejects.toThrow(/heal test boom/);
+    expect(await mealRecipeRows(client)).toEqual(before);
+
+    await client.exec(`DROP TRIGGER heal_test_boom ON "meal_recipes"; DROP FUNCTION heal_test_boom();`);
+    await healMealRecipes(db);
+    expect(await rowsOf(meal(2))).toEqual([{ recipe_id: OTHER_RECIPE, position: 0, rating: 3 }]);
+  });
 });
 
 describe("migration journal", () => {

@@ -1,5 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
+import type { PGlite } from "@electric-sql/pglite";
 import type { FastifyInstance } from "fastify";
 import type {
   AllergenProgressResponse,
@@ -1363,13 +1365,17 @@ describe("custom recipes", () => {
       });
       expect(meal.statusCode).toBe(201);
       const mealId = meal.json<{ id: string }>().id;
+      const favorite = await app.inject({ method: "PUT", url: `/api/recipes/${recipe.id}/favorite`, headers: { cookie: owner.cookie } });
+      expect(favorite.statusCode).toBe(204);
 
       const del = () => app.inject({ method: "DELETE", url: `/api/recipes/${recipe.id}`, headers: { cookie: owner.cookie } });
       const blocked = await del();
       expect(blocked.statusCode).toBe(409);
       expect(blocked.json()).toEqual({ error: "conflict", mealCount: 1, storageCount: 0 });
-      // Nothing cascaded: the meal still has both recipes.
+      // Nothing cascaded: the meal still has both recipes. And the refusal
+      // wrote nothing, not even the un-favorite that a delete would do.
       expect(await db.select().from(schema.mealRecipes).where(eq(schema.mealRecipes.mealId, mealId))).toHaveLength(2);
+      expect(await db.select().from(schema.favorites).where(eq(schema.favorites.recipeId, recipe.id))).toHaveLength(1);
 
       const edit = await app.inject({
         method: "PATCH",
@@ -1380,6 +1386,62 @@ describe("custom recipes", () => {
       expect(edit.statusCode).toBe(200);
       expect((await del()).statusCode).toBe(204);
       expect(await db.select().from(schema.recipes).where(eq(schema.recipes.id, recipe.id))).toEqual([]);
+    });
+
+    // Ledger 754: on Postgres a meal saved between the count and the DELETE
+    // would have its new `meal_recipes` row cascade away. The guard closes
+    // that by locking the recipe row FOR UPDATE (which conflicts with the
+    // FOR KEY SHARE a foreign-key check takes; FOR SHARE would not) and
+    // counting inside the same transaction. PGlite cannot run the race, so
+    // the statement order is pinned; the race itself is in the dry run.
+    it("locks the recipe row FOR UPDATE, then counts, inside one transaction (ledger 754)", async () => {
+      const recipe = await createRecipe(owner, recipePayload());
+      const babyId = await createBaby(owner);
+      const meal = await app.inject({
+        method: "POST",
+        url: `/api/babies/${babyId}/meals`,
+        headers: { cookie: owner.cookie },
+        payload: { foodIds: [fixtures.banana.id], recipeIds: [fixtures.catalogRecipe.id, recipe.id] },
+      });
+      expect(meal.statusCode).toBe(201);
+
+      const events: string[] = [];
+      const original = PgDialect.prototype.sqlToQuery;
+      const sqlSpy = vi.spyOn(PgDialect.prototype, "sqlToQuery").mockImplementation(function (this: PgDialect, ...args) {
+        const query = original.apply(this, args);
+        events.push(query.sql.toLowerCase());
+        return query;
+      });
+      const client = (db as unknown as { $client: PGlite }).$client;
+      const originalTransaction = client.transaction.bind(client);
+      const txSpy = vi.spyOn(client, "transaction").mockImplementation(async (callback) => {
+        events.push("<begin>");
+        try {
+          return await originalTransaction(callback);
+        } finally {
+          events.push("<end>");
+        }
+      });
+      let status: number;
+      try {
+        status = (await app.inject({ method: "DELETE", url: `/api/recipes/${recipe.id}`, headers: { cookie: owner.cookie } })).statusCode;
+      } finally {
+        sqlSpy.mockRestore();
+        txSpy.mockRestore();
+      }
+      expect(status).toBe(409);
+      const trace = events.join("\n");
+      const lock = events.findIndex((text) => /^select .* from "recipes" where .* for update$/.test(text));
+      const begin = events.lastIndexOf("<begin>", lock);
+      const mealCount = events.findIndex((text) => text.includes('from "meal_recipes"') && text.includes("count("));
+      const storageCount = events.findIndex((text) => text.includes('from "storage_items"') && text.includes("count("));
+      const end = events.indexOf("<end>", lock);
+      expect(lock, trace).toBeGreaterThanOrEqual(0);
+      expect(begin, trace).toBeGreaterThanOrEqual(0);
+      expect(events.slice(begin, lock), trace).not.toContain("<end>");
+      expect(mealCount, trace).toBeGreaterThan(lock);
+      expect(storageCount, trace).toBeGreaterThan(lock);
+      expect(end, trace).toBeGreaterThan(Math.max(mealCount, storageCount));
     });
 
     // Item 240, the edit half: a parent can take every step back off a

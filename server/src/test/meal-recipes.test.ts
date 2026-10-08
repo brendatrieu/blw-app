@@ -3,8 +3,9 @@
 // in one locked transaction, the legacy mirror, and the older app's
 // single-recipe shape — which must keep working byte for byte, because the
 // shipped app and its 24 h offline queue talk to this server unchanged.
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { asc, eq } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import type { FastifyInstance } from "fastify";
 import {
   accountExportSchema,
@@ -319,6 +320,72 @@ describe("several recipes per meal (ledger 752)", () => {
       expect(refused.json()).toMatchObject({ details: { foodRatings: "rated as part of its recipe" } });
     });
 
+    it("an added recipe clears only ITS ingredients' stars, keeps its place, and its ingredients can't be rated in that edit", async () => {
+      const meal = await created({
+        foodIds: [fx.egg.id, fx.banana.id, fx.pear.id],
+        recipeIds: [fx.toast.id],
+        foodRatings: { [fx.pear.id]: 4, [fx.banana.id]: 3 },
+      });
+      // + porridge (oats, banana) after toast: banana's own stars go, pear keeps its.
+      let edited = await patched(meal.id, { recipeIds: [fx.toast.id, fx.porridge.id] });
+      expect(foodsOf(edited)).toEqual([
+        ["Banana", null, true],
+        ["Egg", null, true],
+        ["Pear", 4, false],
+      ]);
+      expect(await storedRows(meal.id)).toEqual([
+        { recipeId: fx.toast.id, position: 0, rating: null },
+        { recipeId: fx.porridge.id, position: 1, rating: null },
+      ]);
+
+      // A deploy makes pear an ingredient of toast, a KEPT recipe. Adding
+      // pancakes (egg, banana) must not touch pear: it is not one of pancakes'.
+      await db.insert(schema.recipeIngredients).values({ recipeId: fx.toast.id, foodId: fx.pear.id, quantityNote: "1" });
+      edited = await patched(meal.id, { recipeIds: [fx.toast.id, fx.porridge.id, fx.pancakes.id] });
+      expect(recipesOf(edited)).toEqual([
+        ["Egg Toast", null],
+        ["Porridge", null],
+        ["Pancakes", null],
+      ]);
+      expect(foodsOf(edited)).toContainEqual(["Pear", 4, true]);
+
+      // Toast and pancakes off: pear is a free extra again, still 4.
+      edited = await patched(meal.id, { recipeIds: [fx.porridge.id] });
+      expect(foodsOf(edited)).toContainEqual(["Pear", 4, false]);
+      // Re-adding toast while rating pear (now toast's ingredient) is refused and writes nothing.
+      const refused = await patchMeal(meal.id, { recipeIds: [fx.porridge.id, fx.toast.id], foodRatings: { [fx.pear.id]: 5 } });
+      expect(refused.statusCode).toBe(400);
+      expect(refused.json()).toMatchObject({ details: { foodRatings: "rated as part of its recipe" } });
+      expect(await storedRows(meal.id)).toEqual([{ recipeId: fx.porridge.id, position: 0, rating: null }]);
+      expect(foodsOf(await patched(meal.id, { notes: "check" }))).toContainEqual(["Pear", 4, false]);
+      // Re-added on its own, toast rates pear from then on.
+      edited = await patched(meal.id, { recipeIds: [fx.porridge.id, fx.toast.id] });
+      expect(foodsOf(edited)).toContainEqual(["Pear", null, true]);
+    });
+
+    // DESIGN-B §4: every rule reads the meal's state first, so the row lock
+    // must come before any of those reads (PGlite serializes, so only the
+    // statement order can show it; the Postgres race is in the dry run).
+    it("locks the meal row FOR UPDATE before it reads any of the meal's state", async () => {
+      const meal = await twoRecipeMeal();
+      const seen: string[] = [];
+      const original = PgDialect.prototype.sqlToQuery;
+      const spy = vi.spyOn(PgDialect.prototype, "sqlToQuery").mockImplementation(function (this: PgDialect, ...args) {
+        const query = original.apply(this, args);
+        seen.push(query.sql.toLowerCase());
+        return query;
+      });
+      try {
+        await patched(meal.id, { recipeRatings: { [fx.porridge.id]: 3 } });
+      } finally {
+        spy.mockRestore();
+      }
+      const lock = seen.findIndex((text) => text.includes('from "meals"') && text.includes("for update"));
+      const firstRead = seen.findIndex((text) => /from "(meal_recipes|meal_foods|recipe_ingredients)"/.test(text));
+      expect(lock, seen.join("\n")).toBeGreaterThanOrEqual(0);
+      expect(firstRead, seen.join("\n")).toBeGreaterThan(lock);
+    });
+
     it("keeps a rated extra that later became an ingredient visible and editable", async () => {
       const meal = await created({ foodIds: [fx.egg.id, fx.pear.id], recipeIds: [fx.toast.id], foodRatings: { [fx.pear.id]: 4 } });
       // A recipe edit (or a deploy adding an ingredient) makes pear part of toast.
@@ -616,5 +683,88 @@ describe("several recipes per meal (ledger 752)", () => {
     // The mirror columns are not the parent's data and are not exported.
     expect(bundle.meals[0]).not.toHaveProperty("recipeId");
     expect(bundle.meals[0]).not.toHaveProperty("recipeRating");
+  });
+});
+
+// DESIGN-B §4: the whole PATCH is one transaction. A write that fails after
+// the columns, the recipe set and the recipe stars were written (here the
+// meal_foods re-insert, which runs after its DELETE) must leave the meal as
+// it was, foods included.
+describe("PATCH atomicity (ledger 752)", () => {
+  let app: FastifyInstance;
+  let db: Database;
+  let close: () => Promise<void>;
+  let armed = false;
+  const failing = { values: () => Promise.reject(new Error("test fault: meal_foods insert")) };
+  // The routes get a view of the database whose meal_foods insert throws
+  // while armed (inside transactions too); `db` stays clean for assertions.
+  const wrap = <T extends object>(target: T): T =>
+    new Proxy(target, {
+      get(inner, prop, receiver) {
+        const value = Reflect.get(inner, prop, receiver) as unknown;
+        if (prop === "insert") {
+          return (table: unknown) =>
+            armed && table === schema.mealFoods ? failing : (value as (t: unknown) => unknown).call(receiver, table);
+        }
+        if (prop === "transaction") {
+          return (callback: (tx: object) => unknown, ...rest: unknown[]) =>
+            (value as (...args: unknown[]) => unknown).call(receiver, (tx: object) => callback(wrap(tx)), ...rest);
+        }
+        return value;
+      },
+    });
+
+  beforeEach(async () => {
+    ({ app, db, close } = await createTestApp({}, {}, (inner) => wrap(inner)));
+  });
+  afterEach(async () => {
+    armed = false;
+    await close();
+  });
+
+  it("a write failing part-way rolls back the columns, the recipe set, both kinds of stars and the foods", async () => {
+    const fx = await seedFixtures(db);
+    const parent = await signUpUser(app);
+    const baby = await app.inject({
+      method: "POST",
+      url: "/api/babies",
+      headers: { cookie: parent.cookie },
+      payload: { name: "Robin", birthDate: "2025-01-15" },
+    });
+    const created = await app.inject({
+      method: "POST",
+      url: `/api/babies/${baby.json<Baby>().id}/meals`,
+      headers: { cookie: parent.cookie },
+      payload: {
+        foodIds: [fx.egg.id, fx.oats.id, fx.pear.id],
+        recipeIds: [fx.toast.id],
+        recipeRatings: { [fx.toast.id]: 4 },
+        foodRatings: { [fx.oats.id]: 3, [fx.pear.id]: 2 },
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const mealId = mealItemSchema.parse(created.json()).id;
+    const snapshot = async () => ({
+      meal: await db.select().from(schema.meals).where(eq(schema.meals.id, mealId)),
+      foods: await db.select().from(schema.mealFoods).where(eq(schema.mealFoods.mealId, mealId)).orderBy(asc(schema.mealFoods.foodId)),
+      recipes: await db.select().from(schema.mealRecipes).where(eq(schema.mealRecipes.mealId, mealId)).orderBy(asc(schema.mealRecipes.recipeId)),
+    });
+    const before = await snapshot();
+
+    armed = true;
+    const response = await app.inject({
+      method: "PATCH",
+      url: `/api/meals/${mealId}`,
+      headers: { cookie: parent.cookie },
+      payload: {
+        notes: "should not stick",
+        recipeIds: [fx.porridge.id, fx.toast.id],
+        recipeRatings: { [fx.porridge.id]: 5, [fx.toast.id]: 1 },
+        foodIds: [fx.egg.id, fx.oats.id],
+      },
+    });
+    armed = false;
+    expect(response.statusCode).toBe(500);
+    expect(await snapshot()).toEqual(before);
   });
 });

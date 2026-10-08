@@ -295,7 +295,7 @@ export type MealsResponse = z.infer<typeof mealsResponseSchema>;
  * Item 573: one baby's ratings of one food or recipe. A food's summary counts
  * the food's own stars (a loose food, or an extra beside a meal's recipes) —
  * a recipe's rating never counts toward its ingredient foods. A recipe's
- * counts its stars on every meal it was part of (ledger 754). `latest` is the
+ * summary counts its stars on every meal it was part of (ledger 754). `latest` is the
  * rating on the most recently served rated meal, and `lastRatedAt` is when
  * that meal was served.
  */

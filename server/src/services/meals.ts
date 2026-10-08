@@ -1,9 +1,10 @@
-// Meal writing and reading, shared by the two routes that create meals:
-// POST /api/babies/:babyId/meals (a meal logged by hand) and
-// POST /api/storage/:id/serve (a meal logged by serving a storage item, which
-// additionally links every food row back to the container it came from).
+// Meal writing and reading, shared by the three routes that create meals:
+// POST /api/babies/:babyId/meals (a meal logged by hand), and
+// POST /api/storage/:id/serve and POST /api/storage/serve (a meal logged by
+// serving one storage item or several parts at once, which additionally links
+// every served food row back to the container it came from).
 //
-// Keeping both flows on one insert helper is what guarantees a served meal
+// Keeping every flow on one insert helper is what guarantees a served meal
 // is byte-for-byte the same kind of row as a hand-logged one — the only
 // difference is `meal_foods.storage_item_id`.
 //

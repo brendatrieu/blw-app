@@ -278,9 +278,12 @@ The container's start command is `node dist/db/migrate.js && tsx db/seeds/index.
 (Dockerfile). If a migration fails there:
 
 1. `migrate.js` logs "Migration failed:" and exits 1, so the app never starts.
-2. The database is untouched: drizzle runs every pending migration in one
-   transaction, which rolls back (the boot heal `healMealRecipes` that runs
-   after it is its own transaction and fails the same way).
+2. If a MIGRATION fails, the database is untouched: drizzle runs every pending
+   migration in one transaction, which rolls back. The boot heal
+   `healMealRecipes` runs after that, in its own transaction: if IT fails, the
+   migrations (0020/0021) are already committed and only the heal rolls back.
+   Pinning the previous image is still safe then, because those migrations
+   only add tables (and the next boot of the new image runs the heal again).
 3. `restart: unless-stopped` restarts it into the same failure (a crash loop),
    `docker compose up -d --wait` fails, and the Deploy job turns red.
 4. **The site is down** (Caddy answers 502). `up -d` has already replaced the
