@@ -422,6 +422,34 @@ describe("the Serve sheet while offline (ledger 766)", () => {
     expect(findAll(tree, OFFLINE_LINE)).toHaveLength(1);
   });
 
+  it("keeps every entry editable offline (M9): a stepper that isn't capped still steps, ✕, Add more, When, stars and notes", () => {
+    h.reset();
+    addMore({ foods: [BANANA] });
+    h.network.offline = true;
+    const tree = render();
+    for (const label of ["Increase servings", "Decrease servings", "Remove Banana"]) {
+      expect(findAll(tree, byLabel(label))[0]!.props.disabled).toBe(false);
+    }
+    expect(findAll(tree, (element) => element.props?.children === "+ Add more")[0]!.props.disabled).toBe(false);
+    expect(findAll(tree, byType(DateTimeField))[0]!.props.disabled).toBe(false);
+    expect(findAll(tree, byType(MealRatingsField))[0]!.props.disabled).toBe(false);
+    const textareas = findAll(tree, byType(Textarea));
+    expect(textareas).toHaveLength(2);
+    for (const textarea of textareas) expect(textarea.props.disabled).toBeFalsy();
+
+    // 1 of 2 left: the step is real, not swallowed by the cap.
+    const count = () => findAll(render(), (element) => element.props?.["aria-live"] === "polite")[0]!.props.children;
+    expect(count()).toBe(1);
+    click(render(), byLabel("Increase servings"));
+    expect(count()).toBe(2);
+    click(render(), (element) => element.props?.children === "+ Add more");
+    expect(findAll(render(), byType(AddMoreSheet))).toHaveLength(1);
+    expect(h.served).toHaveLength(0);
+
+    h.network.offline = false;
+    expect(serve()).toMatchObject({ parts: [{ storageItemId: ITEM.id, servings: 2 }], foodIds: ["food-banana"] });
+  });
+
   it("keeps servings, added items, stars and notes through offline, and serves them all once back online", () => {
     h.reset();
     click(render(), byLabel("Increase servings"));

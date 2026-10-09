@@ -28,6 +28,11 @@ describe("StorageStatusBanner (item 147, shared undo UI)", () => {
     expect(html).toMatch(/<button type="button" class="relative [^"]*after:absolute after:-inset-x-2 after:-inset-y-3"[^>]*>Undo</);
   });
 
+  it("marks the whole banner for the post-serve tap guard to let through (ledger 767)", () => {
+    const html = renderToString(createElement(StorageStatusBanner, { label: "Served: Peas", onUndo: () => {} }));
+    expect(html).toMatch(/^<div data-tap-guard-skip="" [^>]*>.*>Undo<\/button><\/div>$/);
+  });
+
   it("calls onUndo exactly once when Undo is pressed (both Undos: Remove and serve)", () => {
     const onUndo = vi.fn();
     const tree = StorageStatusBanner({ label: "Served: Peas", onUndo }) as { props: { children: unknown[] } };

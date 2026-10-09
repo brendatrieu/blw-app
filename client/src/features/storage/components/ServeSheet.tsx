@@ -16,6 +16,7 @@ import { foodPlate } from "../../catalog/foodEmoji.js";
 import { useRecipeDetails } from "../../catalog/hooks.js";
 import { HowToLink } from "../../safety/HowToLink.js";
 import { useIsOffline } from "../../../lib/online.js";
+import { ignoreTapsBriefly } from "../../../lib/tapGuard.js";
 import { MealRatingsField, RECIPE_ROW_PREFIX, type MealRatingRow } from "../../tracking/components/MealRatingsField.js";
 
 /** Ceiling for the serve stepper on an untracked item (no servingsLeft to
@@ -418,6 +419,9 @@ export function ServeSheet({ item, babyId, open, onClose, onServed }: ServeSheet
         babyId={babyId}
         onServed={(response) => {
           onClose();
+          // Ledger 767: a fast double tap's second tap must not land on the
+          // bottom nav that was under Serve.
+          ignoreTapsBriefly();
           onServed?.(response);
         }}
       />

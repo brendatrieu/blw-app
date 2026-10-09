@@ -2,7 +2,7 @@ import { createElement, type ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { StorageItem } from "@blw/shared";
 import { CelebrationProvider } from "../../../components/ui/Celebration.js";
 import { SheetPanel } from "../../../components/ui/Sheet.js";
@@ -257,6 +257,21 @@ describe("ServeControl offline, through the real online signal (ledger 766)", ()
   });
 });
 
+describe("the Serve button's wrapper (ledger 766, M11)", () => {
+  it("has no gap, so the empty live region adds no space online; the offline line brings its own margin", () => {
+    const control = () => render(createElement(ServeControl, { item: BASE_ITEM, babyId: "baby-1" }));
+    expect(control()).toMatch(/<div class="flex flex-col"><button [^>]*>Serve<\/button><div role="status"><\/div><\/div>/);
+    onlineManager.setOnline(false);
+    try {
+      expect(control()).toMatch(
+        /<div class="flex flex-col"><button [^>]*>Serve<\/button><div role="status"><p id="serve-offline" class="mt-1\.5 [^"]*">/,
+      );
+    } finally {
+      onlineManager.setOnline(true);
+    }
+  });
+});
+
 describe("the Serve sheet's How-to link (item 714)", () => {
   it("lifts its text 2.5px above center inside the same 44px box (pb-[5px] on a centered min-h-11)", () => {
     const html = render(createElement(ServeControl, { item: BASE_ITEM, babyId: "baby-1" }));
@@ -304,17 +319,43 @@ describe("ServeSheet", () => {
     expect(element.props.open).toBe(true);
   });
 
-  it("closes itself, then hands the serve to the page's Undo", () => {
+  it("closes itself, arms the brief tap guard (ledger 767), then hands the serve to the page's Undo", () => {
     const calls: string[] = [];
-    const element = ServeSheet({
-      item: BASE_ITEM,
-      babyId: "baby-1",
-      open: true,
-      onClose: () => calls.push("close"),
-      onServed: (response) => calls.push(`served ${response.meal.id}`),
-    }) as ReactElement<{ children: ReactElement<{ onServed: (response: unknown) => void }> }>;
-    element.props.children.props.onServed({ meal: { id: "m1" }, items: [] });
-    expect(calls).toEqual(["close", "served m1"]);
+    vi.useFakeTimers();
+    vi.stubGlobal("window", {
+      addEventListener: (type: string, _listener: unknown, capture: boolean) => calls.push(`guard ${type} ${capture}`),
+      removeEventListener: (type: string) => calls.push(`unguard ${type}`),
+    });
+    try {
+      const element = ServeSheet({
+        item: BASE_ITEM,
+        babyId: "baby-1",
+        open: true,
+        onClose: () => calls.push("close"),
+        onServed: (response) => calls.push(`served ${response.meal.id}`),
+      }) as ReactElement<{ children: ReactElement<{ onServed: (response: unknown) => void }> }>;
+      element.props.children.props.onServed({ meal: { id: "m1" }, items: [] });
+      expect(calls).toEqual(["close", "guard click true", "served m1"]);
+      vi.runAllTimers();
+      expect(calls).toEqual(["close", "guard click true", "served m1", "unguard click"]);
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("arms no tap guard just for opening or closing (only a serve does)", () => {
+    const addEventListener = vi.fn();
+    vi.stubGlobal("window", { addEventListener, removeEventListener: vi.fn() });
+    try {
+      const element = ServeSheet({ item: BASE_ITEM, babyId: "baby-1", open: true, onClose: () => {} }) as ReactElement<{
+        onClose: () => void;
+      }>;
+      element.props.onClose();
+      expect(addEventListener).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("puts the sheet's close X at the LEFT of its header row, before the title", () => {
