@@ -2,16 +2,24 @@
 // a slot store (idiom from MealDeleteDialog.handlers / Menu.handlers), the
 // components are called as plain functions, and the element tree is read by
 // hand — so "click ›", "items shrink" and "delete the last row" run in node.
+// Item 775: the page is read back from the swipe track's scroll position, so
+// `next()` hands the track a fake scroller whose scrollTo fires the scroll
+// handler, as the browser does; the rows read are the one non-inert slide's.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => {
-  const store = { states: [] as unknown[], i: 0 };
+  const store = { states: [] as unknown[], i: 0, refs: [] as { current: unknown }[], r: 0 };
   return {
     store,
     meals: [] as unknown[],
     storage: [] as unknown[],
     allergens: [] as unknown[],
     activeBaby: null as unknown,
+    useRef: (init: unknown) => {
+      const i = store.r++;
+      if (!(i in store.refs)) store.refs[i] = { current: init };
+      return store.refs[i]!;
+    },
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states))
@@ -23,7 +31,7 @@ const h = vi.hoisted(() => {
 
 vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, useState: h.useState, useMemo: (fn: () => unknown) => fn() };
+  return { ...actual, useState: h.useState, useRef: h.useRef, useMemo: (fn: () => unknown) => fn() };
 });
 vi.mock("../features/tracking/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -40,8 +48,7 @@ vi.mock("../features/storage/hooks.js", async (importOriginal) => ({
   useServeUndo: () => ({ recentServe: null, announce: () => {}, undo: () => {} }),
 }));
 
-import { Card } from "../components/ui/Card.js";
-import { Pager, type PageWindow } from "../components/ui/Pager.js";
+import { PageTrack, Pager, type PageWindow, type PagedTrack } from "../components/ui/Pager.js";
 import { MealCard, ServeLogList } from "../features/tracking/components/ServeLogList.js";
 import { StorageItemRow } from "../features/storage/components/StorageItemCard.js";
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
@@ -66,15 +73,45 @@ function find(node: unknown, type: unknown): El | null {
   return el.type === type ? el : find(el.props.children, type);
 }
 
+/** The swipe track's one shown (non-inert) slide, rendered: its Card or ul. */
+function shownSlide(tree: unknown): El | null {
+  const track = find(tree, PageTrack);
+  if (!track) return null;
+  const slides = (PageTrack(track.props as unknown as Parameters<typeof PageTrack>[0]) as unknown as El).props
+    .children as El[];
+  const shown = slides.filter((slide) => !("inert" in slide.props));
+  expect(shown).toHaveLength(1);
+  return shown[0]!.props.children as El;
+}
+
+/** A scroller as the browser has it: scrollTo moves it and fires `onScroll`. */
+const TRACK_WIDTH = 300;
+function scroller(track: PagedTrack) {
+  const el = (track.trackRef.current ??= {
+    clientWidth: TRACK_WIDTH,
+    scrollLeft: 0,
+  } as unknown as HTMLDivElement) as HTMLDivElement & { calls?: ScrollToOptions[] };
+  el.scrollTo = ((options: ScrollToOptions) => {
+    (el.calls ??= []).push(options);
+    el.scrollLeft = options.left ?? 0;
+    track.onScroll({ currentTarget: el } as never);
+  }) as never;
+  return el;
+}
+
 function view(render: () => unknown, row: unknown) {
-  h.store.i = 0;
+  h.store.i = h.store.r = 0;
   const tree = render();
   const pager = find(tree, Pager);
-  const rows = ((find(tree, Card)?.props.children ?? []) as El[]).filter((el) => el.type === row);
+  const track = find(tree, PageTrack)?.props.track as PagedTrack | undefined;
+  const rows = ((shownSlide(tree)?.props.children ?? []) as El[]).filter((el) => el.type === row);
   return {
     pages: pager?.props.pages as PageWindow | undefined,
-    next: () =>
-      (pager!.props.onPage as (p: number) => void)((pager!.props.pages as PageWindow).page + 1),
+    next: () => {
+      scroller(track!);
+      (pager!.props.onPage as (p: number) => void)((pager!.props.pages as PageWindow).page + 1);
+    },
+    track,
     ids: rows.map((el) => ((el.props.meal ?? el.props.item) as { id: string }).id),
     tree,
   };
@@ -107,6 +144,7 @@ const storage = () =>
 
 beforeEach(() => {
   h.store.states = [];
+  h.store.refs = [];
   h.meals = Array.from({ length: 8 }, (_, i) => meal(i));
   h.storage = Array.from({ length: 8 }, (_, i) => item(i));
 });
@@ -146,7 +184,7 @@ describe("Food log paging", () => {
 
   it("says 100+ when the fetch came back full", () => {
     h.meals = Array.from({ length: 100 }, (_, i) => meal(i));
-    h.store.i = 0;
+    h.store.i = h.store.r = 0;
     const pager = find(
       (ServeLogList as unknown as (p: unknown) => unknown)({
         babyId: "b",
@@ -158,7 +196,7 @@ describe("Food log paging", () => {
     );
     expect(pager!.props.capped).toBe(true);
     h.meals = h.meals.slice(0, 99);
-    h.store.i = 0;
+    h.store.i = h.store.r = 0;
     expect(
       find(
         (ServeLogList as unknown as (p: unknown) => unknown)({
@@ -217,15 +255,20 @@ describe("Up next paging (item 712)", () => {
     lastExposureAt: null,
   });
   const upNext = () => {
-    h.store.i = 0;
+    h.store.i = h.store.r = 0;
     const tree = (UpNextCard as unknown as (p: unknown) => unknown)({ babyId: "b" });
     const pager = find(tree, Pager);
-    const rows = (find(tree, "ul")?.props.children ?? []) as (El & { key: string })[];
+    const rows = (shownSlide(tree)?.props.children ?? []) as (El & { key: string })[];
+    const track = find(tree, PageTrack)?.props.track as PagedTrack | undefined;
     const seeAll = find(tree, SectionLink);
     return {
       pages: pager?.props.pages as PageWindow | undefined,
+      track,
       label: pager?.props.label,
-      next: () => (pager!.props.onPage as (p: number) => void)((pager!.props.pages as PageWindow).page + 1),
+      next: () => {
+        scroller(track!);
+        (pager!.props.onPage as (p: number) => void)((pager!.props.pages as PageWindow).page + 1);
+      },
       keys: rows.map((row) => row.key),
       actions: rows.map((row) => row.props.actions as El),
       seeAll: seeAll?.props.to,
@@ -250,6 +293,13 @@ describe("Up next paging (item 712)", () => {
     const last = upNext();
     expect(last.keys).toEqual(["allergen-milk"]);
     expect(last.pages).toMatchObject({ page: 2, start: 6, end: 7 });
+  });
+
+  it("swipes too (item 775): the scroll position sets the page", () => {
+    const el = scroller(upNext().track!);
+    el.scrollLeft = 2 * TRACK_WIDTH;
+    upNext().track!.onScroll({ currentTarget: el } as never);
+    expect(upNext().keys).toEqual(["allergen-milk"]);
   });
 
   it("has no See all on any page, whatever spills: the rows mix storage and allergens (item 722)", () => {
@@ -289,6 +339,87 @@ describe("Up next paging (item 712)", () => {
     expect((storageMenu!.props.item as { id: string }).id).toBe("soon-3");
     expect(peanutMenu!.type).toBe(AllergenUpNextMenu);
     expect((peanutMenu!.props.item as { allergenSlug: string }).allergenSlug).toBe("peanut");
+  });
+});
+
+describe("Swipe paging (item 775)", () => {
+  const swipeTo = (track: PagedTrack, scrollLeft: number) => {
+    const el = scroller(track);
+    el.scrollLeft = scrollLeft;
+    track.onScroll({ currentTarget: el } as never);
+  };
+
+  it.each([
+    ["Storage", () => storage()],
+    ["Food log", () => foodLog()],
+  ])("%s: a swipe alone turns the page, and the range follows", (_name, render) => {
+    swipeTo(render().track!, 2 * TRACK_WIDTH);
+    const v = render();
+    expect(v.pages).toMatchObject({ page: 2, start: 6, end: 8 });
+    expect(v.ids).toHaveLength(2);
+    // A swipe let go short of halfway snaps back, and the page reads back with it.
+    swipeTo(v.track!, TRACK_WIDTH + TRACK_WIDTH * 0.4);
+    expect(render().pages?.page).toBe(1);
+    // iOS rubber-banding past either end is not a page.
+    swipeTo(v.track!, -40);
+    expect(render().pages?.page).toBe(0);
+    swipeTo(v.track!, 9 * TRACK_WIDTH);
+    expect(render().pages?.page).toBe(2);
+  });
+
+  it("a slide is exactly the track's width, so deep pages read back right", () => {
+    h.meals = Array.from({ length: 100 }, (_, i) => meal(i));
+    swipeTo(foodLog().track!, 30 * TRACK_WIDTH);
+    expect(foodLog().ids).toEqual(["meal-90", "meal-91", "meal-92"]);
+  });
+
+  it("one slide per page, all rendered; only the shown one is reachable (inert)", () => {
+    storage().next();
+    const track = find(storage().tree, PageTrack)!;
+    const slides = (PageTrack(track.props as unknown as Parameters<typeof PageTrack>[0]) as unknown as El).props
+      .children as El[];
+    expect(slides).toHaveLength(3);
+    expect(slides.map((slide) => "inert" in slide.props)).toEqual([true, false, true]);
+    expect(slides.map((slide) => ((slide.props.children as El).props.children as unknown[]).length)).toEqual([
+      3, 3, 2,
+    ]);
+  });
+
+  it("‹ › scroll the track (smoothly) and never set the page behind its back", () => {
+    const v = storage();
+    v.next();
+    const el = v.track!.trackRef.current as unknown as { calls: ScrollToOptions[] };
+    expect(el.calls).toEqual([{ left: TRACK_WIDTH, behavior: "smooth" }]);
+    expect(storage().pages?.page).toBe(1);
+    // Off the end: clamped to the last slide, not a slide that isn't there.
+    storage().track!.goTo(7);
+    expect(el.calls.at(-1)).toEqual({ left: 2 * TRACK_WIDTH, behavior: "smooth" });
+  });
+
+  it("jumps instead of animating under prefers-reduced-motion", () => {
+    vi.stubGlobal("window", { matchMedia: (q: string) => ({ matches: q === "(prefers-reduced-motion: reduce)" }) });
+    try {
+      const v = storage();
+      v.next();
+      const el = v.track!.trackRef.current as unknown as { calls: ScrollToOptions[] };
+      expect(el.calls).toEqual([{ left: TRACK_WIDTH, behavior: "auto" }]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("an arrow before the track has a width does nothing (first paint, hidden)", () => {
+    const v = storage();
+    v.track!.trackRef.current = { clientWidth: 0, scrollTo: () => expect.unreachable() } as never;
+    v.track!.goTo(1);
+    expect(storage().pages?.page).toBe(0);
+  });
+
+  it("the range, not the rows, is the live region", () => {
+    const v = storage();
+    expect(JSON.stringify(shownSlide(v.tree), (k, val) => (k === "_owner" ? undefined : val))).not.toContain(
+      "aria-live",
+    );
   });
 });
 

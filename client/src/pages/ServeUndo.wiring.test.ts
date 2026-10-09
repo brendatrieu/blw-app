@@ -32,7 +32,11 @@ const h = vi.hoisted(() => ({
 
 vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, useState: (init: unknown) => [typeof init === "function" ? (init as () => unknown)() : init, () => {}] };
+  return {
+    ...actual,
+    useState: (init: unknown) => [typeof init === "function" ? (init as () => unknown)() : init, () => {}],
+    useRef: (current: unknown) => ({ current }),
+  };
 });
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -59,6 +63,7 @@ import { DashboardPage, StorageSection, UpNextCard } from "./DashboardPage.js";
 import { StorageStatusBanner } from "../features/storage/components/StorageStatusBanner.js";
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
 import { ServeSheet } from "../features/storage/components/ServeSheet.js";
+import { PageTrack } from "../components/ui/Pager.js";
 
 interface El {
   type: unknown;
@@ -72,6 +77,8 @@ function findAll(node: unknown, type: unknown, out: El[] = []): El[] {
   }
   const element = node as El;
   if (element.type === type) out.push(element);
+  // Home's paged lists render their rows through the swipe track (item 775).
+  if (element.type === PageTrack) findAll(PageTrack(element.props as never), type, out);
   for (const value of Object.values(element.props ?? {})) findAll(value, type, out);
   return out;
 }

@@ -25,7 +25,8 @@ const h = vi.hoisted(() => {
 
 vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, useState: h.useState, useMemo: (fn: () => unknown) => fn() };
+  // useRef: the swipe track's ref (item 775), unused when nothing is paged.
+  return { ...actual, useState: h.useState, useRef: (current: unknown) => ({ current }), useMemo: (fn: () => unknown) => fn() };
 });
 vi.mock("../hooks.js", () => ({
   useMeals: () => ({ data: { items: h.meals }, isLoading: false, isError: false }),

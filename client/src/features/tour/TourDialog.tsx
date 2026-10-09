@@ -5,7 +5,15 @@ import { Dialog } from "../../components/ui/Dialog.js";
 import { track as trackEvent } from "../../lib/usage/track.js";
 import { usePreferences, useCompleteTour } from "./hooks.js";
 import { TOUR_SLIDES, TOUR_SLIDE_COUNT } from "./slides.js";
+import { prefersReducedMotion } from "../../lib/scrollTrack.js";
 import { clampSlide, resolveTourExit, slideIndexFromScroll, type TourExitVia, type TourSource } from "./tour.js";
+
+interface TourDialogProps {
+  /** Closes the dialog. Called after the exit has decided what to write. */
+  onClose: () => void;
+  /** First run, or a replay from More — carried on every tour event. */
+  source: TourSource;
+}
 
 /**
  * The tour: six slides on one horizontal, snapping track, inside a centred
@@ -21,18 +29,6 @@ import { clampSlide, resolveTourExit, slideIndexFromScroll, type TourExitVia, ty
  * Mounted only while it is open (see `TourProvider`), so the replay latch
  * below is decided fresh on every visit.
  */
-function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined" || !window.matchMedia) return false;
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-interface TourDialogProps {
-  /** Closes the dialog. Called after the exit has decided what to write. */
-  onClose: () => void;
-  /** First run, or a replay from More — carried on every tour event. */
-  source: TourSource;
-}
-
 export function TourDialog({ onClose, source }: TourDialogProps) {
   const { data: preferences, status } = usePreferences();
   const completeTour = useCompleteTour();

@@ -11,6 +11,28 @@ import { CARD_ROW_DIVIDER } from "../components/ui/Card.js";
 import { DashboardPage, HOME_STORAGE_LIMIT, UP_NEXT_LIMIT, upNextRows } from "./DashboardPage.js";
 import type { MealItem } from "@blw/shared";
 
+/** The markup minus the swipe track's off-screen (`inert`) slides (item 775):
+ * what Home shows. Every page of a paged list is rendered, one slide each. */
+function shown(html: string): string {
+  let out = html;
+  for (let at = out.indexOf(' inert=""'); at >= 0; at = out.indexOf(' inert=""')) {
+    const start = out.lastIndexOf("<div", at);
+    const tags = /<\/?div\b/g;
+    tags.lastIndex = start;
+    let depth = 0;
+    let end = out.length;
+    for (let tag; (tag = tags.exec(out)); ) {
+      depth += tag[0] === "<div" ? 1 : -1;
+      if (depth === 0) {
+        end = out.indexOf(">", tag.index) + 1;
+        break;
+      }
+    }
+    out = out.slice(0, start) + out.slice(end);
+  }
+  return out;
+}
+
 describe("DashboardPage", () => {
   it("renders without throwing (no active baby yet, in the loading/empty states)", () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -172,13 +194,16 @@ describe("DashboardPage", () => {
       items: Array.from({ length: 5 }, (_, i) => meal(i)),
     });
 
-    const html = renderToString(
+    const all = renderToString(
       createElement(
         QueryClientProvider,
         { client: queryClient },
         createElement(MemoryRouter, null, createElement(DashboardPage, null)),
       ),
     );
+    const html = shown(all);
+    // Every page is rendered, the rest on inert slides.
+    expect(all).toContain("Storage food 3");
 
     expect(HOME_STORAGE_LIMIT).toBe(3);
     expect((html.match(/href="\/storage\/storage-/g) ?? []).length).toBe(3);
@@ -193,7 +218,11 @@ describe("DashboardPage", () => {
       expect(html, noun).toMatch(new RegExp(`<button [^>]*aria-label="Next ${noun}">`));
     }
     expect(html.match(/>1–3 of 5</g)).toHaveLength(2);
-    expect(html.match(/<ul [^>]*aria-live="polite"/g)).toHaveLength(2);
+    // The ranges are announced (item 775), not the rows.
+    expect(html.match(/<span aria-live="polite"[^>]*>1–3 of 5</g)).toHaveLength(2);
+    expect(html).not.toMatch(/<ul [^>]*aria-live/);
+    // Storage's and Food log's tracks bleed 8px so their cards keep their shadow (item 775).
+    expect(html.match(/overscroll-x-contain -mx-2 -mb-2"><div class="w-full shrink-0 snap-start snap-always px-2 pb-2">/g)).toHaveLength(2);
     // Storage: [h2][pager]; Food log: [h2][pager][See all], wrapping under the heading at 320px.
     // Item 696: rows are the heading's height; the controls' 44px targets overhang them.
     expect(html).toMatch(/<div class="flex items-center justify-between"><h2 [^>]*>Storage<\/h2><div class="-my-\[9\.5px\]"><div class="-mr-2 flex shrink-0 items-center">/);
@@ -254,11 +283,13 @@ describe("DashboardPage storage ordering (item 333)", () => {
     queryClient.setQueryData(trackingKeys.allergenProgress(baby.id), { items: [] });
     queryClient.setQueryData([...trackingKeys.meals(baby.id), { limit: 100 }], { items: [] });
 
-    const html = renderToString(
-      createElement(
-        QueryClientProvider,
-        { client: queryClient },
-        createElement(MemoryRouter, null, createElement(DashboardPage, null)),
+    const html = shown(
+      renderToString(
+        createElement(
+          QueryClientProvider,
+          { client: queryClient },
+          createElement(MemoryRouter, null, createElement(DashboardPage, null)),
+        ),
       ),
     );
 
@@ -356,11 +387,13 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     if (storage) queryClient.setQueryData(storageKeys.list("active"), { items: storage });
     if (allergens) queryClient.setQueryData(trackingKeys.allergenProgress(BABY.id), { items: allergens });
     queryClient.setQueryData([...trackingKeys.meals(BABY.id), { limit: 100 }], { items: meals });
-    return renderToString(
-      createElement(
-        QueryClientProvider,
-        { client: queryClient },
-        createElement(MemoryRouter, null, createElement(DashboardPage, null)),
+    return shown(
+      renderToString(
+        createElement(
+          QueryClientProvider,
+          { client: queryClient },
+          createElement(MemoryRouter, null, createElement(DashboardPage, null)),
+        ),
       ),
     );
   }
@@ -463,11 +496,14 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(card).not.toContain("Food d");
       expect(card).not.toContain("Peanut");
       expect(card).not.toContain("See all");
-      // Storage and Food log's pager: the range, ‹ dimmed on page one, › live; the list announced.
+      // Storage and Food log's pager: the range (announced, item 775), ‹ dimmed on page one, › live.
       expect(card).toContain(">1–3 of 5<");
       expect(card).toMatch(/<button [^>]*aria-label="Previous Up next items" aria-disabled="true">/);
       expect(card).toMatch(/<button [^>]*aria-label="Next Up next items">/);
-      expect(card).toContain('<ul aria-live="polite" class="flex flex-col">');
+      expect(card).toMatch(/<span aria-live="polite"[^>]*>1–3 of 5</);
+      // One slide per page inside the card, no bleed past its edge (item 775).
+      expect(card).toContain('<div class="w-full shrink-0 snap-start snap-always"><ul class="flex flex-col">');
+      expect(card).toContain('overscroll-x-contain"><div');
     });
 
     it("has no See all even when only allergens spill, and no pager when everything fits (item 722)", () => {

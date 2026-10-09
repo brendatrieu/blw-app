@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { AllergenProgressItem, ServeStorageResponse, StorageItem } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
@@ -25,12 +24,12 @@ import { Card, CARD_ROW_DIVIDER, CardLink } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { ProgressRing } from "../components/ui/ProgressRing.js";
 import { HEADING_CONTROL_INSET, SectionLink } from "../components/ui/SectionLink.js";
-import { Pager, pageWindow } from "../components/ui/Pager.js";
+import { PageTrack, Pager, usePagedTrack } from "../components/ui/Pager.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 const ALLERGEN_TOTAL = 9;
 
-/** Up next's page size; ‹ › page through the rest (item 712, as Storage and Food log). */
+/** Up next's page size; swipe or ‹ › for the rest (items 712, 775, as Storage and Food log). */
 export const UP_NEXT_LIMIT = 3;
 
 export type UpNextRow = { kind: "storage"; item: StorageItem } | { kind: "allergen"; item: AllergenProgressItem };
@@ -110,12 +109,12 @@ export function UpNextCard({
 }) {
   const storage = useStorageItems("active");
   const progress = useAllergenProgress(babyId);
-  const [page, setPage] = useState(0);
-  if (storage.isLoading || progress.isLoading) return null;
-  const all = upNextRows(storage.data?.items ?? [], progress.data?.items ?? []);
+  const loading = storage.isLoading || progress.isLoading;
+  const all = loading ? [] : upNextRows(storage.data?.items ?? [], progress.data?.items ?? []);
+  // Above the early return, so the hooks keep their order (item 775).
+  const track = usePagedTrack(all.length, UP_NEXT_LIMIT);
   if (all.length === 0) return null;
-  const pages = pageWindow(all.length, page, UP_NEXT_LIMIT);
-  const rows = all.slice(pages.start, pages.end);
+  const pages = track.pages;
   const ladderPath = `/babies/${babyId}/allergens`;
 
   return (
@@ -140,52 +139,60 @@ export function UpNextCard({
             sits). */}
         {pages.last > 0 && (
           <div className="relative z-10 -my-[15.5px] ml-auto flex shrink-0 items-center">
-            <Pager label="Up next items" pages={pages} onPage={setPage} />
+            <Pager label="Up next items" pages={pages} onPage={track.goTo} />
           </div>
         )}
       </div>
-      <ul aria-live="polite" className="flex flex-col">
-        {rows.map((row) =>
-          row.kind === "storage" ? (
-            <UpNextRowShell
-              key={`storage-${row.item.id}`}
-              to={`/storage/${row.item.id}`}
-              plates={<FoodPlates {...storageItemCluster(row.item)} />}
-              title={<StorageItemTitle item={row.item} />}
-              detail={
-                <span className="flex items-center gap-1.5 text-sm whitespace-nowrap text-[var(--color-text-muted)]">
-                  <UseSoonBadge />
-                  {row.item.servingsLeft != null && <span>{servingsCount(row.item.servingsLeft)} left</span>}
-                </span>
-              }
-              actions={
-                <StorageItemActionsMenu
-                  item={row.item}
-                  babyId={babyId}
-                  label={`Up next: ${storageItemTitle(row.item)} actions`}
-                  onServed={onServed}
+      {/* One slide per page, inside the card (item 775). No bleed: rows
+          would show past the card's edge mid-swipe. */}
+      <PageTrack
+        track={track}
+        items={all}
+        renderSlide={(rows) => (
+          <ul className="flex flex-col">
+            {rows.map((row) =>
+              row.kind === "storage" ? (
+                <UpNextRowShell
+                  key={`storage-${row.item.id}`}
+                  to={`/storage/${row.item.id}`}
+                  plates={<FoodPlates {...storageItemCluster(row.item)} />}
+                  title={<StorageItemTitle item={row.item} />}
+                  detail={
+                    <span className="flex items-center gap-1.5 text-sm whitespace-nowrap text-[var(--color-text-muted)]">
+                      <UseSoonBadge />
+                      {row.item.servingsLeft != null && <span>{servingsCount(row.item.servingsLeft)} left</span>}
+                    </span>
+                  }
+                  actions={
+                    <StorageItemActionsMenu
+                      item={row.item}
+                      babyId={babyId}
+                      label={`Up next: ${storageItemTitle(row.item)} actions`}
+                      onServed={onServed}
+                    />
+                  }
                 />
-              }
-            />
-          ) : (
-            <UpNextRowShell
-              key={`allergen-${row.item.allergenSlug}`}
-              to={`${ladderPath}/${row.item.allergenSlug}`}
-              plates={
-                <FoodPlates
-                  plates={[{ emoji: allergenEmoji(row.item.allergenSlug), tint: allergenTint(row.item.allergenSlug) }]}
-                  overflow={0}
+              ) : (
+                <UpNextRowShell
+                  key={`allergen-${row.item.allergenSlug}`}
+                  to={`${ladderPath}/${row.item.allergenSlug}`}
+                  plates={
+                    <FoodPlates
+                      plates={[{ emoji: allergenEmoji(row.item.allergenSlug), tint: allergenTint(row.item.allergenSlug) }]}
+                      overflow={0}
+                    />
+                  }
+                  title={`${row.item.allergenName} is due for a serve`}
+                  detail={<span className="text-sm text-[var(--color-text-muted)]">{dueSinceLabel(row.item)}</span>}
+                  actions={
+                    <AllergenUpNextMenu babyId={babyId} item={row.item} label={`${row.item.allergenName} actions`} />
+                  }
                 />
-              }
-              title={`${row.item.allergenName} is due for a serve`}
-              detail={<span className="text-sm text-[var(--color-text-muted)]">{dueSinceLabel(row.item)}</span>}
-              actions={
-                <AllergenUpNextMenu babyId={babyId} item={row.item} label={`${row.item.allergenName} actions`} />
-              }
-            />
-          ),
+              ),
+            )}
+          </ul>
         )}
-      </ul>
+      />
     </Card>
   );
 }
@@ -242,7 +249,7 @@ function AllergenProgressSummary({ babyId }: { babyId: string }) {
   );
 }
 
-/** Home's storage page size; ‹ › page through the rest (item 694). */
+/** Home's storage page size; swipe or ‹ › for the rest (items 694, 775). */
 export const HOME_STORAGE_LIMIT = 3;
 
 export function StorageSection({
@@ -254,10 +261,8 @@ export function StorageSection({
   onServed?: (response: ServeStorageResponse) => void;
 }) {
   const { data, isLoading } = useStorageItems("active");
-  const [page, setPage] = useState(0);
   const items = data?.items ?? [];
-  const pages = pageWindow(items.length, page, HOME_STORAGE_LIMIT);
-  const topThree = items.slice(pages.start, pages.end);
+  const track = usePagedTrack(items.length, HOME_STORAGE_LIMIT);
 
   return (
     <section className="flex flex-col gap-2.5">
@@ -267,13 +272,13 @@ export function StorageSection({
       <div className="flex items-center justify-between">
         <h2 className="font-h2 text-[var(--color-text)]">Storage</h2>
         <div className={HEADING_CONTROL_INSET}>
-          <Pager label="storage items" pages={pages} onPage={setPage} />
+          <Pager label="storage items" pages={track.pages} onPage={track.goTo} />
         </div>
       </div>
 
       {isLoading && <SkeletonList count={2} />}
 
-      {!isLoading && topThree.length === 0 && (
+      {!isLoading && items.length === 0 && (
         <EmptyState
           icon="📦"
           title="Nothing in storage yet"
@@ -286,24 +291,31 @@ export function StorageSection({
         />
       )}
 
-      {topThree.length > 0 && (
-        // One rounded group of divided rows (item 662), not a card per item.
-        <Card as="ul" padding="none" aria-live="polite" className="flex flex-col">
-          {topThree.map((item) => (
-            <StorageItemRow
-              key={item.id}
-              item={item}
-              actions={
-                <StorageItemActionsMenu
+      {items.length > 0 && (
+        <PageTrack
+          track={track}
+          items={items}
+          bleed
+          renderSlide={(slice) => (
+            // One rounded group of divided rows per page (items 662, 775), not a card per item.
+            <Card as="ul" padding="none" className="flex flex-col">
+              {slice.map((item) => (
+                <StorageItemRow
+                  key={item.id}
                   item={item}
-                  babyId={babyId}
-                  label={`${storageItemTitle(item)} actions`}
-                  onServed={onServed}
+                  actions={
+                    <StorageItemActionsMenu
+                      item={item}
+                      babyId={babyId}
+                      label={`${storageItemTitle(item)} actions`}
+                      onServed={onServed}
+                    />
+                  }
                 />
-              }
-            />
-          ))}
-        </Card>
+              ))}
+            </Card>
+          )}
+        />
       )}
     </section>
   );

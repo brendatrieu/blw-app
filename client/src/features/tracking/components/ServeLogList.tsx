@@ -11,7 +11,7 @@ import { Badge } from "../../catalog/components/Badge.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
 import { Card, CARD_ROW_DIVIDER } from "../../../components/ui/Card.js";
 import { HEADING_CONTROL_INSET, SectionLink } from "../../../components/ui/SectionLink.js";
-import { Pager, pageWindow } from "../../../components/ui/Pager.js";
+import { PageTrack, Pager, usePagedTrack } from "../../../components/ui/Pager.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog.js";
 import { SkeletonList } from "../../../components/ui/Skeleton.js";
@@ -210,7 +210,7 @@ export function MealCard({
 
 export interface ServeLogListProps {
   babyId: string;
-  /** Page size (newest first), with ‹ › for the rest — Home passes 3. Omitted = every meal. */
+  /** Page size (newest first), swiped or ‹ › through — Home passes 3. Omitted = every meal. */
   limit?: number;
   /** Where the header's "See all" link goes; omitted = no link (the full log page). */
   seeAllHref?: string;
@@ -240,13 +240,27 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, gr
   // The meal itself, not its id: the delete removes the row optimistically,
   // and the question has to outlive it to show a failure.
   const [pendingDelete, setPendingDelete] = useState<MealItem | null>(null);
-  // After pendingDelete: the handler tests index useState slots by call order.
-  const [page, setPage] = useState(0);
-
-  // The API returns meals newest-first; the slice preserves that order.
+  // The API returns meals newest-first; the slices preserve that order.
   const all = data?.items ?? [];
-  const pages = limit === undefined ? null : pageWindow(all.length, page, limit);
-  const meals = pages ? all.slice(pages.start, pages.end) : all;
+  // After pendingDelete: the handler tests index useState slots by call order.
+  // Always called (hook order); without a limit it is one unused page.
+  const track = usePagedTrack(all.length, limit ?? Math.max(all.length, 1));
+  const pages = limit === undefined ? null : track.pages;
+
+  const renderMeals = (meals: readonly MealItem[]) =>
+    grouped ? (
+      <Card as="ul" padding="none" className="flex flex-col">
+        {meals.map((meal) => (
+          <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} grouped />
+        ))}
+      </Card>
+    ) : (
+      <ul className="flex flex-col gap-2">
+        {meals.map((meal) => (
+          <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} />
+        ))}
+      </ul>
+    );
 
   return (
     <section className="flex flex-col gap-2.5">
@@ -257,7 +271,7 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, gr
           {showHeading && <h2 className="font-h2 text-[var(--color-text)]">Food log</h2>}
           <div className={`ml-auto flex shrink-0 items-center gap-2 ${HEADING_CONTROL_INSET}`}>
             {pages && (
-              <Pager label="meals" pages={pages} onPage={setPage} capped={all.length >= MEAL_FETCH_LIMIT} />
+              <Pager label="meals" pages={pages} onPage={track.goTo} capped={all.length >= MEAL_FETCH_LIMIT} />
             )}
             {seeAllHref && <SectionLink to={seeAllHref}>See all</SectionLink>}
           </div>
@@ -267,7 +281,7 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, gr
       {isLoading && <SkeletonList count={3} />}
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load the log.</p>}
 
-      {!isLoading && !isError && meals.length === 0 && (
+      {!isLoading && !isError && all.length === 0 && (
         <EmptyState
           icon="🍽️"
           title="Nothing logged yet"
@@ -280,20 +294,8 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, gr
         />
       )}
 
-      {meals.length > 0 &&
-        (grouped ? (
-          <Card as="ul" padding="none" aria-live="polite" className="flex flex-col">
-            {meals.map((meal) => (
-              <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} grouped />
-            ))}
-          </Card>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {meals.map((meal) => (
-              <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} />
-            ))}
-          </ul>
-        ))}
+      {all.length > 0 &&
+        (pages ? <PageTrack track={track} items={all} bleed renderSlide={renderMeals} /> : renderMeals(all))}
       {pendingDelete && (
         <MealDeleteDialog meal={pendingDelete} babyId={babyId} open onClose={() => setPendingDelete(null)} />
       )}

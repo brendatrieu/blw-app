@@ -3,7 +3,7 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { Pager, pageWindow, rangeLabel } from "./Pager.js";
+import { PageTrack, Pager, pageWindow, rangeLabel, type PagedTrack } from "./Pager.js";
 
 const render = (total: number, page: number, capped?: boolean) =>
   renderToString(
@@ -56,10 +56,11 @@ describe("Pager", () => {
     expect(render(4, 0)).not.toBe("");
   });
 
-  it("is a muted range, then ‹ and › as 44px named buttons", () => {
+  it("is a muted, announced range, then ‹ and › as 44px named buttons", () => {
     const html = render(8, 1);
+    // aria-live on the range (item 775): a swipe or an arrow changes it.
     expect(html).toMatch(
-      /^<div class="-mr-2 flex shrink-0 items-center"><span class="[^"]*text-sm[^"]*tabular-nums[^"]*text-\[var\(--color-text-muted\)\]">4–6 of 8<\/span>/,
+      /^<div class="-mr-2 flex shrink-0 items-center"><span aria-live="polite" class="[^"]*text-sm[^"]*tabular-nums[^"]*text-\[var\(--color-text-muted\)\]">4–6 of 8<\/span>/,
     );
     const buttons = html.match(/<button [^>]*>/g) ?? [];
     expect(buttons).toHaveLength(2);
@@ -120,5 +121,44 @@ describe("Pager focus and dimming", () => {
       // Inset ring: the Food log's "See all" sits right next to ›.
       expect(b).toContain("focus-visible:outline-offset-[-2px]");
     }
+  });
+});
+
+describe("PageTrack (item 775)", () => {
+  const track = (page: number): PagedTrack => ({
+    pages: pageWindow(7, page, 3),
+    size: 3,
+    trackRef: { current: null },
+    onScroll: () => {},
+    goTo: () => {},
+  });
+  const html = (page: number, bleed?: boolean) =>
+    renderToString(
+      createElement(PageTrack<number>, {
+        track: track(page),
+        items: [0, 1, 2, 3, 4, 5, 6],
+        bleed,
+        renderSlide: (slice) => createElement("ul", null, slice.join(",")),
+      }),
+    );
+
+  it("is a horizontal snap scroller that leaves vertical pans to the page", () => {
+    expect(html(0)).toMatch(
+      /^<div class="scroll-hidden flex snap-x snap-mandatory items-start overflow-x-auto overflow-y-hidden overscroll-x-contain">/,
+    );
+  });
+
+  it("puts each page on its own full-width slide, one page per flick; only the shown one is reachable", () => {
+    const slides = html(1).match(/<div class="[^"]*"( inert="")?><ul>[^<]*<\/ul>/g);
+    expect(slides).toEqual([
+      '<div class="w-full shrink-0 snap-start snap-always" inert=""><ul>0,1,2</ul>',
+      '<div class="w-full shrink-0 snap-start snap-always"><ul>3,4,5</ul>',
+      '<div class="w-full shrink-0 snap-start snap-always" inert=""><ul>6</ul>',
+    ]);
+  });
+
+  it("bleeds 8px past the sides and bottom when asked, so a slide's card keeps its shadow", () => {
+    expect(html(0, true)).toMatch(/^<div class="[^"]* overscroll-x-contain -mx-2 -mb-2">/);
+    expect(html(0, true)).toContain('<div class="w-full shrink-0 snap-start snap-always px-2 pb-2"><ul>0,1,2</ul>');
   });
 });

@@ -424,11 +424,23 @@ describe("Home paging (item 694)", () => {
     );
   }
 
-  it("with limit 3 and seeAllHref renders exactly three meals and a See all link", () => {
+  // Item 775: every page is a slide on the swipe track; off-screen slides are
+  // inert, so the one without `inert` is the page on show.
+  const shownSlides = (html: string) =>
+    html
+      .split('<div class="w-full shrink-0 snap-start')
+      .slice(1)
+      .filter((slide) => !slide.slice(0, slide.indexOf(">")).includes("inert"));
+
+  it("with limit 3 and seeAllHref shows exactly three meals and a See all link", () => {
     const html = renderList(3, "/meals");
-    expect((html.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(3);
-    expect(html).toContain("Food 0");
-    expect(html).not.toContain("Food 3");
+    const [shown, ...more] = shownSlides(html);
+    expect(more).toEqual([]);
+    expect((shown!.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(3);
+    expect(shown).toContain("Food 0");
+    expect(shown).not.toContain("Food 3");
+    // The rest wait on the next, inert, slide.
+    expect(html).toMatch(/<div class="w-full shrink-0 snap-start[^"]*" inert="">.*Food 3/);
     // A-Home's link style: 14px bold accent, no underline, a decorative chevron, 44px tall.
     expect(html).toMatch(
       /<a class="inline-flex min-h-11 items-center text-sm font-semibold text-\[var\(--color-accent\)\]" href="\/meals"[^>]*>See all<span aria-hidden="true">\u00a0›<\/span><\/a>/,
@@ -441,7 +453,9 @@ describe("Home paging (item 694)", () => {
     expect(html).toMatch(/<button [^>]*aria-label="Previous meals" aria-disabled="true">/);
     expect(html).toMatch(/<button [^>]*aria-label="Next meals">/);
     expect(html.indexOf('aria-label="Next meals"')).toBeLessThan(html.indexOf('href="/meals"'));
-    expect(html).toMatch(/<ul [^>]*aria-live="polite"/);
+    // The range is announced (item 775), not the rows, which all sit on slides.
+    expect(html).toMatch(/<span aria-live="polite"[^>]*>1–3 of 5<\/span>/);
+    expect(html).not.toMatch(/<ul [^>]*aria-live/);
   });
 
   it("without a limit renders every meal and no See all link", () => {
@@ -456,10 +470,10 @@ describe("Home paging (item 694)", () => {
   });
 
   it("grouped (Home, item 664): one card of divided rows, each kebab named after its meal", () => {
-    const html = renderList(3, "/meals", true);
-    expect((html.match(/<ul\b/g) ?? []).length).toBe(1);
+    const [html] = shownSlides(renderList(3, "/meals", true));
+    expect((html!.match(/<ul\b/g) ?? []).length).toBe(1);
     expect(html).toMatch(/<ul class="rounded-\[var\(--radius-lg\)\] border border-\[var\(--color-border\)\] bg-\[var\(--color-bg-elevated\)\][^"]*"/);
-    const rows = html.match(/<li class="[^"]*"/g) ?? [];
+    const rows = html!.match(/<li class="[^"]*"/g) ?? [];
     expect(rows).toHaveLength(3);
     for (const row of rows) {
       expect(row).toContain("not-first:before:h-px not-first:before:bg-[var(--color-divider)]");
@@ -471,10 +485,10 @@ describe("Home paging (item 694)", () => {
   });
 
   it("not grouped (/meals) keeps a card per meal and the plain Actions label", () => {
-    const html = renderList(3, "/meals");
+    const [html] = shownSlides(renderList(3, "/meals"));
     expect(html).toMatch(/<ul class="flex flex-col gap-2">/);
     expect(html).not.toContain("not-first:before");
-    expect((html.match(/aria-label="Actions"/g) ?? []).length).toBe(3);
+    expect((html!.match(/aria-label="Actions"/g) ?? []).length).toBe(3);
   });
 
   it("renders one flat newest-first <ul> with no day headers (item 193)", () => {
