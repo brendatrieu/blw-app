@@ -459,6 +459,28 @@ describe("Menu keyboard (item 773, WAI-ARIA menu button)", () => {
     expect(panelOf(renderMenu())).toBeFalsy();
   });
 
+  it("a scroll that closes the menu returns focus to the trigger when it was in the menu (item 778)", () => {
+    const { doc, trigger, rows } = open("enter");
+    expect(doc.activeElement).toBe(rows[0]);
+    fire("window", "scroll");
+    expect(doc.activeElement).toBe(trigger);
+    expect(panelOf(renderMenu())).toBeFalsy();
+  });
+
+  it("Enter on the trigger to CLOSE the menu leaves no keyboard intent behind: the next tap open focuses no row (item 778)", () => {
+    const { doc, trigger } = open("enter");
+    trigger.focus();
+    const [openButton] = renderMenu().props.children as [Rendered, unknown];
+    openButton.props.onClick!({ detail: 0 }); // Enter on ⋮ while open: closes
+    const closed = renderMenu();
+    expect(panelOf(closed)).toBeFalsy();
+    const [closedButton] = closed.props.children as [Rendered, unknown];
+    closedButton.props.onClick!({ detail: 1 }); // then a tap opens it again
+    renderMenu();
+    expect(panelOf(renderMenu())).toBeTruthy();
+    expect(doc.activeElement).toBe(trigger);
+  });
+
   it("an item's close() does not steal focus when it was never in the menu (a tap-opened menu on a phone)", () => {
     const { doc } = open("pointer");
     const outside = { tagName: "BODY" };

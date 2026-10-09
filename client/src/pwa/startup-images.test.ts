@@ -24,6 +24,14 @@ describe("iPhone launch screens (item 772)", () => {
     expect(sizes("light").length * 2).toBe(links.length);
   });
 
+  it("each link is portrait and points at its own scheme's image (item 778)", () => {
+    for (const { href, media } of links) {
+      expect(media, href).toContain("(orientation: portrait)");
+      const scheme = media.match(/prefers-color-scheme: (light|dark)/)?.[1];
+      expect(href, media).toMatch(new RegExp(`^startup/${scheme}-\\d+x\\d+\\.png$`));
+    }
+  });
+
   it("each image's pixel size matches its media query", () => {
     for (const { href, media } of links) {
       const png = read(`public/${href}`);

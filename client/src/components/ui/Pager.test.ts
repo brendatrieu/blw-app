@@ -125,11 +125,13 @@ describe("Pager focus and dimming", () => {
 });
 
 describe("PageTrack (item 775)", () => {
-  const track = (page: number): PagedTrack => ({
-    pages: pageWindow(7, page, 3),
+  const track = (page: number, near: number | null = null, total = 7): PagedTrack => ({
+    pages: pageWindow(total, page, 3),
     size: 3,
     trackRef: { current: null },
     onScroll: () => {},
+    near,
+    onTouchStart: () => {},
     goTo: () => {},
   });
   const html = (page: number, bleed?: boolean) =>
@@ -160,5 +162,25 @@ describe("PageTrack (item 775)", () => {
   it("bleeds 8px past the sides and bottom when asked, so a slide's card keeps its shadow", () => {
     expect(html(0, true)).toMatch(/^<div class="[^"]* overscroll-x-contain -mx-2 -mb-2">/);
     expect(html(0, true)).toContain('<div class="w-full shrink-0 snap-start snap-always px-2 pb-2"><ul>0,1,2</ul>');
+  });
+
+  it("after a touch, only the page it started on and its neighbours snap: one flick = one page (item 778)", () => {
+    const classes = (near: number | null, bleed?: boolean) =>
+      [
+        ...renderToString(
+          createElement(PageTrack<number>, {
+            track: track(near ?? 0, near, 15),
+            items: Array.from({ length: 15 }, (_, i) => i),
+            bleed,
+            renderSlide: (slice) => createElement("ul", null, slice.join(",")),
+          }),
+        ).matchAll(/<div class="(w-full[^"]*)"/g),
+      ].map((m) => m[1]);
+    const SNAP = "w-full shrink-0 snap-start snap-always";
+    const FAR = "w-full shrink-0 snap-align-none";
+    expect(classes(null)).toEqual([SNAP, SNAP, SNAP, SNAP, SNAP]);
+    expect(classes(2)).toEqual([FAR, SNAP, SNAP, SNAP, FAR]);
+    expect(classes(0)).toEqual([SNAP, SNAP, FAR, FAR, FAR]);
+    expect(classes(4, true)).toEqual([FAR, FAR, FAR, SNAP, SNAP].map((c) => `${c} px-2 pb-2`));
   });
 });

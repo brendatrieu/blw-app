@@ -15,6 +15,8 @@ const h = vi.hoisted(() => {
     storage: [] as unknown[],
     allergens: [] as unknown[],
     activeBaby: null as unknown,
+    /** "flush" when the ‹ › handler flushes its snap reset; "scrollTo" when it scrolls. */
+    order: [] as string[],
     useRef: (init: unknown) => {
       const i = store.r++;
       if (!(i in store.refs)) store.refs[i] = { current: init };
@@ -32,6 +34,16 @@ const h = vi.hoisted(() => {
 vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, useState: h.useState, useRef: h.useRef, useMemo: (fn: () => unknown) => fn() };
+});
+vi.mock("react-dom", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    flushSync: (fn: () => void) => {
+      fn();
+      h.order.push("flush");
+    },
+  };
 });
 vi.mock("../features/tracking/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -92,6 +104,7 @@ function scroller(track: PagedTrack) {
     scrollLeft: 0,
   } as unknown as HTMLDivElement) as HTMLDivElement & { calls?: ScrollToOptions[] };
   el.scrollTo = ((options: ScrollToOptions) => {
+    h.order.push("scrollTo");
     (el.calls ??= []).push(options);
     el.scrollLeft = options.left ?? 0;
     track.onScroll({ currentTarget: el } as never);
@@ -145,6 +158,7 @@ const storage = () =>
 beforeEach(() => {
   h.store.states = [];
   h.store.refs = [];
+  h.order = [];
   h.meals = Array.from({ length: 8 }, (_, i) => meal(i));
   h.storage = Array.from({ length: 8 }, (_, i) => item(i));
 });
@@ -413,6 +427,32 @@ describe("Swipe paging (item 775)", () => {
     v.track!.trackRef.current = { clientWidth: 0, scrollTo: () => expect.unreachable() } as never;
     v.track!.goTo(1);
     expect(storage().pages?.page).toBe(0);
+  });
+
+  it("a touch freezes the snap window on the page it starts on; ‹ › reopen every page first (item 778)", () => {
+    h.storage = Array.from({ length: 13 }, (_, i) => item(i));
+    expect(storage().track!.near).toBeNull();
+    swipeTo(storage().track!, 2 * TRACK_WIDTH);
+    // A finger lands on the rendered track (the scroller itself).
+    const tree = storage().tree;
+    const trackEl = PageTrack(find(tree, PageTrack)!.props as unknown as Parameters<typeof PageTrack>[0]) as unknown as El;
+    (trackEl.props.onTouchStart as () => void)();
+    expect(storage().track!.near).toBe(2);
+    // The window stays put while the flick scrolls on: it does not follow the page.
+    swipeTo(storage().track!, 3 * TRACK_WIDTH);
+    expect(storage().pages?.page).toBe(3);
+    expect(storage().track!.near).toBe(2);
+    const slides = (PageTrack(find(storage().tree, PageTrack)!.props as unknown as Parameters<typeof PageTrack>[0]) as unknown as El)
+      .props.children as El[];
+    expect(slides.map((slide) => (slide.props.className as string).includes("snap-start"))).toEqual([
+      false, true, true, true, false,
+    ]);
+    // ›: the reset is committed (flushSync) before the scroll, or the browser
+    // would snap a target outside the window back into it.
+    storage().next();
+    expect(h.order).toEqual(["flush", "scrollTo"]);
+    expect(storage().track!.near).toBeNull();
+    expect(storage().pages?.page).toBe(4);
   });
 
   it("the range, not the rows, is the live region", () => {

@@ -1,4 +1,5 @@
 import { useRef, useState, type MutableRefObject, type ReactNode, type UIEvent } from "react";
+import { flushSync } from "react-dom";
 import { clampSlide, prefersReducedMotion, slideIndexFromScroll } from "../../lib/scrollTrack.js";
 import { ChevronLeftGlyph, ChevronRightGlyph, ICON_BUTTON_CLASSES } from "./iconButton.js";
 
@@ -91,6 +92,9 @@ export interface PagedTrack {
   size: number;
   trackRef: MutableRefObject<HTMLDivElement | null>;
   onScroll: (event: UIEvent<HTMLDivElement>) => void;
+  /** The page a touch started on: only it and its neighbours snap until ‹ › (null = every page snaps). */
+  near: number | null;
+  onTouchStart: () => void;
   /** The ‹ › handler: scrolls the track; the scroll then sets the page. */
   goTo: (page: number) => void;
 }
@@ -104,6 +108,7 @@ export interface PagedTrack {
 export function usePagedTrack(total: number, size: number): PagedTrack {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [page, setPage] = useState(0);
+  const [near, setNear] = useState<number | null>(null);
   const pages = pageWindow(total, page, size);
   const count = pages.last + 1;
   return {
@@ -114,9 +119,19 @@ export function usePagedTrack(total: number, size: number): PagedTrack {
       const el = event.currentTarget;
       setPage(slideIndexFromScroll(el.scrollLeft, el.clientWidth, count));
     },
+    near,
+    // One flick = one page (item 778): Chromium's touch fling ignores
+    // snap-always and can fly two pages, so a touch freezes the snap points
+    // to the page it started on and its neighbours. Frozen, not following
+    // the page: a window that moves mid-fling lets the fling through.
+    // ponytail: a trackpad after a touch stays one page per gesture until ‹ ›.
+    onTouchStart: () => setNear(pages.page),
     goTo: (next) => {
       const el = trackRef.current;
       if (!el || el.clientWidth <= 0) return;
+      // Every page snaps again before the scroll starts, or the browser
+      // snaps an arrow's target outside the window back inside it.
+      flushSync(() => setNear(null));
       el.scrollTo({
         left: clampSlide(next, count) * el.clientWidth,
         behavior: prefersReducedMotion() ? "auto" : "smooth",
@@ -137,8 +152,9 @@ export function usePagedTrack(total: number, size: number): PagedTrack {
 // Whole class names only: Tailwind's scanner misses a class glued to `${`.
 const TRACK_CLASSES =
   "scroll-hidden flex snap-x snap-mandatory items-start overflow-x-auto overflow-y-hidden overscroll-x-contain";
-// snap-always: a hard flick stops at the next page instead of flying past several.
+// snap-always: a hard flick stops at the next page (WebKit); Chromium needs `near`.
 const SLIDE_CLASSES = "w-full shrink-0 snap-start snap-always";
+const FAR_SLIDE_CLASSES = "w-full shrink-0 snap-align-none";
 
 export function PageTrack<T>({
   track,
@@ -157,13 +173,14 @@ export function PageTrack<T>({
     <div
       ref={track.trackRef}
       onScroll={track.onScroll}
+      onTouchStart={track.onTouchStart}
       className={bleed ? `${TRACK_CLASSES} -mx-2 -mb-2` : TRACK_CLASSES}
     >
       {slides.map((slice, index) => (
         <div
           // Position keys: a slide is "page n", whatever rows it holds now.
           key={index}
-          className={bleed ? `${SLIDE_CLASSES} px-2 pb-2` : SLIDE_CLASSES}
+          className={`${track.near === null || Math.abs(index - track.near) <= 1 ? SLIDE_CLASSES : FAR_SLIDE_CLASSES}${bleed ? " px-2 pb-2" : ""}`}
           // ponytail: React 18 has no boolean `inert`, so "" sets the
           // attribute; on React 19 this becomes `inert={true}`.
           {...(index !== track.pages.page && { inert: "" })}
