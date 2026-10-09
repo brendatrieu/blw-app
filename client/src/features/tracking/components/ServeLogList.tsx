@@ -179,7 +179,12 @@ export function MealCard({
           : "relative flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-divider)] bg-[var(--color-bg-elevated)] p-3"
       }
     >
-      <div className="flex items-start justify-between gap-2">
+      {/* Wraps instead of overflowing (ledger 776): the info has no flex
+          basis, so the badge + kebab stay on its line until the info would
+          drop below its narrowest (longest word); past that — a recipe meal
+          from storage at 320px — they move to a line of their own,
+          right-aligned, and the info takes the full width. */}
+      <div className="flex flex-wrap items-start justify-end gap-2">
         {/* Stretched link: the anchor's ::after overlay covers the whole card
             so tapping anywhere opens the meal for editing (which is why there
             is no separate Edit link). The kebab sits ABOVE
@@ -188,12 +193,12 @@ export function MealCard({
         {linkable ? (
           <Link
             to={`/log-meal?edit=${meal.id}`}
-            className="flex items-start gap-2 rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+            className="flex flex-1 items-start gap-2 rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
           >
             {info}
           </Link>
         ) : (
-          <div className="flex items-start gap-2">{info}</div>
+          <div className="flex flex-1 items-start gap-2">{info}</div>
         )}
         <div className="relative z-10 flex shrink-0 items-center gap-1">
           {hasStorageFood(meal.foods) && <Badge tone="neutral">📦 From storage</Badge>}

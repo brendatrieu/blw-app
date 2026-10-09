@@ -238,6 +238,16 @@ describe("MealCard (render, storage-card styling — item 192)", () => {
     for (const { emoji } of emojiCluster(baseMeal.foods).plates) expect(html).toContain(emoji);
   });
 
+  it("wraps the badge + kebab under the info instead of overflowing at 320px (ledger 776)", () => {
+    // The row wraps, right-aligned; the info (link or plain div) has no flex
+    // basis, so the badge + kebab only move down once it would shrink past
+    // its longest word. Measured live: 329px → 320px at a 320 viewport.
+    for (const html of [renderMealCard(baseMeal), renderMealCard(baseMeal, false)]) {
+      expect(html).toMatch(/<div class="flex flex-wrap items-start justify-end gap-2">/);
+      expect(html).toMatch(/<(a|div) [^>]*class="flex flex-1 items-start gap-2[ "]/);
+    }
+  });
+
   it("shows two plates and a +N count from four foods on (5 foods: +3)", () => {
     const html = renderMealCard({
       ...baseMeal,
