@@ -82,6 +82,11 @@ describe("MenuItem (render)", () => {
     expect(html).toMatch(/<button[^>]*role="menuitem"[^>]*>Mark finished<\/button>/);
   });
 
+  it("is out of the Tab order — the menu's arrow keys move between rows (item 773)", () => {
+    const html = renderToString(createElement(MenuItem, { onSelect: () => {}, children: "Serve" }));
+    expect(html).toMatch(/<button[^>]*role="menuitem"[^>]*tabindex="-1"/);
+  });
+
   it("respects disabled", () => {
     const html = renderToString(createElement(MenuItem, { onSelect: () => {}, disabled: true, children: "Serve" }));
     expect(html).toMatch(/<button[^>]*role="menuitem"[^>]*disabled/);
@@ -95,6 +100,7 @@ describe("MenuLinkItem (render)", () => {
     );
     expect(html).toContain('role="menuitem"');
     expect(html).toContain('href="/storage/item-1/edit"');
+    expect(html).toContain('tabindex="-1"');
     expect(html).toContain(">Edit<");
   });
 });

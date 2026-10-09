@@ -638,6 +638,12 @@ textarea {
   border-radius: 4px;
 }
 
+/* A menu row fills its panel edge to edge and the panel scrolls (overflow
+ * clips), so an outside ring loses its sides: draw it inside the row. */
+[role="menuitem"]:focus-visible {
+  outline-offset: -2px;
+}
+
 /* -------------------------------------------------------------------------
  * Page transition — a soft fade/rise on route change. Purely decorative,
  * fully disabled for reduced-motion users.

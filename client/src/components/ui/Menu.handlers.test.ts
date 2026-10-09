@@ -78,7 +78,8 @@ interface Rendered {
   type: unknown;
   props: {
     children?: unknown;
-    onClick?: () => void;
+    onClick?: (event: { detail: number }) => void;
+    onKeyDown?: (event: { key: string; preventDefault: () => void }) => void;
     position?: Position;
     [key: string]: unknown;
   };
@@ -163,7 +164,7 @@ function panelOf(tree: Rendered): Rendered | false | null | undefined {
 function openMenu(triggerBottom: number, panelHeight: number, triggerRight = 374) {
   const closed = renderMenu();
   const [button] = closed.props.children as [Rendered, unknown];
-  button.props.onClick!();
+  button.props.onClick!({ detail: 1 }); // a pointer click
 
   h.store.refs[1]!.current = fakeRect({ top: triggerBottom - 36, bottom: triggerBottom, right: triggerRight });
   h.store.refs[2]!.current = fakeRect({ height: panelHeight });
@@ -303,5 +304,167 @@ describe("Menu dismissal", () => {
 
     fire("document", "mousedown", { target: {} });
     expect(panelOf(renderMenu())).toBeTruthy();
+  });
+});
+
+/** A fake focusable row: focusing it makes it the document's active element. */
+interface FakeRow {
+  tagName: string;
+  disabled?: boolean;
+  focus: () => void;
+  click: ReturnType<typeof vi.fn>;
+}
+
+describe("Menu keyboard (item 773, WAI-ARIA menu button)", () => {
+  /** Opens the menu the way `how` says, with real-looking trigger/panel
+   * fakes: `focus()` moves `document.activeElement`, and the panel's
+   * `querySelectorAll` hands back the enabled rows. Leaves exactly ONE
+   * keydown listener registered (this harness runs every effect on every
+   * render, so earlier renders' listeners are dropped first). */
+  function open(how: "enter" | "pointer" | "ArrowDown" | "ArrowUp", tags = ["BUTTON", "A", "BUTTON"]) {
+    h.reset();
+    fakeDocument();
+    fakeWindow(800);
+    const doc = globals.document as { activeElement: unknown; body: unknown };
+    const trigger = { ...fakeRect({ top: 164, bottom: 200, right: 374 }), focus: () => (doc.activeElement = trigger) };
+    const rows: FakeRow[] = tags.map((tagName) => {
+      const row: FakeRow = { tagName, focus: () => (doc.activeElement = row), click: vi.fn() };
+      return row;
+    });
+    const selectors: string[] = [];
+    const panel = {
+      ...fakeRect({ height: 150 }),
+      contains: (node: unknown) => rows.includes(node as FakeRow),
+      querySelectorAll: (selector: string) => {
+        selectors.push(selector);
+        return rows;
+      },
+    };
+    doc.activeElement = trigger; // the trigger was reached by Tab
+
+    const [button] = renderMenu().props.children as [Rendered, unknown];
+    const preventDefault = vi.fn();
+    if (how === "enter") button.props.onClick!({ detail: 0 });
+    else if (how === "pointer") button.props.onClick!({ detail: 1 });
+    else button.props.onKeyDown!({ key: how, preventDefault });
+    h.store.refs[1]!.current = trigger;
+    h.store.refs[2]!.current = panel;
+    renderMenu(); // opens, measures — the panel is still visibility:hidden here
+    const focusBeforePositioned = doc.activeElement;
+    renderMenu(); // positioned — the focus effect can act now
+    listeners.document.clear();
+    const tree = renderMenu();
+    return { doc, trigger, rows, selectors, preventDefault, tree, focusBeforePositioned };
+  }
+
+  function press(key: string, shift = false, defaultPrevented = false) {
+    const event = { key, shiftKey: shift, defaultPrevented, preventDefault: vi.fn() };
+    fire("document", "keydown", event);
+    return event;
+  }
+
+  it("Enter/Space (a click with no pointer behind it) opens the menu and focuses the first row, once the panel is positioned", () => {
+    const { doc, trigger, rows, tree, selectors, focusBeforePositioned } = open("enter");
+    expect(panelOf(tree)).toBeTruthy();
+    // A hidden element refuses focus, so nothing is attempted before then.
+    expect(focusBeforePositioned).toBe(trigger);
+    expect(doc.activeElement).toBe(rows[0]);
+    // Disabled rows can't take focus, so they are left out of the cycle.
+    expect(selectors.every((s) => s.includes(":not([disabled])"))).toBe(true);
+  });
+
+  it("a pointer click opens the menu but leaves focus alone — no focus ring drawn on a tapped-open menu", () => {
+    const { doc, trigger, tree } = open("pointer");
+    expect(panelOf(tree)).toBeTruthy();
+    expect(doc.activeElement).toBe(trigger);
+  });
+
+  it("ArrowDown on the closed trigger opens on the first row; ArrowUp opens on the last — and neither scrolls the page", () => {
+    const down = open("ArrowDown");
+    expect(panelOf(down.tree)).toBeTruthy();
+    expect(down.doc.activeElement).toBe(down.rows[0]);
+    expect(down.preventDefault).toHaveBeenCalled();
+
+    const up = open("ArrowUp");
+    expect(up.doc.activeElement).toBe(up.rows[2]);
+    expect(up.preventDefault).toHaveBeenCalled();
+  });
+
+  it("ArrowDown/ArrowUp move through the rows and wrap; Home/End jump to the ends; none of them scroll the page", () => {
+    const { doc, rows } = open("enter");
+    expect(press("ArrowDown").preventDefault).toHaveBeenCalled();
+    expect(doc.activeElement).toBe(rows[1]);
+    press("ArrowDown");
+    press("ArrowDown"); // past the last row → wraps to the first
+    expect(doc.activeElement).toBe(rows[0]);
+    expect(press("ArrowUp").preventDefault).toHaveBeenCalled(); // before the first → wraps to the last
+    expect(doc.activeElement).toBe(rows[2]);
+    expect(press("Home").preventDefault).toHaveBeenCalled();
+    expect(doc.activeElement).toBe(rows[0]);
+    expect(press("End").preventDefault).toHaveBeenCalled();
+    expect(doc.activeElement).toBe(rows[2]);
+  });
+
+  it("ignores a key something already handled — the trigger's opening ArrowDown reaching the document listener must not skip to the second row", () => {
+    const { doc, rows } = open("ArrowDown");
+    press("ArrowDown", false, true);
+    expect(doc.activeElement).toBe(rows[0]);
+    press("Escape", false, true);
+    expect(panelOf(renderMenu())).toBeTruthy();
+  });
+
+  it("ArrowDown on a pointer-opened menu (focus still on the trigger) moves into the first row", () => {
+    const { doc, rows } = open("pointer");
+    press("ArrowDown");
+    expect(doc.activeElement).toBe(rows[0]);
+  });
+
+  it("Escape closes the menu and returns focus to the trigger", () => {
+    const { doc, trigger } = open("enter");
+    press("ArrowDown");
+    expect(press("Escape").preventDefault).toHaveBeenCalled();
+    expect(panelOf(renderMenu())).toBeFalsy();
+    expect(doc.activeElement).toBe(trigger);
+  });
+
+  it("Tab (either direction) closes the menu and hands focus back to the trigger WITHOUT swallowing the key, so the browser's own Tab continues from there", () => {
+    for (const shift of [false, true]) {
+      const { doc, trigger } = open("enter");
+      const event = press("Tab", shift);
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(doc.activeElement).toBe(trigger);
+      expect(panelOf(renderMenu())).toBeFalsy();
+    }
+  });
+
+  it("Space activates a link row (links have no Space activation of their own) but leaves button rows to the browser", () => {
+    const { rows } = open("enter");
+    const onButton = press(" "); // focus is on rows[0], a button
+    expect(onButton.preventDefault).not.toHaveBeenCalled();
+    expect(rows[0]!.click).not.toHaveBeenCalled();
+
+    press("ArrowDown"); // rows[1] is a link
+    const onLink = press(" ");
+    expect(onLink.preventDefault).toHaveBeenCalled();
+    expect(rows[1]!.click).toHaveBeenCalledTimes(1);
+  });
+
+  it("an item's own close() returns focus to the trigger when focus was in the menu, so a keyboard user doesn't land on <body>", () => {
+    const { doc, trigger, rows } = open("enter");
+    const itemsElement = panelOf(renderMenu()) as Rendered;
+    const row = itemsElement.props.children as Rendered; // the MenuItem element built by renderMenu's children(close)
+    expect(doc.activeElement).toBe(rows[0]);
+    (row.props as unknown as { onSelect: () => void }).onSelect();
+    expect(doc.activeElement).toBe(trigger);
+    expect(panelOf(renderMenu())).toBeFalsy();
+  });
+
+  it("an item's close() does not steal focus when it was never in the menu (a tap-opened menu on a phone)", () => {
+    const { doc } = open("pointer");
+    const outside = { tagName: "BODY" };
+    doc.activeElement = outside;
+    const row = (panelOf(renderMenu()) as Rendered).props.children as Rendered;
+    (row.props as unknown as { onSelect: () => void }).onSelect();
+    expect(doc.activeElement).toBe(outside);
   });
 });

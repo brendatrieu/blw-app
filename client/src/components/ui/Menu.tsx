@@ -41,6 +41,20 @@ const MENU_GAP = 8;
  * for the one render before anything has been measured yet. */
 type MenuPosition = { top: number; right: number } | { bottom: number; right: number } | null;
 
+/** The panel's focusable rows, in order. A native-`disabled` row can't take
+ * focus, so it is skipped — the same as a browser skips it on Tab. */
+function menuItems(panel: HTMLElement | null): HTMLElement[] {
+  return Array.from(panel?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])') ?? []);
+}
+
+/** Puts focus back on the trigger when it is inside the panel that is about
+ * to unmount — otherwise it would fall to `<body>` and a keyboard or
+ * screen-reader user would lose their place. A pointer user's focus is
+ * never inside the panel on a touch device, so this is a no-op for them. */
+function returnFocus(panel: HTMLElement | null, trigger: HTMLElement | null) {
+  if (panel?.contains(document.activeElement)) trigger?.focus({ preventScroll: true });
+}
+
 export interface MenuProps {
   /** Accessible name for the trigger button (e.g. "Actions"). */
   label: string;
@@ -58,7 +72,17 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  /** Which row a keyboard open should land on (the WAI-ARIA menu button
+   * pattern: Enter/Space/ArrowDown → first, ArrowUp → last). A pointer open
+   * leaves it `null` and focus where it was, so a tap never draws a focus
+   * ring on the first row. */
+  const focusOnOpenRef = useRef<"first" | "last" | null>(null);
   const menuId = useId();
+
+  function close() {
+    returnFocus(panelRef.current, triggerRef.current);
+    setOpen(false);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -71,16 +95,63 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
       if (panelRef.current?.contains(target)) return;
       setOpen(false);
     }
+    // The WAI-ARIA menu keys (item 773). The panel is portaled to the end
+    // of `<body>`, so the browser's own Tab order can never reach it from
+    // the trigger — arrows move focus through the rows instead, and Tab
+    // closes the menu after handing focus back to the trigger, so the
+    // browser's Tab then continues from the trigger (forward or back), not
+    // from the end of the page.
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setOpen(false);
+      // Already handled — e.g. the trigger's own ArrowDown/ArrowUp that just
+      // opened the menu, still bubbling up to here after React registered
+      // this listener mid-event; acting on it again would skip a row.
+      if (event.defaultPrevented) return;
+      const items = menuItems(panelRef.current);
+      const index = items.indexOf(document.activeElement as HTMLElement);
+      let next: HTMLElement | undefined;
+      switch (event.key) {
+        case "Escape":
+          event.preventDefault();
+          triggerRef.current?.focus({ preventScroll: true });
+          setOpen(false);
+          return;
+        case "Tab":
+          returnFocus(panelRef.current, triggerRef.current);
+          setOpen(false);
+          return;
+        case "ArrowDown":
+          next = items[(index + 1) % items.length];
+          break;
+        case "ArrowUp":
+          next = items[index < 0 ? items.length - 1 : (index - 1 + items.length) % items.length];
+          break;
+        case "Home":
+          next = items[0];
+          break;
+        case "End":
+          next = items[items.length - 1];
+          break;
+        case " ":
+          // A link row (`MenuLinkItem`) has no Space activation of its own;
+          // the pattern says Space activates any row. Button rows already do.
+          if (index >= 0 && items[index]!.tagName === "A") {
+            event.preventDefault();
+            items[index]!.click();
+          }
+          return;
+        default:
+          return;
       }
+      // Arrows/Home/End would otherwise scroll the page — which closes the
+      // menu (below) — so they are consumed even with no row to move to.
+      event.preventDefault();
+      next?.focus({ preventScroll: true });
     }
     // A portaled, fixed-position panel doesn't move with the page the way
     // the old locally-anchored one did — closing on scroll avoids it
     // visually detaching from a trigger that has since scrolled away.
     function handleScroll() {
+      returnFocus(panelRef.current, triggerRef.current);
       setOpen(false);
     }
     // Same guard the layout effect below uses — this component is also
@@ -154,6 +225,17 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
     setPosition(fitsBelow ? { top: clampedTop, right } : { bottom: clampedBottom, right });
   }, [open]);
 
+  // A keyboard open moves focus onto a row — but only once the panel has a
+  // measured position: until then it is `visibility: hidden`, and a hidden
+  // element refuses focus. `preventScroll` because a scroll closes the menu.
+  useEffect(() => {
+    const which = focusOnOpenRef.current;
+    if (!open || !position || !which) return;
+    focusOnOpenRef.current = null;
+    const items = menuItems(panelRef.current);
+    items[which === "first" ? 0 : items.length - 1]?.focus({ preventScroll: true });
+  }, [open, position]);
+
   return (
     <div ref={containerRef} className={`relative inline-block ${className}`}>
       <button
@@ -163,7 +245,19 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
         disabled={disabled}
         {...getMenuTriggerAriaProps(open)}
         {...(open ? { "aria-controls": menuId } : {})}
-        onClick={() => setOpen((o) => !o)}
+        onClick={(event) => {
+          // `detail === 0`: a click with no pointer behind it — Enter/Space
+          // on the focused trigger, or a screen reader's activate gesture.
+          if (!open && event.detail === 0) focusOnOpenRef.current = "first";
+          setOpen((o) => !o);
+        }}
+        onKeyDown={(event) => {
+          // Once open, the document-level handler above owns the arrows.
+          if (open || (event.key !== "ArrowDown" && event.key !== "ArrowUp")) return;
+          event.preventDefault();
+          focusOnOpenRef.current = event.key === "ArrowDown" ? "first" : "last";
+          setOpen(true);
+        }}
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--color-icon)] transition-colors duration-[var(--duration-fast)] hover:bg-[var(--color-bg-inset)] disabled:cursor-not-allowed disabled:opacity-60"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
@@ -175,8 +269,8 @@ export function Menu({ label, disabled = false, className = "", children }: Menu
 
       {open &&
         createPortal(
-          <MenuPanel id={menuId} panelRef={panelRef} position={position} onClose={() => setOpen(false)}>
-            {children(() => setOpen(false))}
+          <MenuPanel id={menuId} panelRef={panelRef} position={position} onClose={close}>
+            {children(close)}
           </MenuPanel>,
           document.body,
         )}
@@ -235,7 +329,7 @@ export interface MenuItemProps {
 /** A plain action row inside a `Menu`. */
 export function MenuItem({ onSelect, disabled, children }: MenuItemProps) {
   return (
-    <button type="button" role="menuitem" disabled={disabled} onClick={onSelect} className={MENU_ITEM_CLASSES}>
+    <button type="button" role="menuitem" tabIndex={-1} disabled={disabled} onClick={onSelect} className={MENU_ITEM_CLASSES}>
       {children}
     </button>
   );
@@ -252,6 +346,7 @@ export function MenuLinkItem({ onSelect, onClick, ...props }: MenuLinkItemProps)
   return (
     <Link
       role="menuitem"
+      tabIndex={-1}
       className={MENU_ITEM_CLASSES}
       onClick={(event) => {
         onClick?.(event);
