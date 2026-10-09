@@ -6,6 +6,8 @@ import { fromNodeHeaders } from "better-auth/node";
 import type { FastifyBaseLogger, FastifyInstance, FastifyRequest } from "fastify";
 import type { Auth } from "../auth.js";
 import type { Env } from "../config.js";
+import type { Database } from "../db/index.js";
+import { deleteUserAndOwnedData } from "../routes/account.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -208,15 +210,17 @@ async function trySignIn(auth: Auth, secret: string): Promise<string | null> {
  * machine). Sign-up fails on the unique email, sign-in fails on the password,
  * and the developer would be stuck with a permanently broken bypass and no
  * explanation. So: if the row exists and the persisted secret does not open
- * it, the stale dev user is deleted (better-auth removes its session and
- * account rows; the schema's ON DELETE CASCADE takes the dev user's app data
- * with it) and re-provisioned under the current secret, with one warning line
- * saying exactly that happened.
+ * it, the stale dev user is deleted exactly the way DELETE /api/account
+ * deletes an account (its own foods and recipes are referenced by columns
+ * that deliberately do not cascade, so a bare user delete trips the foreign
+ * key; ledger 774) and re-provisioned under the current secret, with one
+ * warning line saying exactly that happened.
  */
 async function mintDevSessionCookie(
   auth: Auth,
   secret: string,
   log: FastifyBaseLogger,
+  db: Database,
 ): Promise<string | null> {
   const provisioned = await trySignUp(auth, secret);
   if (provisioned) return provisioned;
@@ -234,7 +238,7 @@ async function mintDevSessionCookie(
   log.warn(
     `dev auto-auth: the local dev-auth secret does not match the stored credential for ${DEV_BYPASS_EMAIL} (the secret file at ${DEV_SECRET_FILE} was probably deleted or the dev database came from another machine). Deleting and re-provisioning that user — its dev-only data has been reset.`,
   );
-  await ctx.internalAdapter.deleteUser(stale.user.id);
+  await deleteUserAndOwnedData(db, stale.user.id);
 
   return (await trySignUp(auth, secret)) ?? (await trySignIn(auth, secret));
 }
@@ -242,6 +246,7 @@ async function mintDevSessionCookie(
 export interface RegisterDevAutoAuthOptions {
   auth: Auth;
   env: Env;
+  db: Database;
 }
 
 /**
@@ -262,7 +267,7 @@ export interface RegisterDevAutoAuthOptions {
  */
 export function registerDevAutoAuth(
   app: FastifyInstance,
-  { auth, env }: RegisterDevAutoAuthOptions,
+  { auth, env, db }: RegisterDevAutoAuthOptions,
 ): void {
   // Strict equality: "test" and "production" must both fall through here so
   // the hook below never exists outside a developer's machine.
@@ -278,7 +283,7 @@ export function registerDevAutoAuth(
    */
   const mint = async (): Promise<string | null> => {
     try {
-      return await mintDevSessionCookie(auth, loadOrCreateDevSecret(), app.log);
+      return await mintDevSessionCookie(auth, loadOrCreateDevSecret(), app.log, db);
     } catch (error) {
       app.log.warn(
         { err: error },

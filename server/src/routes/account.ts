@@ -57,6 +57,77 @@ import { loadContainerRecipes, loadStorageItemFoods } from "../services/storage.
 const DELETE_ATTEMPTS_PER_WINDOW = 5;
 const DELETE_WINDOW_MS = 15 * 60 * 1000;
 
+/**
+ * Removes a user and everything the account owns, atomically. Shared by
+ * DELETE /api/account and the dev auto-auth recovery (plugins/dev-auth.ts),
+ * so both take the same FK-safe order.
+ */
+export async function deleteUserAndOwnedData(db: Database, userId: string): Promise<void> {
+  // Almost everything the account owns hangs off `user` by an ON DELETE
+  // CASCADE chain, so one delete takes it all:
+  //   user -> babies -> meals -> meal_foods, meal_recipes, meal_storage_items
+  //   user -> babies -> symptom_checks
+  //   user -> storage_items -> meal_storage_items, storage_item_recipes
+  //   user -> babies -> allergen_overrides
+  //   user -> favorites, storage_items, user_ai_keys, user_preferences
+  //   user -> usage_events                (anonymous, but still theirs)
+  //   user -> feedback                    (their messages to the admins;
+  //                                        `feedback.resolved_by` is SET
+  //                                        NULL, so deleting an ADMIN
+  //                                        never takes a parent's message)
+  //   user -> foods, recipes (custom only) -> recipe_ingredients/variants
+  //   user -> chat_threads -> chat_messages
+  //   user -> session, account            (better-auth's own tables)
+  //
+  // The exception is the account's own custom foods. `meal_foods.food_id`
+  // and `storage_item_foods.food_id` deliberately do NOT cascade — eaten
+  // history must survive a food being tidied away, and a container must
+  // not silently empty itself — and Postgres checks those references
+  // while the cascade is still running, so a lone `delete(user)` trips
+  // the constraint even though every referencing row is on its way out in
+  // the same statement. Clearing them first, inside one transaction,
+  // keeps the whole wipe atomic. Only this user's rows can reference
+  // their own custom foods: nobody else can see one, let alone log or
+  // stock it.
+  await db.transaction(async (tx) => {
+    const ownFoodIds = tx.select({ id: foods.id }).from(foods).where(eq(foods.ownerId, userId));
+    const ownRecipeIds = tx.select({ id: recipes.id }).from(recipes).where(eq(recipes.ownerId, userId));
+    await tx.delete(mealFoods).where(inArray(mealFoods.foodId, ownFoodIds));
+    // `recipe_ingredients.food_id` has no cascade for the same reason, and
+    // a parent's own recipe can be built out of their own foods, so its
+    // ingredient rows go first as well. (`recipe_variants` DOES cascade
+    // from the recipe, so the steps need no sweep of their own.)
+    await tx
+      .delete(recipeIngredients)
+      .where(
+        or(inArray(recipeIngredients.foodId, ownFoodIds), inArray(recipeIngredients.recipeId, ownRecipeIds)),
+      );
+    // `storage_items.recipe_id` has no action at all, so a storage row made
+    // from an own recipe would block the recipe's cascade the same way.
+    // A container holding an own custom food is now found through the
+    // join table rather than a `food_id` column — and since one container
+    // can hold several foods, ONE own food anywhere in it takes the whole
+    // container, exactly as it did when that food was the whole item.
+    // (`storage_item_foods` itself cascades from `storage_items`, so
+    // deleting the container clears its rows.)
+    await tx.delete(storageItems).where(
+      or(
+        inArray(
+          storageItems.id,
+          tx
+            .select({ id: storageItemFoods.storageItemId })
+            .from(storageItemFoods)
+            .where(inArray(storageItemFoods.foodId, ownFoodIds)),
+        ),
+        inArray(storageItems.recipeId, ownRecipeIds),
+      ),
+    );
+    // Deleting rows that are already gone is a no-op, which is what makes
+    // a retried request safe.
+    await tx.delete(user).where(eq(user.id, userId));
+  });
+}
+
 /** Every handler here sits behind requireAuth; this makes that explicit. */
 function currentUserId(request: FastifyRequest): string {
   const id = request.user?.id;
@@ -681,69 +752,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         ];
       }
 
-      // Almost everything the account owns hangs off `user` by an ON DELETE
-      // CASCADE chain, so one delete takes it all:
-      //   user -> babies -> meals -> meal_foods, meal_recipes, meal_storage_items
-      //   user -> babies -> symptom_checks
-      //   user -> storage_items -> meal_storage_items, storage_item_recipes
-      //   user -> babies -> allergen_overrides
-      //   user -> favorites, storage_items, user_ai_keys, user_preferences
-      //   user -> usage_events                (anonymous, but still theirs)
-      //   user -> feedback                    (their messages to the admins;
-      //                                        `feedback.resolved_by` is SET
-      //                                        NULL, so deleting an ADMIN
-      //                                        never takes a parent's message)
-      //   user -> foods, recipes (custom only) -> recipe_ingredients/variants
-      //   user -> chat_threads -> chat_messages
-      //   user -> session, account            (better-auth's own tables)
-      //
-      // The exception is the account's own custom foods. `meal_foods.food_id`
-      // and `storage_item_foods.food_id` deliberately do NOT cascade — eaten
-      // history must survive a food being tidied away, and a container must
-      // not silently empty itself — and Postgres checks those references
-      // while the cascade is still running, so a lone `delete(user)` trips
-      // the constraint even though every referencing row is on its way out in
-      // the same statement. Clearing them first, inside one transaction,
-      // keeps the whole wipe atomic. Only this user's rows can reference
-      // their own custom foods: nobody else can see one, let alone log or
-      // stock it.
-      await db.transaction(async (tx) => {
-        const ownFoodIds = tx.select({ id: foods.id }).from(foods).where(eq(foods.ownerId, userId));
-        const ownRecipeIds = tx.select({ id: recipes.id }).from(recipes).where(eq(recipes.ownerId, userId));
-        await tx.delete(mealFoods).where(inArray(mealFoods.foodId, ownFoodIds));
-        // `recipe_ingredients.food_id` has no cascade for the same reason, and
-        // a parent's own recipe can be built out of their own foods, so its
-        // ingredient rows go first as well. (`recipe_variants` DOES cascade
-        // from the recipe, so the steps need no sweep of their own.)
-        await tx
-          .delete(recipeIngredients)
-          .where(
-            or(inArray(recipeIngredients.foodId, ownFoodIds), inArray(recipeIngredients.recipeId, ownRecipeIds)),
-          );
-        // `storage_items.recipe_id` has no action at all, so a storage row made
-        // from an own recipe would block the recipe's cascade the same way.
-        // A container holding an own custom food is now found through the
-        // join table rather than a `food_id` column — and since one container
-        // can hold several foods, ONE own food anywhere in it takes the whole
-        // container, exactly as it did when that food was the whole item.
-        // (`storage_item_foods` itself cascades from `storage_items`, so
-        // deleting the container clears its rows.)
-        await tx.delete(storageItems).where(
-          or(
-            inArray(
-              storageItems.id,
-              tx
-                .select({ id: storageItemFoods.storageItemId })
-                .from(storageItemFoods)
-                .where(inArray(storageItemFoods.foodId, ownFoodIds)),
-            ),
-            inArray(storageItems.recipeId, ownRecipeIds),
-          ),
-        );
-        // Deleting rows that are already gone is a no-op, which is what makes
-        // a retried request safe.
-        await tx.delete(user).where(eq(user.id, userId));
-      });
+      await deleteUserAndOwnedData(db, userId);
 
       if (clearedCookies.length > 0) {
         reply.header("set-cookie", clearedCookies);

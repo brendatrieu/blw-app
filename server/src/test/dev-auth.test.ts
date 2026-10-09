@@ -4,14 +4,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { TEST_ORIGIN, createTestApp } from "./helpers.js";
+import { TEST_ORIGIN, createTestApp, insertMeals } from "./helpers.js";
 import {
   DEV_BYPASS_EMAIL,
   DEV_SECRET_FILE,
   isLoopbackAddress,
   loadOrCreateDevSecret,
 } from "../plugins/dev-auth.js";
-import { user } from "../db/schema.js";
+import * as schema from "../db/schema.js";
+
+const { user } = schema;
 
 /**
  * The dev-only loopback auth bypass.
@@ -494,6 +496,111 @@ describe("credential mismatch between the secret file and the dev database", () 
       remoteAddress: LOOPBACK,
     });
     expect(session.json<{ user: { email: string } }>().user.email).toBe(DEV_BYPASS_EMAIL);
+
+    await close();
+  });
+
+  // Ledger 774: the stale dev user's OWN foods and recipes are referenced by
+  // columns that deliberately do not cascade (meal_foods.food_id,
+  // recipe_ingredients.food_id, storage_items.recipe_id), so a bare user
+  // delete trips the foreign key. Recovery must take the account delete's
+  // order instead.
+  it("re-provisions even when the stale dev user logged its own food and stored its own recipe", async () => {
+    const { app, db, close } = await createTestApp({ NODE_ENV: "development" });
+
+    const seeded = await app.inject({
+      method: "POST",
+      url: "/api/auth/sign-up/email",
+      headers: { origin: TEST_ORIGIN },
+      remoteAddress: REMOTE,
+      payload: {
+        email: DEV_BYPASS_EMAIL,
+        password: "a-secret-this-machine-no-longer-has",
+        name: "Stale Dev",
+      },
+    });
+    expect(seeded.statusCode).toBe(200);
+    const [stale] = await db.select().from(user).where(eq(user.email, DEV_BYPASS_EMAIL));
+    const staleId = stale!.id;
+
+    await db.insert(schema.storageGuidelines).values({
+      category: "produce_cooked",
+      fridgeHours: 48,
+      freezerDays: 60,
+      roomTempHours: 2,
+      notes: "Cooked produce.",
+    });
+    const [ownFood] = await db
+      .insert(schema.foods)
+      .values({
+        slug: "dev-own-food",
+        name: "Own food",
+        category: "veg",
+        ironLevel: "low",
+        vitaminCLevel: "low",
+        chokingRisk: "low",
+        minAgeMonths: 6,
+        prep6m: "",
+        prep9m: "",
+        prep12m: "",
+        storageCategory: "produce_cooked",
+        ownerId: staleId,
+      })
+      .returning();
+    const [ownRecipe] = await db
+      .insert(schema.recipes)
+      .values({
+        slug: "dev-own-recipe",
+        title: "Own recipe",
+        minAgeMonths: 6,
+        prepMinutes: 5,
+        ironFocus: false,
+        ownerId: staleId,
+      })
+      .returning();
+    await db
+      .insert(schema.recipeIngredients)
+      .values({ recipeId: ownRecipe!.id, foodId: ownFood!.id, quantityNote: "" });
+    const [baby] = await db
+      .insert(schema.babies)
+      .values({ userId: staleId, name: "Robin", birthDate: "2025-01-15" })
+      .returning();
+    await insertMeals(db, [
+      { babyId: baby!.id, foodId: ownFood!.id, servedAt: new Date("2026-03-01T09:00:00Z") },
+    ]);
+    const [container] = await db
+      .insert(schema.storageItems)
+      .values({
+        userId: staleId,
+        recipeId: ownRecipe!.id,
+        preparedAt: new Date("2026-03-01T08:00:00Z"),
+        location: "fridge",
+      })
+      .returning();
+    await db
+      .insert(schema.storageItemFoods)
+      .values({ storageItemId: container!.id, foodId: ownFood!.id, position: 0 });
+
+    const response = await app.inject({
+      method: "GET",
+      url: PROTECTED_URL,
+      remoteAddress: LOOPBACK,
+    });
+    expect(response.statusCode).toBe(200);
+
+    const after = await db.select().from(user).where(eq(user.email, DEV_BYPASS_EMAIL));
+    expect(after).toHaveLength(1);
+    expect(after[0]?.id).not.toBe(staleId);
+    // The stale user's owned rows went with it.
+    expect(
+      await db.select().from(schema.foods).where(eq(schema.foods.ownerId, staleId)),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(schema.recipes).where(eq(schema.recipes.ownerId, staleId)),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(schema.babies).where(eq(schema.babies.userId, staleId)),
+    ).toHaveLength(0);
 
     await close();
   });

@@ -177,6 +177,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     registerAuth(app, {
       auth: createAuth({ db, env, logger: options.authLogger ?? app.log }),
       env,
+      db,
     });
 
     /**
