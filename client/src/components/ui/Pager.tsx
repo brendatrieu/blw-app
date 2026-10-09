@@ -95,6 +95,8 @@ export interface PagedTrack {
   /** The page a touch started on: only it and its neighbours snap until ‹ › (null = every page snaps). */
   near: number | null;
   onTouchStart: () => void;
+  /** A wheel or trackpad swipe reopens every page, as ‹ › do. */
+  onWheel: () => void;
   /** The ‹ › handler: scrolls the track; the scroll then sets the page. */
   goTo: (page: number) => void;
 }
@@ -124,8 +126,10 @@ export function usePagedTrack(total: number, size: number): PagedTrack {
     // snap-always and can fly two pages, so a touch freezes the snap points
     // to the page it started on and its neighbours. Frozen, not following
     // the page: a window that moves mid-fling lets the fling through.
-    // ponytail: a trackpad after a touch stays one page per gesture until ‹ ›.
     onTouchStart: () => setNear(pages.page),
+    // A wheel is not a fling: without this, a trackpad after a touch could
+    // not get past the touched page's neighbours until ‹ ›.
+    onWheel: () => setNear(null),
     goTo: (next) => {
       const el = trackRef.current;
       if (!el || el.clientWidth <= 0) return;
@@ -174,6 +178,7 @@ export function PageTrack<T>({
       ref={track.trackRef}
       onScroll={track.onScroll}
       onTouchStart={track.onTouchStart}
+      onWheel={track.onWheel}
       className={bleed ? `${TRACK_CLASSES} -mx-2 -mb-2` : TRACK_CLASSES}
     >
       {slides.map((slice, index) => (

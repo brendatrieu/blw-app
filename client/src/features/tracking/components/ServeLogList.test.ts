@@ -244,7 +244,10 @@ describe("MealCard (render, storage-card styling — item 192)", () => {
     // its longest word. Measured live: 329px → 320px at a 320 viewport.
     for (const html of [renderMealCard(baseMeal), renderMealCard(baseMeal, false)]) {
       expect(html).toMatch(/<div class="flex flex-wrap items-start justify-end gap-2">/);
-      expect(html).toMatch(/<(a|div) [^>]*class="flex flex-1 items-start gap-2[ "]/);
+      const info = html.match(/<(?:a|div) [^>]*class="(flex flex-1 items-start gap-2(?: [^"]*)?)"/)?.[1];
+      expect(info).toBeDefined();
+      // min-w-0 squeezes the names beside the badge at 320; a basis always wraps it.
+      expect(info).not.toMatch(/(^| )(min-w-0|basis-\S+)( |$)/);
     }
   });
 

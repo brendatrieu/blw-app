@@ -63,6 +63,8 @@ describe("FoodsPage", () => {
     const row = html.match(/<div class="([^"]*)" role="group" aria-label="Category"/)?.[1]?.split(" ") ?? [];
     expect(row).toEqual(expect.arrayContaining(["grid", "grid-cols-4", "min-[384px]:flex"]));
     expect(row).not.toContain("flex");
+    // 384 holds only at this chip size: a bigger font or padding clips again.
+    expect(html).toMatch(/<button [^>]*class="[^"]*\bpx-1 text-\[10px\][^"]*"[^>]*>Legume</);
   });
 
   // Item 179: adding a food of your own is a first-class action on this page,

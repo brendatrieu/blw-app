@@ -455,6 +455,21 @@ describe("Swipe paging (item 775)", () => {
     expect(storage().pages?.page).toBe(4);
   });
 
+  it("each new touch re-anchors the window; a wheel reopens every page (item 779)", () => {
+    h.storage = Array.from({ length: 13 }, (_, i) => item(i));
+    const trackEl = () =>
+      PageTrack(find(storage().tree, PageTrack)!.props as unknown as Parameters<typeof PageTrack>[0]) as unknown as El;
+    swipeTo(storage().track!, 1 * TRACK_WIDTH);
+    (trackEl().props.onTouchStart as () => void)();
+    expect(storage().track!.near).toBe(1);
+    // The flick lands one page on; the next touch follows it, so a walk goes on.
+    swipeTo(storage().track!, 2 * TRACK_WIDTH);
+    (trackEl().props.onTouchStart as () => void)();
+    expect(storage().track!.near).toBe(2);
+    (trackEl().props.onWheel as () => void)();
+    expect(storage().track!.near).toBeNull();
+  });
+
   it("the range, not the rows, is the live region", () => {
     const v = storage();
     expect(JSON.stringify(shownSlide(v.tree), (k, val) => (k === "_owner" ? undefined : val))).not.toContain(

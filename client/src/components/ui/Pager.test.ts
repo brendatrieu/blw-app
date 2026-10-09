@@ -132,6 +132,7 @@ describe("PageTrack (item 775)", () => {
     onScroll: () => {},
     near,
     onTouchStart: () => {},
+    onWheel: () => {},
     goTo: () => {},
   });
   const html = (page: number, bleed?: boolean) =>
