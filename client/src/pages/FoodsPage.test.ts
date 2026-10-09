@@ -57,6 +57,12 @@ describe("FoodsPage", () => {
     // the custom-food select (pinned in CustomFoodForm.test.ts).
     expect(html).toContain(">Spices<");
     expect(html).not.toContain("Spices &amp; herbs");
+    // Item 777: below 384px seven chips can't fit their labels (measured:
+    // "Legume" 39px of text in a 31px chip at 320), so the row is two rows of
+    // four there and one flex row from 384px up.
+    const row = html.match(/<div class="([^"]*)" role="group" aria-label="Category"/)?.[1]?.split(" ") ?? [];
+    expect(row).toEqual(expect.arrayContaining(["grid", "grid-cols-4", "min-[384px]:flex"]));
+    expect(row).not.toContain("flex");
   });
 
   // Item 179: adding a food of your own is a first-class action on this page,

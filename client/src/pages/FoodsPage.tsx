@@ -322,7 +322,10 @@ export function FoodsPage() {
           aria-label="Search foods"
         />
 
-        <div className="flex items-center gap-0.5" role="group" aria-label="Category">
+        {/* Item 777: one row of seven equal chips needs a 384px viewport
+            ("Legume" is 39px of 10px Jakarta); below that the labels were
+            cut off at both edges, so narrower phones get two rows of four. */}
+        <div className="grid grid-cols-4 items-center gap-x-0.5 gap-y-1.5 min-[384px]:flex" role="group" aria-label="Category">
           {CATEGORIES.map((opt) => (
             <FilterChip
               key={opt.value}
