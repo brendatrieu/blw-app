@@ -9,7 +9,10 @@ import { useActiveBaby } from "../features/babies/useActiveBaby.js";
  * laid transparently over the chip so tapping the chip opens it.
  */
 export function BabyChip() {
-  const { babies, activeBaby, setActiveBabyId } = useActiveBaby();
+  const { babies, activeBaby, setActiveBabyId, isLoading } = useActiveBaby();
+
+  // Item 770: wait for the babies to load (or restore) before saying "Add a baby".
+  if (isLoading) return null;
 
   if (babies.length === 0 || !activeBaby) {
     return (

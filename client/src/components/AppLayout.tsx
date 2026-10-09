@@ -39,10 +39,16 @@ const GREETING_CLASS =
   "text-[11px] leading-[normal] font-bold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
 
 function BabySwitcher() {
-  const { babies, activeBaby, setActiveBabyId } = useActiveBaby();
+  const { babies, activeBaby, setActiveBabyId, isLoading } = useActiveBaby();
   // Item 680: rides on the allergen-progress query Home already fetches. An
   // older persisted cache has no foodsTried, so the suffix just stays hidden.
   const foodsTried = useAllergenProgress(activeBaby?.id).data?.foodsTried;
+
+  // Item 770: no answer yet (incl. a cold load while the cache restores from
+  // IndexedDB) is not "no babies"; it flashed "Add a baby" before the name.
+  // An empty box, not null: the header is justify-between, so a lone gear
+  // would jump to the left.
+  if (isLoading) return <div />;
 
   if (babies.length === 0) {
     return (

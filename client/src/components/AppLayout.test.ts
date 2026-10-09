@@ -2,22 +2,26 @@ import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { onlineManager, QueryClientProvider, QueryClient } from "@tanstack/react-query";
+import { IsRestoringProvider, onlineManager, QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { ageInMonths, type Baby } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
 import { AppLayout, shouldScrollToTop } from "./AppLayout.js";
 
-function renderLayout(queryClient: QueryClient, pathname = "/") {
+function renderLayout(queryClient: QueryClient, pathname = "/", restoring = false) {
   return renderToString(
     createElement(
       QueryClientProvider,
       { client: queryClient },
       createElement(
-        MemoryRouter,
-        { initialEntries: [pathname] },
-        createElement(Routes, null, createElement(Route, { path: pathname, element: createElement(AppLayout, null) }, createElement(Route, { index: true, element: createElement("div", null, "content") }))),
+        IsRestoringProvider,
+        { value: restoring },
+        createElement(
+          MemoryRouter,
+          { initialEntries: [pathname] },
+          createElement(Routes, null, createElement(Route, { path: pathname, element: createElement(AppLayout, null) }, createElement(Route, { index: true, element: createElement("div", null, "content") }))),
+        ),
       ),
     ),
   );
@@ -376,6 +380,51 @@ describe("AppLayout shell column (item 379 — the nav stopped being fixed)", ()
     expect(html.indexOf("</nav>")).toBeLessThan(html.lastIndexOf("</div>"));
     expect(html).toMatch(/<nav class="sticky bottom-0 /);
   });
+});
+
+// Ledger 770: on a cold load the babies query has no answer yet (the persisted
+// cache is still restoring, or the first fetch is in flight); the header said
+// "Add a baby" until the list arrived. `IsRestoringProvider value` is the state
+// PersistQueryClientProvider holds the tree in during the restore.
+describe("AppLayout header while the babies load (ledger 770)", () => {
+  const remy: Baby = {
+    id: "baby-1",
+    name: "Remy",
+    birthDate: "2026-01-01",
+    notes: null,
+    archived: false,
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+  const header = (html: string) => html.slice(html.indexOf("<header"), html.indexOf("</header>"));
+  const client = (babies?: Baby[]) => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    if (babies) queryClient.setQueryData(babyKeys.list(false), babies);
+    return queryClient;
+  };
+
+  for (const pathname of ["/", "/foods"]) {
+    it(`no answer yet (restoring or first fetch): no "Add a baby", no name, the gear stays (${pathname})`, () => {
+      for (const restoring of [true, false]) {
+        const html = header(renderLayout(client(), pathname, restoring));
+        expect(html, `restoring=${restoring}`).not.toContain("Add a baby");
+        expect(html, `restoring=${restoring}`).not.toMatch(/Good morning|Good afternoon|Good evening|<select/);
+        expect(html, `restoring=${restoring}`).toContain('aria-label="Settings"');
+        // The gear keeps its right-hand place: something still sits before it in the row.
+        expect(html.slice(html.indexOf(">") + 1), `restoring=${restoring}`).toMatch(/^<div[ >]/);
+      }
+    });
+
+    it(`a settled empty list still says "Add a baby" (${pathname})`, () => {
+      expect(header(renderLayout(client([]), pathname))).toMatch(/<a [^>]*href="\/settings"[^>]*>Add a baby<\/a>/);
+    });
+
+    it(`a restored list shows the baby straight away (${pathname})`, () => {
+      const html = header(renderLayout(client([remy]), pathname, true));
+      expect(html).toContain("Remy");
+      expect(html).not.toContain("Add a baby");
+    });
+  }
 });
 
 describe("AppLayout offline banner (ledger 765)", () => {
