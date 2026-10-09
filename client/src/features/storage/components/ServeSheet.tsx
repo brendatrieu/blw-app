@@ -15,6 +15,7 @@ import { FoodPlate } from "../../catalog/components/FoodPlate.js";
 import { foodPlate } from "../../catalog/foodEmoji.js";
 import { useRecipeDetails } from "../../catalog/hooks.js";
 import { HowToLink } from "../../safety/HowToLink.js";
+import { useIsOffline } from "../../../lib/online.js";
 import { MealRatingsField, RECIPE_ROW_PREFIX, type MealRatingRow } from "../../tracking/components/MealRatingsField.js";
 
 /** Ceiling for the serve stepper on an untracked item (no servingsLeft to
@@ -190,6 +191,9 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
   const [notes, setNotes] = useState("");
   const [ratings, setRatings] = useState<Record<string, number | null>>({});
   const serve = useStorageServe(babyId);
+  // Ledger 766: offline, the mutation would pause and sit on "Serving…"
+  // forever; Serve waits instead, with everything entered kept.
+  const offline = useIsOffline();
 
   const recipeDetails = useRecipeDetails(servedRecipes(parts, freshRecipes).map((recipe) => recipe.id));
   const ingredientFoodIds = recipeDetails.every((detail) => detail.data)
@@ -342,24 +346,35 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="e.g. ate the whole thing" />
       </label>
 
-      {serve.isError && <span className="text-xs text-[var(--color-danger)]">Couldn't serve — try again.</span>}
+      {serve.isError && !offline && <span className="text-xs text-[var(--color-danger)]">Couldn't serve — try again.</span>}
 
-      <Button
-        type="button"
-        disabled={serve.isPending}
-        className="w-full"
-        onClick={() =>
-          serve.mutate(
-            {
-              ...buildServeInput(babyId, parts, freshFoods, freshRecipes, reactionNote, notes, servedAt),
-              ...serveRatingsInput(rows),
-            },
-            { onSuccess: (response) => onServed?.(response) },
-          )
-        }
-      >
-        {serve.isPending ? "Serving…" : "Serve"}
-      </Button>
+      {/* No gap: the empty live region must add no space while online. */}
+      <div className="flex flex-col">
+        <Button
+          type="button"
+          disabled={serve.isPending || offline}
+          aria-describedby={offline ? "serve-offline" : undefined}
+          className="w-full"
+          onClick={() =>
+            serve.mutate(
+              {
+                ...buildServeInput(babyId, parts, freshFoods, freshRecipes, reactionNote, notes, servedAt),
+                ...serveRatingsInput(rows),
+              },
+              { onSuccess: (response) => onServed?.(response) },
+            )
+          }
+        >
+          {serve.isPending && !offline ? "Serving…" : "Serve"}
+        </Button>
+        <div role="status">
+          {offline && (
+            <p id="serve-offline" className="mt-1.5 text-center text-xs text-[var(--color-text-muted)]">
+              You're offline.
+            </p>
+          )}
+        </div>
+      </div>
 
       {addingMore && (
         <AddMoreSheet

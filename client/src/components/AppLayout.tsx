@@ -7,6 +7,7 @@ import { TourProvider } from "../features/tour/TourProvider.js";
 import { timeOfDayGreeting } from "../lib/greeting.js";
 import { BabyChip } from "./BabyChip.js";
 import { BottomNav } from "./BottomNav.js";
+import { OfflineBanner } from "./OfflineBanner.js";
 import { CelebrationProvider } from "./ui/Celebration.js";
 import { HeaderSlotContext } from "./ui/headerSlot.js";
 
@@ -219,6 +220,7 @@ export function AppLayout() {
               </>
             )}
           </header>
+          <OfflineBanner />
 
           <main className="scroll-momentum flex-1">
             <div key={location.pathname} className="page-transition">

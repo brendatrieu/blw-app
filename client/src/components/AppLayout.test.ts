@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
+import { onlineManager, QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { ageInMonths, type Baby } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
@@ -375,6 +375,25 @@ describe("AppLayout shell column (item 379 — the nav stopped being fixed)", ()
     // after the nav, so the nav is the column's last flex child.
     expect(html.indexOf("</nav>")).toBeLessThan(html.lastIndexOf("</div>"));
     expect(html).toMatch(/<nav class="sticky bottom-0 /);
+  });
+});
+
+describe("AppLayout offline banner (ledger 765)", () => {
+  it("sits between the header and the page, on Home and inner pages, only while offline", () => {
+    for (const pathname of ["/", "/foods"]) {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      expect(renderLayout(queryClient, pathname), pathname).not.toContain("offline.");
+      onlineManager.setOnline(false);
+      try {
+        const html = renderLayout(queryClient, pathname);
+        const banner = html.indexOf('<div role="status"><p');
+        expect(banner, pathname).toBeGreaterThan(html.indexOf("</header>"));
+        expect(banner, pathname).toBeLessThan(html.indexOf("<main"));
+        expect(html.match(/You&#x27;re offline\./g), pathname).toHaveLength(1);
+      } finally {
+        onlineManager.setOnline(true);
+      }
+    }
   });
 });
 

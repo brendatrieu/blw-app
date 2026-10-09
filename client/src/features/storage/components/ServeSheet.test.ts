@@ -1,7 +1,7 @@
 import { createElement, type ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { StorageItem } from "@blw/shared";
 import { CelebrationProvider } from "../../../components/ui/Celebration.js";
@@ -234,6 +234,26 @@ describe("ServeControl — the serve sheet's body (MR-Serve, ledger 760)", () =>
     expect(html).toContain(">When</label>");
     expect(html.indexOf('id="serve-when"')).toBeLessThan(html.indexOf(RATING_HEADING));
     expect(html.indexOf(RATING_HEADING)).toBeLessThan(html.indexOf("<textarea"));
+  });
+});
+
+describe("ServeControl offline, through the real online signal (ledger 766)", () => {
+  it("renders Serve disabled with \"You're offline.\" under it, described by it; online it has neither", () => {
+    const control = () => render(createElement(ServeControl, { item: BASE_ITEM, babyId: "baby-1" }));
+    const online = control();
+    const serveButton = (html: string) => html.match(/<button ([^>]*)>Serve<\/button><div role="status">(.*?)<\/div>/)!;
+    expect(serveButton(online)[1]).not.toContain('disabled=""');
+    expect(serveButton(online)[1]).not.toContain("aria-describedby");
+    expect(serveButton(online)[2]).toBe("");
+    onlineManager.setOnline(false);
+    try {
+      const [, attrs, status] = serveButton(control());
+      expect(attrs).toContain('disabled=""');
+      expect(attrs).toContain('aria-describedby="serve-offline"');
+      expect(status).toMatch(/^<p id="serve-offline" class="[^"]*">You&#x27;re offline\.<\/p>$/);
+    } finally {
+      onlineManager.setOnline(true);
+    }
   });
 });
 

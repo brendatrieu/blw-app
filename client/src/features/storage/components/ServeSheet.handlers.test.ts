@@ -13,12 +13,15 @@ import type { StorageItem } from "@blw/shared";
 const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], i: 0 };
   const mutation = { isPending: false, isError: false };
+  /** What the mocked online signal reports (ledger 766). */
+  const network = { offline: false };
   const served: Array<{ input: Record<string, unknown>; onSuccess?: (response: unknown) => void }> = [];
   return {
     store,
     served,
     /** What the mocked serve mutation reports. */
     mutation,
+    network,
     /** recipe id -> its ingredient food ids; a missing id is "still loading". */
     ingredients: new Map<string, string[]>(),
     useState: (init: unknown) => {
@@ -36,6 +39,7 @@ const h = vi.hoisted(() => {
       served.length = 0;
       mutation.isPending = false;
       mutation.isError = false;
+      network.offline = false;
     },
   };
 });
@@ -63,6 +67,8 @@ vi.mock("../hooks.js", async (importOriginal) => {
   };
 });
 
+vi.mock("../../../lib/online.js", () => ({ useIsOffline: () => h.network.offline }));
+
 vi.mock("../../catalog/hooks.js", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
@@ -79,6 +85,7 @@ import { ServeControl } from "./ServeSheet.js";
 import { AddMoreSheet } from "./AddMoreSheet.js";
 import { DateTimeField } from "../../../components/ui/DateTimeField.js";
 import { Button } from "../../../components/ui/Button.js";
+import { Textarea } from "../../../components/ui/Input.js";
 import { MealRatingsField } from "../../tracking/components/MealRatingsField.js";
 
 const ITEM: StorageItem = {
@@ -370,6 +377,78 @@ describe("the Serve sheet's star rows (item 718, DESIGN-B §2)", () => {
     h.ingredients.set(SALMON, ["food-salmon"]); // loaded; Oat Pancakes is not
     addMore({ items: [SALMON_ITEM], foods: [BANANA], recipes: [{ id: "r-oat", title: "Oat Pancakes" }] });
     expect((ratingsField().props.rows as { key: string }[]).map((row) => row.key)).toEqual([`recipe:${SALMON}`, "recipe:r-oat"]);
+    h.ingredients.clear();
+  });
+});
+
+// Ledger 766: offline, the serve mutation would pause and sit on "Serving…".
+// Serve waits instead, says why, and keeps everything the parent entered.
+describe("the Serve sheet while offline (ledger 766)", () => {
+  const OFFLINE_LINE = (element: Rendered) => element.props?.children === "You're offline.";
+  const STATUS = (element: Rendered) => element.props?.role === "status";
+
+  it("disables Serve with exactly \"You're offline.\" in a live region under it, and re-enables online", () => {
+    h.reset();
+    let tree = render();
+    expect(findAll(tree, OFFLINE_LINE)).toHaveLength(0);
+    // The live region is mounted while online too, so the line is announced.
+    expect(findAll(tree, STATUS)).toHaveLength(1);
+    expect(findAll(tree, byType(Button))[0]!.props.disabled).toBe(false);
+
+    h.network.offline = true;
+    tree = render();
+    const [button] = findAll(tree, byType(Button));
+    expect(button!.props.disabled).toBe(true);
+    expect(button!.props.children).toBe("Serve");
+    const [status] = findAll(tree, STATUS);
+    const [line] = findAll(status, OFFLINE_LINE);
+    expect(line).toBeDefined();
+    expect(button!.props["aria-describedby"]).toBe(line!.props.id);
+
+    h.network.offline = false;
+    tree = render();
+    expect(findAll(tree, OFFLINE_LINE)).toHaveLength(0);
+    expect(findAll(tree, byType(Button))[0]!.props.disabled).toBe(false);
+  });
+
+  it("never reads 'Serving…' offline, even with a paused request, and hides the generic error", () => {
+    h.reset();
+    h.network.offline = true;
+    h.mutation.isPending = true;
+    h.mutation.isError = true;
+    const tree = render();
+    expect(findAll(tree, byType(Button))[0]!.props.children).toBe("Serve");
+    expect(findAll(tree, (element) => element.props?.children === "Couldn't serve — try again.")).toHaveLength(0);
+    expect(findAll(tree, OFFLINE_LINE)).toHaveLength(1);
+  });
+
+  it("keeps servings, added items, stars and notes through offline, and serves them all once back online", () => {
+    h.reset();
+    click(render(), byLabel("Increase servings"));
+    addMore({ foods: [BANANA], recipes: [{ id: "r-oat", title: "Oat Pancakes" }] });
+    h.ingredients.set("r-oat", []);
+    const [reaction, note] = findAll(render(), byType(Textarea));
+    (reaction!.props.onChange as (event: unknown) => void)({ target: { value: "mild rash" } });
+    (note!.props.onChange as (event: unknown) => void)({ target: { value: "ate it all" } });
+    const ratings = () => findAll(render(), byType(MealRatingsField))[0]!;
+    (ratings().props.onChange as (key: string, value: number) => void)("recipe:r-oat", 4);
+
+    h.network.offline = true;
+    const offlineTree = render();
+    // Entries stay editable offline; only Serve waits.
+    for (const stepper of findAll(offlineTree, byLabel("Increase servings"))) expect(stepper.props.disabled).toBe(false);
+    click(offlineTree, byLabel("Increase servings"));
+    expect(h.served).toHaveLength(0);
+
+    h.network.offline = false;
+    expect(serve()).toMatchObject({
+      parts: [{ storageItemId: ITEM.id, servings: 2 }],
+      foodIds: ["food-banana"],
+      recipeIds: ["r-oat"],
+      reactionNote: "mild rash",
+      notes: "ate it all",
+      recipeRatings: { "r-oat": 4 },
+    });
     h.ingredients.clear();
   });
 });
