@@ -94,10 +94,20 @@ export function isLabelOnly(item: { foods: readonly unknown[]; recipeTitle: stri
 }
 
 /**
+ * A tracked container with no servings left — after a Restore of a finished
+ * one, or a resize below what was served. Still active (it can be edited or
+ * removed), but the serve endpoint 409s on it (routes/storage.ts), so Serve
+ * and Add more leave it out (ledger 771).
+ */
+export function hasNoServingsLeft(item: { servingsTotal: number | null; servingsLeft: number | null }): boolean {
+  return item.servingsTotal !== null && (item.servingsLeft ?? 0) <= 0;
+}
+
+/**
  * Which actions the storage item Actions menu — the three-dot kebab every
  * list card now carries, on Home AND the Storage tab (item 264) — should
- * offer for a given item. Serve mirrors the active/food-or-recipe gate the
- * Serve sheet uses (see `isLabelOnly`); Edit and Remove are only meaningful
+ * offer for a given item. Serve needs an active item with something to log
+ * (see `isLabelOnly`) and a serving left (see `hasNoServingsLeft`); Edit and Remove are only meaningful
  * for an active item; Restore is the one action only a finished or
  * discarded item has. Pure so the menu's item list is unit-testable without
  * rendering.
@@ -106,13 +116,15 @@ export function resolveStorageItemMenuActions(item: {
   status: StorageStatus;
   foods: readonly unknown[];
   recipeTitle: string | null;
+  servingsTotal: number | null;
+  servingsLeft: number | null;
 }): { serve: boolean; edit: boolean; remove: boolean; restore: boolean } {
   const active = item.status === "active";
   // `restore` is the exact complement of `active`: a finished or discarded
   // item can only be put back, and an active one has nothing to be put back
   // from (item 264 — the kebab is now the ONLY action surface on a list
   // card, so it has to carry History's "Restore to active" too).
-  return { serve: active && !isLabelOnly(item), edit: active, remove: active, restore: !active };
+  return { serve: active && !isLabelOnly(item) && !hasNoServingsLeft(item), edit: active, remove: active, restore: !active };
 }
 
 /** Human "use within …" text for an unexpired item, counting down to `expiresAt`. */

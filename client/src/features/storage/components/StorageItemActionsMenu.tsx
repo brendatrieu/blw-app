@@ -26,7 +26,7 @@ export const STORAGE_MENU_ROW_LABEL: Record<StorageMenuRow, string> = {
  * serve as, does this caller handle restoring — come in as flags.
  */
 export function storageMenuRows(
-  item: Pick<StorageItem, "status" | "foods" | "recipeTitle">,
+  item: Pick<StorageItem, "status" | "foods" | "recipeTitle" | "servingsTotal" | "servingsLeft">,
   { hasBaby, canRestore }: { hasBaby: boolean; canRestore: boolean },
 ): StorageMenuRow[] {
   const actions = resolveStorageItemMenuActions(item);
@@ -71,7 +71,7 @@ export interface StorageItemActionsMenuProps {
  * this menu's own mutation otherwise.
  *
  * Which actions are offered is delegated entirely to
- * `resolveStorageItemMenuActions` so the gating logic (active/label-only)
+ * `resolveStorageItemMenuActions` so the gating logic (active/label-only/no servings left)
  * has one home, unit-tested there.
  */
 export function StorageItemActionsMenu({

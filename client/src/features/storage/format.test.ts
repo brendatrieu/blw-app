@@ -105,8 +105,11 @@ describe("isLabelOnly", () => {
 });
 
 describe("resolveStorageItemMenuActions", () => {
+  /** Servings not tracked — the shape every case below shares unless it says otherwise. */
+  const UNTRACKED = { servingsTotal: null, servingsLeft: null };
+
   it("offers Serve, Edit, and Remove for an active, food-sourced item", () => {
-    expect(resolveStorageItemMenuActions({ status: "active", foods: named("Avocado"), recipeTitle: null })).toEqual({
+    expect(resolveStorageItemMenuActions({ status: "active", foods: named("Avocado"), recipeTitle: null, ...UNTRACKED })).toEqual({
       serve: true,
       edit: true,
       remove: true,
@@ -116,12 +119,12 @@ describe("resolveStorageItemMenuActions", () => {
 
   it("offers Serve for an active, recipe-sourced item", () => {
     expect(
-      resolveStorageItemMenuActions({ status: "active", foods: [], recipeTitle: "Iron-Rich Purée" }),
+      resolveStorageItemMenuActions({ status: "active", foods: [], recipeTitle: "Iron-Rich Purée", ...UNTRACKED }),
     ).toEqual({ serve: true, edit: true, remove: true, restore: false });
   });
 
   it("withholds Serve for a label-only active item (nothing the serve endpoint could log)", () => {
-    expect(resolveStorageItemMenuActions({ status: "active", foods: [], recipeTitle: null })).toEqual({
+    expect(resolveStorageItemMenuActions({ status: "active", foods: [], recipeTitle: null, ...UNTRACKED })).toEqual({
       serve: false,
       edit: true,
       remove: true,
@@ -133,7 +136,7 @@ describe("resolveStorageItemMenuActions", () => {
   // a finished/discarded item offers exactly one thing — Restore — instead
   // of nothing at all.
   it("offers only Restore for a finished item", () => {
-    expect(resolveStorageItemMenuActions({ status: "finished", foods: named("Avocado"), recipeTitle: null })).toEqual({
+    expect(resolveStorageItemMenuActions({ status: "finished", foods: named("Avocado"), recipeTitle: null, ...UNTRACKED })).toEqual({
       serve: false,
       edit: false,
       remove: false,
@@ -142,7 +145,7 @@ describe("resolveStorageItemMenuActions", () => {
   });
 
   it("offers only Restore for a discarded item", () => {
-    expect(resolveStorageItemMenuActions({ status: "discarded", foods: named("Avocado"), recipeTitle: null })).toEqual({
+    expect(resolveStorageItemMenuActions({ status: "discarded", foods: named("Avocado"), recipeTitle: null, ...UNTRACKED })).toEqual({
       serve: false,
       edit: false,
       remove: false,
@@ -150,9 +153,36 @@ describe("resolveStorageItemMenuActions", () => {
     });
   });
 
+  // Ledger 771: restored after it ran out, or resized below what was served —
+  // still active, but the serve endpoint 409s on it.
+  it("withholds Serve for an active tracked container with no servings left, keeping Edit and Remove", () => {
+    for (const servings of [
+      { servingsTotal: 2, servingsLeft: 0 },
+      { servingsTotal: 1, servingsLeft: null },
+    ]) {
+      expect(resolveStorageItemMenuActions({ status: "active", foods: named("Avocado"), recipeTitle: null, ...servings })).toEqual({
+        serve: false,
+        edit: true,
+        remove: true,
+        restore: false,
+      });
+    }
+  });
+
+  it("still offers Serve with one serving left", () => {
+    const actions = resolveStorageItemMenuActions({
+      status: "active",
+      foods: named("Avocado"),
+      recipeTitle: null,
+      servingsTotal: 2,
+      servingsLeft: 1,
+    });
+    expect(actions.serve).toBe(true);
+  });
+
   it("never offers Restore alongside Remove — they are exact complements", () => {
     for (const status of ["active", "finished", "discarded"] as const) {
-      const actions = resolveStorageItemMenuActions({ status, foods: named("Avocado"), recipeTitle: null });
+      const actions = resolveStorageItemMenuActions({ status, foods: named("Avocado"), recipeTitle: null, ...UNTRACKED });
       expect(actions.restore).toBe(!actions.remove);
     }
   });

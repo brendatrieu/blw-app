@@ -77,7 +77,7 @@ describe("StorageItemActionsMenu (render)", () => {
 
 describe("storageMenuRows (item 264 — the kebab is a list card's only action surface)", () => {
   const labels = (rows: ReturnType<typeof storageMenuRows>) => rows.map((row) => STORAGE_MENU_ROW_LABEL[row]);
-  const active = { status: "active" as const, foods: [FOOD], recipeTitle: null };
+  const active = { status: "active" as const, foods: [FOOD], recipeTitle: null, servingsTotal: null, servingsLeft: null };
 
   it("offers Serve, Edit and Remove for an active item, in that order", () => {
     expect(labels(storageMenuRows(active, { hasBaby: true, canRestore: true }))).toEqual([
@@ -92,22 +92,27 @@ describe("storageMenuRows (item 264 — the kebab is a list card's only action s
   });
 
   it("withholds Serve for a label-only item but keeps Edit and Remove", () => {
-    const labelOnly = { status: "active" as const, foods: [], recipeTitle: null };
+    const labelOnly = { status: "active" as const, foods: [], recipeTitle: null, servingsTotal: null, servingsLeft: null };
     expect(labels(storageMenuRows(labelOnly, { hasBaby: true, canRestore: true }))).toEqual(["Edit", "Remove"]);
   });
 
+  it("withholds Serve for an active container with no servings left but keeps Edit and Remove (ledger 771)", () => {
+    const empty = { ...active, servingsTotal: 2, servingsLeft: 0 };
+    expect(labels(storageMenuRows(empty, { hasBaby: true, canRestore: true }))).toEqual(["Edit", "Remove"]);
+  });
+
   it("offers Restore to active — and only that — for a finished item", () => {
-    const finished = { status: "finished" as const, foods: [FOOD], recipeTitle: null };
+    const finished = { status: "finished" as const, foods: [FOOD], recipeTitle: null, servingsTotal: null, servingsLeft: null };
     expect(labels(storageMenuRows(finished, { hasBaby: true, canRestore: true }))).toEqual(["Restore to active"]);
   });
 
   it("offers Restore for a discarded item too", () => {
-    const discarded = { status: "discarded" as const, foods: [FOOD], recipeTitle: null };
+    const discarded = { status: "discarded" as const, foods: [FOOD], recipeTitle: null, servingsTotal: null, servingsLeft: null };
     expect(labels(storageMenuRows(discarded, { hasBaby: true, canRestore: true }))).toEqual(["Restore to active"]);
   });
 
   it("shows no rows at all for a caller with no restore handler (Home) on a finished item", () => {
-    const finished = { status: "finished" as const, foods: [FOOD], recipeTitle: null };
+    const finished = { status: "finished" as const, foods: [FOOD], recipeTitle: null, servingsTotal: null, servingsLeft: null };
     expect(storageMenuRows(finished, { hasBaby: true, canRestore: false })).toEqual([]);
   });
 });

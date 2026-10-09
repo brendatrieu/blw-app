@@ -8,7 +8,7 @@ import { FoodPicker } from "../../catalog/components/FoodPicker.js";
 import { FoodPlate } from "../../catalog/components/FoodPlate.js";
 import { recipePickerOptions } from "../../catalog/components/RecipePicker.js";
 import { useFoods, useRecipes } from "../../catalog/hooks.js";
-import { isLabelOnly, servePartHint, storageItemTitle } from "../format.js";
+import { hasNoServingsLeft, isLabelOnly, servePartHint, storageItemTitle } from "../format.js";
 import { useStorageItems } from "../hooks.js";
 import { storageItemCluster } from "./StorageItemCard.js";
 
@@ -40,7 +40,7 @@ export function addMoreStorageItems(items: readonly StorageItem[], servingIds: r
     (item) =>
       item.status === "active" &&
       !isLabelOnly(item) &&
-      !(item.servingsTotal !== null && (item.servingsLeft ?? 0) <= 0) &&
+      !hasNoServingsLeft(item) &&
       !servingIds.includes(item.id),
   );
 }
