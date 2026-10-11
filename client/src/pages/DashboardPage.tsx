@@ -165,7 +165,10 @@ export function UpNextCard({
                   plates={<FoodPlates {...storageItemCluster(row.item)} />}
                   title={<StorageItemTitle item={row.item} />}
                   detail={
-                    <span className="flex items-center gap-1.5 text-sm whitespace-nowrap text-[var(--color-text-muted)]">
+                    // flex-wrap (item 783): at 320px "N servings left" drops under
+                    // the badge instead of running under the kebab; nowrap keeps
+                    // each piece whole.
+                    <span className="flex flex-wrap items-center gap-x-1.5 gap-y-[3px] text-sm whitespace-nowrap text-[var(--color-text-muted)]">
                       <UseSoonBadge />
                       {row.item.servingsLeft != null && <span>{servingsCount(row.item.servingsLeft)} left</span>}
                     </span>

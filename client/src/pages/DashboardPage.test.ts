@@ -459,11 +459,11 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(card).not.toContain("left-[60px]");
     });
 
-    it("a storage row: plates, name, the Use soon chip and 'N servings left' on one line, its own kebab", () => {
+    it("a storage row: plates, name, the Use soon chip and 'N servings left' (wrapping under the chip when narrow, item 783), its own kebab", () => {
       const card = upNext(render({ storage: [useSoon("a", { servingsTotal: 4, servingsLeft: 3 })] }))!;
       expect(card).toContain("Food a");
       expect(card).toMatch(
-        /<span class="flex items-center gap-1\.5 text-sm whitespace-nowrap text-\[var\(--color-text-muted\)\]"><span class="[^"]*">(?:(?!<\/span>).)*<\/svg>Use soon<\/span><span>3 servings<!-- --> left<\/span><\/span>/s,
+        /<span class="flex flex-wrap items-center gap-x-1\.5 gap-y-\[3px\] text-sm whitespace-nowrap text-\[var\(--color-text-muted\)\]"><span class="[^"]*">(?:(?!<\/span>).)*<\/svg>Use soon<\/span><span>3 servings<!-- --> left<\/span><\/span>/s,
       );
       expect(card).toContain('href="/storage/a"');
       expect(card).toContain('aria-label="Up next: Food a actions"');
