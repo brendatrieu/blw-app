@@ -137,16 +137,20 @@ describe("how-to guides (item 601)", () => {
     expect(meal[2]).toContain(
       "![Under Rating (optional), Banana has three stars and Avocado has five, each with a Clear link.](/guides/meal-3-stars.webp)",
     );
+    // Item 782: the step-3 alt stays "Sweet Potato and Lentils"; the shots were retaken in that pick order.
+    expect(steps("how-to-custom-recipe")[2]).toContain(
+      "![Sweet Potato and Lentils each have a quantity filled in, and olive oil is listed under Additional ingredients.](/guides/recipe-3-amounts.webp)",
+    );
     const serve = steps("how-to-serve-from-storage");
     expect(serve[0]).toContain(
-      "\n\nUse **−** and **+** to set how many **Servings** your baby had. **When** defaults to the current time. If you served earlier, tap it, scroll to the day and time, and tap **Done**.\n\n",
+      "\n\nUse **−** and **+** to set how many servings your baby had. **When** defaults to the current time. If you served earlier, tap it, scroll to the day and time, and tap **Done**.\n\n",
     );
     expect(serve[0]).toContain(
-      "![The Serve sheet with Sweet Potato Lentil Patties under Serving, Servings at 1, and When showing today at 11:59 AM.](/guides/serve-1-servings.webp)",
+      "![The Serve sheet with Sweet Potato Lentil Patties under Serving, servings set to 1, and When showing today at 11:59 AM.](/guides/serve-1-servings.webp)",
     );
     // Item 763: several items per serve (ledger 760) get their own step 2.
     expect(serve[1]).toBe(
-      "2. Serve more than one item (optional)\n\nTap **+ Add more** to serve something else with it: another item from storage, or a fresh food or recipe that isn't in storage.\n\n![Under Serving, Sweet Potato Lentil Patties and Broccoli, Carrot each have their own Servings, and a fresh Banana is added.](/guides/serve-2-more.webp)\n\n",
+      "2. Serve more than one item (optional)\n\nTap **+ Add more** to serve something else with it: another item from storage, or a fresh food or recipe that isn't in storage.\n\n![Under Serving, Sweet Potato Lentil Patties and a Broccoli, Carrot container each have their own servings, and a fresh Banana is added.](/guides/serve-2-more.webp)\n\n",
     );
     expect(serve[2]).toMatch(/^3\. Rate it with stars \(optional\)\n\nTap one to five stars, five for a big hit\.\n\n!\[/);
     expect(serve[3]).toMatch(/^4\. Add a reaction or a note \(optional\)\n/);
