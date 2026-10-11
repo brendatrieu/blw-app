@@ -115,7 +115,7 @@ describe("how-to guides (item 601)", () => {
       "\n\nTap **Fridge**, **Freezer**, or **Counter**. **Prepared** defaults to the current time. If you made the batch earlier, tap it, scroll to the day and time, and tap **Done**.\n\n",
     );
     expect(storage.find((s) => s.startsWith("4. "))).toContain(
-      "\n\nWhen complete, your item is listed on the **Storage** page with the servings left and when to use it by.\n\n",
+      "\n\nWhen complete, your item is listed on the **Storage** page with the servings left and when to use it by. To change it later, including which foods are in it, choose **Edit** from its **⋮** menu.\n\n",
     );
     expect(getGuide("how-to-add-to-storage")?.body).toContain("Use within 90d");
     const stars = steps("how-to-log-a-meal").find((s) => s.startsWith("3. ")) ?? "";
@@ -150,8 +150,13 @@ describe("how-to guides (item 601)", () => {
     );
     expect(serve[2]).toMatch(/^3\. Rate it with stars \(optional\)\n\nTap one to five stars, five for a big hit\.\n\n!\[/);
     expect(serve[3]).toMatch(/^4\. Add a reaction or a note \(optional\)\n/);
-    expect(serve[4]).toMatch(
-      /^5\. Tap Serve\n\nThe servings left go down, and the meal lands in your \*\*Food log\*\* marked \*\*From storage\*\*\.\n\n!\[/,
+    // Item 780: owner-approved Undo sentence; the retaken shot shows the Undo banner.
+    expect(serve[4]).toBe(
+      '5. Tap Serve\n\nThe servings left go down, and the meal lands in your **Food log** marked **From storage**. Served by mistake? Tap **Undo** on the banner that shows for a few seconds, and the servings go back.\n\n![The storage item now reads 7 of 8 servings left, under a "Served: Sweet Potato Lentil Patties" banner with Undo.](/guides/serve-5-served.webp)',
+    );
+    // Item 780: "Toggle on", not "Turn on"; nothing else in that step changed.
+    expect(meal[4]).toContain(
+      "\n\nTap **Save** at the bottom. The meal shows up in **Food log** on Home. Have leftovers? Toggle on **Save leftovers to storage** before you save.\n\n",
     );
     expect(serve).toHaveLength(5);
   });
