@@ -89,6 +89,12 @@ function UpNextRowShell({
   );
 }
 
+/** A short last page's closing line (item 781): the row divider's geometry
+ * under its last row, so the blank space the card keeps for its tallest page
+ * (item 778) reads as the end of the list. */
+export const UP_NEXT_END_DIVIDER =
+  "*:last:after:absolute *:last:after:inset-x-3.5 *:last:after:bottom-0 *:last:after:h-px *:last:after:bg-[var(--color-divider)]";
+
 // The Home greeting's small uppercase apricot label (AppLayout), for the
 // card's own label (CSS uppercases it, so the copy stays "Up next").
 const UP_NEXT_LABEL_CLASS = "text-[11px] leading-[normal] font-bold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
@@ -149,7 +155,8 @@ export function UpNextCard({
         track={track}
         items={all}
         renderSlide={(rows) => (
-          <ul className="flex flex-col">
+          // Only when paged: a lone short page has no blank space under it.
+          <ul className={pages.last > 0 && rows.length < UP_NEXT_LIMIT ? `flex flex-col ${UP_NEXT_END_DIVIDER}` : "flex flex-col"}>
             {rows.map((row) =>
               row.kind === "storage" ? (
                 <UpNextRowShell

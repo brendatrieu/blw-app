@@ -8,7 +8,7 @@ import { babyKeys } from "../features/babies/api.js";
 import { storageKeys } from "../features/storage/hooks.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
 import { CARD_ROW_DIVIDER } from "../components/ui/Card.js";
-import { DashboardPage, HOME_STORAGE_LIMIT, UP_NEXT_LIMIT, upNextRows } from "./DashboardPage.js";
+import { DashboardPage, HOME_STORAGE_LIMIT, UP_NEXT_END_DIVIDER, UP_NEXT_LIMIT, upNextRows } from "./DashboardPage.js";
 import type { MealItem } from "@blw/shared";
 
 /** The markup minus the swipe track's off-screen (`inert`) slides (item 775):
@@ -377,7 +377,10 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     storage = [],
     allergens = [],
     meals = [],
+    offScreen = false,
   }: {
+    /** Keep the off-screen slides too (item 781 reads a later page). */
+    offScreen?: boolean;
     storage?: StorageItem[] | null;
     allergens?: AllergenProgressItem[] | null;
     meals?: MealItem[];
@@ -387,15 +390,14 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     if (storage) queryClient.setQueryData(storageKeys.list("active"), { items: storage });
     if (allergens) queryClient.setQueryData(trackingKeys.allergenProgress(BABY.id), { items: allergens });
     queryClient.setQueryData([...trackingKeys.meals(BABY.id), { limit: 100 }], { items: meals });
-    return shown(
-      renderToString(
-        createElement(
-          QueryClientProvider,
-          { client: queryClient },
-          createElement(MemoryRouter, null, createElement(DashboardPage, null)),
-        ),
+    const html = renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(MemoryRouter, null, createElement(DashboardPage, null)),
       ),
     );
+    return offScreen ? html : shown(html);
   }
 
   /** The Up next card's own markup, or null when it is not rendered. */
@@ -516,6 +518,30 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       const fits = upNext(render({ storage: [useSoon("a")], allergens: [due("peanut")] }))!;
       expect(fits).not.toContain("See all");
       expect(fits).not.toContain("Up next items");
+    });
+
+    it("closes a short last page with a divider under its last row; full and lone pages get none (item 781)", () => {
+      const lists = (card: string) => [...card.matchAll(/<ul class="([^"]*)"/g)].map((m) => m[1]!);
+      // Same line as the row divider, moved to the last row's bottom edge.
+      expect(UP_NEXT_END_DIVIDER).toBe(
+        CARD_ROW_DIVIDER.replaceAll("not-first:before:", "*:last:after:").replace("top-0", "bottom-0"),
+      );
+      for (const [extra, closed] of [
+        [1, true],
+        [2, true],
+        [3, false],
+      ] as const) {
+        const storage = Array.from({ length: UP_NEXT_LIMIT + extra }, (_, i) => useSoon(`s${i}`));
+        const [first, last, more] = lists(upNext(render({ storage, offScreen: true }))!);
+        expect(more).toBeUndefined();
+        expect(first).toBe("flex flex-col");
+        expect(last).toBe(closed ? `flex flex-col ${UP_NEXT_END_DIVIDER}` : "flex flex-col");
+      }
+      // One page of 1-2 rows: the card ends right under them, so no line.
+      for (const n of [1, 2]) {
+        const storage = Array.from({ length: n }, (_, i) => useSoon(`s${i}`));
+        expect(lists(upNext(render({ storage, offScreen: true }))!)).toEqual(["flex flex-col"]);
+      }
     });
 
     it("starts every divider under its row's plate, as Storage and Food log do (items 709, 720)", () => {
