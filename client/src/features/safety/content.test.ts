@@ -158,9 +158,9 @@ describe("how-to guides (item 601)", () => {
     expect(serve[4]).toBe(
       '5. Tap Serve\n\nThe servings left go down, and the meal lands in your **Food log** marked **From storage**. Served by mistake? Tap **Undo** on the banner that shows for a few seconds, and the servings go back.\n\n![The storage item now reads 7 of 8 servings left, under a "Served: Sweet Potato Lentil Patties" banner with Undo.](/guides/serve-5-served.webp)',
     );
-    // Item 780: "Toggle on", not "Turn on"; nothing else in that step changed.
+    // Item 784 (owner kept the chair's wording): "Turn on", plus the edit/delete sentences.
     expect(meal[4]).toContain(
-      "\n\nTap **Save** at the bottom. The meal shows up in **Food log** on Home. Have leftovers? Toggle on **Save leftovers to storage** before you save.\n\n",
+      "\n\nTap **Save** at the bottom. The meal shows up in **Food log** on Home. Have leftovers? Turn on **Save leftovers to storage** before you save. You can edit or delete a meal later. Deleting one that was served from storage gives its servings back.\n\n",
     );
     expect(serve).toHaveLength(5);
   });
