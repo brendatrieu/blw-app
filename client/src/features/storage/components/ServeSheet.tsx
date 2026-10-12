@@ -378,6 +378,7 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
 
       {addingMore && (
         <AddMoreSheet
+          babyId={babyId}
           servingIds={parts.map((part) => part.item.id)}
           onClose={() => setAddingMore(false)}
           onAdd={(picks) => {

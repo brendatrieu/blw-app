@@ -6,7 +6,7 @@ import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { SheetPanel } from "./Sheet.js";
 
-const render = (props: { title?: string; showClose?: boolean }) =>
+const render = (props: { title?: string; showClose?: boolean; fixedHeight?: boolean }) =>
   renderToString(createElement(SheetPanel, { ...props, onClose: () => {}, children: createElement("p", null, "body") }));
 
 const classOf = (html: string, marker: string) => html.match(new RegExp(`<div ${marker}[^>]*class="([^"]*)"`))?.[1] ?? "";
@@ -47,5 +47,13 @@ describe("SheetPanel pinned header (item 737)", () => {
     expect(classOf(html, 'data-sheet-header=""')).not.toMatch(/\bfixed\b/);
     // A sheet without a title still pins its handle.
     expect(classOf(render({}), 'data-sheet-header=""')).toContain("sticky");
+  });
+
+  it("a fixedHeight sheet (ledger 789) is 85vh from the start and hangs from the top; others only cap at 85vh", () => {
+    const fixed = classOf(render({ title: "Add more", fixedHeight: true }), 'role="dialog"').split(" ");
+    expect(fixed).toEqual(expect.arrayContaining(["h-[85vh]", "mt-[15vh]", "max-h-[85vh]"]));
+    const plain = classOf(render({ title: "Serve" }), 'role="dialog"').split(" ");
+    expect(plain).toContain("max-h-[85vh]");
+    expect(plain).not.toContain("h-[85vh]");
   });
 });

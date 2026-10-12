@@ -1,12 +1,12 @@
-// The Serve sheet's "Add more" (MR-Add-More, ledger 760), called as a plain
+// The Serve sheet's "Add more" (MR2 boards, ledger 789), called as a plain
 // function with its hooks mocked (the vi.hoisted store idiom), so ticking,
-// picking and "Add" run in node. The markup is pinned by rendering the
-// sheet's own children: the open Sheet portals to a document.body node lacks.
-import { createElement } from "react";
+// searching, switching tabs and "Add" run in node. The markup is pinned by
+// rendering the sheet's own children: the open Sheet portals to a
+// document.body node lacks.
+import { createElement, Fragment } from "react";
 import { renderToString } from "react-dom/server";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import type { StorageItem } from "@blw/shared";
+import type { MealItem, StorageItem } from "@blw/shared";
 
 const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], i: 0 };
@@ -14,6 +14,8 @@ const h = vi.hoisted(() => {
     store,
     storage: [] as unknown[],
     storageLoading: false,
+    meals: [] as unknown[],
+    mealsBaby: "" as string | undefined,
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states)) store.states[i] = typeof init === "function" ? (init as () => unknown)() : init;
@@ -34,13 +36,23 @@ vi.mock("../hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useStorageItems: () => ({ data: { items: h.storage }, isLoading: h.storageLoading }),
 }));
+vi.mock("../../tracking/hooks.js", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useMeals: (babyId: string | undefined, query: unknown) => {
+    h.mealsBaby = babyId;
+    expect(query).toEqual({ limit: 100 }); // Home's food-log key: already cached
+    return { data: { items: h.meals }, isLoading: false };
+  },
+}));
 vi.mock("../../catalog/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
+  // The API orders foods by iron level, not by name.
   useFoods: () => ({
     data: {
       foods: [
-        { id: "food-banana", slug: "banana", name: "Banana", category: "fruit", emoji: null, allergens: [] },
         { id: "food-pear", slug: "pear", name: "Pear", category: "fruit", emoji: null, allergens: [] },
+        { id: "food-oats", slug: "oats", name: "Oats", category: "grain", emoji: null, allergens: [] },
+        { id: "food-banana", slug: "banana", name: "Banana", category: "fruit", emoji: null, allergens: [] },
       ],
     },
     isLoading: false,
@@ -50,17 +62,19 @@ vi.mock("../../catalog/hooks.js", async (importOriginal) => ({
       recipes: [
         { id: "r-oat", title: "Oat Pancakes", isCustom: false, isFavorite: false },
         { id: "r-dal", title: "Red Lentil Dal", isCustom: true, isFavorite: false },
+        { id: "r-apple", title: "Apple Oatmeal", isCustom: false, isFavorite: false },
+        { id: "r-cod", title: "Baked Cod", isCustom: false, isFavorite: false },
+        { id: "r-egg", title: "Egg Muffins", isCustom: false, isFavorite: false },
       ],
     },
     isLoading: false,
   }),
 }));
 
-import { ADD_MORE_TABS, AddMoreSheet, addMoreStorageItems } from "./AddMoreSheet.js";
+import { ADD_MORE_TABS, AddMoreSheet, RECENT_LIMIT, addMoreStorageItems, recentIds } from "./AddMoreSheet.js";
 import { Button } from "../../../components/ui/Button.js";
-import { MultiCombobox } from "../../../components/ui/MultiCombobox.js";
+import { Input } from "../../../components/ui/Input.js";
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.js";
-import { FoodPicker } from "../../catalog/components/FoodPicker.js";
 
 const BASE: StorageItem = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -86,12 +100,22 @@ const SALMON: StorageItem = {
   id: "22222222-2222-2222-2222-222222222222",
   foods: [],
   recipeId: "aaaaaaaa-0000-0000-0000-000000000002",
-  recipeTitle: "Salmon Cakes",
+  recipeTitle: "Salmon Oat Cakes",
   location: "freezer",
 };
 const PEAR: StorageItem = { ...BASE, id: "33333333-3333-3333-3333-333333333333", foods: [], label: "Pear purée cubes", recipeTitle: null };
 const LABEL_ONLY: StorageItem = { ...BASE, id: "44444444-4444-4444-4444-444444444444", foods: [], label: "Mystery" };
 const PEAR_FOODS: StorageItem = { ...PEAR, foods: [{ id: "food-pear", slug: "pear", name: "Pear", emoji: null }], servingsTotal: 12, servingsLeft: 10 };
+
+type MealFoodish = { id: string; inRecipe?: boolean };
+const meal = (id: string, recipes: string[], foods: MealFoodish[]): MealItem =>
+  ({
+    id,
+    recipes: recipes.map((recipeId) => ({ id: recipeId, title: recipeId, rating: null })),
+    recipeId: recipes[0] ?? null,
+    recipeTitle: null,
+    foods: foods.map((food) => ({ slug: food.id, name: food.id, category: "fruit", storageItemId: null, ...food })),
+  }) as unknown as MealItem;
 
 interface El {
   type: unknown;
@@ -117,17 +141,36 @@ const one = (tree: El, type: unknown) => {
 const added: unknown[] = [];
 function render(servingIds: string[] = [BASE.id]): El {
   h.store.i = 0;
-  return (AddMoreSheet as unknown as (props: unknown) => El)({ servingIds, onAdd: (picks: unknown) => added.push(picks), onClose: () => {} });
+  return (AddMoreSheet as unknown as (props: unknown) => El)({
+    babyId: "baby-1",
+    servingIds,
+    onAdd: (picks: unknown) => added.push(picks),
+    onClose: () => {},
+  });
 }
-function reset(storage: StorageItem[]) {
+function reset(storage: StorageItem[], meals: MealItem[] = []) {
   h.store.states = [];
   h.storage = storage;
   h.storageLoading = false;
+  h.meals = meals;
   added.length = 0;
 }
-const checkboxes = (tree: El) => findAll(tree, (element) => element.type === "input" && element.props.type === "checkbox");
+/** The tickable rows, as elements (title, checked, onToggle). */
+const rows = (tree: El) => findAll(tree, (element) => typeof element.props?.onToggle === "function");
+const titles = (tree: El) => rows(tree).map((row) => row.props.title);
+const tick = (title: string, checked = true) => {
+  const row = rows(render()).find((entry) => entry.props.title === title);
+  if (!row) throw new Error(`no row ${title}`);
+  (row.props.onToggle as (checked: boolean) => void)(checked);
+};
+const goTo = (tab: string) => (one(render(), SegmentedControl).props.onChange as (value: string) => void)(tab);
+const type = (text: string) => (one(render(), Input).props.onChange as (event: unknown) => void)({ target: { value: text } });
+/** The scrolling list's key: a new one remounts it, back at the top. */
+const listKey = (tree: El) =>
+  (findAll(tree, (element) => String(element.props?.className ?? "").includes("overflow-y-auto"))[0] as unknown as { key: string }).key;
+const html = (tree: El) => renderToString(createElement(Fragment, null, tree.props.children as never));
 
-describe("addMoreStorageItems — what 'From storage' offers (items 730, 760)", () => {
+describe("addMoreStorageItems — what 'In storage' offers (items 730, 760)", () => {
   it("lists active containers that have something to serve and are not already in the list", () => {
     const finished = { ...SALMON, id: "55555555-5555-5555-5555-555555555555", status: "finished" as const };
     expect(addMoreStorageItems([BASE, SALMON, LABEL_ONLY, finished, PEAR_FOODS], [BASE.id]).map((item) => item.id)).toEqual([
@@ -143,42 +186,132 @@ describe("addMoreStorageItems — what 'From storage' offers (items 730, 760)", 
   });
 });
 
-describe("AddMoreSheet (MR-Add-More, ledger 760)", () => {
-  it("is titled 'Add more' with the three approved segments, From storage first", () => {
+describe("recentIds — this baby's recent recipes and foods (ledger 789)", () => {
+  it("newest meal first, each once, recipes in pick order; a recipe's ingredients are not recent foods", () => {
+    const meals = [
+      meal("m3", ["r-dal", "r-oat"], [{ id: "food-oats", inRecipe: true }, { id: "food-banana", inRecipe: false }]),
+      meal("m2", [], [{ id: "food-pear" }, { id: "food-banana" }]),
+      meal("m1", ["r-oat", "r-cod"], [{ id: "food-egg", inRecipe: true }]),
+    ];
+    expect(recentIds(meals)).toEqual({ recipeIds: ["r-dal", "r-oat", "r-cod"], foodIds: ["food-banana", "food-pear"] });
+  });
+
+  it("reads an older cached meal's single legacy recipe", () => {
+    const legacy = { ...meal("m1", [], [{ id: "food-pear" }]), recipes: undefined, recipeId: "r-egg" } as MealItem;
+    expect(recentIds([legacy]).recipeIds).toEqual(["r-egg"]);
+  });
+});
+
+describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
+  it("is a fixed-height 'Add more' sheet: one search box, then the three approved tabs, In storage first", () => {
     reset([BASE, SALMON]);
     const tree = render();
     expect(tree.props.title).toBe("Add more");
     expect(tree.props.showClose).toBe(true);
-    expect(ADD_MORE_TABS.map((tab) => tab.label)).toEqual(["From storage", "A food", "A recipe"]);
+    expect(tree.props.fixedHeight).toBe(true);
+    expect(ADD_MORE_TABS.map((tab) => tab.label)).toEqual(["In storage", "Recipes", "Foods"]);
     expect(one(tree, SegmentedControl).props.value).toBe("storage");
     expect(one(tree, SegmentedControl).props["aria-label"]).toBe("Add more");
+    const search = one(tree, Input);
+    expect(search.props.type).toBe("search");
+    expect(search.props.placeholder).toBe("Search storage, recipes, foods…");
+    expect(h.mealsBaby).toBe("baby-1");
+    // The search box, the tabs and the Add footer never shrink; only the
+    // list between them scrolls.
+    const out = html(tree);
+    expect(out).toMatch(/<div class="scroll-momentum scroll-thin -mx-4 min-h-0 flex-1 overflow-y-auto px-4">/);
+    expect(out).toMatch(/<div class="-mx-4 shrink-0 border-t [^"]*"><button[^>]*>Add<\/button><\/div>$/);
   });
 
-  it("keeps Add disabled until something is picked", () => {
+  it("keeps a plain Add, disabled until something is picked", () => {
     reset([BASE, SALMON]);
-    expect(one(render(), Button).props.disabled).toBe(true);
+    const add = one(render(), Button);
+    expect(add.props.disabled).toBe(true);
+    expect(add.props.children).toBe("Add");
   });
 
-  it("ticks containers, a fresh food and a fresh recipe across segments, and adds them all at once, in the order picked", () => {
+  it("Recipes opens with this baby's recent ones (at most three, ones the list still has), then every recipe A–Z", () => {
+    const meals = [
+      meal("m3", ["r-gone", "r-dal"], []),
+      meal("m2", ["r-egg"], []),
+      meal("m1", ["r-dal", "r-cod", "r-oat"], []),
+    ];
+    reset([BASE], meals);
+    goTo("recipe");
+    const tree = render();
+    expect(titles(tree)).toEqual([
+      "Red Lentil Dal",
+      "Egg Muffins",
+      "Baked Cod",
+      "Apple Oatmeal",
+      "Baked Cod",
+      "Egg Muffins",
+      "Oat Pancakes",
+      "Red Lentil Dal",
+    ]);
+    expect(RECENT_LIMIT).toBe(3);
+    const out = html(tree);
+    expect(out.indexOf(">Recent</h3>")).toBeLessThan(out.indexOf(">All recipes</h3>"));
+    expect(out).toContain(">🍲</span>");
+  });
+
+  it("Foods opens with recent loose foods, then every food A–Z; no Recent heading without a history", () => {
+    reset([BASE], [meal("m1", [], [{ id: "food-pear" }])]);
+    goTo("food");
+    expect(titles(render())).toEqual(["Pear", "Banana", "Oats", "Pear"]);
+    expect(html(render())).toContain(">All foods</h3>");
+
+    reset([BASE]);
+    goTo("food");
+    const out = html(render());
+    expect(out).not.toContain(">Recent</h3>");
+    expect(titles(render())).toEqual(["Banana", "Oats", "Pear"]);
+  });
+
+  it("typing searches all three at once, grouped In storage, Recipes, Foods; the tabs dim, and a tab tap clears the search", () => {
     reset([BASE, SALMON, PEAR_FOODS]);
-    const boxes = checkboxes(render());
-    expect(boxes).toHaveLength(2); // Avocado is already being served
-    (boxes[1]!.props.onChange as (event: unknown) => void)({ target: { checked: true } }); // Pear purée cubes
-    (checkboxes(render())[0]!.props.onChange as (event: unknown) => void)({ target: { checked: true } }); // Salmon Cakes
-    expect(checkboxes(render()).map((box) => box.props.checked)).toEqual([true, true]);
+    goTo("recipe");
+    expect(listKey(render())).toBe("recipe");
+    type("oat");
+    const tree = render();
+    expect(listKey(tree)).toBe("search");
+    expect(titles(tree)).toEqual(["Salmon Oat Cakes", "Apple Oatmeal", "Oat Pancakes", "Oats"]);
+    const out = html(tree);
+    expect(out.indexOf(">In storage</h3>")).toBeLessThan(out.indexOf(">Recipes</h3>"));
+    expect(out.indexOf(">Recipes</h3>")).toBeLessThan(out.indexOf(">Foods</h3>"));
+    expect(out).not.toContain(">Recent</h3>");
+    expect(out).toContain("opacity-45");
 
-    (one(render(), SegmentedControl).props.onChange as (value: string) => void)("food");
-    expect(findAll(render(), (element) => element.type === "input")).toHaveLength(0);
-    const picker = one(render(), FoodPicker);
-    expect(picker.props.inline).toBe(true);
-    (picker.props.onChange as (ids: string[]) => void)(["food-banana"]);
+    type("OAT  ");
+    expect(titles(render())).toHaveLength(4); // case and trailing spaces ignored
 
-    (one(render(), SegmentedControl).props.onChange as (value: string) => void)("recipe");
-    const combobox = one(render(), MultiCombobox);
-    expect(combobox.props.inline).toBe(true);
-    expect(combobox.props.placeholder).toBe("Search recipes…");
-    expect((combobox.props.options as { label: string }[]).map((option) => option.label)).toEqual(["Red Lentil Dal", "Oat Pancakes"]);
-    (combobox.props.onChange as (ids: string[]) => void)(["r-oat"]);
+    type("zzz");
+    expect(titles(render())).toEqual([]);
+    expect(html(render())).toContain("No matches");
+
+    goTo("food");
+    expect(one(render(), Input).props.value).toBe("");
+    expect(one(render(), SegmentedControl).props.value).toBe("food");
+    expect(html(render())).not.toContain("opacity-45");
+  });
+
+  it("keeps picks across tabs and searches, and adds them all at once, in the order picked", () => {
+    reset([BASE, SALMON, PEAR_FOODS]);
+    expect(titles(render())).toEqual(["Salmon Oat Cakes", "Pear purée cubes"]); // Avocado is already being served
+    tick("Pear purée cubes");
+    type("salmon");
+    tick("Salmon Oat Cakes");
+    type("");
+    expect(rows(render()).map((row) => row.props.checked)).toEqual([true, true]);
+
+    goTo("food");
+    tick("Banana");
+    goTo("recipe");
+    tick("Oat Pancakes");
+    type("banana"); // the food picked on another tab shows ticked in a search
+    expect(rows(render()).map((row) => [row.props.title, row.props.checked])).toEqual([["Banana", true]]);
+    goTo("storage");
+    expect(rows(render()).map((row) => row.props.checked)).toEqual([true, true]);
 
     const add = one(render(), Button);
     expect(add.props.disabled).toBe(false);
@@ -192,51 +325,30 @@ describe("AddMoreSheet (MR-Add-More, ledger 760)", () => {
     ]);
   });
 
-  it("enables Add for a fresh food alone, or a fresh recipe alone — no container needed", () => {
-    reset([BASE, SALMON]);
-    (one(render(), SegmentedControl).props.onChange as (value: string) => void)("food");
-    (one(render(), FoodPicker).props.onChange as (ids: string[]) => void)(["food-pear"]);
-    expect(one(render(), Button).props.disabled).toBe(false);
-
-    reset([BASE, SALMON]);
-    (one(render(), SegmentedControl).props.onChange as (value: string) => void)("recipe");
-    (one(render(), MultiCombobox).props.onChange as (ids: string[]) => void)(["r-dal"]);
-    const add = one(render(), Button);
-    expect(add.props.disabled).toBe(false);
-    (add.props.onClick as () => void)();
-    expect(added).toEqual([{ items: [], foods: [], recipes: [{ id: "r-dal", title: "Red Lentil Dal" }] }]);
-  });
-
-  it("unticking takes a container back out", () => {
-    reset([BASE, SALMON]);
-    (checkboxes(render())[0]!.props.onChange as (event: unknown) => void)({ target: { checked: true } });
-    (checkboxes(render())[0]!.props.onChange as (event: unknown) => void)({ target: { checked: false } });
+  it("a recipe ticked under Recent is the same pick as under All recipes; unticking takes it back out", () => {
+    reset([BASE], [meal("m1", ["r-dal"], [])]);
+    goTo("recipe");
+    tick("Red Lentil Dal");
+    expect(rows(render()).filter((row) => row.props.title === "Red Lentil Dal").map((row) => row.props.checked)).toEqual([true, true]);
+    tick("Red Lentil Dal", false);
     expect(one(render(), Button).props.disabled).toBe(true);
   });
 
-  it("each row shows the container's plate, name and where it is with what is left", () => {
+  it("each storage row shows the container's plate, name and where it is with what is left; the row is the tap target", () => {
     reset([BASE, SALMON, PEAR_FOODS]);
-    const tree = render();
-    const html = renderToString(
-      createElement(QueryClientProvider, { client: new QueryClient() }, tree.props.children as never),
-    );
-    expect(html).toContain(">Salmon Cakes</span>");
-    expect(html).toContain(">Freezer · 6 of 6 left</span>");
-    expect(html).toContain(">Pear purée cubes</span>");
-    expect(html).toContain(">Fridge · 10 of 12 left</span>");
-    expect(html).toContain(">🍲</span>");
-    // A whole row is the checkbox's label: the tap target is the row.
-    expect(html).toMatch(/<label class="flex min-h-14 cursor-pointer[^"]*"><input type="checkbox"/);
-    expect(html).toContain(">Add</button>");
+    const out = html(render());
+    expect(out).toContain(">Salmon Oat Cakes</span>");
+    expect(out).toContain(">Freezer · 6 of 6 left</span>");
+    expect(out).toContain(">Pear purée cubes</span>");
+    expect(out).toContain(">Fridge · 10 of 12 left</span>");
+    expect(out).toMatch(/<label class="flex min-h-14 cursor-pointer[^"]*"><input type="checkbox"/);
   });
 
   it("says so when there is nothing else in storage, and nothing at all while it loads", () => {
     reset([BASE]);
-    const html = () =>
-      renderToString(createElement(QueryClientProvider, { client: new QueryClient() }, render().props.children as never));
-    expect(html()).toContain("Nothing else in storage to add.");
+    expect(html(render())).toContain("Nothing else in storage to add.");
     h.storageLoading = true;
     h.storage = [];
-    expect(html()).not.toContain("Nothing else in storage to add.");
+    expect(html(render())).not.toContain("Nothing else in storage to add.");
   });
 });

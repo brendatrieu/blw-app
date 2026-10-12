@@ -16,6 +16,14 @@ interface SheetProps {
    * way out besides the overlay tap.
    */
   showClose?: boolean;
+  /**
+   * Ledger 789: the panel is a fixed 85vh from the start, hung from the top
+   * rather than the bottom, so it never changes height with its content and
+   * stays put when the iOS keyboard shrinks the box fixed elements hang from
+   * (item 379) — the keyboard covers its lower part instead. The body lays
+   * out its own scrolling list.
+   */
+  fixedHeight?: boolean;
   children: ReactNode;
 }
 
@@ -26,20 +34,20 @@ interface SheetProps {
  * or an overlay click, and traps Tab focus inside the panel while open — the
  * same `useModal` mechanics as `Dialog`.
  */
-export function Sheet({ open, onClose, title, showClose = false, children }: SheetProps) {
+export function Sheet({ open, onClose, title, showClose = false, fixedHeight = false, children }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   useModal(open, panelRef, onClose, true);
 
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-30 flex items-end justify-center">
+    <div className={`fixed inset-0 z-30 flex justify-center ${fixedHeight ? "items-start" : "items-end"}`}>
       <div
         className="sheet-overlay absolute inset-0 bg-[var(--color-text)]/40"
         aria-hidden="true"
         onClick={onClose}
       />
-      <SheetPanel panelRef={panelRef} title={title} showClose={showClose} onClose={onClose}>
+      <SheetPanel panelRef={panelRef} title={title} showClose={showClose} fixedHeight={fixedHeight} onClose={onClose}>
         {children}
       </SheetPanel>
     </div>,
@@ -50,6 +58,7 @@ export function Sheet({ open, onClose, title, showClose = false, children }: She
 interface SheetPanelProps {
   title?: ReactNode;
   showClose?: boolean;
+  fixedHeight?: boolean;
   onClose: () => void;
   children: ReactNode;
   panelRef?: Ref<HTMLDivElement>;
@@ -61,7 +70,7 @@ interface SheetPanelProps {
  * the grab handle, the header row, the left-hand X — without a DOM env for
  * `createPortal` to mount into.
  */
-export function SheetPanel({ title, showClose = false, onClose, children, panelRef }: SheetPanelProps) {
+export function SheetPanel({ title, showClose = false, fixedHeight = false, onClose, children, panelRef }: SheetPanelProps) {
   return (
     <div
       ref={panelRef}
@@ -69,7 +78,7 @@ export function SheetPanel({ title, showClose = false, onClose, children, panelR
       aria-modal="true"
       aria-label={typeof title === "string" ? title : undefined}
       tabIndex={-1}
-      className="sheet-panel scroll-momentum relative z-10 flex max-h-[85vh] w-full max-w-lg scroll-pt-28 flex-col gap-3 overflow-y-auto rounded-t-[var(--radius-lg)] border-t border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 shadow-[var(--shadow-lg)] outline-none scroll-thin"
+      className={`sheet-panel scroll-momentum relative z-10 flex max-h-[85vh] w-full max-w-lg scroll-pt-28 flex-col gap-3 overflow-y-auto rounded-t-[var(--radius-lg)] border-t border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 shadow-[var(--shadow-lg)] outline-none scroll-thin${fixedHeight ? " mt-[15vh] h-[85vh]" : ""}`}
       style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
     >
       {/* Item 737: the handle and header row stay pinned while a long body

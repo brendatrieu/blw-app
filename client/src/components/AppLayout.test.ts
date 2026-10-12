@@ -293,7 +293,7 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
     // Menu portals to body AFTER the header, so a tie still floats it above; Sheet/Dialog sit higher.
     expect(headerZ).toBeLessThanOrEqual(z(src("./ui/Menu.tsx"), /className="z-(\d+) min-w-40/));
     for (const overlay of ["./ui/Sheet.tsx", "./ui/Dialog.tsx"]) {
-      expect(headerZ, overlay).toBeLessThan(z(src(overlay), /"fixed inset-0 z-(\d+) /));
+      expect(headerZ, overlay).toBeLessThan(z(src(overlay), /["`]fixed inset-0 z-(\d+) /));
     }
   });
 
