@@ -1,13 +1,13 @@
-// Ledger 760: every surface that opens the Serve sheet offers its 6 s Undo —
-// the Storage tab, a container's page and Home — through the page's own
-// `useServeUndo`, and the kebab hands the serve to it. Pages are called as
-// plain functions with their hooks mocked (the HomePaging.handlers idiom) and
-// the returned element tree is read.
+// Ledger 785: a serve raises no banner (the sheet closes and the counts
+// update; deleting the meal reverses it), while Remove keeps its 6 s Undo on
+// the Storage tab and a container's page. Pages are called as plain functions
+// with their hooks mocked (the HomePaging.handlers idiom) and the returned
+// element tree is read.
 import { describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
-  recentServe: null as null | { mealId: string; label: string },
-  announce: () => {},
+  recentChange: null as null | { id: string; title: string; from: string; to: string },
+  setStatus: vi.fn(),
   undo: () => {},
   item: {
     id: "11111111-1111-1111-1111-111111111111",
@@ -45,8 +45,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 vi.mock("../features/storage/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useStorageItems: () => ({ data: { items: [h.item] }, isLoading: false, isError: false, isFetching: false, isSuccess: true }),
-  useStorageStatusChange: () => ({ recentChange: null, setStatus: () => {}, undo: () => {}, isPending: false }),
-  useServeUndo: () => ({ recentServe: h.recentServe, announce: h.announce, undo: h.undo }),
+  useStorageStatusChange: () => ({ recentChange: h.recentChange, setStatus: h.setStatus, undo: h.undo, isPending: false }),
   useUpdateStorageItem: () => ({ mutate: () => {}, isPending: false }),
 }));
 vi.mock("../features/babies/useActiveBaby.js", () => ({
@@ -84,42 +83,49 @@ function findAll(node: unknown, type: unknown, out: El[] = []): El[] {
 }
 const call = (component: unknown, props: Record<string, unknown> = {}) => (component as (p: unknown) => El)(props);
 
-describe("the serve Undo banner on every Serve surface (ledger 760)", () => {
+describe("Undo after Remove only (ledger 785)", () => {
   it.each([
     ["the Storage tab", () => call(StoragePage)],
     ["a container's page", () => call(StorageDetailPage)],
-    ["Home", () => call(DashboardPage)],
-  ])("%s shows it only after a serve, with the serve's label and Undo", (_name, page) => {
-    h.recentServe = null;
+  ])("%s shows Remove's banner with its Undo, and no banner otherwise", (_name, page) => {
+    h.recentChange = null;
     expect(findAll(page(), StorageStatusBanner)).toHaveLength(0);
 
-    h.recentServe = { mealId: "m1", label: "Served: Avocado + 1 more" };
+    h.recentChange = { id: h.item.id, title: "Avocado", from: "active", to: "discarded" };
     const banners = findAll(page(), StorageStatusBanner);
     expect(banners).toHaveLength(1);
-    expect(banners[0]!.props.label).toBe("Served: Avocado + 1 more");
+    expect(banners[0]!.props.label).toBe("Marked discarded: Avocado");
     expect(banners[0]!.props.onUndo).toBe(h.undo);
-    h.recentServe = null;
+    h.recentChange = null;
   });
 
   it.each([
     ["the Storage tab", () => call(StoragePage)],
     ["a container's page", () => call(StorageDetailPage)],
-    ["Home's Up next", () => call(UpNextCard, { babyId: "baby-1", onServed: h.announce })],
-    ["Home's Storage", () => call(StorageSection, { babyId: "baby-1", onServed: h.announce })],
-  ])("%s hands each kebab's serve to the page's Undo", (_name, page) => {
+  ])("%s runs the kebab's Remove through the undoable setter", (_name, page) => {
+    h.setStatus.mockClear();
+    const [menu] = findAll(page(), StorageItemActionsMenu);
+    (menu!.props.onRemove as () => void)();
+    expect(h.setStatus).toHaveBeenCalledWith(h.item, "discarded", true);
+  });
+
+  it("Home renders no Undo banner at all", () => {
+    expect(findAll(call(DashboardPage), StorageStatusBanner)).toHaveLength(0);
+  });
+
+  it.each([
+    ["the Storage tab", () => call(StoragePage)],
+    ["a container's page", () => call(StorageDetailPage)],
+    ["Home's Up next", () => call(UpNextCard, { babyId: "baby-1" })],
+    ["Home's Storage", () => call(StorageSection, { babyId: "baby-1" })],
+  ])("%s hands nothing to a serve: no kebab carries onServed", (_name, page) => {
     const menus = findAll(page(), StorageItemActionsMenu);
     expect(menus.length).toBeGreaterThan(0);
-    for (const menu of menus) expect(menu.props.onServed).toBe(h.announce);
+    for (const menu of menus) expect(menu.props).not.toHaveProperty("onServed");
   });
 
-  it("Home passes its Undo down to Up next and Storage", () => {
-    const tree = call(DashboardPage);
-    expect(findAll(tree, UpNextCard)[0]!.props.onServed).toBe(h.announce);
-    expect(findAll(tree, StorageSection)[0]!.props.onServed).toBe(h.announce);
-  });
-
-  it("the kebab's Serve sheet reports the serve to the page", () => {
-    const tree = call(StorageItemActionsMenu, { item: h.item, babyId: "baby-1", onServed: h.announce });
-    expect(findAll(tree, ServeSheet)[0]!.props.onServed).toBe(h.announce);
+  it("the kebab's Serve sheet carries no onServed", () => {
+    const tree = call(StorageItemActionsMenu, { item: h.item, babyId: "baby-1" });
+    expect(findAll(tree, ServeSheet)[0]!.props).not.toHaveProperty("onServed");
   });
 });

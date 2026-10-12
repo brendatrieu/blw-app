@@ -16,8 +16,8 @@ function arm() {
   return { win, type, capture, listener: listener as (event: unknown) => void };
 }
 
-function click(detail: number, target: unknown = { closest: () => null }) {
-  return { detail, target, preventDefault: vi.fn(), stopPropagation: vi.fn() };
+function click(detail: number) {
+  return { detail, preventDefault: vi.fn(), stopPropagation: vi.fn() };
 }
 
 describe("ignoreTapsBriefly (ledger 767)", () => {
@@ -25,28 +25,16 @@ describe("ignoreTapsBriefly (ledger 767)", () => {
     const { type, capture, listener } = arm();
     expect(type).toBe("click");
     expect(capture).toBe(true);
-    for (const target of [{ closest: () => null }, null]) {
-      const event = click(1, target);
-      listener(event);
-      expect(event.preventDefault).toHaveBeenCalledTimes(1);
-      expect(event.stopPropagation).toHaveBeenCalledTimes(1);
-    }
+    const event = click(1);
+    listener(event);
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
   });
 
   it("lets a keyboard click through (Enter or Space make a click with detail 0)", () => {
     const { listener } = arm();
     const event = click(0);
     listener(event);
-    expect(event.preventDefault).not.toHaveBeenCalled();
-    expect(event.stopPropagation).not.toHaveBeenCalled();
-  });
-
-  it("lets a tap on the Undo banner through", () => {
-    const { listener } = arm();
-    const closest = vi.fn((selector: string) => (selector === "[data-tap-guard-skip]" ? {} : null));
-    const event = click(1, { closest });
-    listener(event);
-    expect(closest).toHaveBeenCalledWith("[data-tap-guard-skip]");
     expect(event.preventDefault).not.toHaveBeenCalled();
     expect(event.stopPropagation).not.toHaveBeenCalled();
   });

@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
-import type { AllergenProgressItem, ServeStorageResponse, StorageItem } from "@blw/shared";
+import type { AllergenProgressItem, StorageItem } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
 import { dueAllergens, dueSinceLabel } from "../features/tracking/allergenRow.js";
 import { allergenEmoji, allergenTint } from "../features/tracking/allergenEmoji.js";
 import { AllergenUpNextMenu } from "../features/tracking/components/AllergenUpNextMenu.js";
 import { HOME_MEAL_LIMIT, ServeLogList } from "../features/tracking/components/ServeLogList.js";
-import { useServeUndo, useStorageItems } from "../features/storage/hooks.js";
+import { useStorageItems } from "../features/storage/hooks.js";
 import { storageItemTitle } from "../features/storage/format.js";
 import { resolveFreshness } from "../features/storage/freshness.js";
 import {
@@ -17,7 +17,6 @@ import {
   UseSoonBadge,
 } from "../features/storage/components/StorageItemCard.js";
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
-import { StorageStatusBanner } from "../features/storage/components/StorageStatusBanner.js";
 import { FoodPlates } from "../features/catalog/components/FoodPlate.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { Card, CARD_ROW_DIVIDER, CardLink } from "../components/ui/Card.js";
@@ -105,14 +104,7 @@ const UP_NEXT_LABEL_CLASS = "text-[11px] leading-[normal] font-bold uppercase tr
  * nothing is due, so it never flashes in empty. Paged like Storage and Food
  * log (item 712); keyed by baby on Home, so a switch starts on page one.
  */
-export function UpNextCard({
-  babyId,
-  onServed,
-}: {
-  babyId: string;
-  /** Home's serve Undo (ledger 760). */
-  onServed?: (response: ServeStorageResponse) => void;
-}) {
+export function UpNextCard({ babyId }: { babyId: string }) {
   const storage = useStorageItems("active");
   const progress = useAllergenProgress(babyId);
   const loading = storage.isLoading || progress.isLoading;
@@ -178,7 +170,6 @@ export function UpNextCard({
                       item={row.item}
                       babyId={babyId}
                       label={`Up next: ${storageItemTitle(row.item)} actions`}
-                      onServed={onServed}
                     />
                   }
                 />
@@ -262,14 +253,7 @@ function AllergenProgressSummary({ babyId }: { babyId: string }) {
 /** Home's storage page size; swipe or ‹ › for the rest (items 694, 775). */
 export const HOME_STORAGE_LIMIT = 3;
 
-export function StorageSection({
-  babyId,
-  onServed,
-}: {
-  babyId: string;
-  /** Home's serve Undo (ledger 760). */
-  onServed?: (response: ServeStorageResponse) => void;
-}) {
+export function StorageSection({ babyId }: { babyId: string }) {
   const { data, isLoading } = useStorageItems("active");
   const items = data?.items ?? [];
   const track = usePagedTrack(items.length, HOME_STORAGE_LIMIT);
@@ -318,7 +302,6 @@ export function StorageSection({
                       item={item}
                       babyId={babyId}
                       label={`${storageItemTitle(item)} actions`}
-                      onServed={onServed}
                     />
                   }
                 />
@@ -333,7 +316,6 @@ export function StorageSection({
 
 export function DashboardPage() {
   const { activeBaby, isLoading } = useActiveBaby();
-  const serveUndo = useServeUndo(activeBaby?.id);
 
   if (isLoading) {
     return (
@@ -366,12 +348,9 @@ export function DashboardPage() {
       {/* The visible greeting lives in the shared AppLayout header; this keeps
           the document outline rooted for screen readers. */}
       <h1 className="sr-only">Home</h1>
-      {/* Ledger 760: a serve from Up next or Storage below offers its Undo
-          here, at the top, where Up next starts. */}
-      {serveUndo.recentServe && <StorageStatusBanner label={serveUndo.recentServe.label} onUndo={serveUndo.undo} />}
       {/* Keyed per baby so a switch starts on page one; prefixed, like
           ServeLogList below, so the two sibling keys never match (item 712). */}
-      <UpNextCard key={`up-next-${activeBaby.id}`} babyId={activeBaby.id} onServed={serveUndo.announce} />
+      <UpNextCard key={`up-next-${activeBaby.id}`} babyId={activeBaby.id} />
       {/* Emoji-free per A-Home; sky and mint as before (item 661). */}
       <div className="flex gap-2.5">
         <ButtonLink to="/log-meal" size="lg" className="flex-1">
@@ -382,7 +361,7 @@ export function DashboardPage() {
         </ButtonLink>
       </div>
 
-      <StorageSection babyId={activeBaby.id} onServed={serveUndo.announce} />
+      <StorageSection babyId={activeBaby.id} />
 
       <section className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between">

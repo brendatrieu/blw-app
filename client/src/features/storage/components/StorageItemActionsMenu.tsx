@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ServeStorageResponse, StorageItem } from "@blw/shared";
+import type { StorageItem } from "@blw/shared";
 import { Menu, MenuItem, MenuLinkItem } from "../../../components/ui/Menu.js";
 import { useUpdateStorageItem } from "../hooks.js";
 import { resolveStorageItemMenuActions } from "../format.js";
@@ -53,9 +53,6 @@ export interface StorageItemActionsMenuProps {
   onRestore?: () => void;
   /** A status mutation is already in flight upstream. */
   busy?: boolean;
-  /** After a serve: the page's Undo banner (`useServeUndo().announce`,
-   * ledger 760). */
-  onServed?: (response: ServeStorageResponse) => void;
   /** The kebab's accessible name. Home names each one ("Peas actions"), as
    * it lists several rows (and some twice); defaults to "Actions". */
   label?: string;
@@ -81,7 +78,6 @@ export function StorageItemActionsMenu({
   onRestore,
   busy = false,
   label = "Actions",
-  onServed,
 }: StorageItemActionsMenuProps) {
   const [serveOpen, setServeOpen] = useState(false);
   const updateItem = useUpdateStorageItem();
@@ -138,7 +134,7 @@ export function StorageItemActionsMenu({
       </Menu>
 
       {babyId && (
-        <ServeSheet item={item} babyId={babyId} open={serveOpen} onClose={() => setServeOpen(false)} onServed={onServed} />
+        <ServeSheet item={item} babyId={babyId} open={serveOpen} onClose={() => setServeOpen(false)} />
       )}
     </>
   );

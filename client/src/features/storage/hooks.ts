@@ -8,14 +8,13 @@ import type {
   StorageStatus,
   StorageView,
   ServeStorageInput,
-  ServeStorageResponse,
   UpdateStorageItemInput,
 } from "@blw/shared";
 import { createStorageItem, fetchStorage, serveStorage, updateStorageItem } from "./api.js";
 import { storageItemTitle } from "./format.js";
 import { sortActiveByFreshness } from "./freshness.js";
 import { useCelebration } from "../../components/ui/Celebration.js";
-import { celebrateForNewMeal, snapshotMealCelebrationContext, trackingKeys, useDeleteMeal } from "../tracking/hooks.js";
+import { celebrateForNewMeal, snapshotMealCelebrationContext, trackingKeys } from "../tracking/hooks.js";
 import { track } from "../../lib/usage/track.js";
 import {
   ageDaysBucket,
@@ -298,52 +297,4 @@ export function useStorageStatusChange() {
   }
 
   return { recentChange, setStatus, undo, isPending: updateItem.isPending };
-}
-
-/**
- * The serve banner's text (ledger 750/760, owner-approved): "Served: {first}"
- * for one container, "Served: {first} + {n} more" for several, where n counts
- * the OTHER containers only — fresh foods and recipes are not counted.
- */
-export function serveUndoLabel(titles: readonly string[]): string {
-  const [first, ...rest] = titles;
-  return rest.length === 0 ? `Served: ${first}` : `Served: ${first} + ${rest.length} more`;
-}
-
-export interface RecentServe {
-  mealId: string;
-  label: string;
-}
-
-/**
- * The 6 s Undo after a serve (ledger 760), the `useStorageStatusChange`
- * pattern: `announce` the serve's response, render the banner while
- * `recentServe` is set, `undo` deletes the meal. The server gives every
- * container its servings back from its own record, in one transaction, and
- * skips one the parent has removed since (ledger 751/762); a delete that
- * finds the meal already gone counts as done (`useDeleteMeal`).
- */
-export function useServeUndo(babyId: string | undefined) {
-  const [recentServe, setRecentServe] = useState<RecentServe | null>(null);
-  const undoTimer = useRef<ReturnType<typeof setTimeout>>();
-  const deleteMeal = useDeleteMeal(babyId);
-
-  useEffect(() => {
-    return () => clearTimeout(undoTimer.current);
-  }, []);
-
-  function announce({ meal, items }: ServeStorageResponse) {
-    clearTimeout(undoTimer.current);
-    setRecentServe({ mealId: meal.id, label: serveUndoLabel(items.map(storageItemTitle)) });
-    undoTimer.current = setTimeout(() => setRecentServe(null), UNDO_WINDOW_MS);
-  }
-
-  function undo() {
-    if (!recentServe) return;
-    deleteMeal.mutate(recentServe.mealId);
-    clearTimeout(undoTimer.current);
-    setRecentServe(null);
-  }
-
-  return { recentServe, announce, undo };
 }

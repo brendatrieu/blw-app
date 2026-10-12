@@ -55,7 +55,7 @@ vi.mock("../../lib/usage/track.js", async (importOriginal) => {
 });
 
 import { ApiError } from "../../lib/api.js";
-import { serveUndoLabel, useCreateStorageItem, useServeUndo, useStorageServe, useStorageStatusChange } from "./hooks.js";
+import { useCreateStorageItem, useStorageServe, useStorageStatusChange } from "./hooks.js";
 
 const fakeQueryClient = {
   getQueryData: () => undefined,
@@ -343,70 +343,46 @@ describe("useStorageStatusChange — storage_item_closed", () => {
   });
 });
 
-// Ledger 760: the serve's Undo banner. Owner-approved wording; {n} counts the
-// OTHER containers only, never fresh foods or recipes.
-describe("serveUndoLabel", () => {
-  it("names one container alone, and the first plus a count of the others", () => {
-    expect(serveUndoLabel(["Lentil Patties"])).toBe("Served: Lentil Patties");
-    expect(serveUndoLabel(["Lentil Patties", "Salmon Cakes"])).toBe("Served: Lentil Patties + 1 more");
-    expect(serveUndoLabel(["Lentil Patties", "Salmon Cakes", "Broccoli + Egg"])).toBe("Served: Lentil Patties + 2 more");
-  });
-});
-
-describe("useServeUndo — 6 s Undo that deletes the served meal (ledger 760)", () => {
+// Ledger 785: the serve Undo is gone; Remove keeps its 6 s Undo exactly as it was.
+describe("useStorageStatusChange — Remove's 6 s Undo (item 147, kept by ledger 785)", () => {
   function render() {
     h.store.i = 0;
     h.store.r = 0;
-    return useServeUndo("baby-1");
+    return useStorageStatusChange();
   }
-  const RESPONSE = {
-    meal: { id: "meal-9" },
-    items: [
-      { ...ITEM, label: null, recipeTitle: "Lentil Patties" },
-      { ...ITEM, label: "Pear purée cubes" },
-    ],
-  } as never;
 
-  it("shows nothing until a serve is announced, then the serve's label", () => {
+  it("Remove shows the banner; Undo writes the old status back, once, and closes it", () => {
     vi.useRealTimers();
     vi.useFakeTimers();
-    expect(render().recentServe).toBeNull();
-    render().announce(RESPONSE);
-    expect(render().recentServe).toEqual({ mealId: "meal-9", label: "Served: Lentil Patties + 1 more" });
-  });
+    expect(render().recentChange).toBeNull();
+    render().setStatus(ITEM as never, "discarded", true);
+    mutateCalls[0]!.options!.onSuccess!({ ...ITEM, status: "discarded" } as never);
+    expect(render().recentChange).toEqual({ id: "s1", title: "Leftovers", from: "active", to: "discarded" });
 
-  it("goes away on its own after 6 seconds, not before", () => {
-    vi.useRealTimers();
-    vi.useFakeTimers();
-    render().announce(RESPONSE);
-    vi.advanceTimersByTime(5_999);
-    expect(render().recentServe).not.toBeNull();
-    vi.advanceTimersByTime(1);
-    expect(render().recentServe).toBeNull();
-  });
-
-  it("a second serve inside the 6 s restarts the clock, so its banner gets its own 6 s", () => {
-    vi.useRealTimers();
-    vi.useFakeTimers();
-    render().announce(RESPONSE);
-    vi.advanceTimersByTime(4_000);
-    render().announce(RESPONSE);
-    vi.advanceTimersByTime(5_999);
-    expect(render().recentServe).not.toBeNull();
-    vi.advanceTimersByTime(1);
-    expect(render().recentServe).toBeNull();
-  });
-
-  it("Undo deletes that meal, once, and closes the banner", () => {
-    vi.useRealTimers();
-    vi.useFakeTimers();
-    render().announce(RESPONSE);
-    mutateCalls.length = 0;
     render().undo();
-    expect(mutateCalls.map((call) => call.variables)).toEqual(["meal-9"]);
-    expect(render().recentServe).toBeNull();
-    // A second tap on a banner that is gone does nothing.
+    expect(mutateCalls.map((call) => call.variables)).toEqual([
+      { id: "s1", input: { status: "discarded" } },
+      { id: "s1", input: { status: "active" } },
+    ]);
+    expect(render().recentChange).toBeNull();
     render().undo();
-    expect(mutateCalls).toHaveLength(1);
+    expect(mutateCalls).toHaveLength(2);
+  });
+
+  it("the banner goes away on its own after 6 seconds, not before", () => {
+    vi.useRealTimers();
+    vi.useFakeTimers();
+    render().setStatus(ITEM as never, "discarded", true);
+    mutateCalls[0]!.options!.onSuccess!({ ...ITEM, status: "discarded" } as never);
+    vi.advanceTimersByTime(5_999);
+    expect(render().recentChange).not.toBeNull();
+    vi.advanceTimersByTime(1);
+    expect(render().recentChange).toBeNull();
+  });
+
+  it("Restore raises no banner", () => {
+    render().setStatus({ ...ITEM, status: "discarded" } as never, "active", false);
+    mutateCalls[0]!.options!.onSuccess!({ ...ITEM, status: "active" } as never);
+    expect(render().recentChange).toBeNull();
   });
 });

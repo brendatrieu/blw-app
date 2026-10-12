@@ -154,9 +154,9 @@ describe("how-to guides (item 601)", () => {
     );
     expect(serve[2]).toMatch(/^3\. Rate it with stars \(optional\)\n\nTap one to five stars, five for a big hit\.\n\n!\[/);
     expect(serve[3]).toMatch(/^4\. Add a reaction or a note \(optional\)\n/);
-    // Item 780: owner-approved Undo sentence; the retaken shot shows the Undo banner.
+    // Item 786: serve Undo removed (785); deleting the meal reverses a serve; pre-780 shot and alt.
     expect(serve[4]).toBe(
-      '5. Tap Serve\n\nThe servings left go down, and the meal lands in your **Food log** marked **From storage**. Served by mistake? Tap **Undo** on the banner that shows for a few seconds, and the servings go back.\n\n![The storage item now reads 7 of 8 servings left, under a "Served: Sweet Potato Lentil Patties" banner with Undo.](/guides/serve-5-served.webp)',
+      '5. Tap Serve\n\nThe servings left go down, and the meal lands in your **Food log** marked **From storage**. Served by mistake? Delete the meal from your **Food log**, and the servings go back.\n\n![The storage item now reads 7 of 8 servings left.](/guides/serve-5-served.webp)',
     );
     // Item 784 (owner kept the chair's wording): "Turn on", plus the edit/delete sentences.
     expect(meal[4]).toContain(

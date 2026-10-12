@@ -16,26 +16,15 @@ describe("StorageStatusBanner (item 147, shared undo UI)", () => {
     expect(html).toContain(">Undo<");
   });
 
-  it("carries the serve's label the same way (ledger 760)", () => {
-    const html = renderToString(createElement(StorageStatusBanner, { label: "Served: Lentil Patties + 2 more", onUndo: () => {} }));
-    expect(html).toContain("<span>Served: Lentil Patties + 2 more</span>");
-    expect(html).toContain(">Undo<");
-  });
-
   it("gives Undo a 44px tap target without changing how it looks (VERIFY-3S B3)", () => {
-    const html = renderToString(createElement(StorageStatusBanner, { label: "Served: Peas", onUndo: () => {} }));
+    const html = renderToString(createElement(StorageStatusBanner, { label: "Marked discarded: Peas", onUndo: () => {} }));
     // A 20px line + 2 x 12px = 44px tall; the text + 2 x 8px wide.
     expect(html).toMatch(/<button type="button" class="relative [^"]*after:absolute after:-inset-x-2 after:-inset-y-3"[^>]*>Undo</);
   });
 
-  it("marks the whole banner for the post-serve tap guard to let through (ledger 767)", () => {
-    const html = renderToString(createElement(StorageStatusBanner, { label: "Served: Peas", onUndo: () => {} }));
-    expect(html).toMatch(/^<div data-tap-guard-skip="" [^>]*>.*>Undo<\/button><\/div>$/);
-  });
-
-  it("calls onUndo exactly once when Undo is pressed (both Undos: Remove and serve)", () => {
+  it("calls onUndo exactly once when Undo is pressed", () => {
     const onUndo = vi.fn();
-    const tree = StorageStatusBanner({ label: "Served: Peas", onUndo }) as { props: { children: unknown[] } };
+    const tree = StorageStatusBanner({ label: "Marked discarded: Peas", onUndo }) as { props: { children: unknown[] } };
     const button = tree.props.children.find(
       (child) => (child as { type?: unknown })?.type === "button",
     ) as { props: { onClick: () => void } };

@@ -319,7 +319,7 @@ describe("ServeSheet", () => {
     expect(element.props.open).toBe(true);
   });
 
-  it("closes itself, arms the brief tap guard (ledger 767), then hands the serve to the page's Undo", () => {
+  it("closes itself and arms the brief tap guard (ledger 767)", () => {
     const calls: string[] = [];
     vi.useFakeTimers();
     vi.stubGlobal("window", {
@@ -332,12 +332,11 @@ describe("ServeSheet", () => {
         babyId: "baby-1",
         open: true,
         onClose: () => calls.push("close"),
-        onServed: (response) => calls.push(`served ${response.meal.id}`),
-      }) as ReactElement<{ children: ReactElement<{ onServed: (response: unknown) => void }> }>;
-      element.props.children.props.onServed({ meal: { id: "m1" }, items: [] });
-      expect(calls).toEqual(["close", "guard click true", "served m1"]);
+      }) as ReactElement<{ children: ReactElement<{ onServed: () => void }> }>;
+      element.props.children.props.onServed();
+      expect(calls).toEqual(["close", "guard click true"]);
       vi.runAllTimers();
-      expect(calls).toEqual(["close", "guard click true", "served m1", "unguard click"]);
+      expect(calls).toEqual(["close", "guard click true", "unguard click"]);
     } finally {
       vi.useRealTimers();
       vi.unstubAllGlobals();

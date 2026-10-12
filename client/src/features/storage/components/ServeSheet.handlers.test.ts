@@ -140,7 +140,7 @@ function findAll(node: unknown, match: (element: Rendered) => boolean, out: Rend
 const byType = (type: unknown) => (element: Rendered) => element.type === type;
 const byLabel = (label: string) => (element: Rendered) => element.props?.["aria-label"] === label;
 
-function render(item: StorageItem = ITEM, onServed?: (response: unknown) => void): Rendered {
+function render(item: StorageItem = ITEM, onServed?: () => void): Rendered {
   h.store.i = 0;
   return (ServeControl as unknown as (props: unknown) => Rendered)({ item, babyId: "baby-1", onServed });
 }
@@ -311,12 +311,13 @@ describe("the Serving list (ledger 760)", () => {
     expect(findAll(render(), byType(AddMoreSheet))).toHaveLength(0);
   });
 
-  it("hands the server's answer to onServed after a successful serve", () => {
+  it("calls onServed after a successful serve, so the sheet can close", () => {
     h.reset();
-    const seen: unknown[] = [];
-    click(render(ITEM, (response) => seen.push(response)), byType(Button));
+    let served = 0;
+    click(render(ITEM, () => served++), byType(Button));
+    expect(served).toBe(0);
     h.served[0]!.onSuccess!({ meal: { id: "m1" }, items: [] });
-    expect(seen).toEqual([{ meal: { id: "m1" }, items: [] }]);
+    expect(served).toBe(1);
   });
 });
 

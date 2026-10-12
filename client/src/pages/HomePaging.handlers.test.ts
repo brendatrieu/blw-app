@@ -57,7 +57,6 @@ vi.mock("../features/babies/useActiveBaby.js", () => ({
 vi.mock("../features/storage/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useStorageItems: () => ({ data: { items: h.storage }, isLoading: false }),
-  useServeUndo: () => ({ recentServe: null, announce: () => {}, undo: () => {} }),
 }));
 
 import { PageTrack, Pager, type PageWindow, type PagedTrack } from "../components/ui/Pager.js";

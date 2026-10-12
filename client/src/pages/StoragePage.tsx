@@ -2,7 +2,6 @@ import { useState } from "react";
 import type { StorageView } from "@blw/shared";
 import {
   storageStatusChangeLabel,
-  useServeUndo,
   useStorageItems,
   useStorageStatusChange,
 } from "../features/storage/hooks.js";
@@ -20,7 +19,6 @@ export function StoragePage() {
   const { data, isLoading, isError } = useStorageItems(view);
   const { recentChange, setStatus, undo, isPending } = useStorageStatusChange();
   const { activeBaby } = useActiveBaby();
-  const serveUndo = useServeUndo(activeBaby?.id);
 
   const items = data?.items ?? [];
 
@@ -55,7 +53,6 @@ export function StoragePage() {
       </div>
 
       {recentChange && <StorageStatusBanner label={storageStatusChangeLabel(recentChange)} onUndo={undo} />}
-      {serveUndo.recentServe && <StorageStatusBanner label={serveUndo.recentServe.label} onUndo={serveUndo.undo} />}
 
       {isLoading && <SkeletonList count={4} />}
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load storage.</p>}
@@ -94,8 +91,7 @@ export function StoragePage() {
                 busy={isPending}
                 onRemove={() => setStatus(item, "discarded", true)}
                 onRestore={() => setStatus(item, "active", false)}
-                onServed={serveUndo.announce}
-              />
+                              />
             }
           />
         ))}

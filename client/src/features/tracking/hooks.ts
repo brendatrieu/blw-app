@@ -335,10 +335,10 @@ export function useUpdateMeal(babyId: string | undefined) {
 }
 
 /**
- * Deleting a meal — also the Serve sheet's Undo (ledger 760). A served
+ * Deleting a meal (ledger 760; 785: the only way to reverse a serve). A served
  * meal's containers get their servings back server-side, so storage is
- * refreshed too. A 404 means the meal is already gone (a double tap, Undo
- * after a delete elsewhere): that is the outcome asked for, so it is done,
+ * refreshed too. A 404 means the meal is already gone (a double tap, or a
+ * delete elsewhere): that is the outcome asked for, so it is done,
  * not an error.
  */
 export function useDeleteMeal(babyId: string | undefined) {

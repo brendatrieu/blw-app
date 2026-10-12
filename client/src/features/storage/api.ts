@@ -29,7 +29,7 @@ export function updateStorageItem(id: string, input: UpdateStorageItemInput): Pr
 }
 
 /** One sitting from one or more containers, plus fresh foods and recipes
- * (ledger 760). Undo is `deleteMeal` with the returned meal's id. */
+ * (ledger 760). Deleting the meal gives the servings back. */
 export function serveStorage(input: ServeStorageInput): Promise<ServeStorageResponse> {
   return apiPost<ServeStorageResponse>("/api/storage/serve", input);
 }

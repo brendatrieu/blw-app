@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import type { FoodListItem, ServeStorageInput, ServeStorageResponse, StorageItem } from "@blw/shared";
+import type { FoodListItem, ServeStorageInput, StorageItem } from "@blw/shared";
 import { useStorageServe } from "../hooks.js";
 import { clampServings, servePartHint, storageItemTitle } from "../format.js";
 import { AddMoreSheet } from "./AddMoreSheet.js";
@@ -167,9 +167,8 @@ const FRESH_TAG = (
 interface ServeControlProps {
   item: StorageItem;
   babyId: string;
-  /** Fired after a successful serve, with what the server answered, so the
-   * sheet can close and the page can offer Undo. */
-  onServed?: (response: ServeStorageResponse) => void;
+  /** Fired after a successful serve, so the sheet can close. */
+  onServed?: () => void;
 }
 
 /**
@@ -362,7 +361,7 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
                 ...buildServeInput(babyId, parts, freshFoods, freshRecipes, reactionNote, notes, servedAt),
                 ...serveRatingsInput(rows),
               },
-              { onSuccess: (response) => onServed?.(response) },
+              { onSuccess: () => onServed?.() },
             )
           }
         >
@@ -401,8 +400,6 @@ interface ServeSheetProps {
   babyId: string;
   open: boolean;
   onClose: () => void;
-  /** The page's Undo (`useServeUndo().announce`, ledger 760). */
-  onServed?: (response: ServeStorageResponse) => void;
 }
 
 /**
@@ -411,18 +408,17 @@ interface ServeSheetProps {
  * the list. Closed by the X at the LEFT of its header, an overlay tap, or
  * Escape; it closes itself after a serve.
  */
-export function ServeSheet({ item, babyId, open, onClose, onServed }: ServeSheetProps) {
+export function ServeSheet({ item, babyId, open, onClose }: ServeSheetProps) {
   return (
     <Sheet open={open} onClose={onClose} title="Serve" showClose>
       <ServeControl
         item={item}
         babyId={babyId}
-        onServed={(response) => {
+        onServed={() => {
           onClose();
           // Ledger 767: a fast double tap's second tap must not land on the
           // bottom nav that was under Serve.
           ignoreTapsBriefly();
-          onServed?.(response);
         }}
       />
     </Sheet>
