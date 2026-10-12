@@ -6,7 +6,7 @@ Full context, history, and open items: **read `docs/HANDOFF.md` before substanti
 ## The one rule that can hurt production
 
 **Pushing to `main` deploys to production.** Commit locally as you go; push ONLY when the owner says "push".
-After a deploy, remind the owner to fully quit and relaunch the installed app (there is no in-app update prompt yet).
+After a deploy, remind the owner to fully quit and relaunch the installed app. Since the update card (ledger 790), later deploys show "A new version is ready." with Reload on Home instead (once per version, then a "Update available" row on More); the deploy that first ships 790 still needs a full quit and reopen, twice.
 
 ## Commands
 
