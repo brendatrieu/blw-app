@@ -49,11 +49,14 @@ describe("SheetPanel pinned header (item 737)", () => {
     expect(classOf(render({}), 'data-sheet-header=""')).toContain("sticky");
   });
 
-  it("a fixedHeight sheet (ledger 789) is 85vh from the start and hangs from the top; others only cap at 85vh", () => {
+  it("a fixedHeight sheet (ledger 789) is 85svh from the start and hangs from the top (svh so a browser toolbar cannot push Add off-screen); others only cap at 85vh", () => {
     const fixed = classOf(render({ title: "Add more", fixedHeight: true }), 'role="dialog"').split(" ");
-    expect(fixed).toEqual(expect.arrayContaining(["h-[85vh]", "mt-[15vh]", "max-h-[85vh]"]));
+    expect(fixed).toEqual(expect.arrayContaining(["h-[85svh]", "mt-[15svh]", "max-h-[85vh]"]));
+    expect(fixed).not.toContain("h-[85vh]");
+    expect(fixed).not.toContain("mt-[15vh]");
     const plain = classOf(render({ title: "Serve" }), 'role="dialog"').split(" ");
     expect(plain).toContain("max-h-[85vh]");
     expect(plain).not.toContain("h-[85vh]");
+    expect(plain).not.toContain("h-[85svh]");
   });
 });

@@ -17,11 +17,14 @@ interface SheetProps {
    */
   showClose?: boolean;
   /**
-   * Ledger 789: the panel is a fixed 85vh from the start, hung from the top
+   * Ledger 789: the panel is a fixed 85svh from the start, hung from the top
    * rather than the bottom, so it never changes height with its content and
    * stays put when the iOS keyboard shrinks the box fixed elements hang from
    * (item 379) — the keyboard covers its lower part instead. The body lays
-   * out its own scrolling list.
+   * out its own scrolling list. svh, not vh: 100vh is the LARGE viewport, so
+   * with a browser toolbar showing (iOS Safari tab, Android Chrome) a vh panel
+   * ran below the visible area and hid the pinned Add (VERIFY-789-c1); svh is
+   * the toolbar-shown height and, like vh, never changes, so it never resizes.
    */
   fixedHeight?: boolean;
   children: ReactNode;
@@ -78,7 +81,7 @@ export function SheetPanel({ title, showClose = false, fixedHeight = false, onCl
       aria-modal="true"
       aria-label={typeof title === "string" ? title : undefined}
       tabIndex={-1}
-      className={`sheet-panel scroll-momentum relative z-10 flex max-h-[85vh] w-full max-w-lg scroll-pt-28 flex-col gap-3 overflow-y-auto rounded-t-[var(--radius-lg)] border-t border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 shadow-[var(--shadow-lg)] outline-none scroll-thin${fixedHeight ? " mt-[15vh] h-[85vh]" : ""}`}
+      className={`sheet-panel scroll-momentum relative z-10 flex max-h-[85vh] w-full max-w-lg scroll-pt-28 flex-col gap-3 overflow-y-auto rounded-t-[var(--radius-lg)] border-t border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 shadow-[var(--shadow-lg)] outline-none scroll-thin${fixedHeight ? " mt-[15svh] h-[85svh]" : ""}`}
       style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
     >
       {/* Item 737: the handle and header row stay pinned while a long body
