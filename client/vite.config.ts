@@ -10,6 +10,7 @@ import {
   isNetworkOnlyRoute,
   isUserDataRoute,
 } from "./src/pwa/route-matchers";
+import { UPDATE_PROMPT_ENABLED } from "./src/pwa/updateMode";
 
 // Monorepo root (one level up from client/) — the safety library's
 // `content/safety/*.mdx` glob import lives there, outside vite's default
@@ -26,7 +27,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: "autoUpdate",
+      // Ledger 790: "prompt" leaves a new worker waiting until the parent taps
+      // Reload (src/pwa/update.ts); the switch lives in src/pwa/updateMode.ts.
+      registerType: UPDATE_PROMPT_ENABLED ? "prompt" : "autoUpdate",
       includeAssets: ["favicon.svg", "icons/apple-touch-icon.png", "icons/icon-maskable-512.png"],
       manifest: {
         name: "Little Meals",
@@ -59,6 +62,12 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: "index.html",
+        // autoUpdate set this implicitly; kept so a first visit is still
+        // controlled (offline cache, meal queue) without a reload. It does not
+        // change WHEN a new worker takes over: that still waits for Reload.
+        clientsClaim: true,
+        // Hands over from a pre-790 autoUpdate worker once (see the file).
+        importScripts: ["sw-handover.js"],
         navigateFallbackDenylist: [/^\/api/],
         runtimeCaching: [
           {

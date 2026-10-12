@@ -265,13 +265,15 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
     // A-Home tops the gear with the greeting; inner rows center (item 679).
     expect(header(layoutWith([remy], "/"))).toMatch(/^<header class="[^"]*\bitems-start py-2\.5"/);
     expect(header(layoutWith([remy], "/foods"))).toMatch(/^<header class="[^"]*\bitems-center py-1"/);
-    // Left group: the (empty) slot, then the chip; the gear is the header's own last child.
+    // Left group: the (empty) slot, then the chip; the gear is the last row
+    // child. After it only the update card's (empty) live region, absolute and
+    // last so it paints over the row when it shows (ledger 790).
     for (const babies of [[remy], [remy, ada], []]) {
       const inner = header(layoutWith(babies, "/foods"));
       expect(inner, `${babies.length} babies`).toMatch(
         /^<header [^>]*><div class="flex min-w-0 items-center gap-0\.5"><div class="contents"><\/div>(?:<span |<label |<a )/,
       );
-      expect(inner, `${babies.length} babies`).toMatch(/<\/(?:span|label|a)><\/div><a [^>]*aria-label="Settings"[^>]*>.*?<\/a>$/s);
+      expect(inner, `${babies.length} babies`).toMatch(/<\/(?:span|label|a)><\/div><a [^>]*aria-label="Settings"[^>]*>.*?<\/a><div role="status" class="absolute inset-x-3"[^>]*><\/div>$/s);
     }
   });
 

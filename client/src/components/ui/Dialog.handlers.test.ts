@@ -30,6 +30,15 @@ const h = vi.hoisted(() => {
       const cleanup = effect();
       if (typeof cleanup === "function") store.cleanups.push(cleanup);
     },
+    // Reads the store straight through, and keeps the subscription so a test
+    // can count the notifications (useAnyModalOpen, ledger 790).
+    notified: { count: 0 },
+    useSyncExternalStore: (subscribe: (listener: () => void) => () => void, getSnapshot: () => unknown) => {
+      subscribe(() => {
+        h.notified.count += 1;
+      });
+      return getSnapshot();
+    },
     reset: () => {
       store.refs = [];
       store.r = 0;
@@ -42,7 +51,7 @@ const h = vi.hoisted(() => {
 
 vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, useRef: h.useRef, useEffect: h.useEffect };
+  return { ...actual, useRef: h.useRef, useEffect: h.useEffect, useSyncExternalStore: h.useSyncExternalStore };
 });
 
 vi.mock("react-dom", () => ({
@@ -52,6 +61,7 @@ vi.mock("react-dom", () => ({
 
 import { Dialog } from "./Dialog.js";
 import { Sheet } from "./Sheet.js";
+import { useAnyModalOpen } from "./useModal.js";
 
 interface Rendered {
   type: unknown;
@@ -125,6 +135,23 @@ afterEach(() => {
 });
 
 describe("Dialog handlers (item 309)", () => {
+  // First in the file on purpose: later tests leave modals open (they never
+  // run their cleanups), and this one needs the stack to start empty.
+  it("tells subscribers when a modal opens and closes, so the update card can wait (ledger 790)", () => {
+    h.reset();
+    fakeDocument();
+    fakeWindow();
+    expect(useAnyModalOpen()).toBe(false);
+    const before = h.notified.count;
+    open(() => {});
+    expect(h.notified.count).toBeGreaterThan(before);
+    expect(useAnyModalOpen()).toBe(true);
+    const afterOpen = h.notified.count;
+    for (const cleanup of h.store.cleanups) cleanup();
+    expect(h.notified.count).toBeGreaterThan(afterOpen);
+    expect(useAnyModalOpen()).toBe(false);
+  });
+
   it("renders nothing at all while closed", () => {
     h.reset();
     fakeDocument();

@@ -3,11 +3,13 @@ import ReactDOM from "react-dom/client";
 import { focusManager, QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { BrowserRouter } from "react-router-dom";
+import { registerSW } from "virtual:pwa-register";
 import { App } from "./App.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { ApiError } from "./lib/api.js";
 import { createCatalogVersionChecker, createCatalogVersionDeps } from "./lib/catalogVersion.js";
 import { createIdbPersister } from "./lib/persister.js";
+import { fetchServerVersion, setUpdateReady } from "./pwa/update.js";
 import { UsageProvider } from "./lib/usage/UsageProvider.js";
 import { initTheme } from "./theme.js";
 import "./styles/index.css";
@@ -32,12 +34,33 @@ const persister = createIdbPersister();
 // earlier, a late hydrate would put the stale catalog back over the refresh.
 // The provider is handed a void callback, never the promise: it would hold
 // every query back until /api/version answered.
-const checkCatalogVersion = createCatalogVersionChecker(createCatalogVersionDeps(queryClient));
+const catalogVersionDeps = createCatalogVersionDeps(queryClient);
+const checkCatalogVersion = createCatalogVersionChecker(catalogVersionDeps);
 const checkCatalogVersionInBackground = () => {
   void checkCatalogVersion();
 };
 focusManager.subscribe((focused) => {
   if (focused) checkCatalogVersionInBackground();
+});
+
+// Ledger 790: registers the service worker (vite-plugin-pwa no longer injects
+// registerSW.js now that this imports it). In prompt mode (src/pwa/updateMode.ts)
+// a new version waits, and onNeedRefresh hands the update card its Reload,
+// keyed on the build the server now serves so Later holds per version. iOS
+// resumes an installed app without a navigation, which is when the browser
+// would look for a new worker, so every return to the app looks too.
+const updateServiceWorker = registerSW({
+  onNeedRefresh() {
+    void fetchServerVersion(catalogVersionDeps.fetchVersion).then((version) =>
+      setUpdateReady(version, () => updateServiceWorker(true)),
+    );
+  },
+  onRegisteredSW(_url, registration) {
+    if (!registration) return;
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") registration.update().catch(() => undefined);
+    });
+  },
 });
 
 // Only the read-mostly catalog/user-data query families are worth restoring

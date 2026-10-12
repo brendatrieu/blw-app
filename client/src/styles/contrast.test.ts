@@ -222,6 +222,8 @@ const BASE_PAIRS: Pair[] = [
   // Interactive text accent — links, active nav label, focus-adjacent text.
   { name: "accent link/text on page", fg: "color-accent", bg: "color-bg" },
   { name: "accent link/text on elevated surface", fg: "color-accent", bg: "color-bg-elevated" },
+  // The More tab's "Update available" row: its Reload sits on inset (ledger 790).
+  { name: "accent text on inset surface (More update row)", fg: "color-accent", bg: "color-bg-inset" },
 
   // Focus ring — non-text UI, 3:1 against both grounds it can appear over.
   { name: "focus ring vs page", fg: "color-accent", bg: "color-bg", min: 3 },

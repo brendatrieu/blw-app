@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, useSyncExternalStore, type RefObject } from "react";
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -26,6 +26,19 @@ function nudgeViewportSync() {
  * (items 601, 610).
  */
 const openModals: object[] = [];
+const modalListeners = new Set<() => void>();
+const notifyModals = () => modalListeners.forEach((listener) => listener());
+function subscribeModals(listener: () => void) {
+  modalListeners.add(listener);
+  return () => {
+    modalListeners.delete(listener);
+  };
+}
+
+/** Whether any sheet or dialog is open: the update card waits while one is (ledger 790). */
+export function useAnyModalOpen(): boolean {
+  return useSyncExternalStore(subscribeModals, () => openModals.length > 0, () => false);
+}
 
 /**
  * What `Sheet` and `Dialog` share, so there is one focus trap in the app, not
@@ -72,6 +85,7 @@ export function useModal(
 
     const token = {};
     openModals.push(token);
+    notifyModals();
 
     function handleKeyDown(event: KeyboardEvent) {
       if (openModals[openModals.length - 1] !== token) return;
@@ -103,6 +117,7 @@ export function useModal(
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       openModals.splice(openModals.indexOf(token), 1);
+      notifyModals();
       root.style.overflow = previousRootOverflow;
       document.body.style.overflow = previousBodyOverflow;
       previouslyFocused.current?.focus();

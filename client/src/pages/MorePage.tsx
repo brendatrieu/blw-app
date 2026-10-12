@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AI_FEATURES_ENABLED } from "@blw/shared";
 import { PageHeader } from "../components/ui/PageHeader.js";
+import { UpdateRow } from "../components/UpdatePrompt.js";
 import { CardButton, CardLink } from "../components/ui/Card.js";
 import { useFeedbackSummary, useIsAdmin } from "../features/admin/hooks.js";
 import { useTour } from "../features/tour/TourProvider.js";
@@ -146,6 +147,7 @@ export function MorePage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <PageHeader title="More" emoji="✨" />
+      <UpdateRow />
 
       <nav className="flex flex-col gap-2">
         {rows.map((row) =>
