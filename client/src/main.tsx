@@ -9,7 +9,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { ApiError } from "./lib/api.js";
 import { createCatalogVersionChecker, createCatalogVersionDeps } from "./lib/catalogVersion.js";
 import { createIdbPersister } from "./lib/persister.js";
-import { fetchServerVersion, setUpdateReady } from "./pwa/update.js";
+import { fetchServerVersion, reloadWhenControlled, setUpdateReady } from "./pwa/update.js";
 import { UsageProvider } from "./lib/usage/UsageProvider.js";
 import { initTheme } from "./theme.js";
 import "./styles/index.css";
@@ -52,7 +52,7 @@ focusManager.subscribe((focused) => {
 const updateServiceWorker = registerSW({
   onNeedRefresh() {
     void fetchServerVersion(catalogVersionDeps.fetchVersion).then((version) =>
-      setUpdateReady(version, () => updateServiceWorker(true)),
+      setUpdateReady(version, () => reloadWhenControlled(() => updateServiceWorker(true))),
     );
   },
   onRegisteredSW(_url, registration) {

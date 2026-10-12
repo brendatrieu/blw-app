@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
@@ -7,6 +8,7 @@ import {
   dismissUpdate,
   fetchServerVersion,
   isUpdatePromptRoute,
+  reloadWhenControlled,
   resetUpdateStateForTests,
   setUpdateReady,
   UPDATE_DISMISSED_KEY,
@@ -145,5 +147,30 @@ describe("fetchServerVersion", () => {
     expect(await fetchServerVersion(respond({ version: null }))).toBeNull();
     expect(await fetchServerVersion(respond({ version: "abc" }, false))).toBeNull();
     expect(await fetchServerVersion(() => Promise.reject(new Error("offline")))).toBeNull();
+  });
+});
+
+describe("reloadWhenControlled (790: Reload in a session that started with no worker)", () => {
+  it("reloads once the new worker takes control, listening before it activates", async () => {
+    const workers = new EventTarget();
+    const reload = vi.fn();
+    vi.stubGlobal("navigator", { serviceWorker: workers });
+    vi.stubGlobal("window", { location: { reload } });
+    // workbox-window never calls this takeover an update, so vite-plugin-pwa
+    // won't reload; the takeover alone has to.
+    const activate = vi.fn(() => {
+      workers.dispatchEvent(new Event("controllerchange"));
+      return Promise.resolve();
+    });
+    await reloadWhenControlled(activate);
+    expect(activate).toHaveBeenCalledOnce();
+    expect(reload).toHaveBeenCalledOnce();
+    workers.dispatchEvent(new Event("controllerchange"));
+    expect(reload).toHaveBeenCalledOnce();
+  });
+
+  it("is what main.tsx hands the card's Reload", () => {
+    const main = readFileSync(new URL("../main.tsx", import.meta.url), "utf8");
+    expect(main).toContain("setUpdateReady(version, () => reloadWhenControlled(() => updateServiceWorker(true)))");
   });
 });

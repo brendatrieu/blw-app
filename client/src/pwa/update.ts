@@ -78,6 +78,20 @@ export function applyUpdate() {
   void apply?.();
 }
 
+/**
+ * Reload's apply: reloads once the waiting worker takes control, then
+ * activates it. vite-plugin-pwa reloads on its own only when workbox-window
+ * calls the takeover an update, and it doesn't in a session that started with
+ * no worker in control (an installed iOS app's first launch, a first visit, a
+ * hard reload): the new worker took over but the page kept the old build. In a
+ * session that started controlled both reloads land in the same task, so the
+ * page still reloads once.
+ */
+export function reloadWhenControlled(activate: () => Promise<void>): Promise<void> {
+  navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload(), { once: true });
+  return activate();
+}
+
 /** The build the server is serving now, or null when it cannot be asked. */
 export async function fetchServerVersion(fetchVersion: () => Promise<Response>): Promise<string | null> {
   try {
