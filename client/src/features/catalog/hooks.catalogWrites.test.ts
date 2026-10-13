@@ -92,6 +92,21 @@ describe("a foods refetch after creating a custom food (the SW-cache race)", () 
     expect(await run(() => Promise.resolve(true))).toEqual(["Apple", "kidney bean"]);
   });
 
+  // Ledger 796: the delete must be AWAITED, not just started first — the refetch
+  // must not reach the SW before the cache is actually gone.
+  it("invalidates nothing until the cache delete has resolved", async () => {
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    let finishDelete = () => undefined as void;
+    const deleting = new Promise<void>((resolve) => (finishDelete = resolve));
+    const done = invalidateAfterCatalogWrite(client, [catalogKeys.foods], () => deleting);
+    await flush();
+    expect(spy).not.toHaveBeenCalled();
+    finishDelete();
+    await done;
+    expect(spy).toHaveBeenCalledWith({ queryKey: catalogKeys.foods });
+  });
+
   it("still invalidates when the cache delete fails", async () => {
     const client = new QueryClient();
     const spy = vi.spyOn(client, "invalidateQueries");

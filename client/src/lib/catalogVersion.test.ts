@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryObserver, type Query } from "@tanstack/react-query";
 import {
   CATALOG_VERSION_STORAGE_KEY,
@@ -233,5 +234,26 @@ describe("checkCatalogVersion against a real QueryClient", () => {
     expect(store.get(CATALOG_VERSION_STORAGE_KEY)).toBe("v2");
     unsubscribe();
     queryClient.unmount();
+  });
+});
+
+// Ledger 796: the name deleteCatalogCache empties must be the one the SW caches
+// the catalog under (vite.config.ts runtimeCaching), or every clear is a no-op.
+describe("deleteCatalogCache targets the SW's catalog cache", () => {
+  it("uses the cacheName from vite.config.ts", async () => {
+    const config = readFileSync(new URL("../../vite.config.ts", import.meta.url), "utf8");
+    const swName = /handler: "StaleWhileRevalidate",\s*options: \{\s*cacheName: "([^"]+)"/.exec(config)?.[1];
+    expect(swName).toBeTruthy();
+
+    const deleted: string[] = [];
+    vi.stubGlobal("caches", { delete: (name: string) => (deleted.push(name), Promise.resolve(true)) });
+    vi.resetModules();
+    try {
+      const { deleteCatalogCache } = await import("./catalogVersion.js");
+      await deleteCatalogCache?.();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(deleted).toEqual([swName]);
   });
 });
