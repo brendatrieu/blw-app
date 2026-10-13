@@ -22,6 +22,15 @@ export const ADD_MORE_TABS: SegmentedControlOption<AddMoreTab>[] = [
   { value: "food", label: "Foods", icon: null },
 ];
 
+/**
+ * Ledger 794 (owner's option A): while the search box has text the row gains
+ * "All" in front, so the highlighted tab always says what the list holds.
+ */
+export const ADD_MORE_SEARCH_TABS: SegmentedControlOption<AddMoreTab | "all">[] = [
+  { value: "all", label: "All", icon: null },
+  ...ADD_MORE_TABS,
+];
+
 /** How many recent recipes or foods head their tab (the MR2 board shows three). */
 export const RECENT_LIMIT = 3;
 
@@ -131,14 +140,17 @@ interface AddMoreSheetProps {
  * The Serve sheet's "Add more" (MR2 boards, ledger 789): one search box over
  * three tabs — "In storage" (containers), "Recipes" and "Foods" made fresh,
  * each of the last two opening with this baby's recent ones, then A–Z.
- * Typing searches all three at once, grouped. Picks are kept across tabs and
- * searches until "Add", pinned at the bottom. The sheet is a fixed height
+ * Typing searches all three at once: "All" (grouped) or one kind, keeping the
+ * text (ledger 794). Picks are kept across tabs and searches until "Add",
+ * pinned at the bottom. The sheet is a fixed height
  * from the start, so nothing moves while typing, switching tabs or as the
  * results change. Rendered only while open, so every opening starts empty.
  */
 export function AddMoreSheet({ babyId, serving, onAdd, onClose }: AddMoreSheetProps) {
   const [tab, setTab] = useState<AddMoreTab>("storage");
   const [query, setQuery] = useState("");
+  // Which kind a search shows; every new search starts on "All".
+  const [searchTab, setSearchTab] = useState<AddMoreTab | "all">("all");
   const [itemIds, setItemIds] = useState<string[]>([]);
   const [foodIds, setFoodIds] = useState<string[]>([]);
   const [recipeIds, setRecipeIds] = useState<string[]>([]);
@@ -212,10 +224,11 @@ export function AddMoreSheet({ babyId, serving, onAdd, onClose }: AddMoreSheetPr
 
   let body: ReactNode;
   if (q) {
+    const shows = (kind: AddMoreTab) => searchTab === "all" || searchTab === kind;
     const found = [
-      group("In storage", storageRows(available.filter((item) => matches(storageItemTitle(item), q)))),
-      group("Recipes", recipeRows(allRecipes.filter((recipe) => matches(recipe.title, q)))),
-      group("Foods", foodRows(allFoods.filter((food) => matches(food.name, q)))),
+      shows("storage") && group("In storage", storageRows(available.filter((item) => matches(storageItemTitle(item), q)))),
+      shows("recipe") && group("Recipes", recipeRows(allRecipes.filter((recipe) => matches(recipe.title, q)))),
+      shows("food") && group("Foods", foodRows(allFoods.filter((food) => matches(food.name, q)))),
     ].filter(Boolean);
     body = found.length > 0 ? found : <p className="text-sm text-[var(--color-text-muted)]">No matches</p>;
   } else if (tab === "storage") {
@@ -236,28 +249,35 @@ export function AddMoreSheet({ babyId, serving, onAdd, onClose }: AddMoreSheetPr
       <Input
         type="search"
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={(event) => {
+          if (!q && event.target.value.trim()) setSearchTab("all");
+          setQuery(event.target.value);
+        }}
         placeholder="Search storage, recipes, foods…"
         aria-label="Search storage, recipes, foods"
         className="shrink-0"
       />
-      {/* While searching, the results span all three tabs, so the tabs dim;
-          tapping one clears the search and opens that tab. */}
-      <div className={`shrink-0 transition-opacity ${q ? "opacity-45" : ""}`}>
+      {/* While searching: All · In storage · Recipes · Foods, narrowing the
+          results and never clearing the text. Clearing the search brings back
+          the three tabs, on the one open before it. Same row height either
+          way, so the list never moves: at 320 px the four labels only fit on
+          one line with slimmer side padding, and kept from wrapping (else
+          "In storage" breaks in two and the row grows 12 px). */}
+      <div className="shrink-0 [&_[role=radio]]:px-2 [&_[role=radio]]:whitespace-nowrap">
         <SegmentedControl
           aria-label="Add more"
-          options={ADD_MORE_TABS}
-          value={tab}
+          options={q ? ADD_MORE_SEARCH_TABS : ADD_MORE_TABS}
+          value={q ? searchTab : tab}
           onChange={(next) => {
-            setQuery("");
-            setTab(next);
+            if (q || next === "all") setSearchTab(next);
+            else setTab(next);
           }}
         />
       </div>
 
-      {/* The only part that scrolls; keyed so a new tab or a new search
-          starts at the top. */}
-      <div key={q ? "search" : tab} className="scroll-momentum scroll-thin -mx-4 min-h-0 flex-1 overflow-y-auto px-4">
+      {/* The only part that scrolls; keyed so a new tab, a new search or a
+          new narrowing starts at the top. */}
+      <div key={q ? `search-${searchTab}` : tab} className="scroll-momentum scroll-thin -mx-4 min-h-0 flex-1 overflow-y-auto px-4">
         {body}
       </div>
 

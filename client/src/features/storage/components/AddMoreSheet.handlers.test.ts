@@ -71,7 +71,7 @@ vi.mock("../../catalog/hooks.js", async (importOriginal) => ({
   }),
 }));
 
-import { ADD_MORE_TABS, AddMoreSheet, RECENT_LIMIT, addMoreStorageItems, recentIds, type AddMoreServing } from "./AddMoreSheet.js";
+import { ADD_MORE_SEARCH_TABS, ADD_MORE_TABS, AddMoreSheet, RECENT_LIMIT, addMoreStorageItems, recentIds, type AddMoreServing } from "./AddMoreSheet.js";
 import { Button } from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.js";
@@ -170,6 +170,11 @@ const type = (text: string) => (one(render(), Input).props.onChange as (event: u
 /** The scrolling list's key: a new one remounts it, back at the top. */
 const listKey = (tree: El) =>
   (findAll(tree, (element) => String(element.props?.className ?? "").includes("overflow-y-auto"))[0] as unknown as { key: string }).key;
+/** The tab row as shown: its labels and the highlighted one. */
+const tabRow = (tree: El) => {
+  const control = one(tree, SegmentedControl).props as { options: { value: string; label: string }[]; value: string };
+  return { labels: control.options.map((option) => option.label), value: control.value };
+};
 const html = (tree: El) => renderToString(createElement(Fragment, null, tree.props.children as never));
 
 describe("addMoreStorageItems — what 'In storage' offers (items 730, 760)", () => {
@@ -270,19 +275,24 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     expect(titles(render())).toEqual(["Banana", "Oats", "Pear"]);
   });
 
-  it("typing searches all three at once, grouped In storage, Recipes, Foods; the tabs dim, and a tab tap clears the search", () => {
+  it("typing searches all three at once, grouped In storage, Recipes, Foods, under a highlighted All (ledger 794)", () => {
     reset([BASE, SALMON, PEAR_FOODS]);
     goTo("recipe");
     expect(listKey(render())).toBe("recipe");
     type("oat");
     const tree = render();
-    expect(listKey(tree)).toBe("search");
+    expect(tabRow(tree)).toEqual({ labels: ["All", "In storage", "Recipes", "Foods"], value: "all" });
+    expect(ADD_MORE_SEARCH_TABS.slice(1)).toEqual(ADD_MORE_TABS); // the only new label is "All"
+    expect(listKey(tree)).toBe("search-all");
     expect(titles(tree)).toEqual(["Salmon Oat Cakes", "Apple Oatmeal", "Oat Pancakes", "Oats"]);
     const out = html(tree);
     expect(out.indexOf(">In storage</h3>")).toBeLessThan(out.indexOf(">Recipes</h3>"));
     expect(out.indexOf(">Recipes</h3>")).toBeLessThan(out.indexOf(">Foods</h3>"));
     expect(out).not.toContain(">Recent</h3>");
-    expect(out).toContain("opacity-45");
+    expect(out).not.toContain("opacity-45"); // nothing dims: the highlight says what is shown
+    // Measured live: at 320 px the four labels need the slimmer padding and
+    // no wrapping, or "In storage" breaks in two and the list drops 12 px.
+    expect(out).toContain('<div class="shrink-0 [&amp;_[role=radio]]:px-2 [&amp;_[role=radio]]:whitespace-nowrap"><div role="radiogroup"');
 
     type("OAT  ");
     expect(titles(render())).toHaveLength(4); // case and trailing spaces ignored
@@ -291,10 +301,58 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     expect(titles(render())).toEqual([]);
     expect(html(render())).toContain("No matches");
 
+    type("   "); // only spaces is no search: the usual tabs, on the one open before
+    expect(tabRow(render())).toEqual({ labels: ["In storage", "Recipes", "Foods"], value: "recipe" });
+  });
+
+  it("a kind tapped while searching narrows to it and keeps the text; All goes back to grouped (ledger 794)", () => {
+    reset([BASE, SALMON, PEAR_FOODS]);
+    type("oat");
+    const kinds = [
+      ["storage", ["Salmon Oat Cakes"], ">In storage</h3>"],
+      ["recipe", ["Apple Oatmeal", "Oat Pancakes"], ">Recipes</h3>"],
+      ["food", ["Oats"], ">Foods</h3>"],
+    ] as const;
+    for (const [kind, shown, heading] of kinds) {
+      goTo(kind);
+      const tree = render();
+      expect(one(tree, Input).props.value).toBe("oat");
+      expect(tabRow(tree).value).toBe(kind);
+      expect(titles(tree)).toEqual(shown);
+      const out = html(tree);
+      expect(out.match(/<h3/g)).toHaveLength(1); // only that kind's group
+      expect(out).toContain(heading);
+      expect(listKey(tree)).toBe(`search-${kind}`); // a new view starts at the top
+    }
+
+    type("oats"); // typing more keeps the narrowing
+    expect(tabRow(render()).value).toBe("food");
+    expect(titles(render())).toEqual(["Oats"]);
+    type("salmon"); // a narrowed kind with nothing matching is not a dead end
+    expect(titles(render())).toEqual([]);
+    expect(html(render())).toContain("No matches");
+
+    goTo("all");
+    expect(tabRow(render()).value).toBe("all");
+    expect(titles(render())).toEqual(["Salmon Oat Cakes"]);
+    expect(one(render(), Input).props.value).toBe("salmon");
+  });
+
+  it("clearing the search brings back the three tabs on the one open before it; the next search starts on All (ledger 794)", () => {
+    reset([BASE, SALMON, PEAR_FOODS]);
     goTo("food");
-    expect(one(render(), Input).props.value).toBe("");
-    expect(one(render(), SegmentedControl).props.value).toBe("food");
-    expect(html(render())).not.toContain("opacity-45");
+    type("o");
+    goTo("recipe"); // narrowing a search never moves the tab underneath
+    type("");
+    let tree = render();
+    expect(tabRow(tree)).toEqual({ labels: ["In storage", "Recipes", "Foods"], value: "food" });
+    expect(titles(tree)).toEqual(["Banana", "Oats", "Pear"]);
+    expect(listKey(tree)).toBe("food");
+
+    type("p");
+    tree = render();
+    expect(tabRow(tree).value).toBe("all");
+    expect(titles(tree)).toEqual(["Pear purée cubes", "Apple Oatmeal", "Oat Pancakes", "Pear"]);
   });
 
   it("keeps picks across tabs and searches, and adds them all at once, in the order picked", () => {
@@ -312,6 +370,9 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     tick("Oat Pancakes");
     type("banana"); // the food picked on another tab shows ticked in a search
     expect(rows(render()).map((row) => [row.props.title, row.props.checked])).toEqual([["Banana", true]]);
+    goTo("food"); // and when the search is narrowed to it
+    expect(rows(render()).map((row) => [row.props.title, row.props.checked])).toEqual([["Banana", true]]);
+    type("");
     goTo("storage");
     expect(rows(render()).map((row) => row.props.checked)).toEqual([true, true]);
 
