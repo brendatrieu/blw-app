@@ -230,6 +230,30 @@ describe("the Serving list (ledger 760)", () => {
     expect(input).not.toHaveProperty("recipeIds");
   });
 
+  it("a container added after its fresh food or recipe, or in the same round, replaces the fresh one (ledger 793)", () => {
+    const BANANA_ITEM: StorageItem = { ...ITEM, id: "33333333-3333-3333-3333-333333333333", foods: [BANANA] };
+    const fresh = { foods: [BANANA], recipes: [{ id: SALMON, title: "Salmon Cakes" }] };
+    for (const rounds of [
+      [fresh, { items: [BANANA_ITEM, SALMON_ITEM] }], // fresh first, the containers second
+      [{ items: [BANANA_ITEM, SALMON_ITEM], ...fresh }], // all ticked in one round
+    ]) {
+      h.reset();
+      for (const picks of rounds) addMore(picks);
+      const tree = render();
+      expect(findAll(tree, (element) => element.props?.children === "Fresh, not from storage")).toHaveLength(0);
+      expect(findAll(tree, byLabel("Remove Banana"))).toHaveLength(0);
+      expect(findAll(tree, byLabel("Remove Salmon Cakes"))).toHaveLength(0);
+      const input = serve();
+      expect(input.parts).toEqual([
+        { storageItemId: ITEM.id, servings: 1 },
+        { storageItemId: BANANA_ITEM.id, servings: 1 },
+        { storageItemId: SALMON_ITEM.id, servings: 1 },
+      ]);
+      expect(input).not.toHaveProperty("foodIds");
+      expect(input).not.toHaveProperty("recipeIds");
+    }
+  });
+
   it("caps a tracked container at the servings LEFT, not its total", () => {
     h.reset();
     for (let i = 0; i < 3; i++) click(render(), byLabel("Increase servings")); // 2 of 3 left

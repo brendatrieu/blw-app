@@ -404,17 +404,26 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
           serving={addMoreServing(parts, freshFoods, freshRecipes)}
           onClose={() => setAddingMore(false)}
           onAdd={(picks) => {
-            setParts((current) => [
-              ...current,
+            const nextParts = [
+              ...parts,
               ...picks.items
-                .filter((picked) => !current.some((part) => part.item.id === picked.id))
+                .filter((picked) => !parts.some((part) => part.item.id === picked.id))
                 .map((picked) => ({ item: picked, servings: 1 })),
-            ]);
-            setFreshFoods((current) => [...current, ...picks.foods.filter((food) => !current.some((entry) => entry.id === food.id))]);
-            setFreshRecipes((current) => [
-              ...current,
-              ...picks.recipes.filter((recipe) => !current.some((entry) => entry.id === recipe.id)),
-            ]);
+            ];
+            // A listed container replaces the same thing fresh, whichever was
+            // added first or both in one round (ledger 793).
+            const covered = addMoreServing(nextParts, [], []);
+            setParts(nextParts);
+            setFreshFoods((current) =>
+              [...current, ...picks.foods.filter((food) => !current.some((entry) => entry.id === food.id))].filter(
+                (food) => !covered.foodIds.includes(food.id),
+              ),
+            );
+            setFreshRecipes((current) =>
+              [...current, ...picks.recipes.filter((recipe) => !current.some((entry) => entry.id === recipe.id))].filter(
+                (recipe) => !covered.recipeIds.includes(recipe.id),
+              ),
+            );
             setAddingMore(false);
           }}
         />
