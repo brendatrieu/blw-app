@@ -49,14 +49,16 @@ describe("SheetPanel pinned header (item 737)", () => {
     expect(classOf(render({}), 'data-sheet-header=""')).toContain("sticky");
   });
 
-  it("a fixedHeight sheet (ledger 789) is 85svh from the start and hangs from the top (svh so a browser toolbar cannot push Add off-screen); others only cap at 85vh", () => {
+  it("a fixedHeight sheet (ledger 789) hangs from 15svh, is never shorter than 85svh, and (792) stretches to its box's bottom with no 85vh cap; others only cap at 85vh", () => {
     const fixed = classOf(render({ title: "Add more", fixedHeight: true }), 'role="dialog"').split(" ");
-    expect(fixed).toEqual(expect.arrayContaining(["h-[85svh]", "mt-[15svh]", "max-h-[85vh]"]));
-    expect(fixed).not.toContain("h-[85vh]");
-    expect(fixed).not.toContain("mt-[15vh]");
+    expect(fixed).toEqual(expect.arrayContaining(["mt-[15svh]", "min-h-[85svh]", "h-[calc(100%-15svh)]"]));
+    // 792: a viewport-unit height or an 85vh cap ends the panel at 100svh, which on iOS can stop short of the box.
+    for (const c of ["h-[85svh]", "h-[85vh]", "mt-[15vh]", "max-h-[85vh]"]) expect(fixed).not.toContain(c);
+    // 792: the panel's color carries on below it, on top of the soft shadow, for a box that itself stops short.
+    expect(fixed).toContain("shadow-[0_50vh_0_0_var(--color-bg-elevated),var(--shadow-lg)]");
     const plain = classOf(render({ title: "Serve" }), 'role="dialog"').split(" ");
-    expect(plain).toContain("max-h-[85vh]");
+    expect(plain).toEqual(expect.arrayContaining(["max-h-[85vh]", "shadow-[var(--shadow-lg)]"]));
     expect(plain).not.toContain("h-[85vh]");
-    expect(plain).not.toContain("h-[85svh]");
+    expect(plain).not.toContain("min-h-[85svh]");
   });
 });

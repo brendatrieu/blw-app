@@ -25,10 +25,26 @@ interface SheetProps {
    * with a browser toolbar showing (iOS Safari tab, Android Chrome) a vh panel
    * ran below the visible area and hid the pinned Add (VERIFY-789-c1); svh is
    * the toolbar-shown height and, like vh, never changes, so it never resizes.
+   * Ledger 792: it also stretches to the bottom of its fixed box, see
+   * FIXED_HEIGHT_CLASSES.
    */
   fixedHeight?: boolean;
   children: ReactNode;
 }
+
+/**
+ * Ledger 792: the fixedHeight panel's bottom. Its top stays at 15svh and it is
+ * never shorter than 85svh (789), but it also stretches to the bottom of the
+ * fixed box it hangs in: on iOS 100svh can stop short of that box (Safari with
+ * the page under its toolbar; an installed app, where svh can leave out the
+ * home-indicator inset), which left a strip of page under the sheet. The
+ * first shadow paints the panel's color 50vh further down, for when the box
+ * itself stops short of the screen (the band item 379 describes after the
+ * keyboard); listed first so the soft shadow cannot grey it. No max-height:
+ * 85vh would cap the stretch.
+ */
+const FIXED_HEIGHT_CLASSES =
+  "mt-[15svh] h-[calc(100%-15svh)] min-h-[85svh] shadow-[0_50vh_0_0_var(--color-bg-elevated),var(--shadow-lg)]";
 
 /**
  * Bottom sheet: a dimmed overlay behind a panel that slides up from the
@@ -81,7 +97,7 @@ export function SheetPanel({ title, showClose = false, fixedHeight = false, onCl
       aria-modal="true"
       aria-label={typeof title === "string" ? title : undefined}
       tabIndex={-1}
-      className={`sheet-panel scroll-momentum relative z-10 flex max-h-[85vh] w-full max-w-lg scroll-pt-28 flex-col gap-3 overflow-y-auto rounded-t-[var(--radius-lg)] border-t border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 shadow-[var(--shadow-lg)] outline-none scroll-thin${fixedHeight ? " mt-[15svh] h-[85svh]" : ""}`}
+      className={`sheet-panel scroll-momentum relative z-10 flex w-full max-w-lg scroll-pt-28 flex-col gap-3 overflow-y-auto rounded-t-[var(--radius-lg)] border-t border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 outline-none scroll-thin ${fixedHeight ? FIXED_HEIGHT_CLASSES : "max-h-[85vh] shadow-[var(--shadow-lg)]"}`}
       style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
     >
       {/* Item 737: the handle and header row stay pinned while a long body
