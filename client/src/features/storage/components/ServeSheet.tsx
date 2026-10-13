@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import type { FoodListItem, ServeStorageInput, StorageItem } from "@blw/shared";
 import { useStorageServe } from "../hooks.js";
 import { clampServings, servePartHint, storageItemTitle } from "../format.js";
-import { AddMoreSheet } from "./AddMoreSheet.js";
+import { AddMoreSheet, type AddMoreServing } from "./AddMoreSheet.js";
 import { storageItemCluster } from "./StorageItemCard.js";
 import { Badge } from "../../../components/ui/Badge.js";
 import { Button } from "../../../components/ui/Button.js";
@@ -57,6 +57,28 @@ export function servedRecipes(parts: readonly ServePart[], freshRecipes: readonl
   }
   for (const recipe of freshRecipes) if (!titles.has(recipe.id)) titles.set(recipe.id, recipe.title);
   return [...titles].map(([id, title]) => ({ id, title }));
+}
+
+/**
+ * What Add more must not offer again (ledger 793): the listed containers,
+ * every recipe on the meal (a container's or a fresh one: the same recipe
+ * twice is one recipe on the meal anyway), and the loose foods, fresh or
+ * held by a container with no recipe. A recipe container's foods are its
+ * ingredients, so they stay addable as fresh foods.
+ */
+export function addMoreServing(
+  parts: readonly ServePart[],
+  freshFoods: readonly FreshFood[],
+  freshRecipes: readonly FreshRecipe[],
+): AddMoreServing {
+  return {
+    itemIds: parts.map((part) => part.item.id),
+    recipeIds: servedRecipes(parts, freshRecipes).map((recipe) => recipe.id),
+    foodIds: [
+      ...freshFoods.map((food) => food.id),
+      ...parts.filter((part) => servedRecipes([part], []).length === 0).flatMap((part) => part.item.foods.map((food) => food.id)),
+    ],
+  };
 }
 
 /**
@@ -379,10 +401,15 @@ export function ServeControl({ item, babyId, onServed }: ServeControlProps) {
       {addingMore && (
         <AddMoreSheet
           babyId={babyId}
-          servingIds={parts.map((part) => part.item.id)}
+          serving={addMoreServing(parts, freshFoods, freshRecipes)}
           onClose={() => setAddingMore(false)}
           onAdd={(picks) => {
-            setParts((current) => [...current, ...picks.items.map((picked) => ({ item: picked, servings: 1 }))]);
+            setParts((current) => [
+              ...current,
+              ...picks.items
+                .filter((picked) => !current.some((part) => part.item.id === picked.id))
+                .map((picked) => ({ item: picked, servings: 1 })),
+            ]);
             setFreshFoods((current) => [...current, ...picks.foods.filter((food) => !current.some((entry) => entry.id === food.id))]);
             setFreshRecipes((current) => [
               ...current,

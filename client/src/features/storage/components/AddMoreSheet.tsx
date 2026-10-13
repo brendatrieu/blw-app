@@ -33,6 +33,18 @@ export interface AddMorePicks {
 }
 
 /**
+ * What the Serving list already holds (ledger 793): its containers, the
+ * meal's recipes (fresh or in a container) and its loose foods. None of it
+ * is offered again, on any tab or in a search, the way a listed container
+ * never was (item 760), so Add cannot put the same thing on the list twice.
+ */
+export interface AddMoreServing {
+  itemIds: readonly string[];
+  recipeIds: readonly string[];
+  foodIds: readonly string[];
+}
+
+/**
  * The containers "In storage" lists (items 730/760): active, servable (a
  * Free-form label has nothing to log), with a serving left (a tracked
  * container at 0 — after a Restore or a resize — is the server's 409 at
@@ -109,8 +121,8 @@ function PickRow({ checked, onToggle, plate, title, detail }: PickRowProps) {
 
 interface AddMoreSheetProps {
   babyId: string;
-  /** The containers already in the Serving list. */
-  servingIds: readonly string[];
+  /** What is already in the Serving list, so it is never offered again. */
+  serving: AddMoreServing;
   onAdd: (picks: AddMorePicks) => void;
   onClose: () => void;
 }
@@ -124,7 +136,7 @@ interface AddMoreSheetProps {
  * from the start, so nothing moves while typing, switching tabs or as the
  * results change. Rendered only while open, so every opening starts empty.
  */
-export function AddMoreSheet({ babyId, servingIds, onAdd, onClose }: AddMoreSheetProps) {
+export function AddMoreSheet({ babyId, serving, onAdd, onClose }: AddMoreSheetProps) {
   const [tab, setTab] = useState<AddMoreTab>("storage");
   const [query, setQuery] = useState("");
   const [itemIds, setItemIds] = useState<string[]>([]);
@@ -138,11 +150,17 @@ export function AddMoreSheet({ babyId, servingIds, onAdd, onClose }: AddMoreShee
   // Home's food-log query (same key), so this is normally already cached.
   const meals = useMeals(babyId, { limit: 100 });
 
-  const available = addMoreStorageItems(storage.data?.items ?? [], servingIds);
-  const allFoods = useMemo(() => [...(foods.data?.foods ?? [])].sort(byLabel((food) => food.name)), [foods.data]);
+  const available = addMoreStorageItems(storage.data?.items ?? [], serving.itemIds);
+  const allFoods = useMemo(
+    () => (foods.data?.foods ?? []).filter((food) => !serving.foodIds.includes(food.id)).sort(byLabel((food) => food.name)),
+    [foods.data, serving.foodIds],
+  );
   const allRecipes = useMemo(
-    () => [...(recipes.data?.recipes ?? [])].sort(byLabel((recipe: RecipeListItem) => recipe.title)),
-    [recipes.data],
+    () =>
+      (recipes.data?.recipes ?? [])
+        .filter((recipe) => !serving.recipeIds.includes(recipe.id))
+        .sort(byLabel((recipe: RecipeListItem) => recipe.title)),
+    [recipes.data, serving.recipeIds],
   );
   const recent = useMemo(() => recentIds(meals.data?.items ?? []), [meals.data]);
   const recentRecipes = resolveIds(recent.recipeIds, allRecipes).slice(0, RECENT_LIMIT);

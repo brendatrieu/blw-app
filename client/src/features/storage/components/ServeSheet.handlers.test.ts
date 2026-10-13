@@ -208,8 +208,9 @@ describe("the Serving list (ledger 760)", () => {
   it("adds what Add more picked: containers at 1 serving, then fresh foods and recipes; and ✕ takes a fresh one back out", () => {
     h.reset();
     addMore({ items: [SALMON_ITEM], foods: [BANANA], recipes: [{ id: "r-oat", title: "Oat Pancakes" }] });
-    // Picking the same fresh food again does not list it twice.
-    addMore({ foods: [BANANA] });
+    // Picking the same fresh food or container again (a stale pick, a second
+    // Add) does not list it twice (ledger 793).
+    addMore({ items: [SALMON_ITEM], foods: [BANANA] });
     const tree = render();
     expect(findAll(tree, (element) => element.props?.children === "Fresh, not from storage")).toHaveLength(2);
     expect(findAll(tree, byLabel("Servings: Salmon Cakes"))).toHaveLength(1);
@@ -301,12 +302,19 @@ describe("the Serving list (ledger 760)", () => {
     expect(button!.props.children).toBe("Serving…");
   });
 
-  it("tells Add more which containers are already listed, so it never offers them again", () => {
+  it("tells Add more everything already listed, so it never offers it again (ledger 793)", () => {
     h.reset();
-    addMore({ items: [SALMON_ITEM] });
+    addMore({ items: [SALMON_ITEM], foods: [BANANA], recipes: [{ id: "r-oat", title: "Oat Pancakes" }] });
     click(render(), (element) => element.props?.children === "+ Add more");
     const [sheet] = findAll(render(), byType(AddMoreSheet));
-    expect(sheet!.props.servingIds).toEqual([ITEM.id, SALMON_ITEM.id]);
+    // Containers; the container's recipe and the fresh one; the fresh food and
+    // the food-only container's Avocado (a recipe container's foods are its
+    // ingredients, so they are not in it).
+    expect(sheet!.props.serving).toEqual({
+      itemIds: [ITEM.id, SALMON_ITEM.id],
+      recipeIds: [SALMON, "r-oat"],
+      foodIds: ["food-banana", "food-1"],
+    });
     (sheet!.props.onClose as () => void)();
     expect(findAll(render(), byType(AddMoreSheet))).toHaveLength(0);
   });

@@ -71,7 +71,7 @@ vi.mock("../../catalog/hooks.js", async (importOriginal) => ({
   }),
 }));
 
-import { ADD_MORE_TABS, AddMoreSheet, RECENT_LIMIT, addMoreStorageItems, recentIds } from "./AddMoreSheet.js";
+import { ADD_MORE_TABS, AddMoreSheet, RECENT_LIMIT, addMoreStorageItems, recentIds, type AddMoreServing } from "./AddMoreSheet.js";
 import { Button } from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.js";
@@ -139,16 +139,18 @@ const one = (tree: El, type: unknown) => {
 };
 
 const added: unknown[] = [];
-function render(servingIds: string[] = [BASE.id]): El {
+let serving: AddMoreServing = { itemIds: [BASE.id], recipeIds: [], foodIds: [] };
+function render(): El {
   h.store.i = 0;
   return (AddMoreSheet as unknown as (props: unknown) => El)({
     babyId: "baby-1",
-    servingIds,
+    serving,
     onAdd: (picks: unknown) => added.push(picks),
     onClose: () => {},
   });
 }
-function reset(storage: StorageItem[], meals: MealItem[] = []) {
+function reset(storage: StorageItem[], meals: MealItem[] = [], listed: Partial<AddMoreServing> = {}) {
+  serving = { itemIds: [BASE.id], recipeIds: [], foodIds: [], ...listed };
   h.store.states = [];
   h.storage = storage;
   h.storageLoading = false;
@@ -342,6 +344,20 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     expect(out).toContain(">Pear purée cubes</span>");
     expect(out).toContain(">Fridge · 10 of 12 left</span>");
     expect(out).toMatch(/<label class="flex min-h-14 cursor-pointer[^"]*"><input type="checkbox"/);
+  });
+
+  it("never offers a recipe or food already in the Serving list: not under Recent, All or a search, and Recent still fills up (ledger 793)", () => {
+    const meals = [meal("m2", ["r-dal", "r-egg"], [{ id: "food-banana" }]), meal("m1", ["r-cod", "r-oat"], [{ id: "food-pear" }])];
+    reset([BASE], meals, { recipeIds: ["r-dal"], foodIds: ["food-banana"] });
+    goTo("recipe");
+    expect(titles(render())).toEqual(["Egg Muffins", "Baked Cod", "Oat Pancakes", "Apple Oatmeal", "Baked Cod", "Egg Muffins", "Oat Pancakes"]);
+    goTo("food");
+    expect(titles(render())).toEqual(["Pear", "Oats", "Pear"]);
+    type("a"); // matches Banana, Red Lentil Dal and the rest
+    expect(titles(render())).not.toContain("Banana");
+    expect(titles(render())).not.toContain("Red Lentil Dal");
+    type("banana");
+    expect(html(render())).toContain("No matches");
   });
 
   it("says so when there is nothing else in storage, and nothing at all while it loads", () => {
