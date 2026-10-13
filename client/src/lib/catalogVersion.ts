@@ -14,6 +14,14 @@ export interface CatalogVersionDeps {
   now: () => number;
 }
 
+/**
+ * Empties the service worker's catalog cache (`runtimeCaching` in
+ * vite.config.ts). Null when the browser has no Cache API. Shared with the
+ * catalog writes (features/catalog/hooks.ts, ledger 791).
+ */
+export const deleteCatalogCache: (() => Promise<unknown>) | null =
+  typeof caches === "undefined" ? null : () => caches.delete("catalog-cache");
+
 /** Real dependencies for use from app code, as in `createSignOutDeps`. */
 export function createCatalogVersionDeps(
   queryClient: Pick<QueryClient, "cancelQueries" | "invalidateQueries">,
@@ -33,7 +41,7 @@ export function createCatalogVersionDeps(
         cache: "no-store",
         signal: typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(10_000) : undefined,
       }),
-    deleteCatalogCache: "caches" in window ? () => caches.delete("catalog-cache") : null,
+    deleteCatalogCache,
     queryClient,
     storage,
     now: () => Date.now(),

@@ -12,6 +12,7 @@ import type {
   UpdateCustomFoodInput,
   UpdateCustomRecipeInput,
 } from "@blw/shared";
+import { deleteCatalogCache } from "../../lib/catalogVersion.js";
 import { trackingKeys } from "../tracking/hooks.js";
 import {
   createCustomFood,
@@ -211,14 +212,35 @@ export function removeCustomFoodFromCache(queryClient: QueryClient, food: Pick<F
   queryClient.removeQueries({ queryKey: catalogKeys.food(food.slug) });
 }
 
+/**
+ * Ledger 791: the service worker answers catalog reads (`/api/foods`,
+ * `/api/recipes`) stale-while-revalidate from `catalog-cache`. So the refetch
+ * that followed a custom food/recipe write was handed the list from BEFORE the
+ * write, and it overwrote the entry the write had just put right: a food added
+ * from a picker came back "1 selected" with no chip and no search match. Every
+ * catalog write therefore empties that cache first (as `checkCatalogVersion`
+ * does on a deploy), then invalidates `keys`. A failed delete still
+ * invalidates: a stale answer is the old behaviour, not a worse one.
+ */
+export async function invalidateAfterCatalogWrite(
+  queryClient: Pick<QueryClient, "invalidateQueries">,
+  keys: readonly (readonly unknown[])[],
+  deleteCache: (() => Promise<unknown>) | null = deleteCatalogCache,
+): Promise<void> {
+  try {
+    await deleteCache?.();
+  } catch {
+    // See above.
+  }
+  for (const queryKey of keys) void queryClient.invalidateQueries({ queryKey });
+}
+
 export function useCreateCustomFood() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateCustomFoodInput) => createCustomFood(input),
     onSuccess: (created) => writeCustomFoodToCache(queryClient, created),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: catalogKeys.foods });
-    },
+    onSettled: () => void invalidateAfterCatalogWrite(queryClient, [catalogKeys.foods]),
   });
 }
 
@@ -227,10 +249,8 @@ export function useUpdateCustomFood() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateCustomFoodInput }) => updateCustomFood(id, input),
     onSuccess: (updated) => writeCustomFoodToCache(queryClient, updated),
-    onSettled: (updated) => {
-      void queryClient.invalidateQueries({ queryKey: catalogKeys.foods });
-      if (updated) void queryClient.invalidateQueries({ queryKey: catalogKeys.food(updated.slug) });
-    },
+    onSettled: (updated) =>
+      void invalidateAfterCatalogWrite(queryClient, [catalogKeys.foods, ...(updated ? [catalogKeys.food(updated.slug)] : [])]),
   });
 }
 
@@ -240,11 +260,9 @@ export function useUpdateCustomFood() {
  * "(deleted)" mark, and a replace shows the new food. Literal prefixes: the
  * per-baby keys have no baby-free builder, and a prefix matches every baby.
  */
-function invalidateFoodHistory(queryClient: QueryClient): void {
-  for (const prefix of ["meals", "storage", "recipe", "recipes", "allergen-detail", "allergen-progress", "favorites"]) {
-    void queryClient.invalidateQueries({ queryKey: [prefix] });
-  }
-}
+const FOOD_HISTORY_KEYS = ["meals", "storage", "recipe", "recipes", "allergen-detail", "allergen-progress", "favorites"].map(
+  (prefix) => [prefix],
+);
 
 /**
  * Deleting a custom food is soft (ledger 537): it leaves every list and
@@ -257,10 +275,7 @@ export function useDeleteCustomFood() {
     mutationFn: (food: FoodDetail) => deleteCustomFood(food.id),
     onSuccess: (_result, food) =>
       writeCustomFoodToCache(queryClient, { ...food, deletedAt: new Date().toISOString() }),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: catalogKeys.foods });
-      invalidateFoodHistory(queryClient);
-    },
+    onSettled: () => void invalidateAfterCatalogWrite(queryClient, [catalogKeys.foods, ...FOOD_HISTORY_KEYS]),
   });
 }
 
@@ -269,10 +284,7 @@ export function useRestoreCustomFood() {
   return useMutation({
     mutationFn: (food: Pick<FoodDetail, "id">) => restoreCustomFood(food.id),
     onSuccess: (restored) => writeCustomFoodToCache(queryClient, restored),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: catalogKeys.foods });
-      invalidateFoodHistory(queryClient);
-    },
+    onSettled: () => void invalidateAfterCatalogWrite(queryClient, [catalogKeys.foods, ...FOOD_HISTORY_KEYS]),
   });
 }
 
@@ -283,10 +295,7 @@ export function useReplaceCustomFood() {
     mutationFn: ({ food, replacementId }: { food: Pick<FoodDetail, "id" | "slug">; replacementId: string }) =>
       replaceCustomFood(food.id, replacementId),
     onSuccess: (_result, { food }) => removeCustomFoodFromCache(queryClient, food),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: catalogKeys.foods });
-      invalidateFoodHistory(queryClient);
-    },
+    onSettled: () => void invalidateAfterCatalogWrite(queryClient, [catalogKeys.foods, ...FOOD_HISTORY_KEYS]),
   });
 }
 
@@ -394,9 +403,7 @@ export function useCreateCustomRecipe() {
   return useMutation({
     mutationFn: (input: CreateCustomRecipeInput) => createCustomRecipe(input),
     onSuccess: (created) => writeCustomRecipeToCache(queryClient, created),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: catalogKeys.recipes });
-    },
+    onSettled: () => void invalidateAfterCatalogWrite(queryClient, [catalogKeys.recipes]),
   });
 }
 
@@ -405,12 +412,13 @@ export function useUpdateCustomRecipe() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateCustomRecipeInput }) => updateCustomRecipe(id, input),
     onSuccess: (updated) => writeCustomRecipeToCache(queryClient, updated),
-    onSettled: (updated) => {
-      void queryClient.invalidateQueries({ queryKey: catalogKeys.recipes });
-      if (updated) void queryClient.invalidateQueries({ queryKey: catalogKeys.recipe(updated.id) });
-      // A favorited recipe's title is denormalised into the favorites list.
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.favorites });
-    },
+    // A favorited recipe's title is denormalised into the favorites list.
+    onSettled: (updated) =>
+      void invalidateAfterCatalogWrite(queryClient, [
+        catalogKeys.recipes,
+        ...(updated ? [catalogKeys.recipe(updated.id)] : []),
+        trackingKeys.favorites,
+      ]),
   });
 }
 
@@ -425,9 +433,6 @@ export function useDeleteCustomRecipe() {
   return useMutation({
     mutationFn: (recipeId: string) => deleteCustomRecipe(recipeId),
     onSuccess: (_result, recipeId) => removeCustomRecipeFromCache(queryClient, recipeId),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: catalogKeys.recipes });
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.favorites });
-    },
+    onSettled: () => void invalidateAfterCatalogWrite(queryClient, [catalogKeys.recipes, trackingKeys.favorites]),
   });
 }
