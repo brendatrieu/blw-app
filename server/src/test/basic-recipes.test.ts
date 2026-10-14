@@ -493,9 +493,9 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     expect(wrong).toEqual([]);
 
     // The exact row count, so deleting one stage of one recipe fails HERE even
-    // though the recipe count is untouched: 125 six-month recipes x 3 stages +
+    // though the recipe count is untouched: 126 six-month recipes x 3 stages +
     // 3 nine-month recipes (simple-shrimp and the two shrimp dishes) x 2.
-    expect(variantRows.length).toBe(381);
+    expect(variantRows.length).toBe(384);
   });
 
   it("gives every catalog variant 3-6 steps and a texture note", async () => {
@@ -614,7 +614,7 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     // not just the curated 15. The basics used to be exempt because they call their
     // one food by a part ("the trimmed breast"); they now name the food in the steps.
     const variants = await catalogVariants();
-    // 128 recipes, 381 variants (see the time/temperature guard below); a
+    // 129 recipes, 384 variants (see the time/temperature guard below); a
     // collapse here would make the check below pass vacuously.
     expect(variants.length).toBeGreaterThan(350);
     const extraRows = await db
@@ -671,6 +671,7 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
       thin: "thin(?:s|ned|ning)?",
       cook: "(?:cook|simmer)(?:s|ed|ing)?",
       pan: "pan|fr(?:y|ies|ied)|baking sheet",
+      greas: "greas(?:e|es|ed|ing)", // silent e: "Grease the pan" (795)
     };
     const purposeRe = (verb: string) => {
       const base = verb.replace(/n?ing$/, "");
@@ -788,11 +789,11 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
 
   it("gives every cooking step a temperature or a time", async () => {
     const variants = await catalogVariants();
-    // 128 recipes: the curated 15, the 50 coverage recipes added for the
+    // 129 recipes: the curated 16 (the original 15 plus item 795's egg bake), the 50 coverage recipes added for the
     // "3 recipes per food" rule (items 338-339, 343, 357, 510, 728), and 63 basics (62 x 3
     // stages + shrimp's 2) — one per non-spice food except lemon and onion (items 331,
     // 342, 356, 484, 509, 728).
-    expect(new Set(variants.map((v) => v.slug)).size).toBe(128);
+    expect(new Set(variants.map((v) => v.slug)).size).toBe(129);
 
     const cookingSteps = variants.flatMap((v) =>
       v.instructions

@@ -4,7 +4,17 @@ import { coverageRecipesB } from './coverageRecipesB'
 import { coverageRecipesC } from './coverageRecipesC'
 import type { RecipeSeed } from './types'
 
-// 15 starter recipes, each with 6/9/12-month variants. No added salt or sugar anywhere, and no
+// Steps 1-5 of the egg bake (item 795), the same at every stage; only the cooling-and-slicing step differs.
+const eggBakeSteps = [
+  'Steam the broccoli and carrot for 8-10 minutes, until fork-tender. Finely chop the broccoli, finely chop or grate the carrot, and let them cool slightly.',
+  'Heat the oven to 325°F (163°C), lower than a usual frittata, to keep the egg soft. Grease a 9.5 x 5 inch loaf pan well with the butter or oil, corners included.',
+  'Whisk the eggs and milk until fully combined and slightly frothy, then stir in the broccoli and carrot until evenly spread through.',
+  'Pour into the pan; it should sit about 1-1½ inches deep. For gentler, more even heat, set the loaf pan in a larger baking dish and pour about 1 inch of hot water into the outer dish, keeping it out of the egg.',
+  'Bake at 325°F (163°C) for 30-40 minutes, checking from 25 minutes, until the center is set with no wobble — 160°F (71°C) on a thermometer. Take it out as soon as it gets there, since overbaking makes it rubbery.',
+]
+
+// 16 starter recipes (item 795's egg bake joined the original 15), each with 6/9/12-month
+// variants. No added salt or sugar anywhere, and no
 // honey at any age (baked or otherwise). foodSlug references resolve against foods.ts;
 // extraIngredients cover cupboard staples (oils, spices, chia) not tracked in the food catalog;
 // lemon is a catalog food.
@@ -281,6 +291,48 @@ const curatedRecipes: RecipeSeed[] = [
           'Pour into a well-greased mini muffin tin and bake at 350°F (180°C) for 12-15 minutes, until fully set with no wobble in the center — 160°F (71°C) on a thermometer.',
           'Cool to just-warm, check the temperature, then serve whole mini muffins or cut into halves for baby to hold and bite from.',
           'Pair with fruit on the side for a balanced meal.',
+        ],
+      },
+    },
+  },
+  // Item 795: a soft loaf-pan egg bake, baked low in a water bath and sliced into strips or cubes.
+  {
+    slug: 'egg-broccoli-carrot-bake',
+    title: 'Egg, Broccoli & Carrot Bake',
+    minAgeMonths: 6,
+    prepMinutes: 60,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'egg', quantityNote: '6 large eggs' },
+      { foodSlug: 'broccoli', quantityNote: '3/4 cup florets, finely chopped and steamed soft' },
+      { foodSlug: 'carrot', quantityNote: '1/2 cup, steamed until fork-tender, finely chopped or grated' },
+    ],
+    extraIngredients: [
+      { name: 'whole milk, breast milk, or formula', quantityNote: '1/4 cup (60 ml)' },
+      { name: 'unsalted butter or oil, for greasing', quantityNote: '1 teaspoon' },
+    ],
+    variants: {
+      '6': {
+        textureNote: 'Soft finger-length strips that squish easily between two fingers.',
+        steps: [
+          ...eggBakeSteps,
+          'Let it cool in the pan for 10-15 minutes, then turn it out onto a cutting board and slice into finger-length strips. Each piece should squish easily between two fingers, not spring back.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft strips, or small cubes (no bigger than ½ inch) for pincer practice.',
+        steps: [
+          ...eggBakeSteps,
+          'Let it cool in the pan for 10-15 minutes, then turn it out onto a cutting board and slice into finger-length strips or small cubes (no bigger than ½ inch) for pincer practice. Each piece should squish easily between two fingers, not spring back.',
+        ],
+      },
+      '12': {
+        textureNote: 'Soft strips or bite-sized cubes to pick up and bite from.',
+        steps: [
+          ...eggBakeSteps,
+          'Let it cool in the pan for 10-15 minutes, then turn it out onto a cutting board and slice into strips or bite-sized cubes. Each piece should squish easily between two fingers, not spring back.',
         ],
       },
     },
@@ -693,8 +745,9 @@ const curatedRecipes: RecipeSeed[] = [
   },
 ]
 
-// The seeded catalog, 128 recipes: the 15 curated multi-ingredient recipes FIRST, in
-// their original order, then the 50 coverage recipes (items 338-339 wrote 39 across two
+// The seeded catalog, 129 recipes: the 16 curated multi-ingredient recipes FIRST (the
+// original 15 in their original order, with item 795's egg bake after the muffins), then the 50
+// coverage recipes (items 338-339 wrote 39 across two
 // files purely so two authors could write them in parallel; item 343 added batch C for
 // the two plain tree nuts, items 357 and 510 appended two more each for potato and
 // cauliflower, and item 728 appended three for onion), then the 63 single-food
