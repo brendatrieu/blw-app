@@ -160,6 +160,8 @@ beforeEach(() => {
   h.order = [];
   h.meals = Array.from({ length: 8 }, (_, i) => meal(i));
   h.storage = Array.from({ length: 8 }, (_, i) => item(i));
+  // Chromium unless a test says otherwise: it knows no iOS-only CSS (item 797).
+  vi.stubGlobal("CSS", { supports: () => false });
 });
 
 describe("Food log paging", () => {
@@ -428,7 +430,7 @@ describe("Swipe paging (item 775)", () => {
     expect(storage().pages?.page).toBe(0);
   });
 
-  it("a touch freezes the snap window on the page it starts on; ‹ › reopen every page first (item 778)", () => {
+  it("Chromium: a touch freezes the snap window on the page it starts on; ‹ › reopen every page first (item 778)", () => {
     h.storage = Array.from({ length: 13 }, (_, i) => item(i));
     expect(storage().track!.near).toBeNull();
     swipeTo(storage().track!, 2 * TRACK_WIDTH);
@@ -454,7 +456,7 @@ describe("Swipe paging (item 775)", () => {
     expect(storage().pages?.page).toBe(4);
   });
 
-  it("each new touch re-anchors the window; a wheel reopens every page (item 779)", () => {
+  it("Chromium: each new touch re-anchors the window; a wheel reopens every page (item 779)", () => {
     h.storage = Array.from({ length: 13 }, (_, i) => item(i));
     const trackEl = () =>
       PageTrack(find(storage().tree, PageTrack)!.props as unknown as Parameters<typeof PageTrack>[0]) as unknown as El;
@@ -467,6 +469,25 @@ describe("Swipe paging (item 775)", () => {
     expect(storage().track!.near).toBe(2);
     (trackEl().props.onWheel as () => void)();
     expect(storage().track!.near).toBeNull();
+  });
+
+  it("on iOS a touch never moves the snap points, wherever it lands (item 797)", () => {
+    // Every iOS browser is WebKit, and only it answers this query.
+    vi.stubGlobal("CSS", {
+      supports: (property: string, value?: string) => property === "-webkit-touch-callout" && value === "none",
+    });
+    h.storage = Array.from({ length: 13 }, (_, i) => item(i));
+    const trackEl = () =>
+      PageTrack(find(storage().tree, PageTrack)!.props as unknown as Parameters<typeof PageTrack>[0]) as unknown as El;
+    for (const page of [1, 2, 3, 2, 0]) {
+      swipeTo(storage().track!, page * TRACK_WIDTH);
+      (trackEl().props.onTouchStart as () => void)();
+      expect(storage().track!.near).toBeNull();
+      const slides = trackEl().props.children as El[];
+      expect(slides.map((slide) => slide.props.className)).toEqual(
+        Array(5).fill("w-full shrink-0 snap-start snap-always px-2 pb-2"),
+      );
+    }
   });
 
   it("the range, not the rows, is the live region", () => {

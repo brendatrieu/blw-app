@@ -92,7 +92,7 @@ export interface PagedTrack {
   size: number;
   trackRef: MutableRefObject<HTMLDivElement | null>;
   onScroll: (event: UIEvent<HTMLDivElement>) => void;
-  /** The page a touch started on: only it and its neighbours snap until ‹ › (null = every page snaps). */
+  /** The page a touch started on: only it and its neighbours snap until ‹ › (null = every page snaps; always on iOS). */
   near: number | null;
   onTouchStart: () => void;
   /** A wheel or trackpad swipe reopens every page, as ‹ › do. */
@@ -126,7 +126,14 @@ export function usePagedTrack(total: number, size: number): PagedTrack {
     // snap-always and can fly two pages, so a touch freezes the snap points
     // to the page it started on and its neighbours. Frozen, not following
     // the page: a window that moves mid-fling lets the fling through.
-    onTouchStart: () => setNear(pages.page),
+    // Never on iOS, where every browser is WebKit (item 797): snap-always
+    // already holds a flick there, and a window broke swipes. WebKit re-snaps
+    // to a wrong page whenever the snap points change, and gives the page no
+    // touchstart for a swipe that catches the last one still settling, so
+    // the window stayed on the old page and that swipe snapped back.
+    onTouchStart: () => {
+      if (!CSS.supports("-webkit-touch-callout", "none")) setNear(pages.page);
+    },
     // A wheel is not a fling: without this, a trackpad after a touch could
     // not get past the touched page's neighbours until ‹ ›.
     onWheel: () => setNear(null),
