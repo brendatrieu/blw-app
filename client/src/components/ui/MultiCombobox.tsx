@@ -825,9 +825,9 @@ export function MultiCombobox({
         event.preventDefault();
         setUi(applyClose);
       }
-    } else if (event.key === "Backspace" && query === "" && value.length > 0) {
-      onChange(value.slice(0, -1));
     }
+    // No Backspace branch on purpose (item 798): backspacing an emptied
+    // search must never remove a selection. Each chip's own × button removes it.
   }
 
   // Removable chips, below the field by default, above it with `chipsFirst`.
