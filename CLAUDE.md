@@ -38,6 +38,7 @@ Node 24 via nvm — every shell needs: `export PATH=~/.nvm/versions/node/v24.19.
 - Seeds (`server/db/seeds/`) sit outside `tsc`; the test suite exercises them. Guards: every food ≥3 recipes, every spice ≥2; cooked recipes state times and temperatures.
 - Analytics is first-party and stores no messages or stacks, ever (`docs/analytics.md`). Do not weaken that for debuggability.
 - Commit messages: write to a file and `git commit -F` (shell quoting has eaten trailers before).
+- **Native-ready (owner's standing rule):** the end goal is an App Store app, so build as if a native shell will wrap or replace this UI. Keep logic and validation in `shared/` or plain TS modules, not in components or browser-only APIs. Everything goes through the REST API. Keep web-only pieces (service worker, install/update prompts, browser storage) behind small swappable modules, like `client/src/pwa/updateMode.ts`, and never rely on the service worker for correctness. Respect safe areas. Keep in-app account deletion.
 
 ## Working with the owner
 
