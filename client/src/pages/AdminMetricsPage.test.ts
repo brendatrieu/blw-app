@@ -51,6 +51,7 @@ vi.mock("../features/admin/hooks.js", () => ({
   useFeedbackSummary: () => h.summary,
   useAdminFeedback: () => h.feedback,
   useUpdateFeedback: () => ({ mutate: () => {}, isPending: false }),
+  useCreateResetLink: () => ({ mutate: () => {}, isPending: false }),
 }));
 
 import { formatTimestamp } from "../components/charts/helpers.js";

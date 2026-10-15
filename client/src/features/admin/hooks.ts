@@ -15,6 +15,7 @@ import {
   fetchCollaborators,
   fetchFeedbackSummary,
   fetchIsAdmin,
+  createResetLink,
   grantCollaborator,
   revokeCollaborator,
   updateFeedback,
@@ -132,6 +133,15 @@ export function useRevokeCollaborator() {
       queryClient.setQueryData(adminKeys.collaborators(), response);
     },
   });
+}
+
+/**
+ * Mints a reset link (ledger 821). A mutation, not a query, on purpose: the
+ * link lives only in this mutation's result, which react-query never
+ * persists, and is gone when the panel unmounts.
+ */
+export function useCreateResetLink() {
+  return useMutation({ mutationFn: (email: string) => createResetLink(email) });
 }
 
 /**

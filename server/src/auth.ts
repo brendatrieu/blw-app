@@ -1,5 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { generateRandomString } from "better-auth/crypto";
+import { RESET_PASSWORD_PATH } from "@blw/shared";
 import type { Env } from "./config.js";
 import { isGoogleEnabled } from "./config.js";
 import type { Database } from "./db/index.js";
@@ -73,6 +75,9 @@ export function resolveTrustedOrigins(env: Env): string[] {
   return [...origins];
 }
 
+/** How long a reset link works, emailed or made on the admin page: one hour. */
+export const RESET_TOKEN_TTL_SECONDS = 60 * 60;
+
 const consoleLogger: AuthLogger = {
   info: (message) => {
     console.log(message);
@@ -125,6 +130,8 @@ export function createAuth({ db, env, logger = consoleLogger }: CreateAuthOption
       // unlock password reset flows that depend on a confirmed address.
       requireEmailVerification: false,
       revokeSessionsOnPasswordReset: true,
+      // Explicit (it is better-auth's default) so admin-made links share it.
+      resetPasswordTokenExpiresIn: RESET_TOKEN_TTL_SECONDS,
       sendResetPassword: async ({ user: recipient, url }) => {
         await deliverEmail(env, logger, {
           to: recipient.email,
@@ -185,5 +192,32 @@ export function createAuth({ db, env, logger = consoleLogger }: CreateAuthOption
 }
 
 export type Auth = ReturnType<typeof createAuth>;
+
+/**
+ * A password-reset link for one account, minted exactly the way better-auth
+ * 1.7's own `/request-password-reset` mints the one it emails
+ * (dist/api/routes/password.mjs): a 24-character `generateId` token stored as
+ * the verification row `reset-password:<token>` -> user id, expiring after
+ * `RESET_TOKEN_TTL_SECONDS` (one hour), consumed once by
+ * `POST /reset-password`, which also revokes every session
+ * (`revokeSessionsOnPasswordReset`). Only the email is skipped: the admin
+ * page hands the link to the owner instead (ledger 821).
+ *
+ * The token travels only in the returned URL. Never log it.
+ */
+export async function createPasswordResetLink(auth: Auth, userId: string): Promise<{ url: string; expiresAt: Date }> {
+  const ctx = await auth.$context;
+  const token = generateRandomString(24, "a-z", "A-Z", "0-9");
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_SECONDS * 1000);
+  await ctx.internalAdapter.createVerificationValue({
+    value: userId,
+    identifier: `reset-password:${token}`,
+    expiresAt,
+  });
+  // Same shape as the emailed link, so both land on the same page and an
+  // expired link is caught by better-auth's check before the form shows.
+  const url = `${ctx.baseURL}/reset-password/${token}?callbackURL=${encodeURIComponent(RESET_PASSWORD_PATH)}`;
+  return { url, expiresAt };
+}
 export type AuthSession = Awaited<ReturnType<Auth["api"]["getSession"]>>;
 export type AuthUser = NonNullable<AuthSession>["user"];

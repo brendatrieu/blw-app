@@ -89,6 +89,21 @@ export const grantCollaboratorInputSchema = z
 export type GrantCollaboratorInput = z.infer<typeof grantCollaboratorInputSchema>;
 
 // ---------------------------------------------------------------------------
+// POST /api/admin/password-reset-link (ledger 821)
+// ---------------------------------------------------------------------------
+
+/**
+ * A one-time password-reset link for a parent who cannot sign in, made by
+ * the owner and sent to them privately. The body is the same `{ email }` a
+ * grant takes. The link is better-auth's own reset link (single use, one
+ * hour), shown once: the server stores only the audit fact, never the token.
+ */
+export const adminResetLinkResponseSchema = z
+  .object({ url: z.string().url(), expiresAt: z.string().datetime() })
+  .strict();
+export type AdminResetLinkResponse = z.infer<typeof adminResetLinkResponseSchema>;
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/metrics
 // ---------------------------------------------------------------------------
 

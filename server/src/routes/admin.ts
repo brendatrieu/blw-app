@@ -23,6 +23,7 @@ import {
   metricsRangeSchema,
   type AdminCollaborator,
   type AdminMeResponse,
+  type AdminResetLinkResponse,
   type MetricsRange,
 } from "@blw/shared";
 import {
@@ -37,7 +38,8 @@ import { createPerUserRateLimit, perUserRateLimitHook } from "../ai/client.js";
 import type { Env } from "../config.js";
 import type { Database } from "../db/index.js";
 import { createMetricsCache } from "../metrics/collect.js";
-import { adminAudit, session, user } from "../db/schema.js";
+import { createPasswordResetLink } from "../auth.js";
+import { account, adminAudit, session, user } from "../db/schema.js";
 
 /**
  * Per-admin hourly budget for the whole surface. Generous — this is a person
@@ -315,4 +317,65 @@ export function registerAdminRoutes(app: FastifyInstance, db: Database, env: Env
         .send({ collaborators: await listCollaborators(admin.id) });
     },
   );
+
+  // -----------------------------------------------------------------------
+  // POST /api/admin/password-reset-link — a one-time link for a parent who
+  // cannot sign in (ledger 821)
+  // -----------------------------------------------------------------------
+  app.post("/api/admin/password-reset-link", { preHandler: writeGuards }, async (request, reply) => {
+    const admin = currentAdmin(request);
+
+    const parsed = grantCollaboratorInputSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: "invalid_request" });
+    }
+
+    // The link is a key to somebody else's account, so only the deployment's
+    // own admins (ADMIN_EMAILS: the owner) may mint one. A collaborator
+    // granted from this page sees aggregates, not accounts — and must not be
+    // able to mint a link to the owner's.
+    if (!admin.fromEnv) {
+      return reply.code(403).send({ error: "owner_only" });
+    }
+
+    // Same rule as granting: a stolen, still-valid cookie is not enough.
+    if (!(await hasFreshSession(request, admin.id))) {
+      return reply.code(401).send({ error: "reauth_required" });
+    }
+
+    const [target] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(sql`lower(${user.email})`, normalizeEmail(parsed.data.email)))
+      .limit(1);
+    if (!target) {
+      // Only an admin, past the 404 guard, can ever read this.
+      return reply.code(404).send({ error: "unknown_user" });
+    }
+
+    // better-auth's reset would quietly ADD a password to a Google-only
+    // account. The owner is told it signs in with Google instead.
+    const [credential] = await db
+      .select({ id: account.id })
+      .from(account)
+      .where(and(eq(account.userId, target.id), eq(account.providerId, "credential")))
+      .limit(1);
+    if (!credential) {
+      return reply.code(409).send({ error: "no_password" });
+    }
+
+    const link = await createPasswordResetLink(app.auth, target.id);
+    // Who made a link for whom, and when — never the token. Written after
+    // the link exists: a failed write here answers 500 and the unseen link
+    // simply expires, rather than an audit row for a link nobody made.
+    await db.insert(adminAudit).values({
+      actorUserId: admin.id,
+      action: "password_reset_link",
+      targetUserId: target.id,
+    });
+
+    const body: AdminResetLinkResponse = { url: link.url, expiresAt: link.expiresAt.toISOString() };
+    // Shown once: never cached anywhere, never stored by the server.
+    return reply.header("cache-control", "no-store").send(body);
+  });
 }

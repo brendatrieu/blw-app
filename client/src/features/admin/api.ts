@@ -5,11 +5,13 @@ import {
   adminFeedbackSummarySchema,
   adminMeResponseSchema,
   adminMetricsResponseSchema,
+  adminResetLinkResponseSchema,
   type AdminCollaboratorsResponse,
   type AdminFeedbackItem,
   type AdminFeedbackListResponse,
   type AdminFeedbackSummary,
   type AdminMetricsResponse,
+  type AdminResetLinkResponse,
   type FeedbackFilter,
   type MetricsRange,
   type UpdateFeedbackInput,
@@ -67,6 +69,15 @@ export async function revokeCollaborator(userId: string): Promise<AdminCollabora
   return adminCollaboratorsResponseSchema.parse(
     await apiDelete<unknown>(`/api/admin/collaborators/${encodeURIComponent(userId)}`),
   );
+}
+
+/**
+ * A one-time password-reset link for the account using `email` (ledger 821).
+ * Owner-only and shown once: the caller keeps it in memory, never in the
+ * query cache or IndexedDB.
+ */
+export async function createResetLink(email: string): Promise<AdminResetLinkResponse> {
+  return adminResetLinkResponseSchema.parse(await apiPost<unknown>("/api/admin/password-reset-link", { email }));
 }
 
 // ---------------------------------------------------------------------------

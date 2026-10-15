@@ -12,6 +12,7 @@ import { useAdminMetrics, useIsAdmin } from "../features/admin/hooks.js";
 import { AccessPanel } from "../features/admin/AccessPanel.js";
 import { describeErrorKind } from "../features/admin/errorKinds.js";
 import { FeedbackInbox } from "../features/admin/FeedbackInbox.js";
+import { RESET_LINK_PANEL_TITLE, ResetLinkPanel } from "../features/admin/ResetLinkPanel.js";
 import { Bars } from "../components/charts/Bars.js";
 import { ChartEmpty } from "../components/charts/ChartFrame.js";
 import { Donut } from "../components/charts/Donut.js";
@@ -86,6 +87,9 @@ export const METRICS_PANEL_TITLES = [
   // only thing here that is waiting on a person, and a dashboard that buried
   // it under twelve charts would be a dashboard nobody read it from.
   "Inbox",
+  // Ledger 821: next to the Inbox, because it is the other thing here a
+  // parent is waiting on — and it renders whether or not metrics load.
+  RESET_LINK_PANEL_TITLE,
   "Weekly logging parents",
   "Signups",
   "Activation",
@@ -148,6 +152,10 @@ export function MetricsDashboard() {
           it would look like it governed which messages were shown. */}
       <Card as="section">
         <FeedbackInbox />
+      </Card>
+
+      <Card as="section">
+        <ResetLinkPanel />
       </Card>
 
       <SegmentedControl options={RANGE_OPTIONS} value={range} onChange={setRange} aria-label="Range" />

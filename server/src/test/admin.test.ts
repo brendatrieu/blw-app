@@ -129,6 +129,7 @@ describe("/api/admin/* is invisible to everybody else", () => {
     { method: "GET" as const, url: "/api/admin/collaborators" },
     { method: "POST" as const, url: "/api/admin/collaborators", payload: { email: "someone@example.com" } },
     { method: "DELETE" as const, url: "/api/admin/collaborators/anything" },
+    { method: "POST" as const, url: "/api/admin/password-reset-link", payload: { email: "someone@example.com" } },
   ];
 
   it("answers a signed-in parent exactly as it answers an unknown route", async () => {
