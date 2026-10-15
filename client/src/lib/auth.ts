@@ -9,7 +9,7 @@ export const authClient = createAuthClient({
   basePath: "/api/auth",
 });
 
-export const { signIn, signUp, signOut } = authClient;
+export const { signIn, signUp, signOut, resetPassword } = authClient;
 
 // Explicit annotation: the inferred hook type reaches into better-auth's
 // internal declaration files, which tsc refuses to name from here.

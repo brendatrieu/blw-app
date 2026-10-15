@@ -6,6 +6,7 @@ import { Card } from "../components/ui/Card.js";
 import { Field } from "../components/ui/Field.js";
 import { Input } from "../components/ui/Input.js";
 import { looksLikeEmail, useSubmitValidation, type FormErrors } from "../lib/forms.js";
+import type { PasswordResetDoneState } from "./ResetPasswordPage.js";
 
 export interface LoginValues {
   email: string;
@@ -43,6 +44,8 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const redirectTo = (location.state as { from?: string } | null)?.from ?? "/";
+  // Set by ResetPasswordPage after a successful reset (ledger 820).
+  const passwordReset = (location.state as Partial<PasswordResetDoneState> | null)?.passwordReset === true;
 
   const { errors, attemptSubmit } = useSubmitValidation(
     { email, password },
@@ -87,6 +90,12 @@ export function LoginPage() {
           What is Little Meals?
         </Link>
       </div>
+
+      {passwordReset ? (
+        <p role="status" className="text-center text-sm font-medium text-[var(--color-text)]">
+          Password changed. Sign in with your new password.
+        </p>
+      ) : null}
 
       <Card padding="md" className="flex flex-col gap-4">
         {/* `noValidate`: the fields answer for themselves inline (item 236). */}

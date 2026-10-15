@@ -5,6 +5,7 @@ import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { SignupPage } from "./pages/SignupPage.js";
 import { AboutPage } from "./pages/AboutPage.js";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
 import { LogFoodPage } from "./pages/LogFoodPage.js";
 import { StoragePage } from "./pages/StoragePage.js";
@@ -75,6 +76,9 @@ export function App() {
       />
       {/* Item 611: public to everyone, signed in or out — no RequireAnonymous. */}
       <Route path="/about" element={<AboutPage />} />
+      {/* Ledger 820: where a reset link lands. Public — no RequireAnonymous —
+          so a link opened on a device that is still signed in works too. */}
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Everything below the guard needs a session. The server enforces
           this independently; the wrapper just keeps the UI honest. */}

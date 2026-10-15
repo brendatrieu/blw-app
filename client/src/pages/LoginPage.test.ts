@@ -9,13 +9,13 @@ function values(overrides: Partial<LoginValues> = {}): LoginValues {
   return { email: "parent@example.com", password: "hunter2hunter2", ...overrides };
 }
 
-function render() {
+function render(entry: string | { pathname: string; state: unknown } = "/login") {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderToString(
     createElement(
       QueryClientProvider,
       { client: queryClient },
-      createElement(MemoryRouter, { initialEntries: ["/login"] }, createElement(LoginPage, null)),
+      createElement(MemoryRouter, { initialEntries: [entry] }, createElement(LoginPage, null)),
     ),
   );
 }
@@ -51,6 +51,13 @@ describe("validateLogin", () => {
 });
 
 describe("LoginPage (render)", () => {
+  it("confirms a password reset only when arriving from one (ledger 820)", () => {
+    const notice = "Password changed. Sign in with your new password.";
+    expect(render({ pathname: "/login", state: { passwordReset: true } })).toContain(notice);
+    expect(render()).not.toContain(notice);
+    expect(render({ pathname: "/login", state: { from: "/meals" } })).not.toContain(notice);
+  });
+
   it("links to the About page for anyone who lands here directly (item 612)", () => {
     expect(render()).toMatch(/<a[^>]*href="\/about"[^>]*>What is Little Meals\?<\/a>/);
   });

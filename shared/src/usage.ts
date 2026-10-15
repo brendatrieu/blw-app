@@ -41,6 +41,9 @@ export const ROUTE_PATTERNS = [
   "/signup",
   /** What the app is, public (item 611): a signed-out "/" lands here. */
   "/about",
+  /** Where a password-reset link lands, public (ledger 820). The token rides
+   * in the query, which a route pattern never carries. */
+  "/reset-password",
   "/",
   "/log-meal",
   "/meals",

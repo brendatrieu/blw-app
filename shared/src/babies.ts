@@ -124,6 +124,10 @@ export const authConfigSchema = z.object({
   googleEnabled: z.boolean(),
 });
 
+/** The app page a password-reset link lands on (ledger 820). The server
+ * builds admin links with it and the client sends it as `redirectTo`. */
+export const RESET_PASSWORD_PATH = "/reset-password";
+
 export type AuthConfig = z.infer<typeof authConfigSchema>;
 
 /** Uniform error body for every API failure. */
