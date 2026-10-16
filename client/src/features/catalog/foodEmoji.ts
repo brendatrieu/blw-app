@@ -2,7 +2,7 @@ import type { FoodCategory } from "@blw/shared";
 
 /**
  * Explicit emoji per seed food slug — one entry for every food in
- * `server/db/seeds/data/foods.ts` (82 as of writing, pinned slug-by-slug in
+ * `server/db/seeds/data/foods.ts` (87 as of writing, pinned slug-by-slug in
  * `foodEmoji.test.ts` so a seed addition cannot quietly fall through to the
  * category fallback). Kept as a plain
  * record rather than derived from the food's name/category so each choice
@@ -26,6 +26,9 @@ const FOOD_EMOJI: Record<string, string> = {
   // Vitamin-C pairing foods
   broccoli: "🥦",
   cauliflower: "🥦",
+  // No sprout emoji in Unicode; the leafy green spinach already uses (ledger 835).
+  brussels_sprouts: "🥬",
+  kale: "🥬",
   onion: "🧅",
   bell_pepper: "🫑",
   strawberry: "🍓",
@@ -36,6 +39,7 @@ const FOOD_EMOJI: Record<string, string> = {
   tomato: "🍅",
   sweet_potato: "🍠",
   butternut_squash: "🎃",
+  pumpkin: "🎃",
 
   // Allergen vehicles
   peanut_butter: "🥜",
@@ -53,8 +57,12 @@ const FOOD_EMOJI: Record<string, string> = {
   apple: "🍎",
   pear: "🍐",
   blueberry: "🫐",
+  // No cranberry emoji; cherries are the nearest small red berry (ledger 835).
+  cranberries: "🍒",
   carrot: "🥕",
   potato: "🥔",
+  // No beet emoji that older phones draw (🫜 is Emoji 16); peas set the colored-dot precedent.
+  beets: "🟣",
   zucchini: "🥒",
   green_beans: "🫛",
   peas: "🟢",
@@ -274,13 +282,17 @@ const TINT_SLUGS: Record<Exclude<PlateTint, "neutral">, readonly string[]> = {
     "spinach",
     "broccoli",
     "cauliflower",
+    "brussels_sprouts",
+    "kale",
     "onion",
     "bell_pepper",
     "tomato",
     "sweet_potato",
     "butternut_squash",
+    "pumpkin",
     "carrot",
     "potato",
+    "beets",
     "zucchini",
     "green_beans",
     "peas",
@@ -302,6 +314,7 @@ const TINT_SLUGS: Record<Exclude<PlateTint, "neutral">, readonly string[]> = {
     "apple",
     "pear",
     "blueberry",
+    "cranberries",
     "watermelon",
   ],
 };

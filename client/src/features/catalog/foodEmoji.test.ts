@@ -55,10 +55,10 @@ describe("getCategoryEmoji", () => {
  */
 const CATALOG_SLUGS = [
   "beef", "chicken_thigh", "salmon", "sardines", "egg", "lentils", "chickpeas", "black_beans", "tofu",
-  "iron_fortified_oats", "spinach", "quinoa", "broccoli", "cauliflower", "onion", "bell_pepper", "strawberry", "orange", "lemon", "kiwi",
-  "mango", "tomato", "sweet_potato", "butternut_squash", "peanut_butter", "almond_butter", "tahini",
+  "iron_fortified_oats", "spinach", "quinoa", "broccoli", "cauliflower", "brussels_sprouts", "kale", "onion", "bell_pepper", "strawberry", "orange", "lemon", "kiwi",
+  "mango", "tomato", "sweet_potato", "butternut_squash", "pumpkin", "peanut_butter", "almond_butter", "tahini",
   "yogurt", "cheese", "wheat_toast", "wheat_pasta", "shrimp", "avocado", "banana", "apple", "pear",
-  "blueberry", "carrot", "potato", "zucchini", "green_beans", "peas", "rice", "watermelon", "chicken", "turkey",
+  "blueberry", "cranberries", "carrot", "potato", "beets", "zucchini", "green_beans", "peas", "rice", "watermelon", "chicken", "turkey",
   "pork", "lamb", "cod", "trout", "tuna", "oats", "sesame_seeds", "chia_seeds", "flax_seeds", "hemp_seeds",
   "pumpkin_seeds", "sunflower_seed_butter", "cashew_butter", "walnuts", "pistachios", "hazelnuts", "pecans",
   "almonds", "cashews",
@@ -69,8 +69,8 @@ const CATALOG_SLUGS = [
 ];
 
 describe("emoji coverage for the seeded catalog", () => {
-  it("has an explicit emoji for all 82 catalog slugs", () => {
-    expect(CATALOG_SLUGS).toHaveLength(82);
+  it("has an explicit emoji for all 87 catalog slugs", () => {
+    expect(CATALOG_SLUGS).toHaveLength(87);
     expect(new Set(CATALOG_SLUGS).size).toBe(CATALOG_SLUGS.length);
 
     // With no category passed, the only fallback left is the generic plate —
@@ -118,6 +118,7 @@ describe("getExtraIngredientEmoji", () => {
     // of writing — hardcoded because a client test cannot import server seeds.
     const seededExtras = [
       "breast milk, formula, or water",
+      "breast milk, formula, or water to thin",
       "breast milk, formula, or water, to loosen",
       "breast milk, formula, whole milk (once baby has had yogurt or cheese), or water",
       "breast milk, formula, whole milk (once baby has had yogurt or cheese), or water to soak",
@@ -150,6 +151,7 @@ describe("getExtraIngredientEmoji", () => {
       "water, for cooking",
       "water, for cooking and thinning",
       "water, to loosen the mash",
+      "water, to thin",
       "water, whole milk, or a thin smooth spread, to moisten",
     ];
     for (const name of seededExtras) {
@@ -193,12 +195,14 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "banana": "fruit",
         "basil": "veg",
         "beef": "protein",
+        "beets": "veg",
         "bell_pepper": "veg",
         "black_beans": "legume",
         "black_pepper": "grain",
         "blueberry": "fruit",
         "broccoli": "veg",
         "brown_rice": "grain",
+        "brussels_sprouts": "veg",
         "butternut_squash": "veg",
         "carrot": "veg",
         "cashew_butter": "legume",
@@ -212,6 +216,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "cilantro": "veg",
         "cinnamon": "grain",
         "cod": "protein",
+        "cranberries": "fruit",
         "cumin": "grain",
         "curry_powder": "grain",
         "dill": "veg",
@@ -223,6 +228,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "hazelnuts": "legume",
         "hemp_seeds": "legume",
         "iron_fortified_oats": "grain",
+        "kale": "veg",
         "kiwi": "fruit",
         "lamb": "protein",
         "lemon": "fruit",
@@ -241,6 +247,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "pistachios": "legume",
         "pork": "protein",
         "potato": "veg",
+        "pumpkin": "veg",
         "pumpkin_seeds": "legume",
         "quinoa": "grain",
         "rice": "grain",
