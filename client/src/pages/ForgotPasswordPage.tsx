@@ -23,7 +23,7 @@ const EMAIL_FIELD_ORDER = ["email"] as const;
  * Every accepted request gets the same answer, whether or not an account
  * uses the address — the server answers both identically too — so this page
  * cannot be used to find out who has an account. Reachable only while the
- * server can really send email; otherwise it returns to sign-in.
+ * server says it can really send email; otherwise it returns to sign-in.
  */
 export function ForgotPasswordPage() {
   const location = useLocation();
@@ -38,7 +38,11 @@ export function ForgotPasswordPage() {
     email: "forgot-email",
   });
 
-  if (config.data && !config.data.emailEnabled) return <Navigate to="/login" replace />;
+  // Only a server that says it can send email gets the form. Email off, or
+  // the server couldn't say: back to sign-in. Still asking: nothing yet.
+  if (config.data?.emailEnabled !== true) {
+    return config.data || config.isError ? <Navigate to="/login" replace /> : null;
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();

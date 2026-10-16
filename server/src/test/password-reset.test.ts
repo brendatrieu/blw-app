@@ -2,7 +2,7 @@
 // self-serve email flow, and the security rules both have to keep.
 import { and, eq, like } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACCOUNT_REAUTH_MAX_AGE_MS, adminResetLinkResponseSchema } from "@blw/shared";
 import { buildApp, redactUrlTokens, serializeRequestForLog } from "../app.js";
 import type { AuthLogger } from "../auth.js";
@@ -12,6 +12,7 @@ import { account, adminAudit, session, user, verification } from "../db/schema.j
 import { cookieHeader, createTestApp, createTestDb, signUpUser, TEST_ORIGIN, testEnv, type TestUser } from "./helpers.js";
 
 const OWNER_EMAIL = "owner@littlemeals.test";
+const SILENT: AuthLogger = { info: () => {}, warn: () => {}, error: () => {} };
 const NEW_PASSWORD = "a-brand-new-password";
 
 async function signUpAs(app: FastifyInstance, email: string): Promise<TestUser> {
@@ -182,6 +183,23 @@ describe("the owner's one-time reset link (821)", () => {
     const response = await makeLink(OWNER_EMAIL, collaborator.cookie);
     expect(response.statusCode).toBe(403);
     expect(response.json()).toEqual({ error: "owner_only" });
+    // Refused before any lookup (826 N3): an unknown address gets the same
+    // answer, so a collaborator can't use this route to test who has an account.
+    const unknown = await makeLink("nobody-here@example.com", collaborator.cookie);
+    expect(unknown.statusCode).toBe(403);
+    expect(unknown.json()).toEqual({ error: "owner_only" });
+    expect(await db.select().from(verification).where(like(verification.identifier, "reset-password:%"))).toHaveLength(
+      0,
+    );
+  });
+
+  it("sits on the tight admin write budget, like granting: the 11th in the window is refused (826 N4)", async () => {
+    for (let i = 0; i < 10; i += 1) {
+      expect((await makeLink("nobody-here@example.com")).statusCode, `attempt ${i}`).toBe(404);
+    }
+    const limited = await makeLink(parent.email);
+    expect(limited.statusCode).toBe(429);
+    expect(limited.json()).toMatchObject({ error: "rate_limited" });
     expect(await db.select().from(verification).where(like(verification.identifier, "reset-password:%"))).toHaveLength(
       0,
     );
@@ -275,6 +293,10 @@ describe("Forgot password? by email (822)", () => {
       RESEND_API_KEY: "re_test",
     });
     expect(isEmailEnabled(prodWithKey)).toBe(false);
+    // However the test sender is capitalised (826 N5).
+    expect(
+      isEmailEnabled({ NODE_ENV: "production", RESEND_API_KEY: "re_test", EMAIL_FROM: "Foo <onboarding@RESEND.DEV>" }),
+    ).toBe(false);
     // Development and test deliver to the server log.
     expect(
       isEmailEnabled({ NODE_ENV: "development", RESEND_API_KEY: undefined, EMAIL_FROM: sender }),
@@ -354,6 +376,83 @@ describe("security rules (824)", () => {
       remoteAddress: "203.0.113.7",
       remotePort: 51234,
     });
+  });
+
+  it("wires that redaction into the real request log (826 N1)", async () => {
+    const token = "ZyXwVuTsRqPoNmLkJiHgFeDc";
+    const { db, close } = await createTestDb();
+    const app = buildApp({ env: testEnv(), db, authLogger: SILENT, logger: true });
+    await app.ready();
+    // Fastify's logger is pino; catch what it would print at its destination.
+    const streamKey = Object.getOwnPropertySymbols(app.log).find((key) => key.description === "pino.stream");
+    const stream = (app.log as unknown as Record<symbol, { write: (line: string) => boolean }>)[streamKey!]!;
+    const lines: string[] = [];
+    const capture = vi.spyOn(stream, "write").mockImplementation((line: string) => {
+      lines.push(String(line));
+      return true;
+    });
+    try {
+      await app.inject({ method: "GET", url: `/api/auth/reset-password/${token}?callbackURL=%2Freset-password` });
+      await app.inject({ method: "GET", url: `/reset-password?token=${token}` });
+      const requestLines = lines.filter((line) => line.includes('"req"'));
+      expect(requestLines).toHaveLength(2);
+      for (const line of requestLines) expect(line).toContain("[redacted]");
+      for (const line of lines) expect(line).not.toContain(token);
+    } finally {
+      capture.mockRestore();
+      await app.close();
+      await close();
+    }
+  });
+
+  it("answers a known address at once even when Resend never answers (826 N2)", async () => {
+    const { db, close } = await createTestDb();
+    const app = buildApp({
+      env: testEnv({
+        NODE_ENV: "production",
+        RESEND_API_KEY: "re_made_up_for_tests",
+        EMAIL_FROM: "Little Meals <no-reply@littlemeals.test>",
+      }),
+      db,
+      authLogger: SILENT,
+      logger: false,
+    });
+    await app.ready();
+    const send = vi.fn((_url: string, _init?: RequestInit) => Promise.resolve(new Response("{}", { status: 200 })));
+    vi.stubGlobal("fetch", send);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const signUp = await app.inject({
+        method: "POST",
+        url: "/api/auth/sign-up/email",
+        headers: { origin: TEST_ORIGIN },
+        payload: { email: "slow-mail-parent@example.com", password: "correct-horse-battery-staple", name: "P" },
+      });
+      expect(signUp.statusCode).toBe(200);
+
+      // From here Resend hangs forever: awaiting it would hang the answer too.
+      send.mockImplementation(() => new Promise<Response>(() => {}));
+      const answer = await Promise.race([
+        app.inject({
+          method: "POST",
+          url: "/api/auth/request-password-reset",
+          headers: { origin: TEST_ORIGIN },
+          payload: { email: "slow-mail-parent@example.com", redirectTo: "/reset-password" },
+        }),
+        new Promise<"hung">((resolve) => {
+          timer = setTimeout(() => resolve("hung"), 5_000);
+        }),
+      ]);
+      expect(answer).not.toBe("hung");
+      expect(answer !== "hung" && answer.statusCode).toBe(200);
+      // The mail really was handed to Resend; only the wait was skipped.
+      expect(send.mock.calls.some(([, init]) => String(init?.body).includes("Reset your password"))).toBe(true);
+    } finally {
+      clearTimeout(timer);
+      vi.unstubAllGlobals();
+      await app.close();
+      await close();
+    }
   });
 
   it("puts asking for and using a reset under the auth rate limit, one shared budget", async () => {

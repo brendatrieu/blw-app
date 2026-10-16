@@ -40,7 +40,7 @@ export function authErrorMessage(error: { message?: string | undefined } | null)
  * on the server shows up on the next load. Unknown (loading, offline) reads
  * as "no", so the app never promises an email it cannot vouch for.
  */
-export function useAuthConfig(): { data: AuthConfig | undefined } {
+export function useAuthConfig(): { data: AuthConfig | undefined; isError: boolean } {
   return useQuery({
     queryKey: ["auth-config"],
     queryFn: async () => authConfigSchema.parse(await apiGet<unknown>("/api/auth-config")),

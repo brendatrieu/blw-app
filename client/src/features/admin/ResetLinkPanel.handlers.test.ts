@@ -165,6 +165,19 @@ describe("making a link", () => {
     expect(collect(tree, (element) => element.props["aria-label"] === "Reset link")).toHaveLength(0);
   });
 
+  it("takes the last link off screen as soon as another is asked for, so a failed retry can't leave it (826 N5)", () => {
+    type("first-parent@example.com");
+    submit();
+    expect(collect(panel(), (element) => element.props["aria-label"] === "Reset link")).toHaveLength(1);
+
+    h.outcome.error = "unknown_user";
+    type("typo-parent@example.com");
+    submit();
+    const tree = panel();
+    expect(collect(tree, (element) => element.props["aria-label"] === "Reset link")).toHaveLength(0);
+    expect(text(tree).join("")).not.toContain("first-parent@example.com");
+  });
+
   it("survives a browser with no clipboard: the link stays in the box", async () => {
     Object.defineProperty(globalThis, "navigator", { configurable: true, value: {} });
     type("parent@example.com");

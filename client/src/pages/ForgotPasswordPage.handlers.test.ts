@@ -5,7 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], i: 0 };
   const calls = { requests: [] as unknown[] };
-  const world = { answer: { data: { status: true }, error: null } as { data: unknown; error: unknown } };
+  const ON = { data: { googleEnabled: false, emailEnabled: true } as unknown, isError: false };
+  const world = {
+    answer: { data: { status: true }, error: null } as { data: unknown; error: unknown },
+    config: ON,
+  };
   return {
     store,
     calls,
@@ -24,6 +28,7 @@ const h = vi.hoisted(() => {
       store.i = 0;
       calls.requests = [];
       world.answer = { data: { status: true }, error: null };
+      world.config = ON;
     },
   };
 });
@@ -44,9 +49,10 @@ vi.mock("../lib/auth.js", () => ({
     return Promise.resolve(h.world.answer);
   },
   authErrorMessage: (error: { message?: string } | null) => error?.message ?? null,
-  useAuthConfig: () => ({ data: { googleEnabled: false, emailEnabled: true } }),
+  useAuthConfig: () => h.world.config,
 }));
 
+import { Navigate } from "react-router-dom";
 import { ForgotPasswordPage } from "./ForgotPasswordPage.js";
 
 interface Rendered {
@@ -125,5 +131,25 @@ describe("asking for a link", () => {
     const [alert] = collect(tree, (element) => element.props.role === "alert");
     expect(text(alert).join("")).toBe("Too many requests. Please try again later.");
     expect(text(tree).join(" ")).not.toContain("Check your email");
+  });
+});
+
+describe("only a server that says it can send email gets the form (826 N7)", () => {
+  it("shows nothing while the server hasn't answered yet", () => {
+    h.world.config = { data: undefined, isError: false };
+    expect(page()).toBeNull();
+  });
+
+  it("goes back to sign-in when the server couldn't say, or says email is off", () => {
+    for (const config of [
+      { data: undefined, isError: true },
+      { data: { googleEnabled: false, emailEnabled: false }, isError: false },
+    ]) {
+      h.reset();
+      h.world.config = config;
+      const tree = page();
+      expect(tree.type).toBe(Navigate);
+      expect(tree.props.to).toBe("/login");
+    }
   });
 });
