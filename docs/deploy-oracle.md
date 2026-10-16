@@ -141,7 +141,8 @@ stack reads:
 | `BETTER_AUTH_URL` | yes | The public origin, e.g. `https://app.example.com`. |
 | `GOOGLE_CLIENT_ID` | optional | Only needed to enable "Sign in with Google". |
 | `GOOGLE_CLIENT_SECRET` | optional | Pairs with the above. |
-| `RESEND_API_KEY` | optional | Needed for verification/password-reset emails; the app should still run without it. |
+| `RESEND_API_KEY` | optional | Turns on email (password reset, sign-up confirmation) through Resend, once `littlemeals.org` is verified there. Without it the app runs, mail is dropped (logged by subject only), and "Forgot password?" stays hidden (`/api/auth-config` reports `emailEnabled: false`); the admin page's Password help links work either way. |
+| `EMAIL_FROM` | with `RESEND_API_KEY` | The sender, on the verified domain: `Little Meals <no-reply@littlemeals.org>`. Unset, it falls back to Resend's test sender, which only reaches the Resend account's own inbox. |
 | `KEY_ENCRYPTION_SECRET` | yes | Encrypts each user's own Anthropic API key at rest (AES-256-GCM). Generate with `openssl rand -base64 32` and never rotate it without a migration plan — rotating it without re-encrypting existing rows locks users out of their saved key. |
 | `USAGE_RATE_LIMIT_MAX` | optional | Requests per hour per caller for `POST /api/usage` (keyed by user when signed in, by IP when not). Default 120; an ordinary session sends far fewer. |
 | `USAGE_RETENTION_DAYS` | optional | How long anonymous usage events are kept. Default 180. The purge runs on boot and daily, cutting on the server's own `received_at`. |
@@ -168,6 +169,7 @@ BETTER_AUTH_URL=https://app.example.com
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 RESEND_API_KEY=
+EMAIL_FROM=Little Meals <no-reply@littlemeals.org>
 KEY_ENCRYPTION_SECRET=change-me-generate-a-real-one
 EOF
 chmod 600 /opt/blw/.env
