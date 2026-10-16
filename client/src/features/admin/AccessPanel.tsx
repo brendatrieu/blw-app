@@ -5,6 +5,7 @@ import { Field } from "../../components/ui/Field.js";
 import { Input } from "../../components/ui/Input.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";
 import { useCollaborators, useGrantCollaborator, useRevokeCollaborator } from "./hooks.js";
+import { PASSWORD_REQUIRED, PasswordPrompt, passwordPromptError } from "./PasswordPrompt.js";
 
 /**
  * Who else can open this dashboard.
@@ -17,9 +18,10 @@ import { useCollaborators, useGrantCollaborator, useRevokeCollaborator } from ".
  *
  * Grant and revoke both need a session younger than ten minutes. That is not
  * a client rule and is not checked here: the server answers
- * `reauth_required` and this panel translates it, the same way the
- * delete-account flow does, so there is exactly one place the freshness rule
- * lives.
+ * `password_required` and this panel asks for the admin's password and sends
+ * the action again (ledger 830), or `reauth_required` (an admin with no
+ * password) and it says to sign in again. There is exactly one place the
+ * freshness rule lives.
  */
 
 export const ACCESS_PANEL_TITLE = "Access";
@@ -49,6 +51,9 @@ export function collaboratorErrorMessage(code: string): string {
   }
 }
 
+/** A grant or revoke held back until the admin confirms their password. */
+type PendingAction = { kind: "grant"; email: string } | { kind: "revoke"; userId: string };
+
 /** How somebody got access, in words rather than a raw enum. */
 export function collaboratorSourceLabel(collaborator: AdminCollaborator): string {
   return collaborator.source === "env" ? "Set in the server environment" : "Granted from this page";
@@ -69,6 +74,43 @@ export function AccessPanel() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | undefined>(undefined);
+  /** The action waiting on the admin's password, while the prompt shows. */
+  const [confirming, setConfirming] = useState<PendingAction | null>(null);
+  const [promptError, setPromptError] = useState<string | null>(null);
+
+  /** Where a refusal goes: the prompt opens, stays with a sentence, or closes. */
+  function refused(action: PendingAction, sentPassword: boolean) {
+    return ({ message }: Error) => {
+      const inPrompt = sentPassword ? passwordPromptError(message) : null;
+      if (message === PASSWORD_REQUIRED) {
+        setConfirming(action);
+      } else if (inPrompt) {
+        setPromptError(inPrompt);
+      } else {
+        setConfirming(null);
+        setError(collaboratorErrorMessage(message));
+      }
+    };
+  }
+
+  function grantAccess(email: string, password?: string) {
+    grant.mutate(password === undefined ? { email } : { email, password }, {
+      onSuccess: () => {
+        setConfirming(null);
+        setEmail("");
+      },
+      onError: refused({ kind: "grant", email }, password !== undefined),
+    });
+  }
+
+  function revokeAccess(userId: string, password?: string) {
+    revoke.mutate(password === undefined ? { userId } : { userId, password }, {
+      onSuccess: () => {
+        setConfirming(null);
+      },
+      onError: refused({ kind: "revoke", userId }, password !== undefined),
+    });
+  }
 
   function handleGrant(event: FormEvent) {
     event.preventDefault();
@@ -80,24 +122,24 @@ export function AccessPanel() {
       setFieldError("Enter the email address they signed up with");
       return;
     }
-    grant.mutate(trimmed, {
-      onSuccess: () => {
-        setEmail("");
-      },
-      onError: (mutationError) => {
-        setError(collaboratorErrorMessage(mutationError.message));
-      },
-    });
+    setConfirming(null);
+    setPromptError(null);
+    grantAccess(trimmed);
   }
 
   function handleRevoke(userId: string) {
     setError(null);
     if (revoke.isPending) return;
-    revoke.mutate(userId, {
-      onError: (mutationError) => {
-        setError(collaboratorErrorMessage(mutationError.message));
-      },
-    });
+    setConfirming(null);
+    setPromptError(null);
+    revokeAccess(userId);
+  }
+
+  function handleConfirm(password: string) {
+    if (!confirming || grant.isPending || revoke.isPending) return;
+    setPromptError(null);
+    if (confirming.kind === "grant") grantAccess(confirming.email, password);
+    else revokeAccess(confirming.userId, password);
   }
 
   const rows = collaborators.data?.collaborators ?? [];
@@ -176,6 +218,7 @@ export function AccessPanel() {
               setEmail(event.target.value);
               setError(null);
               setFieldError(undefined);
+              setConfirming(null);
             }}
           />
         </Field>
@@ -185,6 +228,15 @@ export function AccessPanel() {
           </Button>
         </div>
       </form>
+
+      {confirming ? (
+        <PasswordPrompt
+          id="admin-access-password"
+          pending={grant.isPending || revoke.isPending}
+          error={promptError}
+          onConfirm={handleConfirm}
+        />
+      ) : null}
 
       {error ? (
         <p role="alert" className="text-sm text-[var(--color-danger)]">

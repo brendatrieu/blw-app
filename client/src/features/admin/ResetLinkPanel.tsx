@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from "react";
-import type { AdminResetLinkResponse } from "@blw/shared";
+import type { AdminResetLinkResponse, GrantCollaboratorInput } from "@blw/shared";
 import { Button } from "../../components/ui/Button.js";
 import { Field } from "../../components/ui/Field.js";
 import { Input } from "../../components/ui/Input.js";
 import { collaboratorErrorMessage } from "./AccessPanel.js";
 import { useCreateResetLink } from "./hooks.js";
+import { PASSWORD_REQUIRED, PasswordPrompt, passwordPromptError } from "./PasswordPrompt.js";
 
 /**
  * Password help (ledger 821): the owner makes a one-time reset link for a
@@ -14,6 +15,8 @@ import { useCreateResetLink } from "./hooks.js";
  * The link is better-auth's own (single use, one hour, every session signed
  * out on use). It lives only in this component's state: it is not in the
  * query cache, not persisted, and gone once the page is left.
+ *
+ * An older session confirms the owner's password here first (ledger 830).
  */
 
 export const RESET_LINK_PANEL_TITLE = "Password help";
@@ -31,8 +34,8 @@ export function resetLinkErrorMessage(code: string): string {
     case "no_password":
       return "This account signs in with Google, so there's no password to reset.";
     default:
-      // reauth_required, invalid_request, rate_limited, not_found: the same
-      // sentences the Access panel already uses.
+      // reauth_required (an owner with no password), invalid_request,
+      // rate_limited, not_found: the same sentences the Access panel uses.
       return collaboratorErrorMessage(code);
   }
 }
@@ -50,6 +53,32 @@ export function ResetLinkPanel() {
   const [error, setError] = useState<string | null>(null);
   const [made, setMade] = useState<(AdminResetLinkResponse & { email: string }) | null>(null);
   const [copied, setCopied] = useState(false);
+  /** The address waiting on the owner's password, while the prompt shows. */
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [promptError, setPromptError] = useState<string | null>(null);
+
+  function send(input: GrantCollaboratorInput) {
+    setMade(null);
+    setCopied(false);
+    create.mutate(input, {
+      onSuccess: (link) => {
+        setConfirming(null);
+        setMade({ ...link, email: input.email });
+        setEmail("");
+      },
+      onError: ({ message }) => {
+        const inPrompt = input.password === undefined ? null : passwordPromptError(message);
+        if (message === PASSWORD_REQUIRED) {
+          setConfirming(input.email);
+        } else if (inPrompt) {
+          setPromptError(inPrompt);
+        } else {
+          setConfirming(null);
+          setError(resetLinkErrorMessage(message));
+        }
+      },
+    });
+  }
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -61,17 +90,15 @@ export function ResetLinkPanel() {
       setFieldError("Enter the email address they signed up with");
       return;
     }
-    setMade(null);
-    setCopied(false);
-    create.mutate(trimmed, {
-      onSuccess: (link) => {
-        setMade({ ...link, email: trimmed });
-        setEmail("");
-      },
-      onError: (mutationError) => {
-        setError(resetLinkErrorMessage(mutationError.message));
-      },
-    });
+    setConfirming(null);
+    setPromptError(null);
+    send({ email: trimmed });
+  }
+
+  function handleConfirm(password: string) {
+    if (!confirming || create.isPending) return;
+    setPromptError(null);
+    send({ email: confirming, password });
   }
 
   async function handleCopy(url: string) {
@@ -108,6 +135,8 @@ export function ResetLinkPanel() {
               setEmail(event.target.value);
               setError(null);
               setFieldError(undefined);
+              // The prompt was for the address as it was.
+              setConfirming(null);
             }}
           />
         </Field>
@@ -117,6 +146,15 @@ export function ResetLinkPanel() {
           </Button>
         </div>
       </form>
+
+      {confirming ? (
+        <PasswordPrompt
+          id="admin-reset-password"
+          pending={create.isPending}
+          error={promptError}
+          onConfirm={handleConfirm}
+        />
+      ) : null}
 
       {error ? (
         <p role="alert" className="text-sm text-[var(--color-danger)]">

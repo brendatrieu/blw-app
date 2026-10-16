@@ -3,7 +3,7 @@
 // picks, and the clipboard is a stand-in. Harness idiom from
 // AccessPanel.handlers.test.ts.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AdminResetLinkResponse } from "@blw/shared";
+import type { AdminResetLinkResponse, GrantCollaboratorInput } from "@blw/shared";
 
 const LINK: AdminResetLinkResponse = {
   url: "https://littlemeals.test/api/auth/reset-password/abcdefghijklmnopqrstuvwx?callbackURL=%2Freset-password",
@@ -12,8 +12,9 @@ const LINK: AdminResetLinkResponse = {
 
 const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], i: 0 };
-  const calls = { creates: [] as string[], copies: [] as string[] };
-  const outcome = { error: null as string | null };
+  const calls = { creates: [] as GrantCollaboratorInput[], copies: [] as string[] };
+  // `error` answers a request without a password, `withPassword` one with.
+  const outcome = { error: null as string | null, withPassword: null as string | null };
   return {
     store,
     calls,
@@ -33,6 +34,7 @@ const h = vi.hoisted(() => {
       calls.creates = [];
       calls.copies = [];
       outcome.error = null;
+      outcome.withPassword = null;
     },
   };
 });
@@ -50,15 +52,17 @@ interface MutateOptions {
 vi.mock("./hooks.js", () => ({
   useCreateResetLink: () => ({
     isPending: false,
-    mutate: (email: string, options?: MutateOptions) => {
-      h.calls.creates.push(email);
-      if (h.outcome.error) options?.onError?.(new Error(h.outcome.error));
+    mutate: (input: GrantCollaboratorInput, options?: MutateOptions) => {
+      h.calls.creates.push(input);
+      const code = input.password === undefined ? h.outcome.error : h.outcome.withPassword;
+      if (code) options?.onError?.(new Error(code));
       else options?.onSuccess?.(LINK);
     },
   }),
 }));
 
 import { ResetLinkPanel, resetLinkErrorMessage } from "./ResetLinkPanel.js";
+import { PasswordPrompt } from "./PasswordPrompt.js";
 
 interface Rendered {
   type: unknown;
@@ -129,7 +133,7 @@ describe("making a link", () => {
   it("sends the trimmed address and shows the link once, ready to copy", async () => {
     type("  parent@example.com ");
     submit();
-    expect(h.calls.creates).toEqual(["parent@example.com"]);
+    expect(h.calls.creates).toEqual([{ email: "parent@example.com" }]);
 
     const tree = panel();
     const [box] = collect(tree, (element) => element.props["aria-label"] === "Reset link");
@@ -186,6 +190,70 @@ describe("making a link", () => {
     (copy!.props.onClick as () => void)();
     await Promise.resolve();
     expect(collect(panel(), (element) => element.props["aria-label"] === "Reset link")).toHaveLength(1);
+  });
+});
+
+describe("an older session confirms the owner's password in the panel (830)", () => {
+  const prompt = () => collect(panel(), (element) => element.type === PasswordPrompt)[0];
+  const confirm = (password: string) => (prompt()!.props.onConfirm as (value: string) => void)(password);
+
+  it("asks right there, then makes the link with the same address and the password", () => {
+    h.outcome.error = "password_required";
+    type("parent@example.com");
+    submit();
+    expect(prompt()).toBeDefined();
+    expect(collect(panel(), (element) => element.props.role === "alert")).toHaveLength(0);
+
+    confirm("owner-password");
+    expect(h.calls.creates).toEqual([
+      { email: "parent@example.com" },
+      { email: "parent@example.com", password: "owner-password" },
+    ]);
+    const tree = panel();
+    expect(collect(tree, (element) => element.props["aria-label"] === "Reset link")).toHaveLength(1);
+    expect(collect(tree, (element) => element.type === PasswordPrompt)).toHaveLength(0);
+  });
+
+  it("keeps asking with the reason after a wrong password or too many tries", () => {
+    h.outcome.error = "password_required";
+    type("parent@example.com");
+    submit();
+    h.outcome.withPassword = "invalid_password";
+    confirm("wrong");
+    expect(prompt()!.props.error).toBe("That password is not right.");
+    h.outcome.withPassword = "rate_limited";
+    confirm("wrong-again");
+    expect(prompt()!.props.error).toBe("Too many attempts. Wait a few minutes and try again.");
+    expect(collect(panel(), (element) => element.props["aria-label"] === "Reset link")).toHaveLength(0);
+  });
+
+  it("hands the action's own refusal back to the panel and closes the prompt", () => {
+    h.outcome.error = "password_required";
+    type("typo@example.com");
+    submit();
+    h.outcome.withPassword = "unknown_user";
+    confirm("owner-password");
+    const tree = panel();
+    expect(collect(tree, (element) => element.type === PasswordPrompt)).toHaveLength(0);
+    const [alert] = collect(tree, (element) => element.props.role === "alert");
+    expect(text(alert).join("")).toBe("No account uses that email.");
+  });
+
+  it("closes the prompt when the address is edited: it was for the old one", () => {
+    h.outcome.error = "password_required";
+    type("parent@example.com");
+    submit();
+    type("other@example.com");
+    expect(prompt()).toBeUndefined();
+  });
+
+  it("keeps the sign-in-again sentence for an owner with no password", () => {
+    h.outcome.error = "reauth_required";
+    type("parent@example.com");
+    submit();
+    expect(prompt()).toBeUndefined();
+    const [alert] = collect(panel(), (element) => element.props.role === "alert");
+    expect(text(alert).join("")).toContain("Sign out, sign back in, and try again.");
   });
 });
 

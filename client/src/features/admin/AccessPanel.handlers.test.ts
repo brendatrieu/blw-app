@@ -8,12 +8,20 @@
 // walked, and its callbacks invoked against fake mutations. Harness idiom
 // ported from features/tour/TourDialog.handlers.test.ts.
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import type { AdminCollaborator } from "@blw/shared";
+import type { AdminCollaborator, GrantCollaboratorInput } from "@blw/shared";
 
 const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], i: 0 };
-  const calls = { grants: [] as string[], revokes: [] as string[] };
-  const outcome = { grant: null as string | null, revoke: null as string | null };
+  const calls = {
+    grants: [] as GrantCollaboratorInput[],
+    revokes: [] as { userId: string; password?: string }[],
+  };
+  // The answer to a request without a password; `withPassword` answers one with.
+  const outcome = {
+    grant: null as string | null,
+    revoke: null as string | null,
+    withPassword: null as string | null,
+  };
 
   return {
     store,
@@ -34,6 +42,7 @@ const h = vi.hoisted(() => {
       calls.revokes = [];
       outcome.grant = null;
       outcome.revoke = null;
+      outcome.withPassword = null;
     },
   };
 });
@@ -77,23 +86,26 @@ vi.mock("./hooks.js", () => ({
   }),
   useGrantCollaborator: () => ({
     isPending: false,
-    mutate: (email: string, options?: MutateOptions) => {
-      h.calls.grants.push(email);
-      if (h.outcome.grant) options?.onError?.(new Error(h.outcome.grant));
+    mutate: (input: GrantCollaboratorInput, options?: MutateOptions) => {
+      h.calls.grants.push(input);
+      const code = input.password === undefined ? h.outcome.grant : h.outcome.withPassword;
+      if (code) options?.onError?.(new Error(code));
       else options?.onSuccess?.();
     },
   }),
   useRevokeCollaborator: () => ({
     isPending: false,
-    mutate: (userId: string, options?: MutateOptions) => {
-      h.calls.revokes.push(userId);
-      if (h.outcome.revoke) options?.onError?.(new Error(h.outcome.revoke));
+    mutate: (input: { userId: string; password?: string }, options?: MutateOptions) => {
+      h.calls.revokes.push(input);
+      const code = input.password === undefined ? h.outcome.revoke : h.outcome.withPassword;
+      if (code) options?.onError?.(new Error(code));
       else options?.onSuccess?.();
     },
   }),
 }));
 
 import { AccessPanel } from "./AccessPanel.js";
+import { PasswordPrompt } from "./PasswordPrompt.js";
 
 interface Rendered {
   type: unknown;
@@ -166,7 +178,7 @@ describe("granting access", () => {
   it("sends the trimmed address the parent signed up with", () => {
     typeEmail(panel(), "  mate@example.com  ");
     submitGrant(panel());
-    expect(h.calls.grants).toEqual(["mate@example.com"]);
+    expect(h.calls.grants).toEqual([{ email: "mate@example.com" }]);
   });
 
   it("empties the field once the server has agreed", () => {
@@ -182,7 +194,7 @@ describe("granting access", () => {
     expect(fieldError(panel())).toBe("Enter the email address they signed up with");
   });
 
-  it("turns a stale session into the re-auth sentence, not a raw code", () => {
+  it("turns a stale session with no password to confirm into the re-auth sentence", () => {
     h.outcome.grant = "reauth_required";
     typeEmail(panel(), "mate@example.com");
     submitGrant(panel());
@@ -212,12 +224,57 @@ describe("revoking access", () => {
     // The email is what the owner reads; the id is what the server acts on,
     // and the two must not be confusable at the call site.
     clickRevoke(panel());
-    expect(h.calls.revokes).toEqual(["user-2"]);
+    expect(h.calls.revokes).toEqual([{ userId: "user-2" }]);
   });
 
   it("explains a refusal in the same words as the grant form", () => {
     h.outcome.revoke = "cannot_demote_self";
     clickRevoke(panel());
     expect(text(panel().props.children).join(" ")).toContain("You can't remove your own access.");
+  });
+});
+
+describe("an older session confirms the admin's password in the panel (830)", () => {
+  const prompt = () => collect(panel(), (element) => element.type === PasswordPrompt)[0];
+  const confirm = (password: string) => (prompt()!.props.onConfirm as (value: string) => void)(password);
+
+  it("asks before granting, then grants the same address with the password", () => {
+    h.outcome.grant = "password_required";
+    typeEmail(panel(), "mate@example.com");
+    submitGrant(panel());
+    expect(prompt()).toBeDefined();
+    expect(text(panel().props.children).join(" ")).not.toContain("Sign out");
+
+    confirm("admin-password");
+    expect(h.calls.grants).toEqual([{ email: "mate@example.com" }, { email: "mate@example.com", password: "admin-password" }]);
+    expect(prompt()).toBeUndefined();
+    const [input] = collect(panel(), (element) => element.props.id === "admin-grant-email");
+    expect(input!.props.value).toBe("");
+  });
+
+  it("asks before revoking, then revokes the same person with the password", () => {
+    h.outcome.revoke = "password_required";
+    clickRevoke(panel());
+    confirm("admin-password");
+    expect(h.calls.revokes).toEqual([{ userId: "user-2" }, { userId: "user-2", password: "admin-password" }]);
+    expect(prompt()).toBeUndefined();
+  });
+
+  it("keeps asking with the reason after a wrong password", () => {
+    h.outcome.grant = "password_required";
+    h.outcome.withPassword = "invalid_password";
+    typeEmail(panel(), "mate@example.com");
+    submitGrant(panel());
+    confirm("wrong");
+    expect(prompt()!.props.error).toBe("That password is not right.");
+  });
+
+  it("hands the action's own refusal back to the panel", () => {
+    h.outcome.revoke = "password_required";
+    h.outcome.withPassword = "env_admin";
+    clickRevoke(panel());
+    confirm("admin-password");
+    expect(prompt()).toBeUndefined();
+    expect(text(panel().props.children).join(" ")).toContain("server's environment");
   });
 });

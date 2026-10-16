@@ -13,6 +13,7 @@ import {
   type AdminMetricsResponse,
   type AdminResetLinkResponse,
   type FeedbackFilter,
+  type GrantCollaboratorInput,
   type MetricsRange,
   type UpdateFeedbackInput,
 } from "@blw/shared";
@@ -60,14 +61,23 @@ export async function fetchCollaborators(): Promise<AdminCollaboratorsResponse> 
   return adminCollaboratorsResponseSchema.parse(await apiGet<unknown>("/api/admin/collaborators"));
 }
 
-/** Grants by email — the address must already belong to an account. */
-export async function grantCollaborator(email: string): Promise<AdminCollaboratorsResponse> {
-  return adminCollaboratorsResponseSchema.parse(await apiPost<unknown>("/api/admin/collaborators", { email }));
+/**
+ * Grants by email — the address must already belong to an account.
+ *
+ * `password` (here, in revoke and in the reset link) is the admin's own, sent
+ * only after the server answered `password_required` (ledger 830). It travels
+ * in the body, never the URL, and is not kept anywhere on this side.
+ */
+export async function grantCollaborator(input: GrantCollaboratorInput): Promise<AdminCollaboratorsResponse> {
+  return adminCollaboratorsResponseSchema.parse(await apiPost<unknown>("/api/admin/collaborators", input));
 }
 
-export async function revokeCollaborator(userId: string): Promise<AdminCollaboratorsResponse> {
+export async function revokeCollaborator(userId: string, password?: string): Promise<AdminCollaboratorsResponse> {
   return adminCollaboratorsResponseSchema.parse(
-    await apiDelete<unknown>(`/api/admin/collaborators/${encodeURIComponent(userId)}`),
+    await apiDelete<unknown>(
+      `/api/admin/collaborators/${encodeURIComponent(userId)}`,
+      password === undefined ? undefined : { password },
+    ),
   );
 }
 
@@ -76,8 +86,8 @@ export async function revokeCollaborator(userId: string): Promise<AdminCollabora
  * Owner-only and shown once: the caller keeps it in memory, never in the
  * query cache or IndexedDB.
  */
-export async function createResetLink(email: string): Promise<AdminResetLinkResponse> {
-  return adminResetLinkResponseSchema.parse(await apiPost<unknown>("/api/admin/password-reset-link", { email }));
+export async function createResetLink(input: GrantCollaboratorInput): Promise<AdminResetLinkResponse> {
+  return adminResetLinkResponseSchema.parse(await apiPost<unknown>("/api/admin/password-reset-link", input));
 }
 
 // ---------------------------------------------------------------------------

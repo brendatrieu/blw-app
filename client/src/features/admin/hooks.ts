@@ -6,6 +6,7 @@ import {
   type AdminFeedbackSummary,
   type AdminMetricsResponse,
   type FeedbackFilter,
+  type GrantCollaboratorInput,
   type MetricsRange,
   type UpdateFeedbackInput,
 } from "@blw/shared";
@@ -117,7 +118,7 @@ export function useGrantCollaborator() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (email: string) => grantCollaborator(email),
+    mutationFn: (input: GrantCollaboratorInput) => grantCollaborator(input),
     onSuccess: (response) => {
       queryClient.setQueryData(adminKeys.collaborators(), response);
     },
@@ -128,7 +129,8 @@ export function useRevokeCollaborator() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userId: string) => revokeCollaborator(userId),
+    mutationFn: ({ userId, password }: { userId: string; password?: string }) =>
+      revokeCollaborator(userId, password),
     onSuccess: (response) => {
       queryClient.setQueryData(adminKeys.collaborators(), response);
     },
@@ -141,7 +143,7 @@ export function useRevokeCollaborator() {
  * persists, and is gone when the panel unmounts.
  */
 export function useCreateResetLink() {
-  return useMutation({ mutationFn: (email: string) => createResetLink(email) });
+  return useMutation({ mutationFn: (input: GrantCollaboratorInput) => createResetLink(input) });
 }
 
 /**

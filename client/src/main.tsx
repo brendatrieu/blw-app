@@ -99,6 +99,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               query.state.status === "success" &&
               typeof query.queryKey[0] === "string" &&
               PERSISTED_QUERY_KEY_PREFIXES.has(query.queryKey[0]),
+            // Never write a mutation to disk. The default keeps one paused
+            // offline, variables and all, and some carry a password (account
+            // deletion, the admin's confirm, ledger 830). Nothing resumes a
+            // restored mutation here anyway: none has a default mutationFn.
+            shouldDehydrateMutation: () => false,
           },
         }}
       >
