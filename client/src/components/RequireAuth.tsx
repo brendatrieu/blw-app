@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useSession } from "../lib/auth.js";
 
@@ -31,6 +31,11 @@ function SessionPending() {
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { data: session, isPending } = useSession();
   const location = useLocation();
+  // Ledger 829: whether this guard has seen a session. One instance wraps the
+  // whole app, so a signed-out render after one means the session ENDED here
+  // (Sign out, account deletion, a sign-out in another tab), not a deep link.
+  const [hadSession, setHadSession] = useState(false);
+  if (session && !hadSession) setHadSession(true);
 
   if (isPending) return <SessionPending />;
   if (!session) {
@@ -38,6 +43,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     if (location.pathname === "/") {
       return <Navigate to="/about" replace state={{ frontDoor: true } satisfies FrontDoorState} />;
     }
+    // The session just ended: no `from`, so whoever signs in next lands on
+    // Home, not on the page the last person was on.
+    if (hadSession) return <Navigate to="/login" replace />;
     // Anywhere else, remember where they were headed so sign-in can send them back.
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }

@@ -88,4 +88,13 @@ describe("Settings › Sign out (item 827)", () => {
     expect(h.calls).toEqual(["performSignOut"]);
     expect(render().props.children).toBe("Sign out");
   });
+
+  it("account deletion leaves the redirect to RequireAuth too (ledger 829)", () => {
+    // navigate("/login") right after the delete met /login's guard with the
+    // old session still cached, which bounced to "/" and then /about.
+    const source = readFileSync(new URL("./SettingsPage.tsx", import.meta.url), "utf8");
+    const form = source.slice(source.indexOf("export function DeleteAccountForm("), source.indexOf("export function SignOutButton("));
+    expect(form).toContain("performSignOut(createSignOutDeps(queryClient))");
+    expect(form).not.toMatch(/navigate\(/);
+  });
 });

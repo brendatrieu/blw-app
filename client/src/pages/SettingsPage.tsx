@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Baby } from "@blw/shared";
 import {
@@ -786,7 +785,6 @@ export function validateDeleteAccount(values: { phrase: string; password: string
 /** Exported for render tests — see `BabyFields`. */
 export function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
   const deleteAccount = useDeleteAccount();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [phrase, setPhrase] = useState("");
@@ -815,9 +813,11 @@ export function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
         try {
           await performSignOut(createSignOutDeps(queryClient));
         } catch {
-          // The account is gone either way — never block the redirect on it.
+          // The account is gone either way.
         }
-        void navigate("/login", { replace: true });
+        // No navigate (ledger 829), as with Sign out: RequireAuth sends this
+        // page to sign-in once the session refetch reads signed out. Sooner,
+        // /login's guard still sees the old session and bounces to /about.
       },
       onError: (mutationError) => {
         setPassword("");
