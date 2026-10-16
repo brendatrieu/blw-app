@@ -1,6 +1,6 @@
 import type { FoodSeed } from './types'
 
-// ~77 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
+// ~87 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
 // staples. minAgeMonths is 6 for nearly everything (BLW typically starts around 6 months when
 // baby shows readiness signs); shellfish is held to 9 months per the allergen ladder ordering.
 // Prep guidance is age-specific: 6-8m favors palmar-grasp finger shapes and thinned textures,
@@ -295,6 +295,63 @@ export const foods: FoodSeed[] = [
     storageCategory: 'produce_cooked_soft',
   },
   {
+    // Item 835. Levels from USDA FoodData Central 169971 (Brussels sprouts, cooked, boiled,
+    // drained, without salt): iron 1.2 mg, vitamin C 62.0 mg, fiber 2.6 g per 100 g —
+    // moderate / high / moderate on the catalog's thresholds. (Frozen, boiled, 169973, is
+    // iron 0.48 mg, so the iron badge assumes fresh sprouts.) Prep and choking copy follow the
+    // cauliflower call and stay more conservative than Solid Starts: never a whole sprout, and
+    // never raw at any age in this catalog.
+    slug: 'brussels_sprouts',
+    name: 'Brussels Sprouts',
+    category: 'veg',
+    ironLevel: 'moderate',
+    vitaminCLevel: 'high',
+    fiberLevel: 'moderate',
+    chokingRisk: 'moderate',
+    minAgeMonths: 6,
+    prep6m:
+      'Halve and steam until very soft, so a knife slides through the core with no resistance, then cut into quarters lengthwise to hold, or mash and stir into a soft food like mashed potato.',
+    prep9m:
+      'Steam until soft and serve in quarters, or cut into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+    prep12m:
+      'Steam or roast until tender all the way through the core, then quarter or cut into small bite-sized pieces and serve as a side.',
+    chokingNotes:
+      'A whole sprout is round and firm, and raw or under-cooked sprouts are hard to chew — never serve a whole sprout, and always cook until a knife slides through the core before cutting into quarters or smaller.',
+    notes:
+      'Rich in vitamin C, which helps baby absorb iron — pair it with lentils, beef, or another iron-rich food. Like broccoli and cauliflower, Brussels sprouts are a cabbage-family vegetable and can cause a little extra gas, which is normal.',
+    allergens: [],
+    storageCategory: 'produce_cooked_soft',
+  },
+  {
+    // Item 835. Levels from USDA FoodData Central 169238 (kale, cooked, boiled, drained,
+    // without salt; SR Legacy, 2019): iron 0.84 mg, vitamin C 17.8 mg, fiber 4.0 g per 100 g —
+    // low / moderate / high on the catalog's thresholds. (Raw kale, 168421, is iron 1.6 mg and
+    // vitamin C 93.4 mg, but the catalog only serves it cooked: the served form decides it.
+    // Frozen, boiled, 169240, is fiber 2.3 g, so the fiber badge assumes fresh kale.) Choking
+    // copy follows the spinach call and stays more conservative than Solid Starts: stems off,
+    // never raw, never whole leaves, no crispy kale chips.
+    slug: 'kale',
+    name: 'Kale',
+    category: 'veg',
+    ironLevel: 'low',
+    vitaminCLevel: 'moderate',
+    fiberLevel: 'high',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Pull the leaves off the tough stems, steam until very soft and dark, then chop finely and stir into a mash, egg, or soft grain rather than serving leaves whole.',
+    prep9m:
+      'Cook until very soft, chop finely, and mix into a mash, fritters, egg dishes, or pasta sauce for pincer-grasp self-feeding.',
+    prep12m:
+      'Chop cooked kale into small pieces and mix it into dishes, or serve it wilted and finely cut as a side.',
+    chokingNotes:
+      'Raw kale and whole cooked leaves are tough, stringy, and hard to chew — always remove the stems, cook until very soft, and chop finely rather than serving whole leaves. Hold off on crispy kale chips: like potato chips, they are dry and crisp, and store-bought ones are often salty.',
+    notes:
+      'Cooked kale adds some vitamin C, which helps baby absorb iron, but it is not an iron-rich food once cooked — pair it with tofu, chickpeas, lentils, egg, or meat. Leafy greens can cling to the tongue and cause gagging, which is normal; finely chopped kale mixed into a soft food is easiest.',
+    allergens: [],
+    storageCategory: 'produce_cooked_soft',
+  },
+  {
     // Item 728. Prep and choking copy from Solid Starts' onion page; levels from USDA
     // FoodData Central 170001 (onions, cooked, boiled, drained, without salt): iron 0.24 mg,
     // vitamin C 5.2 mg, fiber 1.4 g per 100 g — low / low / low on the catalog's thresholds
@@ -496,6 +553,28 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Cook until tender and dice into small bite-sized pieces.',
     notes: 'A mild, naturally sweet vitamin-C pairing for chicken thigh or another iron-rich protein.',
+    allergens: [],
+    storageCategory: 'produce_cooked_soft',
+  },
+  {
+    slug: 'pumpkin',
+    name: 'Pumpkin',
+    category: 'veg',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'low',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Peel, deseed, and steam or roast fresh pumpkin until it mashes easily between two fingers, then serve a finger-length wedge; or stir canned 100% pure pumpkin into oatmeal or yogurt.',
+    prep9m:
+      'Cook until soft, then serve as a finger-length wedge or as small bite-sized soft cubes (no bigger than ½ inch) for pincer practice, or stir canned pure pumpkin into oatmeal, pancakes, or fritters.',
+    prep12m:
+      'Cook until tender and dice into small bite-sized pieces, or use canned pure pumpkin in oatmeal, pancakes, or muffins made with no added sugar.',
+    chokingNotes:
+      'Peel off the tough skin and scoop out every seed and stringy fiber before cooking — whole pumpkin seeds are a choking hazard (ground pumpkin seeds have their own page). Serve only flesh cooked until it mashes easily between two fingers, never firm or under-cooked pieces.',
+    notes:
+      'Buy cans labeled 100% pure pumpkin — never pumpkin pie filling, which has added sugar and spices. Canned pure pumpkin is already cooked and has more than twice the iron and fiber of fresh boiled pumpkin; both are rich in vitamin A. For fresh, choose a small pie pumpkin rather than a large carving pumpkin, and never cook one that has been carved or left out as decoration. Serve it beside an iron-rich food and a vitamin-C food, like chicken thigh and broccoli.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -757,6 +836,36 @@ export const foods: FoodSeed[] = [
     storageCategory: 'produce_raw_cut',
   },
   {
+    // Item 835. Levels from USDA FoodData Central 171722 (cranberries, raw; SR Legacy, 2019):
+    // iron 0.23 mg, vitamin C 14.0 mg, fiber 3.6 g per 100 g — low / moderate / high on the
+    // catalog's thresholds. FDC has no plain cooked, unsweetened cranberry entry (only sweetened
+    // dried, 171723, and sweetened sauce), so the raw figures stand in for the served form;
+    // simmering costs some vitamin C (a loss over ~40% would read low), with no cooked figure to
+    // check against. Always cooked:
+    // a raw cranberry is small, round, and hard, so the choking copy keeps it burst and mashed at
+    // every age, the same "never whole" line blueberry holds.
+    slug: 'cranberries',
+    name: 'Cranberries',
+    category: 'fruit',
+    ironLevel: 'low',
+    vitaminCLevel: 'moderate',
+    fiberLevel: 'high',
+    chokingRisk: 'high',
+    minAgeMonths: 6,
+    prep6m:
+      'Simmer fresh or frozen cranberries with a splash of water until every berry bursts, then mash smooth and swirl a little into oatmeal, yogurt, or a sweeter fruit mash — never whole or raw.',
+    prep9m:
+      'Simmer until every berry bursts, then mash well and stir into oatmeal, yogurt, or cooked apple or pear, or serve as a thick sauce beside turkey or beef.',
+    prep12m:
+      'Simmer into a chunky, unsweetened cranberry-apple sauce with every berry burst and mashed, or bake cooked, chopped cranberries into muffins — still never whole or raw.',
+    chokingNotes:
+      'Raw cranberries are small, round, and hard — exactly airway-sized — so always simmer them until every berry bursts and mash them before serving, at any age, rather than serving them whole or raw. Hold off on dried cranberries before 12 months: they are firm and sticky, and nearly all are sweetened. After that, choose unsweetened ones, chop them finely, and soak them in warm water first.',
+    notes:
+      'Cranberries are very tart, so mix them with a naturally sweeter food (pear, apple, banana, or sweet potato) rather than adding sugar. Skip store-bought cranberry sauce and cranberry juice drinks, which carry a lot of added sugar; no juice of any kind before 12 months. Cooked cranberries add some vitamin C, which helps baby absorb iron, to an iron-rich food like iron-fortified oats, turkey, or beef.',
+    allergens: [],
+    storageCategory: 'produce_cooked_soft',
+  },
+  {
     slug: 'carrot',
     name: 'Carrot',
     category: 'veg',
@@ -796,6 +905,33 @@ export const foods: FoodSeed[] = [
       'Cook until tender and serve in small bite-sized pieces, or as a soft mash stirred loose rather than beaten sticky.',
     chokingNotes: 'Raw or under-cooked potato is hard and slippery and can shear into a firm, airway-blocking chunk — always cook until it mashes easily between two fingers, peel it for the youngest babies, and never serve raw or firm cubes. Stiff, gluey mash is hard to swallow too, so keep it loose and soft.',
     notes: 'A gentle, filling everyday vegetable with more vitamin C than it gets credit for, especially cooked in its skin. Yukon Gold (or any yellow potato) is the easiest choice: steamed wedges hold together for little hands and it mashes creamy. Russets are best baked, since boiled russet wedges tend to crumble, and waxy red potatoes make a lumpier mash. Serve it with no added salt, and trim away any green patches or sprouts before cooking.',
+    allergens: [],
+    storageCategory: 'produce_cooked_soft',
+  },
+  {
+    // Item 835. Levels from USDA FoodData Central 169146 (beets, cooked, boiled, drained):
+    // iron 0.79 mg, vitamin C 3.6 mg, fiber 2.0 g per 100 g (folate 80 µg) — low / low /
+    // moderate on the catalog's thresholds. Raw (169145) is 0.80 / 4.9 / 2.8, the same buckets.
+    // Choking copy copies the carrot call (raw root veg is hard and shears into chunks), so it
+    // is `high` and pinned in HAZARD_COPY. Red pee/poop: MedlinePlus 003139 (urine color) and
+    // 003130 (stool color); NHS "Blood in urine" (beetroot). The AAP nitrate caution is for
+    // homemade vegetable purées under 3 months, so it does not apply at 6 months and is left out.
+    slug: 'beets',
+    name: 'Beets',
+    category: 'veg',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'moderate',
+    chokingRisk: 'high',
+    minAgeMonths: 6,
+    prep6m:
+      'Peel, then steam, boil, or roast until it mashes easily between two fingers, and serve as a finger-length wedge or mashed — never serve raw beet under 12 months.',
+    prep9m:
+      'Cook until soft and serve as finger-length wedges, or cut into small bite-sized cubes (no bigger than ½ inch) for pincer practice; still avoid raw beet.',
+    prep12m:
+      'Cook until tender-soft and dice into small bite-sized pieces; hold off on raw beet until chewing is confident, well beyond 12 months.',
+    chokingNotes: 'Raw beet is hard and can shear into a firm, airway-blocking chunk — always cook until it mashes easily under 12 months.',
+    notes: 'An earthy-sweet root vegetable with folate and some fiber. Beets can turn pee pink or red and poop red for a day or two afterwards, which is harmless; call your pediatrician if the color lasts, shows up when baby has not had beets, or comes with other symptoms. Plain canned beets with no salt added work too, but skip pickled beets. Beet juice stains, so a bib helps.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },

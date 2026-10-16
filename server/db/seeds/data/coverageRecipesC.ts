@@ -27,6 +27,10 @@ import type { RecipeSeed } from './types'
 // beef-potato-carrot-cottage-mash and turkey-sweet-potato-pepper-hash, and the onion roast
 // (400°F for 30-40 minutes) is Purdue Extension's. Draft and sources:
 // .workflow/scratch/onion/DRAFT-v2.md
+//
+// Item 835 appends ten, two for each fall/winter food (Brussels sprouts, pumpkin, kale, beets,
+// cranberries); each food's own `Simple <food>` basic is its third. Drafts, USDA levels and
+// sources: .workflow/scratch/catalog-835/FOOD-*.md
 export const coverageRecipesC: RecipeSeed[] = [
   {
     slug: 'butternut-squash-almond-soup',
@@ -559,6 +563,491 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Add the ground beef and brown it over medium heat for 5-7 minutes, until it reads 160°F (71°C) on a thermometer.',
           'Add a splash of water and simmer over low heat for 12-15 minutes, until the beef is tender and the vegetables are soft.',
           'Cool to just-warm and serve with a spoon or fork to practice with, with no added salt.',
+        ],
+      },
+    },
+  },
+  // ---- Item 835: Brussels sprouts (iron + vitamin C pairings) ----
+  {
+    slug: 'lentil-brussels-sprouts-apple-mash',
+    title: 'Lentil, Brussels Sprouts & Apple Mash',
+    minAgeMonths: 6,
+    prepMinutes: 25,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'lentils', quantityNote: '1/4 cup dried red lentils (about 1/2 cup cooked)' },
+      { foodSlug: 'brussels_sprouts', quantityNote: '4-5 Brussels sprouts' },
+      { foodSlug: 'apple', quantityNote: '1/2 apple, peeled and cored' },
+    ],
+    extraIngredients: [{ name: 'water, for cooking and thinning' }],
+    variants: {
+      '6': {
+        textureNote:
+          'A soft, scoopable mash of red lentils, Brussels sprouts, and apple, with soft Brussels sprout quarters to hold.',
+        steps: [
+          'Rinse the lentils, then simmer them in plenty of unsalted water over low heat for 15-20 minutes, until they collapse and mash easily against the side of the pan.',
+          'Meanwhile, wash the Brussels sprouts, trim the stem ends, pull off any loose outer leaves, and halve them; peel, core, and dice the apple.',
+          'Steam the Brussels sprouts and apple over boiling water for 10-12 minutes, until a knife slides through the sprout cores and the apple mashes easily between two fingers — never serve raw apple under 12 months, or a firm sprout at any age.',
+          'Set one Brussels sprout half aside and cut it lengthwise into two quarters for baby to hold.',
+          'Drain the lentils and mash them with the rest of the Brussels sprouts and the apple until smooth, thinning with a little of the cooking water until it is scoopable rather than stiff.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon with the quarters alongside, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'A rougher lentil and apple mash, with small bite-sized pieces of Brussels sprouts (no bigger than ½ inch) on the tray.',
+        steps: [
+          'Rinse the lentils and simmer them in unsalted water over low heat for 15-20 minutes, until they squash easily between two fingers, then drain them well.',
+          'Wash the Brussels sprouts, trim the stem ends, pull off any loose outer leaves, and halve them; peel, core, and dice the apple.',
+          'Steam the Brussels sprouts and apple over boiling water for 10-12 minutes, until a knife slides through the sprout cores and the apple mashes easily between two fingers.',
+          'Mash the lentils roughly with the apple and a few of the Brussels sprouts, and cut the rest into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+          'Cool to just-warm and serve the mash with a spoon for baby to practice with and the soft pieces on the tray, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Soft red lentils with diced cooked apple and small bite-sized pieces of Brussels sprouts, family-style.',
+        steps: [
+          'Rinse the lentils and simmer them in unsalted water over low heat for 15-20 minutes, until soft, then drain them.',
+          'Wash the Brussels sprouts, trim the stem ends, and halve them; peel, core, and dice the apple.',
+          'Steam the Brussels sprouts and apple for 8-10 minutes, until the sprouts are tender through the core and the apple is soft.',
+          'Cut the Brussels sprouts into small bite-sized pieces and stir them and the apple through the lentils, or pre-load a fork for baby to practice with.',
+          'Cool to just-warm and serve in small spoonfuls, with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'chicken-thigh-brussels-sprouts-sweet-potato',
+    title: 'Chicken Thigh with Brussels Sprouts & Sweet Potato',
+    minAgeMonths: 6,
+    prepMinutes: 35,
+    ironFocus: true,
+    fridgeHoursOverride: 24,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'chicken_thigh', quantityNote: '1 boneless, skinless chicken thigh (about 115g/4oz)' },
+      { foodSlug: 'brussels_sprouts', quantityNote: '4-5 Brussels sprouts' },
+      { foodSlug: 'sweet_potato', quantityNote: '1 small sweet potato, peeled' },
+    ],
+    extraIngredients: [{ name: 'olive oil' }],
+    variants: {
+      '6': {
+        textureNote:
+          'A finger-length strip or a soft pile of finely shredded chicken thigh, a sweet potato wedge that mashes between two fingers, and very soft Brussels sprout quarters.',
+        steps: [
+          'Trim any fat or gristle from the chicken thigh, check it for small bones, rub it with a little olive oil, and bake it at 400°F (200°C) for 18-22 minutes, until a thermometer in the thickest part reads 165°F (74°C) and the juices run clear.',
+          'Meanwhile, peel the sweet potato and cut it into thick, finger-length wedges; wash the Brussels sprouts, trim the stem ends, pull off any loose outer leaves, and halve them.',
+          'Steam the sweet potato and Brussels sprouts over boiling water for 12-15 minutes, until a wedge mashes easily between two fingers and a knife slides through the sprout cores with no resistance.',
+          'Rest the chicken for 5 minutes, then cut a finger-length strip or shred it finely, moistened with the pan juices, and cut each Brussels sprout half lengthwise into two quarters.',
+          'Cool everything to just-warm, check the temperature, and serve with no added salt — never a whole sprout.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'Finger-length strips, or small bite-sized pieces (no bigger than ½ inch) of chicken thigh, sweet potato, and Brussels sprouts for pincer practice.',
+        steps: [
+          'Trim the chicken thigh of fat and gristle, check it for small bones, rub it with a little olive oil, and bake it at 400°F (200°C) for 18-22 minutes, until it reads 165°F (74°C) all the way through.',
+          'Meanwhile, peel the sweet potato and cut it into finger-length wedges; wash the Brussels sprouts, trim the stem ends, pull off any loose outer leaves, and halve them.',
+          'Steam the sweet potato and Brussels sprouts over boiling water for 12-15 minutes, until both mash easily between two fingers.',
+          'Rest the chicken for 5 minutes, then cut it into finger-length strips or small bite-sized pieces (no bigger than ½ inch), and cut the Brussels sprouts into quarters or small pieces too.',
+          'Cool to just-warm and serve with no added salt, the chicken moistened with a little of the pan juices so it is not dry.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small, soft bite-sized pieces of roasted chicken thigh, sweet potato, and Brussels sprouts, served family-style.',
+        steps: [
+          'Peel the sweet potato and dice it into small bite-sized pieces; wash the Brussels sprouts, trim the stem ends, and halve them; toss both with a little olive oil.',
+          'Spread them on a lined baking sheet with the trimmed chicken thigh and roast at 400°F (200°C) for 20-25 minutes, until the vegetables are tender all the way through and the chicken reads 165°F (74°C).',
+          'Rest the chicken for 5 minutes, then dice it into small, soft bite-sized pieces, checking for small bones.',
+          'Pull any crispy or charred outer leaves off the Brussels sprouts, cut them into quarters or small bite-sized pieces, and cool everything to just-warm.',
+          'Serve together with no added salt, letting baby practice with a fork.',
+        ],
+      },
+    },
+  },
+  // ---- Item 835: pumpkin (iron + vitamin C pairings) ----
+  {
+    slug: 'pumpkin-strawberry-oatmeal',
+    title: 'Pumpkin, Strawberry & Cinnamon Oatmeal',
+    minAgeMonths: 6,
+    prepMinutes: 8,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    ingredients: [
+      { foodSlug: 'iron_fortified_oats', quantityNote: '3 tablespoons iron-fortified baby oat cereal' },
+      { foodSlug: 'pumpkin', quantityNote: '2 tablespoons canned 100% pure pumpkin (never pie filling), or mashed cooked fresh pumpkin' },
+      { foodSlug: 'strawberry', quantityNote: '2 strawberries' },
+      { foodSlug: 'cinnamon', quantityNote: 'a pinch' },
+    ],
+    extraIngredients: [{ name: 'breast milk, formula, or water to thin' }],
+    variants: {
+      '6': {
+        textureNote: 'Smooth, thinned pumpkin oatmeal loose enough to drip slowly off a spoon, with the strawberries mashed so no round berry shape is left.',
+        steps: [
+          'Stir the iron-fortified oat cereal into breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, stirring, until warm and smooth.',
+          'Stir in the canned pure pumpkin (or mashed cooked fresh pumpkin) and a pinch of cinnamon, and keep stirring over low heat for 1 minute more, until warmed through.',
+          'Thin with a little more breast milk, formula, or water until the oatmeal drips slowly off a spoon.',
+          'Hull the strawberries and mash them completely flat, so no round or half-berry shape remains, then swirl them through.',
+          'Stir well to release hot spots, cool to just-warm, check the temperature, and serve on a pre-loaded spoon.',
+        ],
+      },
+      '9': {
+        textureNote: 'Thicker, spoonable pumpkin oatmeal with strawberry finely diced into small bite-sized pieces (no bigger than ½ inch).',
+        steps: [
+          'Stir the iron-fortified oat cereal into a little less breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, stirring, to a thick, spoonable consistency.',
+          'Stir in the canned pure pumpkin (or mashed cooked fresh pumpkin) and a pinch of cinnamon, and keep stirring over low heat for 1 minute more, until warmed through.',
+          'Thin with a splash more breast milk, formula, or water only if it has turned stiff — it should stay on the spoon rather than run off it.',
+          'Hull the strawberries and dice them finely into small bite-sized pieces (no bigger than ½ inch) so no round or half-berry shape remains, then fold them in.',
+          'Cool to just-warm and serve in a bowl with a spoon for self-feeding.',
+        ],
+      },
+      '12': {
+        textureNote: 'Thick, family-style pumpkin oatmeal with quartered strawberries.',
+        steps: [
+          'Stir the iron-fortified oat cereal into breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, adding liquid a splash at a time, until thick and family-style.',
+          'Stir in the canned pure pumpkin (or mashed cooked fresh pumpkin) and a pinch of cinnamon, and keep stirring over low heat for 1 minute more, until warmed through.',
+          'Thin with a little more breast milk, formula, or water if it thickens as it stands.',
+          'Hull and quarter the strawberries lengthwise, never leaving a whole round berry, and stir most of them through.',
+          'Stir to release hot spots, cool to just-warm, check the temperature, and serve with the rest of the strawberries on the side, with no added sugar.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'sheet-pan-chicken-thigh-pumpkin-broccoli',
+    title: 'Sheet-Pan Chicken Thigh, Pumpkin & Broccoli',
+    minAgeMonths: 6,
+    prepMinutes: 40,
+    ironFocus: true,
+    fridgeHoursOverride: 24,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'chicken_thigh', quantityNote: '1 boneless, skinless chicken thigh (about 115g/4oz)' },
+      { foodSlug: 'pumpkin', quantityNote: '1 thick slice (about 1 cup cubed) fresh pie pumpkin' },
+      { foodSlug: 'broccoli', quantityNote: '1 cup broccoli florets' },
+    ],
+    extraIngredients: [{ name: 'olive oil', quantityNote: 'a drizzle of' }],
+    variants: {
+      '6': {
+        textureNote: 'A finger-length strip or fine shreds of moist chicken thigh, with a pumpkin wedge and a broccoli floret that both mash easily between two fingers.',
+        steps: [
+          'Heat the oven to 400°F (200°C). Peel the pumpkin, scoop out every seed and the stringy middle, and cut the pumpkin into thick, finger-length wedges.',
+          'Trim any tough skin, fat, or gristle from the chicken thigh and check it carefully for small bones, then toss the chicken and the pumpkin wedges in a drizzle of olive oil on a lined sheet pan.',
+          'Roast at 400°F (200°C) for 25-30 minutes, until a pumpkin wedge mashes easily between two fingers, taking the chicken thigh out as soon as a thermometer in the thickest part reads 165°F (74°C), usually after 18-22 minutes.',
+          'Steam the broccoli florets for 8-10 minutes, keeping a bit of stem as a handle, until they mash easily between two fingers.',
+          'Rest the chicken for 5 minutes, then cut a finger-length strip of the dark meat or shred it finely, moisten it with a little olive oil, and check again for small bones.',
+          'Cool everything to just-warm, check the temperature, and serve the chicken, a pumpkin wedge, and a broccoli floret side by side.',
+        ],
+      },
+      '9': {
+        textureNote: 'Small bite-sized pieces (no bigger than ½ inch) of chicken thigh, pumpkin, and broccoli for pincer practice, or finger-length pumpkin wedges and strips of chicken.',
+        steps: [
+          'Heat the oven to 400°F (200°C). Peel the pumpkin, scoop out every seed and the stringy middle, and cut the pumpkin into finger-length wedges.',
+          'Trim any tough skin, fat, or gristle from the chicken thigh and check it carefully for small bones, then toss the chicken and the pumpkin wedges in a drizzle of olive oil on a lined sheet pan.',
+          'Roast at 400°F (200°C) for 25-30 minutes, until a pumpkin wedge mashes easily between two fingers, taking the chicken thigh out as soon as a thermometer in the thickest part reads 165°F (74°C), usually after 18-22 minutes.',
+          'Steam the broccoli for 8-10 minutes, until soft, and cut it into small bite-sized florets (no bigger than ½ inch).',
+          'Rest the chicken for 5 minutes, then chop or shred it into small bite-sized pieces (no bigger than ½ inch), feeling for small bones, and moisten it with a little olive oil; serve the pumpkin as wedges or cut it into soft cubes the same size.',
+          'Cool everything to just-warm and serve for self-feeding.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small bite-sized pieces of tender chicken thigh, roasted pumpkin, and broccoli.',
+        steps: [
+          'Heat the oven to 400°F (200°C). Peel and deseed the pumpkin and cut the pumpkin into ¾-inch cubes.',
+          'Trim any tough skin, fat, or gristle from the chicken thigh and check it carefully for small bones, then toss the chicken and the pumpkin in a drizzle of olive oil on a lined sheet pan.',
+          'Roast at 400°F (200°C) for 20-25 minutes, until the pumpkin is fork-tender, taking the chicken thigh out as soon as it reads 165°F (74°C) in the thickest part, usually after 18-22 minutes.',
+          'Add the broccoli florets to the pan for the last 15 minutes and roast them at 400°F (200°C) until tender.',
+          'Rest the chicken for 5 minutes, then dice it, the pumpkin, and the broccoli into small bite-sized pieces, discarding any gristle and checking for small bones.',
+          'Cool to just-warm, check the temperature, and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  // ---- Item 835: kale (plant iron + vitamin C) ----
+  // Plant iron from chickpeas with vitamin C from kale and tomato, in a soft pasta sauce.
+  {
+    slug: 'chickpea-kale-tomato-pasta',
+    title: 'Chickpea, Kale & Tomato Pasta',
+    minAgeMonths: 6,
+    prepMinutes: 30,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'chickpeas', quantityNote: '1/2 cup cooked or no-salt-added canned chickpeas, rinsed' },
+      { foodSlug: 'kale', quantityNote: '2 large kale leaves, stems removed' },
+      { foodSlug: 'tomato', quantityNote: '2 tomatoes, skinned and diced' },
+      { foodSlug: 'wheat_pasta', quantityNote: '60g pasta shapes' },
+    ],
+    extraIngredients: [{ name: 'olive oil', quantityNote: 'a drizzle of' }],
+    variants: {
+      '6': {
+        textureNote:
+          'Very soft, large pasta shapes to hold whole, under a smooth tomato sauce with the chickpeas blended in and the kale chopped very finely.',
+        steps: [
+          'Simmer the skinned, diced tomatoes in a little olive oil over low heat for 12-15 minutes, until they break down into a soft sauce.',
+          'Meanwhile, pull the kale leaves off their stems and steam them for 5-7 minutes, until dark and very soft, then squeeze them dry and chop the kale very finely.',
+          'Stir the rinsed chickpeas into the sauce for the last 5 minutes, then blend or mash the sauce until completely smooth — whole chickpeas and their loose skins are a choking risk at this age.',
+          'Cook the pasta for 10-12 minutes, well past al dente, until it is very soft, and keep larger shapes whole as a finger food.',
+          'Stir the chopped kale through the sauce, cool it to just-warm, check the temperature, and spoon it over the pasta, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'Small soft pasta shapes for pincer-grasp self-feeding, in a thick tomato sauce with mashed chickpeas and finely chopped kale.',
+        steps: [
+          'Simmer the skinned, diced tomatoes in a little olive oil over low heat for 12-15 minutes, until soft.',
+          'Pull the kale leaves off their stems and steam them for 5-7 minutes, until very soft, then squeeze them dry and chop the kale finely.',
+          'Mash the rinsed chickpeas roughly, or squeeze each one out of its skin and flatten it between your fingers, and stir them into the sauce with the kale for the last 3-5 minutes.',
+          'Cook the small pasta shapes for 10-12 minutes, past al dente, until they squash easily, and drain them.',
+          'Toss the pasta through the sauce, cool to just-warm, and serve on the tray with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Family-style pasta in a chunky tomato sauce with squashed chickpeas and chopped kale.',
+        steps: [
+          'Simmer the diced tomatoes in a little olive oil over low heat for 12-15 minutes, until thick.',
+          'Pull the kale leaves off their stems, chop them, and stir the kale into the sauce for the last 5-7 minutes, until tender.',
+          'Squash each rinsed chickpea flat between finger and thumb and stir the chickpeas into the sauce for the last 2-3 minutes to warm through.',
+          'Cook the pasta for 10-12 minutes, until tender, drain it, and toss it through the sauce.',
+          'Let it cool to just-warm and serve with a fork alongside, with no added salt.',
+        ],
+      },
+    },
+  },
+
+  // Plant iron from tofu with vitamin C from kale; a pinch of turmeric gives the scramble its color.
+  {
+    slug: 'tofu-kale-scramble',
+    title: 'Tofu & Kale Scramble',
+    minAgeMonths: 6,
+    prepMinutes: 15,
+    ironFocus: true,
+    fridgeHoursOverride: 24,
+    freezerDaysOverride: 30,
+    ingredients: [
+      { foodSlug: 'tofu', quantityNote: '200g (7oz) firm tofu, drained and patted dry' },
+      { foodSlug: 'kale', quantityNote: '2 large kale leaves, stems removed' },
+      { foodSlug: 'turmeric', quantityNote: 'a small pinch of ground turmeric, cooked in' },
+    ],
+    extraIngredients: [{ name: 'olive oil', quantityNote: 'a drizzle of' }],
+    variants: {
+      '6': {
+        textureNote:
+          'A soft, moist tofu scramble with very finely chopped kale, served as a soft pile to scoop up or on a pre-loaded spoon.',
+        steps: [
+          'Pull the kale leaves off their stems, steam them for 5-7 minutes, until dark and very soft, then squeeze them dry and chop the kale very finely.',
+          'Crumble the firm tofu into small, soft crumbs with your fingers or a fork.',
+          'Warm a little olive oil over medium heat, stir in a small pinch of ground turmeric, then add the tofu and cook it for 4-5 minutes, stirring, until heated through.',
+          'Stir in the chopped kale and a splash of water and cook for 1-2 minutes, until it is soft and moist rather than dry.',
+          'Mash it lightly with a fork so it holds together, cool to just-warm, check the temperature, and serve as a soft pile or on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'Small, soft crumbs of tofu scramble (no bigger than ½ inch) with finely chopped kale for pincer practice.',
+        steps: [
+          'Pull the kale leaves off their stems, steam them for 5-7 minutes, until very soft, then squeeze them dry and chop the kale finely.',
+          'Crumble the firm tofu into small pieces (no bigger than ½ inch).',
+          'Warm a little olive oil over medium heat, stir in a small pinch of ground turmeric, then add the tofu and cook it for 4-5 minutes, stirring, until heated through.',
+          'Stir in the chopped kale and a splash of water and cook for 1-2 minutes, until soft and moist rather than dry.',
+          'Cool to just-warm and serve on the tray for pincer-grasp self-feeding, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'A family-style tofu scramble with chopped kale, soft and moist, with a spoon or fork to practice with.',
+        steps: [
+          'Pull the kale leaves off their stems and chop the kale finely.',
+          'Crumble the firm tofu into small bite-sized pieces.',
+          'Warm a little olive oil over medium heat, stir in a small pinch of ground turmeric, then cook the tofu and kale together with a splash of water for 5-6 minutes, stirring, until the kale is tender and the tofu is heated through.',
+          'Cool to just-warm and serve with a spoon or fork to practice with, with no added salt.',
+        ],
+      },
+    },
+  },
+  // ---- Item 835: beets (iron + vitamin C pairings) ----
+  {
+    slug: 'beet-hummus',
+    title: 'Pink Beet Hummus',
+    minAgeMonths: 6,
+    prepMinutes: 25,
+    ironFocus: true,
+    ingredients: [
+      { foodSlug: 'beets', quantityNote: '1 small beet' },
+      { foodSlug: 'chickpeas', quantityNote: '1/2 cup cooked chickpeas' },
+      { foodSlug: 'tahini', quantityNote: '1 tablespoon tahini' },
+      { foodSlug: 'lemon', quantityNote: 'a squeeze of juice' },
+    ],
+    extraIngredients: [{ name: 'water, to thin' }],
+    variants: {
+      '6': {
+        textureNote: 'A smooth, loose pink hummus on a pre-loaded spoon, with no whole chickpeas or skins.',
+        steps: [
+          'Peel the beet and cut it into small cubes, then steam or boil them for 12-15 minutes, until a cube mashes easily between two fingers.',
+          'Let the beet cool a little, then blend it with the chickpeas, tahini, and a squeeze of lemon juice until completely smooth, with no whole chickpeas or loose skins left.',
+          'Blend in water a spoonful at a time, thinning until the hummus is loose and drips slowly off a spoon rather than sitting thick or sticky.',
+          'Check the temperature and serve on a pre-loaded spoon for baby to grab.',
+        ],
+      },
+      '9': {
+        textureNote: 'A slightly thicker pink hummus, still smooth enough not to stick, with small bite-sized soft beet cubes (no bigger than ½ inch) on the tray.',
+        steps: [
+          'Peel the beet and cut it into small cubes (no bigger than ½ inch), then steam or boil them for 12-15 minutes, until a cube mashes easily between two fingers.',
+          'Set a few soft cubes aside, let the rest cool a little, and blend the beet with the chickpeas, tahini, and a squeeze of lemon juice until smooth, with no whole chickpeas or loose skins left.',
+          'Blend in water a spoonful at a time, thinning until the hummus is soft and spreadable rather than thick or sticky.',
+          'Cool to just-warm, check the temperature, and serve the hummus on a pre-loaded spoon or as a dip, with the soft beet cubes on the tray for pincer practice.',
+        ],
+      },
+      '12': {
+        textureNote: 'Family-style pink hummus as a dip or thin spread, with small bite-sized pieces of soft beet.',
+        steps: [
+          'Peel and dice the beet, then steam or boil it for 12-15 minutes, until fork-tender.',
+          'Blend most of the beet with the chickpeas, tahini, and a squeeze of lemon juice until smooth, with no whole chickpeas left.',
+          'Blend in water a spoonful at a time, thinning until the hummus is spreadable rather than thick or sticky.',
+          'Cool to just-warm and serve as a dip or spread thinly, with the rest of the beet alongside in small bite-sized pieces.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'red-lentil-beet-orange-mash',
+    title: 'Red Lentil, Beet & Orange Mash',
+    minAgeMonths: 6,
+    prepMinutes: 30,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'lentils', quantityNote: '1/4 cup dried red lentils (about 1/2 cup cooked)' },
+      { foodSlug: 'beets', quantityNote: '1 small beet, peeled and cut into small cubes' },
+      { foodSlug: 'orange', quantityNote: 'the juice of 1/2 orange, stirred in off the heat, plus a few segments from 9 months' },
+    ],
+    extraIngredients: [{ name: 'water, for cooking and thinning' }],
+    variants: {
+      '6': {
+        textureNote: 'A smooth, thick pink mash of red lentils and beet, loose enough to scoop, brightened with orange juice.',
+        steps: [
+          'Rinse the lentils and put them in a pan with the peeled, diced beet and plenty of unsalted water.',
+          'Simmer covered over low heat for 20-25 minutes, until the lentils collapse and a beet cube mashes easily between two fingers, adding a splash more water if the pan runs dry.',
+          'Take the pan off the heat and blend or mash until completely smooth, thinning with a little of the cooking water until it is scoopable rather than stiff.',
+          'Stir in the juice of half an orange; its vitamin C helps baby absorb the iron in the lentils.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'A thicker lentil and beet mash with some soft beet pieces left in, plus small membrane-free orange pieces on the tray.',
+        steps: [
+          'Rinse the lentils and simmer them with the peeled beet, cut into small cubes (no bigger than ½ inch), in plenty of unsalted water over low heat for 20-25 minutes, until a beet cube mashes easily between two fingers.',
+          'Drain off most of the water, keeping a little for thinning, and mash roughly so some soft beet pieces stay whole.',
+          'Stir in the juice of half an orange off the heat.',
+          'Cool to just-warm and serve with a spoon, with a few small membrane-free orange segment pieces alongside for pincer practice and no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Soft red lentils with small bite-sized beet pieces, family-style, finished with orange.',
+        steps: [
+          'Rinse the lentils and simmer them with the peeled, diced beet in unsalted water over low heat for 20-25 minutes, until the beet is fork-tender.',
+          'Drain any extra water, stir in the juice of half an orange, and leave the beet in small bite-sized pieces.',
+          'Cool to just-warm and serve in small spoonfuls, with membrane-free orange segments cut into small bite-sized pieces on the side and no added salt.',
+        ],
+      },
+    },
+  },
+  // ---- Item 835: cranberries (iron + vitamin C pairings) ----
+  // Iron from turkey with vitamin C from cranberries and apple; grated apple keeps the lean turkey moist.
+  {
+    slug: 'turkey-patties-cranberry-apple-sauce',
+    title: 'Turkey Patties with Cranberry-Apple Sauce',
+    minAgeMonths: 6,
+    prepMinutes: 35,
+    ironFocus: true,
+    fridgeHoursOverride: 24,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'turkey', quantityNote: '225g (8oz) ground turkey' },
+      { foodSlug: 'apple', quantityNote: '1 apple, peeled and cored' },
+      { foodSlug: 'cranberries', quantityNote: '1/2 cup fresh or frozen cranberries' },
+    ],
+    extraIngredients: [{ name: 'olive oil', quantityNote: 'a drizzle of' }],
+    variants: {
+      '6': {
+        textureNote:
+          'Finger-length strips of soft, moist turkey patty with a smooth cranberry-apple sauce spooned over or alongside — no whole cranberries.',
+        steps: [
+          'Finely grate a quarter of the apple and mix it with a little olive oil through the ground turkey, so the patties stay moist rather than dry and crumbly.',
+          'Shape the turkey into thin patties and bake them at 375°F (190°C) for 18-20 minutes, until a thermometer in the center reads 165°F (74°C) and no pink remains.',
+          'Meanwhile, dice the rest of the apple and simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 10-12 minutes, until every cranberry has burst and the apple mashes easily between two fingers.',
+          'Blend or mash the sauce until completely smooth, so no whole berry or loose skin is left.',
+          'Rest the patties for 3-5 minutes, cut them into finger-length strips, cool everything to just-warm, check the temperature, and serve the strips with the sauce, with no added salt or sugar.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'Strips or small bite-sized pieces of turkey patty (no bigger than ½ inch) with a thick cranberry-apple mash to dip into or spoon over.',
+        steps: [
+          'Finely grate a quarter of the apple and mix it with a little olive oil through the ground turkey.',
+          'Shape the turkey into thin patties and bake them at 375°F (190°C) for 18-20 minutes, until they read 165°F (74°C) in the center with no pink left.',
+          'Dice the rest of the apple and simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 10-12 minutes, until every cranberry has burst and the apple is very soft.',
+          'Mash the sauce well with a fork, so no whole berry is left.',
+          'Rest the patties for 3-5 minutes, cut them into finger-length strips or small bite-sized pieces (no bigger than ½ inch), cool to just-warm, and serve with the sauce, with no added salt or sugar.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small, soft bite-sized pieces of turkey patty with a chunky cranberry-apple sauce, family style.',
+        steps: [
+          'Finely grate a quarter of the apple and mix it with a little olive oil through the ground turkey, which keeps lean turkey from turning dry.',
+          'Shape the turkey into thin patties and bake them at 375°F (190°C) for 18-20 minutes, until they are 165°F (74°C) in the center.',
+          'Dice the rest of the apple small and simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 10-12 minutes, until every cranberry has burst and the apple is tender.',
+          'Mash the sauce roughly so no whole berry is left, keeping it chunky.',
+          'Rest the patties for 3-5 minutes, dice them into small bite-sized pieces, cool to just-warm, and serve with the sauce, with no added salt or sugar.',
+        ],
+      },
+    },
+  },
+
+  // Iron-fortified oat cereal with vitamin C from cranberries; the pear brings the sweetness instead of sugar.
+  {
+    slug: 'cranberry-pear-oatmeal',
+    title: 'Cranberry & Pear Oatmeal',
+    minAgeMonths: 6,
+    prepMinutes: 15,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    ingredients: [
+      { foodSlug: 'iron_fortified_oats', quantityNote: '3 tablespoons iron-fortified baby oat cereal' },
+      { foodSlug: 'cranberries', quantityNote: '1/4 cup fresh or frozen cranberries' },
+      { foodSlug: 'pear', quantityNote: '1 ripe pear' },
+    ],
+    extraIngredients: [{ name: 'breast milk, formula, or water' }],
+    variants: {
+      '6': {
+        textureNote:
+          'A smooth, thinned oatmeal with a swirl of smooth cranberry and pear mash, loose enough to drip slowly off a spoon.',
+        steps: [
+          'Peel, core, and dice the pear, then simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 8-10 minutes, until every cranberry has burst and the pear mashes easily between two fingers.',
+          'Blend or mash the fruit until completely smooth, so no whole berry or loose skin is left.',
+          'Stir the oat cereal into breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, stirring, until warm and smooth, then thin it until it drips slowly off a spoon.',
+          'Swirl a spoonful of the cranberry and pear mash through the oatmeal, stir well to release hot spots, cool to just-warm, and check the temperature.',
+          'Serve on a pre-loaded spoon, with no added sugar — the pear brings the sweetness.',
+        ],
+      },
+      '9': {
+        textureNote: 'A thicker, spoonable oatmeal with a well-mashed cranberry and pear sauce stirred through, for spoon practice.',
+        steps: [
+          'Peel, core, and dice the pear, then simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 8-10 minutes, until every cranberry has burst and the pear is very soft.',
+          'Mash the fruit well with a fork, so no whole berry is left.',
+          'Stir the oat cereal into a little less breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, stirring, to a thick, spoonable consistency.',
+          'Stir the cranberry and pear mash through the oatmeal, cool to just-warm, and serve in a bowl with a pre-loaded spoon for baby to practice with, with no added sugar.',
+        ],
+      },
+      '12': {
+        textureNote: 'A thick, family-style oatmeal topped with a chunky cranberry and pear sauce.',
+        steps: [
+          'Peel, core, and dice the pear small, then simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 8-10 minutes, until every cranberry has burst and the pear is tender.',
+          'Mash the fruit roughly, checking that no whole berry is left.',
+          'Stir the oat cereal into breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, adding liquid a splash at a time, until thick and family-style.',
+          'Spoon the cranberry and pear sauce over the oatmeal, cool to just-warm, and serve with a spoon, with no added sugar.',
         ],
       },
     },

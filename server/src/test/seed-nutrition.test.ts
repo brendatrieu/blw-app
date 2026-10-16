@@ -70,6 +70,13 @@ const EXPECTED_FIBER_LEVEL: Record<string, "high" | "moderate" | "low"> = {
   milk: "low", // 0 g
   unsalted_butter: "low", // 0 g
   sesame_oil: "low", // 0 g
+  // Item 835's fall/winter foods (USDA SR Legacy, catalog-835/FOOD-*.md §1).
+  brussels_sprouts: "moderate", // 2.6 g, boiled (fdcId 169971)
+  // Fresh boiled (168449) is 1.1 g; canned 168450 is 2.9 g (moderate) — the badge follows the lower served form.
+  pumpkin: "low", // 1.1 g, fresh boiled (fdcId 168449)
+  kale: "high", // 4.0 g, boiled (fdcId 169238); frozen boiled (169240) is 2.3 g
+  beets: "moderate", // 2.0 g, boiled (fdcId 169146)
+  cranberries: "high", // 3.6 g, raw (fdcId 171722); FDC has no plain cooked entry
 };
 
 describe("seeded fiber levels", () => {

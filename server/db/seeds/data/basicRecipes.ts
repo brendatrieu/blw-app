@@ -834,6 +834,42 @@ export const basicRecipes: RecipeSeed[] = [
     },
   },
   {
+    slug: 'simple-pumpkin',
+    title: 'Simple pumpkin',
+    minAgeMonths: 6,
+    prepMinutes: 30,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'pumpkin', quantityNote: '1 thick slice (about 1 cup cubed) fresh pie pumpkin' }],
+    variants: {
+      '6': {
+        textureNote: 'A finger-length wedge of pumpkin cooked until it mashes easily between two fingers.',
+        steps: [
+          'Peel the pumpkin, scoop out every seed and the stringy middle, and cut the pumpkin into thick, finger-length wedges.',
+          'Steam the pumpkin for 12-15 minutes, or roast it at 400°F (200°C) for 25-30 minutes, until a wedge mashes easily between two fingers.',
+          'Test one wedge between your fingers before serving; if it resists, cook it for 5 minutes more.',
+          'Cool to just-warm, check the temperature, and serve the pumpkin with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'Finger-length wedges, or small bite-sized soft cubes (no bigger than ½ inch) for pincer practice, cooked until they mash easily between two fingers.',
+        steps: [
+          'Peel the pumpkin, scoop out every seed and the stringy middle, and cut the pumpkin into finger-length wedges or small cubes (no bigger than ½ inch).',
+          'Steam wedges for 12-15 minutes, or cubes for 8-10 minutes, until a piece of pumpkin mashes easily between two fingers.',
+          'Test one piece between your fingers before serving; if it resists, cook it for 5 minutes more.',
+          'Cool to just-warm and serve.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small bite-sized pieces of tender pumpkin.',
+        steps: [
+          'Peel, deseed, and dice the pumpkin, then roast it at 400°F (200°C) for 20-25 minutes, or steam it for 8-10 minutes, until fork-tender.',
+          'Cut the pumpkin into small bite-sized pieces, checking that no seeds or stringy bits are left.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  {
     slug: 'simple-peanut-butter',
     title: 'Simple peanut butter',
     minAgeMonths: 6,
@@ -1362,6 +1398,43 @@ export const basicRecipes: RecipeSeed[] = [
           'Scrub the potato and cut away any green patches or sprouts.',
           'Steam or boil it in chunks for 12-15 minutes, or bake it whole at 400°F (200°C) for 50-60 minutes, until a skewer slides in with no resistance and the flesh mashes easily.',
           'Serve it in small bite-sized pieces, or mash it loosely with a fork — broken up just enough to eat, never beaten until it turns gluey.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-beets',
+    title: 'Simple beets',
+    minAgeMonths: 6,
+    prepMinutes: 30,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'beets', quantityNote: '1 medium beet' }],
+    variants: {
+      '6': {
+        textureNote: 'A finger-length wedge, peeled and cooked until it mashes easily between two fingers.',
+        steps: [
+          'Scrub and peel the beet, trim off the top and the root, and cut it into thick, finger-length wedges (gloves help, since beet juice stains).',
+          'Steam or boil the wedges for 20-25 minutes, or roast them at 400°F (200°C) for 30-40 minutes, until a wedge mashes easily between two fingers — never serve raw beet under 12 months.',
+          'Raw beet is hard and can shear into a firm, airway-blocking chunk, so test a wedge between your fingers first and cook it 5 minutes more if it resists.',
+          'Cool to just-warm, check the temperature, and serve.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft cooked beet in finger-length wedges, or small bite-sized cubes (no bigger than ½ inch) for pincer practice; still no raw beet.',
+        steps: [
+          'Scrub, peel, and trim the beet, then cut it into finger-length wedges, or into small cubes (no bigger than ½ inch) for pincer practice.',
+          'Steam or boil wedges for 20-25 minutes, or cubes for 12-15 minutes, until a piece mashes easily between two fingers.',
+          'Test one piece between your fingers before serving; if it resists, cook it for 5 minutes more.',
+          'Keep avoiding raw beet, which can shear into a firm, airway-blocking chunk.',
+          'Cool to just-warm and serve for pincer-grasp self-feeding.',
+        ],
+      },
+      '12': {
+        textureNote: 'Tender-soft beet in small bite-sized pieces; raw beet waits until well beyond 12 months.',
+        steps: [
+          'Scrub, peel, and dice the beet into small bite-sized pieces, then steam or boil them for 12-15 minutes, or roast them at 400°F (200°C) for 25-30 minutes, until fork-tender right through.',
+          'Hold off on raw beet until chewing is confident, well beyond 12 months.',
           'Cool to just-warm and serve with no added salt.',
         ],
       },
@@ -2323,6 +2396,118 @@ export const basicRecipes: RecipeSeed[] = [
           'Keep to finely ground cashew meal stirred into food, or a smooth cashew butter thinned until runny.',
           'Pieces, halves, and whole nuts stay off the menu until age 4-5.',
           'Grind small batches and keep the meal in the fridge.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-brussels-sprouts',
+    title: 'Simple brussels sprouts',
+    minAgeMonths: 6,
+    prepMinutes: 20,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'brussels_sprouts', quantityNote: '4-5 Brussels sprouts' }],
+    variants: {
+      '6': {
+        textureNote: 'Very soft steamed Brussels sprouts, cut into quarters to hold or mashed smooth — never a whole sprout.',
+        steps: [
+          'Wash the Brussels sprouts, trim the stem ends, pull off any yellow or loose outer leaves, and halve them lengthwise.',
+          'Steam the halves over boiling water for 10-12 minutes, until a knife slides through the core with no resistance and a piece mashes easily between two fingers — raw or under-cooked Brussels sprouts are firm and hard to chew.',
+          'Cut each half lengthwise into two quarters for baby to hold, or mash a few smooth for a pre-loaded spoon — never a whole sprout, which is round and firm.',
+          'Cool to just-warm, check the temperature, and serve with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft steamed quarters, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+        steps: [
+          'Wash the Brussels sprouts, trim the stem ends, pull off any yellow or loose outer leaves, and halve them lengthwise.',
+          'Steam the halves over boiling water for 10-12 minutes, until a knife slides through the core easily.',
+          'Cut them into quarters, or into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Tender quarters or small bite-sized pieces, steamed or roasted, served as a side.',
+        steps: [
+          'Wash the Brussels sprouts, trim the stem ends, pull off any yellow or loose outer leaves, and halve them lengthwise.',
+          'Steam the halves for 8-10 minutes, or roast them cut-side down on a lined baking sheet at 400°F (200°C) for 20-25 minutes, until tender all the way through the core.',
+          'Pull any crispy or charred outer leaves off roasted halves, then cut the Brussels sprouts into quarters or small bite-sized pieces.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-kale',
+    title: 'Simple kale',
+    minAgeMonths: 6,
+    prepMinutes: 12,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'kale', quantityNote: '3-4 large kale leaves' }],
+    variants: {
+      '6': {
+        textureNote: 'Very soft steamed kale, chopped finely and stirred through a mash or another soft food — never a whole leaf.',
+        steps: [
+          'Wash the kale, pull the leaves off the tough center stems, and throw the stems away.',
+          'Steam the kale leaves for 5-7 minutes, until they are dark, completely limp, and very soft — raw or under-cooked kale is tough and stringy.',
+          'Squeeze out the excess water and chop the kale very finely, so there are no whole leaves or long strands.',
+          'Stir the chopped kale through a soft food baby already eats — a mash, a soft grain, or egg — then cool to just-warm, check the temperature, and serve with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'Finely chopped steamed kale folded through a mash, a fritter, or an egg dish so baby can pick it up.',
+        steps: [
+          'Wash the kale, pull the leaves off the tough center stems, and throw the stems away.',
+          'Steam the kale leaves for 5-7 minutes, until dark, limp, and very soft, then squeeze out the excess water.',
+          'Chop the kale finely — still no whole leaves or long strands.',
+          'Mix it into a mash, an egg dish, or a fritter so baby can pick up the pieces, cool to just-warm, and serve with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Chopped tender kale as a small side, or mixed through the family meal.',
+        steps: [
+          'Wash the kale, pull the leaves off the tough center stems, and throw the stems away.',
+          'Steam the kale leaves for 4-5 minutes, or wilt them in a covered pan with a splash of water over medium heat for 3-4 minutes, until limp and tender.',
+          'Squeeze out the excess water and chop the kale into small pieces.',
+          'Serve it as a small side or stir it through the rest of the meal, cooled to just-warm, with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-cranberries',
+    title: 'Simple cranberries',
+    minAgeMonths: 6,
+    prepMinutes: 15,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'cranberries', quantityNote: '1/2 cup fresh or frozen cranberries' }],
+    variants: {
+      '6': {
+        textureNote:
+          'A smooth cranberry mash with no whole berry or loose skin left, swirled through a sweeter soft food baby already eats.',
+        steps: [
+          'Rinse the cranberries and pick out any stems and any soft or shriveled berries; frozen cranberries can go straight into the pan.',
+          'Put them in a small pan with 2-3 tablespoons of water and simmer over medium-low heat for 8-10 minutes, stirring now and then, until every berry has burst and gone soft.',
+          'Mash or blend the cranberries until completely smooth, so no whole berry or loose piece of skin is left — a whole cranberry is small, round, and hard.',
+          'Cool to just-warm, check the temperature, and swirl a teaspoon or two of the mash through a sweeter soft food baby already eats, such as oatmeal, yogurt, or mashed pear, with no added sugar.',
+        ],
+      },
+      '9': {
+        textureNote: 'A thick cranberry mash stirred through oatmeal, yogurt, or soft mashed fruit for spoon and finger practice.',
+        steps: [
+          'Rinse the cranberries and pick out any stems and any soft or shriveled berries.',
+          'Simmer them with 2-3 tablespoons of water over medium-low heat for 8-10 minutes, stirring now and then, until every berry has burst and gone soft.',
+          'Mash the cranberries well with a fork, until no whole berry is left and the skins are broken down.',
+          'Cool to just-warm and stir the mash through oatmeal, yogurt, or mashed pear or apple, with no added sugar.',
+        ],
+      },
+      '12': {
+        textureNote: 'A chunky, unsweetened cranberry mash with every berry burst, as a small tart side or stirred through oatmeal or yogurt.',
+        steps: [
+          'Rinse the cranberries and pick out any stems and any soft or shriveled berries.',
+          'Simmer them with 2-3 tablespoons of water over medium-low heat for 8-10 minutes, until every berry has burst.',
+          'Mash the cranberries roughly with a fork, checking that no whole berry is left — cranberries are never served whole or raw.',
+          'Cool to just-warm and serve a spoonful as a tart side, or stirred through oatmeal or yogurt, with no added sugar.',
         ],
       },
     },
