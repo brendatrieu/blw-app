@@ -342,6 +342,29 @@ with its own maxAge to keep in sync. If you ever move behind a different
 edge proxy that doesn't set HSTS, add it there rather than re-enabling
 helmet's copy.
 
+## Client addresses and rate limits
+
+Every request reaches the app from Caddy, so the app's socket address is
+Caddy's for every user. Caddy puts the client it saw in `X-Forwarded-For`,
+and by default it drops whatever `X-Forwarded-For` a client sent (it has no
+`trusted_proxies`). The app trusts exactly that one hop, and only when the
+socket peer is on a private network (the compose network); a direct client
+(dev, tests, the loopback healthcheck) is keyed by its own address whatever
+it sends. See `trustCaddyHop` in `server/src/plugins/rate-limit.ts`.
+
+- Per client, per minute: `GLOBAL_RATE_LIMIT_MAX` (default 300) for the
+  whole API, including `/api/auth/get-session` and `/api/auth/sign-out`;
+  `AUTH_RATE_LIMIT_MAX` (default 10) shared across every other
+  `/api/auth/*` endpoint (sign-in, sign-up, password reset, change and
+  verify password). IPv6 clients count per /64. Both are optional `.env`
+  overrides; nothing needs setting.
+- Never publish the app's port 3000. Anything that reaches it from a private
+  address is believed about who the client is.
+- If something is ever put in front of Caddy (a CDN or load balancer), the
+  app sees that thing as the client. Revisit `trustCaddyHop` then.
+- To check on the VM: `docker compose logs app | grep remoteAddress` shows
+  your phone's public address, not a `172.x` container address.
+
 ## Known follow-up
 
 `server/package.json`'s `db:migrate`/`db:seed` scripts run through `tsx`

@@ -9,7 +9,7 @@ import { AI_FEATURES_ENABLED, type DeepHealthResponse, type HealthResponse } fro
 import { loadConfig, type Env } from "./config.js";
 import { createDb, type Database } from "./db/index.js";
 import { createAuth, type AuthLogger } from "./auth.js";
-import { registerRateLimit } from "./plugins/rate-limit.js";
+import { registerRateLimit, trustCaddyHop } from "./plugins/rate-limit.js";
 import { registerSecurityHeaders } from "./plugins/security.js";
 import { registerAuth } from "./plugins/auth.js";
 import { registerCatalogRoutes } from "./routes/catalog.js";
@@ -134,6 +134,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     // and it leads straight to the stack in the server log — without the app
     // ever putting a message or a stack into an analytics event.
     genReqId: () => randomUUID(),
+    // Behind Caddy every socket is Caddy's; this makes `request.ip` the
+    // client Caddy saw, so per-IP limits are per parent again (ledger 839).
+    trustProxy: trustCaddyHop,
   });
 
   registerSecurityHeaders(app);

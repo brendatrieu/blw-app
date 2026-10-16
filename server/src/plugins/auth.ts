@@ -90,37 +90,56 @@ export function registerAuth(app: FastifyInstance, { auth, env, db }: RegisterAu
   // ---------------------------------------------------------------------
   // better-auth HTTP handler
   // ---------------------------------------------------------------------
+  const authHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+    const url = new URL(request.url, env.BETTER_AUTH_URL);
+    const headers = fromNodeHeaders(request.headers);
+    // better-auth reads the client address (its own production limiter,
+    // the session's ip) from X-Forwarded-For. Hand it the one address
+    // trustCaddyHop resolved, never a client-supplied chain.
+    headers.set("x-forwarded-for", request.ip);
+
+    const init: RequestInit = { method: request.method, headers };
+    if (request.body !== undefined && request.body !== null && request.method !== "GET") {
+      init.body = JSON.stringify(request.body);
+    }
+
+    const response = await auth.handler(new Request(url.toString(), init));
+
+    reply.status(response.status);
+
+    // `Headers.forEach` folds repeated Set-Cookie values into one comma
+    // joined string, which browsers then parse as a single malformed
+    // cookie. getSetCookie() keeps them as separate header lines.
+    const setCookie = response.headers.getSetCookie();
+    response.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "set-cookie") return;
+      reply.header(key, value);
+    });
+    if (setCookie.length > 0) {
+      reply.header("set-cookie", setCookie);
+    }
+
+    return reply.send(response.body ? await response.text() : null);
+  };
+
+  // Session plumbing that every app open and focus calls: the global per-IP
+  // limit only (ledger 839). Exact paths, so a variant (a trailing slash, a
+  // different case) falls through to the strict route below, never the
+  // other way round.
+  for (const url of ["/api/auth/get-session", "/api/auth/sign-out"]) {
+    app.route({ method: ["GET", "POST"], url, handler: authHandler });
+  }
+
+  // Everything else under /api/auth: the credential endpoints (sign-in/email,
+  // sign-up/email, request-password-reset, reset-password and its link
+  // check, change-password, verify-password, send-verification-email,
+  // change-email, delete-user) and the rarer account and OAuth ones. Strict
+  // by default, so an endpoint a later better-auth adds starts out strict.
   app.route({
     method: ["GET", "POST"],
     url: "/api/auth/*",
     config: authRateLimitConfig(env),
-    async handler(request: FastifyRequest, reply: FastifyReply) {
-      const url = new URL(request.url, env.BETTER_AUTH_URL);
-      const headers = fromNodeHeaders(request.headers);
-
-      const init: RequestInit = { method: request.method, headers };
-      if (request.body !== undefined && request.body !== null && request.method !== "GET") {
-        init.body = JSON.stringify(request.body);
-      }
-
-      const response = await auth.handler(new Request(url.toString(), init));
-
-      reply.status(response.status);
-
-      // `Headers.forEach` folds repeated Set-Cookie values into one comma
-      // joined string, which browsers then parse as a single malformed
-      // cookie. getSetCookie() keeps them as separate header lines.
-      const setCookie = response.headers.getSetCookie();
-      response.headers.forEach((value, key) => {
-        if (key.toLowerCase() === "set-cookie") return;
-        reply.header(key, value);
-      });
-      if (setCookie.length > 0) {
-        reply.header("set-cookie", setCookie);
-      }
-
-      return reply.send(response.body ? await response.text() : null);
-    },
+    handler: authHandler,
   });
 
   // ---------------------------------------------------------------------
