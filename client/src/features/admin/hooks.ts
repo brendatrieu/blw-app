@@ -119,6 +119,10 @@ export function useGrantCollaborator() {
 
   return useMutation({
     mutationFn: (input: GrantCollaboratorInput) => grantCollaborator(input),
+    // Its variables can hold the admin's password (830): dropped from the
+    // mutation cache as soon as the panel lets go (reset on settle), not
+    // five minutes later. Same for revoke and the reset link (840).
+    gcTime: 0,
     onSuccess: (response) => {
       queryClient.setQueryData(adminKeys.collaborators(), response);
     },
@@ -131,6 +135,7 @@ export function useRevokeCollaborator() {
   return useMutation({
     mutationFn: ({ userId, password }: { userId: string; password?: string }) =>
       revokeCollaborator(userId, password),
+    gcTime: 0,
     onSuccess: (response) => {
       queryClient.setQueryData(adminKeys.collaborators(), response);
     },
@@ -143,7 +148,7 @@ export function useRevokeCollaborator() {
  * persists, and is gone when the panel unmounts.
  */
 export function useCreateResetLink() {
-  return useMutation({ mutationFn: (input: GrantCollaboratorInput) => createResetLink(input) });
+  return useMutation({ mutationFn: (input: GrantCollaboratorInput) => createResetLink(input), gcTime: 0 });
 }
 
 /**

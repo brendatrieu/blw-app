@@ -12,7 +12,7 @@ const LINK: AdminResetLinkResponse = {
 
 const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], i: 0 };
-  const calls = { creates: [] as GrantCollaboratorInput[], copies: [] as string[] };
+  const calls = { creates: [] as GrantCollaboratorInput[], copies: [] as string[], resets: 0 };
   // `error` answers a request without a password, `withPassword` one with.
   const outcome = { error: null as string | null, withPassword: null as string | null };
   return {
@@ -33,6 +33,7 @@ const h = vi.hoisted(() => {
       store.i = 0;
       calls.creates = [];
       calls.copies = [];
+      calls.resets = 0;
       outcome.error = null;
       outcome.withPassword = null;
     },
@@ -47,6 +48,7 @@ vi.mock("react", async (importOriginal) => {
 interface MutateOptions {
   onSuccess?: (link: AdminResetLinkResponse) => void;
   onError?: (error: Error) => void;
+  onSettled?: () => void;
 }
 
 vi.mock("./hooks.js", () => ({
@@ -57,6 +59,10 @@ vi.mock("./hooks.js", () => ({
       const code = input.password === undefined ? h.outcome.error : h.outcome.withPassword;
       if (code) options?.onError?.(new Error(code));
       else options?.onSuccess?.(LINK);
+      options?.onSettled?.();
+    },
+    reset: () => {
+      h.calls.resets += 1;
     },
   }),
 }));
@@ -245,6 +251,20 @@ describe("an older session confirms the owner's password in the panel (830)", ()
     submit();
     type("other@example.com");
     expect(prompt()).toBeUndefined();
+  });
+
+  it("lets go of every request once it has answered, the password in it included (840)", () => {
+    h.outcome.error = "password_required";
+    type("parent@example.com");
+    submit();
+    h.outcome.withPassword = "invalid_password";
+    confirm("wrong");
+    h.outcome.withPassword = null;
+    confirm("owner-password");
+    expect(h.calls.creates).toHaveLength(3);
+    expect(h.calls.resets).toBe(3);
+    // The link itself stays on screen: the panel holds its own copy.
+    expect(collect(panel(), (element) => element.props["aria-label"] === "Reset link")).toHaveLength(1);
   });
 
   it("keeps the sign-in-again sentence for an owner with no password", () => {

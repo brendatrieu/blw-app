@@ -15,6 +15,7 @@ const h = vi.hoisted(() => {
   const calls = {
     grants: [] as GrantCollaboratorInput[],
     revokes: [] as { userId: string; password?: string }[],
+    resets: [] as string[],
   };
   // The answer to a request without a password; `withPassword` answers one with.
   const outcome = {
@@ -40,6 +41,7 @@ const h = vi.hoisted(() => {
       store.i = 0;
       calls.grants = [];
       calls.revokes = [];
+      calls.resets = [];
       outcome.grant = null;
       outcome.revoke = null;
       outcome.withPassword = null;
@@ -55,6 +57,7 @@ vi.mock("react", async (importOriginal) => {
 interface MutateOptions {
   onSuccess?: () => void;
   onError?: (error: Error) => void;
+  onSettled?: () => void;
 }
 
 vi.mock("./hooks.js", () => ({
@@ -91,6 +94,10 @@ vi.mock("./hooks.js", () => ({
       const code = input.password === undefined ? h.outcome.grant : h.outcome.withPassword;
       if (code) options?.onError?.(new Error(code));
       else options?.onSuccess?.();
+      options?.onSettled?.();
+    },
+    reset: () => {
+      h.calls.resets.push("grant");
     },
   }),
   useRevokeCollaborator: () => ({
@@ -100,6 +107,10 @@ vi.mock("./hooks.js", () => ({
       const code = input.password === undefined ? h.outcome.revoke : h.outcome.withPassword;
       if (code) options?.onError?.(new Error(code));
       else options?.onSuccess?.();
+      options?.onSettled?.();
+    },
+    reset: () => {
+      h.calls.resets.push("revoke");
     },
   }),
 }));
@@ -267,6 +278,39 @@ describe("an older session confirms the admin's password in the panel (830)", ()
     submitGrant(panel());
     confirm("wrong");
     expect(prompt()!.props.error).toBe("That password is not right.");
+  });
+
+  it("never re-sends a confirmed password with the next action (840)", () => {
+    h.outcome.grant = "password_required";
+    typeEmail(panel(), "mate@example.com");
+    submitGrant(panel());
+    confirm("admin-password");
+
+    // The session is still stale: the next actions ask again, with no password.
+    typeEmail(panel(), "other@example.com");
+    submitGrant(panel());
+    h.outcome.revoke = "password_required";
+    clickRevoke(panel());
+    expect(h.calls.grants).toEqual([
+      { email: "mate@example.com" },
+      { email: "mate@example.com", password: "admin-password" },
+      { email: "other@example.com" },
+    ]);
+    expect(h.calls.revokes).toEqual([{ userId: "user-2" }]);
+    expect(prompt()).toBeDefined();
+  });
+
+  it("lets go of every request once it has answered, the password in it included (840)", () => {
+    h.outcome.grant = "password_required";
+    h.outcome.withPassword = "invalid_password";
+    typeEmail(panel(), "mate@example.com");
+    submitGrant(panel());
+    confirm("wrong");
+    h.outcome.revoke = "password_required";
+    h.outcome.withPassword = null;
+    clickRevoke(panel());
+    confirm("admin-password");
+    expect(h.calls.resets).toEqual(["grant", "grant", "revoke", "revoke"]);
   });
 
   it("hands the action's own refusal back to the panel", () => {

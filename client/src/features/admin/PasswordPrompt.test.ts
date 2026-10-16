@@ -11,6 +11,7 @@ const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], i: 0 };
   return {
     store,
+    session: { data: { user: { email: "owner@example.test" } } } as { data: { user: { email: string } } | null },
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states)) store.states[i] = init;
@@ -26,6 +27,8 @@ vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, useState: h.useState };
 });
+
+vi.mock("../../lib/auth.js", () => ({ useSession: () => h.session }));
 
 import { PASSWORD_PROMPT_DESCRIPTION, PasswordPrompt, passwordPromptError } from "./PasswordPrompt.js";
 
@@ -69,6 +72,7 @@ function fieldError(tree: Rendered): unknown {
 }
 
 beforeEach(() => {
+  h.session = { data: { user: { email: "owner@example.test" } } };
   h.store.states = [];
   confirmed = [];
   pending = false;
@@ -106,6 +110,18 @@ describe("PasswordPrompt", () => {
     type("owner-password");
     submit();
     expect(confirmed).toEqual([]);
+  });
+
+  it("tells a password manager whose password it is: the signed-in admin's own email (840)", () => {
+    const [username] = collect(prompt(), (element) => element.props.autoComplete === "username");
+    expect(username!.props).toMatchObject({ type: "text", value: "owner@example.test", readOnly: true, hidden: true });
+    // Not a second thing to fill in: the form still sends the password only.
+    type("owner-password");
+    submit();
+    expect(confirmed).toEqual(["owner-password"]);
+
+    h.session = { data: null };
+    expect(collect(prompt(), (element) => element.props.autoComplete === "username")).toHaveLength(0);
   });
 
   it("shows the server's reason in the field", () => {

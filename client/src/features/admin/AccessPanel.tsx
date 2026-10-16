@@ -100,6 +100,10 @@ export function AccessPanel() {
         setEmail("");
       },
       onError: refused({ kind: "grant", email }, password !== undefined),
+      // Let go of the request (and the password in it) once it has answered.
+      onSettled: () => {
+        grant.reset();
+      },
     });
   }
 
@@ -109,6 +113,9 @@ export function AccessPanel() {
         setConfirming(null);
       },
       onError: refused({ kind: "revoke", userId }, password !== undefined),
+      onSettled: () => {
+        revoke.reset();
+      },
     });
   }
 

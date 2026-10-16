@@ -114,6 +114,52 @@ describe("confirming the admin's password instead of signing in again (830)", ()
     expect(await auditActions()).toEqual(Array(5).fill("password_rejected"));
   });
 
+  it("keeps one budget per admin: another session, address or X-Forwarded-For does not reset it (840)", async () => {
+    const signIn = await app.inject({
+      method: "POST",
+      url: "/api/auth/sign-in/email",
+      headers: { origin: TEST_ORIGIN },
+      payload: { email: OWNER_EMAIL, password: OWNER_PASSWORD },
+    });
+    const second = cookieHeader(signIn.headers["set-cookie"] as string | string[] | undefined);
+    expect(second).not.toBe(owner.cookie);
+    await makeStale(db, OWNER_EMAIL);
+
+    // Wrong guesses spread over both sessions, direct and through a proxy hop
+    // (172.18.0.2, the shape of Caddy's address) for different clients.
+    const from = (cookie: string, remoteAddress: string, forwardedFor?: string) => ({
+      remoteAddress,
+      headers: { cookie, ...(forwardedFor ? { "x-forwarded-for": forwardedFor } : {}) },
+    });
+    const tries = [
+      from(owner.cookie, "203.0.113.1"),
+      from(second, "203.0.113.2"),
+      from(owner.cookie, "172.18.0.2", "198.51.100.3"),
+      from(second, "172.18.0.2", "198.51.100.4"),
+      from(owner.cookie, "127.0.0.1", "198.51.100.5"),
+    ];
+    for (const [i, request] of tries.entries()) {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/admin/password-reset-link",
+        ...request,
+        payload: { email: parent.email, password: WRONG },
+      });
+      expect(response.json(), `attempt ${i}`).toEqual({ error: "invalid_password" });
+    }
+
+    // The right password, from the other session, a new address and a forged header.
+    const limited = await app.inject({
+      method: "POST",
+      url: "/api/admin/password-reset-link",
+      ...from(second, "172.18.0.2", "198.51.100.99"),
+      payload: { email: parent.email, password: OWNER_PASSWORD },
+    });
+    expect(limited.statusCode).toBe(429);
+    expect(limited.json()).toMatchObject({ error: "rate_limited" });
+    expect(await links()).toHaveLength(0);
+  });
+
   it("grants and revokes with the password, the same way", async () => {
     const friend = await signUpUser(app);
     expect((await grant({ email: friend.email })).json()).toEqual({ error: "password_required" });

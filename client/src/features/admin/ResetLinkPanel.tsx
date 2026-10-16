@@ -77,6 +77,11 @@ export function ResetLinkPanel() {
           setError(resetLinkErrorMessage(message));
         }
       },
+      // Let go of the request (the password, and the link the panel already
+      // copied into its own state) once it has answered.
+      onSettled: () => {
+        create.reset();
+      },
     });
   }
 

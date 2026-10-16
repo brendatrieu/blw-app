@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "../../components/ui/Button.js";
 import { Field } from "../../components/ui/Field.js";
 import { Input } from "../../components/ui/Input.js";
+import { useSession } from "../../lib/auth.js";
 
 /**
  * Ledger 830: when a session is older than the fresh window, the server
@@ -45,6 +46,9 @@ export function PasswordPrompt({
 }) {
   const [password, setPassword] = useState("");
   const [empty, setEmpty] = useState(false);
+  // Whose password this is, for password managers: they fill and save it
+  // against the admin's own account, never another saved one.
+  const username = useSession().data?.user.email;
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -60,6 +64,7 @@ export function PasswordPrompt({
 
   return (
     <form className="flex flex-col gap-2" onSubmit={handleSubmit} noValidate>
+      {username ? <input type="text" name="username" autoComplete="username" value={username} readOnly hidden /> : null}
       <Field
         label="Your password"
         htmlFor={id}
