@@ -92,8 +92,11 @@ describe("Fraunces is for page titles and the Home baby name only (item 648)", (
     "components/ui/PageHeader.tsx",
     "pages/AboutPage.tsx",
     "pages/FoodDetailPage.tsx",
+    // Signed-out password screens, titled like sign-in and sign-up (ledger 820/822).
+    "pages/ForgotPasswordPage.tsx",
     "pages/LoginPage.tsx",
     "pages/RecipeDetailPage.tsx",
+    "pages/ResetPasswordPage.tsx",
     "pages/SignupPage.tsx",
   ];
   it("only title files use .font-display (an admin stat number stays the base face)", () => {
