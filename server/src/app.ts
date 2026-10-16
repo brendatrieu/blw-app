@@ -2,7 +2,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs";
-import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply } from "fastify";
+import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { sql } from "drizzle-orm";
 import { AI_FEATURES_ENABLED, type DeepHealthResponse, type HealthResponse } from "@blw/shared";
@@ -73,6 +73,27 @@ export function isRecipeGoneViolation(error: unknown): boolean {
   return pg?.code === "23503" && typeof pg.constraint === "string" && pg.constraint.endsWith("_recipe_id_recipes_id_fk");
 }
 
+/**
+ * A URL as the request log may print it (ledger 824). Account tokens travel
+ * in URLs — better-auth's `/api/auth/reset-password/<token>` check, the reset
+ * page's `?token=` landing, `/api/auth/verify-email?token=` — and a live one
+ * in `docker compose logs` is a working key to somebody's account.
+ */
+export function redactUrlTokens(url: string): string {
+  return url.replace(/(\/reset-password\/)[^/?#]+/g, "$1[redacted]").replace(/([?&]token=)[^&#]*/g, "$1[redacted]");
+}
+
+/** Fastify's own `req` log shape, with the URL passed through `redactUrlTokens`. */
+export function serializeRequestForLog(request: FastifyRequest) {
+  return {
+    method: request.method,
+    url: redactUrlTokens(request.url),
+    host: request.host,
+    remoteAddress: request.ip,
+    remotePort: request.socket?.remotePort,
+  };
+}
+
 export interface BuildAppOptions {
   env?: Env;
   // Injectable so tests can pass an isolated (e.g. in-memory PGlite) instance
@@ -106,7 +127,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const db = options.db ?? createDb(env.DATABASE_URL);
   const aiEnabled = options.aiFeaturesEnabled ?? AI_FEATURES_ENABLED;
   const app = Fastify({
-    logger: options.logger ?? env.NODE_ENV !== "test",
+    logger: (options.logger ?? env.NODE_ENV !== "test") ? { serializers: { req: serializeRequestForLog } } : false,
     // Every request gets an id, echoed to the caller as `x-request-id` and
     // logged with any failure. This is the whole of "error tracking" for now:
     // a parent who reports a problem can read one short id off the screen,

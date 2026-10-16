@@ -4,7 +4,7 @@ import { and, eq, like } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ACCOUNT_REAUTH_MAX_AGE_MS, adminResetLinkResponseSchema } from "@blw/shared";
-import { buildApp } from "../app.js";
+import { buildApp, redactUrlTokens, serializeRequestForLog } from "../app.js";
 import type { AuthLogger } from "../auth.js";
 import { isEmailEnabled } from "../config.js";
 import type { Database } from "../db/index.js";
@@ -300,5 +300,108 @@ describe("Forgot password? by email (822)", () => {
     expect((await app.inject({ method: "GET", url: "/api/babies", headers: { cookie: parent.cookie } })).statusCode).toBe(
       401,
     );
+  });
+});
+
+describe("security rules (824)", () => {
+  it("keeps tokens out of the request log", () => {
+    const token = "AbCdEfGhIjKlMnOpQrStUvWx";
+    const cases = [
+      `/api/auth/reset-password/${token}?callbackURL=%2Freset-password`,
+      `/reset-password?token=${token}`,
+      `/reset-password?error=INVALID_TOKEN&token=${token}`,
+      `/api/auth/verify-email?token=${token}&callbackURL=%2F`,
+    ];
+    for (const url of cases) {
+      expect(redactUrlTokens(url)).not.toContain(token);
+      expect(redactUrlTokens(url)).toContain("[redacted]");
+    }
+    expect(redactUrlTokens(cases[0]!)).toBe("/api/auth/reset-password/[redacted]?callbackURL=%2Freset-password");
+    // Everything else is logged as it was.
+    expect(redactUrlTokens("/api/meals?babyId=b1&tokens=2")).toBe("/api/meals?babyId=b1&tokens=2");
+    expect(redactUrlTokens("/api/auth/reset-password")).toBe("/api/auth/reset-password");
+
+    const logged = serializeRequestForLog({
+      method: "GET",
+      url: cases[0]!,
+      host: "littlemeals.test",
+      ip: "203.0.113.7",
+      socket: { remotePort: 51234 },
+    } as unknown as Parameters<typeof serializeRequestForLog>[0]);
+    expect(logged).toEqual({
+      method: "GET",
+      url: "/api/auth/reset-password/[redacted]?callbackURL=%2Freset-password",
+      host: "littlemeals.test",
+      remoteAddress: "203.0.113.7",
+      remotePort: 51234,
+    });
+  });
+
+  it("puts asking for and using a reset under the auth rate limit, one shared budget", async () => {
+    const { app, close } = await createTestApp({ AUTH_RATE_LIMIT_MAX: 3 });
+    try {
+      const ask = () =>
+        app.inject({
+          method: "POST",
+          url: "/api/auth/request-password-reset",
+          headers: { origin: TEST_ORIGIN },
+          payload: { email: "nobody@example.com", redirectTo: "/reset-password" },
+        });
+      const use = () => resetWith(app, "not-a-real-token");
+
+      const allowed = [(await ask()).statusCode, (await use()).statusCode, (await ask()).statusCode];
+      expect(allowed).not.toContain(429);
+      // Spent across both: neither door opens again inside the minute.
+      expect((await ask()).statusCode).toBe(429);
+      expect((await use()).statusCode).toBe(429);
+    } finally {
+      await close();
+    }
+  });
+
+  it("never writes a reset link to the production log, even with no email key", async () => {
+    const lines: string[] = [];
+    const logger: AuthLogger = {
+      info: (message) => lines.push(message),
+      warn: (message) => lines.push(message),
+      error: (message) => lines.push(message),
+    };
+    const { db, close } = await createTestDb();
+    const app = buildApp({ env: testEnv({ NODE_ENV: "production" }), db, authLogger: logger, logger: false });
+    await app.ready();
+    try {
+      const signUp = await app.inject({
+        method: "POST",
+        url: "/api/auth/sign-up/email",
+        headers: { origin: TEST_ORIGIN },
+        payload: { email: "prod-parent@example.com", password: "correct-horse-battery-staple", name: "P" },
+      });
+      expect(signUp.statusCode).toBe(200);
+      lines.length = 0;
+
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/auth/request-password-reset",
+        headers: { origin: TEST_ORIGIN },
+        payload: { email: "prod-parent@example.com", redirectTo: "/reset-password" },
+      });
+      expect(response.statusCode).toBe(200);
+      // The drop is reported by subject only: no address, no link, no token.
+      expect(lines.some((line) => line.includes('Cannot send "Reset your password"'))).toBe(true);
+      const [row] = await db.select().from(verification).where(like(verification.identifier, "reset-password:%"));
+      const token = row!.identifier.slice("reset-password:".length);
+      for (const line of lines) {
+        expect(line).not.toContain(token);
+        expect(line).not.toContain("prod-parent@example.com");
+        expect(line).not.toContain("/reset-password/");
+      }
+      expect((await app.inject({ method: "GET", url: "/api/auth-config" })).json()).toEqual({
+        googleEnabled: false,
+        emailEnabled: false,
+      });
+    } finally {
+      await app.close();
+      await close();
+    }
   });
 });
