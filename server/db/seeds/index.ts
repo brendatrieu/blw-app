@@ -101,11 +101,13 @@ export async function runSeeds(db: Database): Promise<void> {
           chokingNotes: f.chokingNotes ?? null,
           notes: f.notes ?? null,
           storageCategory: f.storageCategory,
+          kind: f.kind ?? "food",
         })),
       )
       .onConflictDoUpdate({
         target: foods.slug,
         set: {
+          kind: sqlExcluded("kind"),
           name: sqlExcluded("name"),
           category: sqlExcluded("category"),
           ironLevel: sqlExcluded("iron_level"),
@@ -132,14 +134,19 @@ export async function runSeeds(db: Database): Promise<void> {
     if (!foodId) return [];
     return f.allergens.flatMap((slug) => {
       const allergenId = allergenIdBySlug.get(slug);
-      return allergenId ? [{ foodId, allergenId }] : [];
+      return allergenId ? [{ foodId, allergenId, countsTowardProgress: f.countsTowardLadder ?? true }] : [];
     });
   });
   if (foodAllergenRows.length > 0) {
+    // The counting flag is seed content like any other column, so a re-seed
+    // writes it; the tag itself is still never removed here.
     await db
       .insert(foodAllergens)
       .values(foodAllergenRows)
-      .onConflictDoNothing({ target: [foodAllergens.foodId, foodAllergens.allergenId] });
+      .onConflictDoUpdate({
+        target: [foodAllergens.foodId, foodAllergens.allergenId],
+        set: { countsTowardProgress: sqlExcluded("counts_toward_progress") },
+      });
   }
 
   // 5. food_pairings (natural key: iron_food_id + vit_c_food_id).

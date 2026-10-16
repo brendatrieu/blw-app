@@ -7,7 +7,7 @@ import type { RecipeSeed } from './types'
 // Steps 1-5 of the egg bake (item 795), the same at every stage; only the cooling-and-slicing step differs.
 const eggBakeSteps = [
   'Steam the broccoli and carrot for 8-10 minutes, until fork-tender. Finely chop the broccoli, finely chop or grate the carrot, and let them cool slightly.',
-  'Heat the oven to 325°F (163°C), lower than a usual frittata, to keep the egg soft. Grease a 9.5 x 5 inch loaf pan well with the butter or oil, corners included.',
+  'Heat the oven to 325°F (163°C), lower than a usual frittata, to keep the egg soft. Grease a 9.5 x 5 inch loaf pan well with the unsalted butter or oil, corners included.',
   'Whisk the eggs and milk until fully combined and slightly frothy, then stir in the broccoli and carrot until evenly spread through.',
   'Pour into the pan; it should sit about 1-1½ inches deep. For gentler, more even heat, set the loaf pan in a larger baking dish and pour about 1 inch of hot water into the outer dish, keeping it out of the egg.',
   'Bake at 325°F (163°C) for 30-40 minutes, checking from 25 minutes, until the center is set with no wobble — 160°F (71°C) on a thermometer. Take it out as soon as it gets there, since overbaking makes it rubbery.',
@@ -308,10 +308,10 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'egg', quantityNote: '6 large eggs' },
       { foodSlug: 'broccoli', quantityNote: '3/4 cup florets, finely chopped and steamed soft' },
       { foodSlug: 'carrot', quantityNote: '1/2 cup, steamed until fork-tender, finely chopped or grated' },
-    ],
-    extraIngredients: [
-      { name: 'whole milk, breast milk, or formula', quantityNote: '1/4 cup (60 ml)' },
-      { name: 'unsalted butter or oil, for greasing', quantityNote: '1 teaspoon' },
+      // Ledger 838 (832): both are "or" choices; linked anyway, because listing the Milk tag when
+      // milk is one option is the safe direction. Neither moves the dairy step (836).
+      { foodSlug: 'milk', quantityNote: '1/4 cup (60 ml) whole milk — or use breast milk or formula' },
+      { foodSlug: 'unsalted_butter', quantityNote: '1 teaspoon, for greasing the pan — or use oil' },
     ],
     variants: {
       '6': {
@@ -353,12 +353,12 @@ const curatedRecipes: RecipeSeed[] = [
         quantityNote: '1 teaspoon chia seeds, soaked with the oats until every seed has swelled into a soft gel',
       },
     ],
-    extraIngredients: [{ name: 'breast milk, formula, or water to thin' }],
+    extraIngredients: [{ name: 'breast milk, formula, whole milk, or water to thin' }],
     variants: {
       '6': {
         textureNote: 'Smooth, thinned oatmeal-like texture loose enough to drip slowly off a spoon.',
         steps: [
-          'Combine the oats, chia seeds, yogurt, and enough breast milk, formula, or water to thin it to a loose, smooth mixture.',
+          'Combine the oats, chia seeds, yogurt, and enough breast milk, formula, whole milk, or water to thin it to a loose, smooth mixture.',
           'Finely grate the pear and stir it in.',
           'Cover and refrigerate overnight, or at least 2 hours, until the oats and chia have softened and thickened slightly.',
           'Stir in a little extra liquid before serving to loosen it to a smooth, drippy consistency for a pre-loaded spoon.',
@@ -367,7 +367,7 @@ const curatedRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Thicker, lumpier oatmeal with soft, small pear pieces baby can self-feed with a spoon.',
         steps: [
-          'Combine the oats, chia seeds, and yogurt with just enough breast milk, formula, or water to thin the mixture slightly, keeping it thick and spoonable rather than pourable.',
+          'Combine the oats, chia seeds, and yogurt with just enough breast milk, formula, whole milk, or water to thin the mixture slightly, keeping it thick and spoonable rather than pourable.',
           'Finely dice the pear into small, soft pieces and stir it through.',
           'Cover and refrigerate overnight, or at least 2 hours, until the oats and chia have softened and thickened, then stir well before serving.',
           "Offer a pre-loaded spoon for baby to bring to their own mouth.",
@@ -376,7 +376,7 @@ const curatedRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Thick, family-style overnight oats with diced pear pieces.',
         steps: [
-          'Combine the oats, chia seeds, and yogurt with just enough breast milk, formula, or water to thin the mixture slightly, keeping it thick enough to hold its shape on a spoon.',
+          'Combine the oats, chia seeds, and yogurt with just enough breast milk, formula, whole milk, or water to thin the mixture slightly, keeping it thick enough to hold its shape on a spoon.',
           'Dice the pear into small bite-sized pieces and stir through.',
           'Cover and refrigerate overnight, or at least 2 hours, until the oats and chia have softened and thickened, and serve chilled or gently warmed, checking the temperature is not hot before serving.',
           'Let baby practice self-feeding with a spoon.',
@@ -672,22 +672,22 @@ const curatedRecipes: RecipeSeed[] = [
       { foodSlug: 'tahini', quantityNote: '1 teaspoon tahini' },
       { foodSlug: 'cinnamon', quantityNote: 'a pinch' },
     ],
-    extraIngredients: [{ name: 'breast milk, formula, or water to thin' }],
+    extraIngredients: [{ name: 'breast milk, formula, whole milk (once baby has had yogurt or cheese), or water to thin' }],
     variants: {
       '6': {
         textureNote: 'Smooth, thinned oatmeal loose enough to drip slowly off a spoon.',
         steps: [
           'Simmer the diced apple in a little water over low heat for 5-7 minutes, until completely soft and squishable between two fingers.',
-          'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, until soft, then blend or mash until mostly smooth.',
+          'Cook the oats with breast milk, formula, whole milk, or water over medium-low heat for 4-5 minutes, until soft, then blend or mash until mostly smooth.',
           'Stir in the softened apple, a thin swirl of tahini fully mixed through (never a thick glob), and a pinch of cinnamon.',
-          'Thin with extra breast milk, formula, or water to a smooth, drippy consistency, cool to just-warm, and serve on a pre-loaded spoon.',
+          'Thin with extra breast milk, formula, whole milk, or water to a smooth, drippy consistency, cool to just-warm, and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote: 'Thicker, spoonable oatmeal with small soft apple pieces.',
         steps: [
           'Simmer the diced apple in a little water over low heat for 5-7 minutes, until completely soft and squishable between two fingers.',
-          'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, thinning with a little more only if needed, to a thick, spoonable consistency.',
+          'Cook the oats with breast milk, formula, whole milk, or water over medium-low heat for 4-5 minutes, thinning with a little more only if needed, to a thick, spoonable consistency.',
           'Stir in the softened diced apple, tahini mixed in thoroughly, and cinnamon.',
           'Cool to just-warm, then serve with a pre-loaded spoon for self-feeding, checking apple pieces are soft.',
         ],
@@ -696,7 +696,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Thick, family-style oatmeal with soft diced apple.',
         steps: [
           'Simmer the diced apple in a little water over low heat for 5-7 minutes, until completely soft and squishable between two fingers.',
-          'Cook the oats with breast milk, formula, or water over medium-low heat for 5-6 minutes, thinning with a little more only if needed, to a thick, family-style oatmeal consistency.',
+          'Cook the oats with breast milk, formula, whole milk, or water over medium-low heat for 5-6 minutes, thinning with a little more only if needed, to a thick, family-style oatmeal consistency.',
           'Stir in the softened apple and tahini, mixed evenly through so no thick pockets remain.',
           'Stir a pinch of cinnamon through the oatmeal — never sprinkled on dry — then cool to just-warm and serve with a spoon.',
         ],

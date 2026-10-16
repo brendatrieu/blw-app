@@ -92,13 +92,13 @@ export const coverageRecipesC: RecipeSeed[] = [
       { foodSlug: 'almonds', quantityNote: '1 tablespoon shelled almonds, ground to a fine meal' },
       { foodSlug: 'cinnamon', quantityNote: 'a pinch of ground cinnamon, stirred in as it cooks' },
     ],
-    extraIngredients: [{ name: 'water, breast milk, or formula' }],
+    extraIngredients: [{ name: 'water, breast milk, formula, or whole milk (once baby has had yogurt or cheese)' }],
     variants: {
       '6': {
         textureNote:
           'A loose, creamy pudding that drips slowly off a spoon, with a finger-length strip of ripe banana to hold.',
         steps: [
-          'Simmer the rice with plenty of water, breast milk, or formula and a pinch of ground cinnamon over low heat for 20-25 minutes, stirring often, until the grains have collapsed into a thick, creamy pudding.',
+          'Simmer the rice with plenty of water, breast milk, formula, or whole milk and a pinch of ground cinnamon over low heat for 20-25 minutes, stirring often, until the grains have collapsed into a thick, creamy pudding.',
           'Take the pan off the heat and let the pudding cool until it is only just warm.',
           'Mash the ripe banana completely smooth and stir it through, leaving no lump that needs chewing.',
           'Stir the finely ground almond meal through off the heat, until the pudding is smooth and nothing hard is left — never a piece, a half, or a whole nut.',
@@ -108,7 +108,7 @@ export const coverageRecipesC: RecipeSeed[] = [
       '9': {
         textureNote: 'Thick, creamy pudding with small bite-sized pieces of soft banana (no bigger than ½ inch) on the tray.',
         steps: [
-          'Simmer the rice with water, breast milk, or formula and a pinch of ground cinnamon over low heat for 20-25 minutes, until the grains are soft and creamy.',
+          'Simmer the rice with water, breast milk, formula, or whole milk and a pinch of ground cinnamon over low heat for 20-25 minutes, until the grains are soft and creamy.',
           'Cool the pudding to just warm, then mash half the banana through it and dice the rest into small bite-sized pieces (no bigger than ½ inch).',
           'Stir the finely ground almond meal through off the heat, so nothing hard is left.',
           'Serve thick in a bowl with the banana pieces on the tray for pincer-grasp practice.',
@@ -117,7 +117,7 @@ export const coverageRecipesC: RecipeSeed[] = [
       '12': {
         textureNote: 'A family-style rice pudding, unsweetened apart from the ripe banana.',
         steps: [
-          'Simmer the rice with water, breast milk, or formula and a pinch of ground cinnamon over low heat for 20-25 minutes, until thick and creamy.',
+          'Simmer the rice with water, breast milk, formula, or whole milk and a pinch of ground cinnamon over low heat for 20-25 minutes, until thick and creamy.',
           'Cool to just warm, mash the banana through it, and stir the finely ground almond meal in off the heat — ground meal only, since nut pieces stay off the menu until age 4-5.',
           'Serve family-style in a bowl with a spoon, with no added sugar: the ripe banana is all the sweetness it needs.',
           'Pair with a vitamin-C side like orange segments with the membrane removed, or a few smashed strawberries.',
@@ -246,7 +246,7 @@ export const coverageRecipesC: RecipeSeed[] = [
     ],
     extraIngredients: [
       { name: 'olive oil', quantityNote: 'a drizzle of' },
-      { name: 'breast milk, formula, or water, to loosen' },
+      { name: 'breast milk, formula, whole milk (once baby has had yogurt or cheese), or water, to loosen' },
     ],
     variants: {
       '6': {
@@ -257,7 +257,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Steam or boil the chunks for 12-15 minutes, until a chunk mashes easily between two fingers, cooking the peas with them for the last 3-4 minutes, until the peas squash flat between finger and thumb.',
           'Set one soft chunk aside as a thick finger-length wedge for baby to hold.',
           'Mash the rest with a drizzle of olive oil, squashing every pea flat — whole round peas are a choking hazard.',
-          'Stir the finely snipped dill through off the heat, then loosen the mash with a little breast milk, formula, or water until it is soft and spoonable rather than stiff or gluey.',
+          'Stir the finely snipped dill through off the heat, then loosen the mash with a little breast milk, formula, whole milk, or water until it is soft and spoonable rather than stiff or gluey.',
           'Cool to just-warm and serve on a pre-loaded spoon with the potato wedge alongside, with no added salt.',
         ],
       },
@@ -267,7 +267,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Scrub and chunk the potato, cutting away any green patches or sprouts — the skin can stay on once baby handles it well.',
           'Steam or boil the chunks for 12-15 minutes, until they mash easily between two fingers, cooking the peas with them for the last 3-4 minutes, until soft.',
           'Mash most of it roughly with a drizzle of olive oil, squashing every pea flat, and cut a little of the potato into small bite-sized soft pieces (no bigger than ½ inch) for the tray.',
-          'Stir the finely snipped dill through off the heat, then loosen the mash with a little breast milk, formula, or water until it is soft and spoonable rather than stiff or gluey, and serve just warm, with no added salt.',
+          'Stir the finely snipped dill through off the heat, then loosen the mash with a little breast milk, formula, whole milk, or water until it is soft and spoonable rather than stiff or gluey, and serve just warm, with no added salt.',
         ],
       },
       '12': {
@@ -276,7 +276,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Scrub and chunk the potato, cutting away any green patches or sprouts, then steam or boil it for 12-15 minutes, until it mashes easily between two fingers.',
           'Cook the peas with it for the last 3-4 minutes, until soft, then drain everything.',
           'Mash it loosely with a drizzle of olive oil — broken up just enough to eat, never beaten until it turns gluey — squashing the peas flat, since a whole pea stays the riskier option.',
-          'Stir the finely snipped dill through off the heat, loosen the mash with a little breast milk, formula, or water until it is soft rather than stiff or gluey, cool to just-warm, and serve family-style in small bite-sized spoonfuls, with no added salt in the pan.',
+          'Stir the finely snipped dill through off the heat, loosen the mash with a little breast milk, formula, whole milk, or water until it is soft rather than stiff or gluey, cool to just-warm, and serve family-style in small bite-sized spoonfuls, with no added salt in the pan.',
         ],
       },
     },
@@ -391,7 +391,7 @@ export const coverageRecipesC: RecipeSeed[] = [
       { foodSlug: 'cauliflower', quantityNote: '4-5 cauliflower florets' },
       { foodSlug: 'cheese', quantityNote: '1 tablespoon finely grated mild, pasteurized cheese, such as mild cheddar' },
     ],
-    extraIngredients: [{ name: 'breast milk, formula, or water, to loosen' }],
+    extraIngredients: [{ name: 'breast milk, formula, whole milk, or water, to loosen' }],
     variants: {
       '6': {
         textureNote:
@@ -400,7 +400,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Wash the cauliflower, cut it into florets, and steam them over boiling water for 8-10 minutes, until a floret mashes easily between two fingers — raw or under-cooked cauliflower is firm and hard to chew.',
           'Set one whole floret aside, with a bit of stem as a handle, for baby to hold.',
           'Mash the rest until smooth and stir the finely grated cheese through it off the heat, so the cheese melts in rather than sitting in firm shreds.',
-          'Loosen the mash with a little breast milk, formula, or water until it is soft and spoonable.',
+          'Loosen the mash with a little breast milk, formula, whole milk, or water until it is soft and spoonable.',
           'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon with the floret alongside, with no added salt.',
         ],
       },
@@ -410,7 +410,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         steps: [
           'Wash the cauliflower, cut it into florets, and steam them over boiling water for 8-10 minutes, until they mash easily between two fingers.',
           'Mash most of it roughly and stir the finely grated cheese through off the heat, then cut the rest into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
-          'Loosen the mash with a little breast milk, formula, or water if it is stiff.',
+          'Loosen the mash with a little breast milk, formula, whole milk, or water if it is stiff.',
           'Cool to just-warm and serve with no added salt.',
         ],
       },
@@ -418,7 +418,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         textureNote: 'Small bite-sized florets tossed with grated cheese, or a looser family-style mash.',
         steps: [
           'Wash the cauliflower and cut it into florets, then steam them for 8-10 minutes, or roast them at 400°F (200°C) for 25-30 minutes, until fork-tender and just golden on top.',
-          'Trim off any crispy or burnt edges from roasted florets, then cut them into small bite-sized florets and toss them with the finely grated cheese while hot, or mash them with the cheese, loosened with a little breast milk, formula, or water.',
+          'Trim off any crispy or burnt edges from roasted florets, then cut them into small bite-sized florets and toss them with the finely grated cheese while hot, or mash them with the cheese, loosened with a little breast milk, formula, whole milk, or water.',
           'Cool to just-warm and serve with no added salt.',
         ],
       },

@@ -31,6 +31,10 @@ async function loadRunSeeds(): Promise<(db: Database) => Promise<void>> {
  * Onion has no basic either (item 728, owner's call: no "Simple onion") and
  * keeps the floor the same way, through its three composite recipes.
  *
+ * Ingredient and info foods (ledger 838: brown rice, flour, butter, sesame
+ * oil, whole milk) have no floor: they are searchable and addable like any
+ * food, but nobody needs three recipes for sesame oil.
+ *
  * Counted over `recipe_ingredients` links, never over `extra_ingredients`
  * free text: a recipe that merely mentions cumin in a step or lists it as a
  * cupboard staple does not make cumin findable by the ingredient filter, and
@@ -86,7 +90,7 @@ describe("recipe coverage per catalog food", () => {
    */
   async function recipesPerFood() {
     const foodRows = await db
-      .select({ id: schema.foods.id, slug: schema.foods.slug, category: schema.foods.category })
+      .select({ id: schema.foods.id, slug: schema.foods.slug, category: schema.foods.category, kind: schema.foods.kind })
       .from(schema.foods)
       .where(isNull(schema.foods.ownerId));
 
@@ -106,7 +110,7 @@ describe("recipe coverage per catalog food", () => {
     return foodRows.map((food) => ({
       slug: food.slug,
       category: food.category,
-      minimum: food.category === "spice" ? SPICE_MINIMUM : NON_SPICE_MINIMUM,
+      minimum: food.kind !== "food" ? 0 : food.category === "spice" ? SPICE_MINIMUM : NON_SPICE_MINIMUM,
       recipeCount: recipeIdsByFoodId.get(food.id)?.size ?? 0,
     }));
   }

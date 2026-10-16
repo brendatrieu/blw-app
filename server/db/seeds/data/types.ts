@@ -10,6 +10,12 @@ export interface FoodSeed {
   chokingNotes?: string; notes?: string;
   allergens: AllergenSlug[];
   storageCategory: string;
+  // Ledger 838. Omitted = 'food'. 'ingredient' is exempt from the recipe-count
+  // and basic-recipe guards; 'info' (whole milk) is never logged on its own.
+  kind?: 'ingredient' | 'info';
+  // Ledger 836. false = this food's allergen tags never move the ladder
+  // (too little, or too heat-changed, to be a serving); the tags still show.
+  countsTowardLadder?: false;
 }
 export interface PairingSeed { ironFoodSlug: string; vitCFoodSlug: string; reason: string }
 export interface RecipeSeed {

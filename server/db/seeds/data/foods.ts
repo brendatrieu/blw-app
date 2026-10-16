@@ -858,7 +858,9 @@ export const foods: FoodSeed[] = [
   },
   {
     slug: 'rice',
-    name: 'Rice',
+    // Ledger 838: renamed so it reads apart from Brown Rice; the slug (and so
+    // every link to it) is unchanged.
+    name: 'White Rice',
     category: 'grain',
     ironLevel: 'low',
     vitaminCLevel: 'low',
@@ -871,7 +873,10 @@ export const foods: FoodSeed[] = [
       'Cook until soft and serve as loose grains for pincer-grasp practice, or pressed into small bites.',
     prep12m:
       'Serve as soft cooked grains alongside other foods.',
-    chokingNotes: 'Cool and reheat rice carefully, and reheat only once — discard any leftovers after that single reheat.',
+    chokingNotes:
+      'Soft, sticky rice is low risk. Dry, hard, or undercooked grains are harder to manage — cook it until very soft, and press it into a ball or patty for early eaters rather than offering a pile of loose grains.',
+    notes:
+      "Rice takes up more arsenic from soil and water than other grains. It's still fine to serve — just make it one grain among several (oats, quinoa, wheat pasta, barley) rather than the everyday default, and don't use rice drinks in place of breast milk or formula. Cool leftovers quickly (within an hour), keep them in the fridge, and reheat only once until steaming hot — germs in rice left sitting out can make toxins that reheating won't remove.",
     allergens: [],
     storageCategory: 'grain_cooked',
   },
@@ -1578,5 +1583,127 @@ export const foods: FoodSeed[] = [
     notes: 'Mild and grassy, and a natural partner for the fish and yogurt already in this catalog.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
+  },
+  // ---- Ingredient foods (ledger 838, drafts .workflow/scratch/catalog-831/INGREDIENT-FOODS.md
+  //      and catalog-835/COUNTING-AND-MILK.md). Exempt from the recipe-count and basic-recipe
+  //      rules; whole milk is 'info' (never logged on its own). Butter, whole milk and sesame oil
+  //      keep their allergen tags but never move the ladder (836). ----
+  {
+    slug: 'milk',
+    name: 'Whole Milk',
+    category: 'dairy',
+    kind: 'info',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'low',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      "Not a drink yet. From around 6 months, a little pasteurized whole milk can be cooked or baked into food — whisked into eggs, stirred into oatmeal, or mixed into a pancake or muffin batter. Breast milk or formula stays baby's milk to drink.",
+    prep9m:
+      "Still not a drink. Keep using pasteurized whole milk in cooking and baking — eggs, oatmeal, batters, and sauces — while breast milk or formula stays baby's milk to drink.",
+    prep12m:
+      "From 12 months, plain pasteurized whole milk can be a drink, offered in an open or straw cup with meals and snacks. Keep it to about 2 cups (16 ounces) a day so it doesn't crowd out iron-rich foods.",
+    // The page's own line says it is logged only through a recipe (831 check: not twice).
+    notes:
+      "Before 12 months, cow's milk shouldn't be a drink: it's low in iron, has more protein and minerals than a baby's kidneys handle easily, and can irritate the gut enough to cause small blood losses. A little cooked into food is fine. Use pasteurized milk only — never raw — and plain whole milk, not flavored. Milk cooked into food doesn't count toward the dairy step's 3 servings: the amount is small and heat changes the milk protein. Start the dairy step with plain yogurt.",
+    allergens: ['milk'],
+    countsTowardLadder: false,
+    // Required by the column; never used, since an info food has no "Add to storage".
+    storageCategory: 'dairy_soft',
+  },
+  {
+    slug: 'brown_rice',
+    name: 'Brown Rice',
+    category: 'grain',
+    kind: 'ingredient',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'moderate',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Cook until very soft — brown rice takes longer than white — then mash it lightly and press it into a soft ball or patty rather than serving loose grains.',
+    prep9m:
+      'Cook until soft and serve as loose grains for pincer-grasp practice, or pressed into small bites; a quick mash helps if the grains still feel chewy.',
+    prep12m:
+      'Serve as soft cooked grains alongside other foods, or mixed into patties, soups, or a vegetable stir-fry.',
+    chokingNotes:
+      'Brown rice keeps its bran layer, so it stays chewier than white rice even when cooked — cook it until very soft, and press it into a ball or patty for early eaters rather than offering dry, loose grains.',
+    notes:
+      "Rice takes up more arsenic from soil and water than other grains, and brown rice holds more than white because arsenic collects in the bran. It's still fine to serve — make it one grain among several (oats, quinoa, wheat pasta, barley), not an everyday staple. Cooking it like pasta in plenty of water (6 to 10 cups per cup of rice) and draining lowers arsenic by about half, though some nutrients go with the water. Cool leftovers quickly and reheat only once until steaming hot.",
+    allergens: [],
+    storageCategory: 'grain_cooked',
+  },
+  {
+    slug: 'wheat_flour',
+    name: 'Wheat Flour',
+    category: 'grain',
+    kind: 'ingredient',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'moderate',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Always cooked, never raw. Bake or cook flour into soft foods baby can hold — pancakes, muffins, or fritters cut into finger-length strips — with no salt or sugar in the batter.',
+    prep9m:
+      'Bake or cook into pancakes, muffins, flatbreads, or fritters cut into small bite-sized pieces (no bigger than ½ inch) or strips; a spoonful can also thicken a sauce or stew as it simmers.',
+    prep12m:
+      'Use in family cooking and baking — pancakes, muffins, breads, thickened sauces — always fully cooked and still with no added salt or sugar.',
+    chokingNotes:
+      "Flour itself isn't the risk; what you make with it can be. Keep bakes soft and moist rather than dense, dry, or gummy, and never let baby eat dry flour — loose powder is easy to inhale.",
+    notes:
+      'Flour is a raw food: it can carry germs like E. coli that only baking or cooking kills. Never let baby (or anyone) taste raw dough or batter, skip raw-flour play dough, and wash hands and surfaces after handling it. All-purpose and whole-wheat both work — whole-wheat adds more fiber. Contains wheat, so pancakes and muffins made with it count as wheat servings.',
+    allergens: ['wheat'],
+    storageCategory: 'pantry_dry',
+  },
+  {
+    slug: 'unsalted_butter',
+    name: 'Unsalted Butter',
+    category: 'dairy',
+    kind: 'ingredient',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'low',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Use a little in cooking rather than serving it on its own: melt a small amount over steamed vegetables, stir it into a mash or oatmeal, or use it to grease the pan for pancakes or eggs.',
+    prep9m:
+      'Melt a little into vegetables, grains, or eggs, or spread a thin layer on soft toast strips.',
+    prep12m:
+      'Use in family cooking and baking the same way — still unsalted, and a little rather than a lot.',
+    chokingNotes:
+      "Melted or spread thin, butter isn't a choking risk. A thick, cold slab can stick in the mouth like any thick spread — keep it thin.",
+    notes:
+      "Choose unsalted: salted butter has about 60 times the sodium (643 mg vs 11 mg per 100 g), and a baby's kidneys can't handle much salt. Butter is made from milk and carries the milk allergen, so skip it if baby has a milk allergy. It holds almost no milk protein, though, so it doesn't count toward the dairy step's 3 servings. Start that step with plain yogurt.",
+    allergens: ['milk'],
+    countsTowardLadder: false,
+    storageCategory: 'dairy_soft',
+  },
+  {
+    slug: 'sesame_oil',
+    name: 'Sesame Oil',
+    // No category fits a pure oil; protein files it beside tahini and sesame seeds (831).
+    category: 'protein',
+    kind: 'ingredient',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'low',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Stir a few drops into a cooked dish — rice, noodles, vegetables, or eggs — for flavor. Toasted sesame oil is strong, so a few drops is plenty.',
+    prep9m:
+      'Add a few drops to soft stir-fried vegetables, rice, noodles, or a salt-free dipping sauce.',
+    prep12m:
+      'Use a little in family cooking. Add toasted sesame oil at the end — high heat makes it smoke and taste bitter.',
+    chokingNotes: 'Not a choking risk on its own. Mix the oil into food — never give it on a spoon by itself.',
+    notes:
+      "Sesame oil carries the sesame allergen. Most sesame oil is pressed rather than refined, so it can hold enough sesame protein to cause a reaction — avoid it if baby has a sesame allergy. A few drops holds very little sesame, though, so it doesn't count toward the sesame step's 3 servings. Start that step with tahini.",
+    allergens: ['sesame'],
+    countsTowardLadder: false,
+    storageCategory: 'pantry_dry',
   },
 ]

@@ -64,6 +64,12 @@ const EXPECTED_FIBER_LEVEL: Record<string, "high" | "moderate" | "low"> = {
   // Item 728 (fdcId 170001, boiled, drained, without salt). Raw onion (170000) is 1.7 g,
   // which would bucket `moderate`: the served form decides it.
   onion: "low", // 1.4 g, boiled
+  // Ledger 838's ingredient foods (USDA SR Legacy, catalog-831/INGREDIENT-FOODS.md §B).
+  brown_rice: "moderate", // 1.6 g, long-grain cooked
+  wheat_flour: "moderate", // 2.7 g, all-purpose enriched
+  milk: "low", // 0 g
+  unsalted_butter: "low", // 0 g
+  sesame_oil: "low", // 0 g
 };
 
 describe("seeded fiber levels", () => {

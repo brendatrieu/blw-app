@@ -1476,7 +1476,7 @@ export const basicRecipes: RecipeSeed[] = [
   },
   {
     slug: 'simple-rice',
-    title: 'Simple rice',
+    title: 'Simple white rice',
     minAgeMonths: 6,
     prepMinutes: 20,
     ironFocus: false,
@@ -1835,12 +1835,12 @@ export const basicRecipes: RecipeSeed[] = [
     prepMinutes: 8,
     ironFocus: false,
     ingredients: [{ foodSlug: 'oats', quantityNote: '3 tablespoons rolled or quick oats' }],
-    extraIngredients: [{ name: 'breast milk, formula, or water' }],
+    extraIngredients: [{ name: 'breast milk, formula, whole milk (once baby has had yogurt or cheese), or water' }],
     variants: {
       '6': {
         textureNote: 'A smooth, thinned oatmeal loose enough to drip slowly off a spoon.',
         steps: [
-          'Simmer the oats with plenty of breast milk, formula, or water over medium-low heat for 4-5 minutes, stirring, until the flakes are completely soft.',
+          'Simmer the oats with plenty of breast milk, formula, whole milk, or water over medium-low heat for 4-5 minutes, stirring, until the flakes are completely soft.',
           'Thin the oatmeal until it drips slowly off a spoon rather than sitting in a stiff lump.',
           'Stir well to release hot spots, cool to just-warm, and check the temperature.',
           'Serve on a pre-loaded spoon — plain oats carry far less iron than the fortified kind, so pair the meal with an iron-rich food.',
@@ -1849,7 +1849,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'A thicker, spoonable oatmeal with a little texture left.',
         steps: [
-          'Simmer the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, to a thicker, spoonable consistency.',
+          'Simmer the oats with breast milk, formula, whole milk, or water over medium-low heat for 4-5 minutes, to a thicker, spoonable consistency.',
           'Leave a little texture rather than cooking it completely smooth.',
           'Cool to just-warm and serve in a bowl with a spoon for self-feeding practice.',
         ],
@@ -1857,7 +1857,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'A thick, family-style oatmeal.',
         steps: [
-          'Simmer the oats with breast milk, formula, or water over medium-low heat for 5-6 minutes, adding liquid a splash at a time, until thick and family-style.',
+          'Simmer the oats with breast milk, formula, whole milk, or water over medium-low heat for 5-6 minutes, adding liquid a splash at a time, until thick and family-style.',
           'Stir to release hot spots, cool to just-warm, and check the temperature.',
           'Serve unsweetened, with no added sugar — and use rolled or quick oats rather than steel-cut, which stay chewy.',
         ],
@@ -2049,13 +2049,13 @@ export const basicRecipes: RecipeSeed[] = [
     ingredients: [
       { foodSlug: 'sunflower_seed_butter', quantityNote: '1-2 teaspoons smooth, unsalted sunflower seed butter' },
     ],
-    extraIngredients: [{ name: 'warm water, breast milk, or formula, to thin' }],
+    extraIngredients: [{ name: 'warm water, breast milk, formula, or whole milk (once baby has had yogurt or cheese), to thin' }],
     variants: {
       '6': {
         textureNote: 'Smooth sunflower seed butter thinned until runny, on a spoon or in a very thin layer on a soft toast finger — never a thick spoonful.',
         steps: [
           'Measure 1-2 teaspoons of smooth, unsalted, unsweetened sunflower seed butter into a small bowl.',
-          'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky.',
+          'Thin it with warm water, breast milk, formula, or whole milk, stirring until it is runny rather than thick or sticky.',
           'Thick or sticky seed butter is a serious choking hazard, so never serve a spoonful straight, and never whole sunflower seeds.',
           'Offer the thinned mixture on a pre-loaded spoon, in a small amount.',
         ],
@@ -2063,7 +2063,7 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Runny thinned sunflower seed butter stirred through food, or spread very thinly.',
         steps: [
-          'Thin smooth sunflower seed butter with warm water, breast milk, or formula until it is runny.',
+          'Thin smooth sunflower seed butter with warm water, breast milk, formula, or whole milk until it is runny.',
           'Stir it into oatmeal or yogurt, or spread a very thin layer on soft fruit.',
           'Keep the layer thin — never a thick glob, and never a spoonful straight.',
         ],
@@ -2071,7 +2071,7 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Thinned sunflower seed butter used as a spread or a dip, still never a thick layer.',
         steps: [
-          'Thin smooth sunflower seed butter with warm water, breast milk, or formula until runny before using it as a spread or a dip base.',
+          'Thin smooth sunflower seed butter with warm water, breast milk, formula, or whole milk until runny before using it as a spread or a dip base.',
           'Keep any spread layer thin; thick spoonfuls and globs remain a choking hazard.',
           'Check the label for added salt and sugar — sunflower seed butter is not a nut butter, but it is often sweetened.',
         ],

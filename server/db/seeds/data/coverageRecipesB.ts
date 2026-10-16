@@ -29,13 +29,13 @@ export const coverageRecipesB: RecipeSeed[] = [
       { foodSlug: 'cashew_butter', quantityNote: '1 tablespoon smooth unsalted cashew butter, whisked with warm water until runny' },
       { foodSlug: 'hemp_seeds', quantityNote: '1 teaspoon hulled hemp hearts' },
     ],
-    extraIngredients: [{ name: 'warm water, breast milk, or formula, to thin the cashew butter', quantityNote: 'a splash of' }],
+    extraIngredients: [{ name: 'warm water, breast milk, formula, or whole milk, to thin the cashew butter', quantityNote: 'a splash of' }],
     variants: {
       '6': {
         textureNote:
           'A loose, spoonable bowl with the mango mashed smooth through the yogurt, plus one finger-length strip of ripe mango to hold.',
         steps: [
-          'Thin the cashew butter with a splash of warm water, breast milk, or formula, whisking until it is completely runny and pours off the spoon — thick nut butter straight from the jar is a serious choking hazard.',
+          'Thin the cashew butter with a splash of warm water, breast milk, formula, or whole milk, whisking until it is completely runny and pours off the spoon — thick nut butter straight from the jar is a serious choking hazard.',
           'Peel the mango, mash half of it smooth, and cut the rest into a finger-length strip baby can hold and gnaw.',
           'Stir the yogurt, mashed mango, and runny cashew butter together until no thick pocket of nut butter is left anywhere in the bowl.',
           'Sprinkle the hemp hearts over the wet bowl so they cling rather than scatter, and serve on a pre-loaded spoon with the mango strip alongside.',
@@ -203,7 +203,7 @@ export const coverageRecipesB: RecipeSeed[] = [
       { foodSlug: 'pecans', quantityNote: '1 tablespoon pecans, ground to a fine meal' },
       { foodSlug: 'cinnamon', quantityNote: 'a pinch, mixed through' },
     ],
-    extraIngredients: [{ name: 'warm water, breast milk, or formula, to thin the seed butter', quantityNote: 'a splash of' }],
+    extraIngredients: [{ name: 'warm water, breast milk, formula, or whole milk (once baby has had yogurt or cheese), to thin the seed butter', quantityNote: 'a splash of' }],
     variants: {
       '6': {
         textureNote: 'Soft chilled fingers, about the length and thickness of an adult finger, that squish easily between two fingers.',

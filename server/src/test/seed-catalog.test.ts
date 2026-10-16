@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Database } from "../db/index.js";
@@ -22,8 +22,24 @@ async function loadRunSeeds(): Promise<(db: Database) => Promise<void>> {
   return mod.runSeeds;
 }
 
-/** Catalog size after the spices batch (329-332), the plain nuts (item 342), cauliflower (item 508) and onion (item 728). */
-const CATALOG_FOOD_COUNT = 77;
+/** Catalog size after the spices batch (329-332), the plain nuts (item 342), cauliflower (item 508), onion (item 728)
+ * and the five ingredient foods (ledger 838). */
+const CATALOG_FOOD_COUNT = 82;
+
+/**
+ * Ledger 838: every catalog food that is not plain `food`, with its kind, and
+ * the (food, allergen) tags that never move the ladder (836). Exact both ways:
+ * a new ingredient food, or a tag that stops (or starts) counting, is a
+ * deliberate change and lands here.
+ */
+const NON_FOOD_KINDS: Record<string, "ingredient" | "info"> = {
+  milk: "info",
+  brown_rice: "ingredient",
+  wheat_flour: "ingredient",
+  unsalted_butter: "ingredient",
+  sesame_oil: "ingredient",
+};
+const NON_COUNTING_TAGS = ["milk/milk", "sesame_oil/sesame", "unsalted_butter/milk"];
 
 /** The 12 spice/herb rows, in seed order. */
 const SPICE_SLUGS = [
@@ -54,7 +70,7 @@ const ALLERGEN_CARRIERS: Record<string, string[]> = {
     "walnuts",
   ],
   fish: ["cod", "salmon", "sardines", "trout", "tuna"],
-  sesame: ["sesame_seeds", "tahini"],
+  sesame: ["sesame_seeds", "tahini", "sesame_oil"],
 };
 
 /**
@@ -239,6 +255,7 @@ async function catalogChecksum(db: Database): Promise<{ counts: Record<string, n
       chokingNotes: schema.foods.chokingNotes,
       notes: schema.foods.notes,
       storageCategory: schema.foods.storageCategory,
+      kind: schema.foods.kind,
     })
     .from(schema.foods)
     .where(isNull(schema.foods.ownerId));
@@ -256,7 +273,11 @@ async function catalogChecksum(db: Database): Promise<{ counts: Record<string, n
     .where(isNull(schema.recipes.ownerId));
 
   const linkRows = await db
-    .select({ foodSlug: schema.foods.slug, allergenSlug: schema.allergens.slug })
+    .select({
+      foodSlug: schema.foods.slug,
+      allergenSlug: schema.allergens.slug,
+      countsTowardProgress: schema.foodAllergens.countsTowardProgress,
+    })
     .from(schema.foodAllergens)
     .innerJoin(schema.foods, eq(schema.foodAllergens.foodId, schema.foods.id))
     .innerJoin(schema.allergens, eq(schema.foodAllergens.allergenId, schema.allergens.id));
@@ -300,7 +321,7 @@ describe("seeded catalog after the spices expansion", () => {
     await close();
   });
 
-  it("seeds exactly 77 catalog foods, 12 of them spices", async () => {
+  it("seeds exactly 82 catalog foods, 12 of them spices", async () => {
     const rows = await db
       .select({ slug: schema.foods.slug, category: schema.foods.category })
       .from(schema.foods)
@@ -308,6 +329,46 @@ describe("seeded catalog after the spices expansion", () => {
 
     expect(rows).toHaveLength(CATALOG_FOOD_COUNT);
     expect(rows.filter((r) => r.category === "spice").map((r) => r.slug).sort()).toEqual([...SPICE_SLUGS].sort());
+  });
+
+  it("seeds the ingredient foods' kinds and the tags that never move the ladder (ledger 836, 838)", async () => {
+    const kinds = await db
+      .select({ slug: schema.foods.slug, kind: schema.foods.kind })
+      .from(schema.foods)
+      .where(and(isNull(schema.foods.ownerId), ne(schema.foods.kind, "food")));
+    expect(Object.fromEntries(kinds.map((r) => [r.slug, r.kind]))).toEqual(NON_FOOD_KINDS);
+
+    const tags = await db
+      .select({ foodSlug: schema.foods.slug, allergenSlug: schema.allergens.slug })
+      .from(schema.foodAllergens)
+      .innerJoin(schema.foods, eq(schema.foodAllergens.foodId, schema.foods.id))
+      .innerJoin(schema.allergens, eq(schema.foodAllergens.allergenId, schema.allergens.id))
+      .where(eq(schema.foodAllergens.countsTowardProgress, false));
+    expect(tags.map((t) => `${t.foodSlug}/${t.allergenSlug}`).sort()).toEqual(NON_COUNTING_TAGS);
+
+    // The step foods keep counting: they are how each step is meant to start.
+    const starters = await db
+      .select({ slug: schema.foods.slug, counts: schema.foodAllergens.countsTowardProgress })
+      .from(schema.foodAllergens)
+      .innerJoin(schema.foods, eq(schema.foodAllergens.foodId, schema.foods.id))
+      .where(inArray(schema.foods.slug, ["yogurt", "tahini", "wheat_flour", "cheese"]));
+    expect(starters.every((row) => row.counts)).toBe(true);
+    expect(starters).toHaveLength(4);
+  });
+
+  it("re-seeding restores a counting flag a hand edit flipped (the upsert writes it)", async () => {
+    const [butter] = await db.select({ id: schema.foods.id }).from(schema.foods).where(eq(schema.foods.slug, "unsalted_butter"));
+    await db
+      .update(schema.foodAllergens)
+      .set({ countsTowardProgress: true })
+      .where(eq(schema.foodAllergens.foodId, butter!.id));
+    const runSeeds = await loadRunSeeds();
+    await runSeeds(db);
+    const rows = await db
+      .select({ counts: schema.foodAllergens.countsTowardProgress })
+      .from(schema.foodAllergens)
+      .where(eq(schema.foodAllergens.foodId, butter!.id));
+    expect(rows).toEqual([{ counts: false }]);
   });
 
   it("gives every spice low/low/low levels, age 6, no allergen, and a dry or fresh storage window", async () => {
@@ -389,7 +450,7 @@ describe("seeded catalog after the spices expansion", () => {
     }
     expect(ALLERGEN_CARRIERS.tree_nut).toHaveLength(8);
     expect(ALLERGEN_CARRIERS.fish).toHaveLength(5);
-    expect(ALLERGEN_CARRIERS.sesame).toHaveLength(2);
+    expect(ALLERGEN_CARRIERS.sesame).toHaveLength(3);
   });
 
   it("names the new carriers in the tree_nut, fish and sesame intro guidance", async () => {

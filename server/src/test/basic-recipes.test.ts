@@ -104,7 +104,17 @@ const RAW_SERVED_FOODS: readonly string[] = [
  * which the recipes legitimately cook. Tomato is served raw in quarters and
  * simmered into sauce; egg is raw in the shell and always cooked through.
  */
-const COOKED_IN_RECIPES: readonly string[] = ["tomato", "egg"];
+const COOKED_IN_RECIPES: readonly string[] = [
+  "tomato",
+  "egg",
+  // Ledger 838's ingredient foods whose prep text says "cooked"/"baking" but
+  // never a bare method verb: milk and butter are baked in the egg bake, and
+  // sesame oil is stirred into cooked food. Not RAW_SERVED: that list forbids
+  // any cooking step reaching the food.
+  "milk",
+  "unsalted_butter",
+  "sesame_oil",
+];
 
 /**
  * Item 357. RAW_SERVED_FOODS above is only half a rule: it stops a recipe
@@ -363,6 +373,33 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
    */
   const NO_BASIC_RECIPE_FOODS: readonly string[] = ["lemon", "onion"];
 
+  /** Catalog foods owed a "Simple <food>" basic: not a spice, and plain
+   * `food` (ledger 838's ingredient and info foods get none). */
+  const basicEligible = and(
+    isNull(schema.foods.ownerId),
+    ne(schema.foods.category, "spice"),
+    eq(schema.foods.kind, "food"),
+  );
+
+  /** Ledger 838: ingredient and info foods (brown rice, flour, butter, sesame
+   * oil, whole milk). */
+  async function nonFoodKindSlugs(): Promise<string[]> {
+    const rows = await db
+      .select({ slug: schema.foods.slug })
+      .from(schema.foods)
+      .where(and(isNull(schema.foods.ownerId), ne(schema.foods.kind, "food")));
+    return rows.map((row) => row.slug);
+  }
+
+  it("gives ingredient and info foods no basic recipe (ledger 838)", async () => {
+    const slugs = await nonFoodKindSlugs();
+    expect(slugs.sort()).toEqual(["brown_rice", "milk", "sesame_oil", "unsalted_butter", "wheat_flour"]);
+    const recipes = await catalogRecipes();
+    const basics = recipes.filter((r) => r.foodSlugs.length === 1 && slugs.includes(r.foodSlugs[0]!));
+    expect(basics.map((r) => r.slug)).toEqual([]);
+    expect(recipes.filter((r) => slugs.some((slug) => r.slug === `simple-${slug.replace(/_/g, "-")}`))).toEqual([]);
+  });
+
   it("keeps the no-basic-recipe exemption honest", async () => {
     const foods = await db
       .select({ slug: schema.foods.slug, category: schema.foods.category })
@@ -385,7 +422,7 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     const foodRows = await db
       .select({ slug: schema.foods.slug, minAgeMonths: schema.foods.minAgeMonths })
       .from(schema.foods)
-      .where(and(isNull(schema.foods.ownerId), ne(schema.foods.category, "spice")))
+      .where(basicEligible)
       .then((rows) => rows.filter((row) => !NO_BASIC_RECIPE_FOODS.includes(row.slug)));
     expect(foodRows.length).toBeGreaterThan(0);
 
@@ -425,7 +462,7 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     const foodRows = await db
       .select({ slug: schema.foods.slug, name: schema.foods.name, minAgeMonths: schema.foods.minAgeMonths })
       .from(schema.foods)
-      .where(and(isNull(schema.foods.ownerId), ne(schema.foods.category, "spice")))
+      .where(basicEligible)
       .then((rows) => rows.filter((row) => !NO_BASIC_RECIPE_FOODS.includes(row.slug)));
 
     const bySlug = new Map((await catalogRecipes()).map((r) => [r.slug, r]));
@@ -688,7 +725,7 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
       // 12 months serves the beans soft and whole, not mashed.
       "simple-black-beans|12|extra: water, to loosen the mash",
       // 12 months serves golden toast on purpose; only 6 and 9 moisten the bread.
-      "banana-almond-butter-toast-fingers|12|extra: water or milk to moisten the bread",
+      "banana-almond-butter-toast-fingers|12|extra: water, breast milk, formula, or whole milk (once baby has had yogurt or cheese) to moisten the bread",
     ]);
 
     // ACCEPTED LIMITATION (item 565): an extra is satisfied by any genuine use of
@@ -1025,8 +1062,13 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     // read, so every recipe carrying it must have a step that both names a
     // cooking method and names the food, and say how long or how done.
     const cookRequired = await cookRequiredFoods();
-    const noBasicCooked = NO_BASIC_RECIPE_FOODS.filter((slug) => cookRequired.includes(slug));
+    // Ledger 838: the ingredient foods whose own prep cooks them (raw flour is
+    // the reason) are under the same rule. Milk, butter and sesame oil are
+    // COOKED_IN_RECIPES (they are never the thing a step cooks), so not here.
+    const ingredientCooked = (await nonFoodKindSlugs()).filter((slug) => !COOKED_IN_RECIPES.includes(slug));
+    const noBasicCooked = [...NO_BASIC_RECIPE_FOODS, ...ingredientCooked].filter((slug) => cookRequired.includes(slug));
     expect(noBasicCooked).toContain("onion");
+    expect(noBasicCooked).toEqual(expect.arrayContaining(["wheat_flour", "brown_rice"]));
 
     const names = (slug: string) => new RegExp(`\\b${slug.replace(/_/g, "[\\s-]+")}s?\\b`, "i");
     const cooksIt = (steps: readonly string[], slug: string) =>
@@ -1170,7 +1212,9 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     const proteinRows = await db
       .select({ slug: schema.foods.slug })
       .from(schema.foods)
-      .where(and(eq(schema.foods.category, "protein"), isNull(schema.foods.ownerId)));
+      // Plain foods only: sesame oil is filed under protein (ledger 838) but is
+      // a few drops of oil, never a cooked serving with a doneness to cue.
+      .where(and(eq(schema.foods.category, "protein"), isNull(schema.foods.ownerId), eq(schema.foods.kind, "food")));
     expect(proteinRows.length).toBeGreaterThan(20);
 
     const unclassified = proteinRows

@@ -36,24 +36,24 @@ export const coverageRecipesA: RecipeSeed[] = [
       },
       { foodSlug: 'chia_seeds', quantityNote: '1 teaspoon chia seeds' },
     ],
-    extraIngredients: [{ name: 'breast milk, formula, or water to soak' }],
+    extraIngredients: [{ name: 'breast milk, formula, whole milk (once baby has had yogurt or cheese), or water to soak' }],
     variants: {
       '6': {
         textureNote:
           'Smooth, thinned overnight oats loose enough to drip slowly off a spoon, with the strawberry mashed so no round berry shape is left.',
         steps: [
-          'Soak the oats and chia seeds together in a small bowl with enough breast milk, formula, or water to cover them well.',
+          'Soak the oats and chia seeds together in a small bowl with enough breast milk, formula, whole milk, or water to cover them well.',
           'Leave them in the fridge overnight, or at least 10 minutes if you are in a hurry, until every chia seed has swelled into a soft gel with no dry grit left.',
           'Hull the strawberries and mash them completely flat, so no round or half-berry shape remains, then stir them through.',
           'Whisk the almond butter with a little warm water until it is runny, never thick or straight from the jar, and swirl it through the oats.',
-          'Thin with extra milk or water to a smooth, drippy consistency and serve on a pre-loaded spoon.',
+          'Thin with extra breast milk, formula, whole milk, or water to a smooth, drippy consistency and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
         textureNote:
           'Thicker, spoonable oats with strawberry finely diced into small bite-sized pieces (no bigger than ½ inch) for pincer-grasp practice.',
         steps: [
-          'Soak the oats and chia seeds in a little less breast milk, formula, or water, so the texture ends up thicker than a drizzly consistency, overnight or for at least 10 minutes, until the chia has gelled and nothing is still dry.',
+          'Soak the oats and chia seeds in a little less breast milk, formula, whole milk, or water, so the texture ends up thicker than a drizzly consistency, overnight or for at least 10 minutes, until the chia has gelled and nothing is still dry.',
           'Hull the strawberries and dice them finely into small bite-sized pieces (no bigger than ½ inch) so no round or half-berry shape remains, then fold them in.',
           'Whisk the almond butter with warm water until runny and stir it through, so no thick pocket is left anywhere.',
           'Serve with a spoon for self-feeding, with a few strawberry pieces on the tray for fingers.',
@@ -62,7 +62,7 @@ export const coverageRecipesA: RecipeSeed[] = [
       '12': {
         textureNote: 'Thick, family-style overnight oats with small bite-sized pieces of strawberry.',
         steps: [
-          'Soak the oats and chia seeds overnight in enough milk or water for a thick, family-style oatmeal, long enough that every seed has swelled soft.',
+          'Soak the oats and chia seeds overnight in enough breast milk, formula, whole milk, or water for a thick, family-style oatmeal, long enough that every seed has swelled soft.',
           'Hull and quarter the strawberries lengthwise, never leaving a whole round berry, and stir most of them through.',
           'Whisk the almond butter until runny and ripple it over the top, keeping the layer thin rather than a glob.',
           'Serve cold with a spoon and let baby scoop for themselves.',
@@ -90,17 +90,17 @@ export const coverageRecipesA: RecipeSeed[] = [
       { foodSlug: 'flax_seeds', quantityNote: '1 teaspoon flaxseed, ground to a meal' },
       { foodSlug: 'cinnamon', quantityNote: 'a pinch, stirred in as the oats cook' },
     ],
-    extraIngredients: [{ name: 'breast milk, formula, or water to thin' }],
+    extraIngredients: [{ name: 'breast milk, formula, whole milk (once baby has had yogurt or cheese), or water to thin' }],
     variants: {
       '6': {
         textureNote:
           'Smooth, thin oatmeal loose enough to drip slowly off a spoon, with the pear cooked until it mashes easily between two fingers.',
         steps: [
           'Simmer the diced pear in a splash of water over low heat for 5-7 minutes, until it mashes easily between two fingers.',
-          'Cook the oats with breast milk, formula, or water over medium-low heat for 4-5 minutes, with a pinch of cinnamon stirred in as they go, until soft and smooth.',
+          'Cook the oats with breast milk, formula, whole milk, or water over medium-low heat for 4-5 minutes, with a pinch of cinnamon stirred in as they go, until soft and smooth.',
           'Take the pan off the heat, then stir in the softened pear and the ground flaxseed until it disappears into the oatmeal.',
           'Whisk the sunflower seed butter with a little warm water until it is runny, then swirl it through so no thick pocket is left.',
-          'Thin with extra breast milk, formula, or water to a drippy consistency, cool to a safe temperature, and serve on a pre-loaded spoon.',
+          'Thin with extra breast milk, formula, whole milk, or water to a drippy consistency, cool to a safe temperature, and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
@@ -186,16 +186,16 @@ export const coverageRecipesA: RecipeSeed[] = [
       { foodSlug: 'kiwi', quantityNote: '1 ripe kiwi, peeled and mashed' },
       { foodSlug: 'banana', quantityNote: '1/2 ripe banana, mashed' },
     ],
-    extraIngredients: [{ name: 'breast milk, formula, or water to soak' }],
+    extraIngredients: [{ name: 'breast milk, formula, whole milk (once baby has had yogurt or cheese), or water to soak' }],
     variants: {
       '6': {
         textureNote:
           'A soft, spoonable pudding thinned until it drips slowly off a spoon, with the kiwi and banana mashed smooth.',
         steps: [
-          'Soak the chia seeds in the breast milk, formula, or water for at least 10 minutes, or overnight in the fridge, until every seed has swelled into a soft gel with no dry grit left.',
+          'Soak the chia seeds in the breast milk, formula, whole milk, or water for at least 10 minutes, or overnight in the fridge, until every seed has swelled into a soft gel with no dry grit left.',
           'Peel the kiwi and mash it with the banana until smooth.',
           'Fold the fruit through the gelled chia.',
-          'Thin with a little more milk or water to a smooth, drippy consistency and serve on a pre-loaded spoon.',
+          'Thin with a little more breast milk, formula, whole milk, or water to a smooth, drippy consistency and serve on a pre-loaded spoon.',
           'Keep the portion small — chia is very high in fiber, so a teaspoon of seed a serving is plenty — and offer water in an open cup alongside.',
         ],
       },
@@ -203,7 +203,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         textureNote:
           'Soft, spoonable pudding with the fruit in small bite-sized pieces (no bigger than ½ inch) baby can pick up.',
         steps: [
-          'Soak the chia seeds in milk or water for at least 10 minutes, or overnight, until they have swelled into a soft gel and nothing is still dry.',
+          'Soak the chia seeds in breast milk, formula, whole milk, or water for at least 10 minutes, or overnight, until they have swelled into a soft gel and nothing is still dry.',
           'Peel and dice the kiwi into small bite-sized soft pieces (no bigger than ½ inch) and cut the banana into half-moons.',
           'Stir most of the fruit through the gelled chia, keeping a few pieces back for the tray.',
           'Serve with a spoon for self-feeding, with water alongside.',
@@ -212,7 +212,7 @@ export const coverageRecipesA: RecipeSeed[] = [
       '12': {
         textureNote: 'Thicker, family-style pudding with small bite-sized kiwi and banana.',
         steps: [
-          'Soak the chia seeds in milk or water overnight — never stirred in dry — until the gel is thick and spoonable.',
+          'Soak the chia seeds in breast milk, formula, whole milk, or water overnight — never stirred in dry — until the gel is thick and spoonable.',
           'Peel and dice the kiwi into small bite-sized pieces and slice the banana into small rounds.',
           'Fold the fruit through and serve cold with a spoon.',
           'Keep the portion small and offer water alongside, since a spoonful of chia carries a lot of fiber.',
@@ -285,13 +285,13 @@ export const coverageRecipesA: RecipeSeed[] = [
       { foodSlug: 'banana', quantityNote: '1/2 ripe banana, mashed' },
       { foodSlug: 'flax_seeds', quantityNote: '1 teaspoon flaxseed, ground to a meal' },
     ],
-    extraIngredients: [{ name: 'water or milk to moisten the bread' }],
+    extraIngredients: [{ name: 'water, breast milk, formula, or whole milk (once baby has had yogurt or cheese) to moisten the bread' }],
     variants: {
       '6': {
         textureNote:
           'Soft finger-length strips that bend without snapping, under a very thin layer of runny almond butter and mashed banana.',
         steps: [
-          'Toast the bread lightly for 1-2 minutes, then moisten it with a little water or milk until it is soft and bends without snapping.',
+          'Toast the bread lightly for 1-2 minutes, then moisten it with a little water, breast milk, formula, or whole milk until it is soft and bends without snapping.',
           'Cut it into finger-length strips.',
           'Whisk the almond butter with warm water until it is runny, never thick or straight from the jar, and spread a very thin layer over each strip.',
           'Mash the banana smooth, smooth it over the top, and dust the ground flaxseed over so it disappears into the banana.',
@@ -302,7 +302,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         textureNote:
           'Soft strips, or small bite-sized squares (no bigger than ½ inch) for pincer practice, with banana on top.',
         steps: [
-          'Toast the bread for 1-2 minutes and moisten it with a little water or milk until it is soft, then cut it into strips, or small squares (no bigger than ½ inch) for pincer practice.',
+          'Toast the bread for 1-2 minutes and moisten it with a little water, breast milk, formula, or whole milk until it is soft, then cut it into strips, or small squares (no bigger than ½ inch) for pincer practice.',
           'Whisk the almond butter with warm water until it is runny, and spread it thinly over each piece.',
           'Cut the banana into half-moons or small bite-sized pieces (no bigger than ½ inch) and press a few onto each piece.',
           'Sprinkle the ground flaxseed over the wet nut butter so it sticks rather than scattering.',
