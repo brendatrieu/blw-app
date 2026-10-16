@@ -54,7 +54,7 @@ describe("getCategoryEmoji", () => {
  * it is easier to diff against the seed file that way.
  */
 const CATALOG_SLUGS = [
-  "beef", "chicken_thigh", "salmon", "sardines", "egg", "lentils", "chickpeas", "black_beans", "tofu",
+  "beef", "chicken_thigh", "salmon", "sardines", "egg", "lentils", "chickpeas", "black_beans", "kidney_beans", "pinto_beans", "white_beans", "butter_beans", "edamame", "tofu",
   "iron_fortified_oats", "spinach", "quinoa", "broccoli", "cauliflower", "brussels_sprouts", "kale", "onion", "bell_pepper", "strawberry", "orange", "lemon", "kiwi",
   "mango", "tomato", "sweet_potato", "butternut_squash", "pumpkin", "peanut_butter", "almond_butter", "tahini",
   "yogurt", "cheese", "wheat_toast", "wheat_pasta", "shrimp", "avocado", "banana", "apple", "pear",
@@ -69,8 +69,8 @@ const CATALOG_SLUGS = [
 ];
 
 describe("emoji coverage for the seeded catalog", () => {
-  it("has an explicit emoji for all 87 catalog slugs", () => {
-    expect(CATALOG_SLUGS).toHaveLength(87);
+  it("has an explicit emoji for all 92 catalog slugs", () => {
+    expect(CATALOG_SLUGS).toHaveLength(92);
     expect(new Set(CATALOG_SLUGS).size).toBe(CATALOG_SLUGS.length);
 
     // With no category passed, the only fallback left is the generic plate —
@@ -150,6 +150,7 @@ describe("getExtraIngredientEmoji", () => {
       "water, breast milk, formula, or whole milk (once baby has had yogurt or cheese) to moisten the bread",
       "water, for cooking",
       "water, for cooking and thinning",
+      "water, to loosen",
       "water, to loosen the mash",
       "water, to thin",
       "water, whole milk, or a thin smooth spread, to moisten",
@@ -203,6 +204,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "broccoli": "veg",
         "brown_rice": "grain",
         "brussels_sprouts": "veg",
+        "butter_beans": "legume",
         "butternut_squash": "veg",
         "carrot": "veg",
         "cashew_butter": "legume",
@@ -220,6 +222,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "cumin": "grain",
         "curry_powder": "grain",
         "dill": "veg",
+        "edamame": "legume",
         "egg": "dairy",
         "flax_seeds": "legume",
         "garlic": "veg",
@@ -229,6 +232,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "hemp_seeds": "legume",
         "iron_fortified_oats": "grain",
         "kale": "veg",
+        "kidney_beans": "legume",
         "kiwi": "fruit",
         "lamb": "protein",
         "lemon": "fruit",
@@ -244,6 +248,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "pear": "fruit",
         "peas": "veg",
         "pecans": "legume",
+        "pinto_beans": "legume",
         "pistachios": "legume",
         "pork": "protein",
         "potato": "veg",
@@ -273,6 +278,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "wheat_flour": "grain",
         "wheat_pasta": "grain",
         "wheat_toast": "grain",
+        "white_beans": "legume",
         "yogurt": "dairy",
         "zucchini": "veg",
       }

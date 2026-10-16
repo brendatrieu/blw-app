@@ -2,7 +2,7 @@ import type { FoodCategory } from "@blw/shared";
 
 /**
  * Explicit emoji per seed food slug — one entry for every food in
- * `server/db/seeds/data/foods.ts` (87 as of writing, pinned slug-by-slug in
+ * `server/db/seeds/data/foods.ts` (92 as of writing, pinned slug-by-slug in
  * `foodEmoji.test.ts` so a seed addition cannot quietly fall through to the
  * category fallback). Kept as a plain
  * record rather than derived from the food's name/category so each choice
@@ -18,6 +18,12 @@ const FOOD_EMOJI: Record<string, string> = {
   lentils: "🍲",
   chickpeas: "🫘",
   black_beans: "🫘",
+  // Ledger 841: the beans share black beans' emoji; edamame takes the pod, like green beans.
+  kidney_beans: "🫘",
+  pinto_beans: "🫘",
+  white_beans: "🫘",
+  butter_beans: "🫘",
+  edamame: "🫛",
   tofu: "🍢",
   iron_fortified_oats: "🥣",
   spinach: "🥬",
@@ -240,6 +246,11 @@ const TINT_SLUGS: Record<Exclude<PlateTint, "neutral">, readonly string[]> = {
     "lentils",
     "chickpeas",
     "black_beans",
+    "kidney_beans",
+    "pinto_beans",
+    "white_beans",
+    "butter_beans",
+    "edamame",
     "tofu",
     "peanut_butter",
     "almond_butter",
