@@ -41,7 +41,7 @@ const CURATED_SLUGS = [
 
 /**
  * Ledger item 266. Runs over the seeded catalog, which is every recipe file
- * (recipes.ts exports the curated 16, the 60 coverage recipes and the 68
+ * (recipes.ts exports the curated 16, the 70 coverage recipes and the 73
  * basics), so a step added to any of them is covered.
  */
 const COOKING_VERB = /\b(?:roast|bake|steam|boil|simmer|saut[eé]|fry|poach|scramble|toast|cook)\b/i;
@@ -530,9 +530,9 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     expect(wrong).toEqual([]);
 
     // The exact row count, so deleting one stage of one recipe fails HERE even
-    // though the recipe count is untouched: 141 six-month recipes x 3 stages +
+    // though the recipe count is untouched: 156 six-month recipes x 3 stages +
     // 3 nine-month recipes (simple-shrimp and the two shrimp dishes) x 2.
-    expect(variantRows.length).toBe(429);
+    expect(variantRows.length).toBe(474);
   });
 
   it("gives every catalog variant 3-6 steps and a texture note", async () => {
@@ -651,7 +651,7 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     // not just the curated 15. The basics used to be exempt because they call their
     // one food by a part ("the trimmed breast"); they now name the food in the steps.
     const variants = await catalogVariants();
-    // 144 recipes, 429 variants (see the time/temperature guard below); a
+    // 159 recipes, 474 variants (see the time/temperature guard below); a
     // collapse here would make the check below pass vacuously.
     expect(variants.length).toBeGreaterThan(350);
     const extraRows = await db
@@ -826,11 +826,11 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
 
   it("gives every cooking step a temperature or a time", async () => {
     const variants = await catalogVariants();
-    // 144 recipes: the curated 16 (the original 15 plus item 795's egg bake), the 60 coverage recipes added for the
-    // "3 recipes per food" rule (items 338-339, 343, 357, 510, 728, 835), and 68 basics (67 x 3
+    // 159 recipes: the curated 16 (the original 15 plus item 795's egg bake), the 70 coverage recipes added for the
+    // "3 recipes per food" rule (items 338-339, 343, 357, 510, 728, 835, 841), and 73 basics (72 x 3
     // stages + shrimp's 2) — one per non-spice food except lemon and onion (items 331,
-    // 342, 356, 484, 509, 728, 835).
-    expect(new Set(variants.map((v) => v.slug)).size).toBe(144);
+    // 342, 356, 484, 509, 728, 835, 841).
+    expect(new Set(variants.map((v) => v.slug)).size).toBe(159);
 
     const cookingSteps = variants.flatMap((v) =>
       v.instructions

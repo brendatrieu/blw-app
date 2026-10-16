@@ -31,6 +31,9 @@ import type { RecipeSeed } from './types'
 // Item 835 appends ten, two for each fall/winter food (Brussels sprouts, pumpkin, kale, beets,
 // cranberries); each food's own `Simple <food>` basic is its third. Drafts, USDA levels and
 // sources: .workflow/scratch/catalog-835/FOOD-*.md
+//
+// Item 841 appends ten, two for each bean (kidney, pinto, white, butter, edamame), the same way.
+// Drafts, USDA levels and sources: .workflow/scratch/catalog-beans/FOOD-*.md
 export const coverageRecipesC: RecipeSeed[] = [
   {
     slug: 'butternut-squash-almond-soup',
@@ -1048,6 +1051,530 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Mash the fruit roughly, checking that no whole berry is left.',
           'Stir the oat cereal into breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, adding liquid a splash at a time, until thick and family-style.',
           'Spoon the cranberry and pear sauce over the oatmeal, cool to just-warm, and serve with a spoon, with no added sugar.',
+        ],
+      },
+    },
+  },
+  // ---- Item 841: kidney beans (plant iron + vitamin C) ----
+  // Plant iron from kidney beans with vitamin C from tomato, in a mild rajma over soft rice.
+  {
+    slug: 'kidney-bean-tomato-rajma',
+    title: 'Mild Kidney Bean Rajma with Rice',
+    minAgeMonths: 6,
+    prepMinutes: 35,
+    ironFocus: true,
+    fridgeHoursOverride: 24,
+    ingredients: [
+      { foodSlug: 'kidney_beans', quantityNote: '1/2 cup fully cooked or no-salt-added canned kidney beans, rinsed (dried beans must be boiled first, never just soaked)' },
+      { foodSlug: 'tomato', quantityNote: '2 tomatoes, skinned and diced' },
+      { foodSlug: 'onion', quantityNote: '1/4 small yellow or sweet onion, peeled, root end cut off, and very finely chopped' },
+      { foodSlug: 'cumin', quantityNote: 'a pinch of ground cumin, warmed in the pan' },
+      { foodSlug: 'rice', quantityNote: '1/4 cup dry white rice' },
+    ],
+    extraIngredients: [{ name: 'olive oil', quantityNote: 'a drizzle of' }],
+    variants: {
+      '6': {
+        textureNote:
+          'A thick, smooth rajma with every kidney bean mashed flat, served on a pre-loaded spoon with a soft, sticky rice ball to hold.',
+        steps: [
+          'Simmer the rice in plenty of water over low heat for 18-20 minutes, until very soft and sticky, then drain it.',
+          'Warm a little olive oil over medium-low heat, stir in a pinch of cumin, then cook the very finely chopped onion in it for 8-10 minutes, until the onion is completely soft and squashes easily between two fingers.',
+          'Add the skinned, diced tomatoes and the rinsed kidney beans and simmer over low heat for 12-15 minutes, until the tomato breaks down into a thick sauce.',
+          'Mash or blend the sauce until no whole kidney bean is left and every bean is squashed flat.',
+          'Press the rice into soft balls, cool everything to just-warm, check the temperature, and serve the rajma on a pre-loaded spoon with a rice ball alongside, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'A thick rajma with each kidney bean squashed flat, over soft loose rice grains for pincer-grasp practice.',
+        steps: [
+          'Simmer the rice in plenty of water over low heat for 15-18 minutes, until soft, then drain it.',
+          'Warm a little olive oil over medium-low heat, stir in a pinch of cumin, then cook the finely chopped onion in it for 8-10 minutes, until the onion is completely soft and squashes easily between two fingers.',
+          'Add the skinned, diced tomatoes and the rinsed kidney beans and simmer over low heat for 12-15 minutes, until the sauce is thick.',
+          'Squash each kidney bean flat with a fork, leaving the sauce thick and a little textured.',
+          'Cool to just-warm and serve the rajma over the soft rice in small spoonfuls, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Family-style rajma with soft kidney beans, lightly squashed or halved, over tender rice.',
+        steps: [
+          'Simmer the rice in plenty of water over low heat for 15-18 minutes, until tender, then drain it.',
+          'Warm a little olive oil over medium heat, stir in a pinch of cumin, then cook the finely chopped onion in it for 6-8 minutes, until the onion is soft.',
+          'Add the diced tomatoes and the rinsed kidney beans and simmer over low heat for 15-20 minutes, until the sauce is thick and the beans squash easily between two fingers.',
+          'Halve or lightly squash the kidney beans, since they are bigger than most beans, then cool to just-warm and serve the rajma over the rice, with no added salt.',
+        ],
+      },
+    },
+  },
+
+  // Plant iron from kidney beans and fortified oat cereal with vitamin C from bell pepper, baked soft.
+  {
+    slug: 'kidney-bean-pepper-patties',
+    title: 'Kidney Bean & Red Pepper Patties',
+    minAgeMonths: 6,
+    prepMinutes: 30,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'kidney_beans', quantityNote: '3/4 cup fully cooked or no-salt-added canned kidney beans, rinsed and drained well (dried beans must be boiled first, never just soaked)' },
+      { foodSlug: 'bell_pepper', quantityNote: '1/2 red bell pepper, very finely diced' },
+      { foodSlug: 'iron_fortified_oats', quantityNote: '3-4 tablespoons iron-fortified baby oat cereal' },
+    ],
+    extraIngredients: [{ name: 'olive oil', quantityNote: 'a little' }],
+    variants: {
+      '6': {
+        textureNote:
+          'Soft, finger-length logs about as thick as an adult finger, set on the outside but soft enough to squash easily between two fingers.',
+        steps: [
+          'Cook the very finely diced bell pepper in a little olive oil over medium heat for 5-6 minutes, until completely soft with no papery skin left.',
+          'Mash the rinsed kidney beans well in a bowl, until no whole bean or large piece of skin is left, then stir in the soft bell pepper and the iron-fortified oat cereal until the mix holds together.',
+          'Shape the mix into finger-length logs about as thick as an adult finger and lay them on a baking sheet lined with parchment paper.',
+          'Bake at 400°F (200°C) for 15-18 minutes, turning once halfway, until set and lightly golden but still soft inside.',
+          'Cool to just-warm, check that a log squashes easily between your fingers, and serve it whole for baby to hold, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'Soft patty strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+        steps: [
+          'Cook the very finely diced bell pepper in a little olive oil over medium heat for 5-6 minutes, until completely soft.',
+          'Mash the rinsed kidney beans in a bowl, squashing every bean flat, then stir in the soft bell pepper and the iron-fortified oat cereal until the mix holds together.',
+          'Shape the mix into small flat patties and lay them on a baking sheet lined with parchment paper.',
+          'Bake at 400°F (200°C) for 15-18 minutes, turning once halfway, until set and lightly golden.',
+          'Cool to just-warm, then cut into strips or small bite-sized pieces (no bigger than ½ inch) and serve on the tray, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Mini patties baby can pick up and bite from, with a little soft bean texture left.',
+        steps: [
+          'Cook the finely diced bell pepper in a little olive oil over medium heat for 4-5 minutes, until soft.',
+          'Mash the rinsed kidney beans roughly in a bowl so every bean is at least squashed flat, then stir in the soft bell pepper and the iron-fortified oat cereal.',
+          'Shape the mix into mini patties and lay them on a baking sheet lined with parchment paper.',
+          'Bake at 400°F (200°C) for 18-20 minutes, turning once halfway, until golden and set.',
+          'Cool to just-warm and serve whole or cut in half for baby to bite from, with no added salt.',
+        ],
+      },
+    },
+  },
+  // ---- Item 841: pinto beans (plant iron + vitamin C) ----
+  // Item 841. Refried beans made at home with no salt — most canned refried beans are salty.
+  // Plant iron from pinto beans with vitamin C from bell pepper.
+  {
+    slug: 'homemade-refried-pinto-beans',
+    title: 'Homemade Refried Pinto Beans',
+    minAgeMonths: 6,
+    prepMinutes: 25,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'pinto_beans', quantityNote: '1 cup cooked or no-salt-added canned pinto beans, rinsed' },
+      { foodSlug: 'onion', quantityNote: '1/4 small yellow or sweet onion, peeled, root end cut off, and very finely chopped' },
+      { foodSlug: 'bell_pepper', quantityNote: '1/4 red bell pepper, very finely diced' },
+      { foodSlug: 'cumin', quantityNote: 'a small pinch of ground cumin' },
+    ],
+    extraIngredients: [
+      { name: 'olive oil', quantityNote: 'a drizzle of' },
+      { name: 'water, to loosen', quantityNote: 'a few tablespoons of' },
+    ],
+    variants: {
+      '6': {
+        textureNote:
+          'A smooth, thick refried-bean spread with the onion and bell pepper cooked soft and blended in, and no whole bean or loose skin left.',
+        steps: [
+          'Warm a little olive oil in a pan over medium-low heat, add the very finely chopped onion and bell pepper, and cook them for 8-10 minutes, stirring, until completely soft with no papery pepper skin left and the onion squashes easily between two fingers — onion is always cooked soft, never raw.',
+          'Stir in a small pinch of ground cumin and cook for 30 seconds, until it smells fragrant.',
+          'Add the rinsed pinto beans and a few tablespoons of water and simmer over low heat for 5 minutes, until the pinto beans are hot and very soft.',
+          'Mash or blend it all until smooth, with no whole bean left, and loosen it with a little more water so it is soft and spreadable rather than thick and sticky.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt — this is why the beans are made at home, since most canned refried beans are salty.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'Thick homemade refried pinto beans with a little soft texture, to scoop with a spoon or spread on a soft finger food.',
+        steps: [
+          'Warm a little olive oil in a pan over medium-low heat, add the very finely chopped onion and bell pepper, and cook them for 8-10 minutes, stirring, until completely soft and the onion squashes easily between two fingers — onion is always cooked soft, never raw.',
+          'Stir in a small pinch of ground cumin and cook for 30 seconds, until fragrant.',
+          'Add the rinsed pinto beans and a few tablespoons of water and simmer over low heat for 5 minutes, until the pinto beans are very soft.',
+          'Mash lightly, leaving some soft texture, squash any whole bean flat, and loosen with a little more water if it is stiff.',
+          'Cool to just-warm and serve in a bowl with a spoon, or spread on a soft finger food, with no added salt — canned refried beans are usually salty, so homemade is the one to offer.',
+        ],
+      },
+      '12': {
+        textureNote: 'Family-style refried pinto beans, mashed with some texture, as a side with rice or a soft dip.',
+        steps: [
+          'Warm a little olive oil in a pan over medium-low heat, add the finely chopped onion and bell pepper, and cook them for 6-8 minutes, stirring, until tender.',
+          'Stir in a small pinch of ground cumin and cook for 30 seconds, until fragrant.',
+          'Add the rinsed pinto beans and a few tablespoons of water and simmer over low heat for 5 minutes, until the pinto beans are hot and soft.',
+          'Mash roughly, leaving some texture, and loosen with a little more water if it is too thick to scoop.',
+          'Cool to just-warm and serve as a side with rice or as a dip for soft-cooked vegetables, with no added salt — skip canned refried beans, which are usually salty.',
+        ],
+      },
+    },
+  },
+
+  // Item 841. Plant iron from pinto beans with vitamin C from tomato and butternut squash.
+  {
+    slug: 'pinto-bean-squash-tomato-stew',
+    title: 'Pinto Bean, Squash & Tomato Stew',
+    minAgeMonths: 6,
+    prepMinutes: 35,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'pinto_beans', quantityNote: '1/2 cup cooked or no-salt-added canned pinto beans, rinsed' },
+      { foodSlug: 'butternut_squash', quantityNote: '1 cup peeled butternut squash, cut into small cubes' },
+      { foodSlug: 'tomato', quantityNote: '2 tomatoes, skinned and diced' },
+      { foodSlug: 'paprika', quantityNote: 'a pinch of sweet (mild) paprika' },
+    ],
+    extraIngredients: [
+      { name: 'olive oil', quantityNote: 'a drizzle of' },
+      { name: 'water', quantityNote: '1/2 cup' },
+    ],
+    variants: {
+      '6': {
+        textureNote:
+          'A thick, smooth stew of soft butternut squash, tomato, and pinto beans, blended or mashed so no whole bean is left.',
+        steps: [
+          'Warm a little olive oil in a pan over medium-low heat, stir in a pinch of sweet (mild) paprika for 30 seconds, then add the skinned, diced tomatoes and the cubes of butternut squash.',
+          'Pour in the water, cover, and simmer over low heat for 15-20 minutes, until the squash mashes easily between two fingers.',
+          'Stir in the rinsed pinto beans and simmer for 5 more minutes, until the pinto beans are hot and very soft.',
+          'Blend or mash the stew until smooth and thick, with no whole bean or loose bean skin left — whole beans can be firm enough to pose a choking risk at this age.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'A thick stew with soft, small bite-sized cubes of butternut squash (no bigger than ½ inch) and every pinto bean squashed flat.',
+        steps: [
+          'Warm a little olive oil in a pan over medium-low heat, stir in a pinch of sweet (mild) paprika for 30 seconds, then add the skinned, diced tomatoes and the small cubes of butternut squash (no bigger than ½ inch).',
+          'Pour in the water, cover, and simmer over low heat for 15-20 minutes, until the squash is very soft.',
+          'Stir in the rinsed pinto beans and simmer for 5 more minutes, until the pinto beans are hot and very soft.',
+          'Squash each bean flat with the back of a fork, leaving the soft cubes of squash for baby to pick up.',
+          'Cool to just-warm and serve thick in a bowl with a spoon alongside, or on the tray for pincer-grasp self-feeding, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote:
+          'Family-style stew with small bite-sized pieces of butternut squash and soft whole pinto beans that squash easily between two fingers.',
+        steps: [
+          'Warm a little olive oil in a pan over medium-low heat, stir in a pinch of sweet (mild) paprika for 30 seconds — sweet paprika only, never hot, smoked hot, or chili powder — then add the diced tomatoes and the cubes of butternut squash.',
+          'Pour in the water, cover, and simmer over low heat for 15-20 minutes, until the squash is tender.',
+          'Stir in the rinsed pinto beans and simmer for 5 more minutes, until they squash easily between two fingers, and squash flat any bean that still feels firm.',
+          'Cool to just-warm and serve with rice or a spoon to practice with, with no added salt.',
+        ],
+      },
+    },
+  },
+  // ---- Item 841: white beans (plant iron + vitamin C) ----
+  // Item 841. Plant iron from white beans and spinach with vitamin C from tomato and spinach.
+  {
+    slug: 'white-bean-spinach-tomato-stew',
+    title: 'White Bean, Spinach & Tomato Stew',
+    minAgeMonths: 6,
+    prepMinutes: 25,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'white_beans', quantityNote: '1/2 cup fully cooked or no-salt-added canned white beans, rinsed' },
+      { foodSlug: 'tomato', quantityNote: '2 tomatoes, skinned and diced' },
+      { foodSlug: 'spinach', quantityNote: '1 large handful of fresh spinach leaves, finely chopped' },
+      { foodSlug: 'garlic', quantityNote: '1/2 small clove, finely minced and softened in the pan' },
+    ],
+    extraIngredients: [
+      { name: 'olive oil', quantityNote: 'a drizzle of' },
+      { name: 'water', quantityNote: '1/4 cup' },
+    ],
+    variants: {
+      '6': {
+        textureNote:
+          'A thick, smooth stew of white beans, tomato, and spinach, blended so no whole bean, loose skin, or piece of leaf is left.',
+        steps: [
+          'Soften the finely minced garlic in a little olive oil over medium-low heat for 30-60 seconds, until it smells sweet rather than raw.',
+          'Add the skinned, diced tomatoes and the water and simmer over low heat for 8-10 minutes, until the tomatoes break down into a sauce.',
+          'Stir in the rinsed white beans and the finely chopped spinach and simmer for 5 more minutes, until the white beans are very soft and the spinach is completely wilted.',
+          'Blend the stew until smooth and thick, with no whole bean or piece of spinach leaf left — whole beans can be firm enough to pose a choking risk at this age.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'A thick, mashed stew with every white bean squashed flat and the spinach finely chopped through it.',
+        steps: [
+          'Soften the finely minced garlic in a little olive oil over medium-low heat for 30-60 seconds, until it smells sweet rather than raw.',
+          'Add the skinned, diced tomatoes and the water and simmer over low heat for 8-10 minutes, until the tomatoes break down into a sauce.',
+          'Stir in the rinsed white beans and the finely chopped spinach and simmer for 5 more minutes, until the white beans are very soft and the spinach is completely wilted.',
+          'Mash the stew lightly with a fork, squashing every white bean flat and leaving some soft texture.',
+          'Cool to just-warm and serve thick in a bowl with a pre-loaded spoon for baby to practice with, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote:
+          'Family-style stew with soft whole white beans that squash easily between two fingers and finely chopped spinach.',
+        steps: [
+          'Soften the finely minced garlic in a little olive oil over medium heat for 30-60 seconds, until fragrant.',
+          'Add the diced tomatoes and the water and simmer over low heat for 8-10 minutes, until the tomatoes break down into a sauce.',
+          'Stir in the rinsed white beans and the chopped spinach and simmer for 5 more minutes, until the white beans squash easily between two fingers and the spinach is wilted.',
+          'Squash flat any bean that still feels firm, then cool to just-warm and serve in a bowl with a spoon to practice with, with no added salt.',
+        ],
+      },
+    },
+  },
+
+  // Item 841. Plant iron from white beans with vitamin C from broccoli; egg-free, so no allergen tag.
+  {
+    slug: 'baked-white-bean-broccoli-patties',
+    title: 'Baked White Bean & Broccoli Patties',
+    minAgeMonths: 6,
+    prepMinutes: 35,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'white_beans', quantityNote: '1 cup fully cooked or no-salt-added canned white beans, rinsed and patted dry' },
+      { foodSlug: 'broccoli', quantityNote: '1 cup small broccoli florets' },
+      { foodSlug: 'oats', quantityNote: '1/4 cup rolled oats, blended into a fine flour' },
+    ],
+    extraIngredients: [{ name: 'olive oil for the pan' }],
+    variants: {
+      '6': {
+        textureNote:
+          'Soft finger-length bean patties, lightly firm outside and soft enough inside to squash easily between two fingers, with no whole bean left.',
+        steps: [
+          'Heat the oven to 400°F (200°C) and brush a baking sheet with a little olive oil.',
+          'Steam the broccoli florets for 6-8 minutes, until very soft, then chop the broccoli very finely.',
+          'Mash the white beans well, with no whole bean left, then mix in the chopped broccoli and the blended oats until the mixture holds together when pressed.',
+          'Shape heaped tablespoons into finger-length logs about as thick as two adult fingers and set them on the baking sheet.',
+          'Bake the patties at 400°F (200°C) for 18-20 minutes, turning them once halfway, until lightly golden outside and soft inside.',
+          'Cool to just-warm, check the temperature, and check a patty squashes easily between two fingers before serving, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'Soft finger-length patties, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
+        steps: [
+          'Heat the oven to 400°F (200°C) and brush a baking sheet with a little olive oil.',
+          'Steam the broccoli florets for 6-8 minutes, until very soft, then chop the broccoli finely.',
+          'Mash the white beans, squashing every bean flat, then mix in the chopped broccoli and the blended oats until the mixture holds together when pressed.',
+          'Shape heaped tablespoons into finger-length logs and set them on the baking sheet.',
+          'Bake the patties at 400°F (200°C) for 18-20 minutes, turning them once halfway, until lightly golden outside and soft inside.',
+          'Cool to just-warm and serve whole, or break into small bite-sized pieces (no bigger than ½ inch) for pincer practice, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Small round patties, soft inside, cut into bite-sized pieces, family-style.',
+        steps: [
+          'Heat the oven to 400°F (200°C) and brush a baking sheet with a little olive oil.',
+          'Steam the broccoli florets for 5-6 minutes, until tender, then chop the broccoli finely.',
+          'Mash the white beans roughly, then mix in the chopped broccoli and the blended oats until the mixture holds together when pressed.',
+          'Shape the mixture into small round patties about 2 inches across and set them on the baking sheet.',
+          'Bake the patties at 400°F (200°C) for 20-22 minutes, turning them once halfway, until golden outside and set through.',
+          'Cool to just-warm, check the temperature, and cut into bite-sized pieces, with no added salt.',
+        ],
+      },
+    },
+  },
+  // ---- Item 841: butter beans (plant iron + vitamin C) ----
+  // Item 841. Plant iron from butter beans with vitamin C from tomato, baked soft, gigantes-style.
+  {
+    slug: 'baked-butter-beans-tomato-oregano',
+    title: 'Baked Butter Beans in Tomato Sauce',
+    minAgeMonths: 6,
+    prepMinutes: 45,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'butter_beans', quantityNote: '1 cup fully cooked or no-salt-added canned butter beans, rinsed (dried beans must be boiled first, never just soaked)' },
+      { foodSlug: 'tomato', quantityNote: '3 tomatoes, skinned and diced' },
+      { foodSlug: 'onion', quantityNote: '1/4 small yellow or sweet onion, peeled, root end cut off, and very finely chopped' },
+      { foodSlug: 'oregano', quantityNote: 'a pinch of dried oregano, rubbed fine' },
+    ],
+    extraIngredients: [
+      { name: 'olive oil', quantityNote: 'a drizzle of' },
+      { name: 'water', quantityNote: '1/4 cup' },
+    ],
+    variants: {
+      '6': {
+        textureNote:
+          'A thick, smooth tomato and butter bean mash, blended so no whole bean or loose skin is left, to scoop from a pre-loaded spoon.',
+        steps: [
+          'Warm a little olive oil in an ovenproof pan over medium-low heat, add the very finely chopped onion, and cook it for 8-10 minutes, stirring, until it squashes easily between two fingers — onion is always cooked soft, never raw.',
+          'Stir in the skinned, diced tomatoes and a pinch of dried oregano rubbed fine, and simmer over low heat for 10 minutes, until the tomato breaks down.',
+          'Stir in the rinsed butter beans and the water, cover, and bake at 375°F (190°C) for 25-30 minutes, until the sauce is thick and the butter beans are very soft.',
+          'Blend or mash it all until smooth, picking out any loose bean skins, so no whole bean is left.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'Soft baked butter beans, each one squashed flat, in a thick tomato sauce for scooping and pincer-grasp practice.',
+        steps: [
+          'Warm a little olive oil in an ovenproof pan over medium-low heat, add the very finely chopped onion, and cook it for 8-10 minutes, stirring, until it squashes easily between two fingers — onion is always cooked soft, never raw.',
+          'Stir in the skinned, diced tomatoes and a pinch of dried oregano rubbed fine, and simmer over low heat for 10 minutes, until the tomato breaks down.',
+          'Stir in the rinsed butter beans and the water, cover, and bake at 375°F (190°C) for 25-30 minutes, until the sauce is thick and the butter beans are very soft.',
+          'Squash each butter bean flat with the back of a fork, leaving the sauce thick and a little textured.',
+          'Cool to just-warm and serve in a bowl with a spoon, or on the tray, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Family-style baked butter beans in tomato sauce, lightly squashed, soft enough to give easily between two fingers.',
+        steps: [
+          'Warm a little olive oil in an ovenproof pan over medium heat, add the finely chopped onion, and cook it for 6-8 minutes, stirring, until the onion is soft.',
+          'Stir in the diced tomatoes and a pinch of dried oregano, and simmer over low heat for 10 minutes, until the tomato breaks down.',
+          'Stir in the rinsed butter beans and the water, then bake uncovered at 375°F (190°C) for 30-35 minutes, until the sauce is thick and the butter beans squash easily between two fingers.',
+          'Squash lightly any butter bean that is still whole, since they are big beans, then cool to just-warm and serve with a spoon, with no added salt.',
+        ],
+      },
+    },
+  },
+
+  // Item 841. Plant iron from butter beans with vitamin C from broccoli and lemon.
+  {
+    slug: 'butter-bean-broccoli-lemon-mash',
+    title: 'Butter Bean & Broccoli Mash with Lemon',
+    minAgeMonths: 6,
+    prepMinutes: 15,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 60,
+    ingredients: [
+      { foodSlug: 'butter_beans', quantityNote: '3/4 cup fully cooked or no-salt-added canned butter beans, rinsed (dried beans must be boiled first, never just soaked)' },
+      { foodSlug: 'broccoli', quantityNote: '1 cup small broccoli florets' },
+      { foodSlug: 'lemon', quantityNote: 'a squeeze of juice' },
+    ],
+    extraIngredients: [{ name: 'olive oil', quantityNote: 'a drizzle of' }],
+    variants: {
+      '6': {
+        textureNote:
+          'A smooth, thick green mash of butter beans and broccoli with no whole bean, loose skin, or floret left, soft enough to scoop.',
+        steps: [
+          'Steam the broccoli florets for 8-10 minutes, until they mash easily between two fingers.',
+          'Warm the rinsed butter beans in a pan over low heat for 2-3 minutes.',
+          'Blend or mash the butter beans and broccoli with a squeeze of lemon juice and a drizzle of olive oil until smooth, picking out any loose bean skins.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'A thick mash with some soft texture, with small soft broccoli florets (no bigger than ½ inch) alongside for pincer practice.',
+        steps: [
+          'Steam the broccoli florets for 8-10 minutes, until soft, and set a few small florets (no bigger than ½ inch) aside.',
+          'Warm the rinsed butter beans in a pan over low heat for 2-3 minutes.',
+          'Mash the butter beans with the rest of the broccoli, a squeeze of lemon juice, and a drizzle of olive oil, leaving some soft texture and squashing any whole bean flat.',
+          'Cool to just-warm and serve the mash in a bowl with the soft florets on the tray, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'A rough butter bean and broccoli mash to scoop or dip, with tender florets that squash easily between two fingers.',
+        steps: [
+          'Steam the broccoli florets for 6-8 minutes, until tender.',
+          'Warm the rinsed butter beans in a pan over low heat for 2-3 minutes.',
+          'Mash the butter beans roughly with a few of the florets, a squeeze of lemon juice, and a drizzle of olive oil, squashing any whole bean.',
+          'Cool to just-warm and serve the mash as a dip with the rest of the broccoli florets, with no added salt.',
+        ],
+      },
+    },
+  },
+  // ---- Item 841: edamame (plant iron + vitamin C; soy) ----
+  // Item 841. Plant iron from edamame with vitamin C from broccoli and lemon.
+  {
+    slug: 'edamame-broccoli-lemon-mash',
+    title: 'Edamame, Broccoli & Lemon Mash',
+    minAgeMonths: 6,
+    prepMinutes: 15,
+    ironFocus: true,
+    fridgeHoursOverride: 48,
+    freezerDaysOverride: 30,
+    ingredients: [
+      { foodSlug: 'edamame', quantityNote: '1/2 cup frozen shelled edamame, with no added salt' },
+      { foodSlug: 'broccoli', quantityNote: '1 cup broccoli florets' },
+      { foodSlug: 'lemon', quantityNote: 'a squeeze of juice' },
+    ],
+    extraIngredients: [{ name: 'olive oil', quantityNote: 'a drizzle of' }],
+    variants: {
+      '6': {
+        textureNote:
+          'A smooth, thick green mash of edamame and broccoli with a squeeze of lemon, with no whole bean or loose skin left.',
+        steps: [
+          'Steam the broccoli florets for 8-10 minutes, until the stems mash easily between two fingers.',
+          'Boil the frozen shelled edamame in unsalted water for 6-8 minutes, until one squashes easily between two fingers, then drain.',
+          'Blend or mash the edamame and broccoli with a drizzle of olive oil and a squeeze of lemon juice until smooth and thick, with no whole bean or loose skin left — whole edamame is a choking hazard at this age.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'A thick mash of edamame and broccoli with some soft texture left, with a few soft broccoli florets to hold and dip.',
+        steps: [
+          'Steam the broccoli florets for 8-10 minutes, until soft, and set two or three florets aside as finger food.',
+          'Boil the frozen shelled edamame in unsalted water for 6-8 minutes, until very soft, then drain.',
+          'Mash the edamame and the rest of the broccoli with a drizzle of olive oil and a squeeze of lemon juice, leaving some soft texture, and check that every edamame bean is smashed flat.',
+          'Cool to just-warm and serve the mash in a bowl with a spoon, with the soft florets alongside for dipping, and no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'A rough mash with every edamame bean smashed flat, served as a dip or with a spoon.',
+        steps: [
+          'Steam the broccoli florets for 6-8 minutes, until tender.',
+          'Boil the frozen shelled edamame in unsalted water for 5-7 minutes, until tender, then drain.',
+          'Roughly mash the edamame and broccoli with a drizzle of olive oil and a squeeze of lemon juice, smashing every bean flat — whole edamame stays a choking hazard.',
+          'Cool to just-warm and serve with a spoon to practice with, or as a dip for soft-cooked vegetables, with no added salt.',
+        ],
+      },
+    },
+  },
+
+  // Item 841. Plant iron from edamame and egg with vitamin C from bell pepper. No soy sauce (salt).
+  {
+    slug: 'edamame-egg-veggie-fried-rice',
+    title: 'Edamame & Egg Veggie Fried Rice',
+    minAgeMonths: 6,
+    prepMinutes: 20,
+    ironFocus: true,
+    fridgeHoursOverride: 24,
+    freezerDaysOverride: 30,
+    ingredients: [
+      { foodSlug: 'edamame', quantityNote: '1/3 cup frozen shelled edamame, with no added salt' },
+      { foodSlug: 'rice', quantityNote: '1 cup cooked rice, very soft' },
+      { foodSlug: 'egg', quantityNote: '1 egg, beaten' },
+      { foodSlug: 'bell_pepper', quantityNote: '1/4 red bell pepper, very finely diced' },
+    ],
+    extraIngredients: [{ name: 'olive oil', quantityNote: 'a drizzle of' }],
+    variants: {
+      '6': {
+        textureNote:
+          'Soft, sticky rice pressed into small balls, with smashed edamame, soft bell pepper, and well-cooked egg mixed through.',
+        steps: [
+          'Boil the frozen shelled edamame in unsalted water for 6-8 minutes, until one squashes easily between two fingers, then drain and smash every bean flat — whole edamame is a choking hazard.',
+          'Warm a drizzle of olive oil in a nonstick pan over medium-low heat and cook the very finely diced bell pepper for 6-8 minutes, stirring, until completely soft with no papery skin left.',
+          'Pour in the beaten egg and scramble it over medium-low heat for 2-3 minutes, until fully set with no runny egg left.',
+          'Add the soft rice and the smashed edamame and stir-fry over low heat for 2-3 minutes, until steaming hot all the way through.',
+          'Squeeze the rice mixture into small balls baby can hold, cool to just-warm, check the temperature, and serve with no added salt or soy sauce.',
+        ],
+      },
+      '9': {
+        textureNote:
+          'Loose soft rice with smashed edamame and small soft pieces of bell pepper and egg (no bigger than ½ inch), for pincer-grasp self-feeding.',
+        steps: [
+          'Boil the frozen shelled edamame in unsalted water for 6-8 minutes, until very soft, then drain and smash each bean flat or split it in half.',
+          'Warm a drizzle of olive oil in a nonstick pan over medium-low heat and cook the very finely diced bell pepper for 6-8 minutes, stirring, until soft.',
+          'Pour in the beaten egg and scramble it over medium-low heat for 2-3 minutes, until fully set, breaking it into small pieces (no bigger than ½ inch).',
+          'Add the rice and the edamame and stir-fry over low heat for 2-3 minutes, until steaming hot all the way through.',
+          'Cool to just-warm and serve on the tray for pincer-grasp self-feeding, with no added salt or soy sauce.',
+        ],
+      },
+      '12': {
+        textureNote:
+          'Family-style fried rice with small bite-sized pieces of egg and bell pepper, and every edamame bean smashed flat or split in half.',
+        steps: [
+          'Boil the frozen shelled edamame in unsalted water for 5-7 minutes, until tender, then drain and smash each bean flat or split it in half — whole edamame stays a choking hazard.',
+          'Warm a drizzle of olive oil in a pan over medium heat and cook the diced bell pepper for 4-5 minutes, until tender.',
+          'Push the bell pepper to one side, pour in the beaten egg, and scramble it over medium heat for 2-3 minutes, until fully set.',
+          'Stir in the rice and the edamame and stir-fry over medium heat for 3-4 minutes, until steaming hot all the way through.',
+          'Cool to just-warm and serve with a spoon to practice with, with no added salt or soy sauce.',
         ],
       },
     },

@@ -337,6 +337,208 @@ export const basicRecipes: RecipeSeed[] = [
     },
   },
   {
+    slug: 'simple-kidney-beans',
+    title: 'Simple kidney beans',
+    minAgeMonths: 6,
+    prepMinutes: 10,
+    ironFocus: false,
+    ingredients: [
+      { foodSlug: 'kidney_beans', quantityNote: '1/3 cup no-salt-added canned kidney beans, or dried beans soaked and boiled as below' },
+    ],
+    variants: {
+      '6': {
+        textureNote: 'Well-mashed kidney beans, with no whole bean or large piece of skin left.',
+        steps: [
+          'Rinse no-salt-added canned kidney beans well, or soak dried kidney beans in plenty of water for at least 5 hours (or overnight) and pour the soaking water away — never cook dried kidney beans in a slow cooker.',
+          'Boil the soaked beans hard in fresh water for at least 30 minutes, then simmer over low heat for 30-60 minutes more, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
+          'Mash the kidney beans well, squashing every bean flat so no whole bean or large piece of skin is left, and loosen the mash with a little of the cooking water if it is stiff.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'Kidney beans squashed flat or lightly mashed, with some soft texture left.',
+        steps: [
+          'Rinse no-salt-added canned kidney beans well, or soak dried kidney beans in plenty of water for at least 5 hours (or overnight) and pour the soaking water away — never cook dried kidney beans in a slow cooker.',
+          'Boil the soaked beans hard in fresh water for at least 30 minutes, then simmer over low heat for 30-60 minutes more, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
+          'Squash each kidney bean flat between your fingers, or mash them lightly, leaving some soft texture for pincer-grasp practice.',
+          'Cool to just-warm and serve on the tray, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Soft kidney beans, lightly squashed or halved, that give easily between two fingers.',
+        steps: [
+          'Rinse no-salt-added canned kidney beans well, or soak dried kidney beans in plenty of water for at least 5 hours (or overnight) and pour the soaking water away — never cook dried kidney beans in a slow cooker.',
+          'Boil the soaked beans hard in fresh water for at least 30 minutes, then simmer over low heat for 30-60 minutes more, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
+          'Squash each kidney bean lightly or cut it in half, since they are bigger than most beans, and serve them in a bowl or mixed through a soft food baby already eats.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-pinto-beans',
+    title: 'Simple pinto beans',
+    minAgeMonths: 6,
+    prepMinutes: 10,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'pinto_beans', quantityNote: '1/3 cup cooked or no-salt-added canned pinto beans' }],
+    extraIngredients: [{ name: 'water, to loosen the mash', quantityNote: 'a little' }],
+    variants: {
+      '6': {
+        textureNote: 'Well-mashed pinto beans, soft enough to scoop, with no whole, round bean left.',
+        steps: [
+          'Soak dried pinto beans in plenty of cold water for 8-12 hours, then drain and rinse them, or rinse no-salt-added canned pinto beans well in a colander.',
+          'Simmer the soaked beans in fresh unsalted water over low heat for 1-2 hours, until one squashes easily between two fingers, or warm the rinsed canned beans over low heat for 2-3 minutes.',
+          'Mash the pinto beans well, squashing every bean flat so no whole, round bean remains — whole beans can be firm enough to pose a choking risk.',
+          'Loosen the mash with a little water if it is stiff, so it is soft and scoopable.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'Lightly mashed or individually squashed pinto beans with some soft texture left, for baby to pick up or scoop.',
+        steps: [
+          'Soak dried pinto beans in cold water for 8-12 hours and drain them, or rinse no-salt-added canned pinto beans well.',
+          'Simmer the soaked beans in fresh unsalted water over low heat for 1-2 hours, or warm rinsed canned beans over low heat for 2-3 minutes, until every bean is very soft.',
+          'Mash the pinto beans lightly, or squash each bean flat between your fingers, leaving some soft texture.',
+          'Loosen the mash with a little water if it is stiff.',
+          'Cool to just-warm and serve on the tray for baby to pick up, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Whole cooked pinto beans soft enough to squash easily between two fingers, or a soft mash to scoop.',
+        steps: [
+          'Soak dried pinto beans in cold water for 8-12 hours and drain them, or rinse no-salt-added canned pinto beans well.',
+          'Simmer the soaked beans in fresh unsalted water over low heat for 1-2 hours, or warm rinsed canned beans over low heat for 2-3 minutes, until one squashes easily between two fingers.',
+          'Serve the pinto beans soft and whole, mixed through rice or another soft food, and squash flat any bean that still feels firm.',
+          'For a spread instead, mash a spoonful of the beans and loosen the mash with a little water.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    // Boil hard >=30 min, then simmer 30-60 min; the recipes say "fully cooked".
+    slug: 'simple-white-beans',
+    title: 'Simple white beans (cannellini)',
+    minAgeMonths: 6,
+    prepMinutes: 10,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'white_beans', quantityNote: '1/3 cup cooked or no-salt-added canned white beans' }],
+    extraIngredients: [{ name: 'water, to loosen the mash', quantityNote: 'a little' }],
+    variants: {
+      '6': {
+        textureNote: 'Well-mashed white beans, soft enough to scoop, with no whole bean or loose skin left.',
+        steps: [
+          'Rinse no-salt-added canned white beans well in a colander, or soak dried white beans in plenty of cold water for 8-12 hours, then drain them and throw the soaking water away.',
+          'Warm the rinsed canned beans over low heat for 2-3 minutes, or bring the soaked beans to a full boil in fresh unsalted water, boil them hard for at least 30 minutes, then simmer over low heat for 30-60 minutes more, until one squashes easily between two fingers — never cook dried beans in a slow cooker, which does not get hot enough.',
+          'Mash the white beans well, squashing every bean flat so no whole bean remains — whole beans can be firm enough to pose a choking risk.',
+          'Loosen the mash with a little water if it is stiff, so it is soft and scoopable.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'Lightly mashed or individually squashed white beans with some soft texture left, for baby to pick up or scoop.',
+        steps: [
+          'Rinse no-salt-added canned white beans well, or soak dried white beans in cold water for 8-12 hours, then drain them and throw the soaking water away.',
+          'Warm the rinsed canned beans over low heat for 2-3 minutes, or bring the soaked beans to a full boil in fresh unsalted water, boil them hard for at least 30 minutes, then simmer over low heat for 30-60 minutes more, until every bean is very soft — never cook dried beans in a slow cooker.',
+          'Mash the white beans lightly, or squash each bean flat between your fingers, leaving some soft texture.',
+          'Loosen the mash with a little water if it is stiff.',
+          'Cool to just-warm and serve on the tray for baby to pick up, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Whole cooked white beans soft enough to squash easily between two fingers, or a soft mash to scoop.',
+        steps: [
+          'Rinse no-salt-added canned white beans well, or soak dried white beans in cold water for 8-12 hours, then drain them and throw the soaking water away.',
+          'Warm the rinsed canned beans over low heat for 2-3 minutes, or bring the soaked beans to a full boil in fresh unsalted water, boil them hard for at least 30 minutes, then simmer over low heat for 30-60 minutes more, until one squashes easily between two fingers — never cook dried beans in a slow cooker.',
+          'Serve the white beans soft and whole, and squash flat any bean that still feels firm — cannellini are big beans.',
+          'For a spread instead, mash a spoonful of the beans and loosen the mash with a little water.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-butter-beans',
+    title: 'Simple butter beans (lima beans)',
+    minAgeMonths: 6,
+    prepMinutes: 10,
+    ironFocus: false,
+    ingredients: [
+      { foodSlug: 'butter_beans', quantityNote: '1/3 cup no-salt-added canned butter beans (lima beans), or dried beans soaked and boiled as below' },
+    ],
+    extraIngredients: [{ name: 'water, to loosen the mash', quantityNote: 'a little' }],
+    variants: {
+      '6': {
+        textureNote: 'Smooth, well-mashed butter beans with no whole bean or loose skin left, soft enough to scoop.',
+        steps: [
+          'Rinse no-salt-added canned butter beans (also sold as lima beans) well, or soak dried butter beans in plenty of cold water for 8-12 hours and pour the soaking water away — they are never served raw.',
+          'Bring the soaked beans to a boil in plenty of fresh, unsalted water, then simmer over low heat for 45-60 minutes, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
+          'Mash the butter beans well, squashing every bean flat and picking out any loose skins, so no whole bean is left.',
+          'Loosen the mash with a little water if it is stiff, so it is soft and scoopable.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'Butter beans squashed flat between your fingers or lightly mashed, with some soft texture left.',
+        steps: [
+          'Rinse no-salt-added canned butter beans well, or soak dried butter beans in plenty of cold water for 8-12 hours and pour the soaking water away — they are never served raw.',
+          'Bring the soaked beans to a boil in plenty of fresh, unsalted water, then simmer over low heat for 45-60 minutes, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
+          'Squash each butter bean flat between your fingers, or mash them lightly, leaving some soft texture for pincer-grasp practice.',
+          'Loosen any mash with a little water if it is stiff.',
+          'Cool to just-warm and serve on the tray, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Soft butter beans, lightly squashed, that give easily between two fingers, or a soft mash to scoop.',
+        steps: [
+          'Rinse no-salt-added canned butter beans well, or soak dried butter beans in plenty of cold water for 8-12 hours and pour the soaking water away.',
+          'Bring the soaked beans to a boil in plenty of fresh, unsalted water, then simmer over low heat for 45-60 minutes, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
+          'Squash each butter bean lightly, since they are big beans, and serve them in a bowl or mixed through a soft food baby already eats.',
+          'For a spread instead, mash a spoonful of the beans and loosen the mash with a little water.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  {
+    slug: 'simple-edamame',
+    title: 'Simple edamame',
+    minAgeMonths: 6,
+    prepMinutes: 10,
+    ironFocus: false,
+    ingredients: [{ foodSlug: 'edamame', quantityNote: '1/3 cup frozen shelled edamame, with no added salt' }],
+    variants: {
+      '6': {
+        textureNote: 'Smooth, well-mashed edamame with no whole bean or loose skin left, soft enough to scoop.',
+        steps: [
+          'Boil the frozen shelled edamame in a small pan of unsalted water for 6-8 minutes, until one squashes easily between two fingers.',
+          'Drain, keeping a little of the cooking water, then blend or mash the edamame until smooth, with no whole bean or loose skin left — whole edamame is firm, round, and slippery, a choking hazard at this age.',
+          'Loosen the mash with a spoonful of the cooking water if it is stiff, so it is soft and scoopable.',
+          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+        ],
+      },
+      '9': {
+        textureNote: 'Edamame beans each smashed flat or split in half, soft enough for baby to pick up with a pincer grasp.',
+        steps: [
+          'Boil the frozen shelled edamame in a small pan of unsalted water for 6-8 minutes, until very soft, then drain.',
+          'Smash each edamame bean flat with the back of a fork, or split it into its two halves along the seam and peel off the thin outer skin.',
+          'Check that no whole, round bean is left on the plate.',
+          'Cool to just-warm and serve on the tray for pincer-grasp self-feeding, with no added salt.',
+        ],
+      },
+      '12': {
+        textureNote: 'Tender edamame, every bean smashed flat or split in half, on its own or mixed through rice.',
+        steps: [
+          'Boil the frozen shelled edamame in unsalted water for 5-7 minutes, until tender and easily squashed between two fingers, then drain.',
+          'Smash each edamame bean flat or split it in half before serving — whole beans stay a choking hazard, and the pods are never served.',
+          'Serve them on their own or stirred through soft rice.',
+          'Cool to just-warm and serve with no added salt.',
+        ],
+      },
+    },
+  },
+  {
     slug: 'simple-tofu',
     title: 'Simple tofu',
     minAgeMonths: 6,

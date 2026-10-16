@@ -23,8 +23,8 @@ async function loadRunSeeds(): Promise<(db: Database) => Promise<void>> {
 }
 
 /** Catalog size after the spices batch (329-332), the plain nuts (item 342), cauliflower (item 508), onion (item 728)
- * and the five ingredient foods (ledger 838). */
-const CATALOG_FOOD_COUNT = 87;
+ * the five ingredient foods (ledger 838), the five fall/winter foods (835) and the five beans (841). */
+const CATALOG_FOOD_COUNT = 92;
 
 /**
  * Ledger 838: every catalog food that is not plain `food`, with its kind, and
@@ -235,6 +235,11 @@ const HAZARD_COPY: Record<string, HazardCopy> = {
     hazard: /small, round, and hard/i,
     everyPrep: /\bburst/i,
   },
+  edamame: {
+    safeForm: /smash each bean flat or split it in half/i,
+    hazard: /whole edamame/i,
+    everyPrep: /smash|mash|split/i,
+  },
   carrot: {
     safeForm: /cook until it mashes/i,
     hazard: /\braw\b/i,
@@ -331,7 +336,7 @@ describe("seeded catalog after the spices expansion", () => {
     await close();
   });
 
-  it("seeds exactly 87 catalog foods, 12 of them spices", async () => {
+  it("seeds exactly 92 catalog foods, 12 of them spices", async () => {
     const rows = await db
       .select({ slug: schema.foods.slug, category: schema.foods.category })
       .from(schema.foods)
@@ -565,9 +570,9 @@ describe("seeded catalog after the spices expansion", () => {
 
     expect(rows.filter((r) => !r.chokingNotes?.trim()).map((r) => r.slug)).toEqual([]);
     expect(rows.filter((r) => !Object.hasOwn(HAZARD_COPY, r.slug)).map((r) => r.slug)).toEqual([]);
-    // The 17 the catalog holds today (6 produce, 3 butters, 7 nuts, pumpkin
+    // The 18 the catalog holds today (6 produce, edamame, 3 butters, 7 nuts, pumpkin
     // seeds) — a food dropping OUT of `high` is a safety change too.
-    expect(rows).toHaveLength(17);
+    expect(rows).toHaveLength(18);
   });
 
   it("re-seeds without changing a single catalog row", async () => {
@@ -580,7 +585,7 @@ describe("seeded catalog after the spices expansion", () => {
     expect(secondPass.counts).toEqual(firstPass.counts);
     expect(secondPass.digest).toBe(firstPass.digest);
     expect(firstPass.counts.foods).toBe(CATALOG_FOOD_COUNT);
-    // 16 curated (item 795 added the egg bake) + 60 coverage (items 338-339, 343, 357, 510, 728, 835) + 68 single-food basics (lemon and onion have none, items 484, 728).
-    expect(firstPass.counts.recipes).toBe(144);
+    // 16 curated (item 795 added the egg bake) + 70 coverage (items 338-339, 343, 357, 510, 728, 835, 841) + 73 single-food basics (lemon and onion have none, items 484, 728).
+    expect(firstPass.counts.recipes).toBe(159);
   });
 });

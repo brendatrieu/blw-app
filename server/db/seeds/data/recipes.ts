@@ -745,12 +745,12 @@ const curatedRecipes: RecipeSeed[] = [
   },
 ]
 
-// The seeded catalog, 144 recipes: the 16 curated multi-ingredient recipes FIRST (the
-// original 15 in their original order, with item 795's egg bake after the muffins), then the 60
+// The seeded catalog, 159 recipes: the 16 curated multi-ingredient recipes FIRST (the
+// original 15 in their original order, with item 795's egg bake after the muffins), then the 70
 // coverage recipes (items 338-339 wrote 39 across two
 // files purely so two authors could write them in parallel; item 343 added batch C for
 // the two plain tree nuts, items 357 and 510 appended two more each for potato and
-// cauliflower, item 728 appended three for onion, and item 835 ten for its five fall/winter foods), then the 68 single-food
+// cauliflower, item 728 appended three for onion, item 835 ten for its five fall/winter foods, and item 841 ten for its five beans), then the 73 single-food
 // "Simple <food>" basics (one per non-spice food — spices have none, and neither
 // do lemon and onion, which are only ever ingredients; see basicRecipes.ts). Order matters only for readability of a fresh seed — every row
 // upserts by slug — but keeping the curated block first means the original 15 are

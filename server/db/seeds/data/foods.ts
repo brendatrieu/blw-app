@@ -1,6 +1,6 @@
 import type { FoodSeed } from './types'
 
-// ~87 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
+// ~92 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
 // staples. minAgeMonths is 6 for nearly everything (BLW typically starts around 6 months when
 // baby shows readiness signs); shellfish is held to 9 months per the allergen ladder ordering.
 // Prep guidance is age-specific: 6-8m favors palmar-grasp finger shapes and thinned textures,
@@ -166,6 +166,147 @@ export const foods: FoodSeed[] = [
     chokingNotes: 'Squash or mash beans rather than serving them fully whole and round, especially before 9 months.',
     notes: 'Pair with a vitamin-C food such as orange or bell pepper to boost non-heme iron absorption.',
     allergens: [],
+    storageCategory: 'legume_tofu_cooked',
+  },
+  {
+    // Item 841. Levels from USDA FoodData Central 173740 (kidney beans, all types, cooked,
+    // boiled, without salt; SR Legacy, 2019): iron 2.22 mg, vitamin C 1.2 mg, fiber 6.4 g per
+    // 100 g — moderate / low / high on the catalog's thresholds. Red kidney, boiled (175194), is
+    // iron 2.94 mg, but chickpeas sit at 2.89 as moderate and canned kidney beans (173741) are
+    // 1.17 mg, so moderate. Raw or undercooked dried kidney beans carry a natural lectin
+    // (phytohaemagglutinin): FDA's Bad Bug Book says soak at least 5 hours, discard the water,
+    // boil in fresh water at least 30 minutes, and never use a slow cooker. Canned beans are
+    // already cooked.
+    slug: 'kidney_beans',
+    name: 'Kidney Beans',
+    category: 'legume',
+    ironLevel: 'moderate',
+    vitaminCLevel: 'low',
+    fiberLevel: 'high',
+    chokingRisk: 'moderate',
+    minAgeMonths: 6,
+    prep6m:
+      'Cook until very soft (or use rinsed, no-salt-added canned beans), then mash well so no whole bean is left, and serve on a pre-loaded spoon or spread on a soft toast finger.',
+    prep9m:
+      'Cook until very soft, then squash each bean flat between your fingers or mash lightly, leaving some soft texture for pincer-grasp practice.',
+    prep12m:
+      'Cook until soft enough to squash easily between two fingers, then serve them lightly squashed or halved — kidney beans are bigger than most beans — mixed into rice, a stew, or a grain bowl.',
+    chokingNotes:
+      'Whole kidney beans are bigger than most beans and their skins can be tough, so a whole bean can be a choking hazard — mash them, squash each one flat, or halve them rather than serving them whole.',
+    notes:
+      'Never serve raw or undercooked kidney beans: dried ones carry a natural toxin that only hard boiling destroys. Soak dried beans for at least 5 hours, pour the water away, and boil them in fresh water for at least 30 minutes before simmering them soft — and never cook dried kidney beans in a slow cooker, which does not get hot enough. Canned kidney beans are already cooked and safe; choose no-salt-added cans and rinse them well. A good plant-based iron source — pair with a vitamin-C food like bell pepper or tomato to boost absorption.',
+    allergens: [],
+    storageCategory: 'legume_tofu_cooked',
+  },
+  {
+    // Item 841. Levels from USDA FoodData Central 175200 (beans, pinto, mature seeds, cooked,
+    // boiled, without salt; SR Legacy): iron 2.09 mg, vitamin C 0.8 mg, fiber 9.0 g per 100 g —
+    // moderate / low / high on the catalog's thresholds, the same buckets as black beans (2.10 mg).
+    // Canned refried beans (172438) run about 370 mg sodium per 100 g, hence the homemade-only note.
+    slug: 'pinto_beans',
+    name: 'Pinto Beans',
+    category: 'legume',
+    ironLevel: 'moderate',
+    vitaminCLevel: 'low',
+    fiberLevel: 'high',
+    chokingRisk: 'moderate',
+    minAgeMonths: 6,
+    prep6m:
+      'Cook until very soft and mash well or blend smooth; whole beans can be firm enough to pose a choking risk, so mash or squash each one flat.',
+    prep9m:
+      'Mash lightly or squash each bean flat between your fingers before serving, leaving some soft texture, or serve as homemade refried beans.',
+    prep12m:
+      'Serve whole cooked beans that are soft enough to squash easily between two fingers, mixed into rice, a stew, or a bowl, or as homemade refried beans.',
+    chokingNotes:
+      'Whole beans are firm and round enough to be a choking hazard for young babies — squash or mash them rather than serving them fully whole, especially before 9 months.',
+    notes:
+      'A good plant-based (non-heme) iron source with plenty of fiber — pair with a vitamin-C food such as bell pepper or tomato to boost absorption. Pinto beans are the usual bean in refried beans: make them at home with no salt, because most canned refried beans are high in salt. Choose dried beans or no-salt-added canned beans, and rinse canned beans before using them.',
+    allergens: [],
+    storageCategory: 'legume_tofu_cooked',
+  },
+  {
+    // Item 841. Levels from USDA FoodData Central 175203 (beans, white, mature seeds, cooked,
+    // boiled, without salt; SR Legacy): iron 3.70 mg, vitamin C 0.0 mg, fiber 6.3 g per 100 g —
+    // high / low / high on the catalog's thresholds (lentils, 3.33 mg, are high). SR Legacy has no
+    // cannellini row; navy (173746, 2.36 mg) and great northern (175191, 2.13 mg) run lower.
+    // Cannellini are white kidney beans: FDA's Bad Bug Book puts their raw lectin at about a
+    // third of red kidney beans', destroyed by a hard boil, hence the soak/boil/no-slow-cooker note.
+    // Dried-bean boil is >=30 min (FDA consumer advice) in the notes and the basic.
+    slug: 'white_beans',
+    name: 'White Beans (Cannellini)',
+    category: 'legume',
+    ironLevel: 'high',
+    vitaminCLevel: 'low',
+    fiberLevel: 'high',
+    chokingRisk: 'moderate',
+    minAgeMonths: 6,
+    prep6m:
+      'Cook until very soft and mash well or blend smooth; whole beans can be firm enough to pose a choking risk, so mash or squash each one flat.',
+    prep9m:
+      'Mash lightly or squash each bean flat between your fingers before serving, leaving some soft texture, or shape the mash into soft baked patties.',
+    prep12m:
+      'Serve whole cooked beans that are soft enough to squash easily between two fingers, mixed into a stew or a bowl, and squash flat any bean that still feels firm.',
+    chokingNotes:
+      'Whole beans are firm and round enough to be a choking hazard for young babies, and cannellini are among the biggest beans — squash or mash them rather than serving them fully whole, especially before 9 months.',
+    notes:
+      'A strong plant-based (non-heme) iron source with plenty of fiber — pair with a vitamin-C food such as broccoli, tomato, or bell pepper to boost absorption. Cannellini are large white kidney beans; smaller navy beans and great northern beans cook and serve the same way, with a little less iron. Canned beans are already cooked: choose no-salt-added and rinse them. Dried white beans must be soaked, then boiled hard in fresh water for at least 30 minutes before simmering, and never cooked from dried in a slow cooker, which does not get hot enough to destroy a natural toxin in undercooked beans.',
+    allergens: [],
+    storageCategory: 'legume_tofu_cooked',
+  },
+  {
+    // Item 841. Butter beans and lima beans are the same bean (Phaseolus lunatus); the name
+    // carries both so either word finds it. Levels from USDA FoodData Central 174253 (lima
+    // beans, large, mature seeds, cooked, boiled, without salt; SR Legacy): iron 2.39 mg,
+    // vitamin C 0 mg, fiber 7.0 g per 100 g — moderate / low / high on the catalog's
+    // thresholds. Canned (174254) is iron 1.81 mg, sodium 336 mg. Raw lima beans carry
+    // linamarin, a natural compound that can release cyanide; soaking, pouring the water
+    // away, and boiling in plenty of fresh water breaks it down (Oregon State University
+    // Extension; FSANZ cyanogenic glycoside survey). Canned beans are already cooked.
+    slug: 'butter_beans',
+    name: 'Butter Beans (Lima Beans)',
+    category: 'legume',
+    ironLevel: 'moderate',
+    vitaminCLevel: 'low',
+    fiberLevel: 'high',
+    chokingRisk: 'moderate',
+    minAgeMonths: 6,
+    prep6m:
+      'Cook until very soft (or use rinsed, no-salt-added canned beans), then mash well or blend smooth, picking out any loose skins, and serve on a pre-loaded spoon.',
+    prep9m:
+      'Cook until very soft, then squash each bean flat between your fingers or mash lightly, leaving some soft texture for pincer-grasp practice.',
+    prep12m:
+      'Cook until soft enough to squash easily between two fingers, then serve them lightly squashed — butter beans are big — in a stew, a bake, or a grain bowl.',
+    chokingNotes:
+      'Whole butter beans are large, and their skins can slip off in one tough piece, so a whole bean can be a choking hazard — mash them or squash each one flat rather than serving them whole, and pick out loose skins for young babies.',
+    notes:
+      'Butter beans and lima beans are the same bean. Never serve them raw or undercooked: raw lima beans contain a natural compound that can release cyanide, and thorough cooking breaks it down. Soak dried beans overnight, pour the soaking water away, and boil them in plenty of fresh water until very soft; fresh or frozen lima beans need cooking until soft too. Canned butter beans are already cooked; choose no-salt-added cans and rinse them well. A good plant-based iron source with plenty of fiber — pair with a vitamin-C food such as broccoli or tomato to boost absorption.',
+    allergens: [],
+    storageCategory: 'legume_tofu_cooked',
+  },
+  {
+    // Item 841. Levels from USDA FoodData Central 168411 (edamame, frozen, prepared; SR Legacy):
+    // iron 2.27 mg, vitamin C 6.1 mg, fiber 5.2 g per 100 g — moderate / low / high on the
+    // catalog's thresholds. Soy-tagged, so it counts toward the soy ladder step like tofu.
+    // chokingRisk 'high' (round, firm and slippery even when cooked), pinned in HAZARD_COPY.
+    slug: 'edamame',
+    name: 'Edamame',
+    category: 'legume',
+    ironLevel: 'moderate',
+    vitaminCLevel: 'low',
+    fiberLevel: 'high',
+    chokingRisk: 'high',
+    minAgeMonths: 6,
+    prep6m:
+      'Cook frozen shelled edamame until very soft, then blend or mash it into a smooth spread — whole beans are a choking hazard at this age, and the pods are never served.',
+    prep9m:
+      'Cook until very soft, then smash each bean flat with a fork or between your fingers, or split it into its two halves and peel off the thin skin.',
+    prep12m:
+      'Cook until tender and smash each bean flat or split it in half before serving, on its own or mixed into rice or a grain bowl; never serve whole beans or the pods.',
+    chokingNotes:
+      'Whole edamame beans are firm, round, and slippery — a choking hazard. Always smash each bean flat or split it in half, and never serve the pods, which are tough and stringy.',
+    notes:
+      'Young green soybeans: a plant-based (non-heme) iron source with plenty of fiber and protein — pair with a vitamin-C food such as broccoli or bell pepper to boost absorption. Edamame is soy, so it counts as a soy serving on the allergen ladder, just like tofu. Buy plain frozen shelled edamame with no added salt or seasoning.',
+    allergens: ['soy'],
     storageCategory: 'legume_tofu_cooked',
   },
   {

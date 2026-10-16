@@ -77,6 +77,12 @@ const EXPECTED_FIBER_LEVEL: Record<string, "high" | "moderate" | "low"> = {
   kale: "high", // 4.0 g, boiled (fdcId 169238); frozen boiled (169240) is 2.3 g
   beets: "moderate", // 2.0 g, boiled (fdcId 169146)
   cranberries: "high", // 3.6 g, raw (fdcId 171722); FDC has no plain cooked entry
+  // Item 841's beans (USDA SR Legacy, catalog-beans/FOOD-*.md §1).
+  kidney_beans: "high", // 6.4 g, boiled (fdcId 173740); canned (173741) is 4.3 g, still high
+  pinto_beans: "high", // 9.0 g, boiled without salt (fdcId 175200)
+  white_beans: "high", // 6.3 g, boiled without salt (fdcId 175203)
+  butter_beans: "high", // 7.0 g, boiled (fdcId 174253); canned (174254) is 4.8 g, still high
+  edamame: "high", // 5.2 g, frozen, prepared (fdcId 168411)
 };
 
 describe("seeded fiber levels", () => {

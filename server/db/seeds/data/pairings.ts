@@ -110,4 +110,9 @@ export const pairings: PairingSeed[] = [
     vitCFoodSlug: 'broccoli',
     reason: "Broccoli's vitamin C helps baby absorb more of the non-heme iron in finely ground cashew meal.",
   },
+  {
+    ironFoodSlug: 'white_beans',
+    vitCFoodSlug: 'broccoli',
+    reason: "Broccoli's vitamin C helps baby absorb more of the plant-based iron in white beans.",
+  },
 ]
