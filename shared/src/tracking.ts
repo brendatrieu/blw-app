@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { foodCategorySchema } from "./catalog.js";
+import { foodCategorySchema, foodKindSchema } from "./catalog.js";
 
 /**
  * Per-baby tracking: meals (one sitting, one or more foods — the completion
@@ -358,8 +358,8 @@ export const ALLERGEN_ESTABLISHED_SERVINGS = 3;
  * this rule is spelled out — the server route and its tests both call this
  * instead of re-deriving the thresholds.
  *
- * `exposures` stays the row's whole count (one per food per meal, any
- * timing); the pause is a separate question, asked by
+ * `exposures` stays the row's whole count (one per meal that carried a
+ * counting food for this allergen, any timing — ledger 836); the pause is a separate question, asked by
  * `allergenReactionPauses`, so that this function keeps taking the same
  * number the API reports. A pause is never a downgrade: it only withholds
  * the promotion, and `unionAllergenStatus` still lets a parent's mark
@@ -625,6 +625,15 @@ export const allergenDetailFoodSchema = z.object({
    * served it still count toward this allergen; the page marks it and offers
    * no "Log meal". Optional so an older cached body still parses. */
   deleted: z.boolean().optional(),
+  /** See `foodKindSchema`: the page offers no "Log meal" for an `info` food,
+   * and Up next never prefills anything but a `food`. Optional for older
+   * cached bodies; absent reads as `food`. */
+  kind: foodKindSchema.optional(),
+  /** False when this food's tag for THIS allergen never moves the ladder
+   * (ledger 836: butter and whole milk for Milk, sesame oil for Sesame). The
+   * page says why under the food. Optional for older cached bodies; absent
+   * reads as counting. */
+  countsTowardProgress: z.boolean().optional(),
 });
 export type AllergenDetailFood = z.infer<typeof allergenDetailFoodSchema>;
 
@@ -643,8 +652,14 @@ export const allergenDetailExposureSchema = z.object({
       name: z.string(),
       emoji: z.string().nullable(),
       deleted: z.boolean().optional(),
+      kind: foodKindSchema.optional(),
     }),
   ),
+  /** False when every allergen food of this meal is one that never moves
+   * the ladder (ledger 836): the meal is real history and stays listed (its
+   * reaction matters), but it was not one of the 3 servings. Optional for
+   * older cached bodies; absent reads as counted. */
+  counted: z.boolean().optional(),
   /** `meals.reactionNote` under the name this page reads it by. */
   reaction: z.string().nullable(),
   notes: z.string().nullable(),

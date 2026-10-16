@@ -39,11 +39,16 @@ const EXPOSURE_LIMIT = 50;
  * (unstepped allergens last, alphabetically) so the response is already in
  * the order the tracker renders it.
  *
- * One exposure = one (meal, food) pair carrying the allergen, exactly the
- * granularity the old one-row-per-food serve log counted. Parent overrides
- * are read alongside the derivation rather than folded into the exposure
- * query on purpose: `exposures` stays a pure count of real meals, and the
- * union happens in one shared function.
+ * One exposure = one MEAL carrying a counting food for the allergen (ledger
+ * 836): yogurt and cheese in one sitting are one dairy serving, not two. A
+ * tag whose `food_allergens.counts_toward_progress` is false (butter and
+ * whole milk for Milk, sesame oil for Sesame) never moves `exposures`,
+ * `firstAt` or `lastAt` — so it cannot start an allergen, add a serving or
+ * reset the maintenance countdown — but its meal still feeds
+ * `lastReactionAt`: the reaction badge is a safety flag, not progress.
+ * Parent overrides are read alongside the derivation rather than folded into
+ * the exposure query on purpose: `exposures` stays a pure count of real
+ * meals, and the union happens in one shared function.
  *
  * Reaction notes are read the same way — as a fact of the meal log, split
  * out of the same aggregate — and the rule they feed ("established after 3
@@ -69,13 +74,16 @@ export async function loadAllergenProgress(db: Database, babyId: string): Promis
   // already collapses "" to null (`optionalReactionNote`), and the trim here
   // catches whitespace written by any other path.
   const hasReaction = sql`${meals.reactionNote} is not null and btrim(${meals.reactionNote}) <> ''`;
+  const counts = foodAllergens.countsTowardProgress;
   const exposureRows = await db
     .select({
       allergenId: foodAllergens.allergenId,
-      exposures: sql<number>`count(*)::int`,
-      cleanExposures: sql<number>`(count(*) filter (where not (${hasReaction})))::int`,
-      firstAt: sql<string>`min(${meals.servedAt})`,
-      lastAt: sql<string>`max(${meals.servedAt})`,
+      exposures: sql<number>`(count(distinct ${mealFoods.mealId}) filter (where ${counts}))::int`,
+      cleanExposures: sql<number>`(count(distinct ${mealFoods.mealId}) filter (where ${counts} and not (${hasReaction})))::int`,
+      // Null when every meal for this allergen was a non-counting one.
+      firstAt: sql<string | null>`min(${meals.servedAt}) filter (where ${counts})`,
+      lastAt: sql<string | null>`max(${meals.servedAt}) filter (where ${counts})`,
+      // Every tagged meal, counting or not (see the doc comment).
       lastReactionAt: sql<string | null>`max(${meals.servedAt}) filter (where ${hasReaction})`,
     })
     .from(mealFoods)
@@ -106,7 +114,7 @@ export async function loadAllergenProgress(db: Database, babyId: string): Promis
     const reactionNotedAt = exposure?.lastReactionAt ? new Date(exposure.lastReactionAt).toISOString() : null;
     const reactionNoted = allergenReactionPauses(reactionNotedAt, exposure?.cleanExposures ?? 0);
     const { status, overridden } = unionAllergenStatus(exposures, markedAt !== null, reactionNoted);
-    const lastServed = exposure ? new Date(exposure.lastAt) : null;
+    const lastServed = exposure?.lastAt ? new Date(exposure.lastAt) : null;
     const lastServedAt = lastServed ? lastServed.toISOString() : null;
     // The later of the two ways this baby is known to have met the allergen.
     // A mark counts here even on a derived-established row whose `overridden`
@@ -121,7 +129,7 @@ export async function loadAllergenProgress(db: Database, babyId: string): Promis
       allergenName: a.name,
       introGuidance: a.introGuidance,
       exposures,
-      firstAt: exposure ? new Date(exposure.firstAt).toISOString() : null,
+      firstAt: exposure?.firstAt ? new Date(exposure.firstAt).toISOString() : null,
       // Null means "nothing logged", including for a row an override alone
       // established — see the schema's note on `lastServedAt`.
       lastServedAt,
@@ -161,12 +169,8 @@ export async function loadAllergenDetail(
   const progress = (await loadAllergenProgress(db, babyId)).find((item) => item.allergenSlug === slug);
   if (!progress) return null;
 
-  const matchingFoodIds = db
-    .select({ foodId: foodAllergens.foodId })
-    .from(foodAllergens)
-    .innerJoin(allergens, eq(foodAllergens.allergenId, allergens.id))
-    .where(eq(allergens.slug, slug));
-
+  // Joined on THIS allergen's tag, because the counting flag lives on the
+  // (food, allergen) pair: one food can carry two allergens.
   const foodRows = await db
     .select({
       id: foods.id,
@@ -176,12 +180,16 @@ export async function loadAllergenDetail(
       emoji: foods.emoji,
       ownerId: foods.ownerId,
       deletedAt: foods.deletedAt,
+      kind: foods.kind,
+      countsTowardProgress: foodAllergens.countsTowardProgress,
     })
     .from(foods)
+    .innerJoin(foodAllergens, eq(foodAllergens.foodId, foods.id))
+    .innerJoin(allergens, eq(foodAllergens.allergenId, allergens.id))
     // Visibility first: every other condition narrows what this allows.
     // Deleted foods stay: these ids are what exposures are matched on, and a
     // meal that served one still counts in `progress` above.
-    .where(and(visibleFoodsCondition(userId), inArray(foods.id, matchingFoodIds)))
+    .where(and(visibleFoodsCondition(userId), eq(allergens.slug, slug)))
     .orderBy(asc(foods.name));
 
   const detailFoods = foodRows.map((f) => ({
@@ -194,6 +202,8 @@ export async function loadAllergenDetail(
     emoji: f.emoji,
     isCustom: f.ownerId !== null,
     deleted: f.deletedAt !== null,
+    kind: f.kind,
+    countsTowardProgress: f.countsTowardProgress,
   }));
 
   // No food carries this allergen (or none this caller can see), so no meal
@@ -229,6 +239,7 @@ export async function loadAllergenDetail(
             name: foods.name,
             emoji: foods.emoji,
             deleted: sql<boolean>`${foods.deletedAt} is not null`,
+            kind: foods.kind,
           })
           .from(mealFoods)
           .innerJoin(foods, eq(mealFoods.foodId, foods.id))
@@ -236,10 +247,10 @@ export async function loadAllergenDetail(
           .orderBy(asc(foods.name))
       : [];
 
-  const foodsByMealId = new Map<string, { id: string; name: string; emoji: string | null; deleted: boolean }[]>();
+  const foodsByMealId = new Map<string, AllergenDetail["exposures"][number]["foods"]>();
   for (const row of exposureFoodRows) {
     const list = foodsByMealId.get(row.mealId);
-    const food = { id: row.id, name: row.name, emoji: row.emoji, deleted: row.deleted };
+    const food = { id: row.id, name: row.name, emoji: row.emoji, deleted: row.deleted, kind: row.kind };
     if (list) {
       list.push(food);
     } else {
@@ -247,13 +258,20 @@ export async function loadAllergenDetail(
     }
   }
 
-  const exposures = mealRows.map((row) => ({
-    mealId: row.id,
-    servedAt: row.servedAt.toISOString(),
-    foods: foodsByMealId.get(row.id) ?? [],
-    reaction: row.reactionNote,
-    notes: row.notes,
-  }));
+  const countingFoodIds = new Set(detailFoods.filter((f) => f.countsTowardProgress).map((f) => f.id));
+  const exposures = mealRows.map((row) => {
+    const mealFoodList = foodsByMealId.get(row.id) ?? [];
+    return {
+      mealId: row.id,
+      servedAt: row.servedAt.toISOString(),
+      foods: mealFoodList,
+      // The same rule `loadAllergenProgress` counts by: a meal is a serving
+      // when at least one of its foods carries a counting tag.
+      counted: mealFoodList.some((food) => countingFoodIds.has(food.id)),
+      reaction: row.reactionNote,
+      notes: row.notes,
+    };
+  });
 
   return { progress, foods: detailFoods, exposures };
 }

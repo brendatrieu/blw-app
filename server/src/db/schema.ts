@@ -186,11 +186,20 @@ export const foods = pgTable(
     // "(deleted)"); choosing/browsing reads filter it out. Only ever set on a
     // custom food — the catalog cannot be deleted.
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    // Ledger 838 (migration 0022): what a food IS, beside its category.
+    // 'food' is everything a parent serves (custom foods are always 'food').
+    // 'ingredient' (brown rice, flour, butter, sesame oil) is searchable and
+    // loggable like a food but exempt from the seeds' recipe-count and
+    // basic-recipe rules. 'info' (whole milk) is never logged on its own: it
+    // reaches a meal only through a served recipe that uses it. Text plus a
+    // CHECK rather than a pg enum, so a new kind avoids ALTER TYPE.
+    kind: text("kind", { enum: ["food", "ingredient", "info"] }).notNull().default("food"),
   },
   (t) => [
     index("foods_iron_level_idx").on(t.ironLevel),
     index("foods_category_idx").on(t.category),
     index("foods_owner_id_idx").on(t.ownerId),
+    check("foods_kind_valid", sql`${t.kind} IN ('food', 'ingredient', 'info')`),
   ],
 );
 
@@ -203,6 +212,11 @@ export const foodAllergens = pgTable(
     allergenId: uuid("allergen_id")
       .notNull()
       .references(() => allergens.id, { onDelete: "cascade" }),
+    // Ledger 836 (migration 0022): false where the tag protects an allergic
+    // baby but the dose is too small or too heat-changed to be a serving
+    // (butter and whole milk -> Milk, sesame oil -> Sesame). The tag still
+    // shows everywhere; only allergen-ladder progress skips it.
+    countsTowardProgress: boolean("counts_toward_progress").notNull().default(true),
   },
   (t) => [primaryKey({ columns: [t.foodId, t.allergenId] })],
 );

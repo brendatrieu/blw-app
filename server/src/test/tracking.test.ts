@@ -1447,6 +1447,8 @@ describe("tracking routes", () => {
         emoji: "🥘",
         isCustom: true,
         deleted: false,
+        kind: "food",
+        countsTowardProgress: true,
       });
       // The catalog row reads as catalog: no owner, no parent-picked emoji.
       expect(detail.foods.find((f) => f.slug === "egg")).toMatchObject({ isCustom: false, emoji: null });
@@ -1487,7 +1489,12 @@ describe("tracking routes", () => {
         name: "Nana's frittata",
         emoji: "🥘",
         deleted: false,
+        kind: "food",
       });
+      // Ledger 836: egg + a custom egg food in one sitting is ONE serving, so
+      // two meals are 2, not 3; and both meals counted.
+      expect(detail.progress.exposures).toBe(2);
+      expect(detail.exposures.map((e) => e.counted)).toEqual([true, true]);
       expect(detail.exposures[1]).toMatchObject({
         mealId: older.id,
         servedAt: "2026-03-01T08:00:00.000Z",

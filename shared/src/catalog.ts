@@ -12,6 +12,18 @@ export type Level = z.infer<typeof levelSchema>;
 export const foodCategorySchema = z.enum(["protein", "veg", "fruit", "grain", "dairy", "legume", "spice"]);
 export type FoodCategory = z.infer<typeof foodCategorySchema>;
 
+/**
+ * What a food IS (ledger 838), beside its category. `food`: everything a
+ * parent serves, custom foods included. `ingredient` (brown rice, flour,
+ * butter, sesame oil): searchable and loggable like any food, only exempt
+ * from the catalog's recipe-count rules. `info` (whole milk): never logged
+ * on its own — it reaches a meal only through a served recipe that uses it,
+ * so pickers for a meal or a container leave it out and the server refuses
+ * it there. No suggestion may offer anything but `food`.
+ */
+export const foodKindSchema = z.enum(["food", "ingredient", "info"]);
+export type FoodKind = z.infer<typeof foodKindSchema>;
+
 export const ageStageSchema = z.enum(["6", "9", "12"]);
 export type AgeStage = z.infer<typeof ageStageSchema>;
 
@@ -82,6 +94,9 @@ export const foodListItemSchema = z.object({
   /** The parent's chosen emoji, or null — the client falls back to its own
    * slug/category emoji map. */
   emoji: z.string().nullable(),
+  /** See `foodKindSchema`. Optional so a body cached before ledger 838
+   * still parses; absent reads as `food`. */
+  kind: foodKindSchema.optional(),
 });
 export type FoodListItem = z.infer<typeof foodListItemSchema>;
 

@@ -6,7 +6,7 @@
 // it only unions into the reported status (see `unionAllergenStatus`). Every
 // route sits behind requireAuth and every baby/meal lookup is scoped to the
 // caller's own rows — a miss (wrong owner or unknown id) is 404, never 403.
-import { and, desc, eq, inArray, isNotNull, isNull, lt, notInArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, ne, notInArray, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   allergenDetailParamsSchema,
@@ -44,6 +44,7 @@ import { loadAllergenDetail, loadAllergenProgress } from "../services/allergens.
 import { visibleRecipesCondition } from "../services/recipes.js";
 import {
   countServed,
+  INFO_FOOD_ALONE,
   ingredientUnion,
   insertMeal,
   loadIngredientFoodIds,
@@ -51,6 +52,7 @@ import {
   loadMeals,
   loadRatingHistory,
   loadRatingSummaries,
+  looseInfoFoodIds,
   ownsBaby,
   writeMealMirror,
   type Queryable,
@@ -420,6 +422,8 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     if (!recipeCheck.ok) return badRequest(reply, recipeCheck.details);
 
     const ingredients = ingredientUnion(await loadIngredientFoodIds(db, recipeIds), recipeIds);
+    const looseInfo = await looseInfoFoodIds(db, children.value, ingredients);
+    if (looseInfo.length > 0) return badRequest(reply, { foodIds: INFO_FOOD_ALONE, infoFoodIds: looseInfo });
     const ratings = validateRatings({
       recipeIds,
       ingredientsOfFinal: ingredients,
@@ -513,6 +517,16 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
         // Ratings are checked against the meal as it will be AFTER this edit.
         const ingredientsByRecipe = await loadIngredientFoodIds(tx, finalRecipeIds);
         const ingredientsOfAdded = ingredientUnion(ingredientsByRecipe, added);
+        if (foodIds) {
+          // What the meal already held stays allowed, like a deleted food: an
+          // edit resends the whole list, and the milk a recipe brought in must
+          // not turn an unrelated edit into a 400.
+          const allowed = new Set([...ingredientUnion(ingredientsByRecipe, finalRecipeIds), ...previousByFoodId.keys()]);
+          const looseInfo = await looseInfoFoodIds(tx, foodIds, allowed);
+          if (looseInfo.length > 0) {
+            throw new MealEditAborted({ code: 400, details: { foodIds: INFO_FOOD_ALONE, infoFoodIds: looseInfo } });
+          }
+        }
         const ratings = validateRatings({
           recipeIds: finalRecipeIds,
           ingredientsOfFinal: ingredientUnion(ingredientsByRecipe, finalRecipeIds),
@@ -721,12 +735,15 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     // helper, so a ladder row and the page it opens can never disagree.
     const items = await loadAllergenProgress(db, params.data.babyId);
     // Item 680: rides on this response because Home already fetches it and
-    // every meal write already refreshes it.
+    // every meal write already refreshes it. Ledger 838: an 'info' food
+    // (whole milk, only ever there inside a recipe) is not a food tried;
+    // ingredients and spices are.
     const [tried] = await db
       .select({ count: sql<number>`count(distinct ${mealFoods.foodId})::int` })
       .from(mealFoods)
       .innerJoin(meals, eq(mealFoods.mealId, meals.id))
-      .where(eq(meals.babyId, params.data.babyId));
+      .innerJoin(foods, eq(mealFoods.foodId, foods.id))
+      .where(and(eq(meals.babyId, params.data.babyId), ne(foods.kind, "info")));
 
     return reply.send({ items, foodsTried: tried?.count ?? 0 } satisfies AllergenProgressResponse);
   });

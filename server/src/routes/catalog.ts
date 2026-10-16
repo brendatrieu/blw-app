@@ -37,7 +37,7 @@ import type { Database } from "../db/index.js";
 import { choosableFoodsCondition, visibleFoodsCondition } from "../services/foods.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import { buildCandidateSlug, isUniqueViolation, SLUG_ATTEMPTS } from "../services/slugs.js";
-import type { Transaction } from "../services/meals.js";
+import { INFO_FOOD_ALONE, type Transaction } from "../services/meals.js";
 import {
   allergens,
   foodAllergens,
@@ -247,6 +247,7 @@ async function loadFoodDetail(db: Database, food: FoodRow, userId: string | null
     allergens: allergenRows.map((a) => a.slug),
     isCustom: food.ownerId !== null,
     emoji: food.emoji,
+    kind: food.kind,
     prep6m: food.prep6m,
     prep9m: food.prep9m,
     prep12m: food.prep12m,
@@ -353,6 +354,7 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
       allergens: allergensByFoodId.get(f.id) ?? [],
       isCustom: f.ownerId !== null,
       emoji: f.emoji,
+      kind: f.kind,
     }));
 
     return { foods: items } satisfies FoodsResponse;
@@ -546,15 +548,20 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
         .limit(1)
         .for("update");
       if (!existing) return { status: 404 } as const;
-      if (body.data.replacementId === existing.id) return { status: 400 } as const;
+      if (body.data.replacementId === existing.id) {
+        return { status: 400, details: { replacementId: "must be a different food" } } as const;
+      }
       // Something the parent could pick: the catalog or their own, not deleted.
       const [replacement] = await tx
-        .select({ id: foods.id, slug: foods.slug, name: foods.name })
+        .select({ id: foods.id, slug: foods.slug, name: foods.name, kind: foods.kind })
         .from(foods)
         .where(and(eq(foods.id, body.data.replacementId), choosableFoodsCondition(userId)))
         .limit(1)
         .for("update");
       if (!replacement) return { status: 404 } as const;
+      // Ledger 838: moving meals and containers onto whole milk would log it
+      // on its own, which only a served recipe may do.
+      if (replacement.kind === "info") return { status: 400, details: { replacementId: INFO_FOOD_ALONE } } as const;
 
       // Counted first: every one of these ends up on the replacement, either
       // re-pointed or merged into a row that already held it.
@@ -654,11 +661,11 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
 
       // Nothing names it any more; `food_allergens` cascades with it.
       await tx.delete(foods).where(and(eq(foods.id, existing.id), eq(foods.ownerId, userId)));
-      return { status: 200, replacement, moved: usage } as const;
+      return { status: 200, replacement: { id: replacement.id, slug: replacement.slug, name: replacement.name }, moved: usage } as const;
     });
 
     if (result.status === 404) return notFound(reply);
-    if (result.status === 400) return badRequest(reply, { replacementId: "must be a different food" });
+    if (result.status === 400) return badRequest(reply, result.details);
     return { replacement: result.replacement, moved: result.moved } satisfies ReplaceCustomFoodResponse;
   });
 }
