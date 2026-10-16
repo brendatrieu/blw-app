@@ -76,7 +76,9 @@ describe("which hop is trusted (839)", () => {
   });
 });
 
-describe("per-client rate limits behind Caddy (839)", () => {
+// Each test builds fresh apps and spends 10+ real sign-in attempts; CI's
+// Postgres runs past vitest's 5 s default (it timed out on d284a3b).
+describe("per-client rate limits behind Caddy (839)", { timeout: 30_000 }, () => {
   it("gives every parent their own bucket, and keeps get-session and sign-out off the strict budget", async () => {
     const { app, close } = await createTestApp({
       AUTH_RATE_LIMIT_MAX: 10,
