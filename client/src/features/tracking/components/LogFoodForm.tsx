@@ -518,7 +518,7 @@ export function LogFoodForm({ babyId, meal, onDone, initialFoodIds, initialRecip
     // `noValidate`: this form answers its own required field inline (item 236).
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
       <Field label="Food" htmlFor="log-food-food" error={shownErrors.foods}>
-        <FoodPicker id="log-food-food" value={foodIds} onChange={setFoodIds} keptFoods={keptFoods} />
+        <FoodPicker id="log-food-food" value={foodIds} onChange={setFoodIds} keptFoods={keptFoods} hideInfo />
       </Field>
 
       <Field label="Recipes (optional)" htmlFor="log-food-recipe">

@@ -16,6 +16,8 @@ import {
   resolveAllergenRowAction,
   serveAgainByLabel,
   serveFoodId,
+  nonCountingFoodLine,
+  NOT_COUNTED_MEAL_LINE,
   servingCountLabel,
   showsReactionBadge,
 } from "./allergenRow.js";
@@ -481,7 +483,7 @@ describe("serveFoodId — the food Up next's Log meal prefills (item 660)", () =
     isCustom: false,
     ...(deleted === undefined ? {} : { deleted }),
   });
-  const exposure = (...foods: { id: string; deleted?: boolean }[]) => ({
+  const exposure = (...foods: { id: string; deleted?: boolean; kind?: "food" | "ingredient" | "info" }[]) => ({
     mealId: "m",
     servedAt: iso(daysAgo(9)),
     foods: foods.map((f) => ({ ...f, name: f.id, emoji: null })),
@@ -502,5 +504,36 @@ describe("serveFoodId — the food Up next's Log meal prefills (item 660)", () =
 
   it("is null when nothing can be logged", () => {
     expect(serveFoodId({ foods: [food("gone", true)], exposures: [] })).toBeNull();
+  });
+
+  it("never prefills an ingredient or info food (ledger 838)", () => {
+    const kinded = (id: string, kind: "food" | "ingredient" | "info") => ({ ...food(id), kind });
+    // Last time was the egg bake's milk and butter: fall through to a real food.
+    expect(
+      serveFoodId({
+        foods: [kinded("milk", "info"), kinded("unsalted_butter", "ingredient"), kinded("yogurt", "food")],
+        exposures: [exposure({ id: "milk", kind: "info" }, { id: "unsalted_butter", kind: "ingredient" })],
+      }),
+    ).toBe("yogurt");
+    expect(serveFoodId({ foods: [kinded("milk", "info")], exposures: [] })).toBeNull();
+    // A body cached before `kind` existed reads as food.
+    expect(serveFoodId({ foods: [food("yogurt")], exposures: [] })).toBe("yogurt");
+  });
+});
+
+describe("non-counting copy on the allergen page (ledger 836)", () => {
+  it("names the reason for each non-counting food, and nothing for a counting one", () => {
+    expect(nonCountingFoodLine({ slug: "unsalted_butter", countsTowardProgress: false })).toBe(
+      "Doesn't count toward the 3 servings: almost no milk protein.",
+    );
+    expect(nonCountingFoodLine({ slug: "milk", countsTowardProgress: false })).toBe(
+      "Doesn't count toward the 3 servings: a small amount, changed by cooking.",
+    );
+    expect(nonCountingFoodLine({ slug: "sesame_oil", countsTowardProgress: false })).toBe(
+      "Doesn't count toward the 3 servings: very little sesame.",
+    );
+    expect(nonCountingFoodLine({ slug: "yogurt", countsTowardProgress: true })).toBeNull();
+    expect(nonCountingFoodLine({ slug: "yogurt" })).toBeNull();
+    expect(NOT_COUNTED_MEAL_LINE).toBe("Didn't count toward the 3 servings");
   });
 });

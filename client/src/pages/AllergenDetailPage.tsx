@@ -9,8 +9,10 @@ import {
   REACTION_BADGE_LABEL,
   REACTION_HINT_COPY,
   RECENCY_HINT_COPY,
+  NOT_COUNTED_MEAL_LINE,
   formatAllergenDate,
   markedEstablishedAt,
+  nonCountingFoodLine,
   resolveAllergenRecency,
   resolveAllergenRowAction,
   servingCountLabel,
@@ -35,6 +37,7 @@ const LINK_FOCUS =
   "rounded-[var(--radius-sm)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]";
 
 function FoodRow({ food }: { food: AllergenDetailFood }) {
+  const notCounting = nonCountingFoodLine(food);
   return (
     // Info-region pattern (ServeLogList / StorageItemCard): only the emoji +
     // name block is the anchor to the food page; the "Log meal" CTA is a
@@ -42,14 +45,19 @@ function FoodRow({ food }: { food: AllergenDetailFood }) {
     <Card as="li" padding="sm" className="flex items-center gap-2">
       <Link to={`/foods/${food.slug}`} className={`flex flex-1 items-center gap-2 ${LINK_FOCUS}`}>
         <FoodPlate {...foodPlate(food)} size={32} />
-        <span className="flex-1 text-sm font-medium text-[var(--color-text)]">
-          {food.name}
-          <DeletedMark deleted={food.deleted} />
+        <span className="flex flex-1 flex-col">
+          <span className="text-sm font-medium text-[var(--color-text)]">
+            {food.name}
+            <DeletedMark deleted={food.deleted} />
+          </span>
+          {notCounting && <span className="text-xs text-[var(--color-text-muted)]">{notCounting}</span>}
         </span>
         {food.isCustom && <Badge tone="outline">Custom</Badge>}
       </Link>
-      {/* A deleted food can't be picked for a new meal, so no CTA for one. */}
-      {!food.deleted && (
+      {/* A deleted food can't be picked for a new meal, and an info food
+          (whole milk) is only ever logged through a recipe, so no CTA for
+          either (ledger 838). */}
+      {!food.deleted && food.kind !== "info" && (
         <div className="flex shrink-0 items-center gap-1">
           <ButtonLink to={`/log-meal?food=${food.id}`} size="sm">
             Log meal
@@ -78,6 +86,9 @@ function ExposureRow({ exposure }: { exposure: AllergenDetailExposure }) {
             }))}
           />
         </span>
+        {exposure.counted === false && (
+          <span className="text-xs text-[var(--color-text-muted)]">{NOT_COUNTED_MEAL_LINE}</span>
+        )}
         {exposure.reaction && (
           <span className="w-fit">
             <Badge tone="dangerSoft">Reaction: {exposure.reaction}</Badge>
@@ -161,9 +172,10 @@ function AllergenDetailBody({
       )}
 
       <section className="flex flex-col gap-2.5">
-        {/* "Meals", not "Exposures": the facts line counts allergen-food
-            SERVINGS (a meal with two egg foods is two exposures) while this
-            list is one row per meal, so the two must not share a noun. */}
+        {/* "Meals", not "Servings": each counted meal is one serving (ledger
+            836), but this list also keeps the meals that did not count
+            (marked with a line; their reactions still matter) and stops at
+            50, so the two must not share a noun. */}
         <h2 className="font-h2 text-[var(--color-text)]">Meals with {progress.allergenName.toLowerCase()}</h2>
         {exposures.length === 0 ? (
           <EmptyState

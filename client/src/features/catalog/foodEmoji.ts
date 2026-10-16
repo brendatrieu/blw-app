@@ -2,7 +2,7 @@ import type { FoodCategory } from "@blw/shared";
 
 /**
  * Explicit emoji per seed food slug — one entry for every food in
- * `server/db/seeds/data/foods.ts` (77 as of writing, pinned slug-by-slug in
+ * `server/db/seeds/data/foods.ts` (82 as of writing, pinned slug-by-slug in
  * `foodEmoji.test.ts` so a seed addition cannot quietly fall through to the
  * category fallback). Kept as a plain
  * record rather than derived from the food's name/category so each choice
@@ -105,6 +105,14 @@ const FOOD_EMOJI: Record<string, string> = {
   basil: "🌿",
   cilantro: "🌿",
   dill: "🌿",
+
+  // Ingredient foods (ledger 838)
+  milk: "🥛",
+  brown_rice: "🍚",
+  wheat_flour: "🌾",
+  unsalted_butter: "🧈",
+  // Unicode 14; an older phone may draw a box, same risk as 🫘/🫚 already here.
+  sesame_oil: "🫗",
 };
 
 /** Fallback emoji when a food's slug isn't in `FOOD_EMOJI` (e.g. a future seed addition). */
@@ -241,8 +249,10 @@ const TINT_SLUGS: Record<Exclude<PlateTint, "neutral">, readonly string[]> = {
     "pecans",
     "almonds",
     "cashews",
+    // Beside tahini and the seeds (ledger 838).
+    "sesame_oil",
   ],
-  dairy: ["egg", "yogurt", "cheese"],
+  dairy: ["egg", "yogurt", "cheese", "milk", "unsalted_butter"],
   grain: [
     "iron_fortified_oats",
     "quinoa",
@@ -250,6 +260,8 @@ const TINT_SLUGS: Record<Exclude<PlateTint, "neutral">, readonly string[]> = {
     "wheat_pasta",
     "rice",
     "oats",
+    "brown_rice",
+    "wheat_flour",
     // Ground spices read warm/brown; leafy herbs (below) read green.
     "cinnamon",
     "cumin",

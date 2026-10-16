@@ -64,11 +64,13 @@ const CATALOG_SLUGS = [
   "almonds", "cashews",
   "cinnamon", "cumin", "turmeric", "paprika", "curry_powder", "black_pepper", "oregano", "garlic", "ginger",
   "basil", "cilantro", "dill",
+  // Ledger 838's ingredient foods.
+  "milk", "brown_rice", "wheat_flour", "unsalted_butter", "sesame_oil",
 ];
 
 describe("emoji coverage for the seeded catalog", () => {
-  it("has an explicit emoji for all 77 catalog slugs", () => {
-    expect(CATALOG_SLUGS).toHaveLength(77);
+  it("has an explicit emoji for all 82 catalog slugs", () => {
+    expect(CATALOG_SLUGS).toHaveLength(82);
     expect(new Set(CATALOG_SLUGS).size).toBe(CATALOG_SLUGS.length);
 
     // With no category passed, the only fallback left is the generic plate —
@@ -116,9 +118,13 @@ describe("getExtraIngredientEmoji", () => {
     // of writing — hardcoded because a client test cannot import server seeds.
     const seededExtras = [
       "breast milk, formula, or water",
-      "breast milk, formula, or water to soak",
-      "breast milk, formula, or water to thin",
       "breast milk, formula, or water, to loosen",
+      "breast milk, formula, whole milk (once baby has had yogurt or cheese), or water",
+      "breast milk, formula, whole milk (once baby has had yogurt or cheese), or water to soak",
+      "breast milk, formula, whole milk (once baby has had yogurt or cheese), or water to thin",
+      "breast milk, formula, whole milk (once baby has had yogurt or cheese), or water, to loosen",
+      "breast milk, formula, whole milk, or water to thin",
+      "breast milk, formula, whole milk, or water, to loosen",
       "dried thyme or sage (optional)",
       "grated vegetable, to bind the ground turkey",
       "ground coriander",
@@ -131,15 +137,16 @@ describe("getExtraIngredientEmoji", () => {
       "plain whole-milk yogurt, mashed avocado, or olive oil, to moisten",
       "unsweetened coconut milk",
       "warm water to thin the peanut butter",
+      "warm water, breast milk, formula, or whole milk (once baby has had yogurt or cheese), to thin",
+      "warm water, breast milk, formula, or whole milk (once baby has had yogurt or cheese), to thin the seed butter",
+      "warm water, breast milk, formula, or whole milk, to thin the cashew butter",
       "warm water, breast milk, or formula, to thin",
-      "warm water, breast milk, or formula, to thin the cashew butter",
-      "warm water, breast milk, or formula, to thin the seed butter",
       "warm water, to soak and blend the ground cashew meal",
       "water",
-      "water or milk to moisten the bread",
       "water or no-salt-added stock",
       "water or olive oil, to loosen",
-      "water, breast milk, or formula",
+      "water, breast milk, formula, or whole milk (once baby has had yogurt or cheese)",
+      "water, breast milk, formula, or whole milk (once baby has had yogurt or cheese) to moisten the bread",
       "water, for cooking",
       "water, for cooking and thinning",
       "water, to loosen the mash",
@@ -191,6 +198,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "black_pepper": "grain",
         "blueberry": "fruit",
         "broccoli": "veg",
+        "brown_rice": "grain",
         "butternut_squash": "veg",
         "carrot": "veg",
         "cashew_butter": "legume",
@@ -220,6 +228,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "lemon": "fruit",
         "lentils": "legume",
         "mango": "fruit",
+        "milk": "dairy",
         "oats": "grain",
         "onion": "veg",
         "orange": "fruit",
@@ -237,6 +246,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "rice": "grain",
         "salmon": "protein",
         "sardines": "protein",
+        "sesame_oil": "legume",
         "sesame_seeds": "legume",
         "shrimp": "protein",
         "spinach": "veg",
@@ -250,8 +260,10 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "tuna": "protein",
         "turkey": "protein",
         "turmeric": "grain",
+        "unsalted_butter": "dairy",
         "walnuts": "legume",
         "watermelon": "fruit",
+        "wheat_flour": "grain",
         "wheat_pasta": "grain",
         "wheat_toast": "grain",
         "yogurt": "dairy",

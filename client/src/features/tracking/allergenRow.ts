@@ -244,12 +244,37 @@ export function dueSinceLabel(
  * The food Up next's "Log meal" prefills for a due allergen (item 660): the
  * one served last time (the exposure's foods are only the allergen carriers),
  * else the first food carrying it; never a deleted food, which cannot be
- * logged. Null leaves the form empty.
+ * logged, and never anything but a plain `food` (ledger 838): whole milk
+ * cannot be logged alone, and butter or sesame oil would not move the
+ * allergen it is due for. Null leaves the form empty.
  */
 export function serveFoodId(detail: Pick<AllergenDetail, "foods" | "exposures">): string | null {
-  const last = detail.exposures[0]?.foods.find((food) => !food.deleted);
-  return last?.id ?? detail.foods.find((food) => !food.deleted)?.id ?? null;
+  const servable = (food: { deleted?: boolean | undefined; kind?: string | undefined }) =>
+    !food.deleted && (food.kind ?? "food") === "food";
+  const last = detail.exposures[0]?.foods.find(servable);
+  return last?.id ?? detail.foods.find(servable)?.id ?? null;
 }
+
+/** Ledger 836: why a food's tag never moves this allergen's ladder, by slug. */
+const NON_COUNTING_REASON: Record<string, string> = {
+  unsalted_butter: "almost no milk protein",
+  milk: "a small amount, changed by cooking",
+  sesame_oil: "very little sesame",
+};
+
+/**
+ * The muted line under a food on the allergen page whose tag never counts
+ * (ledger 836): "Doesn't count toward the 3 servings: almost no milk
+ * protein." Null for a food that counts (or a body cached before the flag).
+ */
+export function nonCountingFoodLine(food: Pick<AllergenDetail["foods"][number], "slug" | "countsTowardProgress">): string | null {
+  if (food.countsTowardProgress !== false) return null;
+  const reason = NON_COUNTING_REASON[food.slug];
+  return `Doesn't count toward the ${ALLERGEN_ESTABLISHED_SERVINGS} servings${reason ? `: ${reason}` : ""}.`;
+}
+
+/** Under a meal whose only allergen foods were non-counting ones (ledger 836). */
+export const NOT_COUNTED_MEAL_LINE = `Didn't count toward the ${ALLERGEN_ESTABLISHED_SERVINGS} servings`;
 
 /**
  * Which manual-override action an allergen ladder row should offer, mirroring

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { FoodListItem } from "@blw/shared";
 import { catalogKeys } from "../hooks.js";
 import { addCustomFoodLabel } from "../constants.js";
-import { FoodPicker, SingleFoodPicker, foodPickerOption, foodPickerOptions } from "./FoodPicker.js";
+import { FoodPicker, SingleFoodPicker, foodPickerOption, foodPickerOptions, offeredFoods } from "./FoodPicker.js";
 
 function food(overrides: Partial<FoodListItem> = {}): FoodListItem {
   return {
@@ -47,6 +47,19 @@ function renderPicker(foods: FoodListItem[], value: string[] = []) {
 }
 
 const SALMON = food({ id: "food-4", slug: "salmon", name: "Salmon", category: "protein", allergens: ["fish"] });
+
+describe("offeredFoods — meal and container pickers (ledger 838)", () => {
+  const MILK = food({ id: "milk-id", slug: "milk", name: "Whole Milk", category: "dairy", kind: "info" });
+  const BUTTER = food({ id: "butter-id", slug: "unsalted_butter", name: "Unsalted Butter", kind: "ingredient" });
+
+  it("leaves whole milk out, keeps ingredient foods and foods cached without a kind", () => {
+    expect(offeredFoods([food(), MILK, BUTTER], []).map((f) => f.id)).toEqual(["food-1", "butter-id"]);
+  });
+
+  it("keeps whole milk once it is picked (a recipe brought it in), so its chip stays removable", () => {
+    expect(offeredFoods([food(), MILK], ["milk-id"]).map((f) => f.id)).toEqual(["food-1", "milk-id"]);
+  });
+});
 
 describe("foodPickerOption", () => {
   it("selects by food id and shows the food's OWN emoji when it has one (item 177)", () => {

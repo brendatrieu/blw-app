@@ -232,7 +232,7 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
 
       {source === "food" && (
         <Field label="Food" htmlFor="storage-add-food" error={shownErrors.food}>
-          <FoodPicker id="storage-add-food" value={foodIds} onChange={setFoodIds} />
+          <FoodPicker id="storage-add-food" value={foodIds} onChange={setFoodIds} hideInfo />
         </Field>
       )}
 

@@ -157,6 +157,7 @@ export function EditStorageItemForm({ item, onDone }: EditStorageItemFormProps) 
             keptFoods={keptFoods}
             placeholder="Add a food…"
             chipsFirst
+            hideInfo
           />
         </Field>
       )}

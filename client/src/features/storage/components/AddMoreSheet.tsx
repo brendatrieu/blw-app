@@ -164,7 +164,11 @@ export function AddMoreSheet({ babyId, serving, onAdd, onClose }: AddMoreSheetPr
 
   const available = addMoreStorageItems(storage.data?.items ?? [], serving.itemIds);
   const allFoods = useMemo(
-    () => (foods.data?.foods ?? []).filter((food) => !serving.foodIds.includes(food.id)).sort(byLabel((food) => food.name)),
+    () =>
+      (foods.data?.foods ?? [])
+        // Whole milk (`info`, ledger 838) comes only with a recipe that uses it.
+        .filter((food) => !serving.foodIds.includes(food.id) && food.kind !== "info")
+        .sort(byLabel((food) => food.name)),
     [foods.data, serving.foodIds],
   );
   const allRecipes = useMemo(

@@ -504,3 +504,48 @@ describe("AllergenDetailPage title plate follows the allergen (item 673)", () =>
     );
   });
 });
+
+describe("AllergenDetailPage — foods that never move the ladder (ledger 836, 838)", () => {
+  const MILK_ID = "66666666-6666-4666-8666-666666666666";
+  const BUTTER_ID = "77777777-7777-4777-8777-777777777777";
+  const YOGURT_ID = "88888888-8888-4888-8888-888888888888";
+  const milkDetail = (): AllergenDetail => {
+    const base = detail();
+    return {
+      ...base,
+      progress: { ...base.progress, allergenSlug: "milk", allergenName: "Milk" },
+      foods: [
+        { id: BUTTER_ID, slug: "unsalted_butter", name: "Unsalted Butter", category: "dairy", emoji: null, isCustom: false, kind: "ingredient", countsTowardProgress: false },
+        { id: MILK_ID, slug: "milk", name: "Whole Milk", category: "dairy", emoji: null, isCustom: false, kind: "info", countsTowardProgress: false },
+        { id: YOGURT_ID, slug: "yogurt", name: "Yogurt", category: "dairy", emoji: null, isCustom: false, kind: "food", countsTowardProgress: true },
+      ],
+      exposures: [
+        { mealId: MEAL_ID, servedAt: "2026-08-20T09:00:00.000Z", foods: [{ id: BUTTER_ID, name: "Unsalted Butter", emoji: null }], counted: false, reaction: null, notes: null },
+        { mealId: "99999999-9999-4999-8999-999999999999", servedAt: "2026-08-19T09:00:00.000Z", foods: [{ id: YOGURT_ID, name: "Yogurt", emoji: null }], counted: true, reaction: null, notes: null },
+      ],
+    };
+  };
+
+  it("says why under each non-counting food, and nothing under yogurt", () => {
+    const html = renderWithDetail(milkDetail(), "milk");
+    expect(html).toMatch(/Doesn(?:&#x27;|')t count toward the 3 servings: almost no milk protein\./);
+    expect(html).toMatch(/Doesn(?:&#x27;|')t count toward the 3 servings: a small amount, changed by cooking\./);
+    expect(html.match(/count toward the 3 servings:/g)).toHaveLength(2);
+  });
+
+  it("offers no Log meal for whole milk, but does for butter and yogurt", () => {
+    const html = renderWithDetail(milkDetail(), "milk");
+    expect(html).not.toContain(`/log-meal?food=${MILK_ID}`);
+    expect(html).toContain(`/log-meal?food=${BUTTER_ID}`);
+    expect(html).toContain(`/log-meal?food=${YOGURT_ID}`);
+  });
+
+  it("marks only the meal that did not count", () => {
+    const html = renderWithDetail(milkDetail(), "milk");
+    expect(html.match(/Didn(?:&#x27;|')t count toward the 3 servings/g)).toHaveLength(1);
+    // A body cached before the flag (no `counted`) reads as counted.
+    const cached = milkDetail();
+    cached.exposures = cached.exposures.map(({ counted: _counted, ...rest }) => rest);
+    expect(renderWithDetail(cached, "milk")).not.toMatch(/Didn(?:&#x27;|')t count/);
+  });
+});
