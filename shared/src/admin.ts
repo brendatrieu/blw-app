@@ -79,14 +79,25 @@ export const adminCollaboratorsResponseSchema = z
 export type AdminCollaboratorsResponse = z.infer<typeof adminCollaboratorsResponseSchema>;
 
 /**
+ * Ledger 830: the admin's OWN password, sent only after the server answered
+ * `password_required` (a session older than the fresh window). Checked
+ * against the signed-in admin's credential account and never stored. Same
+ * bounds as sign-in.
+ */
+const adminPasswordSchema = z.string().min(1).max(128).optional();
+
+/**
  * Grant by email. The address must already belong to an account: admin
  * access is given to somebody who signed up like any other parent, never to
  * an invitation that creates one.
  */
 export const grantCollaboratorInputSchema = z
-  .object({ email: z.string().trim().min(3).max(254).email() })
+  .object({ email: z.string().trim().min(3).max(254).email(), password: adminPasswordSchema })
   .strict();
 export type GrantCollaboratorInput = z.infer<typeof grantCollaboratorInputSchema>;
+
+/** Revoke's optional body: only ever the password (ledger 830). */
+export const revokeCollaboratorInputSchema = z.object({ password: adminPasswordSchema }).strict();
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/password-reset-link (ledger 821)
@@ -94,7 +105,7 @@ export type GrantCollaboratorInput = z.infer<typeof grantCollaboratorInputSchema
 
 /**
  * A one-time password-reset link for a parent who cannot sign in, made by
- * the owner and sent to them privately. The body is the same `{ email }` a
+ * the owner and sent to them privately. The body is the same `{ email, password? }` a
  * grant takes. The link is better-auth's own reset link (single use, one
  * hour), shown once: the server stores only the audit fact, never the token.
  */

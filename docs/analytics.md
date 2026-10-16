@@ -227,7 +227,10 @@ Two independent sources of access, either of which is sufficient:
 
 Guards: an env-bootstrapped admin cannot be demoted from the UI (clearing the
 row would change nothing), nobody can demote themselves, and every grant and
-revoke needs a session younger than ten minutes and writes a row to
+revoke (and every owner reset link) needs a session younger than ten minutes
+or, for an older session, the admin's own password typed into the panel
+(checked server-side, 5 tries per 15 minutes, each check audited as
+`password_confirmed` / `password_rejected`, ledger 830), and writes a row to
 `admin_audit` (actor, action, target, timestamp) that survives the deletion of
 either account.
 

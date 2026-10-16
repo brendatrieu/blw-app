@@ -451,7 +451,8 @@ describe("an admin", () => {
       });
 
       expect(response.statusCode).toBe(401);
-      expect(response.json()).toEqual({ error: "reauth_required" });
+      // The owner has a password, so the panel asks for it (830).
+      expect(response.json()).toEqual({ error: "password_required" });
       // Nothing happened, which is the point of checking before writing.
       const [row] = await db.select({ role: user.role }).from(user).where(eq(user.email, friend.email));
       expect(row?.role).toBe("parent");

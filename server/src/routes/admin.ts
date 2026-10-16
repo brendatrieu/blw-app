@@ -13,14 +13,17 @@
 //   * **Granting access is a fresh-session action.** Same reasoning as
 //     account deletion: a stolen, still-valid cookie must not be enough to
 //     hand somebody else the dashboard. Every grant and revoke is written to
-//     `admin_audit`, which survives the deletion of either account.
+//     `admin_audit`, which survives the deletion of either account. An older
+//     session proves itself with the admin's own password instead of a sign
+//     out and back in (ledger 830, `confirmFreshness`).
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   ACCOUNT_REAUTH_MAX_AGE_MS,
   adminMetricsResponseSchema,
   grantCollaboratorInputSchema,
   metricsRangeSchema,
+  revokeCollaboratorInputSchema,
   type AdminCollaborator,
   type AdminMeResponse,
   type AdminResetLinkResponse,
@@ -34,7 +37,7 @@ import {
   isEnvAdmin,
   normalizeEmail,
 } from "../admin/access.js";
-import { createPerUserRateLimit, perUserRateLimitHook } from "../ai/client.js";
+import { createPerUserRateLimit, perUserRateLimitHook, rateLimited } from "../ai/client.js";
 import type { Env } from "../config.js";
 import type { Database } from "../db/index.js";
 import { createMetricsCache } from "../metrics/collect.js";
@@ -55,6 +58,14 @@ const ADMIN_REQUESTS_PER_HOUR = 120;
  */
 const ADMIN_WRITES_PER_WINDOW = 10;
 const ADMIN_WRITE_WINDOW_MS = 15 * 60 * 1000;
+
+/**
+ * Password checks per admin per write window (ledger 830), right or wrong.
+ * Counted BEFORE the hash is compared, so a throttled caller learns nothing
+ * about a guess, not even a correct one. Five password-confirmed changes in
+ * fifteen minutes is plenty; past that, a fresh sign-in needs no password.
+ */
+const ADMIN_PASSWORD_ATTEMPTS_PER_WINDOW = 5;
 
 /** Default when `?range=` is absent: a quarter is what the review looks at. */
 const DEFAULT_RANGE: MetricsRange = "12w";
@@ -82,11 +93,11 @@ export function registerAdminRoutes(app: FastifyInstance, db: Database, env: Env
   const guards = [app.resolveOptionalUser, requireAdmin, budget];
   const writeGuards = [...guards, writeBudget];
 
+  const passwordAttempts = createPerUserRateLimit(ADMIN_PASSWORD_ATTEMPTS_PER_WINDOW, ADMIN_WRITE_WINDOW_MS);
+
   /**
-   * Freshness, reusing the account-deletion rule (shared/src/account.ts).
-   * Only the session-age half of that pattern applies here: unlike deletion
-   * this action is undoable by another admin, and asking for a password on
-   * every grant would push people towards leaving the window open instead.
+   * Freshness, reusing the account-deletion window (shared/src/account.ts):
+   * signed in within the last ten minutes.
    */
   async function hasFreshSession(request: FastifyRequest, userId: string): Promise<boolean> {
     const sessionId = request.sessionId;
@@ -100,6 +111,63 @@ export function registerAdminRoutes(app: FastifyInstance, db: Database, env: Env
 
     if (!row) return false;
     return Date.now() - row.createdAt.getTime() <= ACCOUNT_REAUTH_MAX_AGE_MS;
+  }
+
+  /**
+   * The gate in front of every access-changing action. True: go ahead.
+   * False: the refusal has already been sent.
+   *
+   * An older session may prove itself with the admin's own password, checked
+   * by better-auth's own verifier against the credential account of the
+   * SIGNED-IN admin (`adminId` comes from the session, never the body), the
+   * way account deletion does. An admin with no password (Google only) keeps
+   * the sign-out-and-back-in answer. The password is never logged (no route
+   * logs bodies; the request log prints the URL only), stored or echoed.
+   *
+   * A right password vouches for THIS request only; the session is not
+   * marked fresh. Marking it would freshen a stolen copy of the same cookie
+   * too, which signing out and back in never did (that issues a new one).
+   * So each action on an older session asks again; a password manager fills
+   * it, and a fresh sign-in still skips the question for ten minutes.
+   */
+  async function confirmFreshness(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    adminId: string,
+    password: string | undefined,
+  ): Promise<boolean> {
+    if (await hasFreshSession(request, adminId)) return true;
+
+    const authContext = await app.auth.$context;
+    const hash = (await authContext.internalAdapter.findCredentialAccount(adminId))?.password;
+    if (!hash) {
+      // The UI turns this into "sign out, sign back in, and try again".
+      void reply.code(401).send({ error: "reauth_required" });
+      return false;
+    }
+    if (password === undefined) {
+      // The UI asks for the password right there and sends the action again.
+      void reply.code(401).send({ error: "password_required" });
+      return false;
+    }
+
+    const retryAfter = passwordAttempts.consume(adminId);
+    if (retryAfter !== null) {
+      void rateLimited(reply, retryAfter);
+      return false;
+    }
+
+    const ok = await authContext.password.verify({ hash, password });
+    // Who tried, and whether it matched — the attempt, never the password.
+    await db.insert(adminAudit).values({
+      actorUserId: adminId,
+      action: ok ? "password_confirmed" : "password_rejected",
+    });
+    if (!ok) {
+      void reply.code(401).send({ error: "invalid_password" });
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -229,10 +297,7 @@ export function registerAdminRoutes(app: FastifyInstance, db: Database, env: Env
       return reply.code(400).send({ error: "invalid_request" });
     }
 
-    if (!(await hasFreshSession(request, admin.id))) {
-      // The UI turns this into "sign in again, then add somebody".
-      return reply.code(401).send({ error: "reauth_required" });
-    }
+    if (!(await confirmFreshness(request, reply, admin.id, parsed.data.password))) return reply;
 
     const email = normalizeEmail(parsed.data.email);
     const [target] = await db
@@ -274,9 +339,13 @@ export function registerAdminRoutes(app: FastifyInstance, db: Database, env: Env
     async (request, reply) => {
       const admin = currentAdmin(request);
 
-      if (!(await hasFreshSession(request, admin.id))) {
-        return reply.code(401).send({ error: "reauth_required" });
+      // No body at all is the usual case; a body is only ever the password.
+      const parsed = revokeCollaboratorInputSchema.safeParse(request.body ?? {});
+      if (!parsed.success) {
+        return reply.code(400).send({ error: "invalid_request" });
       }
+
+      if (!(await confirmFreshness(request, reply, admin.id, parsed.data.password))) return reply;
 
       const targetId = request.params.userId;
       const [target] = await db
@@ -339,9 +408,7 @@ export function registerAdminRoutes(app: FastifyInstance, db: Database, env: Env
     }
 
     // Same rule as granting: a stolen, still-valid cookie is not enough.
-    if (!(await hasFreshSession(request, admin.id))) {
-      return reply.code(401).send({ error: "reauth_required" });
-    }
+    if (!(await confirmFreshness(request, reply, admin.id, parsed.data.password))) return reply;
 
     const [target] = await db
       .select({ id: user.id })

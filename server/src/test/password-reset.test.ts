@@ -213,7 +213,8 @@ describe("the owner's one-time reset link (821)", () => {
 
     const response = await makeLink(parent.email);
     expect(response.statusCode).toBe(401);
-    expect(response.json()).toEqual({ error: "reauth_required" });
+    // The owner has a password, so the panel asks for it (830).
+    expect(response.json()).toEqual({ error: "password_required" });
     expect(await db.select().from(adminAudit)).toHaveLength(0);
   });
 
