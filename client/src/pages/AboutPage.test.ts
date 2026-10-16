@@ -1,9 +1,14 @@
 import { createElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Navigate } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const h = vi.hoisted(() => ({ session: null as object | null, isPending: false }));
+const h = vi.hoisted(() => ({ session: null as object | null, isPending: false, state: null as unknown }));
+
+vi.mock("react-router-dom", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-router-dom")>()),
+  useLocation: () => ({ pathname: "/about", search: "", hash: "", key: "k", state: h.state }),
+}));
 
 vi.mock("../lib/auth.js", () => ({
   useSession: () => ({ data: h.session, isPending: h.isPending }),
@@ -24,6 +29,7 @@ const count = (html: string, needle: string | RegExp) => html.split(needle).leng
 
 beforeEach(() => {
   h.session = null;
+  h.state = null;
 });
 
 describe("AboutPage signed out (item 611)", () => {
@@ -193,6 +199,30 @@ describe("AboutPage signed in (item 611)", () => {
     );
     expect(header?.props.leading.type).toBe(BackButton);
     expect(header?.props.leading.props.fallback).toBe("/more");
+  });
+});
+
+describe("AboutPage as the signed-out front door (ledger 828)", () => {
+  const page = () => (AboutPage as () => ReactElement<{ to?: string; replace?: boolean }>)();
+
+  it("forwards to Home once signed in, so Back after sign-in never lands on About", () => {
+    h.session = { user: { id: "u1" } };
+    h.state = { frontDoor: true };
+    expect(page().type).toBe(Navigate);
+    expect(page().props).toMatchObject({ to: "/", replace: true });
+  });
+
+  it("still shows itself on that entry while signed out or loading", () => {
+    h.state = { frontDoor: true };
+    expect(page().type).not.toBe(Navigate);
+    h.isPending = true;
+    expect(page().type).not.toBe(Navigate);
+    h.isPending = false;
+  });
+
+  it("stays put for a signed-in parent who opened it from More", () => {
+    h.session = { user: { id: "u1" } };
+    expect(page().type).not.toBe(Navigate);
   });
 });
 

@@ -1,4 +1,6 @@
+import { Navigate, useLocation } from "react-router-dom";
 import { useSession } from "../lib/auth.js";
+import type { FrontDoorState } from "../components/RequireAuth.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
 import { BackButton } from "../components/ui/BackButton.js";
@@ -37,11 +39,17 @@ function SignUpButtons() {
  */
 export function AboutPage() {
   const { data: session, isPending } = useSession();
+  const location = useLocation();
   // Until the session is known, show neither the sign-up buttons nor the back
   // button: a signed-in parent reloading this page must not see "Create an
   // account" flash first.
   const signedIn = Boolean(session);
   const signedOut = !isPending && !session;
+  // Ledger 828: Back after signing in returns to the entry that stood in for
+  // "/" while signed out. Signed in, that entry is Home.
+  if (signedIn && (location.state as Partial<FrontDoorState> | null)?.frontDoor === true) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     // Item 703: as wide as every page inside AppLayout (its max-w-lg column,

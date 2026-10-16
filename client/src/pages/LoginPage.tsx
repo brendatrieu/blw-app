@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { authErrorMessage, signIn, useAuthConfig } from "../lib/auth.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
@@ -36,7 +36,6 @@ export function validateLogin(values: LoginValues): LoginErrors {
 }
 
 export function LoginPage() {
-  const navigate = useNavigate();
   const location = useLocation();
   // Ledger 822: offered only when the reset email would really arrive.
   const emailEnabled = useAuthConfig().data?.emailEnabled === true;
@@ -46,7 +45,6 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const redirectTo = (location.state as { from?: string } | null)?.from ?? "/";
   // Set by ResetPasswordPage after a successful reset (ledger 820).
   const passwordReset = (location.state as Partial<PasswordResetDoneState> | null)?.passwordReset === true;
 
@@ -69,13 +67,12 @@ export function LoginPage() {
     setError(null);
 
     const result = await signIn.email({ email, password });
-    setSubmitting(false);
-
     if (result.error) {
+      setSubmitting(false);
       setError(authErrorMessage(result.error));
-      return;
     }
-    void navigate(redirectTo, { replace: true });
+    // Success: no navigate here (ledger 828). RequireAnonymous sends the
+    // parent on once the session lands; "Signing in…" stays until then.
   }
 
   return (

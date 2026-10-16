@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { authErrorMessage, signUp } from "../lib/auth.js";
 import { Button } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
@@ -41,7 +41,6 @@ export function validateSignup(values: SignupValues): SignupErrors {
 }
 
 export function SignupPage() {
-  const navigate = useNavigate();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -65,13 +64,12 @@ export function SignupPage() {
     setError(null);
 
     const result = await signUp.email({ name: name.trim(), email, password });
-    setSubmitting(false);
-
     if (result.error) {
+      setSubmitting(false);
       setError(authErrorMessage(result.error));
-      return;
     }
-    void navigate("/", { replace: true });
+    // Success: no navigate here (ledger 828). RequireAnonymous sends the
+    // parent on once the session lands.
   }
 
   return (

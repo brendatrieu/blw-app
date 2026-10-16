@@ -31,11 +31,12 @@ beforeEach(() => {
 });
 
 describe("RequireAuth signed-out redirects (item 612)", () => {
-  it("sends a signed-out visit to / to the About page, with no `from`", () => {
+  it("sends a signed-out visit to / to the About page, marked as the front door, with no `from`", () => {
     const el = gate("/");
     expect(el.type).toBe(Navigate);
     expect(el.props.to).toBe("/about");
-    expect(el.props.state).toBeUndefined();
+    // Ledger 828: AboutPage forwards this entry to Home once signed in.
+    expect(el.props.state).toEqual({ frontDoor: true });
   });
 
   it("sends every other signed-out path to /login with `from`, so deep links come back", () => {
@@ -52,8 +53,8 @@ describe("RequireAuth signed-out redirects (item 612)", () => {
 });
 
 describe("RequireAnonymous finishes the deep link (item 612)", () => {
-  // Sign-in creates the session and this guard redirects before LoginPage's
-  // own navigate(from) runs, so this is where the parent actually lands.
+  // Ledger 828: LoginPage and SignupPage do not navigate on success; this
+  // guard is where a fresh session actually lands.
   function anon(state: unknown): ReactElement<{ to?: string }> {
     h.session = { user: { id: "u1" } };
     h.location = { pathname: "/login", search: "", state };
