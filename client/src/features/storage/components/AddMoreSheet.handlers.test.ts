@@ -53,6 +53,8 @@ vi.mock("../../catalog/hooks.js", async (importOriginal) => ({
         { id: "food-pear", slug: "pear", name: "Pear", category: "fruit", emoji: null, allergens: [] },
         { id: "food-oats", slug: "oats", name: "Oats", category: "grain", emoji: null, allergens: [] },
         { id: "food-banana", slug: "banana", name: "Banana", category: "fruit", emoji: null, allergens: [] },
+        // Ledger 838/842: an info food is never offered on its own.
+        { id: "food-milk", slug: "milk", name: "Whole Milk", category: "dairy", kind: "info", emoji: null, allergens: ["milk"] },
       ],
     },
     isLoading: false,
@@ -273,6 +275,14 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     const out = html(render());
     expect(out).not.toContain(">Recent</h3>");
     expect(titles(render())).toEqual(["Banana", "Oats", "Pear"]);
+  });
+
+  it("never offers whole milk (info, ledger 838): not under Recent, All foods or a search", () => {
+    reset([BASE], [meal("m1", [], [{ id: "food-milk" }, { id: "food-pear" }])]);
+    goTo("food");
+    expect(titles(render())).toEqual(["Pear", "Banana", "Oats", "Pear"]);
+    type("milk");
+    expect(titles(render())).toEqual([]);
   });
 
   it("typing searches all three at once, grouped In storage, Recipes, Foods, under a highlighted All (ledger 794)", () => {

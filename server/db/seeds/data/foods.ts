@@ -279,7 +279,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole butter beans are large, and their skins can slip off in one tough piece, so a whole bean can be a choking hazard — mash them or squash each one flat rather than serving them whole, and pick out loose skins for young babies.',
     notes:
-      'Butter beans and lima beans are the same bean. Never serve them raw or undercooked: raw lima beans contain a natural compound that can release cyanide, and thorough cooking breaks it down. Soak dried beans overnight, pour the soaking water away, and boil them in plenty of fresh water until very soft; fresh or frozen lima beans need cooking until soft too. Canned butter beans are already cooked; choose no-salt-added cans and rinse them well. A good plant-based iron source with plenty of fiber — pair with a vitamin-C food such as broccoli or tomato to boost absorption.',
+      'Butter beans and lima beans are the same bean. Never serve them raw or undercooked: raw lima beans contain a natural compound that can release cyanide, and thorough cooking breaks it down. Soak dried beans overnight, pour the soaking water away, and boil them hard in plenty of fresh water for at least 10 minutes, then simmer them until very soft; fresh or frozen lima beans need cooking until soft too. Canned butter beans are already cooked; choose no-salt-added cans and rinse them well. A good plant-based iron source with plenty of fiber — pair with a vitamin-C food such as broccoli or tomato to boost absorption.',
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },

@@ -266,6 +266,21 @@ describe("POST /api/usage", () => {
     }
   });
 
+  it("keys an anonymous IPv6 caller by its /64, like every other budget (ledger 839 N5)", async () => {
+    const limited = await createTestApp({ USAGE_RATE_LIMIT_MAX: 1 });
+    try {
+      const send = (remoteAddress: string) =>
+        limited.app.inject({ method: "POST", url: "/api/usage", remoteAddress, payload: { events: [usageEnvelope()] } });
+
+      expect((await send("2001:db8:1:2::a")).statusCode).toBe(204);
+      // Another address in the same /64 is the same client.
+      expect((await send("2001:db8:1:2::b")).statusCode).toBe(429);
+      expect((await send("2001:db8:1:3::a")).statusCode).toBe(204);
+    } finally {
+      await limited.close();
+    }
+  });
+
   it("caps the body at 32 KB", async () => {
     expect(USAGE_BODY_LIMIT_BYTES).toBe(32 * 1024);
 

@@ -22,6 +22,7 @@ import { DEFAULT_SHARE_USAGE_DATA, clampOccurredAt, ingestUsageInputSchema } fro
 import { createPerUserRateLimit, rateLimited } from "../ai/client.js";
 import type { Env } from "../config.js";
 import type { Database } from "../db/index.js";
+import { rateLimitKey } from "../plugins/rate-limit.js";
 import { usageEvents, userPreferences } from "../db/schema.js";
 
 /**
@@ -62,7 +63,8 @@ export function registerUsageRoutes(app: FastifyInstance, db: Database, env: Env
    */
   const limit = createPerUserRateLimit(env.USAGE_RATE_LIMIT_MAX);
   const usageBudget: preHandlerAsyncHookHandler = async (request, reply) => {
-    const key = request.user?.id ?? `ip:${request.ip}`;
+    // By /64 for IPv6, like every other per-client budget (ledger 839 N5).
+    const key = request.user?.id ?? `ip:${rateLimitKey(request.ip)}`;
     const retryAfter = limit.consume(key);
     if (retryAfter !== null) {
       return rateLimited(reply, retryAfter);

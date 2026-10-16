@@ -71,6 +71,32 @@ const ALLERGEN_CARRIERS: Record<string, string[]> = {
   ],
   fish: ["cod", "salmon", "sardines", "trout", "tuna"],
   sesame: ["sesame_seeds", "tahini", "sesame_oil"],
+  // Ledger 842: edamame (841) joined tofu.
+  soy: ["edamame", "tofu"],
+};
+
+/** Ledger 842: the dried-bean safety copy in each bean's notes (see 843's recipe guard in basic-recipes.test.ts). */
+const BEAN_TOXIN_COPY: Record<string, RegExp[]> = {
+  kidney_beans: [
+    /never serve raw or undercooked kidney beans/i,
+    /soak dried beans for at least 5 hours, pour the water away/i,
+    /boil them in fresh water for at least 30 minutes/i,
+    /never cook dried kidney beans in a slow cooker/i,
+    /canned kidney beans are already cooked/i,
+  ],
+  white_beans: [
+    /dried white beans must be soaked/i,
+    /boiled hard in fresh water for at least 30 minutes/i,
+    /never cooked from dried in a slow cooker/i,
+    /canned beans are already cooked/i,
+  ],
+  butter_beans: [
+    /never serve them raw or undercooked/i,
+    /cyanide/i,
+    /pour the soaking water away/i,
+    /boil them hard in plenty of fresh water for at least 10 minutes/i,
+    /canned butter beans are already cooked/i,
+  ],
 };
 
 /**
@@ -466,6 +492,7 @@ describe("seeded catalog after the spices expansion", () => {
     expect(ALLERGEN_CARRIERS.tree_nut).toHaveLength(8);
     expect(ALLERGEN_CARRIERS.fish).toHaveLength(5);
     expect(ALLERGEN_CARRIERS.sesame).toHaveLength(3);
+    expect(ALLERGEN_CARRIERS.soy).toHaveLength(2);
   });
 
   it("names the new carriers in the tree_nut, fish and sesame intro guidance", async () => {
@@ -480,6 +507,21 @@ describe("seeded catalog after the spices expansion", () => {
     expect(bySlug.get("fish")).toMatch(/cod/i);
     expect(bySlug.get("fish")).toMatch(/tuna/i);
     expect(bySlug.get("sesame")).toMatch(/sesame seeds/i);
+  });
+
+  it("keeps the dried-bean toxin copy on kidney, white, and butter beans (ledger 842)", async () => {
+    // FDA's Bad Bug Book (kidney and white kidney beans: lectin) and OSU
+    // Extension (lima/butter beans: cyanide). The sentence that says how to
+    // cook them from dried IS the feature; softening it is a safety regression.
+    const rows = await db
+      .select({ slug: schema.foods.slug, notes: schema.foods.notes })
+      .from(schema.foods)
+      .where(and(inArray(schema.foods.slug, Object.keys(BEAN_TOXIN_COPY)), isNull(schema.foods.ownerId)));
+    const bySlug = new Map(rows.map((r) => [r.slug, r.notes ?? ""]));
+    const failures = Object.entries(BEAN_TOXIN_COPY).flatMap(([slug, patterns]) =>
+      patterns.filter((p) => !p.test(bySlug.get(slug) ?? "")).map((p) => `${slug}: notes lost ${String(p)}`),
+    );
+    expect(failures).toEqual([]);
   });
 
   it("carries the mercury limit on canned light tuna and never mentions honey", async () => {

@@ -271,7 +271,8 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'A smooth, mashed hummus-style chickpea spread — no whole chickpeas and no loose skins.',
         steps: [
-          'Simmer soaked dried chickpeas over low heat for 45-60 minutes, until one squashes easily between two fingers, or rinse no-salt-added canned chickpeas and warm them through for 2-3 minutes.',
+          'Rinse no-salt-added canned chickpeas well, or soak dried chickpeas in plenty of cold water for 8-12 hours and pour the soaking water away.',
+          'Warm the rinsed canned chickpeas over low heat for 2-3 minutes, or bring the soaked chickpeas to a full boil in fresh unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 45-60 minutes more, until one squashes easily between two fingers.',
           'Blend or mash them completely smooth, loosening with a little water or olive oil.',
           'Whole chickpeas and their loose skins are a choking risk at this age, so check the spread for any unblended piece or skin and remove it.',
           'Serve as a soft spread on a pre-loaded spoon, at room temperature or just-warm.',
@@ -280,7 +281,8 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Lightly mashed chickpeas, or each one squeezed out of its skin and flattened between your fingers.',
         steps: [
-          'Simmer soaked dried chickpeas over low heat for 45-60 minutes, or rinse canned ones and warm them for 2-3 minutes, until each squashes easily between two fingers.',
+          'Rinse no-salt-added canned chickpeas well, or soak dried chickpeas in cold water for 8-12 hours and pour the soaking water away.',
+          'Warm the rinsed canned chickpeas over low heat for 2-3 minutes, or bring the soaked chickpeas to a full boil in fresh unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 45-60 minutes more, until each squashes easily between two fingers.',
           'Mash lightly for some texture, loosening with a little water or olive oil, or squeeze each chickpea out of its skin and flatten it between your fingers.',
           'Never leave a whole, round chickpea on the plate — always mash, squash flat, or blend.',
           'Serve just-warm for pincer-grasp self-feeding.',
@@ -289,7 +291,8 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Chickpeas squashed flat between finger and thumb one by one, or fully blended into hummus.',
         steps: [
-          'Simmer soaked dried chickpeas over low heat for 45-60 minutes, or rinse canned ones and warm them for 2-3 minutes, until soft.',
+          'Rinse no-salt-added canned chickpeas well, or soak dried chickpeas in cold water for 8-12 hours and pour the soaking water away.',
+          'Warm the rinsed canned chickpeas over low heat for 2-3 minutes, or bring the soaked chickpeas to a full boil in fresh unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 45-60 minutes more, until soft.',
           'Squash each one flat between finger and thumb before it goes on the plate, or blend them fully into hummus or a mild curry, loosening with a little water or olive oil.',
           'Round, firm whole chickpeas stay a choking hazard, so squash or blend rather than serving them whole.',
           'Serve just-warm with no added salt.',
@@ -309,7 +312,8 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'Well-mashed black beans with no whole, round bean left.',
         steps: [
-          'Simmer soaked dried black beans over low heat for 60-90 minutes, until one squashes easily between two fingers, or rinse no-salt-added canned beans and warm them through for 2-3 minutes.',
+          'Rinse no-salt-added canned black beans well, or soak dried black beans in plenty of cold water for 8-12 hours and pour the soaking water away.',
+          'Warm the rinsed canned beans over low heat for 2-3 minutes, or bring the soaked beans to a full boil in fresh unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 60-90 minutes more, until one squashes easily between two fingers.',
           'Mash them well, squashing every bean flat so no whole, round bean remains — whole beans can be firm enough to pose a choking risk.',
           'Loosen with a little water if the mash is stiff.',
           'Cool to just-warm and serve on a pre-loaded spoon.',
@@ -318,7 +322,8 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Lightly mashed or individually squashed beans with some soft texture left.',
         steps: [
-          'Simmer soaked dried beans over low heat for 60-90 minutes, or rinse canned beans and warm them for 2-3 minutes, until they are very soft.',
+          'Rinse no-salt-added canned black beans well, or soak dried black beans in cold water for 8-12 hours and pour the soaking water away.',
+          'Warm the rinsed canned beans over low heat for 2-3 minutes, or bring the soaked beans to a full boil in fresh unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 60-90 minutes more, until they are very soft.',
           'Mash lightly, or squash each bean flat between your fingers, leaving some soft texture.',
           'Loosen with a little water if the mash is stiff.',
           'Squash or mash rather than serving beans fully whole and round.',
@@ -328,7 +333,8 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Whole cooked beans soft enough to squash easily between two fingers.',
         steps: [
-          'Cook the beans until one squashes easily between two fingers — 60-90 minutes at a low simmer for dried, or 2-3 minutes to warm rinsed canned beans through — and test one before serving.',
+          'Rinse no-salt-added canned black beans well, or soak dried black beans in cold water for 8-12 hours and pour the soaking water away.',
+          'Warm the rinsed canned beans over low heat for 2-3 minutes, or bring the soaked beans to a full boil in fresh unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 60-90 minutes more, until one squashes easily between two fingers — test one before serving.',
           'Serve them soft and whole in a bowl, or mixed through rice or another soft food.',
           'If any bean still feels firm, squash it flat before it goes on the plate.',
           'Serve just-warm with no added salt.',
@@ -387,8 +393,8 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'Well-mashed pinto beans, soft enough to scoop, with no whole, round bean left.',
         steps: [
-          'Soak dried pinto beans in plenty of cold water for 8-12 hours, then drain and rinse them, or rinse no-salt-added canned pinto beans well in a colander.',
-          'Simmer the soaked beans in fresh unsalted water over low heat for 1-2 hours, until one squashes easily between two fingers, or warm the rinsed canned beans over low heat for 2-3 minutes.',
+          'Soak dried pinto beans in plenty of cold water for 8-12 hours, then pour the soaking water away and rinse them, or rinse no-salt-added canned pinto beans well in a colander.',
+          'Bring the soaked beans to a full boil in fresh unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 1-2 hours, until one squashes easily between two fingers, or warm the rinsed canned beans over low heat for 2-3 minutes.',
           'Mash the pinto beans well, squashing every bean flat so no whole, round bean remains — whole beans can be firm enough to pose a choking risk.',
           'Loosen the mash with a little water if it is stiff, so it is soft and scoopable.',
           'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
@@ -397,8 +403,8 @@ export const basicRecipes: RecipeSeed[] = [
       '9': {
         textureNote: 'Lightly mashed or individually squashed pinto beans with some soft texture left, for baby to pick up or scoop.',
         steps: [
-          'Soak dried pinto beans in cold water for 8-12 hours and drain them, or rinse no-salt-added canned pinto beans well.',
-          'Simmer the soaked beans in fresh unsalted water over low heat for 1-2 hours, or warm rinsed canned beans over low heat for 2-3 minutes, until every bean is very soft.',
+          'Soak dried pinto beans in cold water for 8-12 hours and pour the soaking water away, or rinse no-salt-added canned pinto beans well.',
+          'Bring the soaked beans to a full boil in fresh unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 1-2 hours, or warm rinsed canned beans over low heat for 2-3 minutes, until every bean is very soft.',
           'Mash the pinto beans lightly, or squash each bean flat between your fingers, leaving some soft texture.',
           'Loosen the mash with a little water if it is stiff.',
           'Cool to just-warm and serve on the tray for baby to pick up, with no added salt.',
@@ -407,8 +413,8 @@ export const basicRecipes: RecipeSeed[] = [
       '12': {
         textureNote: 'Whole cooked pinto beans soft enough to squash easily between two fingers, or a soft mash to scoop.',
         steps: [
-          'Soak dried pinto beans in cold water for 8-12 hours and drain them, or rinse no-salt-added canned pinto beans well.',
-          'Simmer the soaked beans in fresh unsalted water over low heat for 1-2 hours, or warm rinsed canned beans over low heat for 2-3 minutes, until one squashes easily between two fingers.',
+          'Soak dried pinto beans in cold water for 8-12 hours and pour the soaking water away, or rinse no-salt-added canned pinto beans well.',
+          'Bring the soaked beans to a full boil in fresh unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 1-2 hours, or warm rinsed canned beans over low heat for 2-3 minutes, until one squashes easily between two fingers.',
           'Serve the pinto beans soft and whole, mixed through rice or another soft food, and squash flat any bean that still feels firm.',
           'For a spread instead, mash a spoonful of the beans and loosen the mash with a little water.',
           'Cool to just-warm and serve with no added salt.',
@@ -473,7 +479,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Smooth, well-mashed butter beans with no whole bean or loose skin left, soft enough to scoop.',
         steps: [
           'Rinse no-salt-added canned butter beans (also sold as lima beans) well, or soak dried butter beans in plenty of cold water for 8-12 hours and pour the soaking water away — they are never served raw.',
-          'Bring the soaked beans to a boil in plenty of fresh, unsalted water, then simmer over low heat for 45-60 minutes, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
+          'Bring the soaked beans to a full boil in plenty of fresh, unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 45-60 minutes more, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
           'Mash the butter beans well, squashing every bean flat and picking out any loose skins, so no whole bean is left.',
           'Loosen the mash with a little water if it is stiff, so it is soft and scoopable.',
           'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
@@ -483,7 +489,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Butter beans squashed flat between your fingers or lightly mashed, with some soft texture left.',
         steps: [
           'Rinse no-salt-added canned butter beans well, or soak dried butter beans in plenty of cold water for 8-12 hours and pour the soaking water away — they are never served raw.',
-          'Bring the soaked beans to a boil in plenty of fresh, unsalted water, then simmer over low heat for 45-60 minutes, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
+          'Bring the soaked beans to a full boil in plenty of fresh, unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 45-60 minutes more, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
           'Squash each butter bean flat between your fingers, or mash them lightly, leaving some soft texture for pincer-grasp practice.',
           'Loosen any mash with a little water if it is stiff.',
           'Cool to just-warm and serve on the tray, with no added salt.',
@@ -493,7 +499,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Soft butter beans, lightly squashed, that give easily between two fingers, or a soft mash to scoop.',
         steps: [
           'Rinse no-salt-added canned butter beans well, or soak dried butter beans in plenty of cold water for 8-12 hours and pour the soaking water away.',
-          'Bring the soaked beans to a boil in plenty of fresh, unsalted water, then simmer over low heat for 45-60 minutes, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
+          'Bring the soaked beans to a full boil in plenty of fresh, unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 45-60 minutes more, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
           'Squash each butter bean lightly, since they are big beans, and serve them in a bowl or mixed through a soft food baby already eats.',
           'For a spread instead, mash a spoonful of the beans and loosen the mash with a little water.',
           'Cool to just-warm and serve with no added salt.',

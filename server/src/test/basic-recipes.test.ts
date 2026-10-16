@@ -277,6 +277,29 @@ function cookedRawFood(step: string, slugs: readonly string[]): string | undefin
  * so the negation is required right next to the word — "no honey before 12
  * months" passes, "with a drizzle of honey, no added salt" does not.
  */
+/**
+ * Ledger 843 (owner + chair, 2026-10-16): a stage that starts from DRIED beans
+ * soaks them, pours the soaking water away, and boils them hard in fresh water
+ * before simmering. Kidney and white (cannellini) beans carry the lectin in
+ * FDA's Bad Bug Book: at least 30 minutes, and never a slow cooker. The other
+ * dried beans get at least 10 (butter/lima beans are cyanogenic raw). Canned
+ * stays "rinse; already cooked"; lentils need no soak or hard boil; edamame is
+ * bought frozen.
+ */
+const DRIED_BEAN_BOIL_MINUTES: Record<string, number> = {
+  kidney_beans: 30,
+  white_beans: 30,
+  butter_beans: 10,
+  pinto_beans: 10,
+  black_beans: 10,
+  chickpeas: 10,
+};
+const NO_DRIED_BOIL_LEGUMES: readonly string[] = ["lentils", "edamame"];
+const SLOW_COOKER_BEANS: readonly string[] = ["kidney_beans", "white_beans"];
+const FROM_DRIED = /\b(?:dried|soak(?:ed)?)\b[^.;—]{0,40}\b(?:beans?|chickpeas?)\b/i;
+/** The step that boils them: names a hard boil in fresh water and its minimum. */
+const HARD_BOIL = /\bboil\w* (?:them |the soaked beans )?hard\b[^.;]*?\bat least (\d+) minutes/i;
+
 const SWEETENER = /\b(?:honey|maple syrup|agave|molasses|golden syrup)\b/i;
 const NEGATED_JUST_BEFORE = /\b(?:no|not|never|without|avoid|skip|don'?t)\b[^.;]{0,24}$/i;
 
@@ -1226,6 +1249,45 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
           !NO_INTERNAL_TEMP.includes(slug),
       );
     expect(unclassified).toEqual([]);
+  });
+
+  it("soaks, drains, and hard-boils dried beans in every stage that starts from them (ledger 843)", async () => {
+    const variants = await catalogVariants();
+    const failures: string[] = [];
+    const checked = new Set<string>();
+    for (const v of variants) {
+      for (const foodSlug of v.foodSlugs) {
+        const minutes = DRIED_BEAN_BOIL_MINUTES[foodSlug];
+        if (minutes === undefined || !v.instructions.some((step) => FROM_DRIED.test(step))) continue;
+        checked.add(foodSlug);
+        const where = `${v.slug} stage ${v.ageStage} (${foodSlug})`;
+        if (!v.instructions.some((step) => /soaking water away/i.test(step))) {
+          failures.push(`${where}: never pours the soaking water away`);
+        }
+        const boil = v.instructions
+          .filter((step) => /\bfresh\b/i.test(step))
+          .map((step) => HARD_BOIL.exec(step))
+          .find((m) => m !== null);
+        if (!boil) failures.push(`${where}: no hard boil in fresh water`);
+        else if (Number(boil[1]) < minutes) failures.push(`${where}: boils ${boil[1]} min, needs at least ${minutes}`);
+        if (SLOW_COOKER_BEANS.includes(foodSlug) && !v.instructions.some((s) => /never cook dried[^.]*slow cooker/i.test(s))) {
+          failures.push(`${where}: no slow-cooker warning`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+    // Guard the guard: every bean's own basic offers the dried path, so each
+    // entry above is really exercised.
+    expect([...checked].sort()).toEqual(Object.keys(DRIED_BEAN_BOIL_MINUTES).sort());
+
+    // Completeness: a new legume has to be classified here.
+    const legumes = await db
+      .select({ slug: schema.foods.slug })
+      .from(schema.foods)
+      .where(and(eq(schema.foods.category, "legume"), isNull(schema.foods.ownerId)));
+    expect(
+      legumes.map((f) => f.slug).filter((s) => DRIED_BEAN_BOIL_MINUTES[s] === undefined && !NO_DRIED_BOIL_LEGUMES.includes(s)),
+    ).toEqual([]);
   });
 
   it("never suggests honey, added salt, or added sugar in any recipe", async () => {

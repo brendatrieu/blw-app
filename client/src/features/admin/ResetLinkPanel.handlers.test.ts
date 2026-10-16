@@ -267,6 +267,23 @@ describe("an older session confirms the owner's password in the panel (830)", ()
     expect(collect(panel(), (element) => element.props["aria-label"] === "Reset link")).toHaveLength(1);
   });
 
+  it("never re-sends a confirmed password with the next link (842, mirrors the Access panel's 840 pin)", () => {
+    h.outcome.error = "password_required";
+    type("parent@example.com");
+    submit();
+    confirm("owner-password");
+
+    // The session is still stale: the next link asks again, with no password.
+    type("other@example.com");
+    submit();
+    expect(h.calls.creates).toEqual([
+      { email: "parent@example.com" },
+      { email: "parent@example.com", password: "owner-password" },
+      { email: "other@example.com" },
+    ]);
+    expect(prompt()).toBeDefined();
+  });
+
   it("keeps the sign-in-again sentence for an owner with no password", () => {
     h.outcome.error = "reauth_required";
     type("parent@example.com");

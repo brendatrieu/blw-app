@@ -361,10 +361,11 @@ export const favorites = pgTable(
 
 // A meal is one sitting: a timestamp, an optional note about how it went,
 // optional attribution to a recipe, and one or more foods through
-// `meal_foods`. Every exposure query (allergen progress, times served, the
-// symptom-checker snapshot) reads meal_foods JOIN meals, where one
-// (meal, food) pair is exactly one exposure — the unique index below is what
-// makes that count trustworthy.
+// `meal_foods`. Every exposure query reads meal_foods JOIN meals. Times
+// served and the symptom-checker snapshot count one (meal, food) pair as one
+// exposure; allergen progress counts each meal once per allergen and skips the
+// tags that never count (ledgers 836, 838). The unique index below is what
+// makes those counts trustworthy.
 export const meals = pgTable(
   "meals",
   {

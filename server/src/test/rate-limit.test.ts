@@ -1,3 +1,4 @@
+import net, { type AddressInfo } from "node:net";
 import { describe, expect, it } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
@@ -29,6 +30,22 @@ function signIn(
     url: "/api/auth/sign-in/email",
     ...from,
     payload: { email: "nobody@example.test", password: "wrong-password-here" },
+  });
+}
+
+/** One raw HTTP/1.1 exchange over a socket, so the request target reaches Fastify unnormalized. */
+function rawRequest(port: number, raw: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const socket = net.connect(port, "127.0.0.1");
+    let out = "";
+    socket.on("data", (chunk) => (out += chunk.toString("latin1")));
+    socket.on("end", () => resolve(out));
+    socket.on("error", reject);
+    socket.setTimeout(10_000, () => {
+      socket.destroy();
+      reject(new Error("raw request timed out"));
+    });
+    socket.write(raw);
   });
 }
 
@@ -126,7 +143,7 @@ describe("per-client rate limits behind Caddy (839)", { timeout: 30_000 }, () =>
   });
 
   it("keeps one strict budget per parent across every credential endpoint", async () => {
-    const { app, close } = await createTestApp({ AUTH_RATE_LIMIT_MAX: 10 });
+    const { app, close } = await createTestApp({ AUTH_RATE_LIMIT_MAX: 12 });
     try {
       const parent = viaCaddy("198.51.100.7");
       const credential = [
@@ -159,6 +176,10 @@ describe("per-client rate limits behind Caddy (839)", { timeout: 30_000 }, () =>
           payload: { email: "a@example.test" },
         },
         { method: "POST", url: "/api/auth/change-email", payload: { newEmail: "b@example.test" } },
+        // Ledger 842 (839 N3): off (404) or token-gated today, but still on
+        // the strict budget, so turning one on later cannot widen it.
+        { method: "POST", url: "/api/auth/delete-user", payload: {} },
+        { method: "GET", url: "/api/auth/verify-email?token=nope" },
         // Only looks like the session route: better-auth resolves the dots
         // and runs sign-in, so it must pay the strict price too.
         {
@@ -170,8 +191,9 @@ describe("per-client rate limits behind Caddy (839)", { timeout: 30_000 }, () =>
       for (const call of credential) {
         const res = await app.inject({ ...call, ...parent });
         expect(res.statusCode, call.url).not.toBe(429);
-        expect(res.headers["x-ratelimit-limit"], call.url).toBe("10");
+        expect(res.headers["x-ratelimit-limit"], call.url).toBe("12");
       }
+      expect(credential).toHaveLength(12);
       const blocked = await signIn(app, parent);
       expect(blocked.statusCode).toBe(429);
       expect(blocked.json()).toMatchObject({ statusCode: 429, code: "RATE_LIMITED" });
@@ -182,6 +204,41 @@ describe("per-client rate limits behind Caddy (839)", { timeout: 30_000 }, () =>
       expect(
         (await app.inject({ method: "GET", url: "/api/auth/get-session", ...parent })).statusCode,
       ).toBe(200);
+    } finally {
+      await close();
+    }
+  });
+
+  it("puts raw dot-segment paths on the strict budget on a real listener (839 N1)", async () => {
+    // inject() resolves `..` before Fastify routes, so only a raw socket sends
+    // what a client can: better-auth resolves these to a credential endpoint,
+    // and Fastify must not have routed them to the global session routes.
+    const { app, close } = await createTestApp({ AUTH_RATE_LIMIT_MAX: 20, GLOBAL_RATE_LIMIT_MAX: 300 });
+    try {
+      await app.listen({ port: 0, host: "127.0.0.1" });
+      const { port } = app.server.address() as AddressInfo;
+      const limitFor = async (target: string) => {
+        const body = JSON.stringify({ email: "nobody@example.test", password: "wrong-password-here" });
+        const response = await rawRequest(
+          port,
+          `POST ${target} HTTP/1.1\r\nHost: localhost\r\nOrigin: ${TEST_ORIGIN}\r\nContent-Type: application/json\r\n` +
+            `Content-Length: ${Buffer.byteLength(body)}\r\nConnection: close\r\n\r\n${body}`,
+        );
+        return /x-ratelimit-limit: (\d+)/i.exec(response)?.[1];
+      };
+      // The control: the plain session route really is on the global budget.
+      expect(await limitFor("/api/auth/sign-out")).toBe("300");
+      for (const target of [
+        "/api/auth/get-session/../sign-in/email",
+        "/api/auth/get-session/%2e%2e/sign-in/email",
+        "/api/auth/get-session/.%2E/sign-in/email",
+        "/api/auth/sign-out/../sign-in/email",
+        "/api/auth/sign-out/../request-password-reset",
+        "/api/auth/get-session/./../reset-password",
+        "/api/auth/get-session/../../auth/sign-in/email",
+      ]) {
+        expect(await limitFor(target), target).toBe("20");
+      }
     } finally {
       await close();
     }
