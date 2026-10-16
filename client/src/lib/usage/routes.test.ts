@@ -59,6 +59,7 @@ describe("toRoutePattern", () => {
     ["/signup", "/signup"],
     ["/about", "/about"],
     ["/reset-password", "/reset-password"],
+    ["/forgot-password", "/forgot-password"],
     ["/", "/"],
     ["/log-meal", "/log-meal"],
     ["/meals", "/meals"],

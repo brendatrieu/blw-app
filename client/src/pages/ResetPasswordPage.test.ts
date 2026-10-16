@@ -1,11 +1,21 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
+import type { AuthConfig } from "@blw/shared";
 import { ResetPasswordPage } from "./ResetPasswordPage.js";
 
-function render(entry: string | { pathname: string; state: unknown }) {
-  return renderToString(createElement(MemoryRouter, { initialEntries: [entry] }, createElement(ResetPasswordPage)));
+function render(entry: string | { pathname: string; state: unknown }, config?: AuthConfig) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  if (config) queryClient.setQueryData(["auth-config"], config);
+  return renderToString(
+    createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(MemoryRouter, { initialEntries: [entry] }, createElement(ResetPasswordPage)),
+    ),
+  );
 }
 
 describe("ResetPasswordPage (render)", () => {
@@ -31,5 +41,12 @@ describe("ResetPasswordPage (render)", () => {
       expect(html).toMatch(/<a[^>]*href="\/login"[^>]*>Back to sign in<\/a>/);
       expect(html).not.toContain("<form");
     }
+  });
+
+  it("offers a fresh link by email only when the server can send one (ledger 822)", () => {
+    const newLink = /<a[^>]*href="\/forgot-password"[^>]*>Send a new link<\/a>/;
+    expect(render("/reset-password", { googleEnabled: false, emailEnabled: true })).toMatch(newLink);
+    expect(render("/reset-password", { googleEnabled: false, emailEnabled: false })).not.toMatch(newLink);
+    expect(render("/reset-password")).not.toContain("Send a new link");
   });
 });

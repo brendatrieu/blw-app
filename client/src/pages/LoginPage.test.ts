@@ -3,14 +3,16 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
+import type { AuthConfig } from "@blw/shared";
 import { LoginPage, validateLogin, type LoginValues } from "./LoginPage.js";
 
 function values(overrides: Partial<LoginValues> = {}): LoginValues {
   return { email: "parent@example.com", password: "hunter2hunter2", ...overrides };
 }
 
-function render(entry: string | { pathname: string; state: unknown } = "/login") {
+function render(entry: string | { pathname: string; state: unknown } = "/login", config?: AuthConfig) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  if (config) queryClient.setQueryData(["auth-config"], config);
   return renderToString(
     createElement(
       QueryClientProvider,
@@ -51,6 +53,14 @@ describe("validateLogin", () => {
 });
 
 describe("LoginPage (render)", () => {
+  it("offers Forgot password? only when the reset email would really arrive (ledger 822)", () => {
+    const link = /<a[^>]*href="\/forgot-password"[^>]*>Forgot password\?<\/a>/;
+    expect(render("/login", { googleEnabled: false, emailEnabled: true })).toMatch(link);
+    expect(render("/login", { googleEnabled: false, emailEnabled: false })).not.toContain("Forgot password?");
+    // Still loading, offline, or the probe failed: no promise either.
+    expect(render()).not.toContain("Forgot password?");
+  });
+
   it("confirms a password reset only when arriving from one (ledger 820)", () => {
     const notice = "Password changed. Sign in with your new password.";
     expect(render({ pathname: "/login", state: { passwordReset: true } })).toContain(notice);

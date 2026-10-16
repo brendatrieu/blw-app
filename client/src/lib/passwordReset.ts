@@ -1,6 +1,6 @@
 // The password-reset screens' rules (ledger 820), kept out of the components
 // so a native shell can reuse them unchanged (CLAUDE.md, native-ready).
-import type { FormErrors } from "./forms.js";
+import { looksLikeEmail, type FormErrors } from "./forms.js";
 
 /** The limits better-auth enforces (server/src/auth.ts, emailAndPassword). */
 export const PASSWORD_MIN_LENGTH = 8;
@@ -27,6 +27,13 @@ export function validateNewPassword(values: NewPasswordValues): FormErrors<NewPa
   }
   if (values.confirm !== values.password) errors.confirm = "The passwords don't match";
   return errors;
+}
+
+/** The "Forgot password?" form's one field, with sign-in's wording (ledger 822). */
+export function validateResetRequest(values: { email: string }): FormErrors<"email"> {
+  if (values.email.trim().length === 0) return { email: "Email is required" };
+  if (!looksLikeEmail(values.email)) return { email: "Enter a valid email" };
+  return {};
 }
 
 /** Where the page parks the token once it is off the address bar. */

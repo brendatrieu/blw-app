@@ -288,7 +288,7 @@ describe("auth and baby ownership", () => {
       const response = await app.inject({ method: "GET", url: "/api/auth-config" });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({ googleEnabled: false });
+      expect(response.json()).toEqual({ googleEnabled: false, emailEnabled: true });
     });
   });
 });
@@ -301,7 +301,7 @@ describe("auth capability probe with Google configured", () => {
     });
 
     const response = await app.inject({ method: "GET", url: "/api/auth-config" });
-    expect(response.json()).toEqual({ googleEnabled: true });
+    expect(response.json()).toEqual({ googleEnabled: true, emailEnabled: true });
 
     await close();
   });

@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { authErrorMessage, signIn } from "../lib/auth.js";
+import { authErrorMessage, signIn, useAuthConfig } from "../lib/auth.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
 import { Field } from "../components/ui/Field.js";
 import { Input } from "../components/ui/Input.js";
 import { looksLikeEmail, useSubmitValidation, type FormErrors } from "../lib/forms.js";
 import type { PasswordResetDoneState } from "./ResetPasswordPage.js";
+import type { ForgotPasswordState } from "./ForgotPasswordPage.js";
 
 export interface LoginValues {
   email: string;
@@ -37,6 +38,8 @@ export function validateLogin(values: LoginValues): LoginErrors {
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  // Ledger 822: offered only when the reset email would really arrive.
+  const emailEnabled = useAuthConfig().data?.emailEnabled === true;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -127,6 +130,16 @@ export function LoginPage() {
               }}
             />
           </Field>
+
+          {emailEnabled ? (
+            <Link
+              to="/forgot-password"
+              state={{ email } satisfies ForgotPasswordState}
+              className="-mt-2 inline-flex min-h-11 items-center self-end text-sm font-medium text-[var(--color-accent)] underline"
+            >
+              Forgot password?
+            </Link>
+          ) : null}
 
           {error ? (
             <p role="alert" className="text-sm text-[var(--color-danger)]">

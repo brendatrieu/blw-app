@@ -57,6 +57,7 @@ vi.mock("../lib/auth.js", () => ({
     return Promise.resolve(h.world.answer);
   },
   authErrorMessage: (error: { message?: string } | null) => error?.message ?? null,
+  useAuthConfig: () => ({ data: undefined }),
 }));
 
 import { ResetPasswordPage } from "./ResetPasswordPage.js";

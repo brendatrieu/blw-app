@@ -4,9 +4,12 @@ import { and, eq, like } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ACCOUNT_REAUTH_MAX_AGE_MS, adminResetLinkResponseSchema } from "@blw/shared";
+import { buildApp } from "../app.js";
+import type { AuthLogger } from "../auth.js";
+import { isEmailEnabled } from "../config.js";
 import type { Database } from "../db/index.js";
 import { account, adminAudit, session, user, verification } from "../db/schema.js";
-import { cookieHeader, createTestApp, signUpUser, TEST_ORIGIN, type TestUser } from "./helpers.js";
+import { cookieHeader, createTestApp, createTestDb, signUpUser, TEST_ORIGIN, testEnv, type TestUser } from "./helpers.js";
 
 const OWNER_EMAIL = "owner@littlemeals.test";
 const NEW_PASSWORD = "a-brand-new-password";
@@ -218,5 +221,84 @@ describe("the owner's one-time reset link (821)", () => {
     expect(refused.statusCode).toBe(409);
     expect(refused.json()).toEqual({ error: "no_password" });
     expect(await db.select().from(adminAudit)).toHaveLength(0);
+  });
+});
+
+describe("Forgot password? by email (822)", () => {
+  let app: FastifyInstance;
+  let db: Database;
+  let closeDb: () => Promise<void>;
+  let mail: string[];
+
+  beforeEach(async () => {
+    // Built by hand rather than with createTestApp, whose auth logger is
+    // silent: outside production the email (link included) goes to this log.
+    mail = [];
+    const logger: AuthLogger = {
+      info: (message) => mail.push(message),
+      warn: () => {},
+      error: () => {},
+    };
+    ({ db, close: closeDb } = await createTestDb());
+    app = buildApp({ env: testEnv(), db, authLogger: logger, logger: false });
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+    await closeDb();
+  });
+
+  const request = (email: string) =>
+    app.inject({
+      method: "POST",
+      url: "/api/auth/request-password-reset",
+      headers: { origin: TEST_ORIGIN },
+      payload: { email, redirectTo: "/reset-password" },
+    });
+
+  it("is offered only where the email would really arrive", async () => {
+    expect(isEmailEnabled({ NODE_ENV: "production", RESEND_API_KEY: undefined })).toBe(false);
+    expect(isEmailEnabled({ NODE_ENV: "production", RESEND_API_KEY: "re_test" })).toBe(true);
+    // Development and test deliver to the server log.
+    expect(isEmailEnabled({ NODE_ENV: "development", RESEND_API_KEY: undefined })).toBe(true);
+    expect(isEmailEnabled({ NODE_ENV: "test", RESEND_API_KEY: undefined })).toBe(true);
+
+    const probe = await app.inject({ method: "GET", url: "/api/auth-config" });
+    expect(probe.json()).toEqual({ googleEnabled: false, emailEnabled: true });
+  });
+
+  it("answers a known and an unknown address identically, and mails only the real one", async () => {
+    const parent = await signUpUser(app);
+    mail = [];
+
+    const known = await request(parent.email);
+    const unknown = await request("nobody-here@example.com");
+    expect(known.statusCode).toBe(200);
+    expect(unknown.statusCode).toBe(known.statusCode);
+    expect(unknown.body).toBe(known.body);
+    expect(unknown.headers["content-type"]).toBe(known.headers["content-type"]);
+
+    const resets = mail.filter((line) => line.includes('subject="Reset your password"'));
+    expect(resets).toHaveLength(1);
+    expect(resets[0]).toContain(`to=${parent.email}`);
+  });
+
+  it("emails a link that lands on the reset page and resets the password", async () => {
+    const parent = await signUpUser(app);
+    mail = [];
+    await request(parent.email);
+
+    const link = /(http\S+\/api\/auth\/reset-password\/\S+)/.exec(mail.join("\n"))?.[1];
+    expect(link).toBeDefined();
+    expect(link).toContain("callbackURL=%2Freset-password");
+    const landing = await openLink(app, link!);
+    expect(landing.pathname).toBe("/reset-password");
+
+    expect((await resetWith(app, landing.searchParams.get("token")!)).statusCode).toBe(200);
+    expect((await signIn(app, parent.email, NEW_PASSWORD)).statusCode).toBe(200);
+    expect((await app.inject({ method: "GET", url: "/api/babies", headers: { cookie: parent.cookie } })).statusCode).toBe(
+      401,
+    );
   });
 });

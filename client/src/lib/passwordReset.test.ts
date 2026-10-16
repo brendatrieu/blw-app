@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDeadLinkError, readResetToken, validateNewPassword } from "./passwordReset.js";
+import { isDeadLinkError, readResetToken, validateNewPassword, validateResetRequest } from "./passwordReset.js";
 
 describe("validateNewPassword", () => {
   it("accepts a matching pair inside the server's limits", () => {
@@ -49,5 +49,13 @@ describe("isDeadLinkError", () => {
     expect(isDeadLinkError({ code: "PASSWORD_TOO_SHORT" })).toBe(false);
     expect(isDeadLinkError({})).toBe(false);
     expect(isDeadLinkError(null)).toBe(false);
+  });
+});
+
+describe("validateResetRequest", () => {
+  it("wants an address, worded like sign-in", () => {
+    expect(validateResetRequest({ email: "parent@example.com" })).toEqual({});
+    expect(validateResetRequest({ email: "  " })).toEqual({ email: "Email is required" });
+    expect(validateResetRequest({ email: "parent@example" })).toEqual({ email: "Enter a valid email" });
   });
 });

@@ -192,6 +192,16 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Env {
   return parsed.data;
 }
 
+/**
+ * True when a password-reset email will really reach somebody (ledger 822):
+ * production needs RESEND_API_KEY, since without it `deliverEmail` drops the
+ * message. Development and test write the email (link included) to the
+ * server log instead, which is real delivery for whoever runs the server.
+ */
+export function isEmailEnabled(env: Pick<Env, "NODE_ENV" | "RESEND_API_KEY">): boolean {
+  return env.NODE_ENV !== "production" || Boolean(env.RESEND_API_KEY);
+}
+
 /** True when the server has everything it needs to offer Google sign-in. */
 export function isGoogleEnabled(env: Env): boolean {
   return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);

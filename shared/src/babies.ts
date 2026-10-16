@@ -122,6 +122,12 @@ export const babyIdParamSchema = z.object({ id: z.string().uuid() });
  */
 export const authConfigSchema = z.object({
   googleEnabled: z.boolean(),
+  /**
+   * True only when the server can really deliver a password-reset email, so
+   * "Forgot password?" never promises a message that will not arrive
+   * (ledger 822). False in production until RESEND_API_KEY is set.
+   */
+  emailEnabled: z.boolean(),
 });
 
 /** The app page a password-reset link lands on (ledger 820). The server

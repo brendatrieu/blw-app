@@ -4,7 +4,7 @@ import type { AuthConfig } from "@blw/shared";
 import type { Auth, AuthUser } from "../auth.js";
 import type { Env } from "../config.js";
 import type { Database } from "../db/index.js";
-import { isGoogleEnabled } from "../config.js";
+import { isEmailEnabled, isGoogleEnabled } from "../config.js";
 import { authRateLimitConfig } from "./rate-limit.js";
 import { registerDevAutoAuth } from "./dev-auth.js";
 
@@ -127,9 +127,10 @@ export function registerAuth(app: FastifyInstance, { auth, env, db }: RegisterAu
   // Capability probe for the sign-in UI
   // ---------------------------------------------------------------------
   // Lets the client disable "Continue with Google" with an explanation
-  // instead of sending the user into a redirect the server cannot complete.
+  // instead of sending the user into a redirect the server cannot complete,
+  // and show "Forgot password?" only when the email would really arrive.
   app.get("/api/auth-config", async (): Promise<AuthConfig> => {
-    return { googleEnabled: isGoogleEnabled(env) };
+    return { googleEnabled: isGoogleEnabled(env), emailEnabled: isEmailEnabled(env) };
   });
 }
 

@@ -132,8 +132,12 @@ export function createAuth({ db, env, logger = consoleLogger }: CreateAuthOption
       revokeSessionsOnPasswordReset: true,
       // Explicit (it is better-auth's default) so admin-made links share it.
       resetPasswordTokenExpiresIn: RESET_TOKEN_TTL_SECONDS,
+      // Not awaited: better-auth awaits this callback only for a REAL
+      // account, so a Resend round trip here would make "known address"
+      // measurably slower than "unknown" — an enumeration oracle. Failures
+      // are logged (subject only) and the answer stays the same neutral one.
       sendResetPassword: async ({ user: recipient, url }) => {
-        await deliverEmail(env, logger, {
+        void deliverEmail(env, logger, {
           to: recipient.email,
           subject: "Reset your password",
           text: [
@@ -143,6 +147,8 @@ export function createAuth({ db, env, logger = consoleLogger }: CreateAuthOption
             "",
             "The link expires in one hour. If you did not ask for this, you can ignore this email.",
           ].join("\n"),
+        }).catch(() => {
+          logger.error('Could not send "Reset your password". Email not delivered.');
         });
       },
     },

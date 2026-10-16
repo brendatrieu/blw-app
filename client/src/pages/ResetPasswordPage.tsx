@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { RESET_PASSWORD_PATH } from "@blw/shared";
-import { authErrorMessage, resetPassword } from "../lib/auth.js";
+import { authErrorMessage, resetPassword, useAuthConfig } from "../lib/auth.js";
 import { useSubmitValidation } from "../lib/forms.js";
 import {
   NEW_PASSWORD_FIELD_ORDER,
@@ -34,6 +34,7 @@ export function ResetPasswordPage() {
   const navigate = useNavigate();
   const token = readResetToken(location.search, location.state);
   const tokenInQuery = new URLSearchParams(location.search).has("token");
+  const emailEnabled = useAuthConfig().data?.emailEnabled === true;
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -84,6 +85,11 @@ export function ResetPasswordPage() {
           <h1 className="font-display text-[var(--color-text)]">This link no longer works</h1>
           <p className="text-sm text-[var(--color-text-muted)]">Reset links work once and expire after an hour.</p>
         </div>
+        {emailEnabled ? (
+          <ButtonLink to="/forgot-password" className="text-base">
+            Send a new link
+          </ButtonLink>
+        ) : null}
         <ButtonLink to="/login" variant="secondary" className="text-base">
           Back to sign in
         </ButtonLink>

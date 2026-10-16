@@ -44,6 +44,8 @@ export const ROUTE_PATTERNS = [
   /** Where a password-reset link lands, public (ledger 820). The token rides
    * in the query, which a route pattern never carries. */
   "/reset-password",
+  /** Ask for a reset email, signed out (ledger 822). */
+  "/forgot-password",
   "/",
   "/log-meal",
   "/meals",
