@@ -24,7 +24,12 @@ export interface SignOutDeps {
  */
 export function createSignOutDeps(queryClient: Pick<QueryClient, "clear">): SignOutDeps {
   return {
-    authSignOut: signOut,
+    // better-auth reports a refused sign-out as `{ error }`, not a throw:
+    // throw it, so the caller knows the session may still be live.
+    authSignOut: async () => {
+      const { error } = await signOut();
+      if (error) throw new Error(error.message ?? "Sign-out failed");
+    },
     queryClient,
     clearCache: clearPersistedQueryCache,
     storage: window.localStorage,
@@ -40,20 +45,25 @@ export function createSignOutDeps(queryClient: Pick<QueryClient, "clear">): Sign
  * previous account's child data (nickname, birth date, serve logs, storage,
  * favourites) for up to `maxAge` after the next person signs in.
  *
- * Runs the cleanup steps after the auth sign-out resolves, so a later step
- * failing never leaves an earlier one undone — each step is awaited in turn.
+ * Runs the cleanup steps after the auth sign-out settles (resolved or not),
+ * each awaited in turn.
  */
 export async function performSignOut(deps: SignOutDeps): Promise<void> {
   // Before the sign-out, not after: a queued event sent once the cookie is
   // gone arrives anonymous and lands in nobody's account. A failed flush is
   // never allowed to block the sign-out itself.
   await deps.flushUsage().catch(() => undefined);
-  await deps.authSignOut();
-  deps.queryClient.clear();
-  await deps.clearCache();
-  deps.storage.removeItem(ACTIVE_BABY_STORAGE_KEY);
-  // The queue is client-side state about the account that just left, exactly
-  // like the caches above — including the persisted copy in IndexedDB.
-  await deps.discardUsage().catch(() => undefined);
-  resetUsageAccountContext();
+  try {
+    await deps.authSignOut();
+  } finally {
+    // Item 827: offline, the server call can throw — this device's copy of
+    // the account is wiped anyway, and the error still reaches the caller.
+    deps.queryClient.clear();
+    await deps.clearCache();
+    deps.storage.removeItem(ACTIVE_BABY_STORAGE_KEY);
+    // The queue is client-side state about the account that just left, exactly
+    // like the caches above — including the persisted copy in IndexedDB.
+    await deps.discardUsage().catch(() => undefined);
+    resetUsageAccountContext();
+  }
 }

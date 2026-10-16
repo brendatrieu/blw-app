@@ -902,6 +902,41 @@ export function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
   );
 }
 
+/** Item 827: the only way out of the app, lost with the header's avatar menu
+ * in 59b8cdf. Exported for handler tests. */
+export function SignOutButton() {
+  const queryClient = useQueryClient();
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await performSignOut(createSignOutDeps(queryClient));
+      // No navigate: once better-auth's session refetch (~10 ms later) reads
+      // signed out, RequireAuth sends this page to /login. Navigating sooner
+      // meets /login's guard with the old session, which bounces to /about.
+    } catch {
+      // The server never heard (offline): this device is cleared anyway
+      // (performSignOut), and the button is back for another try.
+      setSigningOut(false);
+    }
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      className="self-start"
+      disabled={signingOut}
+      onClick={() => {
+        void handleSignOut();
+      }}
+    >
+      {signingOut ? "Signing out…" : "Sign out"}
+    </Button>
+  );
+}
+
 function AccountSection() {
   const { data: session } = useSession();
   const exportData = useExportAccount();
@@ -913,6 +948,7 @@ function AccountSection() {
         <span aria-hidden="true">🔐</span> Account
       </h2>
       <p className="text-sm text-[var(--color-text-muted)]">Signed in as {session?.user.email}</p>
+      <SignOutButton />
 
       <div className="flex flex-wrap gap-2">
         <Button

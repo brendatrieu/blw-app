@@ -58,4 +58,13 @@ describe("performSignOut", () => {
 
     expect(order).toContain("storage.removeItem:blw.activeBabyId");
   });
+
+  it("still clears this device when the server sign-out fails (offline, item 827), then rethrows", async () => {
+    const order: string[] = [];
+    const deps = makeDeps(order);
+    deps.authSignOut = () => Promise.reject(new TypeError("Failed to fetch"));
+    await expect(performSignOut(deps)).rejects.toThrow("Failed to fetch");
+
+    expect(order).toEqual(["flushUsage", "queryClient.clear", "clearCache", "storage.removeItem:blw.activeBabyId", "discardUsage"]);
+  });
 });
