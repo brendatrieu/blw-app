@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ACCOUNT_REAUTH_MAX_AGE_MS, adminResetLinkResponseSchema } from "@blw/shared";
 import { buildApp, redactUrlTokens, serializeRequestForLog } from "../app.js";
 import type { AuthLogger } from "../auth.js";
-import { isEmailEnabled } from "../config.js";
+import { isEmailEnabled, loadConfig } from "../config.js";
 import type { Database } from "../db/index.js";
 import { account, adminAudit, session, user, verification } from "../db/schema.js";
 import { cookieHeader, createTestApp, createTestDb, signUpUser, TEST_ORIGIN, testEnv, type TestUser } from "./helpers.js";
@@ -258,11 +258,30 @@ describe("Forgot password? by email (822)", () => {
     });
 
   it("is offered only where the email would really arrive", async () => {
-    expect(isEmailEnabled({ NODE_ENV: "production", RESEND_API_KEY: undefined })).toBe(false);
-    expect(isEmailEnabled({ NODE_ENV: "production", RESEND_API_KEY: "re_test" })).toBe(true);
+    const sender = "Little Meals <no-reply@littlemeals.test>";
+    expect(
+      isEmailEnabled({ NODE_ENV: "production", RESEND_API_KEY: undefined, EMAIL_FROM: sender }),
+    ).toBe(false);
+    expect(
+      isEmailEnabled({ NODE_ENV: "production", RESEND_API_KEY: "re_test", EMAIL_FROM: sender }),
+    ).toBe(true);
+    // A key with EMAIL_FROM left unset: the default is Resend's test sender,
+    // which only reaches the Resend account's own inbox.
+    const { BETTER_AUTH_SECRET, KEY_ENCRYPTION_SECRET } = testEnv();
+    const prodWithKey = loadConfig({
+      NODE_ENV: "production",
+      BETTER_AUTH_SECRET,
+      KEY_ENCRYPTION_SECRET,
+      RESEND_API_KEY: "re_test",
+    });
+    expect(isEmailEnabled(prodWithKey)).toBe(false);
     // Development and test deliver to the server log.
-    expect(isEmailEnabled({ NODE_ENV: "development", RESEND_API_KEY: undefined })).toBe(true);
-    expect(isEmailEnabled({ NODE_ENV: "test", RESEND_API_KEY: undefined })).toBe(true);
+    expect(
+      isEmailEnabled({ NODE_ENV: "development", RESEND_API_KEY: undefined, EMAIL_FROM: sender }),
+    ).toBe(true);
+    expect(isEmailEnabled({ NODE_ENV: "test", RESEND_API_KEY: undefined, EMAIL_FROM: sender })).toBe(
+      true,
+    );
 
     const probe = await app.inject({ method: "GET", url: "/api/auth-config" });
     expect(probe.json()).toEqual({ googleEnabled: false, emailEnabled: true });
