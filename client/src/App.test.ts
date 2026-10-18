@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isValidElement, type ReactElement, type ReactNode } from "react";
+import { createElement, isValidElement, type ReactElement, type ReactNode } from "react";
+import { renderToString } from "react-dom/server";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
-import { App, legacyStoragePath } from "./App.js";
+import { App, OutsideAppLayout, legacyStoragePath } from "./App.js";
 import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
 import { AboutPage } from "./pages/AboutPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
@@ -170,6 +172,41 @@ describe("App route wiring (items 611/612 — who may open what)", () => {
 
   it("guards the app screens with RequireAuth (sanity for the walk above)", () => {
     expect(findRoute("/more")?.wrappers).toContain(RequireAuth);
+  });
+});
+
+describe("App route wiring (ledger 851 — screens outside AppLayout clear the iOS status bar)", () => {
+  // The installed app draws under the status bar; AppLayout's header clears it
+  // for app screens. Signed out, the 👋 sat under the Dynamic Island.
+  it.each(["/login", "/signup", "/about", "/forgot-password", "/reset-password"])(
+    "mounts %s under OutsideAppLayout",
+    (path) => {
+      expect(findRoute(path)?.wrappers).toContain(OutsideAppLayout);
+    },
+  );
+
+  it("keeps it off the app screens, whose header already clears the bar", () => {
+    expect(findRoute("/more")?.wrappers).not.toContain(OutsideAppLayout);
+    expect(findRoute("/settings")?.wrappers).not.toContain(OutsideAppLayout);
+  });
+
+  it("pads the top by the safe-area inset alone around the page", () => {
+    const html = renderToString(
+      createElement(
+        MemoryRouter,
+        { initialEntries: ["/x"] },
+        createElement(
+          Routes,
+          null,
+          createElement(
+            Route,
+            { element: createElement(OutsideAppLayout) },
+            createElement(Route, { path: "/x", element: createElement("p", null, "page") }),
+          ),
+        ),
+      ),
+    );
+    expect(html).toBe('<div style="padding-top:env(safe-area-inset-top)"><p>page</p></div>');
   });
 });
 

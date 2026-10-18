@@ -145,7 +145,8 @@ function SettingsLink() {
  */
 /** A top padding of `base` plus the iOS safe area (viewport-fit=cover with a
  * black-translucent status bar draws the page under the clock). The header
- * below uses it, and so does AboutPage, which sits outside this layout (item 710). */
+ * below uses it; screens outside this layout get theirs from App's
+ * OutsideAppLayout (ledger 851). */
 export function safeTop(base: string): string {
   return `calc(${base} + env(safe-area-inset-top))`;
 }

@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { AI_FEATURES_ENABLED } from "@blw/shared";
 import { AppLayout } from "./components/AppLayout.js";
 import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
@@ -56,39 +56,55 @@ function LegacyStorageRedirect() {
   return <Navigate to={legacyStoragePath(useLocation())} replace />;
 }
 
+/**
+ * Ledger 851: the screens outside AppLayout (sign-in, sign-up, About, the
+ * password pages) have no app header to clear the iOS status bar, and the
+ * installed app draws the page under it (viewport-fit=cover, black-translucent).
+ * One top inset here covers all of them; Safari reports 0, so it is unchanged.
+ */
+export function OutsideAppLayout() {
+  return (
+    <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
+      <Outlet />
+    </div>
+  );
+}
+
 export function App() {
   return (
     <Routes>
-      <Route
-        path="/login"
-        element={
-          <RequireAnonymous>
-            <LoginPage />
-          </RequireAnonymous>
-        }
-      />
-      <Route
-        path="/signup"
-        element={
-          <RequireAnonymous>
-            <SignupPage />
-          </RequireAnonymous>
-        }
-      />
-      {/* Item 611: public to everyone, signed in or out — no RequireAnonymous. */}
-      <Route path="/about" element={<AboutPage />} />
-      {/* Ledger 820: where a reset link lands. Public — no RequireAnonymous —
-          so a link opened on a device that is still signed in works too. */}
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      {/* Ledger 822: ask for a reset email. */}
-      <Route
-        path="/forgot-password"
-        element={
-          <RequireAnonymous>
-            <ForgotPasswordPage />
-          </RequireAnonymous>
-        }
-      />
+      <Route element={<OutsideAppLayout />}>
+        <Route
+          path="/login"
+          element={
+            <RequireAnonymous>
+              <LoginPage />
+            </RequireAnonymous>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <RequireAnonymous>
+              <SignupPage />
+            </RequireAnonymous>
+          }
+        />
+        {/* Item 611: public to everyone, signed in or out — no RequireAnonymous. */}
+        <Route path="/about" element={<AboutPage />} />
+        {/* Ledger 820: where a reset link lands. Public — no RequireAnonymous —
+            so a link opened on a device that is still signed in works too. */}
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* Ledger 822: ask for a reset email. */}
+        <Route
+          path="/forgot-password"
+          element={
+            <RequireAnonymous>
+              <ForgotPasswordPage />
+            </RequireAnonymous>
+          }
+        />
+      </Route>
 
       {/* Everything below the guard needs a session. The server enforces
           this independently; the wrapper just keeps the UI honest. */}

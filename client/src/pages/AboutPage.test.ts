@@ -17,7 +17,6 @@ vi.mock("../lib/auth.js", () => ({
 import { ABOUT_FEATURES, AboutPage } from "./AboutPage.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
-import { safeTop } from "../components/AppLayout.js";
 
 function render(): string {
   return renderToString(
@@ -164,17 +163,18 @@ describe("AboutPage width (item 703)", () => {
   });
 });
 
-describe("AboutPage top inset (item 710)", () => {
-  // Outside AppLayout, so no header clears the iOS status bar for it: the root
-  // pads its own top with AppLayout's safeTop, 1rem (p-4's) plus the inset.
+describe("AboutPage top inset (items 710, 851)", () => {
+  // Outside AppLayout, so no header clears the iOS status bar for it. Its
+  // route's OutsideAppLayout adds the inset (App.test.ts); the page keeps
+  // p-4's 1rem and must not add the inset a second time.
   it.each([
     ["signed out", null],
     ["signed in", { user: { id: "u1" } }],
-  ])("clears the status bar when %s", (_label, session) => {
+  ])("leaves the inset to its route when %s", (_label, session) => {
     h.session = session;
-    const style = render().match(/^<div class="[^"]*" style="([^"]*)"/)?.[1];
-    expect(style).toBe(`padding-top:${safeTop("1rem")}`);
-    expect(safeTop("1rem")).toBe("calc(1rem + env(safe-area-inset-top))");
+    const html = render();
+    expect(html).toMatch(/^<div class="[^"]*\bp-4\b[^"]*">/);
+    expect(html).not.toContain("safe-area-inset-top");
   });
 });
 
