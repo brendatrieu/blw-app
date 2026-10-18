@@ -115,4 +115,29 @@ export const pairings: PairingSeed[] = [
     vitCFoodSlug: 'broccoli',
     reason: "Broccoli's vitamin C helps baby absorb more of the plant-based iron in white beans.",
   },
+  {
+    ironFoodSlug: 'kidney_beans',
+    vitCFoodSlug: 'bell_pepper',
+    reason: "Bell pepper's vitamin C helps baby absorb more of the plant-based iron in kidney beans.",
+  },
+  {
+    ironFoodSlug: 'pinto_beans',
+    vitCFoodSlug: 'tomato',
+    reason: "Tomato's vitamin C helps baby absorb more of the plant-based iron in pinto beans.",
+  },
+  {
+    ironFoodSlug: 'butter_beans',
+    vitCFoodSlug: 'broccoli',
+    reason: "Broccoli's vitamin C helps baby absorb more of the plant-based iron in butter beans.",
+  },
+  {
+    ironFoodSlug: 'edamame',
+    vitCFoodSlug: 'broccoli',
+    reason: "Broccoli's vitamin C helps baby absorb more of the plant-based iron in edamame.",
+  },
+  {
+    ironFoodSlug: 'lentils',
+    vitCFoodSlug: 'brussels_sprouts',
+    reason: "Brussels sprouts' vitamin C helps baby absorb more of the plant-based iron in lentils.",
+  },
 ]

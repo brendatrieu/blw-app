@@ -1950,7 +1950,7 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Melt a little into vegetables, grains, or eggs, or spread a thin layer on soft toast strips.',
     prep12m:
-      'Use in family cooking and baking the same way — still unsalted, and a little rather than a lot.',
+      'Use in cooking and baking the same way — still unsalted, and a little rather than a lot.',
     chokingNotes:
       "Melted or spread thin, butter isn't a choking risk. A thick, cold slab can stick in the mouth like any thick spread — keep it thin.",
     notes:

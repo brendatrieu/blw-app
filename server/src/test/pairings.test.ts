@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
@@ -49,11 +49,55 @@ describe("food pairing completeness", () => {
 
     expect(ironHighFoods.length).toBeGreaterThan(0);
 
-    const pairingRows = await db.select({ ironFoodId: schema.foodPairings.ironFoodId }).from(schema.foodPairings);
+    const pairingRows = await db
+      .select({ ironFoodId: schema.foodPairings.ironFoodId })
+      .from(schema.foodPairings);
     const pairedIronFoodIds = new Set(pairingRows.map((r) => r.ironFoodId));
 
-    const unpaired = ironHighFoods.filter((food) => !pairedIronFoodIds.has(food.id)).map((food) => food.slug);
+    const unpaired = ironHighFoods
+      .filter((food) => !pairedIronFoodIds.has(food.id))
+      .map((food) => food.slug);
 
     expect(unpaired).toEqual([]);
+  });
+  // 853: the iron foods added in the 2026-10-15/16 rounds each get a pairing (their notes name
+  // one), every partner really is a vitamin-C food, and no pairing uses an info-only food.
+  it("pairs the 10-15/16 round iron foods and only uses real vitamin-C partners", async () => {
+    const all = await db
+      .select({
+        id: schema.foods.id,
+        slug: schema.foods.slug,
+        vitC: schema.foods.vitaminCLevel,
+        kind: schema.foods.kind,
+      })
+      .from(schema.foods);
+    const byId = new Map(all.map((f) => [f.id, f]));
+    const rows = await db.select().from(schema.foodPairings);
+
+    for (const r of rows) {
+      const vitC = byId.get(r.vitCFoodId);
+      expect([vitC?.slug, vitC?.vitC]).toEqual([
+        vitC?.slug,
+        expect.stringMatching(/^(high|moderate)$/),
+      ]);
+      expect(vitC?.kind).not.toBe("info");
+      expect(byId.get(r.ironFoodId)?.kind).not.toBe("info");
+    }
+
+    const roundSlugs = [
+      "kidney_beans",
+      "pinto_beans",
+      "white_beans",
+      "butter_beans",
+      "edamame",
+      "brussels_sprouts",
+    ];
+    const round = await db
+      .select({ id: schema.foods.id, slug: schema.foods.slug })
+      .from(schema.foods)
+      .where(inArray(schema.foods.slug, roundSlugs));
+    expect(round).toHaveLength(roundSlugs.length);
+    const pairedIds = new Set(rows.flatMap((r) => [r.ironFoodId, r.vitCFoodId]));
+    expect(round.filter((f) => !pairedIds.has(f.id)).map((f) => f.slug)).toEqual([]);
   });
 });
