@@ -11,7 +11,8 @@ export interface FrontDoorState {
   frontDoor: true;
 }
 
-function SessionPending() {
+/** "Loading…" while the session (or, ledger 849, a waiting version) resolves. */
+export function SessionPending() {
   return (
     <div className="flex min-h-full items-center justify-center p-8">
       <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>

@@ -1,5 +1,14 @@
+import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
-import { applyUpdate, dismissUpdate, isUpdatePromptRoute, useUpdateState } from "../pwa/update.js";
+import { useSession } from "../lib/auth.js";
+import {
+  applyUpdate,
+  dismissUpdate,
+  isUpdatePromptRoute,
+  useUpdateOnSignedOutNavigation,
+  useUpdateState,
+} from "../pwa/update.js";
+import { SessionPending } from "./RequireAuth.js";
 import { useAnyModalOpen } from "./ui/useModal.js";
 import { Button } from "./ui/Button.js";
 
@@ -55,4 +64,15 @@ export function UpdateRow() {
       </button>
     </div>
   );
+}
+
+/**
+ * Ledger 849: wraps the app (main.tsx). Signed out, a waiting version loads on
+ * the next navigation (useUpdateOnSignedOutNavigation); until the page reloads,
+ * "Loading…" stands in for the screen being opened, so nothing is typed into it.
+ */
+export function SignedOutUpdate({ children }: { children: ReactNode }) {
+  const { key } = useLocation();
+  const { data: session, isPending } = useSession();
+  return useUpdateOnSignedOutNavigation(key, !isPending && !session) ? <SessionPending /> : <>{children}</>;
 }

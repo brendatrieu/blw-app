@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 /**
  * Ledger 790: the update prompt's state, one module-level store so the card
@@ -113,6 +113,42 @@ function subscribe(listener: () => void) {
 
 export function useUpdateState(): UpdateState {
   return useSyncExternalStore(subscribe, () => state, () => state);
+}
+
+/**
+ * Ledger 849: the card lives in AppLayout, so a signed-out tab never offers
+ * it, and a tab left open on About or Sign in kept the old build through every
+ * reload (the 828 fix never reached it). So a waiting version loads on the
+ * next navigation away from a screen that was shown signed out: About → Sign
+ * in, Sign in → Create an account, and the landing after a sign-in or sign-up.
+ * The screen being left is gone anyway and, while this returns true, the
+ * caller shows nothing of the next one, so nothing typed is lost. The reload
+ * opens the same address with its history state. Off with the prompt
+ * (updateMode.ts): nothing is ever ready then. Later does not hold here: Later
+ * means "not now" on a signed-in screen, and this costs nothing.
+ */
+export function useUpdateOnSignedOutNavigation(locationKey: string, signedOut: boolean): boolean {
+  const { ready } = useUpdateState();
+  const [screen, setScreen] = useState({ key: locationKey, signedOut });
+  const [phase, setPhase] = useState<"idle" | "applying" | "gave-up">("idle");
+  let applying = phase === "applying";
+  if (screen.key !== locationKey) {
+    if (screen.signedOut && ready && phase === "idle") {
+      setPhase("applying");
+      applying = true;
+    }
+    setScreen({ key: locationKey, signedOut });
+  } else if (signedOut && !screen.signedOut) {
+    setScreen({ key: locationKey, signedOut: true });
+  }
+  useEffect(() => {
+    if (!applying) return;
+    applyUpdate();
+    // Never rely on the worker: no reload by then, and the screen shows after all.
+    const timer = setTimeout(() => setPhase("gave-up"), 5000);
+    return () => clearTimeout(timer);
+  }, [applying]);
+  return applying;
 }
 
 /** Test-only: back to "nothing waiting". */

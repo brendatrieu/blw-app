@@ -1,6 +1,7 @@
 /**
  * Ledger 790, the one switch for the update prompt. true: a new version
- * waits until the parent taps Reload (the card, or the More row). false:
+ * waits until the parent taps Reload (the card, or the More row), or, signed
+ * out, until the next navigation (ledger 849, src/pwa/update.ts). false:
  * neither the card nor the row ever shows and a new service worker takes over
  * on its own, as it did before 790 (not byte-for-byte the pre-790 setup: the
  * foreground update check stays) — for a native build, whose updates come

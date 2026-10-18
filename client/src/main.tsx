@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { registerSW } from "virtual:pwa-register";
 import { App } from "./App.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
+import { SignedOutUpdate } from "./components/UpdatePrompt.js";
 import { ApiError } from "./lib/api.js";
 import { createCatalogVersionChecker, createCatalogVersionDeps } from "./lib/catalogVersion.js";
 import { createIdbPersister } from "./lib/persister.js";
@@ -112,7 +113,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               AppLayout, so /login and /signup are measured too — the signup
               funnel starts on a screen the authenticated layout never renders. */}
           <UsageProvider>
-            <App />
+            <SignedOutUpdate>
+              <App />
+            </SignedOutUpdate>
           </UsageProvider>
         </BrowserRouter>
       </PersistQueryClientProvider>
