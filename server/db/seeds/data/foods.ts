@@ -1975,7 +1975,7 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Add a few drops to soft stir-fried vegetables, rice, noodles, or a salt-free dipping sauce.',
     prep12m:
-      'Use a little in family cooking. Add toasted sesame oil at the end — high heat makes it smoke and taste bitter.',
+      'Use a little in cooking. Add toasted sesame oil at the end — high heat makes it smoke and taste bitter.',
     chokingNotes: 'Not a choking risk on its own. Mix the oil into food — never give it on a spoon by itself.',
     notes:
       "Sesame oil carries the sesame allergen. Most sesame oil is pressed rather than refined, so it can hold enough sesame protein to cause a reaction — avoid it if baby has a sesame allergy. A few drops holds very little sesame, though, so it doesn't count toward the sesame step's 3 servings. Start that step with tahini.",
