@@ -136,13 +136,6 @@ function SettingsLink() {
   );
 }
 
-/**
- * Whether a route change should start at the top of the page. Forward
- * navigation (tapping into an article, a food, a recipe) should — the page
- * scrolls the window, so a tap deep in a list would otherwise land the new
- * page already scrolled down. Back/forward (POP) keeps the browser's own
- * restored position so returning to a list lands where the user left it.
- */
 /** A top padding of `base` plus the iOS safe area (viewport-fit=cover with a
  * black-translucent status bar draws the page under the clock). The header
  * below uses it; screens outside this layout get theirs from App's
@@ -151,30 +144,44 @@ export function safeTop(base: string): string {
   return `calc(${base} + env(safe-area-inset-top))`;
 }
 
+/**
+ * Whether a route change should start at the top of the page. Forward
+ * navigation (tapping into an article, a food, a recipe) should — the page
+ * scrolls the window, so a tap deep in a list would otherwise land the new
+ * page already scrolled down. Back/forward (POP) keeps the browser's own
+ * restored position so returning to a list lands where the user left it.
+ */
 export function shouldScrollToTop(navigationType: "PUSH" | "POP" | "REPLACE"): boolean {
   return navigationType !== "POP";
 }
 
-export function AppLayout() {
-  const location = useLocation();
+/** Applies shouldScrollToTop on every path change. Used by AppLayout and by
+ * App's OutsideAppLayout, so a screen outside AppLayout does not open at the
+ * scroll position of the page before it (ledger 851: Settings → Sign out). */
+export function useScrollToTopOnPathChange(): void {
+  const { pathname } = useLocation();
   const navigationType = useNavigationType();
   // Read through a ref so the effect keys on the PATH alone — a ?tab=
   // change on the same page keeps its scroll position.
   const navigationTypeRef = useRef(navigationType);
   navigationTypeRef.current = navigationType;
+  useEffect(() => {
+    // Guarded: layouts are also exercised outside a browser (the node-env
+    // test suite calls them as functions).
+    if (typeof window === "undefined") return;
+    if (shouldScrollToTop(navigationTypeRef.current)) window.scrollTo(0, 0);
+  }, [pathname]);
+}
+
+export function AppLayout() {
+  const location = useLocation();
+  useScrollToTopOnPathChange();
   // Home keeps its tall greeting header; every other page gets one slim row
   // whose left slot receives the page's Back/Close button (item 654).
   const isHome = location.pathname === "/";
   // A ref callback into state: set in the commit phase, so the button moves
   // into the header before the first paint (no inline flash).
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    // Guarded: this layout is also exercised outside a browser (the
-    // node-env test suite calls it as a function).
-    if (typeof window === "undefined") return;
-    if (shouldScrollToTop(navigationTypeRef.current)) window.scrollTo(0, 0);
-  }, [location.pathname]);
 
   return (
     <CelebrationProvider>

@@ -1,6 +1,6 @@
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { AI_FEATURES_ENABLED } from "@blw/shared";
-import { AppLayout } from "./components/AppLayout.js";
+import { AppLayout, useScrollToTopOnPathChange } from "./components/AppLayout.js";
 import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { SignupPage } from "./pages/SignupPage.js";
@@ -61,8 +61,12 @@ function LegacyStorageRedirect() {
  * password pages) have no app header to clear the iOS status bar, and the
  * installed app draws the page under it (viewport-fit=cover, black-translucent).
  * One top inset here covers all of them; Safari reports 0, so it is unchanged.
+ * It also starts each of them at the top, as AppLayout does: Sign out from a
+ * scrolled Settings otherwise opened a taller-than-the-window /login scrolled
+ * to its bottom.
  */
 export function OutsideAppLayout() {
+  useScrollToTopOnPathChange();
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <Outlet />
