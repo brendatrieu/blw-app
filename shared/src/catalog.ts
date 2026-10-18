@@ -145,6 +145,18 @@ export const foodUsageSchema = z.object({
 });
 export type FoodUsage = z.infer<typeof foodUsageSchema>;
 
+/**
+ * A food's notes as paragraphs (ledger 850): a blank line separates them, so
+ * the seed and a custom food's notes stay one plain-text string everywhere
+ * else (API, export) and only a renderer splits them.
+ */
+export function noteParagraphs(notes: string): string[] {
+  return notes
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+}
+
 export const foodDetailSchema = foodListItemSchema.extend({
   prep6m: z.string(),
   prep9m: z.string(),

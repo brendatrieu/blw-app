@@ -4,6 +4,7 @@ import {
   createCustomRecipeSchema,
   formatExtraIngredient,
   isSingleEmoji,
+  noteParagraphs,
   normalizeExtraIngredients,
   updateCustomFoodSchema,
   updateCustomRecipeSchema,
@@ -160,5 +161,16 @@ describe("extra ingredients", () => {
   it("applies the 20 cap to what was SENT, before blanks are dropped", () => {
     const twentyOne = Array.from({ length: 21 }, (_unused, index) => ({ name: index === 0 ? "" : `extra ${index}` }));
     expect(createCustomRecipeSchema.safeParse({ ...baseRecipe, extraIngredients: twentyOne }).success).toBe(false);
+  });
+});
+
+describe("noteParagraphs", () => {
+  it("splits on blank lines, trims, and drops empty paragraphs", () => {
+    expect(noteParagraphs("One.\n\nTwo.\n \n\nThree.\n")).toEqual(["One.", "Two.", "Three."]);
+  });
+  it("keeps a single newline inside its paragraph and one-paragraph notes whole", () => {
+    expect(noteParagraphs("Line one\nline two")).toEqual(["Line one\nline two"]);
+    expect(noteParagraphs("Iron-rich.")).toEqual(["Iron-rich."]);
+    expect(noteParagraphs("  \n\n ")).toEqual([]);
   });
 });

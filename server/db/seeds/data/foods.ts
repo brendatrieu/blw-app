@@ -176,7 +176,7 @@ export const foods: FoodSeed[] = [
     // 1.17 mg, so moderate. Raw or undercooked dried kidney beans carry a natural lectin
     // (phytohaemagglutinin): FDA's Bad Bug Book says soak at least 5 hours, discard the water,
     // boil in fresh water at least 30 minutes, and never use a slow cooker. Canned beans are
-    // already cooked.
+    // already cooked. The method lives in the Simple recipe; the notes keep the warning (ledger 850).
     slug: 'kidney_beans',
     name: 'Kidney Beans',
     category: 'legume',
@@ -194,7 +194,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole kidney beans are bigger than most beans and their skins can be tough, so a whole bean can be a choking hazard — mash them, squash each one flat, or halve them rather than serving them whole.',
     notes:
-      'Never serve raw or undercooked kidney beans: dried ones carry a natural toxin that only hard boiling destroys. Soak dried beans for at least 5 hours, pour the water away, and boil them in fresh water for at least 30 minutes before simmering them soft — and never cook dried kidney beans in a slow cooker, which does not get hot enough. Canned kidney beans are already cooked and safe; choose no-salt-added cans and rinse them well. A good plant-based iron source — pair with a vitamin-C food like bell pepper or tomato to boost absorption.',
+      "Never serve raw or undercooked kidney beans. Dried ones carry a natural toxin that only a long, hard boil destroys, and a slow cooker doesn't get hot enough. The Simple kidney beans recipe shows how to cook them safely.\n\nCanned kidney beans are already cooked: choose no-salt-added and rinse them.\n\nA good plant-based iron source. Pair with a vitamin-C food like bell pepper or tomato to boost absorption.",
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -220,7 +220,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole beans are firm and round enough to be a choking hazard for young babies — squash or mash them rather than serving them fully whole, especially before 9 months.',
     notes:
-      'A good plant-based (non-heme) iron source with plenty of fiber — pair with a vitamin-C food such as bell pepper or tomato to boost absorption. Pinto beans are the usual bean in refried beans: make them at home with no salt, because most canned refried beans are high in salt. Choose dried beans or no-salt-added canned beans, and rinse canned beans before using them.',
+      "A good plant-based iron source with plenty of fiber. Pair with a vitamin-C food like bell pepper or tomato to boost absorption.\n\nPinto beans are the usual bean in refried beans. Make them at home with no salt: most canned refried beans are high in salt.\n\nCanned pinto beans are already cooked: choose no-salt-added and rinse them.",
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -230,8 +230,8 @@ export const foods: FoodSeed[] = [
     // high / low / high on the catalog's thresholds (lentils, 3.33 mg, are high). SR Legacy has no
     // cannellini row; navy (173746, 2.36 mg) and great northern (175191, 2.13 mg) run lower.
     // Cannellini are white kidney beans: FDA's Bad Bug Book puts their raw lectin at about a
-    // third of red kidney beans', destroyed by a hard boil, hence the soak/boil/no-slow-cooker note.
-    // Dried-bean boil is >=30 min (FDA consumer advice) in the notes and the basic.
+    // third of red kidney beans', destroyed by a hard boil, hence the undercooked/slow-cooker warning.
+    // Dried-bean boil is >=30 min (FDA consumer advice); the method lives in the basic (ledger 850).
     slug: 'white_beans',
     name: 'White Beans (Cannellini)',
     category: 'legume',
@@ -249,7 +249,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole beans are firm and round enough to be a choking hazard for young babies, and cannellini are among the biggest beans — squash or mash them rather than serving them fully whole, especially before 9 months.',
     notes:
-      'A strong plant-based (non-heme) iron source with plenty of fiber — pair with a vitamin-C food such as broccoli, tomato, or bell pepper to boost absorption. Cannellini are large white kidney beans; smaller navy beans and great northern beans cook and serve the same way, with a little less iron. Canned beans are already cooked: choose no-salt-added and rinse them. Dried white beans must be soaked, then boiled hard in fresh water for at least 30 minutes before simmering, and never cooked from dried in a slow cooker, which does not get hot enough to destroy a natural toxin in undercooked beans.',
+      "A strong plant-based iron source with plenty of fiber. Pair with a vitamin-C food like broccoli, tomato, or bell pepper to boost absorption.\n\nCannellini are large white kidney beans. Navy and great northern beans cook and serve the same way, with a little less iron.\n\nNever serve dried white beans undercooked or cook them from dried in a slow cooker: like kidney beans, they carry a natural toxin that only a hard boil destroys. The Simple white beans (cannellini) recipe shows how. Canned white beans are already cooked: choose no-salt-added and rinse them.",
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -279,7 +279,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole butter beans are large, and their skins can slip off in one tough piece, so a whole bean can be a choking hazard — mash them or squash each one flat rather than serving them whole, and pick out loose skins for young babies.',
     notes:
-      'Butter beans and lima beans are the same bean. Never serve them raw or undercooked: raw lima beans contain a natural compound that can release cyanide, and thorough cooking breaks it down. Soak dried beans overnight, pour the soaking water away, and boil them hard in plenty of fresh water for at least 10 minutes, then simmer them until very soft; fresh or frozen lima beans need cooking until soft too. Canned butter beans are already cooked; choose no-salt-added cans and rinse them well. A good plant-based iron source with plenty of fiber — pair with a vitamin-C food such as broccoli or tomato to boost absorption.',
+      "Butter beans and lima beans are the same bean.\n\nNever serve them raw or undercooked: raw lima beans contain a natural compound that can release cyanide, and thorough cooking breaks it down. The Simple butter beans (lima beans) recipe shows how. Canned butter beans are already cooked: choose no-salt-added and rinse them.\n\nA good plant-based iron source with plenty of fiber. Pair with a vitamin-C food like broccoli or tomato to boost absorption.",
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -305,7 +305,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole edamame beans are firm, round, and slippery — a choking hazard. Always smash each bean flat or split it in half, and never serve the pods, which are tough and stringy.',
     notes:
-      'Young green soybeans: a plant-based (non-heme) iron source with plenty of fiber and protein — pair with a vitamin-C food such as broccoli or bell pepper to boost absorption. Edamame is soy, so it counts as a soy serving on the allergen ladder, just like tofu. Buy plain frozen shelled edamame with no added salt or seasoning.',
+      "Young green soybeans, with plenty of iron, fiber, and protein. Pair with a vitamin-C food like broccoli or bell pepper to boost absorption.\n\nEdamame is soy, so it counts as a soy serving on the allergen ladder, like tofu.\n\nBuy plain frozen shelled edamame with no added salt or seasoning.",
     allergens: ['soy'],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -1902,11 +1902,11 @@ export const foods: FoodSeed[] = [
     prep6m:
       'Cook until very soft — brown rice takes longer than white — then mash it lightly and press it into a soft ball or patty rather than serving loose grains.',
     prep9m:
-      'Cook until soft and serve as loose grains for pincer-grasp practice, or pressed into small bites; a quick mash helps if the grains still feel chewy.',
+      'Cook until soft and serve as loose grains for pincer-grasp practice, or pressed into small bites.',
     prep12m:
       'Serve as soft cooked grains alongside other foods, or mixed into patties, soups, or a vegetable stir-fry.',
     chokingNotes:
-      'Brown rice keeps its bran layer, so it stays chewier than white rice even when cooked — cook it until very soft, and press it into a ball or patty for early eaters rather than offering dry, loose grains.',
+      'Brown rice keeps its bran layer, so it stays chewier than white rice even when cooked — cook it until very soft, and press it into a ball or patty for early eaters rather than offering dry, loose grains. If the grains still feel chewy, mash them a little.',
     notes:
       "Rice takes up more arsenic from soil and water than other grains, and brown rice holds more than white because arsenic collects in the bran. It's still fine to serve — make it one grain among several (oats, quinoa, wheat pasta, barley), not an everyday staple. Cooking it like pasta in plenty of water (6 to 10 cups per cup of rice) and draining lowers arsenic by about half, though some nutrients go with the water. Cool leftovers quickly and reheat only once until steaming hot.",
     allergens: [],
@@ -1923,11 +1923,11 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'low',
     minAgeMonths: 6,
     prep6m:
-      'Always cooked, never raw. Bake or cook flour into soft foods baby can hold — pancakes, muffins, or fritters cut into finger-length strips — with no salt or sugar in the batter.',
+      'Always cooked, never raw. Bake or cook flour into soft foods baby can hold — pancakes, muffins, or fritters cut into finger-length strips — with no salt or sugar in the batter. A spoonful can also thicken a sauce or stew as it simmers.',
     prep9m:
       'Bake or cook into pancakes, muffins, flatbreads, or fritters cut into small bite-sized pieces (no bigger than ½ inch) or strips; a spoonful can also thicken a sauce or stew as it simmers.',
     prep12m:
-      'Use in family cooking and baking — pancakes, muffins, breads, thickened sauces — always fully cooked and still with no added salt or sugar.',
+      'Use in cooking and baking — pancakes, muffins, breads, thickened sauces — always fully cooked and still with no added salt or sugar.',
     chokingNotes:
       "Flour itself isn't the risk; what you make with it can be. Keep bakes soft and moist rather than dense, dry, or gummy, and never let baby eat dry flour — loose powder is easy to inhale.",
     notes:

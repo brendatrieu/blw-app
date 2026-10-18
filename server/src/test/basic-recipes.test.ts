@@ -299,6 +299,9 @@ const SLOW_COOKER_BEANS: readonly string[] = ["kidney_beans", "white_beans"];
 const FROM_DRIED = /\b(?:dried|soak(?:ed)?)\b[^.;—]{0,40}\b(?:beans?|chickpeas?)\b/i;
 /** The step that boils them: names a hard boil in fresh water and its minimum. */
 const HARD_BOIL = /\bboil\w* (?:them |the soaked beans )?hard\b[^.;]*?\bat least (\d+) minutes/i;
+/** Ledger 850: the Simple recipe the notes point to soaks dried beans at least 5 hours (FDA). */
+const SOAK_HOURS = /\bsoak\w*\b[^.;—]*?\bfor (?:at least )?(\d+)(?:-\d+)? hours\b/i;
+const MIN_SOAK_HOURS = 5;
 
 const SWEETENER = /\b(?:honey|maple syrup|agave|molasses|golden syrup)\b/i;
 const NEGATED_JUST_BEFORE = /\b(?:no|not|never|without|avoid|skip|don'?t)\b[^.;]{0,24}$/i;
@@ -1255,12 +1258,20 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     const variants = await catalogVariants();
     const failures: string[] = [];
     const checked = new Set<string>();
+    const simpleStages = new Set<string>();
     for (const v of variants) {
       for (const foodSlug of v.foodSlugs) {
         const minutes = DRIED_BEAN_BOIL_MINUTES[foodSlug];
         if (minutes === undefined || !v.instructions.some((step) => FROM_DRIED.test(step))) continue;
         checked.add(foodSlug);
         const where = `${v.slug} stage ${v.ageStage} (${foodSlug})`;
+        // Ledger 850: the bean's notes no longer give the method; its Simple
+        // recipe does, so that one also states the soak time.
+        if (v.slug === `simple-${foodSlug.replace(/_/g, "-")}`) {
+          simpleStages.add(`${foodSlug} ${v.ageStage}`);
+          const soak = v.instructions.map((step) => SOAK_HOURS.exec(step)).find((m) => m !== null);
+          if (!soak || Number(soak[1]) < MIN_SOAK_HOURS) failures.push(`${where}: no soak of at least ${MIN_SOAK_HOURS} hours`);
+        }
         if (!v.instructions.some((step) => /soaking water away/i.test(step))) {
           failures.push(`${where}: never pours the soaking water away`);
         }
@@ -1279,6 +1290,10 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
     // Guard the guard: every bean's own basic offers the dried path, so each
     // entry above is really exercised.
     expect([...checked].sort()).toEqual(Object.keys(DRIED_BEAN_BOIL_MINUTES).sort());
+    // ...and each bean's Simple recipe gives the whole method at all three stages.
+    expect(simpleStages.size).toBe(Object.keys(DRIED_BEAN_BOIL_MINUTES).length * 3);
+    expect(SOAK_HOURS.exec("soak dried kidney beans in plenty of water for at least 5 hours")?.[1]).toBe("5");
+    expect(SOAK_HOURS.exec("soak dried chickpeas in cold water for 8-12 hours")?.[1]).toBe("8");
 
     // Completeness: a new legume has to be classified here.
     const legumes = await db

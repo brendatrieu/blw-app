@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { awaitingDetail } from "../lib/detailQuery.js";
-import { STAR_RATING_MAX, ageInMonths, type AgeStage, type FoodDetail, type FoodListItem } from "@blw/shared";
+import { STAR_RATING_MAX, ageInMonths, noteParagraphs, type AgeStage, type FoodDetail, type FoodListItem } from "@blw/shared";
 import {
   useDeleteCustomFood,
   useFood,
@@ -399,7 +399,14 @@ export function FoodDetailPage() {
       {food.notes && (
         <section className="flex flex-col gap-2.5">
           <h2 className="font-h2 text-[var(--color-text)]">Notes</h2>
-          <p className="text-sm text-[var(--color-text-muted)]">{food.notes}</p>
+          {/* Blank-line paragraphs (ledger 850), each its own <p>. */}
+          <div className="flex flex-col gap-2">
+            {noteParagraphs(food.notes).map((paragraph, i) => (
+              <p key={i} className="text-sm text-[var(--color-text-muted)]">
+                {paragraph}
+              </p>
+            ))}
+          </div>
         </section>
       )}
 

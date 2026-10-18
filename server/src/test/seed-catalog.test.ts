@@ -75,29 +75,31 @@ const ALLERGEN_CARRIERS: Record<string, string[]> = {
   soy: ["edamame", "tofu"],
 };
 
-/** Ledger 842: the dried-bean safety copy in each bean's notes (see 843's recipe guard in basic-recipes.test.ts). */
-const BEAN_TOXIN_COPY: Record<string, RegExp[]> = {
+/**
+ * Ledger 842, trimmed by 850: each bean's notes keep the never-raw/undercooked
+ * warning (and the slow cooker for kidney and white beans) and point to the
+ * food's Simple recipe, which carries the method (843's guard in
+ * basic-recipes.test.ts pins it there).
+ */
+const BEAN_WARNING_COPY: Record<string, RegExp[]> = {
   kidney_beans: [
     /never serve raw or undercooked kidney beans/i,
-    /soak dried beans for at least 5 hours, pour the water away/i,
-    /boil them in fresh water for at least 30 minutes/i,
-    /never cook dried kidney beans in a slow cooker/i,
+    /slow cooker doesn't get hot enough/i,
     /canned kidney beans are already cooked/i,
   ],
   white_beans: [
-    /dried white beans must be soaked/i,
-    /boiled hard in fresh water for at least 30 minutes/i,
-    /never cooked from dried in a slow cooker/i,
-    /canned beans are already cooked/i,
+    /never serve dried white beans undercooked or cook them from dried in a slow cooker/i,
+    /natural toxin that only a hard boil destroys/i,
+    /canned white beans are already cooked/i,
   ],
   butter_beans: [
     /never serve them raw or undercooked/i,
     /cyanide/i,
-    /pour the soaking water away/i,
-    /boil them hard in plenty of fresh water for at least 10 minutes/i,
     /canned butter beans are already cooked/i,
   ],
 };
+/** Ledger 850: a step-by-step method belongs in the recipes, not a legume's notes. */
+const NOTES_METHOD = /\bsoak\w*\b[^.]*?(?:\bhours?\b|\bovernight\b)|\bwater away\b|\bat least \d+ minutes\b|\bsimmer/i;
 
 /**
  * The words the copy is allowed to say "no" with. Item 330's rule is that a
@@ -509,19 +511,37 @@ describe("seeded catalog after the spices expansion", () => {
     expect(bySlug.get("sesame")).toMatch(/sesame seeds/i);
   });
 
-  it("keeps the dried-bean toxin copy on kidney, white, and butter beans (ledger 842)", async () => {
+  it("keeps the dried-bean warning on kidney, white, and butter beans and points to the Simple recipe (ledgers 842, 850)", async () => {
     // FDA's Bad Bug Book (kidney and white kidney beans: lectin) and OSU
-    // Extension (lima/butter beans: cyanide). The sentence that says how to
-    // cook them from dried IS the feature; softening it is a safety regression.
+    // Extension (lima/butter beans: cyanide). The warning IS the feature;
+    // softening it is a safety regression. The pointer names the basic, whose
+    // title is "Simple <food name>" (basic-recipes.test.ts pins that).
+    const rows = await db
+      .select({ slug: schema.foods.slug, name: schema.foods.name, notes: schema.foods.notes })
+      .from(schema.foods)
+      .where(and(inArray(schema.foods.slug, Object.keys(BEAN_WARNING_COPY)), isNull(schema.foods.ownerId)));
+    expect(rows).toHaveLength(Object.keys(BEAN_WARNING_COPY).length);
+    const failures = rows.flatMap((r) => {
+      const notes = r.notes ?? "";
+      const lost = (BEAN_WARNING_COPY[r.slug] ?? []).filter((p) => !p.test(notes)).map((p) => `${r.slug}: notes lost ${String(p)}`);
+      const pointer = `The Simple ${r.name.toLowerCase()} recipe`;
+      return notes.includes(pointer) ? lost : [...lost, `${r.slug}: notes do not point to "${pointer}"`];
+    });
+    expect(failures).toEqual([]);
+  });
+
+  it("keeps the cooking method out of every legume's notes (ledger 850)", async () => {
+    // Guard the guard: the 842 notes this replaced are caught.
+    expect(NOTES_METHOD.test("Soak dried beans for at least 5 hours, pour the water away.")).toBe(true);
+    expect(NOTES_METHOD.test("Soak dried beans overnight, pour the soaking water away.")).toBe(true);
+    expect(NOTES_METHOD.test("Dried white beans must be soaked, then boiled hard in fresh water for at least 30 minutes.")).toBe(true);
+    expect(NOTES_METHOD.test("The Simple kidney beans recipe shows how to cook them safely.")).toBe(false);
     const rows = await db
       .select({ slug: schema.foods.slug, notes: schema.foods.notes })
       .from(schema.foods)
-      .where(and(inArray(schema.foods.slug, Object.keys(BEAN_TOXIN_COPY)), isNull(schema.foods.ownerId)));
-    const bySlug = new Map(rows.map((r) => [r.slug, r.notes ?? ""]));
-    const failures = Object.entries(BEAN_TOXIN_COPY).flatMap(([slug, patterns]) =>
-      patterns.filter((p) => !p.test(bySlug.get(slug) ?? "")).map((p) => `${slug}: notes lost ${String(p)}`),
-    );
-    expect(failures).toEqual([]);
+      .where(and(eq(schema.foods.category, "legume"), isNull(schema.foods.ownerId)));
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.filter((r) => NOTES_METHOD.test(r.notes ?? "")).map((r) => r.slug)).toEqual([]);
   });
 
   it("carries the mercury limit on canned light tuna and never mentions honey", async () => {

@@ -157,6 +157,15 @@ describe("FoodDetailPage — catalog food (unchanged)", () => {
     expect(renderFood(catalogFood())).toMatch(/<section class="flex flex-col gap-2\.5"><h2 class="font-h2[^"]*">Notes<\/h2>/);
   });
 
+  it("renders blank-line-separated notes as separate paragraphs, same style (ledger 850)", () => {
+    const html = renderFood(catalogFood({ notes: "Never raw.\n\nCanned is cooked.\n\nIron-rich." }));
+    const p = '<p class="text-sm text-[var(--color-text-muted)]">';
+    expect(html).toContain(
+      `<div class="flex flex-col gap-2">${p}Never raw.</p>${p}Canned is cooked.</p>${p}Iron-rich.</p></div>`,
+    );
+    expect(renderFood(catalogFood())).toContain(`${p}Iron-rich.</p>`);
+  });
+
   // Item 279: the "High fiber" badge lives on the food PAGE only — the grid
   // tiles stay badge-free (see FoodTile.test.ts).
   it("badges a high-fiber catalog food, and says nothing at a lower level", () => {
