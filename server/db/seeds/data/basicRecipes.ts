@@ -8,7 +8,7 @@ import type { RecipeSeed } from './types'
 //
 // These exist so every food in the catalog has an obvious "just serve the food"
 // entry point: the steps EXPAND that food's own prep text for the stage
-// (wash / cook / cut / serve / check the temperature) and repeat its
+// (wash / cook / cut / serve / cool to just-warm) and repeat its
 // chokingNotes caution wherever it applies. They never introduce guidance the
 // food row does not already carry, and they never contradict it.
 //
@@ -54,7 +54,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Rest it for 3-5 minutes, then cut a finger-length strip along the grain so it holds together, or mince it very finely.',
           'Moisten the strip or the finely minced pieces with a little olive oil or cooking liquid so it is never dry or stringy.',
           'Dense or dry meat is hard to gum into a swallowable piece, so keep it moist and tender and shred it finely against the grain if it feels tough.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -93,7 +93,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Cook it thoroughly with no added salt — bake at 400°F (200°C) for 18-22 minutes, or poach at a bare simmer for 12-15 minutes — until a thermometer in the thickest part reads 165°F (74°C) and the juices run clear.',
           'Rest it for 5 minutes, then cut a finger-length strip of the dark meat, or shred it finely, and moisten with a little olive oil or cooking liquid.',
           'Check once more for small bones as you plate it.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -130,7 +130,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, or poach it at a bare simmer for 8-10 minutes, until it is opaque right through and flakes under gentle pressure — 145°F (63°C) on a thermometer.',
           'Run your fingers through every flake to feel for pin bones and remove them all — a missed bone is a real hazard, even in a pre-deboned fillet.',
           'Press the checked flakes gently back together into a soft, finger-length piece baby can hold.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -201,7 +201,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Cook the whole egg fully — hard-boil it for 10-12 minutes from the boil, or scramble it over low heat for 3-4 minutes, stirring — until both the yolk and the white are firm with no runny egg left.',
           'Mash the cooked egg and loosen it with a little breast milk, formula, or water, or leave it as a soft scrambled pile.',
-          'Cool to just-warm and check the temperature before it reaches baby.',
+          'Cool to just-warm before it reaches baby.',
           'Serve on a pre-loaded spoon or as a small pile baby can scoop at.',
         ],
       },
@@ -238,7 +238,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Rinse the lentils, then simmer them in plenty of unsalted water over low heat for 15-20 minutes, until they collapse and mash easily against the side of the pan.',
           'Drain off the excess water and mash or blend until smooth.',
           'Thin with a little of the cooking water until the puree is scoopable rather than stiff.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon.',
+          'Cool to just-warm and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
@@ -358,7 +358,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Rinse no-salt-added canned kidney beans well, or soak dried kidney beans in plenty of water for at least 5 hours (or overnight) and pour the soaking water away — never cook dried kidney beans in a slow cooker.',
           'Boil the soaked beans hard in fresh water for at least 30 minutes, then simmer over low heat for 30-60 minutes more, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
           'Mash the kidney beans well, squashing every bean flat so no whole bean or large piece of skin is left, and loosen the mash with a little of the cooking water if it is stiff.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -397,7 +397,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Bring the soaked beans to a full boil in fresh unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 1-2 hours, until one squashes easily between two fingers, or warm the rinsed canned beans over low heat for 2-3 minutes.',
           'Mash the pinto beans well, squashing every bean flat so no whole, round bean remains — whole beans can be firm enough to pose a choking risk.',
           'Loosen the mash with a little water if it is stiff, so it is soft and scoopable.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -439,7 +439,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Warm the rinsed canned beans over low heat for 2-3 minutes, or bring the soaked beans to a full boil in fresh unsalted water, boil them hard for at least 30 minutes, then simmer over low heat for 30-60 minutes more, until one squashes easily between two fingers — never cook dried beans in a slow cooker, which does not get hot enough.',
           'Mash the white beans well, squashing every bean flat so no whole bean remains — whole beans can be firm enough to pose a choking risk.',
           'Loosen the mash with a little water if it is stiff, so it is soft and scoopable.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -482,7 +482,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Bring the soaked beans to a full boil in plenty of fresh, unsalted water, boil them hard for at least 10 minutes, then simmer over low heat for 45-60 minutes more, until one squashes easily between two fingers — or warm the rinsed canned beans in a pan over low heat for 2-3 minutes.',
           'Mash the butter beans well, squashing every bean flat and picking out any loose skins, so no whole bean is left.',
           'Loosen the mash with a little water if it is stiff, so it is soft and scoopable.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -521,7 +521,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Boil the frozen shelled edamame in a small pan of unsalted water for 6-8 minutes, until one squashes easily between two fingers.',
           'Drain, keeping a little of the cooking water, then blend or mash the edamame until smooth, with no whole bean or loose skin left — whole edamame is firm, round, and slippery, a choking hazard at this age.',
           'Loosen the mash with a spoonful of the cooking water if it is stiff, so it is soft and scoopable.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -560,7 +560,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Cut it into finger-length strips baby can hold with some poking out of the fist.',
           'Pan-fry the strips in a little oil over medium heat — wait until the oil shimmers before they go in — for 3-4 minutes a side, until the outside is firm and pale gold and the inside stays soft.',
           'Unfried tofu can be slippery, and that light crust is what helps little hands grip it.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -595,7 +595,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Stir the oat cereal into breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, stirring, just until warm and smooth.',
           'Thin the oatmeal until it drips slowly off a spoon rather than sitting in a stiff lump.',
-          'Stir well to release hot spots, cool to just-warm, and check the temperature.',
+          'Stir well to release hot spots and cool to just-warm.',
           'Serve on a pre-loaded spoon and let baby bring it to their mouth.',
         ],
       },
@@ -604,14 +604,14 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Stir the oat cereal into a little less breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, stirring, to a thicker, spoonable consistency.',
           'Keep it thick enough to stay on the spoon rather than run off it.',
-          'Stir well to release hot spots, cool to just-warm, and check the temperature, then serve in a bowl with a spoon for baby to practice self-feeding.',
+          'Stir well to release hot spots, cool to just-warm, and serve in a bowl with a spoon for baby to practice self-feeding.',
         ],
       },
       '12': {
         textureNote: 'A thick, family-style oatmeal.',
         steps: [
           'Stir the oat cereal into breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, adding liquid a splash at a time, until thick and family-style.',
-          'Stir well to release hot spots, cool to just-warm, and check the temperature.',
+          'Stir well to release hot spots and cool to just-warm.',
           'Serve unsweetened with a spoon — no added sugar, and no honey before 12 months.',
         ],
       },
@@ -983,7 +983,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Wash and peel the sweet potato and cut it into thick, finger-length wedges.',
           'Steam or boil for 12-15 minutes, or roast at 400°F (200°C) for 25-30 minutes, until a wedge mashes easily between two fingers.',
           'Test one wedge between your fingers before serving; if it resists, cook it for 5 minutes more.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -1019,7 +1019,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Peel and deseed the squash and cut it into thick, finger-length wedges.',
           'Steam for 12-15 minutes, or roast at 400°F (200°C) for 25-30 minutes, until a wedge mashes easily between two fingers.',
           'Test one wedge between your fingers before serving; if it resists, cook it for 5 minutes more.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -1055,7 +1055,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Peel the pumpkin, scoop out every seed and the stringy middle, and cut the pumpkin into thick, finger-length wedges.',
           'Steam the pumpkin for 12-15 minutes, or roast it at 400°F (200°C) for 25-30 minutes, until a wedge mashes easily between two fingers.',
           'Test one wedge between your fingers before serving; if it resists, cook it for 5 minutes more.',
-          'Cool to just-warm, check the temperature, and serve the pumpkin with no added salt.',
+          'Cool to just-warm and serve the pumpkin with no added salt.',
         ],
       },
       '9': {
@@ -1306,7 +1306,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Boil a large pasta shape such as penne or fusilli in plenty of unsalted water, brought to a rolling boil over high heat.',
           'Cook it to al dente — usually 9-11 minutes — then give it 3-4 minutes more, well past al dente, until a piece squashes easily between two fingers.',
-          'Drain it, rinse briefly under cool water, and check the temperature.',
+          'Drain it and rinse briefly under cool water until just warm.',
           'Serve the shapes whole as a finger food, just-warm.',
         ],
       },
@@ -1444,7 +1444,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Wash, peel, and core the apple, then cut it into thick, finger-length wedges.',
           'Steam or simmer the wedges for 8-12 minutes, or bake them at 375°F (190°C) for 20-25 minutes, until they mash easily between two fingers — never serve raw apple under 12 months.',
           'Raw apple is firm and can shear off into a hard, airway-blocking chunk, so test a wedge between your fingers before it reaches baby.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -1551,7 +1551,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Wash and peel the carrot and cut it into finger-length spears.',
           'Steam or boil for 12-15 minutes, until a spear mashes easily between two fingers — never serve raw carrot under 12 months.',
           'Raw carrot is hard and can shear into a firm, airway-blocking chunk, so test a spear between your fingers first and cook it 3-5 minutes more if it resists.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -1588,7 +1588,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Scrub the potato, cut away any green patches or sprouts, then peel it and cut it into thick, finger-length wedges.',
           'Steam or boil the wedges for 15-20 minutes, or bake them at 400°F (200°C) for 30-40 minutes, until a wedge mashes easily between two fingers.',
           'Test a wedge between your fingers before serving, and cook it 5 minutes more if it resists at all — potato is never served raw or firm.',
-          'Cool to just-warm, check the temperature, and serve with no added salt.',
+          'Cool to just-warm and serve with no added salt.',
         ],
       },
       '9': {
@@ -1625,7 +1625,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Scrub and peel the beet, trim off the top and the root, and cut it into thick, finger-length wedges (gloves help, since beet juice stains).',
           'Steam or boil the wedges for 20-25 minutes, or roast them at 400°F (200°C) for 30-40 minutes, until a wedge mashes easily between two fingers — never serve raw beet under 12 months.',
           'Raw beet is hard and can shear into a firm, airway-blocking chunk, so test a wedge between your fingers first and cook it 5 minutes more if it resists.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -1662,7 +1662,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Wash the zucchini and cut it into finger-length spears, skin on or off.',
           'Steam the spears for 6-8 minutes, or roast them at 400°F (200°C) for 15-18 minutes, until they are soft right through.',
           'Check a spear mashes easily between two fingers before serving.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -1732,7 +1732,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Simmer or steam the peas for 4-6 minutes, until one squashes easily between finger and thumb.',
           'Mash them, or squash each pea flat between finger and thumb — whole round peas are small and firm enough to be a choking hazard.',
           'Check that no whole, round pea is left on the plate.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -1844,7 +1844,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Cook it thoroughly with no added salt — bake at 400°F (200°C) for 18-20 minutes, or poach at a bare simmer for 10-12 minutes — until a thermometer in the thickest part reads 165°F (74°C) and the juices run clear.',
           'Rest it for 5 minutes, then cut a finger-length strip along the grain, or shred it finely.',
           'Moisten the strip or the shreds with a little olive oil or cooking liquid — breast meat dries out fast and turns stringy when it does.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -1886,7 +1886,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Cook it through with no added salt — pan-fry over medium heat for 4-5 minutes a side, or bake at 375°F (190°C) for 18-20 minutes — until a thermometer in the center reads 165°F (74°C) and no pink remains.',
           'Rest it for 3-5 minutes, then cut the patty into finger-length strips, or shred slow-cooked thigh meat finely instead.',
           'Moisten with a little olive oil or cooking liquid so nothing is dry or crumbly.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -1926,7 +1926,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Cook it well-done with no added salt — roast at 400°F (200°C) for 20-25 minutes, or pan-fry over medium heat for 5-6 minutes a side — until a thermometer in the thickest part reads 160°F (71°C).',
           'Rest it for 5 minutes, then cut a finger-length strip along the grain.',
           'Moisten the strip with a little olive oil or cooking liquid so it is not dry or chewy.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -1965,7 +1965,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Cook it well-done with no added salt: brown the ground lamb over medium heat for 6-8 minutes, or slow-cook the shoulder for 2-3 hours until it falls apart, in either case until a thermometer reads 160°F (71°C).',
           'Drain off the fat, rest it for 3-5 minutes, and moisten with a little olive oil or cooking liquid.',
           'Serve as a soft pile of finely crumbled ground lamb, or pull a finger-length shred from the shoulder.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -2006,7 +2006,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Bake it at 400°F (200°C) for 10-12 minutes, or poach it at a bare simmer for 6-8 minutes, until it is opaque right through and flakes under gentle pressure — 145°F (63°C) on a thermometer.',
           'Flake a soft finger-length piece, running your fingers through the flakes for bones once more.',
           'Moisten it with a little cooking liquid or olive oil — cod flakes dry quickly.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -2046,7 +2046,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Bake it at 375°F (190°C) for 10-12 minutes, or poach it at a bare simmer for 6-8 minutes, until it is opaque right through and flakes under gentle pressure — 145°F (63°C) on a thermometer.',
           'Flake a soft finger-length piece, then check the flakes by feel for pin bones a second time.',
           'Moisten with a little cooking liquid or olive oil.',
-          'Cool to just-warm, check the temperature, and serve.',
+          'Cool to just-warm and serve.',
         ],
       },
       '9': {
@@ -2123,7 +2123,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Simmer the oats with plenty of breast milk, formula, whole milk, or water over medium-low heat for 4-5 minutes, stirring, until the flakes are completely soft.',
           'Thin the oatmeal until it drips slowly off a spoon rather than sitting in a stiff lump.',
-          'Stir well to release hot spots, cool to just-warm, and check the temperature.',
+          'Stir well to release hot spots and cool to just-warm.',
           'Serve on a pre-loaded spoon — plain oats carry far less iron than the fortified kind, so pair the meal with an iron-rich food.',
         ],
       },
@@ -2132,14 +2132,14 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Simmer the oats with breast milk, formula, whole milk, or water over medium-low heat for 4-5 minutes, to a thicker, spoonable consistency.',
           'Leave a little texture rather than cooking it completely smooth.',
-          'Stir well to release hot spots, cool to just-warm, and check the temperature, then serve in a bowl with a spoon for self-feeding practice.',
+          'Stir well to release hot spots, cool to just-warm, and serve in a bowl with a spoon for self-feeding practice.',
         ],
       },
       '12': {
         textureNote: 'A thick, family-style oatmeal.',
         steps: [
           'Simmer the oats with breast milk, formula, whole milk, or water over medium-low heat for 5-6 minutes, adding liquid a splash at a time, until thick and family-style.',
-          'Stir well to release hot spots, cool to just-warm, and check the temperature.',
+          'Stir well to release hot spots and cool to just-warm.',
           'Serve unsweetened, with no added sugar — and use rolled or quick oats rather than steel-cut, which stay chewy.',
         ],
       },
@@ -2622,7 +2622,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Wash the Brussels sprouts, trim the stem ends, pull off any yellow or loose outer leaves, and halve them lengthwise.',
           'Steam the halves over boiling water for 10-12 minutes, until a knife slides through the core with no resistance and a piece mashes easily between two fingers — raw or under-cooked Brussels sprouts are firm and hard to chew.',
           'Cut each half lengthwise into two quarters for baby to hold, or mash a few smooth for a pre-loaded spoon — never a whole sprout, which is round and firm.',
-          'Cool to just-warm, check the temperature, and serve with no added salt.',
+          'Cool to just-warm and serve with no added salt.',
         ],
       },
       '9': {
@@ -2659,7 +2659,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Wash the kale, pull the leaves off the tough center stems, and throw the stems away.',
           'Steam the kale leaves for 5-7 minutes, until they are dark, completely limp, and very soft — raw or under-cooked kale is tough and stringy.',
           'Squeeze out the excess water and chop the kale very finely, so there are no whole leaves or long strands.',
-          'Stir the chopped kale through a soft food baby already eats — a mash, a soft grain, or egg — then cool to just-warm, check the temperature, and serve with no added salt.',
+          'Stir the chopped kale through a soft food baby already eats — a mash, a soft grain, or egg — then cool to just-warm and serve with no added salt.',
         ],
       },
       '9': {
@@ -2697,7 +2697,7 @@ export const basicRecipes: RecipeSeed[] = [
           'Rinse the cranberries and pick out any stems and any soft or shriveled berries; frozen cranberries can go straight into the pan.',
           'Put them in a small pan with 2-3 tablespoons of water and simmer over medium-low heat for 8-10 minutes, stirring now and then, until every berry has burst and gone soft.',
           'Mash or blend the cranberries until completely smooth, so no whole berry or loose piece of skin is left — a whole cranberry is small, round, and hard.',
-          'Cool to just-warm, check the temperature, and swirl a teaspoon or two of the mash through a sweeter soft food baby already eats, such as oatmeal, yogurt, or mashed pear, with no added sugar.',
+          'Cool to just-warm and swirl a teaspoon or two of the mash through a sweeter soft food baby already eats, such as oatmeal, yogurt, or mashed pear, with no added sugar.',
         ],
       },
       '9': {

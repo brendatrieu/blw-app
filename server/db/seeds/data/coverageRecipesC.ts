@@ -363,7 +363,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Meanwhile, wash the cauliflower, cut it into florets, and steam them over boiling water for 8-10 minutes, until a floret mashes easily between two fingers — raw or under-cooked cauliflower is firm and hard to chew.',
           'Set one whole floret aside, with a bit of stem as a handle, for baby to hold.',
           'Drain the lentils and mash them with the rest of the cauliflower until smooth, thinning with a little of the cooking water until it is scoopable rather than stiff.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon with the floret alongside, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon with the floret alongside, with no added salt.',
         ],
       },
       '9': {
@@ -408,7 +408,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Set one whole floret aside, with a bit of stem as a handle, for baby to hold.',
           'Mash the rest until smooth and stir the finely grated cheese through it off the heat, so the cheese melts in rather than sitting in firm shreds.',
           'Loosen the mash with a little breast milk, formula, whole milk, or water until it is soft and spoonable.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon with the floret alongside, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon with the floret alongside, with no added salt.',
         ],
       },
       '9': {
@@ -452,7 +452,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Rinse the lentils and put them in a pan with the very finely chopped onion, chopped tomato, and plenty of unsalted water.',
           'Simmer over low heat for 15-20 minutes, until the lentils collapse and the onion is completely soft and squashes easily between two fingers — onion is always cooked soft, never raw.',
           'Blend or mash until smooth, thinning with a little of the cooking water until it is loose and scoopable rather than stiff.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -494,7 +494,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Peel the sweet potato and cut it into thick, finger-length wedges.',
           'Toss the onion wedges in a little olive oil and roast them at 400°F (200°C) for 10 minutes, then add the sweet potato wedges and roast everything for 25-30 minutes more, turning once, until every wedge squashes easily between two fingers — raw or under-cooked onion is firm and slippery.',
           'Cut the firm root end off each onion wedge, along with any crispy or dark edges; if the layers come apart, keep them as large soft slices.',
-          'Cool to just-warm, check the temperature, and hand baby a sweet potato wedge and an onion wedge or slice to hold, with no added salt.',
+          'Cool to just-warm and hand baby a sweet potato wedge and an onion wedge or slice to hold, with no added salt.',
         ],
       },
       '9': {
@@ -545,7 +545,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Add the ground beef and brown it over medium heat for 5-7 minutes, breaking it up very small, until no pink is left and it reads 160°F (71°C) on a thermometer.',
           'Add a splash of water, then simmer over low heat for 12-15 minutes, until the beef is very tender and the onion squashes easily between two fingers.',
           'Mash it well with a fork, adding a little more water if needed, so it is moist and soft rather than dry or stringy.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -595,7 +595,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Steam the Brussels sprouts and apple over boiling water for 10-12 minutes, until a knife slides through the sprout cores and the apple mashes easily between two fingers — never serve raw apple under 12 months, or a firm sprout at any age.',
           'Set one Brussels sprout half aside and cut it lengthwise into two quarters for baby to hold.',
           'Drain the lentils and mash them with the rest of the Brussels sprouts and the apple until smooth, thinning with a little of the cooking water until it is scoopable rather than stiff.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon with the quarters alongside, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon with the quarters alongside, with no added salt.',
         ],
       },
       '9': {
@@ -644,7 +644,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Meanwhile, peel the sweet potato and cut it into thick, finger-length wedges; wash the Brussels sprouts, trim the stem ends, pull off any loose outer leaves, and halve them.',
           'Steam the sweet potato and Brussels sprouts over boiling water for 12-15 minutes, until a wedge mashes easily between two fingers and a knife slides through the sprout cores with no resistance.',
           'Rest the chicken for 5 minutes, then cut a finger-length strip or shred it finely, moistened with the pan juices, and cut each Brussels sprout half lengthwise into two quarters.',
-          'Cool everything to just-warm, check the temperature, and serve with no added salt — never a whole sprout.',
+          'Cool everything to just-warm and serve with no added salt — never a whole sprout.',
         ],
       },
       '9': {
@@ -693,7 +693,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Stir in the canned pure pumpkin (or mashed cooked fresh pumpkin) and a pinch of cinnamon, and keep stirring over low heat for 1 minute more, until warmed through.',
           'Thin with a little more breast milk, formula, or water until the oatmeal drips slowly off a spoon.',
           'Hull the strawberries and mash them completely flat, so no round or half-berry shape remains, then swirl them through.',
-          'Stir well to release hot spots, cool to just-warm, check the temperature, and serve on a pre-loaded spoon.',
+          'Stir well to release hot spots, cool to just-warm, and serve on a pre-loaded spoon.',
         ],
       },
       '9': {
@@ -703,7 +703,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Stir in the canned pure pumpkin (or mashed cooked fresh pumpkin) and a pinch of cinnamon, and keep stirring over low heat for 1 minute more, until warmed through.',
           'Thin with a splash more breast milk, formula, or water only if it has turned stiff — it should stay on the spoon rather than run off it.',
           'Hull the strawberries and dice them finely into small bite-sized pieces (no bigger than ½ inch) so no round or half-berry shape remains, then fold them in.',
-          'Stir well to release hot spots, cool to just-warm, check the temperature, and serve in a bowl with a spoon for self-feeding.',
+          'Stir well to release hot spots, cool to just-warm, and serve in a bowl with a spoon for self-feeding.',
         ],
       },
       '12': {
@@ -713,7 +713,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Stir in the canned pure pumpkin (or mashed cooked fresh pumpkin) and a pinch of cinnamon, and keep stirring over low heat for 1 minute more, until warmed through.',
           'Thin with a little more breast milk, formula, or water if it thickens as it stands.',
           'Hull and quarter the strawberries lengthwise, never leaving a whole round berry, and stir most of them through.',
-          'Stir well to release hot spots, cool to just-warm, check the temperature, and serve with the rest of the strawberries on the side, with no added sugar.',
+          'Stir well to release hot spots, cool to just-warm, and serve with the rest of the strawberries on the side, with no added sugar.',
         ],
       },
     },
@@ -741,7 +741,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Roast at 400°F (200°C) for 25-30 minutes, until a pumpkin wedge mashes easily between two fingers, taking the chicken thigh out after 18-22 minutes, once it is cooked to an internal temperature of 165°F (74°C) in the thickest part.',
           'Steam the broccoli florets for 8-10 minutes, keeping a bit of stem as a handle, until they mash easily between two fingers.',
           'Rest the chicken for 5 minutes, then cut a finger-length strip of the dark meat or shred it finely, moisten it with a little olive oil, and check again for small bones.',
-          'Cool everything to just-warm, check the temperature, and serve the chicken, a pumpkin wedge, and a broccoli floret side by side.',
+          'Cool everything to just-warm and serve the chicken, a pumpkin wedge, and a broccoli floret side by side.',
         ],
       },
       '9': {
@@ -752,7 +752,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Roast at 400°F (200°C) for 25-30 minutes, until a pumpkin wedge mashes easily between two fingers, taking the chicken thigh out after 18-22 minutes, once it is cooked to an internal temperature of 165°F (74°C) in the thickest part.',
           'Steam the broccoli for 8-10 minutes, until soft, and cut it into small bite-sized florets (no bigger than ½ inch).',
           'Rest the chicken for 5 minutes, then chop or shred it into small bite-sized pieces (no bigger than ½ inch), feeling for small bones, and moisten it with a little olive oil; serve the pumpkin as wedges or cut it into soft cubes the same size.',
-          'Cool everything to just-warm, check the temperature, and serve for self-feeding.',
+          'Cool everything to just-warm and serve for self-feeding.',
         ],
       },
       '12': {
@@ -763,7 +763,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Roast at 400°F (200°C) for 20-25 minutes, until the pumpkin is fork-tender, taking the chicken thigh out after 18-22 minutes, once it is cooked to an internal temperature of 165°F (74°C) in the thickest part.',
           'Add the broccoli florets to the pan for the last 15 minutes and roast them at 400°F (200°C) until tender.',
           'Rest the chicken for 5 minutes, then dice it, the pumpkin, and the broccoli into small bite-sized pieces, discarding any gristle and checking for small bones.',
-          'Cool to just-warm, check the temperature, and serve with no added salt.',
+          'Cool to just-warm and serve with no added salt.',
         ],
       },
     },
@@ -794,7 +794,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Meanwhile, pull the kale leaves off their stems and steam them for 5-7 minutes, until dark and very soft, then squeeze them dry and chop the kale very finely.',
           'Stir the rinsed chickpeas into the sauce for the last 5 minutes, then blend or mash the sauce until completely smooth — whole chickpeas and their loose skins are a choking risk at this age.',
           'Cook the pasta for 10-12 minutes, well past al dente, until it is very soft, and keep larger shapes whole as a finger food.',
-          'Stir the chopped kale through the sauce, cool it to just-warm, check the temperature, and spoon it over the pasta, with no added salt.',
+          'Stir the chopped kale through the sauce, cool it to just-warm, and spoon it over the pasta, with no added salt.',
         ],
       },
       '9': {
@@ -845,7 +845,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Crumble the firm tofu into small, soft crumbs with your fingers or a fork.',
           'Warm a little olive oil over medium heat, stir in a small pinch of ground turmeric, then add the tofu and cook it for 4-5 minutes, stirring, until heated through.',
           'Stir in the chopped kale and a splash of water and cook for 1-2 minutes, until it is soft and moist rather than dry.',
-          'Mash it lightly with a fork so it holds together, cool to just-warm, check the temperature, and serve as a soft pile or on a pre-loaded spoon, with no added salt.',
+          'Mash it lightly with a fork so it holds together, cool to just-warm, and serve as a soft pile or on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -890,7 +890,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Peel the beet and cut it into small cubes, then steam or boil them for 12-15 minutes, until a cube mashes easily between two fingers.',
           'Let the beet cool a little, then blend it with the chickpeas, tahini, and a squeeze of lemon juice until completely smooth, with no whole chickpeas or loose skins left.',
           'Blend in water a spoonful at a time, thinning until the hummus is loose and drips slowly off a spoon rather than sitting thick or sticky.',
-          'Check the temperature and serve on a pre-loaded spoon for baby to grab.',
+          'Cool to just-warm and serve on a pre-loaded spoon for baby to grab.',
         ],
       },
       '9': {
@@ -899,7 +899,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Peel the beet and cut it into small cubes (no bigger than ½ inch), then steam or boil them for 12-15 minutes, until a cube mashes easily between two fingers.',
           'Set a few soft cubes aside, let the rest cool a little, and blend the beet with the chickpeas, tahini, and a squeeze of lemon juice until smooth, with no whole chickpeas or loose skins left.',
           'Blend in water a spoonful at a time, thinning until the hummus is soft and spreadable rather than thick or sticky.',
-          'Cool to just-warm, check the temperature, and serve the hummus on a pre-loaded spoon or as a dip, with the soft beet cubes on the tray for pincer practice.',
+          'Cool to just-warm and serve the hummus on a pre-loaded spoon or as a dip, with the soft beet cubes on the tray for pincer practice.',
         ],
       },
       '12': {
@@ -935,7 +935,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Simmer covered over low heat for 20-25 minutes, until the lentils collapse and a beet cube mashes easily between two fingers, adding a splash more water if the pan runs dry.',
           'Take the pan off the heat and blend or mash until completely smooth, thinning with a little of the cooking water until it is scoopable rather than stiff.',
           'Stir in the juice of half an orange; its vitamin C helps baby absorb the iron in the lentils.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -982,7 +982,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Shape the turkey into thin patties and bake them at 375°F (190°C) for 18-20 minutes, until they are cooked to an internal temperature of 165°F (74°C) in the center.',
           'Meanwhile, dice the rest of the apple and simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 10-12 minutes, until every cranberry has burst and the apple mashes easily between two fingers.',
           'Blend or mash the sauce until completely smooth, so no whole berry or loose skin is left.',
-          'Rest the patties for 3-5 minutes, cut them into finger-length strips, cool everything to just-warm, check the temperature, and serve the strips with the sauce, with no added salt or sugar.',
+          'Rest the patties for 3-5 minutes, cut them into finger-length strips, cool everything to just-warm, and serve the strips with the sauce, with no added salt or sugar.',
         ],
       },
       '9': {
@@ -1031,7 +1031,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Peel, core, and dice the pear, then simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 8-10 minutes, until every cranberry has burst and the pear mashes easily between two fingers.',
           'Blend or mash the fruit until completely smooth, so no whole berry or loose skin is left.',
           'Stir the oat cereal into breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, stirring, until warm and smooth, then thin it until it drips slowly off a spoon.',
-          'Swirl a spoonful of the cranberry and pear mash through the oatmeal, stir well to release hot spots, cool to just-warm, and check the temperature.',
+          'Swirl a spoonful of the cranberry and pear mash through the oatmeal, stir well to release hot spots, and cool to just-warm.',
           'Serve on a pre-loaded spoon, with no added sugar — the pear brings the sweetness.',
         ],
       },
@@ -1041,7 +1041,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Peel, core, and dice the pear, then simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 8-10 minutes, until every cranberry has burst and the pear is very soft.',
           'Mash the fruit well with a fork, so no whole berry is left.',
           'Stir the oat cereal into a little less breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, stirring, to a thick, spoonable consistency.',
-          'Fold the cranberry and pear mash through the oatmeal, stir well to release hot spots, cool to just-warm, and check the temperature, then serve in a bowl with a pre-loaded spoon for baby to practice with, with no added sugar.',
+          'Fold the cranberry and pear mash through the oatmeal, stir well to release hot spots, cool to just-warm, and serve in a bowl with a pre-loaded spoon for baby to practice with, with no added sugar.',
         ],
       },
       '12': {
@@ -1050,7 +1050,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Peel, core, and dice the pear small, then simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 8-10 minutes, until every cranberry has burst and the pear is tender.',
           'Mash the fruit roughly, checking that no whole berry is left.',
           'Stir the oat cereal into breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, adding liquid a splash at a time, until thick and family-style.',
-          'Stir well to release hot spots, spoon the cranberry and pear sauce over the oatmeal, cool to just-warm, check the temperature, and serve with a spoon, with no added sugar.',
+          'Stir well to release hot spots, spoon the cranberry and pear sauce over the oatmeal, cool to just-warm, and serve with a spoon, with no added sugar.',
         ],
       },
     },
@@ -1081,7 +1081,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Warm a little olive oil over medium-low heat, stir in a pinch of cumin, then cook the very finely chopped onion in it for 8-10 minutes, until the onion is completely soft and squashes easily between two fingers.',
           'Add the skinned, diced tomatoes and the rinsed kidney beans and simmer over low heat for 12-15 minutes, until the tomato breaks down into a thick sauce.',
           'Mash or blend the sauce until no whole kidney bean is left and every bean is squashed flat.',
-          'Press the rice into soft balls, cool everything to just-warm, check the temperature, and serve the rajma on a pre-loaded spoon with a rice ball alongside, with no added salt.',
+          'Press the rice into soft balls, cool everything to just-warm, and serve the rajma on a pre-loaded spoon with a rice ball alongside, with no added salt.',
         ],
       },
       '9': {
@@ -1186,7 +1186,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Stir in a small pinch of ground cumin and cook for 30 seconds, until it smells fragrant.',
           'Add the rinsed pinto beans and a few tablespoons of water and simmer over low heat for 5 minutes, until the pinto beans are hot and very soft.',
           'Mash or blend it all until smooth, with no whole bean left, and loosen it with a little more water so it is soft and spreadable rather than thick and sticky.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt — this is why the beans are made at home, since most canned refried beans are salty.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt — this is why the beans are made at home, since most canned refried beans are salty.',
         ],
       },
       '9': {
@@ -1241,7 +1241,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Pour in the water, cover, and simmer over low heat for 15-20 minutes, until the squash mashes easily between two fingers.',
           'Stir in the rinsed pinto beans and simmer for 5 more minutes, until the pinto beans are hot and very soft.',
           'Blend or mash the stew until smooth and thick, with no whole bean or loose bean skin left — whole beans can be firm enough to pose a choking risk at this age.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -1296,7 +1296,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Add the skinned, diced tomatoes and the water and simmer over low heat for 8-10 minutes, until the tomatoes break down into a sauce.',
           'Stir in the rinsed white beans and the finely chopped spinach and simmer for 5 more minutes, until the white beans are very soft and the spinach is completely wilted.',
           'Blend the stew until smooth and thick, with no whole bean or piece of spinach leaf left — whole beans can be firm enough to pose a choking risk at this age.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -1348,7 +1348,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Mash the white beans well, with no whole bean left, then mix in the chopped broccoli and the blended oats until the mixture holds together when pressed.',
           'Shape heaped tablespoons into finger-length logs about as thick as two adult fingers and set them on the baking sheet.',
           'Bake the patties at 400°F (200°C) for 18-20 minutes, turning them once halfway, until lightly golden outside and soft inside.',
-          'Cool to just-warm, check the temperature, and check a patty squashes easily between two fingers before serving, with no added salt.',
+          'Cool to just-warm and check a patty squashes easily between two fingers before serving, with no added salt.',
         ],
       },
       '9': {
@@ -1371,7 +1371,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Mash the white beans roughly, then mix in the chopped broccoli and the blended oats until the mixture holds together when pressed.',
           'Shape the mixture into small round patties about 2 inches across and set them on the baking sheet.',
           'Bake the patties at 400°F (200°C) for 20-22 minutes, turning them once halfway, until golden outside and set through.',
-          'Cool to just-warm, check the temperature, and cut into bite-sized pieces, with no added salt.',
+          'Cool to just-warm and cut into bite-sized pieces, with no added salt.',
         ],
       },
     },
@@ -1405,7 +1405,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Stir in the skinned, diced tomatoes and a pinch of dried oregano rubbed fine, and simmer over low heat for 10 minutes, until the tomato breaks down.',
           'Stir in the rinsed butter beans and the water, cover, and bake at 375°F (190°C) for 25-30 minutes, until the sauce is thick and the butter beans are very soft.',
           'Blend or mash it all until smooth, picking out any loose bean skins, so no whole bean is left.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -1454,7 +1454,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Steam the broccoli florets for 8-10 minutes, until they mash easily between two fingers.',
           'Warm the rinsed butter beans in a pan over low heat for 2-3 minutes.',
           'Blend or mash the butter beans and broccoli with a squeeze of lemon juice and a drizzle of olive oil until smooth, picking out any loose bean skins.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -1502,7 +1502,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Steam the broccoli florets for 8-10 minutes, until the stems mash easily between two fingers.',
           'Boil the frozen shelled edamame in unsalted water for 6-8 minutes, until one squashes easily between two fingers, then drain.',
           'Blend or mash the edamame and broccoli with a drizzle of olive oil and a squeeze of lemon juice until smooth and thick, with no whole bean or loose skin left — whole edamame is a choking hazard at this age.',
-          'Cool to just-warm, check the temperature, and serve on a pre-loaded spoon, with no added salt.',
+          'Cool to just-warm and serve on a pre-loaded spoon, with no added salt.',
         ],
       },
       '9': {
@@ -1552,7 +1552,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Warm a drizzle of olive oil in a nonstick pan over medium-low heat and cook the very finely diced bell pepper for 6-8 minutes, stirring, until completely soft with no papery skin left.',
           'Pour in the beaten egg and scramble it over medium-low heat for 2-3 minutes, until it is fully set with no runny egg left and cooked to an internal temperature of 160°F (71°C).',
           'Add the soft rice and the smashed edamame and stir-fry over low heat for 2-3 minutes, until steaming hot all the way through.',
-          'Squeeze the rice mixture into small balls baby can hold, cool to just-warm, check the temperature, and serve with no added salt or soy sauce.',
+          'Squeeze the rice mixture into small balls baby can hold, cool to just-warm, and serve with no added salt or soy sauce.',
         ],
       },
       '9': {
