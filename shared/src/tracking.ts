@@ -678,6 +678,11 @@ export const allergenDetailSchema = z.object({
   progress: allergenProgressItemSchema,
   foods: z.array(allergenDetailFoodSchema),
   exposures: z.array(allergenDetailExposureSchema),
+  /** The ladder step's starter food (dairy -> yogurt, sesame -> tahini):
+   * what Up next suggests when no meal has counted yet or the latest one
+   * didn't (ledger 857). Null for an allergen with no ladder step; optional
+   * for older cached bodies. */
+  starterFoodId: z.string().uuid().nullable().optional(),
 });
 export type AllergenDetail = z.infer<typeof allergenDetailSchema>;
 

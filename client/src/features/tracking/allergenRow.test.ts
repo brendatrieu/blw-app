@@ -519,6 +519,24 @@ describe("serveFoodId — the food Up next's Log meal prefills (item 660)", () =
     // A body cached before `kind` existed reads as food.
     expect(serveFoodId({ foods: [food("yogurt")], exposures: [] })).toBe("yogurt");
   });
+
+  it("suggests the ladder's starter food until a meal counts, and after one that didn't (ledger 857)", () => {
+    const tag = (id: string, kind: "food" | "ingredient", countsTowardProgress: boolean) => ({ ...food(id), kind, countsTowardProgress });
+    const foods = [tag("cheese", "food", true), tag("unsalted_butter", "ingredient", false), tag("yogurt", "food", true)];
+    const didntCount = { ...exposure({ id: "unsalted_butter", kind: "ingredient" }), counted: false };
+    const counted = (id: string) => ({ ...exposure({ id }), counted: true });
+    // Butter only: yogurt, not the alphabetically first Cheese.
+    expect(serveFoodId({ foods, exposures: [didntCount], starterFoodId: "yogurt" })).toBe("yogurt");
+    // Nothing logged yet.
+    expect(serveFoodId({ foods, exposures: [], starterFoodId: "yogurt" })).toBe("yogurt");
+    // A counting meal before the butter one doesn't win: the latest didn't count.
+    expect(serveFoodId({ foods, exposures: [didntCount, counted("cheese")], starterFoodId: "yogurt" })).toBe("yogurt");
+    // The latest meal counted: the food served then.
+    expect(serveFoodId({ foods, exposures: [counted("cheese"), didntCount], starterFoodId: "yogurt" })).toBe("cheese");
+    expect(serveFoodId({ foods, exposures: [counted("yogurt")], starterFoodId: "yogurt" })).toBe("yogurt");
+    // A deleted starter (or an old cached body without one) keeps the old fallback.
+    expect(serveFoodId({ foods, exposures: [didntCount] })).toBe("cheese");
+  });
 });
 
 describe("non-counting copy on the allergen page (ledger 836)", () => {

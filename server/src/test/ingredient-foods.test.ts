@@ -70,6 +70,10 @@ async function seedFixtures(db: Database) {
     { foodId: food.tahini!.id, allergenId: sesameAllergen!.id },
     { foodId: food.sesame_oil!.id, allergenId: sesameAllergen!.id, countsTowardProgress: false },
   ]);
+  await db.insert(schema.allergenLadderSteps).values([
+    { step: 1, allergenId: milkAllergen!.id, starterFoodId: food.yogurt!.id, howTo: "Yogurt.", waitDays: 3 },
+    { step: 2, allergenId: sesameAllergen!.id, starterFoodId: food.tahini!.id, howTo: "Tahini.", waitDays: 3 },
+  ]);
   const [eggBake] = await db
     .insert(schema.recipes)
     .values({ slug: "egg-bake", title: "Egg Bake", minAgeMonths: 6, prepMinutes: 60, ironFocus: true })
@@ -220,6 +224,13 @@ describe("ingredient foods and ladder counting (ledger 836, 838)", () => {
         ["Yogurt", "food"],
       ]);
       expect(milk.progress).toMatchObject({ exposures: 1, firstAt: "2026-03-01T08:00:00.000Z" });
+    });
+
+    it("names the ladder's starter food, Up next's pick after a meal that didn't count (ledger 857)", async () => {
+      expect((await detail("milk")).starterFoodId).toBe(id("yogurt"));
+      expect((await detail("sesame")).starterFoodId).toBe(id("tahini"));
+      // No ladder step for this allergen in the fixtures.
+      expect((await detail("egg")).starterFoodId).toBeNull();
     });
   });
 

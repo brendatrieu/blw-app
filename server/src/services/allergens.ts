@@ -209,7 +209,7 @@ export async function loadAllergenDetail(
   // No food carries this allergen (or none this caller can see), so no meal
   // can have exposed the baby to it — including an override-only row, whose
   // status came from a parent and never from the log.
-  if (detailFoods.length === 0) return { progress, foods: detailFoods, exposures: [] };
+  if (detailFoods.length === 0) return { progress, foods: detailFoods, exposures: [], starterFoodId: null };
 
   const foodIds = detailFoods.map((f) => f.id);
 
@@ -273,5 +273,11 @@ export async function loadAllergenDetail(
     };
   });
 
-  return { progress, foods: detailFoods, exposures };
+  const [step] = await db
+    .select({ starterFoodId: allergenLadderSteps.starterFoodId })
+    .from(allergenLadderSteps)
+    .innerJoin(allergens, eq(allergenLadderSteps.allergenId, allergens.id))
+    .where(eq(allergens.slug, slug));
+
+  return { progress, foods: detailFoods, exposures, starterFoodId: step?.starterFoodId ?? null };
 }
