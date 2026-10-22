@@ -12,10 +12,12 @@
     <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 
-    <!-- iOS PWA niceties: standalone launch, translucent status bar over our
-         own header chrome, and the same name shown on the home-screen icon. -->
+    <!-- iOS PWA niceties: standalone launch and the same name shown on the
+         home-screen icon. No apple-mobile-web-app-status-bar-style (ledger 869):
+         "black-translucent" makes iOS 26.1+ paint a blur band over the top of
+         the installed app; without it the status bar is opaque in theme-color
+         (above, kept in step with the in-app theme by src/theme.ts). -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Little Meals" />
     <!-- Launch screens (icon + name on --color-bg, light and dark), one per
          iPhone size; regenerate with client/scripts/startup-images.mjs. -->

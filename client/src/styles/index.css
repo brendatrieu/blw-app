@@ -67,8 +67,9 @@
  *
  * --color-bg (light) and --_dark-color-bg (dark) are duplicated as literal
  * hex outside this file, in `client/vite.config.ts` (manifest theme_color /
- * background_color) and `client/index.html` (the two `theme-color` meta
- * tags). Keep all three in sync by hand when either value changes here.
+ * background_color), `client/index.html` (the two `theme-color` meta tags,
+ * which color the iOS status bar) and `client/src/theme.ts` (THEME_BG).
+ * `client/src/theme.test.ts` pins all four together.
  */
 :root {
   /* ---- Surfaces (neutral off-white, white cards) ---- */

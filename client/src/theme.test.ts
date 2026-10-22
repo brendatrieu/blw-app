@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getStoredTheme, setTheme } from "./theme.js";
+import { getStoredTheme, setTheme, THEME_BG } from "./theme.js";
 
 const STORAGE_KEY = "blw-theme";
 
@@ -86,5 +87,73 @@ describe("theme", () => {
 
     setTheme("system");
     expect(root.hasAttribute("data-theme")).toBe(false);
+  });
+});
+
+/** index.html's two theme-color metas as attribute bags. */
+function makeFakeThemeColorMetas() {
+  return [
+    { content: THEME_BG.light, media: "(prefers-color-scheme: light)" },
+    { content: THEME_BG.dark, media: "(prefers-color-scheme: dark)" },
+  ].map((attrs) => {
+    const map = new Map(Object.entries(attrs));
+    return {
+      getAttribute: (name: string) => map.get(name) ?? null,
+      setAttribute: (name: string, value: string) => {
+        map.set(name, value);
+      },
+    };
+  });
+}
+
+describe("theme-color follows the in-app theme (ledger 869)", () => {
+  let metas: ReturnType<typeof makeFakeThemeColorMetas>;
+  const contents = () => metas.map((meta) => meta.getAttribute("content"));
+
+  beforeEach(() => {
+    metas = makeFakeThemeColorMetas();
+    vi.stubGlobal("document", {
+      documentElement: makeFakeRoot(),
+      querySelectorAll: (selector: string) => (selector === 'meta[name="theme-color"]' ? metas : []),
+    } as unknown as Document);
+    vi.stubGlobal("localStorage", makeFakeLocalStorage() as unknown as Storage);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("a forced theme sets both metas to that theme's background", () => {
+    setTheme("dark");
+    expect(contents()).toEqual([THEME_BG.dark, THEME_BG.dark]);
+    setTheme("light");
+    expect(contents()).toEqual([THEME_BG.light, THEME_BG.light]);
+  });
+
+  it("'system' restores each meta's own scheme value", () => {
+    setTheme("dark");
+    setTheme("system");
+    expect(contents()).toEqual([THEME_BG.light, THEME_BG.dark]);
+  });
+});
+
+describe("index.html status bar tags (ledger 869)", () => {
+  const read = (relative: string) => readFileSync(new URL(relative, import.meta.url), "utf8");
+  const html = read("../index.html");
+
+  it("has no apple-mobile-web-app-status-bar-style (black-translucent blurs the top on iOS 26.1+)", () => {
+    expect(html).not.toMatch(/<meta[^>]*apple-mobile-web-app-status-bar-style/);
+    expect(html).toContain('<meta name="apple-mobile-web-app-capable" content="yes" />');
+  });
+
+  it("has both theme-color metas, equal to the bg tokens and the manifest", () => {
+    expect(html).toContain(`<meta name="theme-color" content="${THEME_BG.light}" media="(prefers-color-scheme: light)" />`);
+    expect(html).toContain(`<meta name="theme-color" content="${THEME_BG.dark}" media="(prefers-color-scheme: dark)" />`);
+    const css = read("./styles/index.css");
+    expect(css).toContain(`--color-bg: ${THEME_BG.light};`);
+    expect(css).toContain(`--_dark-color-bg: ${THEME_BG.dark};`);
+    const config = read("../vite.config.ts");
+    expect(config).toContain(`theme_color: "${THEME_BG.light}",`);
+    expect(config).toContain(`background_color: "${THEME_BG.light}",`);
   });
 });

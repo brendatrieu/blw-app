@@ -136,8 +136,9 @@ function SettingsLink() {
   );
 }
 
-/** A top padding of `base` plus the iOS safe area (viewport-fit=cover with a
- * black-translucent status bar draws the page under the clock). The header
+/** A top padding of `base` plus the iOS safe area: 0 under today's opaque
+ * status bar (ledger 869), the clock's height in installs from before it,
+ * whose black-translucent status bar draws the page under the clock. The header
  * below uses it; screens outside this layout get theirs from App's
  * OutsideAppLayout (ledger 851). */
 export function safeTop(base: string): string {

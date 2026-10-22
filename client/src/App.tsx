@@ -58,8 +58,9 @@ function LegacyStorageRedirect() {
 
 /**
  * Ledger 851: the screens outside AppLayout (sign-in, sign-up, About, the
- * password pages) have no app header to clear the iOS status bar, and the
- * installed app draws the page under it (viewport-fit=cover, black-translucent).
+ * password pages) have no app header to clear the iOS status bar. Since ledger
+ * 869 the status bar is opaque (inset 0), but installs from before it keep the
+ * old see-through one (viewport-fit=cover, black-translucent) until re-added.
  * One top inset here covers all of them; Safari reports 0, so it is unchanged.
  * It also starts each of them at the top, as AppLayout does: Sign out from a
  * scrolled Settings otherwise opened a taller-than-the-window /login scrolled
