@@ -533,9 +533,9 @@ describe("AllergenDetailPage — foods that never move the ladder (ledger 836, 8
     expect(html.match(/count toward the 3 servings:/g)).toHaveLength(2);
   });
 
-  it("offers no Log meal for whole milk, but does for butter and yogurt", () => {
+  it("offers Log meal for whole milk (ledger 855), butter and yogurt", () => {
     const html = renderWithDetail(milkDetail(), "milk");
-    expect(html).not.toContain(`/log-meal?food=${MILK_ID}`);
+    expect(html).toContain(`/log-meal?food=${MILK_ID}`);
     expect(html).toContain(`/log-meal?food=${BUTTER_ID}`);
     expect(html).toContain(`/log-meal?food=${YOGURT_ID}`);
   });

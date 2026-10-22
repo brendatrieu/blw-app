@@ -37,7 +37,7 @@ import type { Database } from "../db/index.js";
 import { choosableFoodsCondition, visibleFoodsCondition } from "../services/foods.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import { buildCandidateSlug, isUniqueViolation, SLUG_ATTEMPTS } from "../services/slugs.js";
-import { INFO_FOOD_ALONE, type Transaction } from "../services/meals.js";
+import { type Transaction } from "../services/meals.js";
 import {
   allergens,
   foodAllergens,
@@ -560,9 +560,6 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
         .limit(1)
         .for("update");
       if (!replacement) return { status: 404 } as const;
-      // Ledger 838: moving meals and containers onto whole milk would log it
-      // on its own, which only a served recipe may do.
-      if (replacement.kind === "info") return { status: 400, details: { replacementId: INFO_FOOD_ALONE } } as const;
 
       // Counted first: every one of these ends up on the replacement, either
       // re-pointed or merged into a row that already held it.

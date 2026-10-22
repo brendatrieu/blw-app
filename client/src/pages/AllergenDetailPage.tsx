@@ -54,10 +54,8 @@ function FoodRow({ food }: { food: AllergenDetailFood }) {
         </span>
         {food.isCustom && <Badge tone="outline">Custom</Badge>}
       </Link>
-      {/* A deleted food can't be picked for a new meal, and an info food
-          (whole milk) is only ever logged through a recipe, so no CTA for
-          either (ledger 838). */}
-      {!food.deleted && food.kind !== "info" && (
+      {/* A deleted food can't be picked for a new meal, so no CTA. */}
+      {!food.deleted && (
         <div className="flex shrink-0 items-center gap-1">
           <ButtonLink to={`/log-meal?food=${food.id}`} size="sm">
             Log meal

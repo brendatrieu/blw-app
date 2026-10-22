@@ -244,9 +244,8 @@ export function dueSinceLabel(
  * The food Up next's "Log meal" prefills for a due allergen (item 660): the
  * one served last time (the exposure's foods are only the allergen carriers),
  * else the first food carrying it; never a deleted food, which cannot be
- * logged, and never anything but a plain `food` (ledger 838): whole milk
- * cannot be logged alone, and butter or sesame oil would not move the
- * allergen it is due for. Null leaves the form empty.
+ * logged, and never anything but a plain `food` (ledger 838): whole milk,
+ * butter and sesame oil would not move the allergen it is due for. Null leaves the form empty.
  */
 export function serveFoodId(detail: Pick<AllergenDetail, "foods" | "exposures">): string | null {
   const servable = (food: { deleted?: boolean | undefined; kind?: string | undefined }) =>

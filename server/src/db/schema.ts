@@ -190,8 +190,8 @@ export const foods = pgTable(
     // 'food' is everything a parent serves (custom foods are always 'food').
     // 'ingredient' (brown rice, flour, butter, sesame oil) is searchable and
     // loggable like a food but exempt from the seeds' recipe-count and
-    // basic-recipe rules. 'info' (whole milk) is never logged on its own: it
-    // reaches a meal only through a served recipe that uses it. Text plus a
+    // basic-recipe rules. 'info' (whole milk) logs and stores like any food (ledger 855) but is
+    // left out of "foods tried" and never suggested. Text plus a
     // CHECK rather than a pg enum, so a new kind avoids ALTER TYPE.
     kind: text("kind", { enum: ["food", "ingredient", "info"] }).notNull().default("food"),
   },

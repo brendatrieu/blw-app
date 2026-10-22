@@ -53,7 +53,7 @@ vi.mock("../../catalog/hooks.js", async (importOriginal) => ({
         { id: "food-pear", slug: "pear", name: "Pear", category: "fruit", emoji: null, allergens: [] },
         { id: "food-oats", slug: "oats", name: "Oats", category: "grain", emoji: null, allergens: [] },
         { id: "food-banana", slug: "banana", name: "Banana", category: "fruit", emoji: null, allergens: [] },
-        // Ledger 838/842: an info food is never offered on its own.
+        // Ledger 855: an info food (whole milk) is offered like any food.
         { id: "food-milk", slug: "milk", name: "Whole Milk", category: "dairy", kind: "info", emoji: null, allergens: ["milk"] },
       ],
     },
@@ -267,22 +267,22 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
   it("Foods opens with recent loose foods, then every food A–Z; no Recent heading without a history", () => {
     reset([BASE], [meal("m1", [], [{ id: "food-pear" }])]);
     goTo("food");
-    expect(titles(render())).toEqual(["Pear", "Banana", "Oats", "Pear"]);
+    expect(titles(render())).toEqual(["Pear", "Banana", "Oats", "Pear", "Whole Milk"]);
     expect(html(render())).toContain(">All foods</h3>");
 
     reset([BASE]);
     goTo("food");
     const out = html(render());
     expect(out).not.toContain(">Recent</h3>");
-    expect(titles(render())).toEqual(["Banana", "Oats", "Pear"]);
+    expect(titles(render())).toEqual(["Banana", "Oats", "Pear", "Whole Milk"]);
   });
 
-  it("never offers whole milk (info, ledger 838): not under Recent, All foods or a search", () => {
+  it("offers whole milk like any food (info, ledger 855): under Recent, All foods and a search", () => {
     reset([BASE], [meal("m1", [], [{ id: "food-milk" }, { id: "food-pear" }])]);
     goTo("food");
-    expect(titles(render())).toEqual(["Pear", "Banana", "Oats", "Pear"]);
+    expect(titles(render())).toEqual(["Whole Milk", "Pear", "Banana", "Oats", "Pear", "Whole Milk"]);
     type("milk");
-    expect(titles(render())).toEqual([]);
+    expect(titles(render())).toEqual(["Whole Milk"]);
   });
 
   it("typing searches all three at once, grouped In storage, Recipes, Foods, under a highlighted All (ledger 794)", () => {
@@ -356,7 +356,7 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     type("");
     let tree = render();
     expect(tabRow(tree)).toEqual({ labels: ["In storage", "Recipes", "Foods"], value: "food" });
-    expect(titles(tree)).toEqual(["Banana", "Oats", "Pear"]);
+    expect(titles(tree)).toEqual(["Banana", "Oats", "Pear", "Whole Milk"]);
     expect(listKey(tree)).toBe("food");
 
     type("p");
@@ -423,7 +423,7 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     goTo("recipe");
     expect(titles(render())).toEqual(["Egg Muffins", "Baked Cod", "Oat Pancakes", "Apple Oatmeal", "Baked Cod", "Egg Muffins", "Oat Pancakes"]);
     goTo("food");
-    expect(titles(render())).toEqual(["Pear", "Oats", "Pear"]);
+    expect(titles(render())).toEqual(["Pear", "Oats", "Pear", "Whole Milk"]);
     type("a"); // matches Banana, Red Lentil Dal and the rest
     expect(titles(render())).not.toContain("Banana");
     expect(titles(render())).not.toContain("Red Lentil Dal");

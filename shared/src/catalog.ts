@@ -16,10 +16,10 @@ export type FoodCategory = z.infer<typeof foodCategorySchema>;
  * What a food IS (ledger 838), beside its category. `food`: everything a
  * parent serves, custom foods included. `ingredient` (brown rice, flour,
  * butter, sesame oil): searchable and loggable like any food, only exempt
- * from the catalog's recipe-count rules. `info` (whole milk): never logged
- * on its own — it reaches a meal only through a served recipe that uses it,
- * so pickers for a meal or a container leave it out and the server refuses
- * it there. No suggestion may offer anything but `food`.
+ * from the catalog's recipe-count rules. `info` (whole milk): logged and
+ * stored like any food (ledger 855, parents decide), but left out of "foods
+ * tried" and exempt from the recipe rules. No suggestion may offer anything
+ * but `food`.
  */
 export const foodKindSchema = z.enum(["food", "ingredient", "info"]);
 export type FoodKind = z.infer<typeof foodKindSchema>;

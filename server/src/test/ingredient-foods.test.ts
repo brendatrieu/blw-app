@@ -6,8 +6,8 @@
 //   sesame oil -> Sesame) never starts an allergen, adds a serving or moves
 //   the dates — but a reaction after such a meal still shows.
 // - "Foods tried" leaves out 'info' foods (whole milk).
-// - An 'info' food is never logged on its own: every write that names foods
-//   refuses it unless one of that meal's recipes brings it in.
+// - An 'info' food logs and stores like any food (ledger 855); it stays out
+//   of "foods tried" and its tag still never counts.
 //
 // Fixture content only (not the real seeds), like tracking.test.ts.
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -23,7 +23,6 @@ import type {
 import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
-import { INFO_FOOD_ALONE } from "../services/meals.js";
 
 async function seedFixtures(db: Database) {
   await db.insert(schema.storageGuidelines).values([
@@ -224,78 +223,61 @@ describe("ingredient foods and ladder counting (ledger 836, 838)", () => {
     });
   });
 
-  describe("an info food is never logged on its own", () => {
-    it("refuses whole milk on a hand-logged meal, and takes it from a recipe that uses it", async () => {
-      const alone = await post(`/api/babies/${babyId}/meals`, { foodIds: [id("milk"), id("banana")] });
-      expect(alone.statusCode).toBe(400);
-      expect(alone.json()).toMatchObject({ details: { foodIds: INFO_FOOD_ALONE, infoFoodIds: [id("milk")] } });
-
-      const viaRecipe = await meal({ recipeIds: [fx.eggBake.id], foodIds: [id("egg"), id("milk"), id("unsalted_butter")] });
-      expect(viaRecipe.foods.map((f) => f.slug).sort()).toEqual(["egg", "milk", "unsalted_butter"]);
-      // Butter is an ingredient, not info: fine on its own.
-      await meal({ foodIds: [id("unsalted_butter")] });
-    });
-
-    it("keeps the milk an edit resends, but refuses milk an edit adds", async () => {
-      const baked = await meal({ recipeIds: [fx.eggBake.id], foodIds: [id("egg"), id("milk"), id("unsalted_butter")] });
-      const kept = await app.inject({
-        method: "PATCH",
-        url: `/api/meals/${baked.id}`,
-        headers: { cookie: user.cookie },
-        payload: { recipeIds: [], foodIds: [id("egg"), id("milk"), id("unsalted_butter")] },
-      });
-      expect(kept.statusCode).toBe(200);
-
-      const plain = await meal({ foodIds: [id("yogurt")] });
+  describe("an info food logs and stores like any food (ledger 855, parents decide)", () => {
+    it("takes whole milk on a hand-logged meal and in an edit, and it still never counts or is a food tried", async () => {
+      const alone = await meal({ foodIds: [id("milk")], servedAt: "2026-03-01T08:00:00.000Z" });
+      expect(alone.foods.map((f) => f.slug)).toEqual(["milk"]);
+      const plain = await meal({ foodIds: [id("banana")], servedAt: "2026-03-02T08:00:00.000Z" });
       const added = await app.inject({
         method: "PATCH",
         url: `/api/meals/${plain.id}`,
         headers: { cookie: user.cookie },
-        payload: { foodIds: [id("yogurt"), id("milk")] },
+        payload: { foodIds: [id("banana"), id("milk")] },
       });
-      expect(added.statusCode).toBe(400);
-      expect(added.json()).toMatchObject({ details: { infoFoodIds: [id("milk")] } });
-      // Adding the recipe in the same edit brings it in legitimately.
-      const withRecipe = await app.inject({
-        method: "PATCH",
-        url: `/api/meals/${plain.id}`,
-        headers: { cookie: user.cookie },
-        payload: { recipeIds: [fx.eggBake.id], foodIds: [id("yogurt"), id("egg"), id("milk")] },
-      });
-      expect(withRecipe.statusCode).toBe(200);
+      expect(added.statusCode).toBe(200);
+
+      expect(await row("milk")).toMatchObject({ exposures: 0, status: "not_started", firstAt: null, lastServedAt: null });
+      expect((await progress()).foodsTried).toBe(1); // banana; milk is not a food tried
+      expect((await detail("milk")).exposures.map((e) => [e.mealId, e.counted])).toEqual([
+        [plain.id, false],
+        [alone.id, false],
+      ]);
     });
 
-    it("refuses whole milk in a container, on create and on edit", async () => {
+    it("takes whole milk in a container, on create and on edit, and serves it on its own without counting", async () => {
       const created = await post("/api/storage", { foodIds: [id("milk")], location: "fridge" });
-      expect(created.statusCode).toBe(400);
-      expect(created.json()).toMatchObject({ details: { foodIds: INFO_FOOD_ALONE } });
+      expect(created.statusCode).toBe(201);
+      const milkItemId = created.json<{ items: { id: string }[] }>().items[0]!.id;
 
       const butter = await post("/api/storage", { foodIds: [id("unsalted_butter")], location: "fridge" });
       expect(butter.statusCode).toBe(201);
-      const itemId = butter.json<{ items: { id: string }[] }>().items[0]!.id;
+      const butterItemId = butter.json<{ items: { id: string }[] }>().items[0]!.id;
       const edited = await app.inject({
         method: "PATCH",
-        url: `/api/storage/${itemId}`,
+        url: `/api/storage/${butterItemId}`,
         headers: { cookie: user.cookie },
         payload: { foodIds: [id("unsalted_butter"), id("milk")] },
       });
-      expect(edited.statusCode).toBe(400);
+      expect(edited.statusCode).toBe(200);
 
-      // Serving: fresh milk alone is refused; fresh milk with a fresh recipe that uses it is not.
-      const parts = [{ storageItemId: itemId, servings: 1 }];
-      const loose = await post("/api/storage/serve", { parts, foodIds: [id("milk")] });
-      expect(loose.statusCode).toBe(400);
-      expect(loose.json()).toMatchObject({ details: { infoFoodIds: [id("milk")] } });
-      const served = await post("/api/storage/serve", { parts, recipeIds: [fx.eggBake.id], foodIds: [id("milk")] });
-      expect(served.statusCode).toBe(201);
+      // Serving: the milk container alone, and fresh milk beside another container.
+      const servedAlone = await post("/api/storage/serve", { babyId, parts: [{ storageItemId: milkItemId, servings: 1 }] });
+      expect(servedAlone.statusCode).toBe(201);
+      const freshMilk = await post("/api/storage/serve", {
+        babyId,
+        parts: [{ storageItemId: butterItemId, servings: 1 }],
+        foodIds: [id("milk")],
+      });
+      expect(freshMilk.statusCode).toBe(201);
+      expect(await row("milk")).toMatchObject({ exposures: 0, status: "not_started" });
+      expect((await progress()).foodsTried).toBe(1); // butter only
     });
 
-    it("never moves a custom food's uses onto whole milk", async () => {
+    it("moves a custom food's uses onto whole milk", async () => {
       const custom = await post("/api/foods", { name: "Oat drink", category: "dairy" });
       expect(custom.statusCode).toBe(201);
       const response = await post(`/api/foods/${custom.json<{ id: string }>().id}/replace`, { replacementId: id("milk") });
-      expect(response.statusCode).toBe(400);
-      expect(response.json()).toMatchObject({ details: { replacementId: INFO_FOOD_ALONE } });
+      expect(response.statusCode).toBe(200);
     });
 
     it("tells the client each food's kind", async () => {

@@ -48,16 +48,6 @@ export interface KeptFood {
   emoji?: string | null;
 }
 
-/**
- * Ledger 838: the foods a meal or container picker offers. An `info` food
- * (whole milk) is never logged on its own, so it is left out — unless it is
- * already selected, which is how the milk a picked recipe brought in keeps
- * its chip (and can still be taken off). Pure and exported for a test.
- */
-export function offeredFoods(foods: FoodListItem[], selected: readonly string[]): FoodListItem[] {
-  return foods.filter((food) => food.kind !== "info" || selected.includes(food.id));
-}
-
 /** The picker's options: every listed food, then any kept food the list
  * lacks. Pure and exported so the kept-chip fix is pinned by a test. */
 export function foodPickerOptions(foods: FoodListItem[], keptFoods: KeptFood[] = []): MultiComboboxOption[] {
@@ -84,10 +74,6 @@ interface FoodPickerProps {
   placeholder?: string;
   /** See `MultiCombobox`'s `chipsFirst`. */
   chipsFirst?: boolean;
-  /** Leave out `info` foods that are not already picked (`offeredFoods`):
-   * set by every picker that logs a meal or fills a container, not by a
-   * custom recipe's ingredients, where whole milk belongs. */
-  hideInfo?: boolean;
 }
 
 /**
@@ -103,17 +89,14 @@ interface FoodPickerProps {
  * `useFoods()` here reads — so appending its id to `value` selects a food the
  * option list can already resolve to a chip, with no refetch in between.
  */
-export function FoodPicker({ id, value, onChange, keptFoods, placeholder, chipsFirst, hideInfo }: FoodPickerProps) {
+export function FoodPicker({ id, value, onChange, keptFoods, placeholder, chipsFirst }: FoodPickerProps) {
   const { data, isLoading } = useFoods();
   // null = the sheet is closed; a string (possibly "") = it's open with that
   // name prefilled. Not a boolean + separate query, so the two can't disagree.
   const [createQuery, setCreateQuery] = useState<string | null>(null);
 
   const foods = data?.foods ?? [];
-  const options = useMemo(
-    () => foodPickerOptions(hideInfo ? offeredFoods(foods, value) : foods, keptFoods),
-    [foods, keptFoods, hideInfo, value],
-  );
+  const options = useMemo(() => foodPickerOptions(foods, keptFoods), [foods, keptFoods]);
 
   return (
     <>
@@ -162,8 +145,6 @@ interface SingleFoodPickerProps {
   excludeId?: string;
   /** See `MultiCombobox`'s `inline`. */
   inline?: boolean;
-  /** See `FoodPicker`'s `hideInfo`. */
-  hideInfo?: boolean;
 }
 
 /**
@@ -174,15 +155,12 @@ interface SingleFoodPickerProps {
  * could only ever match nothing. `mode="single"` so a pick fills the field and
  * closes the menu, rather than staying open for a second food (item 230).
  */
-export function SingleFoodPicker({ id, value, onChange, placeholder, excludeId, inline, hideInfo }: SingleFoodPickerProps) {
+export function SingleFoodPicker({ id, value, onChange, placeholder, excludeId, inline }: SingleFoodPickerProps) {
   const { data, isLoading } = useFoods();
   const foods = data?.foods ?? [];
   const options = useMemo(
-    () =>
-      (hideInfo ? offeredFoods(foods, value ? [value] : []) : foods)
-        .filter((food) => food.id !== excludeId)
-        .map(foodPickerOption),
-    [foods, excludeId, hideInfo, value],
+    () => foods.filter((food) => food.id !== excludeId).map(foodPickerOption),
+    [foods, excludeId],
   );
 
   return (

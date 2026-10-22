@@ -135,26 +135,18 @@ interface CustomFoodActionsProps {
   food: FoodDetail;
 }
 
-/**
- * What an `info` food's page says where "Log meal / Add to storage" would sit
- * (ledger 838, approved copy). Whole milk is the only info food; reword if a
- * second one arrives.
- */
-export const INFO_FOOD_LINE = "Info only — logged automatically when you serve a recipe that uses milk.";
-
 /** Where a deleted food can be found again — said before and after deleting. */
 export const RESTORE_HINT = "You can restore it from Foods › Deleted.";
 
 /**
  * The food "Replace with…" starts on: the catalog food named exactly like
  * this one, ignoring case (a parent who typed "cauliflower" before the
- * catalog had it), else another of their own foods of that name. Never an
- * `info` food (ledger 838): whole milk cannot take a meal's place. Pure.
+ * catalog had it), else another of their own foods of that name. Pure.
  */
 export function sameNameFood(foods: FoodListItem[], food: Pick<FoodDetail, "id" | "name">): FoodListItem | undefined {
   const name = food.name.trim().toLowerCase();
   const matches = foods.filter(
-    (candidate) => candidate.id !== food.id && candidate.kind !== "info" && candidate.name.trim().toLowerCase() === name,
+    (candidate) => candidate.id !== food.id && candidate.name.trim().toLowerCase() === name,
   );
   return matches.find((candidate) => !candidate.isCustom) ?? matches[0];
 }
@@ -257,7 +249,6 @@ export function DeleteFoodQuestion({ food, onClose }: { food: FoodDetail; onClos
               onChange={setPickedId}
               excludeId={food.id}
               inline
-              hideInfo
             />
           </Field>
           <Button
@@ -346,9 +337,6 @@ export function FoodDetailPage() {
 
       {food.deletedAt ? (
         <DeletedFoodNotice food={food} />
-      ) : food.kind === "info" ? (
-        // Ledger 838: no Log meal / Add to storage — it is never logged alone.
-        <p className="text-sm text-[var(--color-text-muted)]">{INFO_FOOD_LINE}</p>
       ) : (
         <>
           <MarkAsServed food={food} />

@@ -1863,7 +1863,7 @@ export const foods: FoodSeed[] = [
   },
   // ---- Ingredient foods (ledger 838, drafts .workflow/scratch/catalog-831/INGREDIENT-FOODS.md
   //      and catalog-835/COUNTING-AND-MILK.md). Exempt from the recipe-count and basic-recipe
-  //      rules; whole milk is 'info' (never logged on its own). Butter, whole milk and sesame oil
+  //      rules; whole milk is 'info' (loggable, not a food tried). Butter, whole milk and sesame oil
   //      keep their allergen tags but never move the ladder (836). ----
   {
     slug: 'milk',
@@ -1881,12 +1881,11 @@ export const foods: FoodSeed[] = [
       "Still not a drink. Keep using pasteurized whole milk in cooking and baking — eggs, oatmeal, batters, and sauces — while breast milk or formula stays baby's milk to drink.",
     prep12m:
       "From 12 months, plain pasteurized whole milk can be a drink, offered in an open or straw cup with meals and snacks. Keep it to about 2 cups (16 ounces) a day so it doesn't crowd out iron-rich foods.",
-    // The page's own line says it is logged only through a recipe (831 check: not twice).
     notes:
       "Before 12 months, cow's milk shouldn't be a drink: it's low in iron, has more protein and minerals than a baby's kidneys handle easily, and can irritate the gut enough to cause small blood losses. A little cooked into food is fine. Use pasteurized milk only — never raw — and plain whole milk, not flavored. Milk cooked into food doesn't count toward the dairy step's 3 servings: the amount is small and heat changes the milk protein. Start the dairy step with plain yogurt.",
     allergens: ['milk'],
     countsTowardLadder: false,
-    // Required by the column; never used, since an info food has no "Add to storage".
+    // Ledger 855: milk can go into storage like any food.
     storageCategory: 'dairy_soft',
   },
   {

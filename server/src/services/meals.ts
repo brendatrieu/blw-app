@@ -160,32 +160,6 @@ export async function loadIngredientFoodIds(
   return byRecipe;
 }
 
-/** The 400 reason when a meal or a container names an 'info' food on its own. */
-export const INFO_FOOD_ALONE = "logged only through a recipe that uses it";
-
-/**
- * Ledger 838: the `kind = 'info'` foods (whole milk) among `foodIds` that
- * `allowed` does not cover. An info food is never logged on its own — it
- * reaches a meal only as an ingredient of one of that meal's recipes (baked
- * milk is real milk exposure, so the served recipe still brings it in) — so
- * every write that names foods passes what its recipes bring in (and, on an
- * edit, what the meal already held) as `allowed`, and refuses the rest. A
- * container's foods have no recipe, so it passes an empty set.
- */
-export async function looseInfoFoodIds(
-  db: Queryable,
-  foodIds: readonly string[],
-  allowed: ReadonlySet<string>,
-): Promise<string[]> {
-  const candidates = foodIds.filter((id) => !allowed.has(id));
-  if (candidates.length === 0) return [];
-  const rows = await db
-    .select({ id: foods.id })
-    .from(foods)
-    .where(and(inArray(foods.id, candidates), eq(foods.kind, "info")));
-  return rows.map((row) => row.id);
-}
-
 /** Union of the ingredient sets of `recipeIds`. */
 export function ingredientUnion(byRecipe: ReadonlyMap<string, ReadonlySet<string>>, recipeIds: readonly string[]): Set<string> {
   const union = new Set<string>();

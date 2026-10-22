@@ -48,12 +48,10 @@ import {
 } from "../db/schema.js";
 import { choosableFoodsCondition } from "../services/foods.js";
 import {
-  INFO_FOOD_ALONE,
   ingredientUnion,
   insertMeal,
   loadIngredientFoodIds,
   loadMeals,
-  looseInfoFoodIds,
   ownsBaby,
 } from "../services/meals.js";
 import { mapRecipeRequest, validateFoodIds, validateRatings, validateRecipeIds } from "./meals.js";
@@ -407,12 +405,6 @@ async function serveParts(db: Database, req: ServeRequest): Promise<string> {
       recipeRatings = req.ratings.recipeRatings;
     }
     const ingredients = ingredientUnion(ingredientsByRecipe, recipeIds);
-    // Fresh foods only: a container's own foods were checked when it was
-    // filled, and its recipes' ingredients are `ingredients` themselves.
-    const looseInfo = await looseInfoFoodIds(tx, req.freshFoodIds, ingredients);
-    if (looseInfo.length > 0) {
-      throw new ServeAborted({ code: 400, details: { foodIds: INFO_FOOD_ALONE, infoFoodIds: looseInfo } });
-    }
     const ratings = validateRatings({
       recipeIds,
       ingredientsOfFinal: ingredients,
@@ -546,9 +538,6 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
       const knownFoodIds = new Set(foodRows.map((f) => f.id));
       const unknownFoodIds = foodIds.filter((id) => !knownFoodIds.has(id));
       if (unknownFoodIds.length > 0) return badRequest(reply, { foodIds: "unknown food", unknownFoodIds });
-      // Ledger 838: a container of foods has no recipe to bring whole milk in.
-      const infoFoodIds = await looseInfoFoodIds(db, foodIds, new Set());
-      if (infoFoodIds.length > 0) return badRequest(reply, { foodIds: INFO_FOOD_ALONE, infoFoodIds });
     }
     // Visible to THIS user — the catalog plus their own custom recipes. One
     // query for a single `recipeId` or a several-recipe list (ledger 753).
@@ -705,8 +694,6 @@ export function registerStorageRoutes(app: FastifyInstance, db: Database): void 
         const known = new Set(foodRows.map((f) => f.id));
         const unknownFoodIds = added.filter((id) => !known.has(id));
         if (unknownFoodIds.length > 0) return badRequest(reply, { foodIds: "unknown food", unknownFoodIds });
-        const infoFoodIds = await looseInfoFoodIds(db, added, new Set());
-        if (infoFoodIds.length > 0) return badRequest(reply, { foodIds: INFO_FOOD_ALONE, infoFoodIds });
       }
     }
 

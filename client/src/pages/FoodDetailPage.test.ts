@@ -8,7 +8,7 @@ import { babyKeys } from "../features/babies/api.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
 import { catalogKeys } from "../features/catalog/hooks.js";
 import { CUSTOM_FOOD_SOFT_NOTE, usedInPhrase } from "../features/catalog/constants.js";
-import { CustomFoodActions, FoodDetailPage, INFO_FOOD_LINE, RESTORE_HINT, sameNameFood } from "./FoodDetailPage.js";
+import { CustomFoodActions, FoodDetailPage, RESTORE_HINT, sameNameFood } from "./FoodDetailPage.js";
 
 /** React's SSR escaping, so a copy assertion can be made against the exact
  * constant rather than a hand-escaped copy of it that could drift. */
@@ -366,9 +366,9 @@ describe("sameNameFood (Replace with… preselect)", () => {
     expect(sameNameFood([listed({ name: "Broccoli" })], mine)).toBeUndefined();
   });
 
-  it("never preselects an info food, which Replace refuses (ledger 838)", () => {
+  it("preselects an info food like any other (ledger 855: Replace takes whole milk)", () => {
     const milk = listed({ slug: "milk", name: "Whole Milk", kind: "info" });
-    expect(sameNameFood([milk], { id: mine.id, name: "whole milk" })).toBeUndefined();
+    expect(sameNameFood([milk], { id: mine.id, name: "whole milk" })?.slug).toBe("milk");
   });
 });
 
@@ -399,7 +399,7 @@ describe("FoodDetailPage — a deleted food (ledger 543)", () => {
   });
 });
 
-describe("FoodDetailPage — an info food (ledger 838)", () => {
+describe("FoodDetailPage — an info food logs and stores like any food (ledger 855)", () => {
   const MILK = catalogFood({
     id: "33333333-3333-4333-8333-333333333333",
     slug: "milk",
@@ -409,19 +409,12 @@ describe("FoodDetailPage — an info food (ledger 838)", () => {
     kind: "info",
   });
 
-  it("offers no Log meal or Add to storage, and says why in their place", () => {
-    const html = renderFood(MILK);
-    expect(html).not.toContain(`/log-meal?food=${MILK.id}`);
-    expect(html).not.toContain(`/storage/add?food=${MILK.id}`);
-    expect(html).toContain(escapeHtml(INFO_FOOD_LINE));
-    expect(INFO_FOOD_LINE).toBe("Info only — logged automatically when you serve a recipe that uses milk.");
-  });
-
-  it("keeps the pair for an ingredient food and a body cached without a kind", () => {
-    for (const food of [catalogFood({ kind: "ingredient" }), catalogFood()]) {
+  it("offers Log meal and Add to storage for whole milk, an ingredient food and a body cached without a kind", () => {
+    for (const food of [MILK, catalogFood({ kind: "ingredient" }), catalogFood()]) {
       const html = renderFood(food);
       expect(html).toContain(`/log-meal?food=${food.id}`);
-      expect(html).not.toContain(escapeHtml(INFO_FOOD_LINE));
+      expect(html).toContain(`/storage/add?food=${food.id}`);
+      expect(html).not.toContain("Info only");
     }
   });
 });
