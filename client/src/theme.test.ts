@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getStoredTheme, setTheme, THEME_BG } from "./theme.js";
+import { getStoredTheme, initTheme, setTheme, THEME_BG } from "./theme.js";
 
 const STORAGE_KEY = "blw-theme";
 
@@ -130,6 +130,12 @@ describe("theme-color follows the in-app theme (ledger 869)", () => {
     expect(contents()).toEqual([THEME_BG.light, THEME_BG.light]);
   });
 
+  it("a stored forced theme sets both metas at boot", () => {
+    localStorage.setItem(STORAGE_KEY, "dark");
+    initTheme();
+    expect(contents()).toEqual([THEME_BG.dark, THEME_BG.dark]);
+  });
+
   it("'system' restores each meta's own scheme value", () => {
     setTheme("dark");
     setTheme("system");
@@ -144,6 +150,9 @@ describe("index.html status bar tags (ledger 869)", () => {
   it("has no apple-mobile-web-app-status-bar-style (black-translucent blurs the top on iOS 26.1+)", () => {
     expect(html).not.toMatch(/<meta[^>]*apple-mobile-web-app-status-bar-style/);
     expect(html).toContain('<meta name="apple-mobile-web-app-capable" content="yes" />');
+    expect(html).toContain('<meta name="apple-mobile-web-app-title" content="Little Meals" />');
+    // The env(safe-area-inset-*) paddings need viewport-fit=cover.
+    expect(html).toContain("viewport-fit=cover");
   });
 
   it("has both theme-color metas, equal to the bg tokens and the manifest", () => {

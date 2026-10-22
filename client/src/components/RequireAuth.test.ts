@@ -115,12 +115,17 @@ describe("RequireAuth on Back/Forward to an earlier session's page (ledger 870)"
   it("sends an in-app history entry to /login WITHOUT `from`, so sign-in lands on Home", () => {
     const el = gate("/recipes/r1", "", "a7d2rjdz");
     expect(el.type).toBe(Navigate);
-    expect(el.props.to).toBe("/login");
+    // `replace` turns that old entry into /login, so Back doesn't reach it again.
+    expect(el.props).toMatchObject({ to: "/login", replace: true });
     expect(el.props.state).toBeUndefined();
   });
 
   it("still keeps `from` for an address from outside the app (typed, a shared link, a reload of one)", () => {
-    expect(gate("/recipes/r1", "?x=1", "default").props.state).toEqual({ from: "/recipes/r1?x=1" });
+    expect(gate("/recipes/r1", "?x=1", "default").props).toMatchObject({
+      to: "/login",
+      replace: true,
+      state: { from: "/recipes/r1?x=1" },
+    });
   });
 
   it("still sends the front door to About, whatever the entry", () => {
