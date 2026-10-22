@@ -91,6 +91,9 @@ describe("food pairing completeness", () => {
       "butter_beans",
       "edamame",
       "brussels_sprouts",
+      // 871: the round's vitamin-C foods get a pairing as the partner (owner: Kale page).
+      "kale",
+      "cranberries",
     ];
     const round = await db
       .select({ id: schema.foods.id, slug: schema.foods.slug })

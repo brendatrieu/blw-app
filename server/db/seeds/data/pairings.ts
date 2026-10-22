@@ -140,4 +140,19 @@ export const pairings: PairingSeed[] = [
     vitCFoodSlug: 'brussels_sprouts',
     reason: "Brussels sprouts' vitamin C helps baby absorb more of the plant-based iron in lentils.",
   },
+  {
+    ironFoodSlug: 'chickpeas',
+    vitCFoodSlug: 'kale',
+    reason: "Cooked kale's vitamin C helps baby absorb more of the plant-based iron in chickpeas.",
+  },
+  {
+    ironFoodSlug: 'tofu',
+    vitCFoodSlug: 'kale',
+    reason: "Cooked kale's vitamin C helps baby absorb more of tofu's non-heme iron.",
+  },
+  {
+    ironFoodSlug: 'iron_fortified_oats',
+    vitCFoodSlug: 'cranberries',
+    reason: 'Mashed cooked cranberries swirled into iron-fortified oats add the vitamin C that helps baby absorb the added non-heme iron.',
+  },
 ]
