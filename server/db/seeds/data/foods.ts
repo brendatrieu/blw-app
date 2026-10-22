@@ -1153,7 +1153,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Soft, sticky rice is low risk. Dry, hard, or undercooked grains are harder to manage — cook it until very soft, and press it into a ball or patty for early eaters rather than offering a pile of loose grains.',
     notes:
-      "Rice takes up more arsenic from soil and water than other grains. It's still fine to serve — just make it one grain among several (oats, quinoa, wheat pasta, barley) rather than the everyday default, and don't use rice drinks in place of breast milk or formula. Cool leftovers quickly (within an hour), keep them in the fridge, and reheat only once until steaming hot — germs in rice left sitting out can make toxins that reheating won't remove.",
+      "Rice takes up more arsenic from soil and water than other grains. It's still fine to serve — just make it one grain among several (oats, quinoa, wheat pasta, barley) rather than the everyday default, and don't use rice drinks in place of breast milk or formula.\n\nCool leftovers quickly (within an hour), keep them in the fridge, and reheat only once until steaming hot — germs in rice left sitting out can make toxins that reheating won't remove.",
     allergens: [],
     storageCategory: 'grain_cooked',
   },
@@ -1883,7 +1883,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       "From 12 months, plain pasteurized whole milk can be a drink, offered in an open or straw cup with meals and snacks. Keep it to about 2 cups (16 ounces) a day so it doesn't crowd out iron-rich foods.",
     notes:
-      "Before 12 months, cow's milk shouldn't be a drink: it's low in iron, has more protein and minerals than a baby's kidneys handle easily, and can irritate the gut enough to cause small blood losses. A little cooked into food is fine. Use pasteurized milk only — never raw — and plain whole milk, not flavored. Milk cooked into food doesn't count toward the dairy step's 3 servings: the amount is small and heat changes the milk protein. Milk served on its own, like a cup of milk from 12 months, does count. Start the dairy step with plain yogurt.",
+      "Before 12 months, cow's milk shouldn't be a drink: it's low in iron, has more protein and minerals than a baby's kidneys handle easily, and can irritate the gut enough to cause small blood losses. A little cooked into food is fine.\n\nUse pasteurized milk only — never raw — and plain whole milk, not flavored.\n\nMilk cooked into food doesn't count toward the dairy step's 3 servings: the amount is small and heat changes the milk protein. Milk served on its own, like a cup of milk from 12 months, does count. Start the dairy step with plain yogurt.",
     allergens: ['milk'],
     // Ledger 864: a cup of milk counts; milk in one of the meal's recipes doesn't.
     countsTowardLadder: 'alone',
@@ -1909,7 +1909,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Brown rice keeps its bran layer, so it stays chewier than white rice even when cooked — cook it until very soft, and press it into a ball or patty for early eaters rather than offering dry, loose grains. If the grains still feel chewy, mash them a little.',
     notes:
-      "Rice takes up more arsenic from soil and water than other grains, and brown rice holds more than white because arsenic collects in the bran. It's still fine to serve — make it one grain among several (oats, quinoa, wheat pasta, barley), not an everyday staple. Cooking it like pasta in plenty of water (6 to 10 cups per cup of rice) and draining lowers arsenic by about half, though some nutrients go with the water. Cool leftovers quickly and reheat only once until steaming hot.",
+      "Rice takes up more arsenic from soil and water than other grains, and brown rice holds more than white because arsenic collects in the bran. It's still fine to serve — make it one grain among several (oats, quinoa, wheat pasta, barley), not an everyday staple.\n\nCooking it like pasta in plenty of water (6 to 10 cups per cup of rice) and draining lowers arsenic by about half, though some nutrients go with the water.\n\nCool leftovers quickly and reheat only once until steaming hot.",
     allergens: [],
     storageCategory: 'grain_cooked',
   },
@@ -1932,7 +1932,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       "Flour itself isn't the risk; what you make with it can be. Keep bakes soft and moist rather than dense, dry, or gummy, and never let baby eat dry flour — loose powder is easy to inhale.",
     notes:
-      'Flour is a raw food: it can carry germs like E. coli that only baking or cooking kills. Never let baby (or anyone) taste raw dough or batter, skip raw-flour play dough, and wash hands and surfaces after handling it. All-purpose and whole-wheat both work — whole-wheat adds more fiber. Contains wheat, so pancakes and muffins made with it count as wheat servings.',
+      'Flour is a raw food: it can carry germs like E. coli that only baking or cooking kills. Never let baby (or anyone) taste raw dough or batter, skip raw-flour play dough, and wash hands and surfaces after handling it.\n\nAll-purpose and whole-wheat both work — whole-wheat adds more fiber.\n\nContains wheat, so pancakes and muffins made with it count as wheat servings.',
     allergens: ['wheat'],
     storageCategory: 'pantry_dry',
   },
@@ -1955,7 +1955,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       "Melted or spread thin, butter isn't a choking risk. A thick, cold slab can stick in the mouth like any thick spread — keep it thin.",
     notes:
-      "Choose unsalted: salted butter has about 60 times the sodium (643 mg vs 11 mg per 100 g), and a baby's kidneys can't handle much salt. Butter is made from milk and carries the milk allergen, so skip it if baby has a milk allergy. It holds almost no milk protein, though, so it doesn't count toward the dairy step's 3 servings. Start that step with plain yogurt.",
+      "Choose unsalted: salted butter has about 60 times the sodium (643 mg vs 11 mg per 100 g), and a baby's kidneys can't handle much salt.\n\nButter is made from milk and carries the milk allergen, so skip it if baby has a milk allergy.\n\nIt holds almost no milk protein, though, so it doesn't count toward the dairy step's 3 servings. Start that step with plain yogurt.",
     allergens: ['milk'],
     countsTowardLadder: false,
     storageCategory: 'dairy_soft',
@@ -1979,7 +1979,7 @@ export const foods: FoodSeed[] = [
       'Use a little in cooking. Add toasted sesame oil at the end — high heat makes it smoke and taste bitter.',
     chokingNotes: 'Not a choking risk on its own. Mix the oil into food — never give it on a spoon by itself.',
     notes:
-      "Sesame oil carries the sesame allergen. Most sesame oil is pressed rather than refined, so it can hold enough sesame protein to cause a reaction — avoid it if baby has a sesame allergy. A few drops holds very little sesame, though, so it doesn't count toward the sesame step's 3 servings. Start that step with tahini.",
+      "Sesame oil carries the sesame allergen. Most sesame oil is pressed rather than refined, so it can hold enough sesame protein to cause a reaction — avoid it if baby has a sesame allergy.\n\nA few drops holds very little sesame, though, so it doesn't count toward the sesame step's 3 servings. Start that step with tahini.",
     allergens: ['sesame'],
     countsTowardLadder: false,
     storageCategory: 'pantry_dry',
