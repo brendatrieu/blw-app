@@ -547,7 +547,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soften the minced garlic in a little olive oil over medium heat for 30-60 seconds.',
           'Cook the thigh to 165°F (74°C) — about 6-7 minutes a side over medium heat — until no pink is left, then rest it and dice it into small, soft bite-sized pieces.',
           'Roast the broccoli at 400°F (200°C) for 15-18 minutes, until tender, and cut it into small bite-sized florets.',
-          'Check the quinoa and chicken have cooled to a safe temperature, then stir it all through and serve with a fork and fingers together.',
+          'Let the quinoa and chicken cool to just warm, then stir it all through and serve with a fork and fingers together.',
         ],
       },
     },
@@ -586,7 +586,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cover with water or a no-salt-added stock, add a small pinch of finely ground black pepper, and simmer covered over low heat for 25-30 minutes, until the carrot is fork-tender and the chicken reads 165°F (74°C) with no pink left.',
           'Lift the chicken out and shred it finely, moistening it with the cooking liquid so it is never dry or stringy.',
           'Mash the carrot and green beans until they give easily between two fingers, then stir the chicken back in.',
-          'Press the soft, sticky rice into a small ball or patty, cool the stew to just warm and check its temperature, then stir in a little olive oil before serving the stew alongside on a pre-loaded spoon.',
+          'Press the soft, sticky rice into a small ball or patty, cool the stew to just warm, then stir in a little olive oil before serving the stew alongside on a pre-loaded spoon.',
         ],
       },
       '9': {
