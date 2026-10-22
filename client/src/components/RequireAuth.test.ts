@@ -1,18 +1,28 @@
 import { isValidElement, type ReactElement } from "react";
 import { Navigate } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 const h = vi.hoisted(() => {
-  // RequireAuth's one useState (ledger 829), kept across calls like a mounted guard.
-  const store = { states: [] as unknown[], i: 0 };
+  // The guards' hooks (ledger 829 useState; ledger 856 useRef/useEffect), kept
+  // across calls like a mounted guard. Effects are collected per render.
+  const store = { states: [] as unknown[], i: 0, effects: [] as (() => void)[] };
   return {
     store,
     session: null as object | null,
     location: { pathname: "/", search: "", state: null as unknown },
+    navigate: (() => {}) as (...args: unknown[]) => void,
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states)) store.states[i] = init;
       return [store.states[i], (value: unknown) => (store.states[i] = value)];
+    },
+    useRef: (init: unknown) => {
+      const i = store.i++;
+      if (!(i in store.states)) store.states[i] = { current: init };
+      return store.states[i];
+    },
+    useEffect: (fn: () => void) => {
+      store.effects.push(fn);
     },
   };
 });
@@ -20,6 +30,8 @@ const h = vi.hoisted(() => {
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useState: h.useState,
+  useRef: h.useRef,
+  useEffect: h.useEffect,
 }));
 
 vi.mock("../lib/auth.js", () => ({
@@ -29,6 +41,7 @@ vi.mock("../lib/auth.js", () => ({
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-router-dom")>()),
   useLocation: () => h.location,
+  useNavigate: () => h.navigate,
 }));
 
 import { RequireAnonymous, RequireAuth } from "./RequireAuth.js";
@@ -45,6 +58,7 @@ function gate(pathname: string, search = ""): ReactElement<{ to?: string; state?
 beforeEach(() => {
   h.session = null;
   h.store.states = []; // a freshly mounted guard
+  h.navigate = vi.fn();
 });
 
 describe("RequireAuth signed-out redirects (item 612)", () => {
@@ -95,36 +109,63 @@ describe("RequireAuth when the session ends (ledger 829)", () => {
 describe("RequireAnonymous finishes the deep link (item 612)", () => {
   // Ledger 828: LoginPage and SignupPage do not navigate on success; this
   // guard is where a fresh session actually lands.
-  function anon(state: unknown): ReactElement<{ to?: string }> {
-    h.session = { user: { id: "u1" } };
+  /** One render of a mounted guard, then its effects TWICE, as StrictMode runs them. */
+  function anon(state: unknown): unknown {
     h.location = { pathname: "/login", search: "", state };
-    const out = (RequireAnonymous as (props: { children: string }) => unknown)({
-      children: "login",
-    });
-    if (!isValidElement(out)) throw new Error("expected an element");
-    return out as ReactElement<{ to?: string }>;
+    h.store.i = 0;
+    h.store.effects = [];
+    const out = (RequireAnonymous as (props: { children: string }) => unknown)({ children: "login" });
+    for (const run of [...h.store.effects, ...h.store.effects]) run();
+    return out;
+  }
+
+  const showsForm = (out: unknown) => isValidElement(out) && (out.props as { children?: unknown }).children === "login";
+
+  /** The form shows signed out, then the sign-in on it lands. */
+  function signInHere(state: unknown): unknown {
+    expect(showsForm(anon(state))).toBe(true);
+    h.session = { user: { id: "u1" } };
+    return anon(state);
   }
 
   it("sends a freshly signed-in parent back to where RequireAuth stopped them", () => {
-    const el = anon({ from: "/more" });
-    expect(el.type).toBe(Navigate);
-    expect(el.props.to).toBe("/more");
+    signInHere({ from: "/more" });
+    expect(h.navigate).toHaveBeenCalledWith("/more");
   });
 
   it("falls back to / when there is no stored destination", () => {
-    expect(anon(null).props.to).toBe("/");
+    signInHere(null);
+    expect(h.navigate).toHaveBeenCalledWith("/");
   });
 
   it("round-trips: the `from` RequireAuth stores is the one RequireAnonymous follows", () => {
     const stored = gate("/foods/sweet-potato", "?tab=recipes").props.state;
-    expect(anon(stored).props.to).toBe("/foods/sweet-potato?tab=recipes");
+    h.store.states = []; // the sign-in page's own guard
+    signInHere(stored);
+    expect(h.navigate).toHaveBeenCalledWith("/foods/sweet-potato?tab=recipes");
+  });
+
+  // Ledger 856: the landing is pushed, so Back returns to the sign-in page
+  // rather than the previous session's pages — and pushed ONCE, though
+  // StrictMode runs the effect twice.
+  it("pushes the landing exactly once, never replacing the sign-in entry", () => {
+    expect(signInHere(null)).toBeNull();
+    expect(anon(null)).toBeNull(); // a re-render before the route changes
+    expect((h.navigate as Mock).mock.calls).toEqual([["/"]]);
+  });
+
+  // Ledger 856: Back from Home to /login (or a typed /login) while signed in.
+  it("sends someone who arrives signed in Home, replacing the entry, even with a stored `from`", () => {
+    h.session = { user: { id: "u1" } };
+    const el = anon({ from: "/storage" });
+    if (!isValidElement(el)) throw new Error("expected an element");
+    expect(el.type).toBe(Navigate);
+    expect(el.props).toMatchObject({ to: "/", replace: true });
+    expect(h.navigate).not.toHaveBeenCalled();
   });
 
   it("lets a signed-out visitor see the form", () => {
-    h.session = null;
-    h.location = { pathname: "/login", search: "", state: { from: "/more" } };
-    expect(
-      (RequireAnonymous as (props: { children: string }) => unknown)({ children: "login" }),
-    ).not.toHaveProperty("type", Navigate);
+    expect(showsForm(anon({ from: "/more" }))).toBe(true);
+    expect(h.navigate).not.toHaveBeenCalled();
   });
 });

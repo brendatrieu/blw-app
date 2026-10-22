@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useSession } from "../lib/auth.js";
 
 /**
@@ -60,15 +60,31 @@ export function RequireAuth({ children }: { children: ReactNode }) {
  * call resolves, and a navigate in that gap meets RequireAuth while the
  * session still reads signed out ("/" → About). Honours the `from` that
  * RequireAuth stored, so a deep link comes back.
+ *
+ * Ledger 856: that landing is a PUSH, so the sign-in page stays beneath it and
+ * Back returns there, not to the previous session's pages. Arriving here
+ * already signed in (that Back, or a typed /login) sends the person Home,
+ * replacing this entry, so Back never loops forward or piles up entries.
  */
 export function RequireAnonymous({ children }: { children: ReactNode }) {
   const { data: session, isPending } = useSession();
   const location = useLocation();
+  const navigate = useNavigate();
+  // Whether this guard showed its page signed out: a session after that is a
+  // sign-in (or sign-up) that happened here.
+  const [shownSignedOut, setShownSignedOut] = useState(false);
+  if (!isPending && !session && !shownSignedOut) setShownSignedOut(true);
+  const landing = session && shownSignedOut ? ((location.state as { from?: string } | null)?.from ?? "/") : null;
+  // One push, by hand: StrictMode runs effects twice in development, and a
+  // pushing <Navigate> would add the landing twice.
+  const landed = useRef(false);
+  useEffect(() => {
+    if (landing === null || landed.current) return;
+    landed.current = true;
+    navigate(landing);
+  }, [landing, navigate]);
 
   if (isPending) return <SessionPending />;
-  if (session) {
-    const from = (location.state as { from?: string } | null)?.from ?? "/";
-    return <Navigate to={from} replace />;
-  }
+  if (session) return landing === null ? <Navigate to="/" replace /> : null;
   return <>{children}</>;
 }
