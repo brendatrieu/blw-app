@@ -715,7 +715,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Peel off the tough skin and scoop out every seed and stringy fiber before cooking — whole pumpkin seeds are a choking hazard (ground pumpkin seeds have their own page). Serve only flesh cooked until it mashes easily between two fingers, never firm or under-cooked pieces.',
     notes:
-      'Buy cans labeled 100% pure pumpkin — never pumpkin pie filling, which has added sugar and spices. Canned pure pumpkin is already cooked and has more than twice the iron and fiber of fresh boiled pumpkin; both are rich in vitamin A. For fresh, choose a small pie pumpkin rather than a large carving pumpkin, and never cook one that has been carved or left out as decoration. Serve it beside an iron-rich food and a vitamin-C food, like chicken thigh and broccoli.',
+      'Buy cans labeled 100% pure pumpkin — never pumpkin pie filling, which has added sugar and spices. Canned pure pumpkin is already cooked and has more than twice the iron and fiber of fresh boiled pumpkin; both are rich in vitamin A.\n\nFor fresh, choose a small pie pumpkin rather than a large carving pumpkin, and never cook one that has been carved or left out as decoration.\n\nServe it beside an iron-rich food and a vitamin-C food, like chicken thigh and broccoli.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -1002,7 +1002,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Raw cranberries are small, round, and hard — exactly airway-sized — so always simmer them until every berry bursts and mash them before serving, at any age, rather than serving them whole or raw. Hold off on dried cranberries before 12 months: they are firm and sticky, and nearly all are sweetened. After that, choose unsweetened ones, chop them finely, and soak them in warm water first.',
     notes:
-      'Cranberries are very tart, so mix them with a naturally sweeter food (pear, apple, banana, or sweet potato) rather than adding sugar. Skip store-bought cranberry sauce and cranberry juice drinks, which carry a lot of added sugar; no juice of any kind before 12 months. Cooked cranberries add some vitamin C, which helps baby absorb iron, to an iron-rich food like iron-fortified oats, turkey, or beef.',
+      'Cranberries are very tart, so mix them with a naturally sweeter food (pear, apple, banana, or sweet potato) rather than adding sugar.\n\nSkip store-bought cranberry sauce and cranberry juice drinks, which carry a lot of added sugar; no juice of any kind before 12 months.\n\nCooked cranberries add some vitamin C, which helps baby absorb iron, to an iron-rich food like iron-fortified oats, turkey, or beef.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -1072,7 +1072,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Cook until tender-soft and dice into small bite-sized pieces; hold off on raw beet until chewing is confident, well beyond 12 months.',
     chokingNotes: 'Raw beet is hard and can shear into a firm, airway-blocking chunk — always cook until it mashes easily under 12 months.',
-    notes: 'An earthy-sweet root vegetable with folate and some fiber. Beets can turn pee pink or red and poop red for a day or two afterwards, which is harmless; call your pediatrician if the color lasts, shows up when baby has not had beets, or comes with other symptoms. Plain canned beets with no salt added work too, but skip pickled beets. Beet juice stains, so a bib helps.',
+    notes: 'An earthy-sweet root vegetable with folate and some fiber.\n\nBeets can turn pee pink or red and poop red for a day or two afterwards, which is harmless; call your pediatrician if the color lasts, shows up when baby has not had beets, or comes with other symptoms.\n\nPlain canned beets with no salt added work too, but skip pickled beets. Beet juice stains, so a bib helps.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },

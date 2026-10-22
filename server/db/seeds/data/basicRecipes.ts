@@ -604,14 +604,14 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Stir the oat cereal into a little less breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, stirring, to a thicker, spoonable consistency.',
           'Keep it thick enough to stay on the spoon rather than run off it.',
-          'Cool to just-warm and serve in a bowl with a spoon for baby to practice self-feeding.',
+          'Stir well to release hot spots, cool to just-warm, and check the temperature, then serve in a bowl with a spoon for baby to practice self-feeding.',
         ],
       },
       '12': {
         textureNote: 'A thick, family-style oatmeal.',
         steps: [
           'Stir the oat cereal into breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, adding liquid a splash at a time, until thick and family-style.',
-          'Stir to release hot spots, cool to just-warm, and check the temperature.',
+          'Stir well to release hot spots, cool to just-warm, and check the temperature.',
           'Serve unsweetened with a spoon — no added sugar, and no honey before 12 months.',
         ],
       },
@@ -2132,14 +2132,14 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Simmer the oats with breast milk, formula, whole milk, or water over medium-low heat for 4-5 minutes, to a thicker, spoonable consistency.',
           'Leave a little texture rather than cooking it completely smooth.',
-          'Cool to just-warm and serve in a bowl with a spoon for self-feeding practice.',
+          'Stir well to release hot spots, cool to just-warm, and check the temperature, then serve in a bowl with a spoon for self-feeding practice.',
         ],
       },
       '12': {
         textureNote: 'A thick, family-style oatmeal.',
         steps: [
           'Simmer the oats with breast milk, formula, whole milk, or water over medium-low heat for 5-6 minutes, adding liquid a splash at a time, until thick and family-style.',
-          'Stir to release hot spots, cool to just-warm, and check the temperature.',
+          'Stir well to release hot spots, cool to just-warm, and check the temperature.',
           'Serve unsweetened, with no added sugar — and use rolled or quick oats rather than steel-cut, which stay chewy.',
         ],
       },

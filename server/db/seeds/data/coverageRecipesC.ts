@@ -640,7 +640,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         textureNote:
           'A finger-length strip or a soft pile of finely shredded chicken thigh, a sweet potato wedge that mashes between two fingers, and very soft Brussels sprout quarters.',
         steps: [
-          'Trim any fat or gristle from the chicken thigh, check it for small bones, rub it with a little olive oil, and bake it at 400°F (200°C) for 18-22 minutes, until a thermometer in the thickest part reads 165°F (74°C) and the juices run clear.',
+          'Trim any fat or gristle from the chicken thigh, check it for small bones, rub it with a little olive oil, and bake it at 400°F (200°C) for 18-22 minutes, until it is cooked to an internal temperature of 165°F (74°C) in the thickest part.',
           'Meanwhile, peel the sweet potato and cut it into thick, finger-length wedges; wash the Brussels sprouts, trim the stem ends, pull off any loose outer leaves, and halve them.',
           'Steam the sweet potato and Brussels sprouts over boiling water for 12-15 minutes, until a wedge mashes easily between two fingers and a knife slides through the sprout cores with no resistance.',
           'Rest the chicken for 5 minutes, then cut a finger-length strip or shred it finely, moistened with the pan juices, and cut each Brussels sprout half lengthwise into two quarters.',
@@ -651,7 +651,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         textureNote:
           'Finger-length strips, or small bite-sized pieces (no bigger than ½ inch) of chicken thigh, sweet potato, and Brussels sprouts for pincer practice.',
         steps: [
-          'Trim the chicken thigh of fat and gristle, check it for small bones, rub it with a little olive oil, and bake it at 400°F (200°C) for 18-22 minutes, until it reads 165°F (74°C) all the way through.',
+          'Trim the chicken thigh of fat and gristle, check it for small bones, rub it with a little olive oil, and bake it at 400°F (200°C) for 18-22 minutes, until it is cooked to an internal temperature of 165°F (74°C) in the thickest part.',
           'Meanwhile, peel the sweet potato and cut it into finger-length wedges; wash the Brussels sprouts, trim the stem ends, pull off any loose outer leaves, and halve them.',
           'Steam the sweet potato and Brussels sprouts over boiling water for 12-15 minutes, until both mash easily between two fingers.',
           'Rest the chicken for 5 minutes, then cut it into finger-length strips or small bite-sized pieces (no bigger than ½ inch), and cut the Brussels sprouts into quarters or small pieces too.',
@@ -662,7 +662,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         textureNote: 'Small, soft bite-sized pieces of roasted chicken thigh, sweet potato, and Brussels sprouts, served family-style.',
         steps: [
           'Peel the sweet potato and dice it into small bite-sized pieces; wash the Brussels sprouts, trim the stem ends, and halve them; toss both with a little olive oil.',
-          'Spread them on a lined baking sheet with the trimmed chicken thigh and roast at 400°F (200°C) for 20-25 minutes, until the vegetables are tender all the way through and the chicken reads 165°F (74°C).',
+          'Spread them on a lined baking sheet with the trimmed chicken thigh and roast at 400°F (200°C) for 20-25 minutes, until the vegetables are tender all the way through, taking the chicken thigh out after 18-22 minutes, once it is cooked to an internal temperature of 165°F (74°C) in the thickest part.',
           'Rest the chicken for 5 minutes, then dice it into small, soft bite-sized pieces, checking for small bones.',
           'Pull any crispy or charred outer leaves off the Brussels sprouts, cut them into quarters or small bite-sized pieces, and cool everything to just-warm.',
           'Serve together with no added salt, letting baby practice with a fork.',
@@ -703,7 +703,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Stir in the canned pure pumpkin (or mashed cooked fresh pumpkin) and a pinch of cinnamon, and keep stirring over low heat for 1 minute more, until warmed through.',
           'Thin with a splash more breast milk, formula, or water only if it has turned stiff — it should stay on the spoon rather than run off it.',
           'Hull the strawberries and dice them finely into small bite-sized pieces (no bigger than ½ inch) so no round or half-berry shape remains, then fold them in.',
-          'Cool to just-warm and serve in a bowl with a spoon for self-feeding.',
+          'Stir well to release hot spots, cool to just-warm, check the temperature, and serve in a bowl with a spoon for self-feeding.',
         ],
       },
       '12': {
@@ -713,7 +713,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Stir in the canned pure pumpkin (or mashed cooked fresh pumpkin) and a pinch of cinnamon, and keep stirring over low heat for 1 minute more, until warmed through.',
           'Thin with a little more breast milk, formula, or water if it thickens as it stands.',
           'Hull and quarter the strawberries lengthwise, never leaving a whole round berry, and stir most of them through.',
-          'Stir to release hot spots, cool to just-warm, check the temperature, and serve with the rest of the strawberries on the side, with no added sugar.',
+          'Stir well to release hot spots, cool to just-warm, check the temperature, and serve with the rest of the strawberries on the side, with no added sugar.',
         ],
       },
     },
@@ -738,7 +738,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         steps: [
           'Heat the oven to 400°F (200°C). Peel the pumpkin, scoop out every seed and the stringy middle, and cut the pumpkin into thick, finger-length wedges.',
           'Trim any tough skin, fat, or gristle from the chicken thigh and check it carefully for small bones, then toss the chicken and the pumpkin wedges in a drizzle of olive oil on a lined sheet pan.',
-          'Roast at 400°F (200°C) for 25-30 minutes, until a pumpkin wedge mashes easily between two fingers, taking the chicken thigh out as soon as a thermometer in the thickest part reads 165°F (74°C), usually after 18-22 minutes.',
+          'Roast at 400°F (200°C) for 25-30 minutes, until a pumpkin wedge mashes easily between two fingers, taking the chicken thigh out after 18-22 minutes, once it is cooked to an internal temperature of 165°F (74°C) in the thickest part.',
           'Steam the broccoli florets for 8-10 minutes, keeping a bit of stem as a handle, until they mash easily between two fingers.',
           'Rest the chicken for 5 minutes, then cut a finger-length strip of the dark meat or shred it finely, moisten it with a little olive oil, and check again for small bones.',
           'Cool everything to just-warm, check the temperature, and serve the chicken, a pumpkin wedge, and a broccoli floret side by side.',
@@ -749,10 +749,10 @@ export const coverageRecipesC: RecipeSeed[] = [
         steps: [
           'Heat the oven to 400°F (200°C). Peel the pumpkin, scoop out every seed and the stringy middle, and cut the pumpkin into finger-length wedges.',
           'Trim any tough skin, fat, or gristle from the chicken thigh and check it carefully for small bones, then toss the chicken and the pumpkin wedges in a drizzle of olive oil on a lined sheet pan.',
-          'Roast at 400°F (200°C) for 25-30 minutes, until a pumpkin wedge mashes easily between two fingers, taking the chicken thigh out as soon as a thermometer in the thickest part reads 165°F (74°C), usually after 18-22 minutes.',
+          'Roast at 400°F (200°C) for 25-30 minutes, until a pumpkin wedge mashes easily between two fingers, taking the chicken thigh out after 18-22 minutes, once it is cooked to an internal temperature of 165°F (74°C) in the thickest part.',
           'Steam the broccoli for 8-10 minutes, until soft, and cut it into small bite-sized florets (no bigger than ½ inch).',
           'Rest the chicken for 5 minutes, then chop or shred it into small bite-sized pieces (no bigger than ½ inch), feeling for small bones, and moisten it with a little olive oil; serve the pumpkin as wedges or cut it into soft cubes the same size.',
-          'Cool everything to just-warm and serve for self-feeding.',
+          'Cool everything to just-warm, check the temperature, and serve for self-feeding.',
         ],
       },
       '12': {
@@ -760,7 +760,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         steps: [
           'Heat the oven to 400°F (200°C). Peel and deseed the pumpkin and cut the pumpkin into ¾-inch cubes.',
           'Trim any tough skin, fat, or gristle from the chicken thigh and check it carefully for small bones, then toss the chicken and the pumpkin in a drizzle of olive oil on a lined sheet pan.',
-          'Roast at 400°F (200°C) for 20-25 minutes, until the pumpkin is fork-tender, taking the chicken thigh out as soon as it reads 165°F (74°C) in the thickest part, usually after 18-22 minutes.',
+          'Roast at 400°F (200°C) for 20-25 minutes, until the pumpkin is fork-tender, taking the chicken thigh out after 18-22 minutes, once it is cooked to an internal temperature of 165°F (74°C) in the thickest part.',
           'Add the broccoli florets to the pan for the last 15 minutes and roast them at 400°F (200°C) until tender.',
           'Rest the chicken for 5 minutes, then dice it, the pumpkin, and the broccoli into small bite-sized pieces, discarding any gristle and checking for small bones.',
           'Cool to just-warm, check the temperature, and serve with no added salt.',
@@ -979,7 +979,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Finger-length strips of soft, moist turkey patty with a smooth cranberry-apple sauce spooned over or alongside — no whole cranberries.',
         steps: [
           'Finely grate a quarter of the apple and mix it with a little olive oil through the ground turkey, so the patties stay moist rather than dry and crumbly.',
-          'Shape the turkey into thin patties and bake them at 375°F (190°C) for 18-20 minutes, until a thermometer in the center reads 165°F (74°C) and no pink remains.',
+          'Shape the turkey into thin patties and bake them at 375°F (190°C) for 18-20 minutes, until they are cooked to an internal temperature of 165°F (74°C) in the center.',
           'Meanwhile, dice the rest of the apple and simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 10-12 minutes, until every cranberry has burst and the apple mashes easily between two fingers.',
           'Blend or mash the sauce until completely smooth, so no whole berry or loose skin is left.',
           'Rest the patties for 3-5 minutes, cut them into finger-length strips, cool everything to just-warm, check the temperature, and serve the strips with the sauce, with no added salt or sugar.',
@@ -990,7 +990,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Strips or small bite-sized pieces of turkey patty (no bigger than ½ inch) with a thick cranberry-apple mash to dip into or spoon over.',
         steps: [
           'Finely grate a quarter of the apple and mix it with a little olive oil through the ground turkey.',
-          'Shape the turkey into thin patties and bake them at 375°F (190°C) for 18-20 minutes, until they read 165°F (74°C) in the center with no pink left.',
+          'Shape the turkey into thin patties and bake them at 375°F (190°C) for 18-20 minutes, until they are cooked to an internal temperature of 165°F (74°C) in the center.',
           'Dice the rest of the apple and simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 10-12 minutes, until every cranberry has burst and the apple is very soft.',
           'Mash the sauce well with a fork, so no whole berry is left.',
           'Rest the patties for 3-5 minutes, cut them into finger-length strips or small bite-sized pieces (no bigger than ½ inch), cool to just-warm, and serve with the sauce, with no added salt or sugar.',
@@ -1000,7 +1000,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         textureNote: 'Small, soft bite-sized pieces of turkey patty with a chunky cranberry-apple sauce, family style.',
         steps: [
           'Finely grate a quarter of the apple and mix it with a little olive oil through the ground turkey, which keeps lean turkey from turning dry.',
-          'Shape the turkey into thin patties and bake them at 375°F (190°C) for 18-20 minutes, until they are 165°F (74°C) in the center.',
+          'Shape the turkey into thin patties and bake them at 375°F (190°C) for 18-20 minutes, until they are cooked to an internal temperature of 165°F (74°C) in the center.',
           'Dice the rest of the apple small and simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 10-12 minutes, until every cranberry has burst and the apple is tender.',
           'Mash the sauce roughly so no whole berry is left, keeping it chunky.',
           'Rest the patties for 3-5 minutes, dice them into small bite-sized pieces, cool to just-warm, and serve with the sauce, with no added salt or sugar.',
@@ -1041,7 +1041,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Peel, core, and dice the pear, then simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 8-10 minutes, until every cranberry has burst and the pear is very soft.',
           'Mash the fruit well with a fork, so no whole berry is left.',
           'Stir the oat cereal into a little less breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, stirring, to a thick, spoonable consistency.',
-          'Stir the cranberry and pear mash through the oatmeal, cool to just-warm, and serve in a bowl with a pre-loaded spoon for baby to practice with, with no added sugar.',
+          'Fold the cranberry and pear mash through the oatmeal, stir well to release hot spots, cool to just-warm, and check the temperature, then serve in a bowl with a pre-loaded spoon for baby to practice with, with no added sugar.',
         ],
       },
       '12': {
@@ -1050,7 +1050,7 @@ export const coverageRecipesC: RecipeSeed[] = [
           'Peel, core, and dice the pear small, then simmer it with the cranberries and 3-4 tablespoons of water over medium-low heat for 8-10 minutes, until every cranberry has burst and the pear is tender.',
           'Mash the fruit roughly, checking that no whole berry is left.',
           'Stir the oat cereal into breast milk, formula, or water in a small pan and cook over low heat for 1-2 minutes, adding liquid a splash at a time, until thick and family-style.',
-          'Spoon the cranberry and pear sauce over the oatmeal, cool to just-warm, and serve with a spoon, with no added sugar.',
+          'Stir well to release hot spots, spoon the cranberry and pear sauce over the oatmeal, cool to just-warm, check the temperature, and serve with a spoon, with no added sugar.',
         ],
       },
     },
@@ -1550,7 +1550,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         steps: [
           'Boil the frozen shelled edamame in unsalted water for 6-8 minutes, until one squashes easily between two fingers, then drain and smash every bean flat — whole edamame is a choking hazard.',
           'Warm a drizzle of olive oil in a nonstick pan over medium-low heat and cook the very finely diced bell pepper for 6-8 minutes, stirring, until completely soft with no papery skin left.',
-          'Pour in the beaten egg and scramble it over medium-low heat for 2-3 minutes, until fully set with no runny egg left.',
+          'Pour in the beaten egg and scramble it over medium-low heat for 2-3 minutes, until it is fully set with no runny egg left and cooked to an internal temperature of 160°F (71°C).',
           'Add the soft rice and the smashed edamame and stir-fry over low heat for 2-3 minutes, until steaming hot all the way through.',
           'Squeeze the rice mixture into small balls baby can hold, cool to just-warm, check the temperature, and serve with no added salt or soy sauce.',
         ],
@@ -1561,7 +1561,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         steps: [
           'Boil the frozen shelled edamame in unsalted water for 6-8 minutes, until very soft, then drain and smash each bean flat or split it in half.',
           'Warm a drizzle of olive oil in a nonstick pan over medium-low heat and cook the very finely diced bell pepper for 6-8 minutes, stirring, until soft.',
-          'Pour in the beaten egg and scramble it over medium-low heat for 2-3 minutes, until fully set, breaking it into small pieces (no bigger than ½ inch).',
+          'Pour in the beaten egg and scramble it over medium-low heat for 2-3 minutes, until it is fully set with no runny egg left and cooked to an internal temperature of 160°F (71°C), breaking it into small pieces (no bigger than ½ inch).',
           'Add the rice and the edamame and stir-fry over low heat for 2-3 minutes, until steaming hot all the way through.',
           'Cool to just-warm and serve on the tray for pincer-grasp self-feeding, with no added salt or soy sauce.',
         ],
@@ -1572,7 +1572,7 @@ export const coverageRecipesC: RecipeSeed[] = [
         steps: [
           'Boil the frozen shelled edamame in unsalted water for 5-7 minutes, until tender, then drain and smash each bean flat or split it in half — whole edamame stays a choking hazard.',
           'Warm a drizzle of olive oil in a pan over medium heat and cook the diced bell pepper for 4-5 minutes, until tender.',
-          'Push the bell pepper to one side, pour in the beaten egg, and scramble it over medium heat for 2-3 minutes, until fully set.',
+          'Push the bell pepper to one side, pour in the beaten egg, and scramble it over medium-low heat for 2-3 minutes, until it is fully set with no runny egg left and cooked to an internal temperature of 160°F (71°C).',
           'Stir in the rice and the edamame and stir-fry over medium heat for 3-4 minutes, until steaming hot all the way through.',
           'Cool to just-warm and serve with a spoon to practice with, with no added salt or soy sauce.',
         ],

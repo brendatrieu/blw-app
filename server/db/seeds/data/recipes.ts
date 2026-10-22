@@ -652,7 +652,7 @@ const curatedRecipes: RecipeSeed[] = [
         textureNote: 'Small bite-sized pieces, family-style.',
         steps: [
           'Squeeze excess water from the grated zucchini using a clean towel, then mix the cooked quinoa, zucchini, beaten egg, and cheese together.',
-          'Shape the mixture into small patties and pan-fry in olive oil over medium-low heat for 3-4 minutes per side, until set through at 160°F (71°C).',
+          'Shape the mixture into small patties and pan-fry in olive oil over medium-low heat for about 3 minutes per side, until set through at 160°F (71°C).',
           'Cool to just-warm, check the temperature, then cut into bite-sized pieces.',
           'Serve with a vitamin-C side like orange segments (membrane removed) for iron absorption.',
         ],

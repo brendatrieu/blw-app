@@ -490,7 +490,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         steps: [
           'Warm the cumin and sweet paprika in a little olive oil over medium heat for 30-60 seconds — sweet paprika only, never hot, smoked hot, or chili powder.',
           'Brown the beef over medium heat for 5-6 minutes, then add the diced tomato and beans.',
-          'Simmer covered over low heat for 25-30 minutes, until the beef is tender and well past 160°F (71°C) and the beans squash easily between two fingers.',
+          'Simmer covered over low heat for 20-25 minutes, until the beef is tender and well past 160°F (71°C) and the beans squash easily between two fingers.',
           'Dice or shred the beef into small, soft bite-sized pieces, cool to a safe temperature, and serve with soft rice on the side.',
         ],
       },
@@ -717,7 +717,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soft, small bite-sized pieces of turkey meatball (no bigger than ½ inch) and small pasta shapes for pincer-grasp self-feeding.',
         steps: [
           'Wilt the spinach for 2-3 minutes, chop it very finely, squeeze the water out, and mix it into the turkey with a little olive oil and a pinch of finely rubbed oregano.',
-          'Bake small meatballs at 375°F (190°C) for 14-16 minutes, until they read 165°F (74°C) in the center, then squash each one flat rather than serving it round.',
+          'Bake small meatballs at 375°F (190°C) for 16-18 minutes, until they read 165°F (74°C) in the center, then squash each one flat rather than serving it round.',
           'Simmer the skinned, diced tomato over low heat for 15-20 minutes, until it breaks down into a soft sauce.',
           'Cook the small pasta shapes for 10-12 minutes, past al dente, until soft.',
           'Let the meatballs cool to just warm, break them into soft, small bite-sized pieces (no bigger than ½ inch), and serve them through the pasta and sauce.',
