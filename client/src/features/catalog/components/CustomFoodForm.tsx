@@ -108,7 +108,9 @@ export function initialCustomFoodValues(food?: FoodDetail, initialName = ""): Cu
   return {
     name: food?.name ?? initialName,
     category,
-    emoji: food?.emoji ?? getCategoryEmoji(category),
+    // Editing keeps "no emoji" as "" (shown muted in the chooser), so saving
+    // an unrelated change can't quietly store the category emoji (ledger 872).
+    emoji: food ? (food.emoji ?? "") : getCategoryEmoji(category),
     allergenSlugs: food?.allergens ? [...food.allergens] : [],
     notes: food?.notes ?? "",
   };

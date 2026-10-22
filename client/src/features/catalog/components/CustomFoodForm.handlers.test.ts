@@ -54,6 +54,7 @@ vi.mock("../hooks.js", async (importOriginal) => {
 
 import { Link } from "react-router-dom";
 import { CustomFoodForm } from "./CustomFoodForm.js";
+import { EmojiChooser } from "./EmojiChooser.js";
 import { FoodPicker } from "./FoodPicker.js";
 import { MultiCombobox } from "../../../components/ui/MultiCombobox.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
@@ -169,5 +170,22 @@ describe("the Add a custom food sheet's How-to link (item 733)", () => {
     expect(link.type).toBe(HowToLink);
     expect(link.props.slug).toBe("how-to-add-custom-food");
     expect(link.props.className).toBe("pb-[5px]");
+  });
+});
+
+// Ledger 872: the chooser only reports a pick; the form must store it.
+describe("CustomFoodForm's emoji box (ledger 872)", () => {
+  function chooser(): Rendered {
+    const found = find(renderForm({}), EmojiChooser);
+    if (!found) throw new Error("the form should render the emoji chooser");
+    return found;
+  }
+
+  it("stores what the chooser picks", () => {
+    h.reset();
+    (chooser().props.onChange as (emoji: string) => void)("🥭");
+    expect(chooser().props.value).toBe("🥭");
+    (chooser().props.onChange as (emoji: string) => void)("");
+    expect(chooser().props.value).toBe("");
   });
 });

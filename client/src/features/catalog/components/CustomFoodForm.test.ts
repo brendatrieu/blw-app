@@ -156,7 +156,9 @@ describe("initialCustomFoodValues", () => {
       allergenSlugs: ["wheat", "egg"],
       notes: "Cut into strips",
     });
-    expect(initialCustomFoodValues(customFood({ emoji: null })).emoji).toBe(getCategoryEmoji("grain"));
+    // No emoji stays "" on edit: the chooser shows the category emoji muted,
+    // and Save keeps null instead of quietly storing it (ledger 872).
+    expect(initialCustomFoodValues(customFood({ emoji: null })).emoji).toBe("");
   });
 
   it("copies the food's allergen array (editing must not mutate cached data)", () => {
