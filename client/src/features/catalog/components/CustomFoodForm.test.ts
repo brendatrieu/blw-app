@@ -207,9 +207,14 @@ describe("CustomFoodForm (render)", () => {
     );
   });
 
-  it("seeds the emoji field from the category and offers every category option", () => {
+  it("seeds the emoji box from the category and offers every category option", () => {
     const html = render(createElement(CustomFoodForm, { onSaved: () => {} }));
-    expect(html).toContain(`value="${getCategoryEmoji("fruit")}"`);
+    // Ledger 872: the box is the control, labelled by the Field and named by its value.
+    expect(html).toMatch(
+      new RegExp(`<button[^>]*id="custom-food-emoji"[^>]*aria-label="Emoji: ${getCategoryEmoji("fruit")}. Change"`),
+    );
+    expect(html).toContain('for="custom-food-emoji"');
+    expect(html).not.toContain("Choose an emoji");
     expect(html).toContain('<option value="protein">Protein</option>');
     expect(html).toContain('<option value="legume">Legume</option>');
     // Item 332: the select uses the LONG label, while the Foods page's filter

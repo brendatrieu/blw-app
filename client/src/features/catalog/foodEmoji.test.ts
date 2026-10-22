@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { isSingleEmoji } from "@blw/shared";
 import {
   EMOJI_CHOICE_GROUPS,
+  TYPED_EMOJI_ERROR,
+  emojiBox,
+  readTypedEmoji,
   FOOD_EMOJI,
   emojiCluster,
   getCategoryEmoji,
@@ -316,5 +319,34 @@ describe("EMOJI_CHOICE_GROUPS (ledger 862)", () => {
     const catalog = new Set(Object.values(FOOD_EMOJI));
     const extras = choices.filter(({ emoji }) => !catalog.has(emoji)).map(({ emoji }) => emoji);
     expect(extras.sort()).toEqual(["🍄", "🍇", "🍑", "🌽"].sort());
+  });
+});
+
+describe("the custom-food emoji box (ledger 872)", () => {
+  it("shows the chosen emoji and names it", () => {
+    expect(emojiBox("🥕", "fruit")).toEqual({ emoji: "🥕", chosen: true, label: "Emoji: 🥕. Change" });
+    expect(emojiBox("  🥕 ", "fruit").emoji).toBe("🥕");
+  });
+
+  it("with none chosen, shows the category's emoji a food with none gets, flagged muted", () => {
+    expect(emojiBox("", "veg")).toEqual({
+      emoji: getCategoryEmoji("veg"),
+      chosen: false,
+      label: `Emoji: none, shows ${getCategoryEmoji("veg")}. Change`,
+    });
+    expect(emojiBox("   ", "dairy").chosen).toBe(false);
+  });
+});
+
+describe("readTypedEmoji (ledger 872)", () => {
+  it("takes any single emoji, trimmed, not just the grid's", () => {
+    expect(readTypedEmoji(" 🥯 ")).toEqual({ emoji: "🥯" });
+    expect(readTypedEmoji("👨‍👩‍👧")).toEqual({ emoji: "👨‍👩‍👧" });
+  });
+
+  it("refuses text or two emojis with the server's rule, and ignores a blank field", () => {
+    expect(readTypedEmoji("ab")).toEqual({ error: TYPED_EMOJI_ERROR });
+    expect(readTypedEmoji("🥕🥕")).toEqual({ error: TYPED_EMOJI_ERROR });
+    expect(readTypedEmoji("  ")).toBeNull();
   });
 });

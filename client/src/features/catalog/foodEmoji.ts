@@ -1,4 +1,4 @@
-import type { FoodCategory } from "@blw/shared";
+import { isSingleEmoji, type FoodCategory } from "@blw/shared";
 
 /**
  * Explicit emoji per seed food slug — one entry for every food in
@@ -413,7 +413,7 @@ export interface EmojiChoiceGroup {
  * The custom-food emoji chooser's grid (ledger 862): mostly the art the
  * catalog above already uses, so a parent's pick sits naturally beside the
  * built-in foods. 🍑 🍇 🌽 🍄 are the only extras — common first foods the
- * catalog doesn't carry yet. Typing any other emoji in the field still works.
+ * catalog doesn't carry yet. The grid's "Or type one" field takes any other.
  */
 export const EMOJI_CHOICE_GROUPS: readonly EmojiChoiceGroup[] = [
   {
@@ -494,3 +494,38 @@ export const EMOJI_CHOICE_GROUPS: readonly EmojiChoiceGroup[] = [
     ],
   },
 ];
+
+/** What the custom-food form's emoji box shows (ledger 872). */
+export interface EmojiBox {
+  /** The chosen emoji, or the category emoji a food with none falls back to. */
+  emoji: string;
+  /** False = no emoji chosen (plain plate): the box draws `emoji` muted. */
+  chosen: boolean;
+  /** The box button's accessible name: what it is, the current choice, what tapping does. */
+  label: string;
+}
+
+/**
+ * The emoji box for a form value ("" = none) and category. A custom food's
+ * slug always carries a random suffix, so it never hits `FOOD_EMOJI`: with no
+ * emoji of its own it gets exactly its category's.
+ */
+export function emojiBox(value: string, category: FoodCategory): EmojiBox {
+  const own = value.trim();
+  if (own) return { emoji: own, chosen: true, label: `Emoji: ${own}. Change` };
+  const fallback = getCategoryEmoji(category);
+  return { emoji: fallback, chosen: false, label: `Emoji: none, shows ${fallback}. Change` };
+}
+
+export const TYPED_EMOJI_ERROR = "Use a single emoji";
+
+/**
+ * The grid's "Or type one" field on Use/Enter: one emoji (the server's own
+ * `isSingleEmoji` rule) is the new value, anything else is an error, and a
+ * blank field changes nothing.
+ */
+export function readTypedEmoji(text: string): { emoji: string } | { error: string } | null {
+  const typed = text.trim();
+  if (!typed) return null;
+  return isSingleEmoji(typed) ? { emoji: typed } : { error: TYPED_EMOJI_ERROR };
+}
