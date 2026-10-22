@@ -516,7 +516,7 @@ describe("AllergenDetailPage — foods that never move the ladder (ledger 836, 8
       progress: { ...base.progress, allergenSlug: "milk", allergenName: "Milk" },
       foods: [
         { id: BUTTER_ID, slug: "unsalted_butter", name: "Unsalted Butter", category: "dairy", emoji: null, isCustom: false, kind: "ingredient", countsTowardProgress: false },
-        { id: MILK_ID, slug: "milk", name: "Whole Milk", category: "dairy", emoji: null, isCustom: false, kind: "info", countsTowardProgress: false },
+        { id: MILK_ID, slug: "milk", name: "Whole Milk", category: "dairy", emoji: null, isCustom: false, kind: "info", countsTowardProgress: false, countsWhenAlone: true },
         { id: YOGURT_ID, slug: "yogurt", name: "Yogurt", category: "dairy", emoji: null, isCustom: false, kind: "food", countsTowardProgress: true },
       ],
       exposures: [
@@ -526,11 +526,11 @@ describe("AllergenDetailPage — foods that never move the ladder (ledger 836, 8
     };
   };
 
-  it("says why under each non-counting food, and nothing under yogurt", () => {
+  it("says why under butter, when whole milk counts (ledger 864), and nothing under yogurt", () => {
     const html = renderWithDetail(milkDetail(), "milk");
     expect(html).toMatch(/Doesn(?:&#x27;|')t count toward the 3 servings: almost no milk protein\./);
-    expect(html).toMatch(/Doesn(?:&#x27;|')t count toward the 3 servings: a small amount, changed by cooking\./);
-    expect(html.match(/count toward the 3 servings:/g)).toHaveLength(2);
+    expect(html).toContain("Counts toward the 3 servings when served on its own, not when cooked into food.");
+    expect(html.match(/ount toward the 3 servings/g)).toHaveLength(2);
   });
 
   it("offers Log meal for whole milk (ledger 855), butter and yogurt", () => {

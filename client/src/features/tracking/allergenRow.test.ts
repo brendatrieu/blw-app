@@ -539,14 +539,16 @@ describe("serveFoodId — the food Up next's Log meal prefills (item 660)", () =
   });
 });
 
-describe("non-counting copy on the allergen page (ledger 836)", () => {
-  it("names the reason for each non-counting food, and nothing for a counting one", () => {
+describe("non-counting copy on the allergen page (ledger 836, 864)", () => {
+  it("names the reason for each non-counting food, when whole milk counts, and nothing for a counting one", () => {
     expect(nonCountingFoodLine({ slug: "unsalted_butter", countsTowardProgress: false })).toBe(
       "Doesn't count toward the 3 servings: almost no milk protein.",
     );
-    expect(nonCountingFoodLine({ slug: "milk", countsTowardProgress: false })).toBe(
-      "Doesn't count toward the 3 servings: a small amount, changed by cooking.",
+    expect(nonCountingFoodLine({ slug: "milk", countsTowardProgress: false, countsWhenAlone: true })).toBe(
+      "Counts toward the 3 servings when served on its own, not when cooked into food.",
     );
+    // The line follows the flag, not the slug: a body cached before 864 gets the plain line.
+    expect(nonCountingFoodLine({ slug: "milk", countsTowardProgress: false })).toBe("Doesn't count toward the 3 servings.");
     expect(nonCountingFoodLine({ slug: "sesame_oil", countsTowardProgress: false })).toBe(
       "Doesn't count toward the 3 servings: very little sesame.",
     );

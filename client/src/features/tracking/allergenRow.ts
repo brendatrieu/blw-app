@@ -243,8 +243,9 @@ export function dueSinceLabel(
 /**
  * The food Up next's "Log meal" prefills for a due allergen (item 660): the
  * counting food served last time (the exposure's foods are only the allergen
- * carriers); when no meal has counted yet or the latest one didn't (butter,
- * milk on its own), the ladder's starter food (ledger 857: dairy -> yogurt,
+ * carriers); when no meal has counted yet, the latest one didn't (butter,
+ * milk cooked into a recipe) or it counted only through whole milk (never a
+ * suggestion), the ladder's starter food (ledger 857: dairy -> yogurt,
  * sesame -> tahini); else the first food carrying it. Never a deleted food,
  * which cannot be logged, and never anything but a plain `food` (ledger 838).
  * Null leaves the form empty.
@@ -262,22 +263,27 @@ export function serveFoodId(detail: Pick<AllergenDetail, "foods" | "exposures" |
 /** Ledger 836: why a food's tag never moves this allergen's ladder, by slug. */
 const NON_COUNTING_REASON: Record<string, string> = {
   unsalted_butter: "almost no milk protein",
-  milk: "a small amount, changed by cooking",
   sesame_oil: "very little sesame",
 };
 
 /**
- * The muted line under a food on the allergen page whose tag never counts
- * (ledger 836): "Doesn't count toward the 3 servings: almost no milk
- * protein." Null for a food that counts (or a body cached before the flag).
+ * The muted line under a food on the allergen page whose tag does not always
+ * count: why it never does ("Doesn't count toward the 3 servings: almost no
+ * milk protein.", ledger 836) or, for whole milk, when it does (ledger 864).
+ * Null for a food that counts (or a body cached before the flag).
  */
-export function nonCountingFoodLine(food: Pick<AllergenDetail["foods"][number], "slug" | "countsTowardProgress">): string | null {
+export function nonCountingFoodLine(
+  food: Pick<AllergenDetail["foods"][number], "slug" | "countsTowardProgress" | "countsWhenAlone">,
+): string | null {
   if (food.countsTowardProgress !== false) return null;
+  if (food.countsWhenAlone) {
+    return `Counts toward the ${ALLERGEN_ESTABLISHED_SERVINGS} servings when served on its own, not when cooked into food.`;
+  }
   const reason = NON_COUNTING_REASON[food.slug];
   return `Doesn't count toward the ${ALLERGEN_ESTABLISHED_SERVINGS} servings${reason ? `: ${reason}` : ""}.`;
 }
 
-/** Under a meal whose only allergen foods were non-counting ones (ledger 836). */
+/** Under a meal none of whose allergen foods was a serving (ledger 836, 864). */
 export const NOT_COUNTED_MEAL_LINE = `Didn't count toward the ${ALLERGEN_ESTABLISHED_SERVINGS} servings`;
 
 /**
