@@ -516,7 +516,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Cook until tender and serve in small bite-sized pieces or soft slices, or stirred through family meals; hold off on raw onion and crispy fried onion for now.',
     chokingNotes: 'Raw onion is firm and slippery and can be a choking hazard — always cook it until it squashes easily between two fingers, and never serve it raw. Small, round onions such as pearl onions are a higher risk, so never serve one whole.',
-    notes: 'Cooking turns onion soft and sweet, and it is one of the easiest salt-free ways to make lentils, eggs, or ground meat taste like family food. Yellow or sweet onions are the mildest; red onion works too. Skip onion salt, and if you reach for onion powder, check the label says onion only.',
+    notes: 'Cooking turns onion soft and sweet, and it is one of the easiest salt-free ways to make lentils, eggs, or ground meat taste like family food.\n\nYellow or sweet onions are the mildest; red onion works too.\n\nSkip onion salt, and if you reach for onion powder, check the label says onion only.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -1045,7 +1045,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Cook until tender and serve in small bite-sized pieces, or as a soft mash stirred loose rather than beaten sticky.',
     chokingNotes: 'Raw or under-cooked potato is hard and slippery and can shear into a firm, airway-blocking chunk — always cook until it mashes easily between two fingers, peel it for the youngest babies, and never serve raw or firm cubes. Stiff, gluey mash is hard to swallow too, so keep it loose and soft.',
-    notes: 'A gentle, filling everyday vegetable with more vitamin C than it gets credit for, especially cooked in its skin. Yukon Gold (or any yellow potato) is the easiest choice: steamed wedges hold together for little hands and it mashes creamy. Russets are best baked, since boiled russet wedges tend to crumble, and waxy red potatoes make a lumpier mash. Serve it with no added salt, and trim away any green patches or sprouts before cooking.',
+    notes: 'A gentle, filling everyday vegetable with more vitamin C than it gets credit for, especially cooked in its skin.\n\nYukon Gold (or any yellow potato) is the easiest choice: steamed wedges hold together for little hands and it mashes creamy. Russets are best baked, since boiled russet wedges tend to crumble, and waxy red potatoes make a lumpier mash.\n\nServe it with no added salt, and trim away any green patches or sprouts before cooking.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -1607,7 +1607,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Keep to finely ground cashew meal stirred into food, or a smooth cashew butter thinned runny; pieces and whole nuts stay off the menu.',
     chokingNotes: 'Whole and chopped cashews are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal and stir it into a wet food, or use a plain smooth cashew butter thinned runny.',
-    notes: 'Look for plain, unsalted kernels: salted cashews carry far too much sodium for a baby. One of the better plant-based iron sources, so pair it with a vitamin-C food. Cashew and pistachio are closely related, so a reaction to one means taking care with the other.',
+    notes: 'Look for plain, unsalted kernels: salted cashews carry far too much sodium for a baby.\n\nOne of the better plant-based iron sources, so pair it with a vitamin-C food.\n\nCashew and pistachio are closely related, so a reaction to one means taking care with the other.',
     allergens: ['tree_nut'],
     storageCategory: 'pantry_dry',
   },
