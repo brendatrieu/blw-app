@@ -152,7 +152,9 @@ function stageDrift(recipe: StageRecipe): string[] {
     for (const s of steps.flatMap(sentences)) {
       const probeSentence = probeFoods.length > 0 && matchesOf(DEGREES_F, s).some((m) => Number(m[1]) < 212);
       if (probeSentence) continue; // rule 1's
-      const named = foods.filter((f) => foodWords(f).some((w) => w.test(s))).sort().join("+");
+      // A one-food basic often says "them" instead of the food's name.
+      const named =
+        foods.length === 1 ? foods[0]! : foods.filter((f) => foodWords(f).some((w) => w.test(s))).sort().join("+");
       if (named === "") continue;
       for (const f of facts(s)) {
         const key = `${f.cls}|${f.heat}|${named}|${f.rest}`;
