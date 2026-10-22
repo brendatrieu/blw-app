@@ -9,7 +9,9 @@ const h = vi.hoisted(() => {
   return {
     store,
     session: null as object | null,
-    location: { pathname: "/", search: "", state: null as unknown },
+    // `key` as react-router's browser history reports it: "default" only for
+    // an entry the app did not make (typed address, outside link, its reload).
+    location: { pathname: "/", search: "", state: null as unknown, key: "default" },
     navigate: (() => {}) as (...args: unknown[]) => void,
     useState: (init: unknown) => {
       const i = store.i++;
@@ -47,8 +49,8 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 import { RequireAnonymous, RequireAuth } from "./RequireAuth.js";
 
 /** The element RequireAuth returns for the current mocked session/location. */
-function gate(pathname: string, search = ""): ReactElement<{ to?: string; state?: unknown }> {
-  h.location = { pathname, search, state: null };
+function gate(pathname: string, search = "", key = "default"): ReactElement<{ to?: string; state?: unknown }> {
+  h.location = { pathname, search, state: null, key };
   h.store.i = 0;
   const out = (RequireAuth as (props: { children: string }) => unknown)({ children: "app" });
   if (!isValidElement(out)) throw new Error("expected an element");
@@ -106,12 +108,32 @@ describe("RequireAuth when the session ends (ledger 829)", () => {
   });
 });
 
+describe("RequireAuth on Back/Forward to an earlier session's page (ledger 870)", () => {
+  // Sign out lands on /login; Back reaches e.g. a recipe page the app pushed
+  // earlier. That mounts a FRESH guard (it never saw a session), so without
+  // this the next sign-in landed on the last person's page.
+  it("sends an in-app history entry to /login WITHOUT `from`, so sign-in lands on Home", () => {
+    const el = gate("/recipes/r1", "", "a7d2rjdz");
+    expect(el.type).toBe(Navigate);
+    expect(el.props.to).toBe("/login");
+    expect(el.props.state).toBeUndefined();
+  });
+
+  it("still keeps `from` for an address from outside the app (typed, a shared link, a reload of one)", () => {
+    expect(gate("/recipes/r1", "?x=1", "default").props.state).toEqual({ from: "/recipes/r1?x=1" });
+  });
+
+  it("still sends the front door to About, whatever the entry", () => {
+    expect(gate("/", "", "a7d2rjdz").props.to).toBe("/about");
+  });
+});
+
 describe("RequireAnonymous finishes the deep link (item 612)", () => {
   // Ledger 828: LoginPage and SignupPage do not navigate on success; this
   // guard is where a fresh session actually lands.
   /** One render of a mounted guard, then its effects TWICE, as StrictMode runs them. */
   function anon(state: unknown): unknown {
-    h.location = { pathname: "/login", search: "", state };
+    h.location = { pathname: "/login", search: "", state, key: "k-login" };
     h.store.i = 0;
     h.store.effects = [];
     const out = (RequireAnonymous as (props: { children: string }) => unknown)({ children: "login" });

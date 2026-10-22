@@ -44,10 +44,12 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     if (location.pathname === "/") {
       return <Navigate to="/about" replace state={{ frontDoor: true } satisfies FrontDoorState} />;
     }
-    // The session just ended: no `from`, so whoever signs in next lands on
-    // Home, not on the page the last person was on.
-    if (hadSession) return <Navigate to="/login" replace />;
-    // Anywhere else, remember where they were headed so sign-in can send them back.
+    // The session just ended (no `from`), or (ledger 870) Back/Forward reached
+    // a page from an earlier session: react-router keys every entry the app
+    // made, so only an address from outside it (typed, a shared link, or a
+    // reload of one) reads "default". Only that one is kept for sign-in; any
+    // other lands Home, not on the page the last person was on.
+    if (hadSession || location.key !== "default") return <Navigate to="/login" replace />;
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
   return <>{children}</>;
