@@ -1775,7 +1775,7 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Cook finely minced garlic into vegetables, lentils, sauces, or ground meat; salt-free garlic powder works the same way.',
     prep12m:
-      'Use finely minced cooked garlic in cooking; raw garlic is harsh and stays off the menu for now.',
+      'Cook finely minced garlic into the dish; raw garlic is harsh and stays off the menu for now.',
     chokingNotes: 'A whole or halved clove is firm, round, and exactly the wrong size — mince, crush, or roast it to a soft paste, and never serve a raw piece.',
     notes: 'One of the best salt-free flavor-builders there is. If you reach for garlic powder, check the label says garlic only — garlic salt is mostly salt.',
     allergens: [],
