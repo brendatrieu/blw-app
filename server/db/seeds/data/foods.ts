@@ -715,7 +715,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Peel off the tough skin and scoop out every seed and stringy fiber before cooking — whole pumpkin seeds are a choking hazard (ground pumpkin seeds have their own page). Serve only flesh cooked until it mashes easily between two fingers, never firm or under-cooked pieces.',
     notes:
-      'Buy cans labeled 100% pure pumpkin — never pumpkin pie filling, which has added sugar and spices. Canned pure pumpkin is already cooked and has more than twice the iron and fiber of fresh boiled pumpkin; both are rich in vitamin A.\n\nFor fresh, choose a small pie pumpkin rather than a large carving pumpkin, and never cook one that has been carved or left out as decoration.\n\nServe it beside an iron-rich food and a vitamin-C food, like chicken thigh and broccoli.',
+      'If using canned pumpkin, look for a label that says 100% pure pumpkin, not pumpkin pie filling, which has added sugar and spices. Canned pure pumpkin is already cooked and has more than twice the iron and fiber of fresh boiled pumpkin; both are rich in vitamin A.\n\nFor fresh, choose a small pie pumpkin rather than a large carving pumpkin, and never cook one that has been carved or left out as decoration.\n\nServe it beside an iron-rich food and a vitamin-C food, like chicken thigh and broccoli.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -1419,7 +1419,7 @@ export const foods: FoodSeed[] = [
       'Sprinkle or stir hulled hemp hearts through oatmeal, yogurt, soft fruit, or vegetables.',
     prep12m:
       'Sprinkle hulled hemp hearts over family food, or stir them into oatmeal, dips, and baking.',
-    chokingNotes: 'Buy hulled hemp hearts rather than whole hemp seed with the shell on — the hearts are soft and crumble easily, while the shell is hard and fibrous.',
+    chokingNotes: 'Look for hulled hemp hearts rather than whole hemp seed with the shell on — the hearts are soft and crumble easily, while the shell is hard and fibrous.',
     notes: 'Soft enough to need no grinding, which makes it the gentlest seed to start with. Pair with a vitamin-C food to boost absorption of its plant-based iron.',
     allergens: [],
     storageCategory: 'pantry_dry',
@@ -1522,7 +1522,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Keep to finely ground pistachio meal stirred into food; whole and chopped nuts stay off the menu.',
     chokingNotes: 'Whole and chopped pistachios are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal, and never serve them in the shell.',
-    notes: 'Buy unsalted kernels: salted pistachios carry far too much sodium for a baby. Pistachio and cashew are closely related, so a reaction to one means taking care with the other.',
+    notes: 'Look for unsalted kernels: salted pistachios carry far too much sodium for a baby. Pistachio and cashew are closely related, so a reaction to one means taking care with the other.',
     allergens: ['tree_nut'],
     storageCategory: 'pantry_dry',
   },
@@ -1607,7 +1607,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Keep to finely ground cashew meal stirred into food, or a smooth cashew butter thinned runny; pieces and whole nuts stay off the menu.',
     chokingNotes: 'Whole and chopped cashews are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal and stir it into a wet food, or use a plain smooth cashew butter thinned runny.',
-    notes: 'Buy plain, unsalted kernels: salted cashews carry far too much sodium for a baby. One of the better plant-based iron sources, so pair it with a vitamin-C food. Cashew and pistachio are closely related, so a reaction to one means taking care with the other.',
+    notes: 'Look for plain, unsalted kernels: salted cashews carry far too much sodium for a baby. One of the better plant-based iron sources, so pair it with a vitamin-C food. Cashew and pistachio are closely related, so a reaction to one means taking care with the other.',
     allergens: ['tree_nut'],
     storageCategory: 'pantry_dry',
   },

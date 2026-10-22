@@ -2586,7 +2586,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Grind plain, unsalted cashews to a fine, flour-like meal — whole and chopped cashews are a serious choking hazard and stay off the menu until age 4-5.',
           'Stir 1 teaspoon of the meal through oatmeal, yogurt, or a fruit mash until nothing hard is left.',
-          'Buy the plain kernels rather than the salted ones, which carry far too much sodium for a baby.',
+          'Use plain kernels rather than salted ones, which carry far too much sodium for a baby.',
         ],
       },
       '9': {
