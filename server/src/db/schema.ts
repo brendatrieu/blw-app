@@ -217,6 +217,12 @@ export const foodAllergens = pgTable(
     // (butter and whole milk -> Milk, sesame oil -> Sesame). The tag still
     // shows everywhere; only allergen-ladder progress skips it.
     countsTowardProgress: boolean("counts_toward_progress").notNull().default(true),
+    // Ledger 864 (migration 0023): true where a non-counting tag DOES count
+    // for a meal in which the food is not an ingredient of any of the meal's
+    // recipes (whole milk -> Milk: a cup of milk counts, milk cooked into the
+    // egg bake doesn't). Only read when `countsTowardProgress` is false; the
+    // rule is `countsAsServing` in services/allergens.ts.
+    countsWhenAlone: boolean("counts_when_alone").notNull().default(false),
   },
   (t) => [primaryKey({ columns: [t.foodId, t.allergenId] })],
 );
@@ -364,8 +370,8 @@ export const favorites = pgTable(
 // `meal_foods`. Every exposure query reads meal_foods JOIN meals. Times
 // served and the symptom-checker snapshot count one (meal, food) pair as one
 // exposure; allergen progress counts each meal once per allergen and skips the
-// tags that never count (ledgers 836, 838). The unique index below is what
-// makes those counts trustworthy.
+// foods that are not a serving there (ledgers 836, 838, 864). The unique
+// index below is what makes those counts trustworthy.
 export const meals = pgTable(
   "meals",
   {

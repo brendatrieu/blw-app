@@ -629,11 +629,17 @@ export const allergenDetailFoodSchema = z.object({
    * and Up next never prefills anything but a `food`. Optional for older
    * cached bodies; absent reads as `food`. */
   kind: foodKindSchema.optional(),
-  /** False when this food's tag for THIS allergen never moves the ladder
-   * (ledger 836: butter and whole milk for Milk, sesame oil for Sesame). The
-   * page says why under the food. Optional for older cached bodies; absent
+  /** False when this food's tag for THIS allergen does not always move the
+   * ladder (ledger 836: butter and whole milk for Milk, sesame oil for
+   * Sesame; whole milk on its own does, see `countsWhenAlone`). The page
+   * says why under the food. Optional for older cached bodies; absent
    * reads as counting. */
   countsTowardProgress: z.boolean().optional(),
+  /** True when a non-counting tag still counts for a meal in which this
+   * food is not an ingredient of any of the meal's recipes (ledger 864:
+   * whole milk served on its own counts, milk cooked into a recipe doesn't).
+   * Optional for older cached bodies; absent reads as false. */
+  countsWhenAlone: z.boolean().optional(),
 });
 export type AllergenDetailFood = z.infer<typeof allergenDetailFoodSchema>;
 
@@ -655,9 +661,10 @@ export const allergenDetailExposureSchema = z.object({
       kind: foodKindSchema.optional(),
     }),
   ),
-  /** False when every allergen food of this meal is one that never moves
-   * the ladder (ledger 836): the meal is real history and stays listed (its
-   * reaction matters), but it was not one of the 3 servings. Optional for
+  /** False when no allergen food of this meal was a serving there (ledger
+   * 836, 864: butter, sesame oil, milk cooked into one of the meal's
+   * recipes): the meal is real history and stays listed (its reaction
+   * matters), but it was not one of the 3 servings. Optional for
    * older cached bodies; absent reads as counted. */
   counted: z.boolean().optional(),
   /** `meals.reactionNote` under the name this page reads it by. */

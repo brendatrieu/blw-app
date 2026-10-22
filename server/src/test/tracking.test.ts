@@ -1449,6 +1449,7 @@ describe("tracking routes", () => {
         deleted: false,
         kind: "food",
         countsTowardProgress: true,
+        countsWhenAlone: false,
       });
       // The catalog row reads as catalog: no owner, no parent-picked emoji.
       expect(detail.foods.find((f) => f.slug === "egg")).toMatchObject({ isCustom: false, emoji: null });

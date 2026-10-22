@@ -9,7 +9,7 @@
 // same allergen — the row saying "started", the page it opened saying
 // something else. Ownership is the caller's business here, exactly as in
 // `loadMeals`: these functions only read by id.
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql, type AnyColumn, type SQL } from "drizzle-orm";
 import {
   allergenDueAt,
   allergenReactionPauses,
@@ -25,7 +25,9 @@ import {
   foodAllergens,
   foods,
   mealFoods,
+  mealRecipes,
   meals,
+  recipeIngredients,
 } from "../db/schema.js";
 import { visibleFoodsCondition } from "./foods.js";
 
@@ -35,17 +37,39 @@ import { visibleFoodsCondition } from "./foods.js";
 const EXPOSURE_LIMIT = 50;
 
 /**
+ * THE rule for whether one food of one meal is a serving of the allergen its
+ * `food_allergens` row tags (needs `food_allergens` in the query). Both the
+ * ladder count and the detail page's per-meal `counted` read it, so they
+ * cannot disagree.
+ *
+ * A counting tag always counts. A `counts_when_alone` tag (ledger 864: whole
+ * milk -> Milk) counts only when the food is NOT an ingredient of any of the
+ * meal's recipes: a cup of milk is a serving, milk cooked into the egg bake
+ * is not. "Ingredient" is the recipe's CURRENT ingredients, the same rule as
+ * `MealFood.inRecipe` and ratings in services/meals.ts. Every other
+ * non-counting tag (butter, sesame oil) never counts.
+ */
+function countsAsServing(mealId: AnyColumn, foodId: AnyColumn): SQL<boolean> {
+  return sql<boolean>`(${foodAllergens.countsTowardProgress} or (${foodAllergens.countsWhenAlone} and not exists (
+    select 1 from ${mealRecipes}
+    inner join ${recipeIngredients} on ${recipeIngredients.recipeId} = ${mealRecipes.recipeId}
+    where ${mealRecipes.mealId} = ${mealId} and ${recipeIngredients.foodId} = ${foodId}
+  )))`;
+}
+
+/**
  * Every allergen with this baby's derived progress, in ladder order
  * (unstepped allergens last, alphabetically) so the response is already in
  * the order the tracker renders it.
  *
  * One exposure = one MEAL carrying a counting food for the allergen (ledger
  * 836): yogurt and cheese in one sitting are one dairy serving, not two. A
- * tag whose `food_allergens.counts_toward_progress` is false (butter and
- * whole milk for Milk, sesame oil for Sesame) never moves `exposures`,
- * `firstAt` or `lastAt` — so it cannot start an allergen, add a serving or
- * reset the maintenance countdown — but its meal still feeds
- * `lastReactionAt`: the reaction badge is a safety flag, not progress.
+ * food that is not a serving there (`countsAsServing`: butter and sesame oil
+ * always, whole milk when it is an ingredient of one of the meal's recipes)
+ * never moves `exposures`, `firstAt` or `lastAt` — so it cannot start an
+ * allergen, add a serving or reset the maintenance countdown — but its meal
+ * still feeds `lastReactionAt`: the reaction badge is a safety flag, not
+ * progress.
  * Parent overrides are read alongside the derivation rather than folded into
  * the exposure query on purpose: `exposures` stays a pure count of real
  * meals, and the union happens in one shared function.
@@ -74,7 +98,7 @@ export async function loadAllergenProgress(db: Database, babyId: string): Promis
   // already collapses "" to null (`optionalReactionNote`), and the trim here
   // catches whitespace written by any other path.
   const hasReaction = sql`${meals.reactionNote} is not null and btrim(${meals.reactionNote}) <> ''`;
-  const counts = foodAllergens.countsTowardProgress;
+  const counts = countsAsServing(mealFoods.mealId, mealFoods.foodId);
   const exposureRows = await db
     .select({
       allergenId: foodAllergens.allergenId,
@@ -182,6 +206,7 @@ export async function loadAllergenDetail(
       deletedAt: foods.deletedAt,
       kind: foods.kind,
       countsTowardProgress: foodAllergens.countsTowardProgress,
+      countsWhenAlone: foodAllergens.countsWhenAlone,
     })
     .from(foods)
     .innerJoin(foodAllergens, eq(foodAllergens.foodId, foods.id))
@@ -204,6 +229,7 @@ export async function loadAllergenDetail(
     deleted: f.deletedAt !== null,
     kind: f.kind,
     countsTowardProgress: f.countsTowardProgress,
+    countsWhenAlone: f.countsWhenAlone,
   }));
 
   // No food carries this allergen (or none this caller can see), so no meal
@@ -240,15 +266,21 @@ export async function loadAllergenDetail(
             emoji: foods.emoji,
             deleted: sql<boolean>`${foods.deletedAt} is not null`,
             kind: foods.kind,
+            counts: countsAsServing(mealFoods.mealId, mealFoods.foodId),
           })
           .from(mealFoods)
           .innerJoin(foods, eq(mealFoods.foodId, foods.id))
+          // THIS allergen's tag, which `countsAsServing` reads.
+          .innerJoin(foodAllergens, eq(foodAllergens.foodId, mealFoods.foodId))
+          .innerJoin(allergens, and(eq(foodAllergens.allergenId, allergens.id), eq(allergens.slug, slug)))
           .where(and(inArray(mealFoods.mealId, mealIds), inArray(mealFoods.foodId, foodIds)))
           .orderBy(asc(foods.name))
       : [];
 
   const foodsByMealId = new Map<string, AllergenDetail["exposures"][number]["foods"]>();
+  const countedMealIds = new Set<string>();
   for (const row of exposureFoodRows) {
+    if (row.counts) countedMealIds.add(row.mealId);
     const list = foodsByMealId.get(row.mealId);
     const food = { id: row.id, name: row.name, emoji: row.emoji, deleted: row.deleted, kind: row.kind };
     if (list) {
@@ -258,20 +290,16 @@ export async function loadAllergenDetail(
     }
   }
 
-  const countingFoodIds = new Set(detailFoods.filter((f) => f.countsTowardProgress).map((f) => f.id));
-  const exposures = mealRows.map((row) => {
-    const mealFoodList = foodsByMealId.get(row.id) ?? [];
-    return {
-      mealId: row.id,
-      servedAt: row.servedAt.toISOString(),
-      foods: mealFoodList,
-      // The same rule `loadAllergenProgress` counts by: a meal is a serving
-      // when at least one of its foods carries a counting tag.
-      counted: mealFoodList.some((food) => countingFoodIds.has(food.id)),
-      reaction: row.reactionNote,
-      notes: row.notes,
-    };
-  });
+  const exposures = mealRows.map((row) => ({
+    mealId: row.id,
+    servedAt: row.servedAt.toISOString(),
+    foods: foodsByMealId.get(row.id) ?? [],
+    // The same rule `loadAllergenProgress` counts by (`countsAsServing`): a
+    // meal is a serving when at least one of its foods is one there.
+    counted: countedMealIds.has(row.id),
+    reaction: row.reactionNote,
+    notes: row.notes,
+  }));
 
   const [step] = await db
     .select({ starterFoodId: allergenLadderSteps.starterFoodId })

@@ -162,6 +162,13 @@
       "when": 1792160351071,
       "tag": "0022_food_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792696036784,
+      "tag": "0023_milk_alone",
+      "breakpoints": true
     }
   ]
 }
