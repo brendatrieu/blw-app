@@ -1127,7 +1127,7 @@ export const basicRecipes: RecipeSeed[] = [
         textureNote: 'Smooth almond butter thinned until runny, on a spoon or in a very thin layer on a soft toast finger — never a thick spoonful.',
         steps: [
           'Measure 1-2 teaspoons of smooth almond butter into a small bowl.',
-          'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky. Test the temperature and let it cool to just-warm.',
+          'Thin it with warm water, breast milk, or formula, stirring until it is runny rather than thick or sticky. Let it cool to just-warm.',
           'Thick or sticky nut butter is a serious choking hazard, so never serve a spoonful straight, and never whole or chopped nuts.',
           'Offer the thinned mixture on a pre-loaded spoon, in a small amount.',
         ],

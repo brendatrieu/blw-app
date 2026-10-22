@@ -378,7 +378,7 @@ const curatedRecipes: RecipeSeed[] = [
         steps: [
           'Combine the oats, chia seeds, and yogurt with just enough breast milk, formula, whole milk, or water to thin the mixture slightly, keeping it thick enough to hold its shape on a spoon.',
           'Dice the pear into small bite-sized pieces and stir through.',
-          'Cover and refrigerate overnight, or at least 2 hours, until the oats and chia have softened and thickened, and serve chilled or gently warmed, checking the temperature is not hot before serving.',
+          'Cover and refrigerate overnight, or at least 2 hours, until the oats and chia have softened and thickened, and serve chilled or gently warmed until just warm.',
           'Let baby practice self-feeding with a spoon.',
         ],
       },
