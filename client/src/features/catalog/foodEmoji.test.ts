@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { emojiCluster, getCategoryEmoji, getExtraIngredientEmoji, getFoodEmoji, getFoodTint } from "./foodEmoji.js";
+import { isSingleEmoji } from "@blw/shared";
+import {
+  EMOJI_CHOICE_GROUPS,
+  FOOD_EMOJI,
+  emojiCluster,
+  getCategoryEmoji,
+  getExtraIngredientEmoji,
+  getFoodEmoji,
+  getFoodTint,
+} from "./foodEmoji.js";
 
 describe("getFoodEmoji", () => {
   it("prefers the food's OWN emoji over everything else (item 177)", () => {
@@ -290,5 +299,22 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
     const { plates, overflow } = emojiCluster(foods);
     expect(plates.map((p) => p.emoji)).toEqual([getFoodEmoji("apple"), getFoodEmoji("banana")]);
     expect(overflow).toBe(3);
+  });
+});
+
+describe("EMOJI_CHOICE_GROUPS (ledger 862)", () => {
+  const choices = EMOJI_CHOICE_GROUPS.flatMap((group) => group.choices);
+
+  it("offers ~40 single, distinct emojis the server will accept", () => {
+    expect(choices.length).toBeGreaterThanOrEqual(36);
+    expect(choices.length).toBeLessThanOrEqual(50);
+    for (const { emoji } of choices) expect(isSingleEmoji(emoji), emoji).toBe(true);
+    expect(new Set(choices.map((choice) => choice.emoji)).size).toBe(choices.length);
+  });
+
+  it("reuses the catalog's own art, bar four named extras", () => {
+    const catalog = new Set(Object.values(FOOD_EMOJI));
+    const extras = choices.filter(({ emoji }) => !catalog.has(emoji)).map(({ emoji }) => emoji);
+    expect(extras.sort()).toEqual(["🍄", "🍇", "🍑", "🌽"].sort());
   });
 });

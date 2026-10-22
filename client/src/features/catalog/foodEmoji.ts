@@ -8,7 +8,7 @@ import type { FoodCategory } from "@blw/shared";
  * record rather than derived from the food's name/category so each choice
  * can be a deliberate, recognizable piece of art rather than a guess.
  */
-const FOOD_EMOJI: Record<string, string> = {
+export const FOOD_EMOJI: Record<string, string> = {
   // Iron anchors
   beef: "🥩",
   chicken_thigh: "🍗",
@@ -397,3 +397,100 @@ export function emojiCluster(foods: readonly EmojiClusterFood[]): EmojiCluster {
   const shown = foods.length <= 3 ? foods : foods.slice(0, 2);
   return { plates: shown.map(foodPlate), overflow: foods.length - shown.length };
 }
+
+export interface EmojiChoice {
+  emoji: string;
+  /** Spoken in the pick button's label ("Pick 🥕 carrot"). */
+  label: string;
+}
+
+export interface EmojiChoiceGroup {
+  label: string;
+  choices: readonly EmojiChoice[];
+}
+
+/**
+ * The custom-food emoji chooser's grid (ledger 862): mostly the art the
+ * catalog above already uses, so a parent's pick sits naturally beside the
+ * built-in foods. 🍑 🍇 🌽 🍄 are the only extras — common first foods the
+ * catalog doesn't carry yet. Typing any other emoji in the field still works.
+ */
+export const EMOJI_CHOICE_GROUPS: readonly EmojiChoiceGroup[] = [
+  {
+    label: "Fruit",
+    choices: [
+      { emoji: "🍎", label: "apple" },
+      { emoji: "🍐", label: "pear" },
+      { emoji: "🍌", label: "banana" },
+      { emoji: "🍓", label: "strawberry" },
+      { emoji: "🫐", label: "blueberries" },
+      { emoji: "🍊", label: "orange" },
+      { emoji: "🥭", label: "mango" },
+      { emoji: "🍉", label: "watermelon" },
+      { emoji: "🥝", label: "kiwi" },
+      { emoji: "🍑", label: "peach" },
+      { emoji: "🍇", label: "grapes" },
+      { emoji: "🍒", label: "cherries" },
+    ],
+  },
+  {
+    label: "Vegetables",
+    choices: [
+      { emoji: "🥕", label: "carrot" },
+      { emoji: "🥦", label: "broccoli" },
+      { emoji: "🥬", label: "leafy greens" },
+      { emoji: "🥒", label: "cucumber" },
+      { emoji: "🫑", label: "pepper" },
+      { emoji: "🍅", label: "tomato" },
+      { emoji: "🍠", label: "sweet potato" },
+      { emoji: "🥔", label: "potato" },
+      { emoji: "🎃", label: "squash" },
+      { emoji: "🫛", label: "pea pod" },
+      { emoji: "🌽", label: "corn" },
+      { emoji: "🍄", label: "mushroom" },
+      { emoji: "🥑", label: "avocado" },
+    ],
+  },
+  {
+    label: "Grains",
+    choices: [
+      { emoji: "🍞", label: "bread" },
+      { emoji: "🍝", label: "pasta" },
+      { emoji: "🍚", label: "rice" },
+      { emoji: "🥣", label: "bowl" },
+      { emoji: "🌾", label: "grain" },
+    ],
+  },
+  {
+    label: "Protein",
+    choices: [
+      { emoji: "🍗", label: "chicken" },
+      { emoji: "🥩", label: "meat" },
+      { emoji: "🐟", label: "fish" },
+      { emoji: "🍤", label: "shrimp" },
+      { emoji: "🫘", label: "beans" },
+      { emoji: "🥜", label: "peanut" },
+      { emoji: "🌰", label: "nut" },
+    ],
+  },
+  {
+    label: "Dairy & eggs",
+    choices: [
+      { emoji: "🥚", label: "egg" },
+      { emoji: "🧀", label: "cheese" },
+      { emoji: "🥛", label: "milk" },
+      { emoji: "🧈", label: "butter" },
+    ],
+  },
+  {
+    label: "Other",
+    choices: [
+      { emoji: "🍲", label: "stew" },
+      { emoji: "🍛", label: "curry" },
+      { emoji: "🌿", label: "herbs" },
+      { emoji: "🧄", label: "garlic" },
+      { emoji: "🧅", label: "onion" },
+      { emoji: "🫙", label: "jar" },
+    ],
+  },
+];

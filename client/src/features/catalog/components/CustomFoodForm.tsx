@@ -15,6 +15,7 @@ import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
 import { Select } from "../../../components/ui/Select.js";
 import { Button } from "../../../components/ui/Button.js";
+import { EmojiChooser } from "./EmojiChooser.js";
 import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 
 /** The form's own state — every field a string/array the inputs can hold
@@ -287,16 +288,22 @@ export function CustomFoodForm({
         error={shownErrors.emoji}
         hint="Shown wherever this food appears. Starts from the category — change it to anything."
       >
-        <Input
-          id={`${idPrefix}-emoji`}
-          type="text"
-          inputMode="text"
-          autoComplete="off"
-          value={values.emoji}
-          onChange={(e) => setValue("emoji", e.target.value)}
-          placeholder="🍽️"
-          className="w-20 text-center text-xl"
-        />
+        {/* Ledger 862: the chooser's toggle sits beside the field and its grid
+            wraps onto its own full-width row. `w-20!` beats Input's own
+            `w-full`, which a plain `w-20` never did. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            id={`${idPrefix}-emoji`}
+            type="text"
+            inputMode="text"
+            autoComplete="off"
+            value={values.emoji}
+            onChange={(e) => setValue("emoji", e.target.value)}
+            placeholder="🍽️"
+            className="w-20! text-center text-xl"
+          />
+          <EmojiChooser id={`${idPrefix}-emoji-choices`} onPick={(emoji) => setValue("emoji", emoji)} />
+        </div>
       </Field>
 
       <div className="flex flex-col gap-1.5">
