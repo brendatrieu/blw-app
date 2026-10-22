@@ -7,6 +7,13 @@ on:
 env:
   IMAGE: ghcr.io/brendatrieu/blw-app
 
+# One deploy at a time: on 896d89e GitHub fired the push twice and the two
+# `docker compose up` runs raced on the app container ("name already in use").
+# Queue overlapping runs instead of cancelling, so the newest commit still lands.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     name: Build image and deploy to the VM
