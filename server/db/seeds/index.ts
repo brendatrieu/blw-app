@@ -134,18 +134,30 @@ export async function runSeeds(db: Database): Promise<void> {
     if (!foodId) return [];
     return f.allergens.flatMap((slug) => {
       const allergenId = allergenIdBySlug.get(slug);
-      return allergenId ? [{ foodId, allergenId, countsTowardProgress: f.countsTowardLadder ?? true }] : [];
+      return allergenId
+        ? [
+            {
+              foodId,
+              allergenId,
+              countsTowardProgress: f.countsTowardLadder === undefined,
+              countsWhenAlone: f.countsTowardLadder === 'alone',
+            },
+          ]
+        : [];
     });
   });
   if (foodAllergenRows.length > 0) {
-    // The counting flag is seed content like any other column, so a re-seed
-    // writes it; the tag itself is still never removed here.
+    // The counting flags are seed content like any other column, so a re-seed
+    // writes both; the tag itself is still never removed here.
     await db
       .insert(foodAllergens)
       .values(foodAllergenRows)
       .onConflictDoUpdate({
         target: [foodAllergens.foodId, foodAllergens.allergenId],
-        set: { countsTowardProgress: sqlExcluded("counts_toward_progress") },
+        set: {
+          countsTowardProgress: sqlExcluded("counts_toward_progress"),
+          countsWhenAlone: sqlExcluded("counts_when_alone"),
+        },
       });
   }
 

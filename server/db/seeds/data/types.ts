@@ -16,7 +16,10 @@ export interface FoodSeed {
   kind?: 'ingredient' | 'info';
   // Ledger 836. false = this food's allergen tags never move the ladder
   // (too little, or too heat-changed, to be a serving); the tags still show.
-  countsTowardLadder?: false;
+  // Ledger 864. 'alone' = they move it only when the food is not an
+  // ingredient of one of the meal's recipes (whole milk: a cup counts, milk
+  // cooked into a recipe doesn't).
+  countsTowardLadder?: false | 'alone';
 }
 export interface PairingSeed { ironFoodSlug: string; vitCFoodSlug: string; reason: string }
 export interface RecipeSeed {

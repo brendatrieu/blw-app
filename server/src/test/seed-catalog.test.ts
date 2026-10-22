@@ -28,9 +28,10 @@ const CATALOG_FOOD_COUNT = 92;
 
 /**
  * Ledger 838: every catalog food that is not plain `food`, with its kind, and
- * the (food, allergen) tags that never move the ladder (836). Exact both ways:
- * a new ingredient food, or a tag that stops (or starts) counting, is a
- * deliberate change and lands here.
+ * the (food, allergen) tags that do not always move the ladder (836), and
+ * of those the ones that move it when the food is served on its own (864).
+ * Exact both ways: a new ingredient food, or a tag that stops (or starts)
+ * counting, is a deliberate change and lands here.
  */
 const NON_FOOD_KINDS: Record<string, "ingredient" | "info"> = {
   milk: "info",
@@ -40,6 +41,7 @@ const NON_FOOD_KINDS: Record<string, "ingredient" | "info"> = {
   sesame_oil: "ingredient",
 };
 const NON_COUNTING_TAGS = ["milk/milk", "sesame_oil/sesame", "unsalted_butter/milk"];
+const COUNTS_WHEN_ALONE_TAGS = ["milk/milk"];
 
 /** The 12 spice/herb rows, in seed order. */
 const SPICE_SLUGS = [
@@ -320,6 +322,7 @@ async function catalogChecksum(db: Database): Promise<{ counts: Record<string, n
       foodSlug: schema.foods.slug,
       allergenSlug: schema.allergens.slug,
       countsTowardProgress: schema.foodAllergens.countsTowardProgress,
+      countsWhenAlone: schema.foodAllergens.countsWhenAlone,
     })
     .from(schema.foodAllergens)
     .innerJoin(schema.foods, eq(schema.foodAllergens.foodId, schema.foods.id))
@@ -389,6 +392,14 @@ describe("seeded catalog after the spices expansion", () => {
       .where(eq(schema.foodAllergens.countsTowardProgress, false));
     expect(tags.map((t) => `${t.foodSlug}/${t.allergenSlug}`).sort()).toEqual(NON_COUNTING_TAGS);
 
+    const alone = await db
+      .select({ foodSlug: schema.foods.slug, allergenSlug: schema.allergens.slug })
+      .from(schema.foodAllergens)
+      .innerJoin(schema.foods, eq(schema.foodAllergens.foodId, schema.foods.id))
+      .innerJoin(schema.allergens, eq(schema.foodAllergens.allergenId, schema.allergens.id))
+      .where(eq(schema.foodAllergens.countsWhenAlone, true));
+    expect(alone.map((t) => `${t.foodSlug}/${t.allergenSlug}`).sort()).toEqual(COUNTS_WHEN_ALONE_TAGS);
+
     // The step foods keep counting: they are how each step is meant to start.
     const starters = await db
       .select({ slug: schema.foods.slug, counts: schema.foodAllergens.countsTowardProgress })
@@ -399,19 +410,38 @@ describe("seeded catalog after the spices expansion", () => {
     expect(starters).toHaveLength(4);
   });
 
-  it("re-seeding restores a counting flag a hand edit flipped (the upsert writes it)", async () => {
-    const [butter] = await db.select({ id: schema.foods.id }).from(schema.foods).where(eq(schema.foods.slug, "unsalted_butter"));
+  it("re-seeding restores the counting flags a hand edit flipped (the upsert writes both)", async () => {
+    const rowsBefore = await db
+      .select({ slug: schema.foods.slug, id: schema.foods.id })
+      .from(schema.foods)
+      .where(inArray(schema.foods.slug, ["unsalted_butter", "milk"]));
+    const id = (slug: string) => rowsBefore.find((row) => row.slug === slug)!.id;
+    const ids = [id("milk"), id("unsalted_butter")];
+    // Both flags flipped both ways.
     await db
       .update(schema.foodAllergens)
-      .set({ countsTowardProgress: true })
-      .where(eq(schema.foodAllergens.foodId, butter!.id));
+      .set({ countsTowardProgress: true, countsWhenAlone: false })
+      .where(eq(schema.foodAllergens.foodId, id("milk")));
+    await db
+      .update(schema.foodAllergens)
+      .set({ countsTowardProgress: true, countsWhenAlone: true })
+      .where(eq(schema.foodAllergens.foodId, id("unsalted_butter")));
     const runSeeds = await loadRunSeeds();
     await runSeeds(db);
     const rows = await db
-      .select({ counts: schema.foodAllergens.countsTowardProgress })
+      .select({
+        slug: schema.foods.slug,
+        counts: schema.foodAllergens.countsTowardProgress,
+        alone: schema.foodAllergens.countsWhenAlone,
+      })
       .from(schema.foodAllergens)
-      .where(eq(schema.foodAllergens.foodId, butter!.id));
-    expect(rows).toEqual([{ counts: false }]);
+      .innerJoin(schema.foods, eq(schema.foodAllergens.foodId, schema.foods.id))
+      .where(inArray(schema.foodAllergens.foodId, ids))
+      .orderBy(asc(schema.foods.slug));
+    expect(rows).toEqual([
+      { slug: "milk", counts: false, alone: true },
+      { slug: "unsalted_butter", counts: false, alone: false },
+    ]);
   });
 
   it("gives every spice low/low/low levels, age 6, no allergen, and a dry or fresh storage window", async () => {
