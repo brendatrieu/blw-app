@@ -301,6 +301,10 @@ describe("catalog routes", () => {
     const body = response.json() as FoodDetail;
     expect(body.pairings).toHaveLength(1);
     expect(body.pairings[0]?.food.slug).toBe("orange");
+    expect(body.pairings[0]?.partnerSide).toBe("vitaminC");
+    // From the vitamin-C side the partner is the iron food (ledger 854).
+    const orange = (await app.inject({ method: "GET", url: "/api/foods/orange" })).json() as FoodDetail;
+    expect(orange.pairings.map((p) => [p.food.slug, p.partnerSide])).toEqual([["spinach", "iron"]]);
     expect(body.recipes.map((r) => r.id)).toContain(fixtures.recipe.id);
   });
 

@@ -428,7 +428,11 @@ export function FoodDetailPage() {
                     <FoodPlate {...foodPlate(pairing.food)} size={32} />
                     {pairing.food.name}
                   </span>
-                  <Badge tone="nutrient">Vit C {levelLabel(pairing.food.vitaminCLevel)}</Badge>
+                  <Badge tone="nutrient">
+                    {pairing.partnerSide === 'iron'
+                      ? `Iron ${levelLabel(pairing.food.ironLevel)}`
+                      : `Vit C ${levelLabel(pairing.food.vitaminCLevel)}`}
+                  </Badge>
                 </div>
                 <p className="text-xs text-[var(--color-text-muted)]">{pairing.reason}</p>
               </CardLink>

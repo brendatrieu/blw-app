@@ -208,6 +208,7 @@ async function loadFoodDetail(db: Database, food: FoodRow, userId: string | null
       {
         food: { slug: other.slug, name: other.name, ironLevel: other.ironLevel, vitaminCLevel: other.vitaminCLevel },
         reason: p.reason,
+        partnerSide: otherId === p.ironFoodId ? 'iron' : 'vitaminC',
       },
     ];
   });

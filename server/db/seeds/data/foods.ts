@@ -1632,7 +1632,7 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Stir a pinch into oatmeal, yogurt, apple or pear mash, or squash; cinnamon is there for flavor, not sweetness.',
     prep12m:
-      'Use a pinch in family cooking and baking — oatmeal, stewed fruit, squash, lentils — still with no added sugar.',
+      'Use a pinch in cooking and baking — oatmeal, stewed fruit, squash, lentils — still with no added sugar.',
     chokingNotes: 'Never let baby lick dry cinnamon off a spoon or a finger: loose powder is easy to inhale and irritates the airway. Mix it into food instead.',
     notes: 'Ceylon ("true") cinnamon is the gentler choice if cinnamon becomes a daily habit; the common cassia kind is fine now and then. Cinnamon is a flavor, not a sweetener — the no-added-sugar rule still applies.',
     allergens: [],
@@ -1652,7 +1652,7 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Add a pinch of ground cumin to lentils, beans, squash, or ground meat as they cook.',
     prep12m:
-      'Use a pinch in family cooking — curries, stews, roasted vegetables, hummus — as long as the dish stays salt-free.',
+      'Use a pinch in cooking — curries, stews, roasted vegetables, hummus — as long as the dish stays salt-free.',
     chokingNotes: 'Stir ground spice into food rather than sprinkling it on top dry — loose powder is easy to inhale.',
     notes: 'Warm and earthy rather than hot. Cumin is one of the easiest ways to make a salt-free lentil or bean dish taste like a real meal.',
     allergens: [],
@@ -1672,7 +1672,7 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Add a pinch to lentils, rice, soups, or vegetables as they cook.',
     prep12m:
-      'Use a pinch in family cooking; a little fat in the dish helps carry the flavor.',
+      'Use a pinch in cooking; a little fat in the dish helps carry the flavor.',
     chokingNotes: 'Stir ground spice into food rather than sprinkling it on dry — loose powder is easy to inhale.',
     notes: 'Mild and slightly bitter, and it stains everything it touches — clothes, high chairs, and hands included. Use it for flavor and color; it is not a supplement.',
     allergens: [],
@@ -1692,7 +1692,7 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Add a pinch of sweet paprika to roasting vegetables, ground meat, beans, or a soft stew.',
     prep12m:
-      'Use a pinch in family cooking wherever a gentle, sweet-peppery flavor and a little color help.',
+      'Use a pinch in cooking wherever a gentle, sweet-peppery flavor and a little color help.',
     chokingNotes: 'Stir ground spice into food rather than sprinkling it on dry — loose powder is easy to inhale.',
     notes: 'Sweet paprika only — hot paprika, smoked hot paprika, chili powder, and cayenne all carry a heat a baby has no reason to meet. Check the jar says sweet or mild.',
     allergens: [],
@@ -1732,7 +1732,7 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Add a small pinch of finely ground pepper to savory food as it cooks.',
     prep12m:
-      'Use a pinch in family cooking, keeping it finely ground rather than coarse.',
+      'Use a pinch in cooking, keeping it finely ground rather than coarse.',
     chokingNotes: 'Coarse grinds and whole peppercorns make babies cough and sneeze and can be inhaled — use a fine grind stirred into food, and keep whole peppercorns out of reach.',
     notes: 'Mild warmth rather than chili heat. Pepper is one of the flavor-builders that makes salt-free cooking taste finished.',
     allergens: [],
@@ -1752,7 +1752,7 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Add a pinch of finely rubbed dried oregano to pasta sauce, beans, vegetables, or a soft stew.',
     prep12m:
-      'Use a pinch in family cooking, or a little fresh oregano chopped very finely.',
+      'Use a pinch in cooking, or a little fresh oregano chopped very finely.',
     chokingNotes: 'Whole dried leaves are papery and can stick to the roof of the mouth or the back of the throat — rub them fine between your fingers and cook them into the dish.',
     notes: 'A gentle Mediterranean herb that does a lot of work in a salt-free tomato sauce.',
     allergens: [],
@@ -1775,7 +1775,7 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Cook finely minced garlic into vegetables, lentils, sauces, or ground meat; salt-free garlic powder works the same way.',
     prep12m:
-      'Use finely minced cooked garlic in family cooking; raw garlic is harsh and stays off the menu for now.',
+      'Use finely minced cooked garlic in cooking; raw garlic is harsh and stays off the menu for now.',
     chokingNotes: 'A whole or halved clove is firm, round, and exactly the wrong size — mince, crush, or roast it to a soft paste, and never serve a raw piece.',
     notes: 'One of the best salt-free flavor-builders there is. If you reach for garlic powder, check the label says garlic only — garlic salt is mostly salt.',
     allergens: [],
@@ -1795,7 +1795,7 @@ export const foods: FoodSeed[] = [
     prep9m:
       'Cook finely grated ginger into lentils, squash, carrot, chicken, or a mild curry.',
     prep12m:
-      'Use finely grated or very finely minced ginger in family cooking; ground dried ginger works too.',
+      'Use finely grated or very finely minced ginger in cooking; ground dried ginger works too.',
     chokingNotes: 'Ginger is fibrous and stringy — grate it finely and cook it in, and never serve a slice, a coin, or a chunk.',
     notes: 'Warming rather than hot. Ginger and turmeric are both good ways to make a mild, salt-free vegetable dish taste like something.',
     allergens: [],

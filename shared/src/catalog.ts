@@ -117,6 +117,10 @@ export const foodPairingSchema = z.object({
     vitaminCLevel: levelSchema,
   }),
   reason: z.string(),
+  // Which side of the pairing `food` (the partner) sits on, so the card can
+  // badge why it's there: an iron partner shows its iron, a vitamin-C partner
+  // its vitamin C. Optional for older payloads (treated as 'vitaminC').
+  partnerSide: z.enum(['iron', 'vitaminC']).optional(),
 });
 export type FoodPairing = z.infer<typeof foodPairingSchema>;
 
