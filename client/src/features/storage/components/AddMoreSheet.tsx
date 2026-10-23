@@ -11,7 +11,7 @@ import { useMeals } from "../../tracking/hooks.js";
 import { mealRecipes } from "../../tracking/mealRecipes.js";
 import { hasNoServingsLeft, isLabelOnly, servePartHint, storageItemTitle } from "../format.js";
 import { useStorageItems } from "../hooks.js";
-import { addMoreCanApply, addMoreDiff, type AddMoreChange, type AddMoreServing } from "../addMoreSelection.js";
+import { addMoreCanApply, addMoreDiff, addMoreNeedsContainer, type AddMoreChange, type AddMoreServing } from "../addMoreSelection.js";
 import { storageItemCluster } from "./StorageItemCard.js";
 
 type AddMoreTab = "storage" | "recipe" | "food";
@@ -167,6 +167,7 @@ export function AddMoreSheet({ babyId, serving, onDone, onClose }: AddMoreSheetP
   const recentRecipes = resolveIds(recent.recipeIds, allRecipes).slice(0, RECENT_LIMIT);
   const recentFoods = resolveIds(recent.foodIds, allFoods).slice(0, RECENT_LIMIT);
   const ticks = { itemIds, recipeIds, foodIds };
+  const needsContainer = addMoreNeedsContainer(ticks);
   const q = query.trim().toLowerCase();
 
   const toggle = (set: (update: (current: string[]) => string[]) => void, id: string) => (checked: boolean) =>
@@ -271,10 +272,20 @@ export function AddMoreSheet({ babyId, serving, onDone, onClose }: AddMoreSheetP
       </div>
 
       <div className="-mx-4 shrink-0 border-t border-[var(--color-border)] px-4 pt-3">
+        {/* Ledger 878b: why Done is off when no container is ticked. The live
+            region is always there, so the line is announced as it appears. */}
+        <div role="status">
+          {needsContainer ? (
+            <p id="add-more-needs-storage" className="pb-2 text-center text-xs text-[var(--color-text-muted)]">
+              Serve needs at least one item from storage.
+            </p>
+          ) : null}
+        </div>
         <Button
           type="button"
           className="w-full"
           disabled={!addMoreCanApply(serving, ticks)}
+          aria-describedby={needsContainer ? "add-more-needs-storage" : undefined}
           onClick={() => {
             const { added, removed } = addMoreDiff(serving, ticks);
             onDone({

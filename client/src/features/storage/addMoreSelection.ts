@@ -90,15 +90,18 @@ export function addMoreDiff(serving: AddMoreIds, ticks: AddMoreIds): { added: Ad
   return { added: diff(serving, ticks), removed: diff(ticks, serving) };
 }
 
+/** No container ticked: a serve needs one (the server's `parts.min(1)`), so Done waits and says why (ledger 878b). */
+export const addMoreNeedsContainer = (ticks: AddMoreIds): boolean => ticks.itemIds.length === 0;
+
 /**
  * Done is enabled only when it would change the Serving list, so it never
  * looks like it did something it didn't; and only while a container stays
- * ticked, since a serve needs one (the server's `parts.min(1)`).
+ * ticked (`addMoreNeedsContainer`).
  */
 export function addMoreCanApply(serving: AddMoreIds, ticks: AddMoreIds): boolean {
   const { added, removed } = addMoreDiff(serving, ticks);
   const changed = [added, removed].some((ids) => ids.itemIds.length + ids.recipeIds.length + ids.foodIds.length > 0);
-  return changed && ticks.itemIds.length > 0;
+  return changed && !addMoreNeedsContainer(ticks);
 }
 
 /**

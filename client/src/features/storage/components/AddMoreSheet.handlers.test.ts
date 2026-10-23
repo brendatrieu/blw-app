@@ -237,7 +237,7 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     // list between them scrolls.
     const out = html(tree);
     expect(out).toMatch(/<div class="scroll-momentum scroll-thin -mx-4 min-h-0 flex-1 overflow-y-auto px-4">/);
-    expect(out).toMatch(/<div class="-mx-4 shrink-0 border-t [^"]*"><button[^>]*>Done<\/button><\/div>$/);
+    expect(out).toMatch(/<div class="-mx-4 shrink-0 border-t [^"]*"><div role="status"><\/div><button[^>]*>Done<\/button><\/div>$/);
   });
 
   it("ends in a plain Done, disabled until the ticks differ from the Serving list (ledger 878)", () => {
@@ -526,6 +526,28 @@ describe("AddMoreSheet opens with the Serving list ticked (ledger 878)", () => {
     expect(enabled()).toBe(false);
     tick("Pear purée cubes");
     expect(enabled()).toBe(true);
+  });
+
+  it("says why Done is off only when no container is ticked, tied to Done for screen readers (ledger 878b)", () => {
+    const LINE = "Serve needs at least one item from storage.";
+    reset([BASE, SALMON, PEAR_FOODS], meals, listed);
+    const done = () => one(render(), Button).props;
+    // Disabled because nothing changed: no line.
+    expect(done().disabled).toBe(true);
+    expect(html(render())).not.toContain(LINE);
+    expect(done()["aria-describedby"]).toBeUndefined();
+    tick("Avocado", false);
+    expect(html(render())).not.toContain(LINE); // one container still ticked, Done on
+    tick("Salmon Oat Cakes", false);
+    expect(done().disabled).toBe(true);
+    const markup = html(render());
+    expect(markup).toMatch(/<div role="status"><p id="add-more-needs-storage"[^>]*>Serve needs at least one item from storage\.<\/p><\/div>/);
+    expect(done()["aria-describedby"]).toBe("add-more-needs-storage");
+    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*aria-describedby="add-more-needs-storage"|<button[^>]*aria-describedby="add-more-needs-storage"[^>]*disabled=""/);
+    tick("Pear purée cubes");
+    expect(html(render())).not.toContain(LINE);
+    expect(html(render())).toContain('<div role="status"></div>');
+    expect(done().disabled).toBe(false);
   });
 
   it("shows a listed container ticked even with no servings left", () => {

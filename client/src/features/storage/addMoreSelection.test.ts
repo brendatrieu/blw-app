@@ -2,7 +2,7 @@
 // only the difference. Pure data, so it runs as plain unit tests.
 import { describe, expect, it } from "vitest";
 import type { StorageItem } from "@blw/shared";
-import { addMoreCanApply, addMoreDiff, addMoreServing, applyAddMore, type ServingList } from "./addMoreSelection.js";
+import { addMoreCanApply, addMoreDiff, addMoreNeedsContainer, addMoreServing, applyAddMore, type ServingList } from "./addMoreSelection.js";
 
 const BASE: StorageItem = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -52,6 +52,12 @@ describe("addMoreServing — what opens ticked and what is never offered", () =>
 
 describe("addMoreDiff / addMoreCanApply — Done's state", () => {
   const serving = addMoreServing(LIST);
+
+  it("needs a container exactly when none is ticked (ledger 878b)", () => {
+    expect(addMoreNeedsContainer(serving)).toBe(false);
+    expect(addMoreNeedsContainer({ ...serving, itemIds: [] })).toBe(true);
+    expect(addMoreCanApply(serving, { ...serving, itemIds: [] })).toBe(false);
+  });
 
   it("is disabled with the ticks as opened, or ticked back the same in another order", () => {
     expect(addMoreCanApply(serving, serving)).toBe(false);
