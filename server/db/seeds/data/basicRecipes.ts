@@ -163,7 +163,7 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'A soft mashed pile of boneless sardines, smooth enough to scoop from a pre-loaded spoon.',
         steps: [
-          'Choose boneless sardines canned in water — already cooked in the can, so nothing here needs heat — and drain them well.',
+          'Look for boneless sardines canned in water — already cooked in the can, so nothing here needs heat — and drain them well.',
           'Check by feel for any remaining small, soft bones — boneless varieties can still hide one.',
           'Mash thoroughly with a fork until no lumps or firm pieces remain.',
           'Serve as a soft mashed pile for dipping, or pre-load a spoon and hand it to baby.',
@@ -1233,7 +1233,7 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'Finely grated cheese, or a very thin soft strip — never a firm cube.',
         steps: [
-          'Choose a mild, pasteurized cheese such as mild cheddar or mozzarella — avoid unpasteurized and soft-ripened cheeses.',
+          'Look for a mild, pasteurized cheese such as mild cheddar or mozzarella — avoid unpasteurized and soft-ripened cheeses.',
           'Grate it finely, or cut a very thin, soft strip; firm cheese cubes are a choking hazard.',
           'Sprinkle the grated cheese over a food baby is already eating, or hand over the thin strip.',
           'Keep the portion small — cheese is salty.',
@@ -2081,7 +2081,7 @@ export const basicRecipes: RecipeSeed[] = [
       '6': {
         textureNote: 'A soft mashed pile of tuna, smooth and wet enough to scoop from a pre-loaded spoon.',
         steps: [
-          'Choose skipjack ("light") tuna canned in water, ideally with no salt added — never albacore, white, or bigeye tuna, which carry far more mercury.',
+          'Look for skipjack ("light") tuna canned in water, ideally with no salt added — never albacore, white, or bigeye tuna, which carry far more mercury.',
           'Drain it well and mash it thoroughly with plain yogurt, mashed avocado, or a little olive oil until it is moistened and no dry, crumbly lumps remain.',
           'Serve as a soft mashed pile, or pre-load a spoon and hand it over.',
           'Keep tuna to about one small serving a week while baby is under two.',

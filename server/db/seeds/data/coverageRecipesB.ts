@@ -252,7 +252,7 @@ export const coverageRecipesB: RecipeSeed[] = [
       '6': {
         textureNote: 'Finger-length strips of soft, moistened bread under a thin layer of smooth tuna-and-avocado mash.',
         steps: [
-          'Choose skipjack ("light") tuna canned in water with no salt added — never albacore, white, or bigeye, which carry far more mercury — and drain it well.',
+          'Look for skipjack ("light") tuna canned in water with no salt added — never albacore, white, or bigeye, which carry far more mercury — and drain it well.',
           'Mash the tuna thoroughly with the ripe avocado until it is smooth and wet, with no dry, crumbly lumps left to pack into a dense ball in the mouth.',
           'Toast the bread for 1-2 minutes, until lightly golden, brush it with a little water so it bends without snapping, then let it cool enough to handle and cut it into finger-length strips.',
           'Spread a thin layer of the mash over each strip and sprinkle the hemp hearts onto the wet mash so they cling rather than scatter.',

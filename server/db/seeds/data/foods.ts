@@ -85,7 +85,7 @@ export const foods: FoodSeed[] = [
       'Flake into soft, small bite-sized pieces (no bigger than ½ inch), double-checking for any small bones.',
     prep12m:
       'Flake into small bite-sized pieces or mash onto toast cut into bite-sized squares.',
-    chokingNotes: 'Choose boneless varieties and still check by feel for any remaining small, soft bones.',
+    chokingNotes: 'Look for boneless varieties and still check by feel for any remaining small, soft bones.',
     notes: 'One of the most iron-dense foods on this list — an excellent heme-iron anchor for early meals.',
     allergens: ['fish'],
     storageCategory: 'fish_seafood_cooked',
@@ -194,7 +194,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole kidney beans are bigger than most beans and their skins can be tough, so a whole bean can be a choking hazard — mash them, squash each one flat, or halve them rather than serving them whole.',
     notes:
-      "Never serve raw or undercooked kidney beans. Dried ones carry a natural toxin that only a long, hard boil destroys, and a slow cooker doesn't get hot enough. The Simple kidney beans recipe shows how to cook them safely.\n\nCanned kidney beans are already cooked: choose no-salt-added and rinse them.\n\nA good plant-based iron source. Pair with a vitamin-C food like bell pepper or tomato to boost absorption.",
+      "Never serve raw or undercooked kidney beans. Dried ones carry a natural toxin that only a long, hard boil destroys, and a slow cooker doesn't get hot enough. The Simple kidney beans recipe shows how to cook them safely.\n\nCanned kidney beans are already cooked: look for no-salt-added and rinse them.\n\nA good plant-based iron source. Pair with a vitamin-C food like bell pepper or tomato to boost absorption.",
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -220,7 +220,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole beans are firm and round enough to be a choking hazard for young babies — squash or mash them rather than serving them fully whole, especially before 9 months.',
     notes:
-      "A good plant-based iron source with plenty of fiber. Pair with a vitamin-C food like bell pepper or tomato to boost absorption.\n\nPinto beans are the usual bean in refried beans. Make them at home with no salt: most canned refried beans are high in salt.\n\nCanned pinto beans are already cooked: choose no-salt-added and rinse them.",
+      "A good plant-based iron source with plenty of fiber. Pair with a vitamin-C food like bell pepper or tomato to boost absorption.\n\nPinto beans are the usual bean in refried beans. Make them at home with no salt: most canned refried beans are high in salt.\n\nCanned pinto beans are already cooked: look for no-salt-added and rinse them.",
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -249,7 +249,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole beans are firm and round enough to be a choking hazard for young babies, and cannellini are among the biggest beans — squash or mash them rather than serving them fully whole, especially before 9 months.',
     notes:
-      "A strong plant-based iron source with plenty of fiber. Pair with a vitamin-C food like broccoli, tomato, or bell pepper to boost absorption.\n\nCannellini are large white kidney beans. Navy and great northern beans cook and serve the same way, with a little less iron.\n\nNever serve dried white beans undercooked or cook them from dried in a slow cooker: like kidney beans, they carry a natural toxin that only a hard boil destroys. The Simple white beans (cannellini) recipe shows how. Canned white beans are already cooked: choose no-salt-added and rinse them.",
+      "A strong plant-based iron source with plenty of fiber. Pair with a vitamin-C food like broccoli, tomato, or bell pepper to boost absorption.\n\nCannellini are large white kidney beans. Navy and great northern beans cook and serve the same way, with a little less iron.\n\nNever serve dried white beans undercooked or cook them from dried in a slow cooker: like kidney beans, they carry a natural toxin that only a hard boil destroys. The Simple white beans (cannellini) recipe shows how. Canned white beans are already cooked: look for no-salt-added and rinse them.",
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -279,7 +279,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole butter beans are large, and their skins can slip off in one tough piece, so a whole bean can be a choking hazard — mash them or squash each one flat rather than serving them whole, and pick out loose skins for young babies.',
     notes:
-      "Butter beans and lima beans are the same bean.\n\nNever serve them raw or undercooked: raw lima beans contain a natural compound that can release cyanide, and thorough cooking breaks it down. The Simple butter beans (lima beans) recipe shows how. Canned butter beans are already cooked: choose no-salt-added and rinse them.\n\nA good plant-based iron source with plenty of fiber. Pair with a vitamin-C food like broccoli or tomato to boost absorption.",
+      "Butter beans and lima beans are the same bean.\n\nNever serve them raw or undercooked: raw lima beans contain a natural compound that can release cyanide, and thorough cooking breaks it down. The Simple butter beans (lima beans) recipe shows how. Canned butter beans are already cooked: look for no-salt-added and rinse them.\n\nA good plant-based iron source with plenty of fiber. Pair with a vitamin-C food like broccoli or tomato to boost absorption.",
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -715,7 +715,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Peel off the tough skin and scoop out every seed and stringy fiber before cooking — whole pumpkin seeds are a choking hazard (ground pumpkin seeds have their own page). Serve only flesh cooked until it mashes easily between two fingers, never firm or under-cooked pieces.',
     notes:
-      'If using canned pumpkin, look for a label that says 100% pure pumpkin, not pumpkin pie filling, which has added sugar and spices. Canned pure pumpkin is already cooked and has more than twice the iron and fiber of fresh boiled pumpkin; both are rich in vitamin A.\n\nFor fresh, choose a small pie pumpkin rather than a large carving pumpkin, and never cook one that has been carved or left out as decoration.\n\nServe it beside an iron-rich food and a vitamin-C food, like chicken thigh and broccoli.',
+      'If using canned pumpkin, look for a label that says 100% pure pumpkin, not pumpkin pie filling, which has added sugar and spices. Canned pure pumpkin is already cooked and has more than twice the iron and fiber of fresh boiled pumpkin; both are rich in vitamin A.\n\nFor fresh, look for a small pie pumpkin rather than a large carving pumpkin, and never cook one that has been carved or left out as decoration.\n\nServe it beside an iron-rich food and a vitamin-C food, like chicken thigh and broccoli.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -1000,7 +1000,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Simmer into a chunky, unsweetened cranberry-apple sauce with every berry burst and mashed, or bake cooked, chopped cranberries into muffins — still never whole or raw.',
     chokingNotes:
-      'Raw cranberries are small, round, and hard — exactly airway-sized — so always simmer them until every berry bursts and mash them before serving, at any age, rather than serving them whole or raw. Hold off on dried cranberries before 12 months: they are firm and sticky, and nearly all are sweetened. After that, choose unsweetened ones, chop them finely, and soak them in warm water first.',
+      'Raw cranberries are small, round, and hard — exactly airway-sized — so always simmer them until every berry bursts and mash them before serving, at any age, rather than serving them whole or raw. Hold off on dried cranberries before 12 months: they are firm and sticky, and nearly all are sweetened. After that, look for unsweetened ones, chop them finely, and soak them in warm water first.',
     notes:
       'Cranberries are very tart, so mix them with a naturally sweeter food (pear, apple, banana, or sweet potato) rather than adding sugar.\n\nSkip store-bought cranberry sauce and cranberry juice drinks, which carry a lot of added sugar; no juice of any kind before 12 months.\n\nCooked cranberries add some vitamin C, which helps baby absorb iron, to an iron-rich food like iron-fortified oats, turkey, or beef.',
     allergens: [],
@@ -1316,7 +1316,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Mash or flake drained light tuna into small bite-sized pieces, stirred through pasta or spread thinly.',
     chokingNotes: 'Drained tuna is dry and crumbly on its own and packs into a dense ball in the mouth — always mash it with something wet, such as plain yogurt, mashed avocado, or a little olive oil.',
-    notes: 'Skipjack ("light") tuna canned in water only — never albacore, white, or bigeye tuna, which carry far more mercury. Keep it to about one small serving (roughly 1 ounce / 30g) a week while baby is under two, and choose a no-salt-added can.',
+    notes: 'Skipjack ("light") tuna canned in water only — never albacore, white, or bigeye tuna, which carry far more mercury. Keep it to about one small serving (roughly 1 ounce / 30g) a week while baby is under two, and look for a no-salt-added can.',
     allergens: ['fish'],
     storageCategory: 'fish_seafood_cooked',
   },
@@ -1714,7 +1714,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Use a pinch in family curries and stews, keeping the blend mild and the dish salt-free.',
     chokingNotes: 'Stir the blend into food as it cooks rather than sprinkling it on dry — loose powder is easy to inhale.',
-    notes: 'Blends vary enormously, so read the label and pick one with no salt and no chili or cayenne. Most supermarket mild curry powder is mostly cumin, coriander, and turmeric, which is exactly the gentle end of the shelf.',
+    notes: 'Blends vary enormously, so read the label and look for one with no salt and no chili or cayenne. Most supermarket mild curry powder is mostly cumin, coriander, and turmeric, which is exactly the gentle end of the shelf.',
     allergens: [],
     storageCategory: 'pantry_dry',
   },
@@ -1955,7 +1955,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       "Melted or spread thin, butter isn't a choking risk. A thick, cold slab can stick in the mouth like any thick spread — keep it thin.",
     notes:
-      "Choose unsalted: salted butter has about 60 times the sodium (643 mg vs 11 mg per 100 g), and a baby's kidneys can't handle much salt.\n\nButter is made from milk and carries the milk allergen, so skip it if baby has a milk allergy.\n\nIt holds almost no milk protein, though, so it doesn't count toward the dairy step's 3 servings. Start that step with plain yogurt.",
+      "Look for unsalted: salted butter has about 60 times the sodium (643 mg vs 11 mg per 100 g), and a baby's kidneys can't handle much salt.\n\nButter is made from milk and carries the milk allergen, so skip it if baby has a milk allergy.\n\nIt holds almost no milk protein, though, so it doesn't count toward the dairy step's 3 servings. Start that step with plain yogurt.",
     allergens: ['milk'],
     countsTowardLadder: false,
     storageCategory: 'dairy_soft',
