@@ -1,4 +1,5 @@
 import { useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
+import { isSingleEmoji } from "@blw/shared";
 import { DEFAULT_FOOD_EMOJI, EMOJI_CHOICE_GROUPS } from "../foodEmoji.js";
 import { Input } from "../../../components/ui/Input.js";
 
@@ -17,7 +18,9 @@ interface EmojiChooserProps {
  * it opens the app's own grid inline (never floating, so no portal; it
  * pushes the form down). The form validates the value (`validateCustomFood`).
  * A pick or Escape closes the grid; so does focus moving on to another
- * control. Logic in `foodEmoji.ts`.
+ * control. Focus onto a box holding something that isn't one emoji (a failed
+ * Save sends focus here) closes the grid instead, so the form's error line
+ * stays right under the box; a tap still opens it. Logic in `foodEmoji.ts`.
  */
 export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
   const [open, setOpen] = useState(false);
@@ -26,6 +29,7 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
   const returning = useRef(false);
   const gridId = `${id}-choices`;
   const current = value.trim();
+  const holdsNonEmoji = current.length > 0 && !isSingleEmoji(current);
 
   function close(refocus: boolean) {
     setOpen(false);
@@ -74,7 +78,8 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
         aria-controls={gridId}
         onChange={(event) => onChange(event.target.value)}
         onFocus={() => {
-          if (!returning.current) setOpen(true);
+          // Ledger 879 B1: the grid would push the Save error off-screen.
+          if (!returning.current) setOpen(!holdsNonEmoji);
         }}
         onClick={() => setOpen(true)}
         className="w-20! text-center text-3xl!"

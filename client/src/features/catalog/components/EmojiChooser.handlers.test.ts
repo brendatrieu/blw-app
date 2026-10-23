@@ -153,6 +153,26 @@ describe("EmojiChooser (ledger 879)", () => {
     expect(grid(render())).toBeDefined();
   });
 
+  it("B1: focus onto a box holding non-emoji (a failed Save) keeps the grid shut, so the error shows under the box", () => {
+    value = "ab";
+    const focusBox = () => (box(render()).props.onFocus as () => void)();
+    focusBox();
+    expect(grid(render())).toBeUndefined();
+    // Open already (typed with the grid up, then an iOS Save tap that blurred
+    // to nowhere): the Save's focus shuts it.
+    openGrid();
+    expect(grid(render())).toBeDefined();
+    focusBox();
+    expect(grid(render())).toBeUndefined();
+    // A tap still opens it to pick a replacement.
+    openGrid();
+    expect(grid(render())).toBeDefined();
+    // A single emoji (spaces trimmed, as Save does) opens on focus as usual.
+    value = " 🥯 ";
+    focusBox();
+    expect(grid(render())).toBeDefined();
+  });
+
   it("a tapped pick sets the value and closes, without pulling focus (no phone keyboard)", () => {
     openGrid();
     tap(pick(render(), "Pick 🍐 pear"));
