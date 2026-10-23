@@ -582,8 +582,8 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
    *   3. a curated recipe listing an ingredient no step in that variant uses
    *      (tofu-nuggets listed garlic powder and never used it; beef listed cumin
    *      and only the 6m seasoned with it).
-   * The regexes are deliberately loose on wording ("just warm" and "just-warm"
-   * both count). They pin the SIGNAL, not a phrasing, so an author can reword.
+   * The regexes are deliberately loose on wording ("a safe temperature", "just warm",
+   * "just-warm" all count). They pin the SIGNAL, not a phrasing, so an author can reword.
    *
    * Items 461-465, owner's decision: generic supervision and post-exposure
    * allergen watching do NOT belong in recipe steps. Repeated on every recipe it
@@ -594,8 +594,8 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
    */
   const BACK_REFERENCE = /as above|(?:as|than|like) (?:for |in )?the (?:6|9|12)[- ]month|as before|same as the|see the (?:6|9|12)/i;
   // NOT plain "serve warm": that instructs you to serve it hot, and accepting it
-  // hid the only real gap left (pear-sunflower-flax-porridge 12m). "just warm" still counts.
-  const COOLING = /\bcool\b|\bcooled\b|just[ -]warm|check the temperature|chilled|room temperature/i;
+  // hid the only real gap left (pear-sunflower-flax-porridge 12m). "a safe temperature" and "just warm" still count.
+  const COOLING = /\bcool\b|\bcooled\b|safe temperature|just[ -]warm|check the temperature|chilled|room temperature/i;
   const SUPERVISION = /supervis|sit(?:ting)? with (?:baby|them)|stay(?:ing)? (?:with (?:baby|them)|close)|\bupright\b|keep an eye on baby|never leave baby/i;
   const ALLERGEN_WATCH = /watch baby (?:for|afterwards)|watch for (?:signs of )?(?:a |any )?reaction|on its own at home|at home,? (?:in the morning|earl)/i;
 
@@ -1036,7 +1036,7 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
         "Scrub the potato, cut away any green patches or sprouts, then peel it and cut it into thick, finger-length wedges.",
         "Arrange the wedges on a board and pat them dry.",
         "Test a wedge between your fingers before serving, and cook it 5 minutes more if it resists at all — potato is never served raw or firm.",
-        "Cool to just-warm and serve with no added salt.",
+        "Cool to a safe temperature and serve with no added salt.",
       ]),
     ).toBe(false);
     expect(
@@ -1044,13 +1044,13 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
         "Wash and peel the carrot and cut it into finger-length spears.",
         "Arrange the spears on a board and pat them dry.",
         "Raw carrot is hard and can shear into a firm, airway-blocking chunk, so test a spear between your fingers first and cook it 3-5 minutes more if it resists.",
-        "Cool to just-warm and serve.",
+        "Cool to a safe temperature and serve.",
       ]),
     ).toBe(false);
     expect(
       stageCooks([
         "Peel the potato and cut it into thick wedges — no cooking needed.",
-        "Cool to just-warm and serve with no added salt.",
+        "Cool to a safe temperature and serve with no added salt.",
       ]),
     ).toBe(false);
     // The unmutated stage still passes, so the rule is not simply always-false.
@@ -1058,7 +1058,7 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
       stageCooks([
         "Scrub the potato, cut away any green patches or sprouts, then peel it and cut it into thick, finger-length wedges.",
         "Steam or boil the wedges for 15-20 minutes, or bake them at 400°F (200°C) for 30-40 minutes, until a wedge mashes easily between two fingers.",
-        "Cool to just-warm and serve with no added salt.",
+        "Cool to a safe temperature and serve with no added salt.",
       ]),
     ).toBe(true);
 

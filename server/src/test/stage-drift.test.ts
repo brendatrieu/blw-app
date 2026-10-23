@@ -248,8 +248,8 @@ describe("cross-stage drift (ledger 861)", () => {
   it("flags a stage that drops the hot-spot stir", () => {
     expect(
       stageDrift(recipe(["oats"], {
-        "6": ["Stir well to release hot spots and cool to just-warm."],
-        "9": ["Cool to just-warm and serve."],
+        "6": ["Stir well to release hot spots and cool to a safe temperature."],
+        "9": ["Cool to a safe temperature and serve."],
       })),
     ).toEqual(['r: "Stir well to release hot spots" missing at 9 mo']);
   });

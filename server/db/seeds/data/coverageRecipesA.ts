@@ -110,7 +110,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Simmer the diced pear in a splash of water over low heat for 5-7 minutes, until it squashes easily between two fingers, leaving the pieces whole rather than mashing them.',
           'Cook the oats over medium-low heat for 4-5 minutes with a pinch of cinnamon, until thick enough to sit on a spoon.',
           'Off the heat, stir through the pear, the ground flaxseed, and the sunflower seed butter thinned with warm water until runny.',
-          'Cool to just warm, then serve with a spoon for self-feeding, checking the pear pieces squash easily first.',
+          'Cool to a safe temperature, then serve with a spoon for self-feeding, checking the pear pieces squash easily first.',
         ],
       },
       '12': {
@@ -119,7 +119,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cook the oats over medium-low heat for 5-6 minutes with a pinch of cinnamon, until thick and family-style.',
           'Dice a ripe pear into small bite-sized pieces, softening it first over low heat for 5-7 minutes if it is still firm, then fold it in.',
           'Stir in the ground flaxseed and a swirl of sunflower seed butter, thinned with warm water until runny and mixed evenly so no thick pockets remain.',
-          'Cool to just-warm, then serve with a spoon.',
+          'Cool to a safe temperature, then serve with a spoon.',
         ],
       },
     },
@@ -295,7 +295,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cut it into finger-length strips.',
           'Whisk the almond butter with warm water until it is runny, never thick or straight from the jar, and spread a very thin layer over each strip.',
           'Mash the banana smooth, smooth it over the top, and dust the ground flaxseed over so it disappears into the banana.',
-          'Let the strips cool a minute so they are comfortable to hold, then serve while they are still soft.',
+          'Let the strips cool to a safe temperature so they are comfortable to hold, then serve while they are still soft.',
         ],
       },
       '9': {
@@ -306,7 +306,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Whisk the almond butter with warm water until it is runny, and spread it thinly over each piece.',
           'Cut the banana into half-moons or small bite-sized pieces (no bigger than ½ inch) and press a few onto each piece.',
           'Sprinkle the ground flaxseed over the wet nut butter so it sticks rather than scattering.',
-          'Let it cool for a minute so it is comfortable to hold, then serve on the tray for self-feeding.',
+          'Let it cool to a safe temperature so it is comfortable to hold, then serve on the tray for self-feeding.',
         ],
       },
       '12': {
@@ -316,7 +316,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Toast the bread for 1-2 minutes, until golden, and cut it into small bite-sized squares or triangles.',
           'Whisk the almond butter until runny for spreading — still no thick spoonfuls or globs — and spread a thin layer on each piece.',
           'Slice the banana into small bite-sized rounds and add them on top with a sprinkle of ground flaxseed.',
-          'Let it cool briefly, then serve with a vitamin-C side like orange segments with the membrane removed.',
+          'Let it cool to a safe temperature, then serve with a vitamin-C side like orange segments with the membrane removed.',
         ],
       },
     },
@@ -526,7 +526,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cook the chicken thigh in the same pan over medium heat for about 6-7 minutes a side, until it is cooked through to 165°F (74°C) with no pink left, then rest it and shred it finely.',
           'Steam the broccoli florets for 8-10 minutes, keeping a bit of stem as a handle, until they mash easily between two fingers.',
           'Stir the cooked quinoa through the garlicky pan juices and press it into a soft patty shape, since loose grains are hard to pick up.',
-          'Cool the patty and the chicken until just warm, then serve with a floret to hold and a small pile of shredded thigh moistened with a little olive oil so it is not dry.',
+          'Cool the patty and the chicken to a safe temperature, then serve with a floret to hold and a small pile of shredded thigh moistened with a little olive oil so it is not dry.',
         ],
       },
       '9': {
@@ -537,7 +537,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cook the thigh through to 165°F (74°C) — about 6-7 minutes a side over medium heat — until no pink is left, then chop or shred it into soft, small bite-sized pieces (no bigger than ½ inch).',
           'Steam the broccoli for 8-10 minutes, until soft, and cut it into small bite-sized florets (no bigger than ½ inch).',
           'Fold the cooked quinoa through the pan juices and serve it loose for pincer-grasp practice.',
-          'Let everything cool to just warm before combining on the tray, with the chicken moistened so it does not crumble apart.',
+          'Let everything cool to a safe temperature before combining on the tray, with the chicken moistened so it does not crumble apart.',
         ],
       },
       '12': {
@@ -547,7 +547,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soften the minced garlic in a little olive oil over medium heat for 30-60 seconds.',
           'Cook the thigh to 165°F (74°C) — about 6-7 minutes a side over medium heat — until no pink is left, then rest it and dice it into small, soft bite-sized pieces.',
           'Roast the broccoli at 400°F (200°C) for 15-18 minutes, until tender, and cut it into small bite-sized florets.',
-          'Let the quinoa and chicken cool to just warm, then stir it all through and serve with a fork and fingers together.',
+          'Let the quinoa and chicken cool to a safe temperature, then stir it all through and serve with a fork and fingers together.',
         ],
       },
     },
@@ -586,7 +586,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Cover with water or a no-salt-added stock, add a small pinch of finely ground black pepper, and simmer covered over low heat for 25-30 minutes, until the carrot is fork-tender and the chicken reads 165°F (74°C) with no pink left.',
           'Lift the chicken out and shred it finely, moistening it with the cooking liquid so it is never dry or stringy.',
           'Mash the carrot and green beans until they give easily between two fingers, then stir the chicken back in.',
-          'Press the soft, sticky rice into a small ball or patty, cool the stew to just warm, then stir in a little olive oil before serving the stew alongside on a pre-loaded spoon.',
+          'Press the soft, sticky rice into a small ball or patty, cool the stew to a safe temperature, then stir in a little olive oil before serving the stew alongside on a pre-loaded spoon.',
         ],
       },
       '9': {
@@ -596,7 +596,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Simmer the diced chicken, carrot, and green beans in water or no-salt-added stock over low heat for 25-30 minutes, with a small pinch of finely ground black pepper, until the carrot is soft and the chicken reads 165°F (74°C).',
           'Shred or chop the chicken into soft, small bite-sized pieces (no bigger than ½ inch), moistened so they do not crumble apart.',
           'Cut any larger carrot or green bean pieces down to small bite-sized pieces (no bigger than ½ inch).',
-          'Cool the stew until it is only just warm, then stir in a little olive oil before serving the soft rice loose for pincer-grasp practice, with the stew spooned over.',
+          'Cool the stew to a safe temperature, then stir in a little olive oil before serving the soft rice loose for pincer-grasp practice, with the stew spooned over.',
         ],
       },
       '12': {
@@ -604,7 +604,7 @@ export const coverageRecipesA: RecipeSeed[] = [
         steps: [
           'Simmer the chicken, carrot, and green beans in water or no-salt-added stock over low heat for 25-30 minutes, with a pinch of finely ground black pepper, until everything is tender and the chicken is 165°F (74°C) throughout.',
           'Dice the chicken into small, soft bite-sized pieces and cut the vegetables the same size.',
-          'Cool the stew to just-warm and stir in a little olive oil before serving over soft rice, reheating leftover rice only once and discarding anything left after that.',
+          'Cool the stew to a safe temperature and stir in a little olive oil before serving over soft rice, reheating leftover rice only once and discarding anything left after that.',
           'Let baby practice with a spoon and fingers, with no added salt in the pot.',
         ],
       },
@@ -646,7 +646,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Add the diced chicken, the cubed butternut squash, and the coconut milk, then simmer covered over low heat for 20-25 minutes, until the squash falls apart under a fork and the chicken reads 165°F (74°C) with no pink left.',
           'Shred the chicken finely and mash the squash, so nothing needs chewing.',
           'Take the pan off the heat, whisk the cashew butter with a little warm water until runny, and stir it through so no thick pocket is left anywhere.',
-          'Press the soft rice into a small ball, cool the curry to just warm, then serve the curry alongside on a pre-loaded spoon.',
+          'Press the soft rice into a small ball, cool the curry to a safe temperature, then serve the curry alongside on a pre-loaded spoon.',
         ],
       },
       '9': {
@@ -667,7 +667,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Warm the mild curry powder in a little olive oil over medium heat for 30-60 seconds — a blend with no salt and no chili in it.',
           'Simmer the chicken and butternut squash in coconut milk over low heat for 20-25 minutes, until tender and the chicken is 165°F (74°C) throughout.',
           'Dice both into small bite-sized pieces and stir the runny cashew butter through off the heat, never as a thick glob.',
-          'Let the curry cool to just-warm before serving over soft rice with a spoon and fingers.',
+          'Let the curry cool to a safe temperature before serving over soft rice with a spoon and fingers.',
         ],
       },
     },
@@ -709,7 +709,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Bake the logs at 375°F (190°C) for 16-18 minutes, until they read 165°F (74°C) in the center with no pink left.',
           'Simmer the skinned, diced tomatoes over low heat for 15-20 minutes, until they collapse into a soft sauce, then mash it smooth.',
           'Cook the pasta for 10-12 minutes, well past al dente, until it is soft enough to squash against the roof of the mouth.',
-          'Spoon the sauce over the pasta, moisten the turkey logs with it so they are never dry, cool everything to just warm, and serve.',
+          'Spoon the sauce over the pasta, moisten the turkey logs with it so they are never dry, cool everything to a safe temperature, and serve.',
         ],
       },
       '9': {
@@ -720,7 +720,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Bake small meatballs at 375°F (190°C) for 16-18 minutes, until they read 165°F (74°C) in the center, then squash each one flat rather than serving it round.',
           'Simmer the skinned, diced tomato over low heat for 15-20 minutes, until it breaks down into a soft sauce.',
           'Cook the small pasta shapes for 10-12 minutes, past al dente, until soft.',
-          'Let the meatballs cool to just warm, break them into soft, small bite-sized pieces (no bigger than ½ inch), and serve them through the pasta and sauce.',
+          'Let the meatballs cool to a safe temperature, break them into soft, small bite-sized pieces (no bigger than ½ inch), and serve them through the pasta and sauce.',
         ],
       },
       '12': {
@@ -731,7 +731,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Bake the meatballs at 375°F (190°C) for 16-18 minutes, until they are 165°F (74°C) in the center.',
           'Simmer the tomato sauce over low heat for 15-20 minutes, until thick, and stir a little more oregano through.',
           'Cook the pasta for 10-12 minutes, until tender, and toss it through the sauce.',
-          'Let the meatballs cool to just-warm before cutting them into small bite-sized pieces — never a whole round meatball — and serve with no added salt.',
+          'Let the meatballs cool to a safe temperature before cutting them into small bite-sized pieces — never a whole round meatball — and serve with no added salt.',
         ],
       },
     },
@@ -763,7 +763,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Steam the cubed sweet potato for 12-15 minutes and the peas for 4-5 minutes, until both mash easily between two fingers.',
           'Mash the sweet potato, squash every pea flat so none keeps its round shape, and fold in the flaked cod with the beaten egg and a little finely snipped dill.',
           'Shape finger-length cakes and pan-fry them in a little olive oil over medium heat for about 3 minutes a side, until firm and set through to 160°F (71°C) in the center.',
-          'Cool until just warm, check a cake mashes easily, and serve whole or torn into strips.',
+          'Cool to a safe temperature, check a cake mashes easily, and serve whole or torn into strips.',
         ],
       },
       '9': {
@@ -783,7 +783,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Bake the cod at 375°F (190°C) for 10-12 minutes, until it flakes at 145°F (63°C), then flake it and check thoroughly for bones.',
           'Steam the sweet potato and peas for 12-15 minutes, until tender, and mash them together.',
           'Bind with the beaten egg and finely snipped dill, shape mini cakes, and pan-fry in a little olive oil over medium heat for about 3 minutes a side, until golden and 160°F (71°C) in the center.',
-          'Cool until just warm, cut into small bite-sized pieces, and serve with soft vegetables on the side.',
+          'Cool to a safe temperature, cut into small bite-sized pieces, and serve with soft vegetables on the side.',
         ],
       },
     },
@@ -822,7 +822,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Add the skinned, diced tomatoes and simmer over low heat for 10-12 minutes, until they collapse into a soft sauce.',
           'Spoon the sauce over the cod and bake at 375°F (190°C) for 12-15 minutes, until the fish is opaque and flakes easily at 145°F (63°C).',
           'Steam the trimmed green beans for 8-10 minutes, until they mash easily between two fingers, and serve them whole as a finger food.',
-          'Run your fingers through every flake of cod for bones, stir the very finely chopped basil through the sauce off the heat, let it cool to just warm, and spoon it over.',
+          'Run your fingers through every flake of cod for bones, stir the very finely chopped basil through the sauce off the heat, let it cool to a safe temperature, and spoon it over.',
         ],
       },
       '9': {
@@ -833,7 +833,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Bake the cod under the sauce at 375°F (190°C) for 12-15 minutes, until opaque and flaking at 145°F (63°C).',
           'Flake it, re-checking for stray bones as you go, then press some into a soft finger-length piece, or leave small bite-sized flakes (no bigger than ½ inch) for pincer practice.',
           'Steam the green beans for 8-10 minutes, until soft, and cut any larger pieces down to small bite-sized pieces (no bigger than ½ inch).',
-          'Stir the finely chopped basil in off the heat, cool to just warm, and serve on the tray.',
+          'Stir the finely chopped basil in off the heat, cool to a safe temperature, and serve on the tray.',
         ],
       },
       '12': {
@@ -876,7 +876,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Steam the broccoli florets for 8-10 minutes, keeping a bit of stem as a handle, until they mash easily between two fingers.',
           'Press the soft, sticky rice into a small ball or patty rather than serving loose grains.',
           'Flake the salmon into a soft finger-length piece and moisten it with a little olive oil so it is not dry.',
-          'Sprinkle a pinch of sesame seeds over the wet rice so they cling rather than scatter, cool everything to just warm, and serve.',
+          'Sprinkle a pinch of sesame seeds over the wet rice so they cling rather than scatter, cool everything to a safe temperature, and serve.',
         ],
       },
       '9': {
@@ -886,7 +886,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Bake the salmon at 375°F (190°C) for 10-12 minutes, until opaque and flaking at 145°F (63°C), then re-check every flake for stray bones.',
           'Steam the broccoli for 8-10 minutes, until soft, and cut it into small bite-sized florets (no bigger than ½ inch).',
           'Serve the soft rice loose for pincer-grasp practice.',
-          'Flake the salmon into soft, small bite-sized pieces (no bigger than ½ inch) over the top, moisten it with a little olive oil so it is not dry, sprinkle a pinch of sesame seeds onto the wet rice, and let it cool to just warm.',
+          'Flake the salmon into soft, small bite-sized pieces (no bigger than ½ inch) over the top, moisten it with a little olive oil so it is not dry, sprinkle a pinch of sesame seeds onto the wet rice, and let it cool to a safe temperature.',
         ],
       },
       '12': {
@@ -931,7 +931,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Add the skinned, diced tomatoes and simmer over low heat for 12-15 minutes, until they break down into a soft sauce.',
           'Cook the pasta for 10-12 minutes, well past al dente, until it is very soft, and keep larger shapes whole as a finger food.',
           'Drain the boneless sardines, check them by feel for any small soft bones, and mash them well.',
-          'Fold the mashed sardines through the sauce off the heat, stir in the very finely chopped basil, let it cool to just warm, and spoon it over the pasta.',
+          'Fold the mashed sardines through the sauce off the heat, stir in the very finely chopped basil, let it cool to a safe temperature, and spoon it over the pasta.',
         ],
       },
       '9': {
@@ -941,7 +941,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soften the minced garlic in a little olive oil over medium heat for 30-60 seconds, then simmer the skinned, diced tomato over low heat for 12-15 minutes, until soft.',
           'Cook the small pasta shapes for 10-12 minutes, past al dente, until they squash easily.',
           'Mash or flake the drained, boneless sardines into soft, small bite-sized pieces (no bigger than ½ inch), double-checking for any small bones.',
-          'Fold them through the sauce off the heat with the finely chopped basil, cool to just warm, then toss it with the pasta.',
+          'Fold them through the sauce off the heat with the finely chopped basil, cool to a safe temperature, then toss it with the pasta.',
         ],
       },
       '12': {
@@ -985,7 +985,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Mash the sauce smooth, so nothing needs chewing.',
           'Grind the walnuts to a fine, flour-like meal — never a half or a piece — and stir it through the finished sauce off the heat, until nothing crunchy is left.',
           'Cook the pasta for 10-12 minutes, well past al dente, until very soft, and keep larger shapes whole as a finger food.',
-          'Cool the sauce to just warm, then spoon it over and serve, loosening it with a little olive oil if it is stiff.',
+          'Cool the sauce to a safe temperature, then spoon it over and serve, loosening it with a little olive oil if it is stiff.',
         ],
       },
       '9': {
@@ -995,7 +995,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Simmer the lentils and skinned, diced tomato with a pinch of finely rubbed oregano over low heat for 20-25 minutes, until the lentils are soft with a little texture left.',
           'Stir the finely ground walnut meal through off the heat, so nothing crunchy remains.',
           'Cook the small pasta shapes for 10-12 minutes, past al dente, until soft.',
-          'Let the sauce cool to just warm, loosening it with a little olive oil if it is stiff, toss the pasta through it, and serve on the tray for self-feeding.',
+          'Let the sauce cool to a safe temperature, loosening it with a little olive oil if it is stiff, toss the pasta through it, and serve on the tray for self-feeding.',
         ],
       },
       '12': {
@@ -1043,7 +1043,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soften a small pinch of finely grated ginger in the same pan over medium heat for 30-60 seconds, until it smells warm rather than raw.',
           'Steam the broccoli florets for 8-10 minutes, keeping a bit of stem as a handle, until they mash easily between two fingers.',
           'Thin the peanut butter with warm water, whisking until it is completely runny — never thick or straight from the jar — and stir the cooked ginger through it off the heat.',
-          'Press the soft, sticky rice into a small ball, arrange the tofu strips and florets alongside, cool everything to just warm, and spoon the thin sauce over.',
+          'Press the soft, sticky rice into a small ball, arrange the tofu strips and florets alongside, cool everything to a safe temperature, and spoon the thin sauce over.',
         ],
       },
       '9': {
@@ -1054,7 +1054,7 @@ export const coverageRecipesA: RecipeSeed[] = [
           'Soften the finely grated ginger in the pan over medium heat for 30-60 seconds, until fragrant.',
           'Steam the broccoli for 8-10 minutes, until soft, and cut it into small bite-sized florets (no bigger than ½ inch).',
           'Thin the peanut butter with warm water, whisking until it is runny, stir the ginger through, and spoon the sauce over the rice, tofu, and broccoli.',
-          'Cool to just-warm, then serve the soft rice loose on the tray with the tofu and broccoli for pincer-grasp self-feeding.',
+          'Cool to a safe temperature, then serve the soft rice loose on the tray with the tofu and broccoli for pincer-grasp self-feeding.',
         ],
       },
       '12': {
