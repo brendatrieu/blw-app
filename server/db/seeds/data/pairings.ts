@@ -155,4 +155,70 @@ export const pairings: PairingSeed[] = [
     vitCFoodSlug: 'cranberries',
     reason: 'Mashed cooked cranberries swirled into iron-fortified oats add the vitamin C that helps baby absorb the added non-heme iron.',
   },
+  // 880: every partner a food's notes used to name is a pairing row instead (the notes no longer list them).
+  {
+    ironFoodSlug: 'turkey',
+    vitCFoodSlug: 'cranberries',
+    reason: "Cooked cranberries' vitamin C rounds out the meal alongside turkey's heme iron.",
+  },
+  {
+    ironFoodSlug: 'beef',
+    vitCFoodSlug: 'cranberries',
+    reason: "Cooked cranberries add vitamin C variety alongside beef's already well-absorbed heme iron.",
+  },
+  {
+    ironFoodSlug: 'lentils',
+    vitCFoodSlug: 'kale',
+    reason: "Cooked kale's vitamin C helps baby absorb more of the plant-based iron in lentils.",
+  },
+  {
+    ironFoodSlug: 'egg',
+    vitCFoodSlug: 'kale',
+    reason: "Cooked kale's vitamin C helps baby absorb more of the iron in egg.",
+  },
+  {
+    ironFoodSlug: 'beef',
+    vitCFoodSlug: 'kale',
+    reason: "Cooked kale's vitamin C rounds out the meal alongside beef's already well-absorbed heme iron.",
+  },
+  {
+    ironFoodSlug: 'beef',
+    vitCFoodSlug: 'brussels_sprouts',
+    reason: "Brussels sprouts' vitamin C rounds out the meal alongside beef's already well-absorbed heme iron.",
+  },
+  {
+    ironFoodSlug: 'lentils',
+    vitCFoodSlug: 'tomato',
+    reason: "Tomato's vitamin C helps baby absorb more of the plant-based iron in lentils.",
+  },
+  {
+    ironFoodSlug: 'kidney_beans',
+    vitCFoodSlug: 'tomato',
+    reason: "Tomato's vitamin C helps baby absorb more of the plant-based iron in kidney beans.",
+  },
+  {
+    ironFoodSlug: 'pinto_beans',
+    vitCFoodSlug: 'bell_pepper',
+    reason: "Bell pepper's vitamin C helps baby absorb more of the plant-based iron in pinto beans.",
+  },
+  {
+    ironFoodSlug: 'white_beans',
+    vitCFoodSlug: 'tomato',
+    reason: "Tomato's vitamin C helps baby absorb more of the plant-based iron in white beans.",
+  },
+  {
+    ironFoodSlug: 'white_beans',
+    vitCFoodSlug: 'bell_pepper',
+    reason: "Bell pepper's vitamin C helps baby absorb more of the plant-based iron in white beans.",
+  },
+  {
+    ironFoodSlug: 'butter_beans',
+    vitCFoodSlug: 'tomato',
+    reason: "Tomato's vitamin C helps baby absorb more of the plant-based iron in butter beans.",
+  },
+  {
+    ironFoodSlug: 'edamame',
+    vitCFoodSlug: 'bell_pepper',
+    reason: "Bell pepper's vitamin C helps baby absorb more of the plant-based iron in edamame.",
+  },
 ]

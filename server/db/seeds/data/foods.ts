@@ -124,7 +124,7 @@ export const foods: FoodSeed[] = [
       'Cook until soft and serve as a mash with some texture left, or stirred into a fritter for pincer-grasp pieces.',
     prep12m:
       'Cook until soft and serve as-is in small spoonfuls, mixed into a soup, stew, or grain bowl.',
-    notes: 'A strong plant-based (non-heme) iron source — pair with a vitamin-C food like bell pepper or tomato to boost absorption.',
+    notes: 'A strong plant-based (non-heme) iron source — pair with a vitamin-C food to boost absorption.',
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -194,7 +194,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole kidney beans are bigger than most beans and their skins can be tough, so a whole bean can be a choking hazard — mash them, squash each one flat, or halve them rather than serving them whole.',
     notes:
-      "Never serve raw or undercooked kidney beans. Dried ones carry a natural toxin that only a long, hard boil destroys, and a slow cooker doesn't get hot enough. The Simple kidney beans recipe shows how to cook them safely.\n\nCanned kidney beans are already cooked: look for no-salt-added and rinse them.\n\nA good plant-based iron source. Pair with a vitamin-C food like bell pepper or tomato to boost absorption.",
+      "Never serve raw or undercooked kidney beans. Dried ones carry a natural toxin that only a long, hard boil destroys, and a slow cooker doesn't get hot enough. The Simple kidney beans recipe shows how to cook them safely.\n\nCanned kidney beans are already cooked: look for no-salt-added and rinse them.\n\nA good plant-based iron source. Pair with a vitamin-C food to boost absorption.",
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -220,7 +220,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole beans are firm and round enough to be a choking hazard for young babies — squash or mash them rather than serving them fully whole, especially before 9 months.',
     notes:
-      "A good plant-based iron source with plenty of fiber. Pair with a vitamin-C food like bell pepper or tomato to boost absorption.\n\nPinto beans are the usual bean in refried beans. Make them at home with no salt: most canned refried beans are high in salt.\n\nCanned pinto beans are already cooked: look for no-salt-added and rinse them.",
+      "A good plant-based iron source with plenty of fiber. Pair with a vitamin-C food to boost absorption.\n\nPinto beans are the usual bean in refried beans. Make them at home with no salt: most canned refried beans are high in salt.\n\nCanned pinto beans are already cooked: look for no-salt-added and rinse them.",
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -249,7 +249,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole beans are firm and round enough to be a choking hazard for young babies, and cannellini are among the biggest beans — squash or mash them rather than serving them fully whole, especially before 9 months.',
     notes:
-      "A strong plant-based iron source with plenty of fiber. Pair with a vitamin-C food like broccoli, tomato, or bell pepper to boost absorption.\n\nCannellini are large white kidney beans. Navy and great northern beans cook and serve the same way, with a little less iron.\n\nNever serve dried white beans undercooked or cook them from dried in a slow cooker: like kidney beans, they carry a natural toxin that only a hard boil destroys. The Simple white beans (cannellini) recipe shows how. Canned white beans are already cooked: look for no-salt-added and rinse them.",
+      "A strong plant-based iron source with plenty of fiber. Pair with a vitamin-C food to boost absorption.\n\nCannellini are large white kidney beans. Navy and great northern beans cook and serve the same way, with a little less iron.\n\nNever serve dried white beans undercooked or cook them from dried in a slow cooker: like kidney beans, they carry a natural toxin that only a hard boil destroys. The Simple white beans (cannellini) recipe shows how. Canned white beans are already cooked: look for no-salt-added and rinse them.",
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -279,7 +279,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole butter beans are large, and their skins can slip off in one tough piece, so a whole bean can be a choking hazard — mash them or squash each one flat rather than serving them whole, and pick out loose skins for young babies.',
     notes:
-      "Butter beans and lima beans are the same bean.\n\nNever serve them raw or undercooked: raw lima beans contain a natural compound that can release cyanide, and thorough cooking breaks it down. The Simple butter beans (lima beans) recipe shows how. Canned butter beans are already cooked: look for no-salt-added and rinse them.\n\nA good plant-based iron source with plenty of fiber. Pair with a vitamin-C food like broccoli or tomato to boost absorption.",
+      "Butter beans and lima beans are the same bean.\n\nNever serve them raw or undercooked: raw lima beans contain a natural compound that can release cyanide, and thorough cooking breaks it down. The Simple butter beans (lima beans) recipe shows how. Canned butter beans are already cooked: look for no-salt-added and rinse them.\n\nA good plant-based iron source with plenty of fiber. Pair with a vitamin-C food to boost absorption.",
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -305,7 +305,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole edamame beans are firm, round, and slippery — a choking hazard. Always smash each bean flat or split it in half, and never serve the pods, which are tough and stringy.',
     notes:
-      "Young green soybeans, with plenty of iron, fiber, and protein. Pair with a vitamin-C food like broccoli or bell pepper to boost absorption.\n\nEdamame is soy, so it counts as a soy serving on the allergen ladder, like tofu.\n\nBuy plain frozen shelled edamame with no added salt or seasoning.",
+      "Young green soybeans, with plenty of iron, fiber, and protein. Pair with a vitamin-C food to boost absorption.\n\nEdamame is soy, so it counts as a soy serving on the allergen ladder, like tofu.\n\nBuy plain frozen shelled edamame with no added salt or seasoning.",
     allergens: ['soy'],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -459,7 +459,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'A whole sprout is round and firm, and raw or under-cooked sprouts are hard to chew — never serve a whole sprout, and always cook until a knife slides through the core before cutting into quarters or smaller.',
     notes:
-      'Rich in vitamin C, which helps baby absorb iron — pair it with lentils, beef, or another iron-rich food. Like broccoli and cauliflower, Brussels sprouts are a cabbage-family vegetable and can cause a little extra gas, which is normal.',
+      'Rich in vitamin C, which helps baby absorb iron from an iron-rich food served with it. Like broccoli and cauliflower, Brussels sprouts are a cabbage-family vegetable and can cause a little extra gas, which is normal.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -488,7 +488,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Raw kale and whole cooked leaves are tough, stringy, and hard to chew — always remove the stems, cook until very soft, and chop finely rather than serving whole leaves. Hold off on crispy kale chips: like potato chips, they are dry and crisp, and store-bought ones are often salty.',
     notes:
-      'Cooked kale adds some vitamin C, which helps baby absorb iron, but it is not an iron-rich food once cooked — pair it with tofu, chickpeas, lentils, egg, or meat. Leafy greens can cling to the tongue and cause gagging, which is normal; finely chopped kale mixed into a soft food is easiest.',
+      "Cooked kale adds some vitamin C, which helps baby absorb iron, but it isn't an iron-rich food once cooked, so serve it with one. Leafy greens can cling to the tongue and cause gagging, which is normal; finely chopped kale mixed into a soft food is easiest.",
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -1002,7 +1002,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Raw cranberries are small, round, and hard — exactly airway-sized — so always simmer them until every berry bursts and mash them before serving, at any age, rather than serving them whole or raw. Hold off on dried cranberries before 12 months: they are firm and sticky, and nearly all are sweetened. After that, look for unsweetened ones, chop them finely, and soak them in warm water first.',
     notes:
-      'Cranberries are very tart, so mix them with a naturally sweeter food (pear, apple, banana, or sweet potato) rather than adding sugar.\n\nSkip store-bought cranberry sauce and cranberry juice drinks, which carry a lot of added sugar; no juice of any kind before 12 months.\n\nCooked cranberries add some vitamin C, which helps baby absorb iron, to an iron-rich food like iron-fortified oats, turkey, or beef.',
+      'Cranberries are very tart, so mix them with a naturally sweeter food (pear, apple, banana, or sweet potato) rather than adding sugar.\n\nSkip store-bought cranberry sauce and cranberry juice drinks, which carry a lot of added sugar; no juice of any kind before 12 months.\n\nCooked cranberries add some vitamin C, which helps baby absorb iron from an iron-rich food served alongside.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },

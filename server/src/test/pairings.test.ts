@@ -103,4 +103,34 @@ describe("food pairing completeness", () => {
     const pairedIds = new Set(rows.flatMap((r) => [r.ironFoodId, r.vitCFoodId]));
     expect(round.filter((f) => !pairedIds.has(f.id)).map((f) => f.slug)).toEqual([]);
   });
+
+  // 880: the partners these foods' notes used to name now live in the pairing section, so the
+  // section must hold every one of them (the notes dropped the lists).
+  it("pairs every partner the 880 notes used to name", async () => {
+    const all = await db.select({ id: schema.foods.id, slug: schema.foods.slug }).from(schema.foods);
+    const slugOf = new Map(all.map((f) => [f.id, f.slug]));
+    const rows = await db.select().from(schema.foodPairings);
+    const partnersOf = (slug: string) =>
+      rows
+        .flatMap((r) => {
+          const iron = slugOf.get(r.ironFoodId);
+          const vitC = slugOf.get(r.vitCFoodId);
+          return iron === slug ? [vitC] : vitC === slug ? [iron] : [];
+        })
+        .sort();
+    const named: Record<string, string[]> = {
+      cranberries: ["beef", "iron_fortified_oats", "turkey"],
+      kale: ["beef", "chickpeas", "egg", "lentils", "tofu"],
+      brussels_sprouts: ["beef", "lentils"],
+      lentils: ["bell_pepper", "tomato"],
+      kidney_beans: ["bell_pepper", "tomato"],
+      pinto_beans: ["bell_pepper", "tomato"],
+      white_beans: ["bell_pepper", "broccoli", "tomato"],
+      butter_beans: ["broccoli", "tomato"],
+      edamame: ["bell_pepper", "broccoli"],
+    };
+    for (const [slug, partners] of Object.entries(named)) {
+      expect([slug, partnersOf(slug)]).toEqual([slug, expect.arrayContaining(partners)]);
+    }
+  });
 });
