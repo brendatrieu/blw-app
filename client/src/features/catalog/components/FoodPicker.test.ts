@@ -80,9 +80,9 @@ describe("foodPickerOption", () => {
     ]);
   });
 
-  it("falls back to the category when a custom food carries no emoji", () => {
+  it("shows 🍽️ for a custom food with no emoji, not its category's (ledger 879)", () => {
     expect(foodPickerOption(food({ id: "food-3", slug: "oat-slice-aa11bb", isCustom: true, category: "grain" })).emoji)
-      .toBe("🌾");
+      .toBe("🍽️");
   });
 });
 

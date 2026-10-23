@@ -17,7 +17,7 @@ export function storageItemEmoji(item: StorageItem): string {
   // Storage rows carry no category — a custom food's own emoji, or the
   // slug map, is all there is to go on.
   const first = item.foods[0];
-  if (first) return getFoodEmoji(first.slug, null, first.emoji);
+  if (first) return getFoodEmoji(first.slug, first.emoji);
   if (item.recipeTitle) return "🍲";
   return "📝";
 }

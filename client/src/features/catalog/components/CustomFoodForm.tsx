@@ -9,7 +9,6 @@ import {
   type FoodDetail,
 } from "@blw/shared";
 import { ALLERGEN_SLUGS, CATEGORIES } from "../constants.js";
-import { getCategoryEmoji } from "../foodEmoji.js";
 import { useCreateCustomFood, useUpdateCustomFood } from "../hooks.js";
 import { Field } from "../../../components/ui/Field.js";
 import { Input, Textarea } from "../../../components/ui/Input.js";
@@ -23,7 +22,7 @@ import { useSubmitValidation, type FormErrors } from "../../../lib/forms.js";
 export interface CustomFoodValues {
   name: string;
   category: FoodCategory;
-  /** "" means "no emoji"; the UI seeds it from the category, never forces it. */
+  /** "" means "no emoji": the food shows 🍽️ (ledger 879). */
   emoji: string;
   allergenSlugs: string[];
   notes: string;
@@ -54,7 +53,7 @@ export function validateCustomFood(values: CustomFoodValues): CustomFoodErrors {
   else if (name.length > CUSTOM_FOOD_NAME_MAX) errors.name = `Name must be ${CUSTOM_FOOD_NAME_MAX} characters or fewer`;
 
   const emoji = values.emoji.trim();
-  // Blank is a real answer (the food falls back to the category emoji);
+  // Blank is a real answer (the food shows 🍽️);
   // anything present has to be exactly one emoji, same rule as the server.
   if (emoji.length > 0 && !isSingleEmoji(emoji)) errors.emoji = "Use a single emoji, or leave it blank";
 
@@ -83,34 +82,16 @@ export function buildCustomFoodInput(values: CustomFoodValues): CreateCustomFood
   };
 }
 
-/**
- * The emoji field's value after the category changes. The field is a
- * *suggestion*, not a derived value: it re-seeds from the new category only
- * while the parent hasn't made it their own — i.e. it's blank, or still the
- * previous category's suggestion. A hand-picked 🥯 survives every category
- * switch. Pure so this "don't clobber my choice" rule is pinned by a test
- * rather than by reading the handler.
- */
-export function resolveEmojiForCategory(
-  currentEmoji: string,
-  previousCategory: FoodCategory,
-  nextCategory: FoodCategory,
-): string {
-  const current = currentEmoji.trim();
-  if (current === "" || current === getCategoryEmoji(previousCategory)) return getCategoryEmoji(nextCategory);
-  return currentEmoji;
-}
-
 /** The form's starting values: an existing food's own fields when editing,
- * otherwise the category default plus whatever name the caller prefilled. */
+ * otherwise the default category, no emoji (ledger 879) and whatever name
+ * the caller prefilled. */
 export function initialCustomFoodValues(food?: FoodDetail, initialName = ""): CustomFoodValues {
-  const category = food?.category ?? DEFAULT_CUSTOM_FOOD_CATEGORY;
   return {
     name: food?.name ?? initialName,
-    category,
-    // Editing keeps "no emoji" as "" (shown muted in the chooser), so saving
-    // an unrelated change can't quietly store the category emoji (ledger 872).
-    emoji: food ? (food.emoji ?? "") : getCategoryEmoji(category),
+    category: food?.category ?? DEFAULT_CUSTOM_FOOD_CATEGORY,
+    // A new food starts empty and an emoji-less one stays "", so the box
+    // shows its 🍽️ placeholder and Save stores no emoji (ledgers 872, 879).
+    emoji: food?.emoji ?? "",
     allergenSlugs: food?.allergens ? [...food.allergens] : [],
     notes: food?.notes ?? "",
   };
@@ -198,14 +179,6 @@ export function CustomFoodForm({
     setValues((current) => ({ ...current, [key]: value }));
   }
 
-  function handleCategoryChange(nextCategory: FoodCategory) {
-    setValues((current) => ({
-      ...current,
-      category: nextCategory,
-      emoji: resolveEmojiForCategory(current.emoji, current.category, nextCategory),
-    }));
-  }
-
   function toggleAllergen(slug: string) {
     setValues((current) => ({
       ...current,
@@ -274,7 +247,7 @@ export function CustomFoodForm({
         <Select
           id={`${idPrefix}-category`}
           value={values.category}
-          onChange={(e) => handleCategoryChange(e.target.value as FoodCategory)}
+          onChange={(e) => setValue("category", e.target.value as FoodCategory)}
         >
           {CATEGORIES.map((option) => (
             <option key={option.value} value={option.value}>
@@ -288,14 +261,13 @@ export function CustomFoodForm({
         label="Emoji (optional)"
         htmlFor={`${idPrefix}-emoji`}
         error={shownErrors.emoji}
-        hint="Shown wherever this food appears. Starts from the category — change it to anything."
+        hint="Shown wherever this food appears."
       >
-        {/* Ledger 872: the box itself opens the grid; its id is the label's
-            target and what a failed submit focuses. */}
+        {/* Ledgers 872, 879: the box is a text field that also opens the grid;
+            its id is the label's target and what a failed submit focuses. */}
         <EmojiChooser
           id={`${idPrefix}-emoji`}
           value={values.emoji}
-          category={values.category}
           onChange={(emoji) => setValue("emoji", emoji)}
         />
       </Field>

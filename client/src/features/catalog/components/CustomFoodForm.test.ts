@@ -4,13 +4,11 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { FoodDetail } from "@blw/shared";
-import { getCategoryEmoji } from "../foodEmoji.js";
 import { ALLERGEN_SLUGS, CATEGORIES } from "../constants.js";
 import {
   CustomFoodForm,
   buildCustomFoodInput,
   initialCustomFoodValues,
-  resolveEmojiForCategory,
   validateCustomFood,
   type CustomFoodValues,
 } from "./CustomFoodForm.js";
@@ -80,7 +78,7 @@ describe("validateCustomFood", () => {
     expect(validateCustomFood(values({ name: `${"a".repeat(60)}   ` })).name).toBeUndefined();
   });
 
-  it("treats a blank emoji as valid (it falls back to the category) but rejects non-emoji text", () => {
+  it("treats a blank emoji as valid (the food shows 🍽️) but rejects non-emoji text", () => {
     expect(validateCustomFood(values({ emoji: "" })).emoji).toBeUndefined();
     expect(validateCustomFood(values({ emoji: "  " })).emoji).toBeUndefined();
     expect(validateCustomFood(values({ emoji: "bread" })).emoji).toBe("Use a single emoji, or leave it blank");
@@ -126,25 +124,11 @@ describe("buildCustomFoodInput", () => {
   });
 });
 
-describe("resolveEmojiForCategory", () => {
-  it("re-seeds a blank field from the new category", () => {
-    expect(resolveEmojiForCategory("", "fruit", "protein")).toBe(getCategoryEmoji("protein"));
-  });
-
-  it("re-seeds a field still showing the OLD category's suggestion", () => {
-    expect(resolveEmojiForCategory(getCategoryEmoji("fruit"), "fruit", "dairy")).toBe(getCategoryEmoji("dairy"));
-  });
-
-  it("never clobbers an emoji the parent chose themselves", () => {
-    expect(resolveEmojiForCategory("🥯", "fruit", "protein")).toBe("🥯");
-  });
-});
-
 describe("initialCustomFoodValues", () => {
-  it("starts a new food from the category default emoji and the prefilled name", () => {
+  it("starts a new food with NO emoji (not the category's, ledger 879) and the prefilled name", () => {
     const initial = initialCustomFoodValues(undefined, "Kale chips");
     expect(initial.name).toBe("Kale chips");
-    expect(initial.emoji).toBe(getCategoryEmoji(initial.category));
+    expect(initial.emoji).toBe("");
     expect(initial.allergenSlugs).toEqual([]);
   });
 
@@ -156,8 +140,8 @@ describe("initialCustomFoodValues", () => {
       allergenSlugs: ["wheat", "egg"],
       notes: "Cut into strips",
     });
-    // No emoji stays "" on edit: the chooser shows the category emoji muted,
-    // and Save keeps null instead of quietly storing it (ledger 872).
+    // No emoji stays "" on edit: the box shows its 🍽️ placeholder, and Save
+    // keeps null (ledgers 872, 879).
     expect(initialCustomFoodValues(customFood({ emoji: null })).emoji).toBe("");
   });
 
@@ -209,14 +193,15 @@ describe("CustomFoodForm (render)", () => {
     );
   });
 
-  it("seeds the emoji box from the category and offers every category option", () => {
+  it("renders an empty emoji text field showing 🍽️, and offers every category option", () => {
     const html = render(createElement(CustomFoodForm, { onSaved: () => {} }));
-    // Ledger 872: the box is the control, labelled by the Field and named by its value.
-    expect(html).toMatch(
-      new RegExp(`<button[^>]*id="custom-food-emoji"[^>]*aria-label="Emoji: ${getCategoryEmoji("fruit")}. Change"`),
-    );
+    // Ledger 879: the box is a text field labelled by the Field, empty, its placeholder the default.
+    expect(html).toMatch(/<input[^>]*id="custom-food-emoji"[^>]*placeholder="🍽️"[^>]*value=""/);
     expect(html).toContain('for="custom-food-emoji"');
-    expect(html).not.toContain("Choose an emoji");
+    expect(html).toContain("Shown wherever this food appears.");
+    for (const gone of ["Choose an emoji", "No emoji chosen", "Or type one", "No emoji<", "Starts from the category"]) {
+      expect(html).not.toContain(gone);
+    }
     expect(html).toContain('<option value="protein">Protein</option>');
     expect(html).toContain('<option value="legume">Legume</option>');
     // Item 332: the select uses the LONG label, while the Foods page's filter

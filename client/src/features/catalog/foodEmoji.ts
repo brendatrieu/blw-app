@@ -1,4 +1,4 @@
-import { isSingleEmoji, type FoodCategory } from "@blw/shared";
+import type { FoodCategory } from "@blw/shared";
 
 /**
  * Explicit emoji per seed food slug — one entry for every food in
@@ -129,53 +129,31 @@ export const FOOD_EMOJI: Record<string, string> = {
   sesame_oil: "🫗",
 };
 
-/** Fallback emoji when a food's slug isn't in `FOOD_EMOJI` (e.g. a future seed addition). */
-const CATEGORY_FALLBACK_EMOJI: Record<FoodCategory, string> = {
-  protein: "🍗",
-  veg: "🥦",
-  fruit: "🍎",
-  grain: "🌾",
-  dairy: "🥛",
-  legume: "🫘",
-  spice: "🌿",
-};
-
-/** Emoji shown when neither the slug nor a category is available. */
-const DEFAULT_EMOJI = "🍽️";
-
 /**
- * The emoji this app would suggest for a whole category — the default the
- * custom-food form seeds its emoji field with, and the second-to-last
- * fallback in `getFoodEmoji`. Exported so the form and the resolver can
- * never drift apart on what "the fruit emoji" is.
+ * The plate with utensils (U+1F37D U+FE0F): what a food with no emoji of its
+ * own shows — every custom food left blank (ledger 879; its tint still comes
+ * from its category) and anything else the slug map doesn't know. Also the
+ * custom-food emoji field's placeholder, so the empty box shows exactly what
+ * the food will get.
  */
-export function getCategoryEmoji(category: FoodCategory): string {
-  return CATEGORY_FALLBACK_EMOJI[category];
-}
+export const DEFAULT_FOOD_EMOJI = "\u{1F37D}\u{FE0F}";
 
 /**
- * The emoji to show for a food, in priority order (item 177):
+ * The emoji to show for a food, in priority order (item 177, ledger 879):
  *  1. `emoji` — the food's OWN emoji. Only custom foods ever carry one (a
- *     parent picked it), and when they do it beats every guess below,
- *     including a slug that happens to collide with a seeded one.
- *  2. the curated per-slug map, for seeded catalog foods;
- *  3. the food's category;
- *  4. a generic plate.
+ *     parent picked it), and when they do it beats the slug map, including
+ *     a slug that happens to collide with a seeded one;
+ *  2. the curated per-slug map, which covers every seeded catalog food
+ *     (pinned in the test);
+ *  3. the plate with utensils. A custom food's slug carries a random
+ *     suffix, so one with no emoji always lands here — its category no
+ *     longer picks one (ledger 879).
  *
- * `emoji` is last in the parameter list, not first, so the pre-existing
- * `getFoodEmoji(slug)` / `getFoodEmoji(slug, category)` calls (pairings,
- * recipe ingredients — shapes that carry no emoji at all) keep compiling
- * unchanged. Blank/whitespace-only and null are treated as "not set", so a
- * cleared emoji field falls through to the map rather than rendering an
- * empty span.
+ * Blank/whitespace-only and null are "not set", so a cleared emoji field
+ * falls through rather than rendering an empty span.
  */
-export function getFoodEmoji(slug: string, category?: FoodCategory | null, emoji?: string | null): string {
-  const own = emoji?.trim();
-  if (own) return own;
-  const bySlug = FOOD_EMOJI[slug];
-  if (bySlug) return bySlug;
-  if (category) return CATEGORY_FALLBACK_EMOJI[category];
-  return DEFAULT_EMOJI;
+export function getFoodEmoji(slug: string, emoji?: string | null): string {
+  return emoji?.trim() || FOOD_EMOJI[slug] || DEFAULT_FOOD_EMOJI;
 }
 
 /**
@@ -353,7 +331,7 @@ export function getFoodTint(slug: string, category?: FoodCategory | null): Plate
 
 /**
  * The shape `emojiCluster` needs from one food: a slug, and optionally the
- * two things that can beat it (its own emoji, its category). Structural
+ * two things that can beat it (its own emoji; its category, for the tint). Structural
  * rather than `MealFood`, because a storage container's `foods` carry no
  * category at all (item 347) and a meal's do — one cluster renderer, two
  * callers, neither importing the other's response type.
@@ -376,10 +354,10 @@ export interface EmojiCluster {
   overflow: number;
 }
 
-/** A food as a plate: its emoji (own > slug > category) on its group tint. */
+/** A food as a plate: its emoji (own > slug > 🍽️) on its group tint (slug > category). */
 export function foodPlate(food: EmojiClusterFood): Plate {
   return {
-    emoji: getFoodEmoji(food.slug, food.category, food.emoji),
+    emoji: getFoodEmoji(food.slug, food.emoji),
     tint: getFoodTint(food.slug, food.category),
   };
 }
@@ -413,7 +391,7 @@ export interface EmojiChoiceGroup {
  * The custom-food emoji chooser's grid (ledger 862): mostly the art the
  * catalog above already uses, so a parent's pick sits naturally beside the
  * built-in foods. 🍑 🍇 🌽 🍄 are the only extras — common first foods the
- * catalog doesn't carry yet. The grid's "Or type one" field takes any other.
+ * catalog doesn't carry yet. Any other can be typed or pasted into the box.
  */
 export const EMOJI_CHOICE_GROUPS: readonly EmojiChoiceGroup[] = [
   {
@@ -494,38 +472,3 @@ export const EMOJI_CHOICE_GROUPS: readonly EmojiChoiceGroup[] = [
     ],
   },
 ];
-
-/** What the custom-food form's emoji box shows (ledger 872). */
-export interface EmojiBox {
-  /** The chosen emoji, or the category emoji a food with none falls back to. */
-  emoji: string;
-  /** False = no emoji chosen (plain plate): the box draws `emoji` muted. */
-  chosen: boolean;
-  /** The box button's accessible name: what it is, the current choice, what tapping does. */
-  label: string;
-}
-
-/**
- * The emoji box for a form value ("" = none) and category. A custom food's
- * slug always carries a random suffix, so it never hits `FOOD_EMOJI`: with no
- * emoji of its own it gets exactly its category's.
- */
-export function emojiBox(value: string, category: FoodCategory): EmojiBox {
-  const own = value.trim();
-  if (own) return { emoji: own, chosen: true, label: `Emoji: ${own}. Change` };
-  const fallback = getCategoryEmoji(category);
-  return { emoji: fallback, chosen: false, label: `Emoji: none, shows ${fallback}. Change` };
-}
-
-export const TYPED_EMOJI_ERROR = "Use a single emoji";
-
-/**
- * The grid's "Or type one" field on Use/Enter: one emoji (the server's own
- * `isSingleEmoji` rule) is the new value, anything else is an error, and a
- * blank field changes nothing.
- */
-export function readTypedEmoji(text: string): { emoji: string } | { error: string } | null {
-  const typed = text.trim();
-  if (!typed) return null;
-  return isSingleEmoji(typed) ? { emoji: typed } : { error: TYPED_EMOJI_ERROR };
-}

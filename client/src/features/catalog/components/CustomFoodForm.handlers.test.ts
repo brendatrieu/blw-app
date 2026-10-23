@@ -19,6 +19,7 @@ const h = vi.hoisted(() => {
 
   return {
     store,
+    created: [] as unknown[],
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states)) store.states[i] = typeof init === "function" ? (init as () => unknown)() : init;
@@ -47,7 +48,7 @@ vi.mock("../hooks.js", async (importOriginal) => {
   return {
     ...actual,
     useFoods: () => ({ data: { foods: [] }, isLoading: false }),
-    useCreateCustomFood: () => ({ mutate: () => {}, isPending: false }),
+    useCreateCustomFood: () => ({ mutate: (input: unknown) => h.created.push(input), isPending: false }),
     useUpdateCustomFood: () => ({ mutate: () => {}, isPending: false }),
   };
 });
@@ -58,6 +59,8 @@ import { EmojiChooser } from "./EmojiChooser.js";
 import { FoodPicker } from "./FoodPicker.js";
 import { MultiCombobox } from "../../../components/ui/MultiCombobox.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
+import { Field } from "../../../components/ui/Field.js";
+import { Select } from "../../../components/ui/Select.js";
 import { HowToLink } from "../../safety/HowToLink.js";
 
 interface Rendered {
@@ -173,19 +176,77 @@ describe("the Add a custom food sheet's How-to link (item 733)", () => {
   });
 });
 
-// Ledger 872: the chooser only reports a pick; the form must store it.
-describe("CustomFoodForm's emoji box (ledger 872)", () => {
+// Ledgers 872, 879: the chooser only reports what was typed or picked; the
+// form stores it, starts a new food empty, and validates it on Save.
+describe("CustomFoodForm's emoji box (ledgers 872, 879)", () => {
+  const form = () => renderForm({ initialName: "Papaya" });
   function chooser(): Rendered {
-    const found = find(renderForm({}), EmojiChooser);
+    const found = find(form(), EmojiChooser);
     if (!found) throw new Error("the form should render the emoji chooser");
     return found;
   }
+  const emojiField = () => {
+    const fields: Rendered[] = [];
+    const walk = (node: unknown) => {
+      if (!node || typeof node !== "object") return;
+      if (Array.isArray(node)) return node.forEach(walk);
+      const el = node as Rendered;
+      if (el.type === Field) fields.push(el);
+      Object.values(el.props ?? {}).forEach(walk);
+    };
+    walk(form());
+    return fields.find((field) => field.props.label === "Emoji (optional)")!;
+  };
+  const submit = () =>
+    (form().props.onSubmit as (event: unknown) => void)({
+      preventDefault: () => {},
+      stopPropagation: () => {},
+    });
 
-  it("stores what the chooser picks", () => {
+  it("stores what the chooser reports", () => {
     h.reset();
     (chooser().props.onChange as (emoji: string) => void)("🥭");
     expect(chooser().props.value).toBe("🥭");
     (chooser().props.onChange as (emoji: string) => void)("");
     expect(chooser().props.value).toBe("");
+  });
+
+  it("a new food starts with no emoji, and changing the category leaves the emoji alone", () => {
+    h.reset();
+    expect(chooser().props.value).toBe("");
+    const category = () => find(form(), Select)!;
+    (category().props.onChange as (event: unknown) => void)({ target: { value: "protein" } });
+    expect(category().props.value).toBe("protein");
+    expect(chooser().props.value).toBe("");
+    (chooser().props.onChange as (emoji: string) => void)("🥯");
+    (category().props.onChange as (event: unknown) => void)({ target: { value: "dairy" } });
+    expect(chooser().props.value).toBe("🥯");
+  });
+
+  it("hint says where the emoji shows, not that the category picks one", () => {
+    h.reset();
+    expect(emojiField().props.hint).toBe("Shown wherever this food appears.");
+  });
+
+  it("a typed emoji saves; typed text is refused on Save with the field's error, as before", () => {
+    h.reset();
+    h.created.length = 0;
+    (chooser().props.onChange as (emoji: string) => void)("ab");
+    expect(emojiField().props.error).toBeUndefined(); // nothing shown before Save
+    submit();
+    expect(h.created).toEqual([]);
+    expect(emojiField().props.error).toBe("Use a single emoji, or leave it blank");
+
+    (chooser().props.onChange as (emoji: string) => void)(" 🥯 ");
+    expect(emojiField().props.error).toBeUndefined();
+    submit();
+    expect(h.created).toEqual([expect.objectContaining({ name: "Papaya", emoji: "🥯" })]);
+  });
+
+  it("left empty, Save stores no emoji", () => {
+    h.reset();
+    h.created.length = 0;
+    submit();
+    expect(h.created).toEqual([expect.objectContaining({ emoji: null })]);
   });
 });

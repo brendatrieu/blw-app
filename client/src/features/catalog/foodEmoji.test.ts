@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { isSingleEmoji } from "@blw/shared";
 import {
+  DEFAULT_FOOD_EMOJI,
   EMOJI_CHOICE_GROUPS,
-  TYPED_EMOJI_ERROR,
-  emojiBox,
-  readTypedEmoji,
   FOOD_EMOJI,
   emojiCluster,
-  getCategoryEmoji,
+  foodPlate,
   getExtraIngredientEmoji,
   getFoodEmoji,
   getFoodTint,
@@ -15,47 +13,48 @@ import {
 
 describe("getFoodEmoji", () => {
   it("prefers the food's OWN emoji over everything else (item 177)", () => {
-    // Even for a slug that IS in the curated map, and with a category that
-    // would also resolve — a parent's pick outranks both.
-    expect(getFoodEmoji("banana", "fruit", "🍞")).toBe("🍞");
-    expect(getFoodEmoji("unknown-slug", null, "🫓")).toBe("🫓");
+    // Even for a slug that IS in the curated map — a parent's pick outranks it.
+    expect(getFoodEmoji("banana", "🍞")).toBe("🍞");
+    expect(getFoodEmoji("unknown-slug", "🫓")).toBe("🫓");
   });
 
   it("treats a blank or whitespace-only emoji as 'not set' and falls through", () => {
-    expect(getFoodEmoji("banana", "fruit", "")).toBe("🍌");
-    expect(getFoodEmoji("banana", "fruit", "   ")).toBe("🍌");
-    expect(getFoodEmoji("banana", "fruit", null)).toBe("🍌");
-    expect(getFoodEmoji("banana", "fruit", undefined)).toBe("🍌");
+    expect(getFoodEmoji("banana", "")).toBe("🍌");
+    expect(getFoodEmoji("banana", "   ")).toBe("🍌");
+    expect(getFoodEmoji("banana", null)).toBe("🍌");
+    expect(getFoodEmoji("banana", undefined)).toBe("🍌");
   });
 
   it("trims a stored emoji rather than rendering the padding", () => {
-    expect(getFoodEmoji("custom-x", "fruit", " 🥯 ")).toBe("🥯");
+    expect(getFoodEmoji("custom-x", " 🥯 ")).toBe("🥯");
   });
 
-  it("falls back to the slug map, then the category, then a plate", () => {
+  it("falls back to the slug map, then the plate with utensils (ledger 879)", () => {
     expect(getFoodEmoji("salmon")).toBe("🐟");
-    expect(getFoodEmoji("grandmas-banana-bread-k3f9q1", "grain")).toBe(getCategoryEmoji("grain"));
+    expect(DEFAULT_FOOD_EMOJI).toBe("\u{1F37D}\u{FE0F}");
     expect(getFoodEmoji("grandmas-banana-bread-k3f9q1")).toBe("🍽️");
     expect(getFoodEmoji("grandmas-banana-bread-k3f9q1", null)).toBe("🍽️");
   });
-
-  it("keeps the pre-existing one- and two-argument call shapes working", () => {
-    // Pairings and recipe ingredients carry no emoji field at all; adding the
-    // third parameter must not have broken them.
-    expect(getFoodEmoji("avocado")).toBe("🥑");
-    expect(getFoodEmoji("avocado", "fruit")).toBe("🥑");
-  });
 });
 
-describe("getCategoryEmoji", () => {
-  it("answers one emoji per category, and matches getFoodEmoji's own fallback", () => {
-    const categories = ["protein", "veg", "fruit", "grain", "dairy", "legume", "spice"] as const;
-    for (const category of categories) {
-      const emoji = getCategoryEmoji(category);
-      expect(emoji.length).toBeGreaterThan(0);
-      expect(getFoodEmoji("not-a-seeded-slug", category)).toBe(emoji);
+describe("a custom food with no emoji (ledger 879)", () => {
+  it("shows 🍽️ on its category's tint, whatever the category", () => {
+    for (const category of ["protein", "veg", "fruit", "grain", "dairy", "legume", "spice"] as const) {
+      expect(foodPlate({ slug: "papaya-k3f9q1", category, emoji: null })).toEqual({
+        emoji: "🍽️",
+        tint: getFoodTint("papaya-k3f9q1", category),
+      });
     }
-    expect(new Set(categories.map(getCategoryEmoji)).size).toBe(categories.length);
+    expect(foodPlate({ slug: "papaya-k3f9q1", category: "grain", emoji: null }).tint).toBe("grain");
+  });
+
+  it("in a cluster (meal card, storage card), beside a catalog food that keeps its own art", () => {
+    const { plates } = emojiCluster([
+      { slug: "papaya-k3f9q1", category: "fruit", emoji: null },
+      { slug: "banana", category: "fruit", emoji: null },
+      { slug: "toast-x1", category: "grain", emoji: "🥯" },
+    ]);
+    expect(plates.map((plate) => plate.emoji)).toEqual(["🍽️", "🍌", "🥯"]);
   });
 });
 
@@ -85,8 +84,8 @@ describe("emoji coverage for the seeded catalog", () => {
     expect(CATALOG_SLUGS).toHaveLength(92);
     expect(new Set(CATALOG_SLUGS).size).toBe(CATALOG_SLUGS.length);
 
-    // With no category passed, the only fallback left is the generic plate —
-    // so a slug that resolves to anything else came from the curated map.
+    // The only fallback is the generic plate — so a slug that resolves to
+    // anything else came from the curated map (catalog foods never show 🍽️).
     const missing = CATALOG_SLUGS.filter((slug) => getFoodEmoji(slug) === getFoodEmoji("not-a-seeded-slug"));
     expect(missing).toEqual([]);
   });
@@ -319,34 +318,5 @@ describe("EMOJI_CHOICE_GROUPS (ledger 862)", () => {
     const catalog = new Set(Object.values(FOOD_EMOJI));
     const extras = choices.filter(({ emoji }) => !catalog.has(emoji)).map(({ emoji }) => emoji);
     expect(extras.sort()).toEqual(["🍄", "🍇", "🍑", "🌽"].sort());
-  });
-});
-
-describe("the custom-food emoji box (ledger 872)", () => {
-  it("shows the chosen emoji and names it", () => {
-    expect(emojiBox("🥕", "fruit")).toEqual({ emoji: "🥕", chosen: true, label: "Emoji: 🥕. Change" });
-    expect(emojiBox("  🥕 ", "fruit").emoji).toBe("🥕");
-  });
-
-  it("with none chosen, shows the category's emoji a food with none gets, flagged muted", () => {
-    expect(emojiBox("", "veg")).toEqual({
-      emoji: getCategoryEmoji("veg"),
-      chosen: false,
-      label: `Emoji: none, shows ${getCategoryEmoji("veg")}. Change`,
-    });
-    expect(emojiBox("   ", "dairy").chosen).toBe(false);
-  });
-});
-
-describe("readTypedEmoji (ledger 872)", () => {
-  it("takes any single emoji, trimmed, not just the grid's", () => {
-    expect(readTypedEmoji(" 🥯 ")).toEqual({ emoji: "🥯" });
-    expect(readTypedEmoji("👨‍👩‍👧")).toEqual({ emoji: "👨‍👩‍👧" });
-  });
-
-  it("refuses text or two emojis with the server's rule, and ignores a blank field", () => {
-    expect(readTypedEmoji("ab")).toEqual({ error: TYPED_EMOJI_ERROR });
-    expect(readTypedEmoji("🥕🥕")).toEqual({ error: TYPED_EMOJI_ERROR });
-    expect(readTypedEmoji("  ")).toBeNull();
   });
 });

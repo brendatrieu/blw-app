@@ -29,7 +29,7 @@ export function foodPickerOption(food: FoodListItem): MultiComboboxOption {
   return {
     value: food.id,
     label: food.name,
-    emoji: getFoodEmoji(food.slug, food.category, food.emoji),
+    emoji: getFoodEmoji(food.slug, food.emoji),
     markers: food.allergens.map(allergenLabel),
   };
 }
@@ -59,7 +59,7 @@ export function foodPickerOptions(foods: FoodListItem[], keptFoods: KeptFood[] =
       .map((food) => ({
         value: food.id,
         label: withDeletedMark(food.name, true),
-        emoji: getFoodEmoji(food.slug, food.category, food.emoji),
+        emoji: getFoodEmoji(food.slug, food.emoji),
       })),
   ];
 }

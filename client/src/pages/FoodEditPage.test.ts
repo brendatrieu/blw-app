@@ -61,8 +61,8 @@ describe("FoodEditPage", () => {
     const html = render(food());
     expect(html).toContain("Edit food");
     expect(html).toContain('value="Banana bread"');
-    // Ledger 872: the emoji box names the food's own emoji.
-    expect(html).toContain('aria-label="Emoji: 🍞. Change"');
+    // Ledgers 872, 879: the emoji box holds the food's own emoji.
+    expect(html).toMatch(/<input[^>]*id="food-edit-emoji"[^>]*value="🍞"/);
     expect(html).toContain("Cut into finger strips");
     // The food's own allergen is pre-ticked, and only that one.
     expect((html.match(/aria-pressed="true"/g) ?? []).length).toBe(1);

@@ -48,14 +48,14 @@ describe("FoodTile", () => {
     );
     expect(custom).toContain(">Custom<");
     expect(custom).toContain("inset-ring inset-ring-[var(--color-border)] text-[var(--color-text-muted)]\">Custom<");
-    // Item 177: its own emoji wins over the slug map / category fallback.
+    // Item 177: its own emoji wins over the slug map / 🍽️ fallback.
     expect(custom).toContain("🍞");
 
     const catalog = renderToString(createElement(MemoryRouter, null, createElement(FoodTile, { food: mockFood(1) })));
     expect(catalog).not.toContain(">Custom<");
   });
 
-  it("falls back to the category emoji for a custom food that has none", () => {
+  it("shows 🍽️ for a custom food that has none (ledger 879), still on its category's tint", () => {
     const html = renderToString(
       createElement(
         MemoryRouter,
@@ -63,7 +63,8 @@ describe("FoodTile", () => {
         createElement(FoodTile, { food: { ...mockFood(2), category: "grain", isCustom: true, emoji: null } }),
       ),
     );
-    expect(html).toContain("🌾");
+    expect(html).toContain("🍽️");
+    expect(html).not.toContain("🌾");
     // Item 659: on a 56px plate tinted by its category.
     expect(html).toContain("width:56px;height:56px;font-size:28px;background:var(--color-plate-grain)");
   });
