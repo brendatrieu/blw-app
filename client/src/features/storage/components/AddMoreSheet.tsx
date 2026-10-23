@@ -11,6 +11,7 @@ import { useMeals } from "../../tracking/hooks.js";
 import { mealRecipes } from "../../tracking/mealRecipes.js";
 import { hasNoServingsLeft, isLabelOnly, servePartHint, storageItemTitle } from "../format.js";
 import { useStorageItems } from "../hooks.js";
+import { addMoreCanApply, addMoreDiff, type AddMoreChange, type AddMoreServing } from "../addMoreSelection.js";
 import { storageItemCluster } from "./StorageItemCard.js";
 
 type AddMoreTab = "storage" | "recipe" | "food";
@@ -34,39 +35,20 @@ export const ADD_MORE_SEARCH_TABS: SegmentedControlOption<AddMoreTab | "all">[] 
 /** How many recent recipes or foods head their tab (the MR2 board shows three). */
 export const RECENT_LIMIT = 3;
 
-/** What Add more hands back: containers, and fresh foods and recipes. */
-export interface AddMorePicks {
-  items: StorageItem[];
-  foods: FoodListItem[];
-  recipes: { id: string; title: string }[];
-}
+export type { AddMoreServing };
 
 /**
- * What the Serving list already holds (ledger 793): its containers, the
- * meal's recipes (fresh or in a container) and its loose foods. None of it
- * is offered again, on any tab or in a search, the way a listed container
- * never was (item 760), so Add cannot put the same thing on the list twice.
- */
-export interface AddMoreServing {
-  itemIds: readonly string[];
-  recipeIds: readonly string[];
-  foodIds: readonly string[];
-}
-
-/**
- * The containers "In storage" lists (items 730/760): active, servable (a
- * Free-form label has nothing to log), with a serving left (a tracked
- * container at 0 — after a Restore or a resize — is the server's 409 at
- * routes/storage.ts, which would sink the whole sitting) and not already in
- * the Serving list.
+ * The containers "In storage" lists (items 730/760): every one already in
+ * the Serving list (shown ticked, ledger 878, whatever it has left), and any
+ * other that is active, servable (a Free-form label has nothing to log) and
+ * has a serving left (a tracked container at 0 — after a Restore or a resize
+ * — is the server's 409 at routes/storage.ts, which would sink the whole
+ * sitting).
  */
 export function addMoreStorageItems(items: readonly StorageItem[], servingIds: readonly string[]): StorageItem[] {
   return items.filter(
     (item) =>
-      item.status === "active" &&
-      !isLabelOnly(item) &&
-      !hasNoServingsLeft(item) &&
-      !servingIds.includes(item.id),
+      servingIds.includes(item.id) || (item.status === "active" && !isLabelOnly(item) && !hasNoServingsLeft(item)),
   );
 }
 
@@ -130,9 +112,10 @@ function PickRow({ checked, onToggle, plate, title, detail }: PickRowProps) {
 
 interface AddMoreSheetProps {
   babyId: string;
-  /** What is already in the Serving list, so it is never offered again. */
+  /** What is already in the Serving list: it opens ticked. */
   serving: AddMoreServing;
-  onAdd: (picks: AddMorePicks) => void;
+  /** Done: what to take off the Serving list and what to put on it. */
+  onDone: (change: AddMoreChange) => void;
   onClose: () => void;
 }
 
@@ -141,19 +124,22 @@ interface AddMoreSheetProps {
  * three tabs — "In storage" (containers), "Recipes" and "Foods" made fresh,
  * each of the last two opening with this baby's recent ones, then A–Z.
  * Typing searches all three at once: "All" (grouped) or one kind, keeping the
- * text (ledger 794). Picks are kept across tabs and searches until "Add",
- * pinned at the bottom. The sheet is a fixed height
- * from the start, so nothing moves while typing, switching tabs or as the
- * results change. Rendered only while open, so every opening starts empty.
+ * text (ledger 794). It opens with the Serving list ticked, each in its own
+ * row (ledger 878); ticks are kept across tabs and searches until "Done",
+ * pinned at the bottom, which adds the new ones and takes off the unticked
+ * ones. The sheet is a fixed height from the start, so nothing moves while
+ * typing, switching tabs or as the results change. Rendered only while
+ * open, so every opening starts from the Serving list; closing without Done
+ * changes nothing.
  */
-export function AddMoreSheet({ babyId, serving, onAdd, onClose }: AddMoreSheetProps) {
+export function AddMoreSheet({ babyId, serving, onDone, onClose }: AddMoreSheetProps) {
   const [tab, setTab] = useState<AddMoreTab>("storage");
   const [query, setQuery] = useState("");
   // Which kind a search shows; every new search starts on "All".
   const [searchTab, setSearchTab] = useState<AddMoreTab | "all">("all");
-  const [itemIds, setItemIds] = useState<string[]>([]);
-  const [foodIds, setFoodIds] = useState<string[]>([]);
-  const [recipeIds, setRecipeIds] = useState<string[]>([]);
+  const [itemIds, setItemIds] = useState<string[]>(() => [...serving.itemIds]);
+  const [foodIds, setFoodIds] = useState<string[]>(() => [...serving.foodIds]);
+  const [recipeIds, setRecipeIds] = useState<string[]>(() => [...serving.recipeIds]);
   const storage = useStorageItems("active");
   const foods = useFoods();
   // `fresh` like Log meal's picker (item 353): a recipe written moments ago
@@ -166,21 +152,21 @@ export function AddMoreSheet({ babyId, serving, onAdd, onClose }: AddMoreSheetPr
   const allFoods = useMemo(
     () =>
       (foods.data?.foods ?? [])
-        .filter((food) => !serving.foodIds.includes(food.id))
+        .filter((food) => !serving.covered.foodIds.includes(food.id))
         .sort(byLabel((food) => food.name)),
-    [foods.data, serving.foodIds],
+    [foods.data, serving.covered.foodIds],
   );
   const allRecipes = useMemo(
     () =>
       (recipes.data?.recipes ?? [])
-        .filter((recipe) => !serving.recipeIds.includes(recipe.id))
+        .filter((recipe) => !serving.covered.recipeIds.includes(recipe.id))
         .sort(byLabel((recipe: RecipeListItem) => recipe.title)),
-    [recipes.data, serving.recipeIds],
+    [recipes.data, serving.covered.recipeIds],
   );
   const recent = useMemo(() => recentIds(meals.data?.items ?? []), [meals.data]);
   const recentRecipes = resolveIds(recent.recipeIds, allRecipes).slice(0, RECENT_LIMIT);
   const recentFoods = resolveIds(recent.foodIds, allFoods).slice(0, RECENT_LIMIT);
-  const pickedCount = itemIds.length + foodIds.length + recipeIds.length;
+  const ticks = { itemIds, recipeIds, foodIds };
   const q = query.trim().toLowerCase();
 
   const toggle = (set: (update: (current: string[]) => string[]) => void, id: string) => (checked: boolean) =>
@@ -239,7 +225,7 @@ export function AddMoreSheet({ babyId, serving, onAdd, onClose }: AddMoreSheetPr
       available.length > 0 ? (
         <ul className="flex flex-col">{storageRows(available)}</ul>
       ) : storage.isLoading ? null : (
-        <p className="text-sm text-[var(--color-text-muted)]">Nothing else in storage to add.</p>
+        <p className="text-sm text-[var(--color-text-muted)]">Nothing in storage to add.</p>
       );
   } else if (tab === "recipe") {
     body = [group("Recent", recipeRows(recentRecipes)), group("All recipes", recipeRows(allRecipes))];
@@ -288,16 +274,18 @@ export function AddMoreSheet({ babyId, serving, onAdd, onClose }: AddMoreSheetPr
         <Button
           type="button"
           className="w-full"
-          disabled={pickedCount === 0}
-          onClick={() =>
-            onAdd({
-              items: resolveIds(itemIds, available),
-              foods: resolveIds(foodIds, allFoods),
-              recipes: resolveIds(recipeIds, allRecipes).map(({ id, title }) => ({ id, title })),
-            })
-          }
+          disabled={!addMoreCanApply(serving, ticks)}
+          onClick={() => {
+            const { added, removed } = addMoreDiff(serving, ticks);
+            onDone({
+              removed,
+              items: resolveIds(added.itemIds, available),
+              foods: resolveIds(added.foodIds, allFoods),
+              recipes: resolveIds(added.recipeIds, allRecipes).map(({ id, title }) => ({ id, title })),
+            });
+          }}
         >
-          Add
+          Done
         </Button>
       </div>
     </Sheet>

@@ -156,11 +156,20 @@ function serve() {
   return h.served[h.served.length - 1]!.input;
 }
 
-function addMore(picks: { items?: StorageItem[]; foods?: unknown[]; recipes?: { id: string; title: string }[] }) {
+const NONE = { itemIds: [] as string[], recipeIds: [] as string[], foodIds: [] as string[] };
+type Change = {
+  items?: StorageItem[];
+  foods?: unknown[];
+  recipes?: { id: string; title: string }[];
+  removed?: Partial<typeof NONE>;
+};
+
+/** Opens Add more and presses Done with this change (new picks, ticks taken off). */
+function addMore({ removed, ...picks }: Change) {
   click(render(), (element) => element.props?.children === "+ Add more");
   const [sheet] = findAll(render(), byType(AddMoreSheet));
   if (!sheet) throw new Error("+ Add more should open the Add more sheet");
-  (sheet.props.onAdd as (value: unknown) => void)({ items: [], foods: [], recipes: [], ...picks });
+  (sheet.props.onDone as (value: unknown) => void)({ items: [], foods: [], recipes: [], ...picks, removed: { ...NONE, ...removed } });
 }
 
 describe("the Serve sheet's When field (item 354)", () => {
@@ -326,21 +335,54 @@ describe("the Serving list (ledger 760)", () => {
     expect(button!.props.children).toBe("Serving…");
   });
 
-  it("tells Add more everything already listed, so it never offers it again (ledger 793)", () => {
+  it("tells Add more what is listed, to open ticked, and what the containers hold, never to offer (ledgers 793, 878)", () => {
     h.reset();
     addMore({ items: [SALMON_ITEM], foods: [BANANA], recipes: [{ id: "r-oat", title: "Oat Pancakes" }] });
     click(render(), (element) => element.props?.children === "+ Add more");
     const [sheet] = findAll(render(), byType(AddMoreSheet));
-    // Containers; the container's recipe and the fresh one; the fresh food and
-    // the food-only container's Avocado (a recipe container's foods are its
-    // ingredients, so they are not in it).
+    // Ticked: the containers, the fresh recipe, the fresh food. Covered: the
+    // container's recipe and the food-only container's Avocado (a recipe
+    // container's foods are its ingredients, so they are not in it).
     expect(sheet!.props.serving).toEqual({
       itemIds: [ITEM.id, SALMON_ITEM.id],
-      recipeIds: [SALMON, "r-oat"],
-      foodIds: ["food-banana", "food-1"],
+      recipeIds: ["r-oat"],
+      foodIds: ["food-banana"],
+      covered: { recipeIds: [SALMON], foodIds: ["food-1"] },
     });
     (sheet!.props.onClose as () => void)();
     expect(findAll(render(), byType(AddMoreSheet))).toHaveLength(0);
+  });
+
+  it("Done takes off what was unticked and keeps the rest as set, servings included (ledger 878)", () => {
+    h.reset();
+    const PEAR_ITEM: StorageItem = { ...ITEM, id: "33333333-3333-3333-3333-333333333333", servingsLeft: 5 };
+    addMore({ items: [SALMON_ITEM, PEAR_ITEM], foods: [BANANA], recipes: [{ id: "r-oat", title: "Oat Pancakes" }] });
+    for (let i = 0; i < 2; i++) (findAll(render(), byLabel("Increase servings"))[2]!.props.onClick as () => void)(); // pear: 3
+    click(render(), byLabel("Increase servings")); // the tapped one: 2
+    addMore({ removed: { itemIds: [SALMON_ITEM.id], foodIds: ["food-banana"] }, recipes: [{ id: "r-dal", title: "Red Lentil Dal" }] });
+    expect(findAll(render(), byType(AddMoreSheet))).toHaveLength(0);
+    expect(serve()).toMatchObject({
+      parts: [
+        { storageItemId: ITEM.id, servings: 2 },
+        { storageItemId: PEAR_ITEM.id, servings: 3 },
+      ],
+      recipeIds: ["r-oat", "r-dal"],
+    });
+    expect(serve()).not.toHaveProperty("foodIds");
+
+    // Even the container the sheet opened on can come off.
+    addMore({ removed: { itemIds: [ITEM.id], recipeIds: ["r-oat"] } });
+    expect(serve().parts).toEqual([{ storageItemId: PEAR_ITEM.id, servings: 3 }]);
+  });
+
+  it("closing Add more without Done changes nothing", () => {
+    h.reset();
+    addMore({ foods: [BANANA] });
+    const before = serve();
+    click(render(), (element) => element.props?.children === "+ Add more");
+    (findAll(render(), byType(AddMoreSheet))[0]!.props.onClose as () => void)();
+    expect(findAll(render(), byType(AddMoreSheet))).toHaveLength(0);
+    expect(serve()).toEqual(before);
   });
 
   it("calls onServed after a successful serve, so the sheet can close", () => {
