@@ -153,6 +153,12 @@ describe("EmojiChooser (ledger 879)", () => {
     expect(grid(render())).toBeDefined();
   });
 
+  it("focusing an EMPTY box opens the grid (empty is not 'holds non-emoji')", () => {
+    value = "";
+    (box(render()).props.onFocus as () => void)();
+    expect(grid(render())).toBeDefined();
+  });
+
   it("B1: focus onto a box holding non-emoji (a failed Save) keeps the grid shut, so the error shows under the box", () => {
     value = "ab";
     const focusBox = () => (box(render()).props.onFocus as () => void)();
