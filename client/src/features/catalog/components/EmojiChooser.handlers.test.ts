@@ -173,6 +173,22 @@ describe("EmojiChooser (ledger 879)", () => {
     expect(grid(render())).toBeDefined();
   });
 
+  it("B1: Enter in the box (the form's implicit Save) closes the grid without blocking the submit", () => {
+    value = "ab";
+    const onKeyDown = (tree: unknown) =>
+      wrapper(tree).onKeyDown as (event: { key: string; target: unknown; preventDefault: () => void }) => void;
+    openGrid();
+    expect(grid(render())).toBeDefined();
+    // Enter on a grid button is a keyboard pick: left to the click.
+    onKeyDown(render())({ key: "Enter", target: { id: "pick" }, preventDefault: vi.fn() });
+    expect(grid(render())).toBeDefined();
+    const prevent = vi.fn();
+    onKeyDown(render())({ key: "Enter", target: { id: "e" }, preventDefault: prevent });
+    expect(prevent).not.toHaveBeenCalled();
+    expect(grid(render())).toBeUndefined();
+    expect(value).toBe("ab");
+  });
+
   it("a tapped pick sets the value and closes, without pulling focus (no phone keyboard)", () => {
     openGrid();
     tap(pick(render(), "Pick 🍐 pear"));

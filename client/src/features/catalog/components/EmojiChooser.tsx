@@ -19,8 +19,9 @@ interface EmojiChooserProps {
  * pushes the form down). The form validates the value (`validateCustomFood`).
  * A pick or Escape closes the grid; so does focus moving on to another
  * control. Focus onto a box holding something that isn't one emoji (a failed
- * Save sends focus here) closes the grid instead, so the form's error line
- * stays right under the box; a tap still opens it. Logic in `foodEmoji.ts`.
+ * Save sends focus here) closes the grid instead, and so does Enter in the
+ * box (it submits), so the form's error line stays right under the box; a
+ * tap still opens it. Logic in `foodEmoji.ts`.
  */
 export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
   const [open, setOpen] = useState(false);
@@ -48,6 +49,13 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    // Enter in the box submits the form, whose focus() on the already-focused
+    // box fires no focus event: close here so a failed Save's error stays
+    // under the box (ledger 879 B1). Not prevented — the submit goes ahead.
+    if (event.key === "Enter" && (event.target as HTMLElement).id === id) {
+      setOpen(false);
+      return;
+    }
     if (!open || event.key !== "Escape") return;
     // Claimed, so a surrounding Sheet's Escape (useModal skips a prevented
     // event) leaves the half-filled form open.
