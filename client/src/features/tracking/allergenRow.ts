@@ -240,26 +240,6 @@ export function dueSinceLabel(
   return `${marked ? "Marked" : "Last served"} ${when}`;
 }
 
-/**
- * The food Up next's "Log meal" prefills for a due allergen (item 660): the
- * counting food served last time (the exposure's foods are only the allergen
- * carriers); when no meal has counted yet, the latest one didn't (butter,
- * milk cooked into a recipe) or it counted only through whole milk (never a
- * suggestion), the ladder's starter food (ledger 857: dairy -> yogurt,
- * sesame -> tahini); else the first food carrying it. Never a deleted food,
- * which cannot be logged, and never anything but a plain `food` (ledger 838).
- * Null leaves the form empty.
- */
-export function serveFoodId(detail: Pick<AllergenDetail, "foods" | "exposures" | "starterFoodId">): string | null {
-  const servable = (food: { deleted?: boolean | undefined; kind?: string | undefined }) =>
-    !food.deleted && (food.kind ?? "food") === "food";
-  const nonCounting = new Set(detail.foods.filter((f) => f.countsTowardProgress === false).map((f) => f.id));
-  const latest = detail.exposures[0];
-  const last = latest?.counted !== false ? latest?.foods.find((f) => servable(f) && !nonCounting.has(f.id)) : undefined;
-  const starter = detail.foods.find((f) => f.id === detail.starterFoodId && servable(f));
-  return last?.id ?? starter?.id ?? detail.foods.find(servable)?.id ?? null;
-}
-
 /** Ledger 836: why a food's tag never moves this allergen's ladder, by slug. */
 const NON_COUNTING_REASON: Record<string, string> = {
   unsalted_butter: "almost no milk protein",

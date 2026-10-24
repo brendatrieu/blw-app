@@ -15,7 +15,6 @@ import {
   resolveAllergenRecency,
   resolveAllergenRowAction,
   serveAgainByLabel,
-  serveFoodId,
   nonCountingFoodLine,
   NOT_COUNTED_MEAL_LINE,
   servingCountLabel,
@@ -470,72 +469,6 @@ describe("dueSinceLabel — Up next's sentence (item 660)", () => {
     expect(dueSinceLabel(servedAt(at(2026, 9, 1, 9, 0)), NOW)).toBe("Last served today");
     expect(dueSinceLabel(servedAt(daysAgo(1)), NOW)).toBe("Last served yesterday");
     expect(dueSinceLabel(progress({ status: "started" }), NOW)).toBe("No serves logged yet");
-  });
-});
-
-describe("serveFoodId — the food Up next's Log meal prefills (item 660)", () => {
-  const food = (id: string, deleted?: boolean) => ({
-    id,
-    slug: id,
-    name: id,
-    category: "protein" as const,
-    emoji: null,
-    isCustom: false,
-    ...(deleted === undefined ? {} : { deleted }),
-  });
-  const exposure = (...foods: { id: string; deleted?: boolean; kind?: "food" | "ingredient" | "info" }[]) => ({
-    mealId: "m",
-    servedAt: iso(daysAgo(9)),
-    foods: foods.map((f) => ({ ...f, name: f.id, emoji: null })),
-    reaction: null,
-    notes: null,
-  });
-
-  it("prefers the newest exposure's first live food", () => {
-    expect(
-      serveFoodId({ foods: [food("butter")], exposures: [exposure({ id: "gone", deleted: true }, { id: "pb" }), exposure({ id: "old" })] }),
-    ).toBe("pb");
-  });
-
-  it("falls back to the first live food carrying the allergen", () => {
-    expect(serveFoodId({ foods: [food("gone", true), food("butter")], exposures: [] })).toBe("butter");
-    expect(serveFoodId({ foods: [food("butter")], exposures: [exposure({ id: "gone", deleted: true })] })).toBe("butter");
-  });
-
-  it("is null when nothing can be logged", () => {
-    expect(serveFoodId({ foods: [food("gone", true)], exposures: [] })).toBeNull();
-  });
-
-  it("never prefills an ingredient or info food (ledger 838)", () => {
-    const kinded = (id: string, kind: "food" | "ingredient" | "info") => ({ ...food(id), kind });
-    // Last time was the egg bake's milk and butter: fall through to a real food.
-    expect(
-      serveFoodId({
-        foods: [kinded("milk", "info"), kinded("unsalted_butter", "ingredient"), kinded("yogurt", "food")],
-        exposures: [exposure({ id: "milk", kind: "info" }, { id: "unsalted_butter", kind: "ingredient" })],
-      }),
-    ).toBe("yogurt");
-    expect(serveFoodId({ foods: [kinded("milk", "info")], exposures: [] })).toBeNull();
-    // A body cached before `kind` existed reads as food.
-    expect(serveFoodId({ foods: [food("yogurt")], exposures: [] })).toBe("yogurt");
-  });
-
-  it("suggests the ladder's starter food until a meal counts, and after one that didn't (ledger 857)", () => {
-    const tag = (id: string, kind: "food" | "ingredient", countsTowardProgress: boolean) => ({ ...food(id), kind, countsTowardProgress });
-    const foods = [tag("cheese", "food", true), tag("unsalted_butter", "ingredient", false), tag("yogurt", "food", true)];
-    const didntCount = { ...exposure({ id: "unsalted_butter", kind: "ingredient" }), counted: false };
-    const counted = (id: string) => ({ ...exposure({ id }), counted: true });
-    // Butter only: yogurt, not the alphabetically first Cheese.
-    expect(serveFoodId({ foods, exposures: [didntCount], starterFoodId: "yogurt" })).toBe("yogurt");
-    // Nothing logged yet.
-    expect(serveFoodId({ foods, exposures: [], starterFoodId: "yogurt" })).toBe("yogurt");
-    // A counting meal before the butter one doesn't win: the latest didn't count.
-    expect(serveFoodId({ foods, exposures: [didntCount, counted("cheese")], starterFoodId: "yogurt" })).toBe("yogurt");
-    // The latest meal counted: the food served then.
-    expect(serveFoodId({ foods, exposures: [counted("cheese"), didntCount], starterFoodId: "yogurt" })).toBe("cheese");
-    expect(serveFoodId({ foods, exposures: [counted("yogurt")], starterFoodId: "yogurt" })).toBe("yogurt");
-    // A deleted starter (or an old cached body without one) keeps the old fallback.
-    expect(serveFoodId({ foods, exposures: [didntCount] })).toBe("cheese");
   });
 });
 
