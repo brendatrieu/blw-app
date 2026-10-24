@@ -144,7 +144,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Squash each chickpea flat between finger and thumb before serving, or serve fully blended into hummus or a curry.',
     chokingNotes: 'Whole chickpeas are round and firm enough to be a choking hazard — always mash, squash flat, or blend rather than serving whole.',
-    notes: 'Pair with a vitamin-C food such as tomato or orange to boost non-heme iron absorption.',
+    notes: 'Pair with a vitamin-C food to boost non-heme iron absorption.',
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -164,7 +164,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Serve whole cooked beans that are soft enough to squash easily between two fingers, mixed into rice or a bowl.',
     chokingNotes: 'Squash or mash beans rather than serving them fully whole and round, especially before 9 months.',
-    notes: 'Pair with a vitamin-C food such as orange or bell pepper to boost non-heme iron absorption.',
+    notes: 'Pair with a vitamin-C food to boost non-heme iron absorption.',
     allergens: [],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -325,7 +325,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Cut into small bite-sized cubes, pan-fried, baked, or coated lightly in crumbs for a soft-inside, lightly crisp-outside nugget.',
     chokingNotes: 'Raw or unfried tofu cubes can be slippery — a light pan-fry or coating helps little hands grip it.',
-    notes: 'A strong plant-based (non-heme) iron and soy protein source — pair with broccoli or another vitamin-C food to boost absorption.',
+    notes: 'A strong plant-based (non-heme) iron and soy protein source — pair with a vitamin-C food to boost absorption.',
     allergens: ['soy'],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -364,7 +364,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Chop cooked spinach and mix into dishes, or serve wilted and finely cut as a side.',
     chokingNotes: 'Whole cooked leaves can be slippery and hard to chew — always chop finely rather than serving whole leaves.',
-    notes: 'Spinach carries both iron and some vitamin C, but also natural compounds (oxalates) that reduce iron absorption — pairing with an extra vitamin-C food like kiwi still helps.',
+    notes: 'Spinach carries both iron and some vitamin C, but also natural compounds (oxalates) that reduce iron absorption — pairing with an extra vitamin-C food still helps.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -384,7 +384,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Serve as soft cooked grains alongside other foods, or baked into bites.',
     chokingNotes: 'Loose cooked quinoa grains are small and can scatter — pressing into a patty or bite shape makes early self-feeding easier and safer.',
-    notes: 'A moderate non-heme iron source — pair with mango or another vitamin-C food to boost absorption.',
+    notes: 'A moderate non-heme iron source — pair with a vitamin-C food to boost absorption.',
     allergens: [],
     storageCategory: 'grain_cooked',
   },
@@ -406,7 +406,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Steam or roast until tender and cut into small bite-sized florets.',
     chokingNotes: 'Raw or under-cooked broccoli is fibrous and hard to chew — always steam until it mashes easily before serving.',
-    notes: 'A great vitamin-C pairing partner for iron-rich foods like beef, lentils, or tofu.',
+    notes: 'A great vitamin-C pairing partner for iron-rich foods.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -431,7 +431,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Steam or roast until tender and cut into small bite-sized florets, or pre-load a fork with a soft piece for utensil practice.',
     chokingNotes: 'Raw or under-cooked cauliflower is firm and hard to chew — always steam until it mashes easily before serving.',
-    notes: 'Rich in vitamin C, which helps baby absorb iron — pair it with lentils, beef, or another iron-rich food.',
+    notes: 'Rich in vitamin C, which helps baby absorb iron from an iron-rich food served with it.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -536,7 +536,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Serve roasted or steamed and softened, or thin raw strips once baby is confidently chewing, cut into small pieces.',
     chokingNotes: 'Raw bell pepper skin is tough and can be hard to bite through — cook until soft, especially before confident chewing develops.',
-    notes: 'One of the best vitamin-C partners for iron-rich foods like beef, lentils, or chickpeas.',
+    notes: 'One of the best vitamin-C partners for iron-rich foods.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -556,7 +556,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Hull and quarter, or slice thinly, always avoiding a whole round berry shape.',
     chokingNotes: 'A whole or halved strawberry can be round enough to block an airway — always quarter lengthwise or mash.',
-    notes: 'A bright vitamin-C food to pair with iron-fortified oats or another iron-rich food.',
+    notes: 'A bright vitamin-C food to pair with an iron-rich food.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },
@@ -576,7 +576,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Remove membrane and seeds and serve segments cut into smaller bite-sized pieces.',
     chokingNotes: 'Tough membrane and seeds are the main hazard — always peel every segment down to just the juicy flesh.',
-    notes: 'A classic vitamin-C pairing partner for chicken, beef, or plant-based iron foods.',
+    notes: 'A classic vitamin-C pairing partner for iron-rich foods.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },
@@ -615,7 +615,7 @@ export const foods: FoodSeed[] = [
       'Peel and cut into finger-length wedges, or dice into small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Peel and dice into small bite-sized pieces.',
-    notes: 'One of the highest vitamin-C foods on this list — an easy pairing for spinach or other iron-rich foods.',
+    notes: 'One of the highest vitamin-C foods on this list — an easy pairing for iron-rich foods.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },
@@ -635,7 +635,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Peel and dice into small bite-sized pieces.',
     chokingNotes: 'Choose fully ripe mango — firm, underripe pieces can be slippery and harder to gum.',
-    notes: 'A sweet vitamin-C food that pairs well with quinoa or another iron-rich grain.',
+    notes: 'A sweet vitamin-C food that pairs well with an iron-rich food.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },
@@ -655,7 +655,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Quarter lengthwise or dice into small bite-sized pieces, skin removed if tough.',
     chokingNotes: 'Whole or halved cherry and small tomatoes are a classic choking hazard due to their round, slippery shape and skin — always quarter lengthwise.',
-    notes: 'A useful vitamin-C partner for salmon, sardines, or other iron-rich proteins.',
+    notes: 'A useful vitamin-C partner for iron-rich proteins.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },
@@ -674,7 +674,7 @@ export const foods: FoodSeed[] = [
       'Cook until soft, then serve as a finger-length wedge, or cut into small bite-sized soft cubes (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Cook until tender and dice into small bite-sized pieces, roasted or mashed.',
-    notes: 'A gentle, well-tolerated vitamin-C pairing for beef or chicken thigh.',
+    notes: 'A gentle, well-tolerated vitamin-C pairing for an iron-rich food.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
@@ -693,7 +693,7 @@ export const foods: FoodSeed[] = [
       'Cook until soft, then serve as a finger-length wedge, or cut into small bite-sized soft cubes (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Cook until tender and dice into small bite-sized pieces.',
-    notes: 'A mild, naturally sweet vitamin-C pairing for chicken thigh or another iron-rich protein.',
+    notes: 'A mild, naturally sweet vitamin-C pairing for an iron-rich protein.',
     allergens: [],
     storageCategory: 'produce_cooked_soft',
   },
