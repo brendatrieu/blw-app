@@ -1,4 +1,4 @@
-import { useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
 import { isSingleEmoji } from "@blw/shared";
 import { DEFAULT_FOOD_EMOJI, EMOJI_CHOICE_GROUPS } from "../foodEmoji.js";
 import { Input } from "../../../components/ui/Input.js";
@@ -18,7 +18,8 @@ interface EmojiChooserProps {
  * it opens the app's own grid inline (never floating, so no portal; it
  * pushes the form down). The form validates the value (`validateCustomFood`).
  * A pick or Escape closes the grid; so does focus moving on to another
- * control. Focus onto a box holding something that isn't one emoji (a failed
+ * control, and a tap or click anywhere outside the box and grid (ledger 888:
+ * phones have no Escape, and a tap on plain text moves focus nowhere). Focus onto a box holding something that isn't one emoji (a failed
  * Save sends focus here) closes the grid instead, and so does Enter in the
  * box (it submits), so the form's error line stays right under the box; a
  * tap still opens it. Logic in `foodEmoji.ts`.
@@ -28,6 +29,7 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
   // Set while focus is handed back to the box after a keyboard pick or
   // Escape, so that focus doesn't reopen the grid it just closed.
   const returning = useRef(false);
+  const root = useRef<HTMLDivElement>(null);
   const gridId = `${id}-choices`;
   const current = value.trim();
   const holdsNonEmoji = current.length > 0 && !isSingleEmoji(current);
@@ -71,8 +73,22 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
     if (open && next && !event.currentTarget.contains(next)) setOpen(false);
   }
 
+  // pointerup, not pointerdown: a touch that turns into a scroll ends in
+  // pointercancel, so scrolling the form keeps the grid; and a touch pointer's
+  // target stays where it went down, so a press that starts in the grid counts
+  // as inside. Not prevented or stopped: inside a Sheet the same tap is still
+  // the sheet's, which closes only on its backdrop.
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerUp(event: PointerEvent) {
+      if (!root.current?.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("pointerup", handlePointerUp);
+    return () => document.removeEventListener("pointerup", handlePointerUp);
+  }, [open]);
+
   return (
-    <div onKeyDown={handleKeyDown} onBlur={handleBlur} className="flex flex-col gap-2">
+    <div ref={root} onKeyDown={handleKeyDown} onBlur={handleBlur} className="flex flex-col gap-2">
       <Input
         id={id}
         type="text"
@@ -97,6 +113,10 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
           id={gridId}
           role="group"
           aria-label="Food emojis"
+          // Focusable by script only: a tap on a label or gap in the grid
+          // focuses it, not the Sheet's panel outside the chooser (which
+          // the blur check would read as leaving).
+          tabIndex={-1}
           className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-2"
         >
           {EMOJI_CHOICE_GROUPS.map((group) => (

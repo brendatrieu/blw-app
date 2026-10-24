@@ -1,4 +1,4 @@
-// Ledgers 862, 872, 879: the emoji box is a text field that opens the grid;
+// Ledgers 862, 872, 879, 888: the emoji box is a text field that opens the grid;
 // type / pick / Escape / blur behaviour lives in state and handlers a server
 // render never reaches.
 // Harness idiom from CustomFoodForm.handlers.test.ts: `useState` is a hoisted
@@ -7,9 +7,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => {
-  const store = { states: [] as unknown[], i: 0 };
+  const store = { states: [] as unknown[], i: 0, effects: [] as (() => void | (() => void))[] };
   return {
     store,
+    // Collected per render; a test runs them, as a commit would.
+    useEffect: (effect: () => void | (() => void)) => {
+      store.effects.push(effect);
+    },
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states)) store.states[i] = init;
@@ -28,7 +32,7 @@ const h = vi.hoisted(() => {
 
 vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, useState: h.useState, useRef: h.useRef };
+  return { ...actual, useState: h.useState, useRef: h.useRef, useEffect: h.useEffect };
 });
 
 import { createElement } from "react";
@@ -63,11 +67,13 @@ function text(node: unknown): string {
 
 const globals = globalThis as unknown as { document?: unknown };
 let focused: string[] = [];
+let listeners: Map<string, (event: unknown) => void>;
 let value = "";
 let boxFocus: (() => void) | undefined;
 
 function render() {
   h.store.i = 0;
+  h.store.effects = [];
   const tree = EmojiChooser({ id: "e", value, onChange: (emoji) => (value = emoji) }) as unknown;
   boxFocus = box(tree).props.onFocus as () => void;
   return tree;
@@ -87,7 +93,12 @@ beforeEach(() => {
   focused = [];
   value = "🥕";
   // Focusing the box runs its onFocus, like a real focus event does.
+  listeners = new Map();
   globals.document = {
+    addEventListener: (type: string, fn: (event: unknown) => void) => listeners.set(type, fn),
+    removeEventListener: (type: string, fn: (event: unknown) => void) => {
+      if (listeners.get(type) === fn) listeners.delete(type);
+    },
     getElementById: (id: string) => ({
       focus: () => {
         focused.push(id);
@@ -249,6 +260,75 @@ describe("EmojiChooser (ledger 879)", () => {
     expect(grid(render())).toBeDefined();
     blur({ id: "notes" });
     expect(grid(render())).toBeUndefined();
+  });
+
+  describe("closing from outside (ledger 888: phones have no Escape)", () => {
+    const inside = { id: "inside" };
+    /** Render, attach the root ref to a node holding only `inside`, run the effects (a commit); returns their cleanups. */
+    function commit() {
+      const tree = render();
+      (tree as { ref: { current: unknown } }).ref.current = { contains: (node: unknown) => node === inside };
+      return h.store.effects.map((effect) => effect());
+    }
+    const pointerUp = (target: unknown) => listeners.get("pointerup")!({ target });
+
+    it("a tap or click outside the box and grid closes it, empty or not; inside keeps it", () => {
+      for (const start of ["", "🥕"]) {
+        value = start;
+        h.store.states = [];
+        listeners.clear();
+        commit();
+        // Closed: nothing listens.
+        expect(listeners.has("pointerup")).toBe(false);
+        openGrid();
+        commit();
+        pointerUp(inside);
+        expect(grid(render())).toBeDefined();
+        pointerUp({ id: "heading" });
+        expect(grid(render())).toBeUndefined();
+        expect(value).toBe(start);
+        expect(focused).toEqual([]);
+      }
+    });
+
+    it("never claims the tap (a surrounding Sheet still gets it), and stops listening once closed", () => {
+      openGrid();
+      const cleanups = commit();
+      const event = { target: { id: "sheet-title" }, preventDefault: vi.fn(), stopPropagation: vi.fn() };
+      listeners.get("pointerup")!(event);
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(event.stopPropagation).not.toHaveBeenCalled();
+      for (const cleanup of cleanups) cleanup?.();
+      expect(listeners.has("pointerup")).toBe(false);
+    });
+
+    it("focus leaving for something outside closes it; focus onto the grid itself (a tap on its gaps) keeps it", () => {
+      openGrid();
+      const tree = render();
+      // The grid takes focus from a tap on a label or gap, instead of a Sheet panel outside the chooser.
+      expect(grid(tree)!.props.tabIndex).toBe(-1);
+      const theGrid = { id: "e-choices" };
+      const blur = (relatedTarget: unknown) =>
+        (wrapper(render()).onBlur as (event: unknown) => void)({
+          relatedTarget,
+          currentTarget: { contains: (node: unknown) => node === theGrid },
+        });
+      blur(theGrid);
+      expect(grid(render())).toBeDefined();
+      blur({ id: "sheet-panel" });
+      expect(grid(render())).toBeUndefined();
+    });
+
+    it("B1 still holds: a failed Save's focus keeps the grid shut, and an outside tap doesn't reopen it", () => {
+      value = "ab";
+      openGrid();
+      commit();
+      (box(render()).props.onFocus as () => void)();
+      expect(grid(render())).toBeUndefined();
+      expect(listeners.has("pointerup")).toBe(true); // the open render's listener, until its cleanup
+      pointerUp({ id: "save" });
+      expect(grid(render())).toBeUndefined();
+    });
   });
 
   it("server-renders the field with its value, placeholder and collapsed state", () => {
