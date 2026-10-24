@@ -264,10 +264,12 @@ describe("EmojiChooser (ledger 879)", () => {
 
   describe("closing from outside (ledger 888: phones have no Escape)", () => {
     const inside = { id: "inside" };
+    // contains() is true for the node itself, as in the DOM.
+    const rootNode = { contains: (node: unknown) => node === inside || node === rootNode };
     /** Render, attach the root ref to a node holding only `inside`, run the effects (a commit); returns their cleanups. */
     function commit() {
       const tree = render();
-      (tree as { ref: { current: unknown } }).ref.current = { contains: (node: unknown) => node === inside };
+      (tree as { ref: { current: unknown } }).ref.current = rootNode;
       return h.store.effects.map((effect) => effect());
     }
     const pointerUp = (target: unknown) => listeners.get("pointerup")!({ target });
@@ -289,6 +291,13 @@ describe("EmojiChooser (ledger 879)", () => {
         expect(value).toBe(start);
         expect(focused).toEqual([]);
       }
+    });
+
+    it("a tap on the wrapper itself (the form-wide strip beside the box, the gap above the grid) closes it", () => {
+      openGrid();
+      commit();
+      pointerUp(rootNode);
+      expect(grid(render())).toBeUndefined();
     });
 
     it("never claims the tap (a surrounding Sheet still gets it), and stops listening once closed", () => {

@@ -19,10 +19,11 @@ interface EmojiChooserProps {
  * pushes the form down). The form validates the value (`validateCustomFood`).
  * A pick or Escape closes the grid; so does focus moving on to another
  * control, and a tap or click anywhere outside the box and grid (ledger 888:
- * phones have no Escape, and a tap on plain text moves focus nowhere). Focus onto a box holding something that isn't one emoji (a failed
- * Save sends focus here) closes the grid instead, and so does Enter in the
- * box (it submits), so the form's error line stays right under the box; a
- * tap still opens it. Logic in `foodEmoji.ts`.
+ * phones have no Escape, and a tap on plain text moves focus nowhere). Focus
+ * onto a box holding something that isn't one emoji (a failed Save sends
+ * focus here) closes the grid instead, and so does Enter in the box (it
+ * submits), so the form's error line stays right under the box; a tap still
+ * opens it. Logic in `foodEmoji.ts`.
  */
 export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
   const [open, setOpen] = useState(false);
@@ -81,7 +82,10 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
   useEffect(() => {
     if (!open) return;
     function handlePointerUp(event: PointerEvent) {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
+      // The wrapper itself is form-wide (the box is narrow): a tap on its own
+      // empty strip beside the box, or the gap above the grid, is outside.
+      const target = event.target as Node;
+      if (target === root.current || !root.current?.contains(target)) setOpen(false);
     }
     document.addEventListener("pointerup", handlePointerUp);
     return () => document.removeEventListener("pointerup", handlePointerUp);
