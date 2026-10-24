@@ -204,7 +204,6 @@ export async function loadAllergenDetail(
       emoji: foods.emoji,
       ownerId: foods.ownerId,
       deletedAt: foods.deletedAt,
-      kind: foods.kind,
       countsTowardProgress: foodAllergens.countsTowardProgress,
       countsWhenAlone: foodAllergens.countsWhenAlone,
     })
@@ -227,7 +226,6 @@ export async function loadAllergenDetail(
     emoji: f.emoji,
     isCustom: f.ownerId !== null,
     deleted: f.deletedAt !== null,
-    kind: f.kind,
     countsTowardProgress: f.countsTowardProgress,
     countsWhenAlone: f.countsWhenAlone,
   }));
@@ -235,7 +233,7 @@ export async function loadAllergenDetail(
   // No food carries this allergen (or none this caller can see), so no meal
   // can have exposed the baby to it — including an override-only row, whose
   // status came from a parent and never from the log.
-  if (detailFoods.length === 0) return { progress, foods: detailFoods, exposures: [], starterFoodId: null };
+  if (detailFoods.length === 0) return { progress, foods: detailFoods, exposures: [] };
 
   const foodIds = detailFoods.map((f) => f.id);
 
@@ -265,7 +263,6 @@ export async function loadAllergenDetail(
             name: foods.name,
             emoji: foods.emoji,
             deleted: sql<boolean>`${foods.deletedAt} is not null`,
-            kind: foods.kind,
             counts: countsAsServing(mealFoods.mealId, mealFoods.foodId),
           })
           .from(mealFoods)
@@ -282,7 +279,7 @@ export async function loadAllergenDetail(
   for (const row of exposureFoodRows) {
     if (row.counts) countedMealIds.add(row.mealId);
     const list = foodsByMealId.get(row.mealId);
-    const food = { id: row.id, name: row.name, emoji: row.emoji, deleted: row.deleted, kind: row.kind };
+    const food = { id: row.id, name: row.name, emoji: row.emoji, deleted: row.deleted };
     if (list) {
       list.push(food);
     } else {
@@ -301,11 +298,5 @@ export async function loadAllergenDetail(
     notes: row.notes,
   }));
 
-  const [step] = await db
-    .select({ starterFoodId: allergenLadderSteps.starterFoodId })
-    .from(allergenLadderSteps)
-    .innerJoin(allergens, eq(allergenLadderSteps.allergenId, allergens.id))
-    .where(eq(allergens.slug, slug));
-
-  return { progress, foods: detailFoods, exposures, starterFoodId: step?.starterFoodId ?? null };
+  return { progress, foods: detailFoods, exposures };
 }

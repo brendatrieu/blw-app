@@ -1447,7 +1447,6 @@ describe("tracking routes", () => {
         emoji: "🥘",
         isCustom: true,
         deleted: false,
-        kind: "food",
         countsTowardProgress: true,
         countsWhenAlone: false,
       });
@@ -1490,7 +1489,6 @@ describe("tracking routes", () => {
         name: "Nana's frittata",
         emoji: "🥘",
         deleted: false,
-        kind: "food",
       });
       // Ledger 836: egg + a custom egg food in one sitting is ONE serving, so
       // two meals are 2, not 3; and both meals counted.

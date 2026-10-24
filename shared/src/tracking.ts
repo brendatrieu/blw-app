@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { foodCategorySchema, foodKindSchema } from "./catalog.js";
+import { foodCategorySchema } from "./catalog.js";
 
 /**
  * Per-baby tracking: meals (one sitting, one or more foods — the completion
@@ -625,10 +625,6 @@ export const allergenDetailFoodSchema = z.object({
    * served it still count toward this allergen; the page marks it and offers
    * no "Log meal". Optional so an older cached body still parses. */
   deleted: z.boolean().optional(),
-  /** See `foodKindSchema`: the page offers no "Log meal" for an `info` food,
-   * and Up next never prefills anything but a `food`. Optional for older
-   * cached bodies; absent reads as `food`. */
-  kind: foodKindSchema.optional(),
   /** False when this food's tag for THIS allergen does not always move the
    * ladder (ledger 836: butter and whole milk for Milk, sesame oil for
    * Sesame; whole milk on its own does, see `countsWhenAlone`). The page
@@ -658,7 +654,6 @@ export const allergenDetailExposureSchema = z.object({
       name: z.string(),
       emoji: z.string().nullable(),
       deleted: z.boolean().optional(),
-      kind: foodKindSchema.optional(),
     }),
   ),
   /** False when no allergen food of this meal was a serving there (ledger
@@ -685,11 +680,6 @@ export const allergenDetailSchema = z.object({
   progress: allergenProgressItemSchema,
   foods: z.array(allergenDetailFoodSchema),
   exposures: z.array(allergenDetailExposureSchema),
-  /** The ladder step's starter food (dairy -> yogurt, sesame -> tahini):
-   * what Up next suggests when no meal has counted yet or the latest one
-   * didn't (ledger 857). Null for an allergen with no ladder step; optional
-   * for older cached bodies. */
-  starterFoodId: z.string().uuid().nullable().optional(),
 });
 export type AllergenDetail = z.infer<typeof allergenDetailSchema>;
 

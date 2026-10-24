@@ -322,28 +322,18 @@ describe("ingredient foods and ladder counting (ledger 836, 838)", () => {
       const mixed = await meal({ foodIds: [id("yogurt"), id("unsalted_butter")], servedAt: "2026-03-01T08:00:00.000Z" });
 
       const milk = await detail("milk");
-      expect(milk.foods.map((f) => [f.slug, f.kind, f.countsTowardProgress, f.countsWhenAlone])).toEqual([
-        ["cheese", "food", true, false],
-        ["unsalted_butter", "ingredient", false, false],
-        ["milk", "info", false, true],
-        ["yogurt", "food", true, false],
+      expect(milk.foods.map((f) => [f.slug, f.countsTowardProgress, f.countsWhenAlone])).toEqual([
+        ["cheese", true, false],
+        ["unsalted_butter", false, false],
+        ["milk", false, true],
+        ["yogurt", true, false],
       ]);
       expect(milk.exposures.map((e) => [e.mealId, e.counted])).toEqual([
         [butterMeal.id, false],
         [mixed.id, true],
       ]);
-      expect(milk.exposures[1]!.foods.map((f) => [f.name, f.kind])).toEqual([
-        ["Unsalted Butter", "ingredient"],
-        ["Yogurt", "food"],
-      ]);
+      expect(milk.exposures[1]!.foods.map((f) => f.name)).toEqual(["Unsalted Butter", "Yogurt"]);
       expect(milk.progress).toMatchObject({ exposures: 1, firstAt: "2026-03-01T08:00:00.000Z" });
-    });
-
-    it("names the ladder's starter food, Up next's pick after a meal that didn't count (ledger 857)", async () => {
-      expect((await detail("milk")).starterFoodId).toBe(id("yogurt"));
-      expect((await detail("sesame")).starterFoodId).toBe(id("tahini"));
-      // No ladder step for this allergen in the fixtures.
-      expect((await detail("egg")).starterFoodId).toBeNull();
     });
   });
 

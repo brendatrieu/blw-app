@@ -515,9 +515,9 @@ describe("AllergenDetailPage — foods that never move the ladder (ledger 836, 8
       ...base,
       progress: { ...base.progress, allergenSlug: "milk", allergenName: "Milk" },
       foods: [
-        { id: BUTTER_ID, slug: "unsalted_butter", name: "Unsalted Butter", category: "dairy", emoji: null, isCustom: false, kind: "ingredient", countsTowardProgress: false },
-        { id: MILK_ID, slug: "milk", name: "Whole Milk", category: "dairy", emoji: null, isCustom: false, kind: "info", countsTowardProgress: false, countsWhenAlone: true },
-        { id: YOGURT_ID, slug: "yogurt", name: "Yogurt", category: "dairy", emoji: null, isCustom: false, kind: "food", countsTowardProgress: true },
+        { id: BUTTER_ID, slug: "unsalted_butter", name: "Unsalted Butter", category: "dairy", emoji: null, isCustom: false, countsTowardProgress: false },
+        { id: MILK_ID, slug: "milk", name: "Whole Milk", category: "dairy", emoji: null, isCustom: false, countsTowardProgress: false, countsWhenAlone: true },
+        { id: YOGURT_ID, slug: "yogurt", name: "Yogurt", category: "dairy", emoji: null, isCustom: false, countsTowardProgress: true },
       ],
       exposures: [
         { mealId: MEAL_ID, servedAt: "2026-08-20T09:00:00.000Z", foods: [{ id: BUTTER_ID, name: "Unsalted Butter", emoji: null }], counted: false, reaction: null, notes: null },
