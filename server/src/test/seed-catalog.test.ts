@@ -574,6 +574,29 @@ describe("seeded catalog after the spices expansion", () => {
     expect(rows.filter((r) => NOTES_METHOD.test(r.notes ?? "")).map((r) => r.slug)).toEqual([]);
   });
 
+  it("keeps allergen-ladder roles off every food's text (ledger 885)", async () => {
+    // What counts toward an allergen step lives on the allergen pages only.
+    // Safety facts (carries the milk allergen, held to 9 months) stay.
+    const LADDER_ROLE = /ladder|counts? (?:toward|as)|servings|start (?:that|the)(?: \w+)? step|starter food|first-exposure|introduce this allergen/i;
+    expect(LADDER_ROLE.test("A low-mercury fish choice, good for the allergen ladder fish step.")).toBe(true);
+    expect(LADDER_ROLE.test("Start that step with tahini.")).toBe(true);
+    expect(LADDER_ROLE.test("Butter is made from milk and carries the milk allergen, so skip it if baby has a milk allergy.")).toBe(false);
+    const rows = await db
+      .select({
+        slug: schema.foods.slug,
+        prep6m: schema.foods.prep6m,
+        prep9m: schema.foods.prep9m,
+        prep12m: schema.foods.prep12m,
+        chokingNotes: schema.foods.chokingNotes,
+        notes: schema.foods.notes,
+      })
+      .from(schema.foods)
+      .where(isNull(schema.foods.ownerId));
+    expect(rows).toHaveLength(CATALOG_FOOD_COUNT);
+    const hits = rows.filter((r) => LADDER_ROLE.test([r.prep6m, r.prep9m, r.prep12m, r.chokingNotes, r.notes].join(" ")));
+    expect(hits.map((r) => r.slug)).toEqual([]);
+  });
+
   it("carries the mercury limit on canned light tuna and never mentions honey", async () => {
     const [tuna] = await db
       .select({ name: schema.foods.name, notes: schema.foods.notes, chokingNotes: schema.foods.chokingNotes })

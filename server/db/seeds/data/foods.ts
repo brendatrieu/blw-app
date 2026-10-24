@@ -66,7 +66,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Cook through and flake into small bite-sized pieces or serve as a small whole fillet piece to pick apart.',
     chokingNotes: 'Always run fingers through cooked flakes to feel for pin bones, even from pre-deboned fillets — a missed bone is a real hazard.',
-    notes: 'A low-mercury fish choice, good for the allergen ladder fish step. Its heme iron absorbs well without needing a vitamin-C pairing.',
+    notes: 'A low-mercury fish choice. Its heme iron absorbs well without needing a vitamin-C pairing.',
     allergens: ['fish'],
     storageCategory: 'fish_seafood_cooked',
   },
@@ -105,7 +105,7 @@ export const foods: FoodSeed[] = [
       'Serve as soft scrambled egg pieces, or firm omelet cut into strips, or small bite-sized pieces (no bigger than ½ inch) for pincer practice.',
     prep12m:
       'Serve as bite-sized omelet pieces, a halved hard-boiled egg, or scrambled egg alongside toast fingers.',
-    notes: 'A useful iron source alongside its role as the first step on the allergen ladder — always cook whole eggs fully for babies.',
+    notes: 'A useful iron source — always cook whole eggs fully for babies.',
     allergens: ['egg'],
     storageCategory: 'egg_dish_cooked',
   },
@@ -737,7 +737,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Thin smooth peanut butter until runny for spreads and dips; still avoid thick spoonfuls or globs.',
     chokingNotes: 'Thick or sticky peanut butter is a serious choking hazard for babies and young children — always thin it until runny, and never serve a spoonful straight or whole/chopped peanuts.',
-    notes: 'A common first-exposure food for the peanut step of the allergen ladder — introduce as its own step, in a small amount, at home.',
+    notes: 'Introduce it in a small amount, at home.',
     allergens: ['peanut'],
     storageCategory: 'nut_seed_butter_thinned',
   },
@@ -757,7 +757,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Thin smooth almond butter until runny for spreads and dips; still avoid thick spoonfuls or globs.',
     chokingNotes: 'Thick or sticky nut butter is a serious choking hazard — always thin it until runny, and never serve whole or chopped nuts.',
-    notes: 'The typical tree-nut-ladder starter food — introduce as its own step, in a small amount, at home.',
+    notes: 'Introduce it in a small amount, at home.',
     allergens: ['tree_nut'],
     storageCategory: 'nut_seed_butter_thinned',
   },
@@ -777,7 +777,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Use thinned as a dressing or dip base; keep the layer thin rather than a thick paste.',
     chokingNotes: 'A thick layer of tahini can stick in the mouth — always thin it and spread only a light layer.',
-    notes: 'The sesame-ladder starter food and a good source of non-heme iron — pair with a vitamin-C food when used as a main component.',
+    notes: 'A good source of non-heme iron — pair with a vitamin-C food when used as a main component.',
     allergens: ['sesame'],
     storageCategory: 'nut_seed_butter_thinned',
   },
@@ -796,7 +796,7 @@ export const foods: FoodSeed[] = [
       'Serve plain whole-milk yogurt with a spoon for self-feeding, optionally mixed with mashed fruit.',
     prep12m:
       'Serve plain whole-milk yogurt with a spoon, optionally mixed with diced soft fruit.',
-    notes: 'Use plain, unsweetened, pasteurized whole-milk yogurt only — the typical dairy-ladder starter food.',
+    notes: 'Use plain, unsweetened, pasteurized whole-milk yogurt only.',
     allergens: ['milk'],
     storageCategory: 'dairy_soft',
   },
@@ -836,7 +836,6 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Toast and cut into small bite-sized squares or triangles, plain or lightly topped.',
     chokingNotes: 'Dry, hard toast can crumble into shards or feel scratchy going down — always soften or moisten before serving.',
-    notes: 'A common wheat-ladder starter food; check for a wheat-free label if introducing wheat for the very first time in isolation.',
     allergens: ['wheat'],
     storageCategory: 'bread_pasta_grain_baked',
   },
@@ -855,7 +854,7 @@ export const foods: FoodSeed[] = [
       'Cook until soft and serve smaller shapes for pincer-grasp self-feeding.',
     prep12m:
       'Cook until tender and serve as-is, mixed with a soft sauce or vegetables.',
-    notes: 'A gentle wheat-ladder option that is easy to prepare very soft.',
+    notes: 'Easy to prepare very soft.',
     allergens: ['wheat'],
     storageCategory: 'bread_pasta_grain_baked',
   },
@@ -869,13 +868,13 @@ export const foods: FoodSeed[] = [
     chokingRisk: 'moderate',
     minAgeMonths: 9,
     prep6m:
-      'Not recommended before 9 months — shellfish is introduced later on the allergen ladder.',
+      'Not recommended before 9 months.',
     prep9m:
       'Cook thoroughly and finely chop into small bite-sized pieces (no bigger than ½ inch); avoid serving a whole shrimp, which can be tough and round.',
     prep12m:
       'Cook thoroughly and chop into small bite-sized pieces.',
     chokingNotes: 'Whole or large shrimp pieces can be rubbery and hard to bite through — always chop finely.',
-    notes: 'Held to 9 months and introduced last on the allergen ladder; cook thoroughly and serve fresh.',
+    notes: 'Held to 9 months; cook thoroughly and serve fresh.',
     allergens: ['shellfish'],
     storageCategory: 'fish_seafood_cooked',
   },
@@ -1276,7 +1275,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Cook through and flake into small bite-sized pieces, or serve a small piece of fillet to pick apart.',
     chokingNotes: 'Cod is a low-bone fish, not a boneless one — run your fingers through every flake before serving, and moisten dry flakes with a little cooking liquid or olive oil.',
-    notes: 'A mild, low-mercury white fish and an easy first try at the fish step of the allergen ladder. Lean enough that it carries very little iron, so pair it with an iron-rich food rather than leaning on it.',
+    notes: 'A mild, low-mercury white fish. Lean enough that it carries very little iron, so pair it with an iron-rich food rather than leaning on it.',
     allergens: ['fish'],
     storageCategory: 'fish_seafood_cooked',
   },
@@ -1296,7 +1295,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Cook through and flake into small bite-sized pieces.',
     chokingNotes: 'Trout carries a row of fine pin bones that survive cooking — check every flake by feel, twice, even from a fillet sold as deboned.',
-    notes: 'A low-mercury freshwater fish with a gentler flavor than salmon; another option for the fish step of the allergen ladder.',
+    notes: 'A low-mercury freshwater fish with a gentler flavor than salmon.',
     allergens: ['fish'],
     storageCategory: 'fish_seafood_cooked',
   },
@@ -1482,7 +1481,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Thin smooth cashew butter until runny for spreads and dips; still avoid thick spoonfuls or globs.',
     chokingNotes: 'Thick or sticky nut butter is a serious choking hazard — always thin it until runny, and never serve whole or chopped cashews, which stay off the menu until age 4-5.',
-    notes: 'A tree-nut ladder option alongside almond butter, and a good plant-based iron source — pair with a vitamin-C food. Cashew and pistachio are closely related, so a reaction to one means taking care with the other.',
+    notes: 'A good plant-based iron source — pair with a vitamin-C food. Cashew and pistachio are closely related, so a reaction to one means taking care with the other.',
     allergens: ['tree_nut'],
     storageCategory: 'nut_seed_butter_thinned',
   },
@@ -1502,7 +1501,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Keep to finely ground walnut meal stirred into food, or a smooth walnut butter thinned runny; pieces stay off the menu.',
     chokingNotes: 'Whole nuts and nut pieces are a serious choking hazard and stay off the menu until age 4-5 — grind walnuts to a fine meal and stir it into a wet food so nothing crunchy is left.',
-    notes: 'A tree-nut carrier for the allergen ladder. Grind in small batches and keep the meal in the fridge — walnut meal turns rancid quickly.',
+    notes: 'Grind in small batches and keep the meal in the fridge — walnut meal turns rancid quickly.',
     allergens: ['tree_nut'],
     storageCategory: 'pantry_dry',
   },
@@ -1542,7 +1541,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Keep to finely ground hazelnut meal or thinned plain hazelnut butter; whole and chopped nuts stay off the menu.',
     chokingNotes: 'Whole and chopped hazelnuts are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal, or use a plain smooth butter thinned runny.',
-    notes: 'Use a plain hazelnut butter with nothing added — a chocolate hazelnut spread is mostly sugar and is not a way to introduce this allergen.',
+    notes: 'Use a plain hazelnut butter with nothing added — a chocolate hazelnut spread is mostly sugar.',
     allergens: ['tree_nut'],
     storageCategory: 'pantry_dry',
   },
@@ -1562,7 +1561,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Keep to finely ground pecan meal stirred into food; halves and pieces stay off the menu.',
     chokingNotes: 'Pecan halves and pieces are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal and stir it into a wet food.',
-    notes: 'A tree-nut carrier for the allergen ladder. Grind in small batches and keep the meal in the fridge — pecan meal is oily and turns rancid quickly.',
+    notes: 'Grind in small batches and keep the meal in the fridge — pecan meal is oily and turns rancid quickly.',
     allergens: ['tree_nut'],
     storageCategory: 'pantry_dry',
   },
@@ -1587,7 +1586,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Keep to finely ground almond meal stirred into food, or a smooth almond butter thinned runny; pieces and whole nuts stay off the menu.',
     chokingNotes: 'Whole and chopped almonds are a serious choking hazard and stay off the menu until age 4-5 — grind them to a fine meal and stir it into a wet food so nothing hard is left.',
-    notes: 'The plain-nut form of the tree-nut ladder step almond butter already covers. Plain ground almonds (sold as almond flour or almond meal) are the same thing, as long as nothing is added to them.',
+    notes: 'Plain ground almonds (sold as almond flour or almond meal) are the same thing, as long as nothing is added to them.',
     allergens: ['tree_nut'],
     storageCategory: 'pantry_dry',
   },

@@ -2481,7 +2481,7 @@ export const basicRecipes: RecipeSeed[] = [
         steps: [
           'Grind skinned, shelled hazelnuts to a fine, flour-like meal, or use a plain smooth hazelnut butter.',
           'Stir 1 teaspoon of the meal through oatmeal, yogurt, or a fruit mash, or thin the butter with warm water until it is runny.',
-          'A chocolate hazelnut spread is mostly sugar and is not a way to introduce this allergen.',
+          'Skip chocolate hazelnut spread, which is mostly sugar.',
           'Whole and chopped hazelnuts are a serious choking hazard and stay off the menu until age 4-5.',
         ],
       },
