@@ -526,10 +526,12 @@ describe("AllergenDetailPage — foods that never move the ladder (ledger 836, 8
     };
   };
 
-  it("says why under butter, when whole milk counts (ledger 864), and nothing under yogurt", () => {
+  it("says why under butter, and nothing under whole milk (ledger 881b) or yogurt", () => {
     const html = renderWithDetail(milkDetail(), "milk");
     expect(html).toMatch(/Doesn(?:&#x27;|')t count toward the 3 servings: almost no milk protein\./);
-    expect(html).toContain("Counts toward the 3 servings when served on its own, not when cooked into food.");
+    expect(html).not.toContain("when served on its own");
+    expect(html).not.toContain("Counts toward the 3 servings");
+    // Butter's line and the one meal that didn't count.
     expect(html.match(/ount toward the 3 servings/g)).toHaveLength(2);
   });
 

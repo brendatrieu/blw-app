@@ -267,18 +267,16 @@ const NON_COUNTING_REASON: Record<string, string> = {
 };
 
 /**
- * The muted line under a food on the allergen page whose tag does not always
- * count: why it never does ("Doesn't count toward the 3 servings: almost no
- * milk protein.", ledger 836) or, for whole milk, when it does (ledger 864).
- * Null for a food that counts (or a body cached before the flag).
+ * The muted line under a food on the allergen page whose tag never counts:
+ * why it never does ("Doesn't count toward the 3 servings: almost no milk
+ * protein.", ledger 836). Null for a food that counts, and (ledger 881b) for
+ * whole milk, which counts when served on its own: it reads like any other
+ * dairy food, and a meal where it didn't count still says so.
  */
 export function nonCountingFoodLine(
   food: Pick<AllergenDetail["foods"][number], "slug" | "countsTowardProgress" | "countsWhenAlone">,
 ): string | null {
-  if (food.countsTowardProgress !== false) return null;
-  if (food.countsWhenAlone) {
-    return `Counts toward the ${ALLERGEN_ESTABLISHED_SERVINGS} servings when served on its own, not when cooked into food.`;
-  }
+  if (food.countsTowardProgress !== false || food.countsWhenAlone) return null;
   const reason = NON_COUNTING_REASON[food.slug];
   return `Doesn't count toward the ${ALLERGEN_ESTABLISHED_SERVINGS} servings${reason ? `: ${reason}` : ""}.`;
 }
