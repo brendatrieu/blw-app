@@ -1153,7 +1153,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Soft, sticky rice is low risk. Dry, hard, or undercooked grains are harder to manage — cook it until very soft, and press it into a ball or patty for early eaters rather than offering a pile of loose grains.',
     notes:
-      "Rice takes up more arsenic from soil and water than other grains. It's still fine to serve — just make it one grain among several (oats, quinoa, wheat pasta, barley) rather than the everyday default, and don't use rice drinks in place of breast milk or formula.\n\nCool leftovers quickly (within an hour), keep them in the fridge, and reheat only once until steaming hot — germs in rice left sitting out can make toxins that reheating won't remove.",
+      "Rice holds more arsenic than other grains, so make it one grain among several rather than an everyday default, and don't use rice drinks in place of breast milk or formula.\n\nCool leftovers within an hour, keep them in the fridge, and reheat only once until steaming hot.",
     allergens: [],
     storageCategory: 'grain_cooked',
   },
