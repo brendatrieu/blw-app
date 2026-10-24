@@ -305,7 +305,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       'Whole edamame beans are firm, round, and slippery — a choking hazard. Always smash each bean flat or split it in half, and never serve the pods, which are tough and stringy.',
     notes:
-      "Young green soybeans, with plenty of iron, fiber, and protein. Pair with a vitamin-C food to boost absorption.\n\nEdamame is soy, so it counts as a soy serving on the allergen ladder, like tofu.\n\nBuy plain frozen shelled edamame with no added salt or seasoning.",
+      "Young green soybeans, with plenty of iron, fiber, and protein. Pair with a vitamin-C food to boost absorption.\n\nBuy plain frozen shelled edamame with no added salt or seasoning.",
     allergens: ['soy'],
     storageCategory: 'legume_tofu_cooked',
   },
@@ -1883,7 +1883,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       "From 12 months, plain pasteurized whole milk can be a drink, offered in an open or straw cup with meals and snacks. Keep it to about 2 cups (16 ounces) a day so it doesn't crowd out iron-rich foods.",
     notes:
-      "Before 12 months, cow's milk shouldn't be a drink: it's low in iron, has more protein and minerals than a baby's kidneys handle easily, and can irritate the gut enough to cause small blood losses. A little cooked into food is fine.\n\nUse pasteurized milk only — never raw — and plain whole milk, not flavored.\n\nMilk cooked into food doesn't count toward the dairy step's 3 servings: the amount is small and heat changes the milk protein. Milk served on its own, like a cup of milk from 12 months, does count. Start the dairy step with plain yogurt.",
+      "Before 12 months, cow's milk shouldn't be a drink: it's low in iron, has more protein and minerals than a baby's kidneys handle easily, and can irritate the gut enough to cause small blood losses. A little cooked into food is fine.\n\nUse pasteurized milk only — never raw — and plain whole milk, not flavored.",
     allergens: ['milk'],
     // Ledger 864: a cup of milk counts; milk in one of the meal's recipes doesn't.
     countsTowardLadder: 'alone',
@@ -1932,7 +1932,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       "Flour itself isn't the risk; what you make with it can be. Keep bakes soft and moist rather than dense, dry, or gummy, and never let baby eat dry flour — loose powder is easy to inhale.",
     notes:
-      'Flour is a raw food: it can carry germs like E. coli that only baking or cooking kills. Never let baby (or anyone) taste raw dough or batter, skip raw-flour play dough, and wash hands and surfaces after handling it.\n\nAll-purpose and whole-wheat both work — whole-wheat adds more fiber.\n\nContains wheat, so pancakes and muffins made with it count as wheat servings.',
+      'Flour is a raw food: it can carry germs like E. coli that only baking or cooking kills. Never let baby (or anyone) taste raw dough or batter, skip raw-flour play dough, and wash hands and surfaces after handling it.\n\nAll-purpose and whole-wheat both work — whole-wheat adds more fiber.',
     allergens: ['wheat'],
     storageCategory: 'pantry_dry',
   },
@@ -1955,7 +1955,7 @@ export const foods: FoodSeed[] = [
     chokingNotes:
       "Melted or spread thin, butter isn't a choking risk. A thick, cold slab can stick in the mouth like any thick spread — keep it thin.",
     notes:
-      "Look for unsalted: salted butter has about 60 times the sodium (643 mg vs 11 mg per 100 g), and a baby's kidneys can't handle much salt.\n\nButter is made from milk and carries the milk allergen, so skip it if baby has a milk allergy.\n\nIt holds almost no milk protein, though, so it doesn't count toward the dairy step's 3 servings. Start that step with plain yogurt.",
+      "Look for unsalted: salted butter has about 60 times the sodium (643 mg vs 11 mg per 100 g), and a baby's kidneys can't handle much salt.\n\nButter is made from milk and carries the milk allergen, so skip it if baby has a milk allergy.",
     allergens: ['milk'],
     countsTowardLadder: false,
     storageCategory: 'dairy_soft',
@@ -1979,7 +1979,7 @@ export const foods: FoodSeed[] = [
       'Use a little in cooking. Add toasted sesame oil at the end — high heat makes it smoke and taste bitter.',
     chokingNotes: 'Not a choking risk on its own. Mix the oil into food — never give it on a spoon by itself.',
     notes:
-      "Sesame oil carries the sesame allergen. Most sesame oil is pressed rather than refined, so it can hold enough sesame protein to cause a reaction — avoid it if baby has a sesame allergy.\n\nA few drops holds very little sesame, though, so it doesn't count toward the sesame step's 3 servings. Start that step with tahini.",
+      "Sesame oil carries the sesame allergen. Most sesame oil is pressed rather than refined, so it can hold enough sesame protein to cause a reaction — avoid it if baby has a sesame allergy.",
     allergens: ['sesame'],
     countsTowardLadder: false,
     storageCategory: 'pantry_dry',
