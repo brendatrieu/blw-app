@@ -141,8 +141,8 @@ function SettingsLink() {
  * whose black-translucent status bar draws the page under the clock. The header
  * below uses it; screens outside this layout get theirs from App's
  * OutsideAppLayout (ledger 851). */
-export function safeTop(base: string): string {
-  return `calc(${base} + env(safe-area-inset-top) + var(--top-edge-clearance))`;
+export function safeTop(base: string, clearance: "--top-edge-clearance" | "--top-edge-clearance-slim" = "--top-edge-clearance"): string {
+  return `calc(${base} + env(safe-area-inset-top) + var(${clearance}))`;
 }
 
 /**
@@ -214,7 +214,8 @@ export function AppLayout() {
               // bar reads as part of the page, still opaque so content
               // scrolling under it disappears.
               backgroundColor: "var(--color-bg)",
-              paddingTop: safeTop(isHome ? "1.125rem" : "0.25rem"),
+              // Ledger 898: the slim header needs more room to clear iOS's top blur.
+              paddingTop: isHome ? safeTop("1.125rem") : safeTop("0.25rem", "--top-edge-clearance-slim"),
             }}
           >
             {isHome ? (

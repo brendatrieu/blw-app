@@ -311,7 +311,7 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
   it("inner pages are one slim row (py-1 + 44px targets = 52px); Home keeps its taller padding", () => {
     const inner = layoutWith([remy], "/foods");
     expect(inner).toMatch(/<header class="[^"]*\bpy-1\b/);
-    expect(inner).toContain("padding-top:calc(0.25rem + env(safe-area-inset-top) + var(--top-edge-clearance))");
+    expect(inner).toContain("padding-top:calc(0.25rem + env(safe-area-inset-top) + var(--top-edge-clearance-slim))");
     // The 44px gear keeps the row 44px tall now that the empty slot collapses (item 692).
     expect(header(inner)).toMatch(/<a [^>]*aria-label="Settings"[^>]*class="[^"]*\bmin-h-11\b/);
     const home = layoutWith([remy], "/");
@@ -320,13 +320,13 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
     expect(home).toMatch(/<header class="[^"]*\bpx-4\b/);
     expect(home).toContain("padding-top:calc(1.125rem + env(safe-area-inset-top) + var(--top-edge-clearance))");
     // Ledger 892: the UpdateCard hanging from the header clears the band too.
-    expect(home).toContain('style="top:calc(0.3125rem + env(safe-area-inset-top) + var(--top-edge-clearance))"');
+    expect(home).toContain('style="top:calc(0.3125rem + env(safe-area-inset-top) + var(--top-edge-clearance-slim))"');
   });
 
   it("--header-height matches that slim header, so the Foods/Recipes sticky bars dock flush under it", () => {
     // 0.25rem + 2.75rem (44px row) + 0.25rem = 3.25rem, + the notch inset; no border since item 679.
     const css = readFileSync(new URL("../styles/index.css", import.meta.url), "utf8");
-    expect(css).toContain("--header-height: calc(3.25rem + env(safe-area-inset-top) + var(--top-edge-clearance));");
+    expect(css).toContain("--header-height: calc(3.25rem + env(safe-area-inset-top) + var(--top-edge-clearance-slim));");
   });
 
   it("--top-edge-clearance is 0 by default and 12px only in the installed iOS app (ledger 892, 896)", () => {
@@ -336,6 +336,10 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
     expect(css).toMatch(/\n:root\[data-ios-standalone\] \{\n {2}--top-edge-clearance: 12px;/);
     // Declared once each: one tunable value.
     expect(css.match(/--top-edge-clearance:/g)).toHaveLength(2);
+    // Ledger 898: the slim header's own, larger value.
+    expect(root.slice(0, root.indexOf("\n}"))).toContain("--top-edge-clearance-slim: 0px;");
+    expect(css).toMatch(/\n:root\[data-ios-standalone\] \{\n.*\n {2}--top-edge-clearance-slim: 24px;/);
+    expect(css.match(/--top-edge-clearance-slim:/g)).toHaveLength(2);
   });
 });
 

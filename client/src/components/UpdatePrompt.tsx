@@ -27,7 +27,7 @@ export function UpdateCard() {
   const show = ready && !dismissed && !modalOpen && isUpdatePromptRoute(pathname);
 
   return (
-    <div role="status" className="absolute inset-x-3" style={{ top: "calc(0.3125rem + env(safe-area-inset-top) + var(--top-edge-clearance))" }}>
+    <div role="status" className="absolute inset-x-3" style={{ top: "calc(0.3125rem + env(safe-area-inset-top) + var(--top-edge-clearance-slim))" }}>
       {show ? (
         <div className="flex items-center gap-2.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] py-3 pr-3 pl-3.5 shadow-[var(--shadow-md)]">
           <p className="flex-1 text-[15px] leading-[1.3] font-semibold text-[var(--color-text)]">A new version is ready.</p>
