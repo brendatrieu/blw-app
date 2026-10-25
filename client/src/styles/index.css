@@ -288,7 +288,7 @@
      Every top-inset site adds it: Home's header (AppLayout safeTop), App's
      OutsideAppLayout, Celebration's toast, EmergencyCard; the slim header,
      --header-height and the UpdateCard add --top-edge-clearance-slim instead.
-     Tune: change the ONE value in the rule below (still blurry on the phone →
+     Tune: change the values in the rule below (still blurry on the phone →
      larger; a gap that looks too big → smaller). */
   --top-edge-clearance: 0px;
   /* Ledger 898: the slim inner-page header starts 14px higher than Home's
