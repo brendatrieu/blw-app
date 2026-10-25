@@ -2,9 +2,12 @@
 // foods/pairings/recipes/ladder/storage-guideline data files. Safe to run
 // repeatedly — every insert is an upsert keyed on each table's natural key
 // (slug / step / category), matching what drizzle-kit migrations create.
+// Recipe ingredients, recipe stages and pairings a seed dropped are pruned
+// (ledger 897); foods, recipes, allergen tags, ladder steps and storage
+// categories are never deleted here.
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { AnyPgColumn, PgTable } from "drizzle-orm/pg-core";
 import { createDb, type Database } from "../../src/db/index.js";
 import {
@@ -46,7 +49,15 @@ const ALLERGENS: { slug: AllergenSlug; name: string; introGuidance: string }[] =
   { slug: "sesame", name: "Sesame", introGuidance: "Tahini thinned with water/yogurt, hummus, or a pinch of sesame seeds stirred into a wet food, as a tiny first portion." },
 ];
 
-export async function runSeeds(db: Database): Promise<void> {
+/** What a run pruned (ledger 897), for the container log. */
+export interface SeedPruneCounts {
+  ingredients: number;
+  stages: number;
+  pairings: number;
+}
+
+export async function runSeeds(db: Database): Promise<SeedPruneCounts> {
+  const pruned: SeedPruneCounts = { ingredients: 0, stages: 0, pairings: 0 };
   // 1. Allergens (natural key: slug).
   await db
     .insert(allergens)
@@ -176,6 +187,20 @@ export async function runSeeds(db: Database): Promise<void> {
         set: { reason: sqlExcluded("reason") },
       });
   }
+  // A pairing the seed dropped goes too (ledger 897). Only this seeder ever
+  // writes food_pairings, and nothing references its rows.
+  const keepPairings = new Set(pairingRows.map((row) => `${row.ironFoodId}/${row.vitCFoodId}`));
+  const stalePairingIds = (
+    await db
+      .select({ id: foodPairings.id, ironFoodId: foodPairings.ironFoodId, vitCFoodId: foodPairings.vitCFoodId })
+      .from(foodPairings)
+  )
+    .filter((row) => !keepPairings.has(`${row.ironFoodId}/${row.vitCFoodId}`))
+    .map((row) => row.id);
+  if (stalePairingIds.length > 0) {
+    await db.delete(foodPairings).where(inArray(foodPairings.id, stalePairingIds));
+  }
+  pruned.pairings = stalePairingIds.length;
 
   // 6. Recipes (natural key: slug). Recipe allergens are NOT stored
   // redundantly — they're derived at query time by joining
@@ -258,6 +283,42 @@ export async function runSeeds(db: Database): Promise<void> {
           set: { textureNote: sqlExcluded("texture_note"), instructions: sqlExcluded("instructions") },
         });
     }
+
+    // Ledger 897: the upserts above never delete, so an ingredient (or a
+    // stage) a recipe seed later dropped lingered — the oats split left
+    // iron_fortified_oats on two oatmeal recipes. Prune those rows on the
+    // SEEDED catalog recipes only: a parent's own recipes have an owner and
+    // are never seeded, so `owner_id IS NULL` keeps them out of reach.
+    const seededRecipeIds = recipeSeeds.flatMap((r) => recipeIdBySlug.get(r.slug) ?? []);
+    const seededCatalog = and(isNull(recipes.ownerId), inArray(recipes.id, seededRecipeIds));
+    const keepIngredients = new Set(ingredientRows.map((row) => `${row.recipeId}/${row.foodId}`));
+    const staleIngredientIds = (
+      await db
+        .select({ id: recipeIngredients.id, recipeId: recipeIngredients.recipeId, foodId: recipeIngredients.foodId })
+        .from(recipeIngredients)
+        .innerJoin(recipes, eq(recipes.id, recipeIngredients.recipeId))
+        .where(seededCatalog)
+    )
+      .filter((row) => !keepIngredients.has(`${row.recipeId}/${row.foodId}`))
+      .map((row) => row.id);
+    if (staleIngredientIds.length > 0) {
+      await db.delete(recipeIngredients).where(inArray(recipeIngredients.id, staleIngredientIds));
+    }
+    pruned.ingredients = staleIngredientIds.length;
+    const keepVariants = new Set(variantRows.map((row) => `${row.recipeId}/${row.ageStage}`));
+    const staleVariantIds = (
+      await db
+        .select({ id: recipeVariants.id, recipeId: recipeVariants.recipeId, ageStage: recipeVariants.ageStage })
+        .from(recipeVariants)
+        .innerJoin(recipes, eq(recipes.id, recipeVariants.recipeId))
+        .where(seededCatalog)
+    )
+      .filter((row) => !keepVariants.has(`${row.recipeId}/${row.ageStage}`))
+      .map((row) => row.id);
+    if (staleVariantIds.length > 0) {
+      await db.delete(recipeVariants).where(inArray(recipeVariants.id, staleVariantIds));
+    }
+    pruned.stages = staleVariantIds.length;
   }
 
   // 7. Allergen ladder (natural key: step).
@@ -291,6 +352,7 @@ export async function runSeeds(db: Database): Promise<void> {
         });
     }
   }
+  return pruned;
 }
 
 // drizzle-orm's query builder doesn't (yet) expose a typed `excluded.<col>`
@@ -318,8 +380,11 @@ async function slugIdMap(
 // db:seed script after db:migrate).
 async function main() {
   const db = createDb(process.env.DATABASE_URL);
-  await runSeeds(db);
-  console.log("Seeds applied.");
+  const pruned = await runSeeds(db);
+  // The container log is where the owner can confirm what a deploy removed.
+  console.log(
+    `Seeds applied (removed ${pruned.ingredients} stale recipe ingredients, ${pruned.stages} recipe stages, ${pruned.pairings} pairings).`,
+  );
 }
 
 const isMainModule =
