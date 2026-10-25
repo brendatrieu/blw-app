@@ -263,7 +263,7 @@ export function CustomFoodForm({
         error={shownErrors.emoji}
         hint="Shown wherever this food appears."
       >
-        {/* Ledgers 872, 879: the box is a text field that also opens the grid;
+        {/* Ledgers 872, 879, 893: the box is a text field; a button beside it opens the grid;
             its id is the label's target and what a failed submit focuses. */}
         <EmojiChooser
           id={`${idPrefix}-emoji`}

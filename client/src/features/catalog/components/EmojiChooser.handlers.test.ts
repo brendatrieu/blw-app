@@ -1,5 +1,5 @@
-// Ledgers 862, 872, 879, 888: the emoji box is a text field that opens the grid;
-// type / pick / Escape / blur behaviour lives in state and handlers a server
+// Ledgers 862, 872, 879, 888, 893: the emoji box is a plain text field and a
+// button beside it opens the grid; type / toggle / pick / Escape / blur behaviour lives in state and handlers a server
 // render never reaches.
 // Harness idiom from CustomFoodForm.handlers.test.ts: `useState` is a hoisted
 // store, so the component is called as a plain function and its element tree
@@ -69,58 +69,83 @@ const globals = globalThis as unknown as { document?: unknown };
 let focused: string[] = [];
 let listeners: Map<string, (event: unknown) => void>;
 let value = "";
-let boxFocus: (() => void) | undefined;
 
 function render() {
   h.store.i = 0;
   h.store.effects = [];
-  const tree = EmojiChooser({ id: "e", value, onChange: (emoji) => (value = emoji) }) as unknown;
-  boxFocus = box(tree).props.onFocus as () => void;
-  return tree;
+  return EmojiChooser({ id: "e", value, onChange: (emoji) => (value = emoji) }) as unknown;
 }
 const box = (tree: unknown) => all(tree, (el) => el.props?.id === "e")[0]!;
+const toggleButton = (tree: unknown) => all(tree, (el) => el.props?.id === "e-button")[0]!;
 const grid = (tree: unknown) => all(tree, (el) => el.props?.role === "group")[0];
 const picks = (tree: unknown) =>
   all(tree, (el) => el.type === "button" && String(el.props["aria-label"]).startsWith("Pick "));
-const tap = (el: Rendered) => (el.props.onClick as (event: { detail: number }) => void)({ detail: 1 });
-const keyPick = (el: Rendered) => (el.props.onClick as (event: { detail: number }) => void)({ detail: 0 });
-const openGrid = () => tap(box(render()));
+/** A tap or click on the toggle; records the focus it gives itself. */
+const pressToggle = () =>
+  (toggleButton(render()).props.onClick as (event: unknown) => void)({
+    detail: 1,
+    currentTarget: { focus: () => focused.push("e-button (self)") },
+  });
+const tapBox = () => (box(render()).props.onClick as () => void)();
+const focusBox = () => (box(render()).props.onFocus as () => void)();
 const pick = (tree: unknown, label: string) => picks(tree).find((el) => el.props["aria-label"] === label)!;
+const tapPick = (label: string) => (pick(render(), label).props.onClick as () => void)();
 const wrapper = (tree: unknown) => (tree as Rendered).props;
+const openGrid = () => {
+  pressToggle();
+  focused = [];
+};
 
 beforeEach(() => {
   h.store.states = [];
   focused = [];
   value = "🥕";
-  // Focusing the box runs its onFocus, like a real focus event does.
   listeners = new Map();
   globals.document = {
     addEventListener: (type: string, fn: (event: unknown) => void) => listeners.set(type, fn),
     removeEventListener: (type: string, fn: (event: unknown) => void) => {
       if (listeners.get(type) === fn) listeners.delete(type);
     },
-    getElementById: (id: string) => ({
-      focus: () => {
-        focused.push(id);
-        boxFocus?.();
-      },
-    }),
+    getElementById: (id: string) => ({ focus: () => focused.push(id) }),
   };
 });
 afterEach(() => {
   delete globals.document;
 });
 
-describe("EmojiChooser (ledger 879)", () => {
-  it("starts closed: a text field holding the value, collapsed, controlling the grid", () => {
+describe("EmojiChooser (ledgers 879, 893)", () => {
+  it("starts closed: a plain text field holding the value, and a collapsed 😀 toggle controlling the grid", () => {
     const tree = render();
     expect(box(tree).type).toBe(Input);
     expect(box(tree).props.type).toBe("text");
     expect(box(tree).props.value).toBe("🥕");
-    expect(box(tree).props["aria-expanded"]).toBe(false);
-    expect(box(tree).props["aria-controls"]).toBe("e-choices");
+    // The field no longer claims the grid.
+    expect(box(tree).props["aria-expanded"]).toBeUndefined();
+    expect(box(tree).props["aria-controls"]).toBeUndefined();
+    const toggle = toggleButton(tree);
+    expect(toggle.type).toBe("button");
+    expect(toggle.props.type).toBe("button");
+    expect(toggle.props["aria-label"]).toBe("Emoji choices");
+    expect(toggle.props["aria-expanded"]).toBe(false);
+    expect(toggle.props["aria-controls"]).toBe("e-choices");
+    expect(text(toggle)).toBe("😀");
     expect(grid(tree)).toBeUndefined();
-    expect(all(tree, (el) => el.type === "button")).toHaveLength(0);
+    expect(all(tree, (el) => el.type === "button")).toEqual([toggle]);
+  });
+
+  it("the toggle is a 44px+ target with a pressed style keyed to aria-expanded (existing selected tokens)", () => {
+    const classes = String(toggleButton(render()).props.className).split(" ");
+    expect(classes).toEqual(expect.arrayContaining(["min-h-11", "w-14"]));
+    expect(classes).toEqual(
+      expect.arrayContaining([
+        "aria-expanded:bg-[var(--color-selected)]",
+        "aria-expanded:border-[var(--color-selected)]",
+      ]),
+    );
+    // Hover never hides the open state.
+    expect(classes.filter((c) => c.startsWith("hover:"))).toEqual(["hover:not-aria-expanded:bg-[var(--color-bg-inset)]"]);
+    openGrid();
+    expect(toggleButton(render()).props["aria-expanded"]).toBe(true);
   });
 
   it("empty shows 🍽️ (U+1F37D U+FE0F) as its placeholder, and none of the old extras", () => {
@@ -140,113 +165,84 @@ describe("EmojiChooser (ledger 879)", () => {
   it("typing goes straight to the value (the form validates it)", () => {
     (box(render()).props.onChange as (e: unknown) => void)({ target: { value: "🥯" } });
     expect(value).toBe("🥯");
+    (box(render()).props.onChange as (e: unknown) => void)({ target: { value: "ab" } });
+    expect(value).toBe("ab");
     (box(render()).props.onChange as (e: unknown) => void)({ target: { value: "" } });
     expect(value).toBe("");
   });
 
-  it("tapping the box opens the grid: every choice a labelled button, the current one pressed", () => {
+  it("tapping or focusing the field never opens the grid, empty or not", () => {
+    for (const start of ["", "🥕", "ab"]) {
+      value = start;
+      h.store.states = [];
+      tapBox();
+      expect(grid(render())).toBeUndefined();
+      focusBox();
+      expect(grid(render())).toBeUndefined();
+      expect(toggleButton(render()).props["aria-expanded"]).toBe(false);
+    }
+  });
+
+  it("tapping or focusing the field while the grid is open closes it (typing, not picking)", () => {
     openGrid();
+    tapBox();
+    expect(grid(render())).toBeUndefined();
+    openGrid();
+    focusBox();
+    expect(grid(render())).toBeUndefined();
+    expect(focused).toEqual([]);
+  });
+
+  it("the toggle opens and closes the grid: every choice a labelled button, the current one pressed", () => {
+    pressToggle();
     const tree = render();
-    expect(box(tree).props["aria-expanded"]).toBe(true);
+    expect(toggleButton(tree).props["aria-expanded"]).toBe(true);
     expect(grid(tree)!.props.id).toBe("e-choices");
     const total = EMOJI_CHOICE_GROUPS.reduce((n, group) => n + group.choices.length, 0);
     expect(picks(tree)).toHaveLength(total);
     expect(picks(tree).every((el) => el.props.type === "button")).toBe(true);
     const pressed = picks(tree).filter((el) => el.props["aria-pressed"] === true);
     expect(pressed.map((el) => el.props["aria-label"])).toEqual(["Pick 🥕 carrot"]);
-    // Tapping again (to place the cursor) keeps it open.
-    openGrid();
-    expect(grid(render())).toBeDefined();
-  });
-
-  it("focusing the box (Tab, the label) opens the grid too", () => {
-    (box(render()).props.onFocus as () => void)();
-    expect(grid(render())).toBeDefined();
-  });
-
-  it("focusing an EMPTY box opens the grid (empty is not 'holds non-emoji')", () => {
-    value = "";
-    (box(render()).props.onFocus as () => void)();
-    expect(grid(render())).toBeDefined();
-  });
-
-  it("B1: focus onto a box holding non-emoji (a failed Save) keeps the grid shut, so the error shows under the box", () => {
-    value = "ab";
-    const focusBox = () => (box(render()).props.onFocus as () => void)();
-    focusBox();
+    // The press takes focus itself (iOS doesn't), so the box's keyboard goes down.
+    expect(focused).toEqual(["e-button (self)"]);
+    pressToggle();
     expect(grid(render())).toBeUndefined();
-    // Open already (typed with the grid up, then an iOS Save tap that blurred
-    // to nowhere): the Save's focus shuts it.
-    openGrid();
-    expect(grid(render())).toBeDefined();
-    focusBox();
-    expect(grid(render())).toBeUndefined();
-    // A tap still opens it to pick a replacement.
-    openGrid();
-    expect(grid(render())).toBeDefined();
-    // A single emoji (spaces trimmed, as Save does) opens on focus as usual.
-    value = " 🥯 ";
-    focusBox();
-    expect(grid(render())).toBeDefined();
+    expect(toggleButton(render()).props["aria-expanded"]).toBe(false);
+    expect(value).toBe("🥕");
   });
 
-  it("B1: Enter in the box (the form's implicit Save) closes the grid without blocking the submit", () => {
-    value = "ab";
-    const onKeyDown = (tree: unknown) =>
-      wrapper(tree).onKeyDown as (event: { key: string; target: unknown; preventDefault: () => void }) => void;
+  it("a pick sets the value, closes, and returns focus to the button", () => {
     openGrid();
-    expect(grid(render())).toBeDefined();
-    // Enter on a grid button is a keyboard pick: left to the click.
-    onKeyDown(render())({ key: "Enter", target: { id: "pick" }, preventDefault: vi.fn() });
-    expect(grid(render())).toBeDefined();
-    const prevent = vi.fn();
-    onKeyDown(render())({ key: "Enter", target: { id: "e" }, preventDefault: prevent });
-    expect(prevent).not.toHaveBeenCalled();
-    expect(grid(render())).toBeUndefined();
-    expect(value).toBe("ab");
-  });
-
-  it("a tapped pick sets the value and closes, without pulling focus (no phone keyboard)", () => {
-    openGrid();
-    tap(pick(render(), "Pick 🍐 pear"));
+    tapPick("Pick 🍐 pear");
     expect(value).toBe("🍐");
     expect(grid(render())).toBeUndefined();
-    expect(focused).toEqual([]);
+    expect(focused).toEqual(["e-button"]);
   });
 
-  it("a keyboard pick sets the value, closes, and returns focus to the box without reopening", () => {
-    openGrid();
-    keyPick(pick(render(), "Pick 🍐 pear"));
-    expect(value).toBe("🍐");
-    expect(focused).toEqual(["e"]);
-    expect(grid(render())).toBeUndefined();
-    // A later, real focus still opens it.
-    (box(render()).props.onFocus as () => void)();
-    expect(grid(render())).toBeDefined();
-  });
-
-  it("Escape closes the open grid, claims the key (a surrounding Sheet stays open), and returns focus", () => {
+  it("Escape closes the open grid, claims the key (a surrounding Sheet stays open), and returns focus to the button", () => {
     const onKeyDown = (tree: unknown) =>
       wrapper(tree).onKeyDown as (event: { key: string; preventDefault: () => void }) => void;
     const closedEscape = vi.fn();
     onKeyDown(render())({ key: "Escape", preventDefault: closedEscape });
     // Closed: the key is the Sheet's.
     expect(closedEscape).not.toHaveBeenCalled();
+    expect(focused).toEqual([]);
 
     openGrid();
     const ignored = vi.fn();
     onKeyDown(render())({ key: "a", preventDefault: ignored });
+    onKeyDown(render())({ key: "Enter", preventDefault: ignored });
     expect(ignored).not.toHaveBeenCalled();
     expect(grid(render())).toBeDefined();
     const prevent = vi.fn();
     onKeyDown(render())({ key: "Escape", preventDefault: prevent });
     expect(prevent).toHaveBeenCalled();
     expect(grid(render())).toBeUndefined();
-    expect(focused).toEqual(["e"]);
+    expect(focused).toEqual(["e-button"]);
     expect(value).toBe("🥕");
   });
 
-  it("focus moving to another control closes the grid; into the grid, or nowhere (an iOS tap), keeps it", () => {
+  it("focus moving to another control closes the grid; into the chooser, or nowhere (an iOS tap), keeps it", () => {
     const inside = { id: "inside" };
     const blur = (relatedTarget: unknown) =>
       (wrapper(render()).onBlur as (event: unknown) => void)({
@@ -274,7 +270,7 @@ describe("EmojiChooser (ledger 879)", () => {
     }
     const pointerUp = (target: unknown) => listeners.get("pointerup")!({ target });
 
-    it("a tap or click outside the box and grid closes it, empty or not; inside keeps it", () => {
+    it("a tap or click outside the field, button and grid closes it, empty or not; inside keeps it", () => {
       for (const start of ["", "🥕"]) {
         value = start;
         h.store.states = [];
@@ -293,7 +289,7 @@ describe("EmojiChooser (ledger 879)", () => {
       }
     });
 
-    it("a tap on the wrapper itself (the form-wide strip beside the box, the gap above the grid) closes it", () => {
+    it("a tap on the wrapper itself (the form-wide strip beside the row, the gap above the grid) closes it", () => {
       openGrid();
       commit();
       pointerUp(rootNode);
@@ -327,24 +323,17 @@ describe("EmojiChooser (ledger 879)", () => {
       blur({ id: "sheet-panel" });
       expect(grid(render())).toBeUndefined();
     });
-
-    it("B1 still holds: a failed Save's focus keeps the grid shut, and an outside tap doesn't reopen it", () => {
-      value = "ab";
-      openGrid();
-      commit();
-      (box(render()).props.onFocus as () => void)();
-      expect(grid(render())).toBeUndefined();
-      expect(listeners.has("pointerup")).toBe(true); // the open render's listener, until its cleanup
-      pointerUp({ id: "save" });
-      expect(grid(render())).toBeUndefined();
-    });
   });
 
-  it("server-renders the field with its value, placeholder and collapsed state", () => {
+  it("server-renders the field with its value and placeholder, and the collapsed toggle", () => {
     h.store.states = [];
     h.store.i = 0;
     const html = renderToString(createElement(EmojiChooser, { id: "e", value: "", onChange: () => {} }));
-    expect(html).toMatch(/<input[^>]*id="e"[^>]*type="text"[^>]*placeholder="🍽️"[^>]*aria-expanded="false"[^>]*value=""/);
+    expect(html).toMatch(/<input[^>]*id="e"[^>]*type="text"[^>]*placeholder="🍽️"[^>]*value=""/);
+    expect(html).not.toMatch(/<input[^>]*aria-expanded/);
+    expect(html).toMatch(
+      /<button[^>]*id="e-button"[^>]*type="button"[^>]*aria-label="Emoji choices"[^>]*aria-expanded="false"[^>]*aria-controls="e-choices"/,
+    );
     expect(html).not.toContain("No emoji chosen");
   });
 });

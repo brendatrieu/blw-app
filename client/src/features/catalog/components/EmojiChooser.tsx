@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
-import { isSingleEmoji } from "@blw/shared";
 import { DEFAULT_FOOD_EMOJI, EMOJI_CHOICE_GROUPS } from "../foodEmoji.js";
 import { Input } from "../../../components/ui/Input.js";
 
@@ -12,62 +11,54 @@ interface EmojiChooserProps {
 }
 
 /**
- * The custom-food emoji (ledgers 862, 872, 879): the box is a text field —
- * type or paste one emoji, or clear it for none, which shows 🍽️ as its
- * placeholder because that is what the food gets — and tapping or focusing
- * it opens the app's own grid inline (never floating, so no portal; it
- * pushes the form down). The form validates the value (`validateCustomFood`).
- * A pick or Escape closes the grid; so does focus moving on to another
- * control, and a tap or click anywhere outside the box and grid (ledger 888:
- * phones have no Escape, and a tap on plain text moves focus nowhere). Focus
- * onto a box holding something that isn't one emoji (a failed Save sends
- * focus here) closes the grid instead, and so does Enter in the box (it
- * submits), so the form's error line stays right under the box; a tap still
- * opens it. Logic in `foodEmoji.ts`.
+ * The custom-food emoji (ledgers 862, 872, 879, 893): the box is a plain text
+ * field — type or paste one emoji, or clear it for none, which shows 🍽️ as
+ * its placeholder because that is what the food gets — and the 😀 button
+ * beside it opens and closes the app's own grid inline (never floating, so no
+ * portal; it pushes the form down). The form validates the value
+ * (`validateCustomFood`). A pick or Escape closes the grid and puts focus back
+ * on the button; so does focus moving on to another control, and a tap or
+ * click anywhere outside the chooser (ledger 888: phones have no Escape, and a
+ * tap on plain text moves focus nowhere). Tapping or focusing the box closes
+ * it too (ledger 893): the box is for typing, so the phone keyboard and the
+ * grid never share the screen, and a failed Save's focus leaves the error line
+ * right under the box. Logic in `foodEmoji.ts`.
  */
 export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
   const [open, setOpen] = useState(false);
-  // Set while focus is handed back to the box after a keyboard pick or
-  // Escape, so that focus doesn't reopen the grid it just closed.
-  const returning = useRef(false);
   const root = useRef<HTMLDivElement>(null);
   const gridId = `${id}-choices`;
+  const buttonId = `${id}-button`;
   const current = value.trim();
-  const holdsNonEmoji = current.length > 0 && !isSingleEmoji(current);
 
-  function close(refocus: boolean) {
+  function close() {
     setOpen(false);
-    if (!refocus) return;
-    returning.current = true;
-    // By id: no ref plumbing through the Field wrapper.
-    document.getElementById(id)?.focus();
-    returning.current = false;
+    // By id: no ref plumbing. A button takes focus without a phone keyboard.
+    document.getElementById(buttonId)?.focus();
   }
 
-  // A keyboard pick (a click with detail 0) gets focus back on the box; a
-  // tap leaves it alone, so a phone's keyboard doesn't jump up after a pick.
-  function choose(emoji: string, event: MouseEvent) {
+  function choose(emoji: string) {
     onChange(emoji);
-    close(event.detail === 0);
+    close();
+  }
+
+  function toggle(event: MouseEvent<HTMLButtonElement>) {
+    // iOS doesn't focus a tapped button: focusing it moves focus off the box,
+    // so its keyboard goes down while the grid is up.
+    event.currentTarget.focus();
+    setOpen(!open);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    // Enter in the box submits the form, whose focus() on the already-focused
-    // box fires no focus event: close here so a failed Save's error stays
-    // under the box (ledger 879 B1). Not prevented — the submit goes ahead.
-    if (event.key === "Enter" && (event.target as HTMLElement).id === id) {
-      setOpen(false);
-      return;
-    }
     if (!open || event.key !== "Escape") return;
     // Claimed, so a surrounding Sheet's Escape (useModal skips a prevented
     // event) leaves the half-filled form open.
     event.preventDefault();
-    close(true);
+    close();
   }
 
   // Focus moving to a control outside the chooser closes the grid. A tap on
-  // a grid button may blur the box with no relatedTarget (iOS doesn't focus
+  // a grid button may blur with no relatedTarget (iOS doesn't focus
   // buttons), so that case keeps it open for the click to land.
   function handleBlur(event: FocusEvent<HTMLDivElement>) {
     const next = event.relatedTarget as Node | null;
@@ -82,8 +73,8 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
   useEffect(() => {
     if (!open) return;
     function handlePointerUp(event: PointerEvent) {
-      // The wrapper itself is form-wide (the box is narrow): a tap on its own
-      // empty strip beside the box, or the gap above the grid, is outside.
+      // The wrapper itself is form-wide (the row is narrow): a tap on its own
+      // empty strip beside the row, or the gap above the grid, is outside.
       const target = event.target as Node;
       if (target === root.current || !root.current?.contains(target)) setOpen(false);
     }
@@ -93,25 +84,33 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
 
   return (
     <div ref={root} onKeyDown={handleKeyDown} onBlur={handleBlur} className="flex flex-col gap-2">
-      <Input
-        id={id}
-        type="text"
-        inputMode="text"
-        autoComplete="off"
-        autoCorrect="off"
-        spellCheck={false}
-        value={value}
-        placeholder={DEFAULT_FOOD_EMOJI}
-        aria-expanded={open}
-        aria-controls={gridId}
-        onChange={(event) => onChange(event.target.value)}
-        onFocus={() => {
-          // Ledger 879 B1: the grid would push the Save error off-screen.
-          if (!returning.current) setOpen(!holdsNonEmoji);
-        }}
-        onClick={() => setOpen(true)}
-        className="w-20! text-center text-3xl!"
-      />
+      <div className="flex gap-2 self-start">
+        <Input
+          id={id}
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          value={value}
+          placeholder={DEFAULT_FOOD_EMOJI}
+          onChange={(event) => onChange(event.target.value)}
+          onFocus={() => setOpen(false)}
+          onClick={() => setOpen(false)}
+          className="w-20! text-center text-3xl!"
+        />
+        <button
+          id={buttonId}
+          type="button"
+          aria-label="Emoji choices"
+          aria-expanded={open}
+          aria-controls={gridId}
+          onClick={toggle}
+          className="flex min-h-11 w-14 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-2xl transition-colors duration-[var(--duration-fast)] hover:not-aria-expanded:bg-[var(--color-bg-inset)] aria-expanded:border-[var(--color-selected)] aria-expanded:bg-[var(--color-selected)] motion-reduce:transition-none"
+        >
+          <span aria-hidden="true">😀</span>
+        </button>
+      </div>
       {open ? (
         <div
           id={gridId}
@@ -133,7 +132,7 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
                     type="button"
                     aria-label={`Pick ${choice.emoji} ${choice.label}`}
                     aria-pressed={choice.emoji === current}
-                    onClick={(event) => choose(choice.emoji, event)}
+                    onClick={() => choose(choice.emoji)}
                     className="flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-md)] text-2xl hover:bg-[var(--color-bg-inset)] aria-pressed:bg-[var(--color-bg-inset)]"
                   >
                     {choice.emoji}
