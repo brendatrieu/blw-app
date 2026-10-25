@@ -297,6 +297,9 @@ const CHIP_TONES = [
   // Item 647: RecipePicker's outline "Custom" marker (muted text, no fill)
   // on a selected listbox row, which is tinted primary-soft.
   { name: "primary outline-marker", text: "color-text-muted", tint: "color-primary-soft" },
+  // Ledger 894: the emoji button while its grid is open — the accent icon on
+  // a primary-soft circle (form page and sheet). An icon, but held to 4.5.
+  { name: "primary emoji-button open icon", text: "color-accent", tint: "color-primary-soft" },
 ];
 
 // Chip text is checked against the tint COMPOSITED over each ground it can

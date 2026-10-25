@@ -1,4 +1,4 @@
-// Ledgers 862, 872, 879, 888, 893: the emoji box is a plain text field and a
+// Ledgers 862, 872, 879, 888, 893, 894: the emoji box is a plain text field and a
 // button beside it opens the grid; type / toggle / pick / Escape / blur behaviour lives in state and handlers a server
 // render never reaches.
 // Harness idiom from CustomFoodForm.handlers.test.ts: `useState` is a hoisted
@@ -40,6 +40,7 @@ import { renderToString } from "react-dom/server";
 import { EmojiChooser } from "./EmojiChooser.js";
 import { Input } from "../../../components/ui/Input.js";
 import { DEFAULT_FOOD_EMOJI, EMOJI_CHOICE_GROUPS } from "../foodEmoji.js";
+import { SmileyGlyph } from "../../../components/ui/iconButton.js";
 
 interface Rendered {
   type: unknown;
@@ -114,7 +115,7 @@ afterEach(() => {
 });
 
 describe("EmojiChooser (ledgers 879, 893)", () => {
-  it("starts closed: a plain text field holding the value, and a collapsed 😀 toggle controlling the grid", () => {
+  it("starts closed: a plain text field holding the value, and a collapsed icon toggle controlling the grid", () => {
     const tree = render();
     expect(box(tree).type).toBe(Input);
     expect(box(tree).props.type).toBe("text");
@@ -128,24 +129,43 @@ describe("EmojiChooser (ledgers 879, 893)", () => {
     expect(toggle.props["aria-label"]).toBe("Emoji choices");
     expect(toggle.props["aria-expanded"]).toBe(false);
     expect(toggle.props["aria-controls"]).toBe("e-choices");
-    expect(text(toggle)).toBe("😀");
+    // Ledger 894: a monochrome outline smiley icon, never a colour emoji.
+    expect(text(toggle)).toBe("");
+    expect(toggle.props.children).toEqual(createElement(SmileyGlyph));
     expect(grid(tree)).toBeUndefined();
     expect(all(tree, (el) => el.type === "button")).toEqual([toggle]);
   });
 
-  it("the toggle is a 44px+ target with a pressed style keyed to aria-expanded (existing selected tokens)", () => {
+  it("the toggle is a 44px icon button, not a bordered tile, with an open style keyed to aria-expanded", () => {
     const classes = String(toggleButton(render()).props.className).split(" ");
-    expect(classes).toEqual(expect.arrayContaining(["min-h-11", "w-14"]));
+    expect(classes).toEqual(expect.arrayContaining(["h-11", "w-11", "rounded-full", "text-[var(--color-icon)]"]));
+    // No field-like border or fill of its own.
+    expect(classes.filter((c) => /(^|:)(border|bg-)/.test(c) && !/^(hover|active|aria-expanded):/.test(c))).toEqual([]);
+    expect(classes.some((c) => c.includes("border"))).toBe(false);
     expect(classes).toEqual(
-      expect.arrayContaining([
-        "aria-expanded:bg-[var(--color-selected)]",
-        "aria-expanded:border-[var(--color-selected)]",
-      ]),
+      expect.arrayContaining(["aria-expanded:bg-[var(--color-primary-soft)]", "aria-expanded:text-[var(--color-accent)]"]),
     );
-    // Hover never hides the open state.
-    expect(classes.filter((c) => c.startsWith("hover:"))).toEqual(["hover:not-aria-expanded:bg-[var(--color-bg-inset)]"]);
+    // Hover/press tint only while closed, so it never hides the open state.
+    expect(classes.filter((c) => c.startsWith("hover:") || c.startsWith("active:"))).toEqual([
+      "hover:not-aria-expanded:bg-[var(--color-bg-inset)]",
+      "active:not-aria-expanded:bg-[var(--color-bg-inset)]",
+    ]);
     openGrid();
     expect(toggleButton(render()).props["aria-expanded"]).toBe(true);
+  });
+
+  it("the icon is an aria-hidden outline svg drawn in currentColor, with no emoji character", () => {
+    const svg = SmileyGlyph() as unknown as Rendered;
+    expect(svg.type).toBe("svg");
+    expect(svg.props["aria-hidden"]).toBe(true);
+    expect(svg.props.fill).toBe("none");
+    expect(svg.props.stroke).toBe("currentColor");
+    expect(svg.props.strokeWidth).toBe(1.8);
+    expect(renderToString(createElement(SmileyGlyph))).not.toMatch(/\p{Extended_Pictographic}/u);
+    const html = renderToString(createElement(EmojiChooser, { id: "e", value: "", onChange: () => {} }));
+    const button = html.slice(html.indexOf('id="e-button"'), html.indexOf("</button>"));
+    expect(button).toContain('<svg aria-hidden="true"');
+    expect(button).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 
   it("empty shows 🍽️ (U+1F37D U+FE0F) as its placeholder, and none of the old extras", () => {

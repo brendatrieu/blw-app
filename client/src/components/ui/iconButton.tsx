@@ -66,3 +66,19 @@ export function ChevronRightGlyph() {
     </svg>
   );
 }
+
+/**
+ * A monochrome outline smiley, like a phone keyboard's emoji key (ledger
+ * 894): the custom-food emoji button. Never a colour emoji, so it reads as
+ * an icon beside the emoji field, not a second field.
+ */
+export function SmileyGlyph() {
+  return (
+    <svg {...GLYPH_PROPS}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+      <circle cx="9" cy="9.5" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="9.5" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}

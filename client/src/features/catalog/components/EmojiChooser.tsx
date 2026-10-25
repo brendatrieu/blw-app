@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
 import { DEFAULT_FOOD_EMOJI, EMOJI_CHOICE_GROUPS } from "../foodEmoji.js";
 import { Input } from "../../../components/ui/Input.js";
+import { SmileyGlyph } from "../../../components/ui/iconButton.js";
 
 interface EmojiChooserProps {
   /** The box's id — the Field label's `htmlFor` and the submit-focus target. */
@@ -11,11 +12,12 @@ interface EmojiChooserProps {
 }
 
 /**
- * The custom-food emoji (ledgers 862, 872, 879, 893): the box is a plain text
- * field — type or paste one emoji, or clear it for none, which shows 🍽️ as
- * its placeholder because that is what the food gets — and the 😀 button
- * beside it opens and closes the app's own grid inline (never floating, so no
- * portal; it pushes the form down). The form validates the value
+ * The custom-food emoji (ledgers 862, 872, 879, 893, 894): the box is a
+ * plain text field — type or paste one emoji, or clear it for none, which
+ * shows 🍽️ as its placeholder because that is what the food gets — and the
+ * emoji button beside it (an outline smiley icon, like a phone keyboard's
+ * emoji key) opens and closes the app's own grid inline (never floating, so
+ * no portal; it pushes the form down). The form validates the value
  * (`validateCustomFood`). A pick or Escape closes the grid and puts focus back
  * on the button; so does focus moving on to another control, and a tap or
  * click anywhere outside the chooser (ledger 888: phones have no Escape, and a
@@ -84,7 +86,7 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
 
   return (
     <div ref={root} onKeyDown={handleKeyDown} onBlur={handleBlur} className="flex flex-col gap-2">
-      <div className="flex gap-2 self-start">
+      <div className="flex items-center gap-2 self-start">
         <Input
           id={id}
           type="text"
@@ -106,9 +108,12 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
           aria-expanded={open}
           aria-controls={gridId}
           onClick={toggle}
-          className="flex min-h-11 w-14 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-2xl transition-colors duration-[var(--duration-fast)] hover:not-aria-expanded:bg-[var(--color-bg-inset)] aria-expanded:border-[var(--color-selected)] aria-expanded:bg-[var(--color-selected)] motion-reduce:transition-none"
+          // An icon button, not a second tile (ledger 894): no border or fill,
+          // the header gear's icon colour, a soft tint on hover/press, and
+          // while open a primary-soft circle with the icon in accent.
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--color-icon)] transition-colors duration-[var(--duration-fast)] hover:not-aria-expanded:bg-[var(--color-bg-inset)] active:not-aria-expanded:bg-[var(--color-bg-inset)] aria-expanded:bg-[var(--color-primary-soft)] aria-expanded:text-[var(--color-accent)] motion-reduce:transition-none"
         >
-          <span aria-hidden="true">😀</span>
+          <SmileyGlyph />
         </button>
       </div>
       {open ? (
