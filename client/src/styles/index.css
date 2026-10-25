@@ -465,7 +465,7 @@
 }
 
 :root[data-ios-standalone] {
-  --top-edge-clearance: 20px; /* ledger 892: the one tunable value, see :root */
+  --top-edge-clearance: 12px; /* ledger 892/896: the one tunable value, see :root (owner: 20px looked too low) */
 }
 
 :root[data-theme="dark"] {

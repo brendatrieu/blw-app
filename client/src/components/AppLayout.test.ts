@@ -329,11 +329,11 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
     expect(css).toContain("--header-height: calc(3.25rem + env(safe-area-inset-top) + var(--top-edge-clearance));");
   });
 
-  it("--top-edge-clearance is 0 by default and 20px only in the installed iOS app (ledger 892)", () => {
+  it("--top-edge-clearance is 0 by default and 12px only in the installed iOS app (ledger 892, 896)", () => {
     const css = readFileSync(new URL("../styles/index.css", import.meta.url), "utf8");
     const root = css.slice(css.indexOf("\n:root {"));
     expect(root.slice(0, root.indexOf("\n}"))).toContain("--top-edge-clearance: 0px;");
-    expect(css).toMatch(/\n:root\[data-ios-standalone\] \{\n {2}--top-edge-clearance: 20px;/);
+    expect(css).toMatch(/\n:root\[data-ios-standalone\] \{\n {2}--top-edge-clearance: 12px;/);
     // Declared once each: one tunable value.
     expect(css.match(/--top-edge-clearance:/g)).toHaveLength(2);
   });
