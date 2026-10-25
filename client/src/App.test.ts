@@ -190,7 +190,7 @@ describe("App route wiring (ledger 851 — screens outside AppLayout clear the i
     expect(findRoute("/settings")?.wrappers).not.toContain(OutsideAppLayout);
   });
 
-  it("pads the top by the safe-area inset alone around the page", () => {
+  it("pads the top by the safe-area inset plus the iOS blur clearance (ledger 892) around the page", () => {
     const html = renderToString(
       createElement(
         MemoryRouter,
@@ -206,7 +206,7 @@ describe("App route wiring (ledger 851 — screens outside AppLayout clear the i
         ),
       ),
     );
-    expect(html).toBe('<div style="padding-top:env(safe-area-inset-top)"><p>page</p></div>');
+    expect(html).toBe('<div style="padding-top:calc(env(safe-area-inset-top) + var(--top-edge-clearance))"><p>page</p></div>');
   });
 });
 

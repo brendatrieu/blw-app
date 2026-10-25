@@ -11,11 +11,13 @@ import { ApiError } from "./lib/api.js";
 import { createCatalogVersionChecker, createCatalogVersionDeps } from "./lib/catalogVersion.js";
 import { createIdbPersister } from "./lib/persister.js";
 import { fetchServerVersion, reloadWhenControlled, setUpdateReady } from "./pwa/update.js";
+import { markIosStandalone } from "./pwa/iosStandalone.js";
 import { UsageProvider } from "./lib/usage/UsageProvider.js";
 import { initTheme } from "./theme.js";
 import "./styles/index.css";
 
 initTheme();
+markIosStandalone();
 
 const queryClient = new QueryClient({
   defaultOptions: {
