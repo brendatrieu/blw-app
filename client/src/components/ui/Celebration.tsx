@@ -111,7 +111,9 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
       {active ? (
         <div
           role="status"
-          className="celebration-toast fixed top-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 py-2.5 shadow-[var(--shadow-lg)]"
+          className="celebration-toast fixed left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 py-2.5 shadow-[var(--shadow-lg)]"
+          // 1rem under the top inset and the installed iOS app's blur band (ledger 892).
+          style={{ top: "calc(1rem + env(safe-area-inset-top) + var(--top-edge-clearance))" }}
         >
           {active.emoji ? (
             <span aria-hidden="true" className="text-xl leading-none">

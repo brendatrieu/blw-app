@@ -27,7 +27,11 @@ export function EmergencyCard({ level, reasons, steps, disclaimer, onDismiss }: 
       className="scroll-momentum fixed inset-0 z-50 overflow-y-auto scroll-thin"
       style={{ backgroundColor: palette.background, color: palette.text }}
     >
-      <div className="mx-auto flex min-h-full max-w-lg flex-col gap-5 p-5">
+      <div
+        className="mx-auto flex min-h-full max-w-lg flex-col gap-5 p-5"
+        // Full screen, so its top clears the inset and the iOS blur band (ledger 892).
+        style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top) + var(--top-edge-clearance))" }}
+      >
         <div className="flex flex-col gap-2">
           <span className="text-xs font-semibold uppercase tracking-widest opacity-90">
             {emergency ? "Emergency" : "Needs to be seen today"}
