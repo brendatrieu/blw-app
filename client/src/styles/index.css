@@ -279,17 +279,7 @@
      44px row, no border, plus the notch inset it pads in) — the sticky
      `top` of the bars that dock under it, so no gap opens between them. */
   --nav-height: 4.125rem;
-  --header-height: calc(3.25rem + env(safe-area-inset-top) + var(--top-edge-clearance));
-
-  /* Ledger 892: extra room under the top safe area, so text and buttons sit
-     below iOS's own soft top blur (the "scroll edge" effect iOS 26+ draws in
-     an installed Home Screen app; a page can't turn it off). 0 everywhere,
-     and set below only for <html data-ios-standalone> (src/pwa/iosStandalone.ts).
-     Every top-inset site adds it: AppLayout's safeTop, App's OutsideAppLayout,
-     UpdateCard, --header-height, Celebration's toast, EmergencyCard.
-     Tune: change the ONE value in the rule below (still blurry on the phone →
-     larger; a gap that looks too big → smaller). */
-  --top-edge-clearance: 0px;
+  --header-height: calc(3.25rem + env(safe-area-inset-top));
 
   /* ---- Dark palette values (private) ----
      Defined unconditionally here so both the prefers-color-scheme path and
@@ -462,10 +452,6 @@
     --shadow-md: var(--_dark-shadow-md);
     --shadow-lg: var(--_dark-shadow-lg);
   }
-}
-
-:root[data-ios-standalone] {
-  --top-edge-clearance: 20px; /* ledger 892: the one tunable value, see :root */
 }
 
 :root[data-theme="dark"] {

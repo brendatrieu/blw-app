@@ -311,31 +311,20 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
   it("inner pages are one slim row (py-1 + 44px targets = 52px); Home keeps its taller padding", () => {
     const inner = layoutWith([remy], "/foods");
     expect(inner).toMatch(/<header class="[^"]*\bpy-1\b/);
-    expect(inner).toContain("padding-top:calc(0.25rem + env(safe-area-inset-top) + var(--top-edge-clearance))");
+    expect(inner).toContain("padding-top:calc(0.25rem + env(safe-area-inset-top))");
     // The 44px gear keeps the row 44px tall now that the empty slot collapses (item 692).
     expect(header(inner)).toMatch(/<a [^>]*aria-label="Settings"[^>]*class="[^"]*\bmin-h-11\b/);
     const home = layoutWith([remy], "/");
     expect(home).toMatch(/<header class="[^"]*\bpy-2\.5\b/);
     // A-Home: 18px 16px 10px, the notch inset on top.
     expect(home).toMatch(/<header class="[^"]*\bpx-4\b/);
-    expect(home).toContain("padding-top:calc(1.125rem + env(safe-area-inset-top) + var(--top-edge-clearance))");
-    // Ledger 892: the UpdateCard hanging from the header clears the band too.
-    expect(home).toContain('style="top:calc(0.3125rem + env(safe-area-inset-top) + var(--top-edge-clearance))"');
+    expect(home).toContain("padding-top:calc(1.125rem + env(safe-area-inset-top))");
   });
 
   it("--header-height matches that slim header, so the Foods/Recipes sticky bars dock flush under it", () => {
     // 0.25rem + 2.75rem (44px row) + 0.25rem = 3.25rem, + the notch inset; no border since item 679.
     const css = readFileSync(new URL("../styles/index.css", import.meta.url), "utf8");
-    expect(css).toContain("--header-height: calc(3.25rem + env(safe-area-inset-top) + var(--top-edge-clearance));");
-  });
-
-  it("--top-edge-clearance is 0 by default and 20px only in the installed iOS app (ledger 892)", () => {
-    const css = readFileSync(new URL("../styles/index.css", import.meta.url), "utf8");
-    const root = css.slice(css.indexOf("\n:root {"));
-    expect(root.slice(0, root.indexOf("\n}"))).toContain("--top-edge-clearance: 0px;");
-    expect(css).toMatch(/\n:root\[data-ios-standalone\] \{\n {2}--top-edge-clearance: 20px;/);
-    // Declared once each: one tunable value.
-    expect(css.match(/--top-edge-clearance:/g)).toHaveLength(2);
+    expect(css).toContain("--header-height: calc(3.25rem + env(safe-area-inset-top));");
   });
 });
 

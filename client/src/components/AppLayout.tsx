@@ -142,7 +142,7 @@ function SettingsLink() {
  * below uses it; screens outside this layout get theirs from App's
  * OutsideAppLayout (ledger 851). */
 export function safeTop(base: string): string {
-  return `calc(${base} + env(safe-area-inset-top) + var(--top-edge-clearance))`;
+  return `calc(${base} + env(safe-area-inset-top))`;
 }
 
 /**

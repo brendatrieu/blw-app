@@ -69,7 +69,7 @@ function LegacyStorageRedirect() {
 export function OutsideAppLayout() {
   useScrollToTopOnPathChange();
   return (
-    <div style={{ paddingTop: "calc(env(safe-area-inset-top) + var(--top-edge-clearance))" }}>
+    <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <Outlet />
     </div>
   );
