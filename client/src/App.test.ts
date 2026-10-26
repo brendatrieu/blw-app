@@ -8,6 +8,8 @@ import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
 import { AboutPage } from "./pages/AboutPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { SignupPage } from "./pages/SignupPage.js";
+import { PlanPage } from "./features/plan/PlanPage.js";
+import { PlateScreen } from "./features/plate/PlateScreen.js";
 import { storageKeys } from "./features/storage/hooks.js";
 import { preferenceKeys } from "./features/tour/hooks.js";
 
@@ -172,6 +174,12 @@ describe("App route wiring (items 611/612 — who may open what)", () => {
 
   it("guards the app screens with RequireAuth (sanity for the walk above)", () => {
     expect(findRoute("/more")?.wrappers).toContain(RequireAuth);
+  });
+
+  it("opens the meal plan on /plan and a planned meal (or + Add a meal's new one) as the plate, Plan a meal (ledger 904)", () => {
+    expect((findRoute("/plan")?.route.props.element as ReactElement).type).toBe(PlanPage);
+    expect((findRoute("/plan/:date/:slotId")?.route.props.element as ReactElement).type).toBe(PlateScreen);
+    expect(findRoute("/plan/:date/:slotId")?.wrappers).toContain(RequireAuth);
   });
 });
 

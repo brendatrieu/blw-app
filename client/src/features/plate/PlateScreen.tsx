@@ -1,10 +1,14 @@
 import { useRef, useState } from "react";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
+  PLAN_NAME_MAX,
   PLATE_NOTHING_COUNTS,
+  localDate,
+  planDateSchema,
   type CreateStorageItemInput,
   type FoodListItem,
   type MealItem,
+  type PlannedMeal,
   type StorageItem,
   type StorageLocation,
 } from "@blw/shared";
@@ -17,13 +21,16 @@ import { LeftoversFields } from "../storage/components/LeftoversFields.js";
 import { buildLeftoverStorageInput } from "../storage/leftovers.js";
 import type { ContainerChoice } from "../storage/format.js";
 import { useCreateMeal, useMeal, useUpdateMeal } from "../tracking/hooks.js";
+import { nativeTimeInput } from "../plan/DailyMealsSheet.js";
+import { isPlanChanged, servedMealId, usePlan, useSavePlannedMeal } from "../plan/hooks.js";
+import { NEW_PLANNED_MEAL, deviceTimeZone, mealTimeLabel, planDayLabel, validatePlanMeal, weekOf } from "../plan/plan.js";
 import { BackButton, useBackNavigate } from "../../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../../components/ui/Button.js";
 import { CloseButton } from "../../components/ui/CloseButton.js";
 import { DateTimeField, nowAtMinute } from "../../components/ui/DateTimeField.js";
 import { EmptyState } from "../../components/ui/EmptyState.js";
 import { Field } from "../../components/ui/Field.js";
-import { Textarea } from "../../components/ui/Input.js";
+import { Input, Textarea } from "../../components/ui/Input.js";
 import { PageHeader, resolveHeaderAffordance, type HeaderAffordance } from "../../components/ui/PageHeader.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";
 import { Switch } from "../../components/ui/Switch.js";
@@ -41,6 +48,7 @@ import {
   containerEntry,
   entryKey,
   fromMeal,
+  fromPlanned,
   hasLeftovers,
   nothingCounts,
   plateAddMoreServing,
@@ -49,14 +57,16 @@ import {
   ranOutEntry,
   staleLeaveOut,
   toMealInput,
+  toPlanInput,
   validatePlate,
   type PlateAction,
   type PlateEntry,
 } from "./plate.js";
 
 /** Which page /log-meal is (plan SPEC §5): `?edit=` an Edit meal, `?storage=`
- * a container's Serve, anything else Log meal (with `?food=` / `?recipe=`). */
-export type PlateMode = "log" | "serve" | "edit";
+ * a container's Serve, anything else Log meal (with `?food=` / `?recipe=`).
+ * `/plan/:date/:slotId` is Plan a meal. */
+export type PlateMode = "log" | "serve" | "edit" | "plan";
 
 export function plateMode(params: URLSearchParams): PlateMode {
   if (params.get("edit")) return "edit";
@@ -65,15 +75,16 @@ export function plateMode(params: URLSearchParams): PlateMode {
 }
 
 /** Entry wording follows the button the parent tapped (PP-NOTES round 1). */
-export const PLATE_TITLE: Record<PlateMode, string> = { log: "Log meal", serve: "Serve", edit: "Edit meal" };
+export const PLATE_TITLE: Record<PlateMode, string> = { log: "Log meal", serve: "Serve", edit: "Edit meal", plan: "Plan a meal" };
 
 /**
- * The header's way out (items 258/259): Edit meal is reached by drilling
- * into a meal, so it gets the back chevron; Log meal and Serve are tasks
- * opened from anywhere, so they get the X. Never both.
+ * The header's way out (items 258/259): Edit meal and Plan a meal are reached
+ * by drilling into a meal, so they get the back chevron; Log meal and Serve
+ * are tasks opened from anywhere, so they get the X. Never both.
  */
 export function resolvePlateHeaderAffordance(mode: PlateMode): HeaderAffordance {
-  return resolveHeaderAffordance({ drilledInto: mode === "edit", openedAsTask: mode !== "edit" });
+  const drilledInto = mode === "edit" || mode === "plan";
+  return resolveHeaderAffordance({ drilledInto, openedAsTask: !drilledInto });
 }
 
 export type PlateStart =
@@ -93,6 +104,10 @@ export type PlateStart =
  *   finished one opens flagged, CD-Serve-Ran-Out); in neither is `missing`.
  * - **Log meal:** the food or recipe a food or recipe page passed. One that
  *   doesn't resolve is simply left off: the page is still Log meal.
+ * - **Plan a meal:** the planned meal's items, or an empty plate for one
+ *   "+ Add a meal" makes. A day that isn't a date, a meal not on its day
+ *   (removed elsewhere), or a save the server says is no longer there is
+ *   `missing`; offline before the plan was ever read is `offline`.
  */
 export function resolvePlateStart(input: {
   mode: PlateMode;
@@ -105,7 +120,18 @@ export function resolvePlateStart(input: {
   storageQueries: readonly { isPending: boolean; isFetching: boolean }[];
   /** Log meal: what `?food=` / `?recipe=` name, and whether it is still loading. */
   prefill: { loading: boolean; food: FoodListItem | undefined; recipe: { id: string; title: string } | undefined };
+  /** Plan a meal: its day (null when not a date), whether it is new, the
+   * meal as the plan holds it, and the plan query's state. */
+  plan?: { date: string | null; isNew: boolean; meal: PlannedMeal | undefined; settled: boolean; gone: boolean };
 }): PlateStart {
+  if (input.mode === "plan") {
+    const plan = input.plan;
+    if (!plan?.date || plan.gone) return { status: "missing" };
+    if (plan.isNew) return { status: "ready", plate: [] };
+    if (plan.meal) return { status: "ready", plate: fromPlanned(plan.meal.items) };
+    if (plan.settled) return { status: "missing" };
+    return input.offline ? { status: "offline" } : { status: "loading" };
+  }
   if (input.mode === "edit") {
     if (input.meal.data) return { status: "ready", plate: fromMeal(input.meal.data) };
     if (input.offline) return { status: "offline" };
@@ -167,12 +193,19 @@ export function resolveSubmitAction(mealSaved: boolean, storageFailurePending: b
 export function PlateScreen() {
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
   const [searchParams] = useSearchParams();
-  const mode = plateMode(searchParams);
+  const params = useParams();
+  const mode: PlateMode = params.date !== undefined ? "plan" : plateMode(searchParams);
   const editId = mode === "edit" ? searchParams.get("edit") : null;
   const storageId = mode === "serve" ? searchParams.get("storage") : null;
   const foodId = mode === "log" ? searchParams.get("food") : null;
   const recipeId = mode === "log" ? searchParams.get("recipe") : null;
-  const goBack = useBackNavigate("/");
+  // Plan a meal: its day, as the plan page shows it (?date=, none for today).
+  const planDate = mode === "plan" && planDateSchema.safeParse(params.date).success ? params.date! : null;
+  const isNewMeal = params.slotId === NEW_PLANNED_MEAL;
+  const localToday = localDate(new Date(), deviceTimeZone());
+  const planBack = !planDate || planDate === localToday ? "/plan" : `/plan?date=${planDate}`;
+  const goBack = useBackNavigate(mode === "plan" ? planBack : "/");
+  const navigate = useNavigate();
   const offline = useIsOffline();
   // Bumped once a 409 meal_changed refetch lands: the plate starts over
   // from the meal as it is now, and says so.
@@ -184,6 +217,15 @@ export function PlateScreen() {
   const foods = useFoods();
   const recipe = useRecipe(recipeId ?? undefined);
   const containers = [...(active.data?.items ?? []), ...(history.data?.items ?? [])];
+  const week = weekOf(planDate ?? localToday);
+  const plan = usePlan(planDate && !isNewMeal ? activeBaby?.id : undefined, week[0]!, week[6]!);
+  const found = plan.data?.days.find((day) => day.date === planDate)?.meals.find((meal) => meal.slotId === params.slotId);
+  // A day another device writes to first gets new slot ids; the page keeps
+  // the meal it opened (the server still finds it by the old one).
+  const opened = useRef<PlannedMeal | undefined>(undefined);
+  if (found) opened.current = found;
+  const plannedMeal = found ?? opened.current;
+  const [planGone, setPlanGone] = useState(false);
 
   const start = resolvePlateStart({
     mode,
@@ -198,6 +240,7 @@ export function PlateScreen() {
       food: foods.data?.foods.find((food) => food.id === foodId),
       recipe: recipe.data,
     },
+    plan: { date: planDate, isNew: isNewMeal, meal: plannedMeal, settled: Boolean(plan.data) || plan.isError, gone: planGone },
   });
 
   return (
@@ -205,10 +248,15 @@ export function PlateScreen() {
       <PageHeader
         title={PLATE_TITLE[mode]}
         leading={
-          resolvePlateHeaderAffordance(mode) === "back" ? <BackButton fallback="/" /> : <CloseButton fallback="/" />
+          resolvePlateHeaderAffordance(mode) === "back" ? (
+            <BackButton fallback={mode === "plan" ? planBack : "/"} />
+          ) : (
+            <CloseButton fallback="/" />
+          )
         }
       />
-      {mode === "serve" ? <HowToLink slug="how-to-serve-from-storage" /> : <HowToLink slug="how-to-log-a-meal" />}
+      {mode === "serve" && <HowToLink slug="how-to-serve-from-storage" />}
+      {(mode === "log" || mode === "edit") && <HowToLink slug="how-to-log-a-meal" />}
 
       {(babyLoading || (activeBaby && start.status === "loading")) && (
         <Skeleton className="h-40 w-full rounded-[var(--radius-lg)]" />
@@ -228,28 +276,45 @@ export function PlateScreen() {
           (VERIFY-p3-c1). The fetch resumes once back online. */}
       {!babyLoading && activeBaby && start.status === "missing" && mode === "serve" && <Navigate to="/storage" replace />}
 
-      {!babyLoading && activeBaby && start.status === "missing" && mode === "edit" && (
+      {!babyLoading && activeBaby && start.status === "missing" && (mode === "edit" || mode === "plan") && (
         <EmptyState
           icon="🤷"
           title="That meal is gone"
           description="It may have already been deleted, or something went wrong loading it."
-          action={<ButtonLink to="/">Back home</ButtonLink>}
+          action={mode === "plan" ? <ButtonLink to={planBack}>Meal plan</ButtonLink> : <ButtonLink to="/">Back home</ButtonLink>}
         />
       )}
 
-      {!babyLoading && activeBaby && start.status === "ready" && (
+      {/* What was served lives on the logged meal (CD-After-Serve's "Rate or change"). */}
+      {!babyLoading && activeBaby && start.status === "ready" && plannedMeal?.served && (
+        <Navigate to={`/meals/${plannedMeal.served.mealId}`} replace />
+      )}
+
+      {!babyLoading && activeBaby && start.status === "ready" && !plannedMeal?.served && (
         <PlateForm
-          key={`${mode}:${editId ?? storageId ?? ""}:${reloads}`}
+          key={`${mode}:${editId ?? storageId ?? params.slotId ?? ""}:${reloads}`}
           mode={mode}
           babyId={activeBaby.id}
           initialPlate={start.plate}
           meal={mealQuery.data}
+          plan={
+            planDate
+              ? {
+                  date: planDate,
+                  today: plan.data?.today ?? localToday,
+                  slotId: isNewMeal ? null : (params.slotId ?? null),
+                  name: plannedMeal?.name ?? "",
+                  time: plannedMeal?.time ?? null,
+                }
+              : undefined
+          }
           containers={containers}
           onDone={goBack}
           reloaded={reloads > 0}
           onMealChanged={() => {
             void mealQuery.refetch().then(() => setReloads((count) => count + 1));
           }}
+          onPlanGone={(mealId) => (mealId ? navigate(`/meals/${mealId}`, { replace: true }) : setPlanGone(true))}
         />
       )}
     </div>
@@ -274,6 +339,12 @@ export interface PlateFormProps {
   onMealChanged: () => void;
   /** Edit: this plate is the meal as reloaded after `meal_changed`. */
   reloaded: boolean;
+  /** Plan a meal: its day and the caller's today, its slot (null for a meal
+   * "+ Add a meal" makes on Save), and its name and time as planned. */
+  plan?: { date: string; today: string; slotId: string | null; name: string; time: string | null };
+  /** Plan a meal: the save found the meal served (its logged meal's id) or
+   * gone from its day (null). */
+  onPlanGone?: (servedMealId: string | null) => void;
 }
 
 /**
@@ -293,6 +364,8 @@ export function PlateForm({
   onDone,
   onMealChanged,
   reloaded,
+  plan,
+  onPlanGone,
 }: PlateFormProps) {
   const [entries, setEntries] = useState<PlateEntry[]>(initialPlate);
   const plate = attachContainers(entries, containers);
@@ -302,6 +375,9 @@ export function PlateForm({
   const [reactionNote, setReactionNote] = useState(() => meal?.reactionNote ?? "");
   const [notes, setNotes] = useState(() => meal?.notes ?? "");
   const [addingMore, setAddingMore] = useState(false);
+  // Plan a meal's Name and Time (CD-Plan-Meal).
+  const [planName, setPlanName] = useState(() => plan?.name ?? "");
+  const [planTime, setPlanTime] = useState<string | null>(() => plan?.time ?? null);
 
   // Log meal's "Save leftovers to storage" (items 152-153, 348).
   const [leftoversOpen, setLeftoversOpen] = useState(false);
@@ -320,20 +396,23 @@ export function PlateForm({
     containers: plate.flatMap((entry) => (entry.kind === "storage" && entry.container ? [entry.container] : [])),
   });
   const updateMeal = useUpdateMeal(babyId);
-  const mutation = mode === "edit" ? updateMeal : createMeal;
+  const savePlan = useSavePlannedMeal(babyId);
+  const planning = mode === "plan";
+  const mutation = planning ? savePlan : mode === "edit" ? updateMeal : createMeal;
   const offline = useIsOffline();
   // Offline a save pauses rather than fails: say neither "Saving…" nor
   // "Couldn't…", and keep every control usable (ledger 766, M9).
   const busy = mutation.isPending && !offline;
-  const runOut = ranOutEntry(plate);
+  // A plan takes nothing from a container yet, so nothing "runs out" here.
+  const runOut = planning ? undefined : ranOutEntry(plate);
   const leftoverSource = plateLeftoverSource(plate);
   const serve = mode === "serve";
 
   const { errors, attemptSubmit } = useSubmitValidation(
-    { itemCount: plate.length, nothingCounts: nothingCounts(plate), leftoversOpen, leftoverBestBy },
-    validatePlate,
+    { itemCount: plate.length, nothingCounts: nothingCounts(plate), leftoversOpen, leftoverBestBy, name: planName },
+    planning ? validatePlanMeal : validatePlate,
     PLATE_FIELD_ORDER,
-    { items: "plate-add-more", leftoverBestBy: "log-food-leftover-best-by" },
+    { name: "plan-name", items: "plate-add-more", leftoverBestBy: "log-food-leftover-best-by" },
   );
 
   function finish() {
@@ -362,13 +441,39 @@ export function PlateForm({
     }
     if (postSave === "noop" || mutation.isPending || offline || runOut) return;
     if (!attemptSubmit()) return;
-    const input = toMealInput(plate, { servedAt, reactionNote, notes });
     // A leave-out the recipe lost on another device: drop it, and the
     // recipe refetches (the mutation hooks), so the next save goes through.
     const dropStale = (error: unknown) => {
       const stale = staleLeaveOut(error);
       if (stale) dispatch({ type: "dropLeftOut", ...stale });
     };
+    if (planning && plan) {
+      const planInput = { name: planName.trim(), time: planTime, items: toPlanInput(plate) };
+      // Nothing changed: leave without a write, so a day nothing was planned
+      // on keeps following Daily meals (804).
+      const unchanged =
+        plan.slotId !== null &&
+        planInput.name === plan.name &&
+        planInput.time === plan.time &&
+        JSON.stringify(planInput.items) === JSON.stringify(toPlanInput(initialPlate));
+      if (unchanged) {
+        finish();
+        return;
+      }
+      savePlan.mutate(
+        { date: plan.date, slotId: plan.slotId, today: plan.today, input: planInput },
+        {
+          onSuccess: finish,
+          onError: (error) => {
+            dropStale(error);
+            const served = servedMealId(error);
+            if (served || isPlanChanged(error)) onPlanGone?.(served);
+          },
+        },
+      );
+      return;
+    }
+    const input = toMealInput(plate, { servedAt, reactionNote, notes });
     if (mode === "edit" && meal) {
       updateMeal.mutate(
         { id: meal.id, input },
@@ -418,6 +523,16 @@ export function PlateForm({
           {`${runOut.title} has run out, so this meal isn't ${serve ? "served" : "saved"} yet.`}
         </p>
       )}
+      {planning &&
+        planMealFields({
+          name: planName,
+          onNameChange: setPlanName,
+          nameError: errors.name,
+          day: plan ? planDayLabel(plan.date, plan.today) : "",
+          time: planTime,
+          onTimeChange: setPlanTime,
+          disabled: busy,
+        })}
       {reloaded && (
         <p role="status" className={`${NOTICE} bg-[var(--color-caution-soft)] text-[var(--color-caution-soft-text)]`}>
           This meal was changed somewhere else, so it's been reloaded. Make your changes again.
@@ -429,12 +544,12 @@ export function PlateForm({
           <span id="plate-items-label" className="text-sm font-medium text-[var(--color-text)]">
             On the plate
           </span>
-          {plate.length > 0 && <p className="text-xs text-[var(--color-text-muted)]">Stars are optional.</p>}
+          {plate.length > 0 && !planning && <p className="text-xs text-[var(--color-text-muted)]">Stars are optional.</p>}
         </div>
         {plate.length > 0 && (
           <ul aria-labelledby="plate-items-label" className="flex flex-col gap-2">
             {plate.map((entry) => (
-              <PlateItemRow key={entryKey(entry)} entry={entry} dispatch={dispatch} disabled={busy} />
+              <PlateItemRow key={entryKey(entry)} entry={entry} dispatch={dispatch} disabled={busy} planning={planning} />
             ))}
           </ul>
         )}
@@ -454,34 +569,39 @@ export function PlateForm({
         )}
       </div>
 
-      <Field label="When" htmlFor="plate-when">
-        <DateTimeField id="plate-when" value={servedAt} onChange={setServedAt} disabled={busy} />
-      </Field>
+      {/* Plan a meal has no When, Reaction or Notes until it is served (SPEC §5). */}
+      {!planning && (
+        <>
+          <Field label="When" htmlFor="plate-when">
+            <DateTimeField id="plate-when" value={servedAt} onChange={setServedAt} disabled={busy} />
+          </Field>
 
-      {/* Always visible (item 263): the reaction note feeds allergen tracking. */}
-      <Field
-        label="Reaction (optional)"
-        htmlFor="plate-reaction"
-        description="Only for hives, vomiting, rash or other reaction signs."
-      >
-        <Textarea
-          id="plate-reaction"
-          value={reactionNote}
-          onChange={(e) => setReactionNote(e.target.value)}
-          rows={2}
-          placeholder="e.g. mild rash around mouth"
-        />
-      </Field>
+          {/* Always visible (item 263): the reaction note feeds allergen tracking. */}
+          <Field
+            label="Reaction (optional)"
+            htmlFor="plate-reaction"
+            description="Only for hives, vomiting, rash or other reaction signs."
+          >
+            <Textarea
+              id="plate-reaction"
+              value={reactionNote}
+              onChange={(e) => setReactionNote(e.target.value)}
+              rows={2}
+              placeholder="e.g. mild rash around mouth"
+            />
+          </Field>
 
-      <Field label="Notes (optional)" htmlFor="plate-notes">
-        <Textarea
-          id="plate-notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={2}
-          placeholder="e.g. ate the whole thing"
-        />
-      </Field>
+          <Field label="Notes (optional)" htmlFor="plate-notes">
+            <Textarea
+              id="plate-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              placeholder="e.g. ate the whole thing"
+            />
+          </Field>
+        </>
+      )}
 
       {mode === "log" && !storageFailure && (
         <div className="flex flex-col gap-3">
@@ -518,8 +638,14 @@ export function PlateForm({
         </div>
       )}
 
-      {/* A `meal_changed` refusal reloads the plate, which says so itself. */}
-      {mutation.isError && !offline && !runOut && !isMealChanged(mutation.error) && (
+      {/* A `meal_changed` refusal reloads the plate, which says so itself; a
+          plan's "served" or "gone" answer leaves the page. */}
+      {mutation.isError &&
+        !offline &&
+        !runOut &&
+        !isMealChanged(mutation.error) &&
+        !isPlanChanged(mutation.error) &&
+        !servedMealId(mutation.error) && (
         <p role="alert" className="text-xs text-[var(--color-danger)]">
           {isNothingCounts(mutation.error)
             ? NOTHING_COUNTS_MESSAGE
@@ -576,5 +702,84 @@ export function PlateForm({
         />
       )}
     </form>
+  );
+}
+
+/** The look of a one-line field (the app's Input), for Day and Time. */
+const PLAN_FIELD_BOX =
+  "flex h-11 items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-3 text-[15px] font-medium whitespace-nowrap text-[var(--color-text)]";
+
+const GLYPH = {
+  "aria-hidden": true,
+  width: 16,
+  height: 16,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round",
+  className: "shrink-0 text-[var(--color-icon)]",
+} as const;
+
+interface PlanMealFieldsProps {
+  name: string;
+  onNameChange: (name: string) => void;
+  nameError: string | undefined;
+  /** The Day field's text ("Today", "Thu, Oct 15"). */
+  day: string;
+  time: string | null;
+  onTimeChange: (time: string | null) => void;
+  disabled: boolean;
+}
+
+/**
+ * Plan a meal's own fields (CD-Plan-Meal): Name, the one place a meal is
+ * renamed (810), just for this day; the Day it is on, read-only in v1 (Q7);
+ * and an optional Time, through the platform's own picker. A render helper,
+ * so the form's own tree holds the fields.
+ */
+function planMealFields({ name, onNameChange, nameError, day, time, onTimeChange, disabled }: PlanMealFieldsProps) {
+  return (
+    <>
+      <Field label="Name" htmlFor="plan-name" error={nameError} hint="Just for this day. Daily meals stay as they are.">
+        <Input
+          id="plan-name"
+          value={name}
+          maxLength={PLAN_NAME_MAX}
+          autoComplete="off"
+          aria-invalid={nameError ? true : undefined}
+          disabled={disabled}
+          onChange={(event) => onNameChange(event.target.value)}
+        />
+      </Field>
+      <div className="flex gap-2.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <span className="text-sm font-medium text-[var(--color-text)]">Day</span>
+          <p className={PLAN_FIELD_BOX}>
+            <svg {...GLYPH}>
+              <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+              <path d="M3.5 10h17M8 3v4M16 3v4" />
+            </svg>
+            <span className="min-w-0 truncate">{day}</span>
+          </p>
+        </div>
+        <div className="min-w-0 flex-1">
+          <Field label="Time (optional)" htmlFor="plan-time">
+            <div
+              className={`${PLAN_FIELD_BOX} relative has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--color-accent)]`}
+            >
+              <svg {...GLYPH}>
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M12 7.5V12l3 2" />
+              </svg>
+              <span aria-hidden="true" className={time ? "" : "text-[var(--color-text-muted)]"}>
+                {time ? mealTimeLabel(time) : "Add time"}
+              </span>
+              <input id="plan-time" disabled={disabled} {...nativeTimeInput(time, onTimeChange)} />
+            </div>
+          </Field>
+        </div>
+      </div>
+    </>
   );
 }

@@ -10,6 +10,8 @@ import {
   type MealItem,
   type PlateFood,
   type PlateItemInput,
+  type PlannedItem,
+  type PlannedItemInput,
   type StorageItem,
   type StorageLocation,
 } from "@blw/shared";
@@ -240,11 +242,12 @@ export function staleLeaveOut(error: unknown): { recipeId: string; foodIds: stri
   return { recipeId: details.recipeId, foodIds: Array.isArray(details.foodIds) ? details.foodIds.filter((id) => typeof id === "string") : [] };
 }
 
-export type PlateField = "items" | "leftoverBestBy";
+/** `name` is Plan a meal's (CD-Plan-Meal), above the plate. */
+export type PlateField = "name" | "items" | "leftoverBestBy";
 export type PlateErrors = FormErrors<PlateField>;
 
 /** Visual order — what a failed save focuses first (item 235). */
-export const PLATE_FIELD_ORDER: readonly PlateField[] = ["items", "leftoverBestBy"];
+export const PLATE_FIELD_ORDER: readonly PlateField[] = ["name", "items", "leftoverBestBy"];
 
 /**
  * The plate's own rules (item 235): something on the plate that counts as
@@ -353,6 +356,31 @@ export function fromMeal(meal: Pick<MealItem, "items">, containers: readonly Sto
       container: containers.find((container) => container.id === item.storageItemId),
       parts,
     };
+  });
+}
+
+/**
+ * The plate a planned meal shows on Plan a meal (SPEC §5): its items as
+ * planned, with no stars. A container takes the servings planned and counts
+ * as new to the plate: a plan has taken nothing from it yet.
+ */
+export function fromPlanned(items: readonly PlannedItem[]): PlateEntry[] {
+  return items.map((item): PlateEntry => {
+    if (item.kind === "food") return { kind: "food", food: item.food, rating: null };
+    if (item.kind === "recipe") {
+      return { kind: "recipe", recipe: item.recipe, leftOut: item.leftOut, savedLeftOut: item.leftOut.map((food) => food.id), rating: null };
+    }
+    return { ...containerEntry(item.container), servings: item.servings };
+  });
+}
+
+/** A plan write's `items` (PUT or "+ Add a meal" POST): the whole plate as
+ * intent, a recipe's leave-outs and a container's servings, never stars. */
+export function toPlanInput(plate: readonly PlateEntry[]): PlannedItemInput[] {
+  return plate.map((entry): PlannedItemInput => {
+    if (entry.kind === "food") return { kind: "food", foodId: entry.food.id };
+    if (entry.kind === "recipe") return { kind: "recipe", recipeId: entry.recipe.id, leftOutFoodIds: entry.leftOut.map((food) => food.id) };
+    return { kind: "storage", storageItemId: entry.storageItemId, servings: entry.servings ?? 1 };
   });
 }
 

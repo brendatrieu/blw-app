@@ -1,5 +1,6 @@
 // The meal plan page (ledger 904, CD-Plan-Day): which week it asks for, the
-// strip, ‹ ›, Today, the selected day's meals and the Daily meals sheet.
+// strip, ‹ ›, Today, the selected day's meals and the Daily meals sheet;
+// step 4.2: "+ Add a meal", ⋮ Copy to… and "Copied to {n} meals".
 // Called as a plain function with its hooks mocked (node env, no DOM); the
 // day is pinned with fake timers in UTC.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,10 +8,12 @@ import type { PlanResponse } from "@blw/shared";
 
 const h = vi.hoisted(() => ({
   search: new URLSearchParams(),
-  pathDate: undefined as string | undefined,
   setSearch: [] as Array<[unknown, unknown]>,
   sets: [] as unknown[],
   open: false,
+  // useState after the first (Daily meals open): Copy's meal, then the count.
+  i: 0,
+  states: [] as unknown[],
   baby: { activeBaby: { id: "baby-1" } as { id: string } | null, isLoading: false },
   plan: { data: undefined as PlanResponse | undefined, isLoading: false, isError: false },
   planArgs: [] as unknown[][],
@@ -18,12 +21,16 @@ const h = vi.hoisted(() => ({
 
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  useState: () => [h.open, (value: unknown) => h.sets.push(value)],
+  useState: (init: unknown) => {
+    const i = h.i++;
+    if (i === 0) return [h.open, (value: unknown) => h.sets.push(value)];
+    if (!(i in h.states)) h.states[i] = init;
+    return [h.states[i], (value: unknown) => (h.states[i] = value)];
+  },
 }));
 vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useSearchParams: () => [h.search, (next: unknown, options: unknown) => h.setSearch.push([next, options])],
-  useParams: () => ({ date: h.pathDate }),
 }));
 vi.mock("../../components/ui/BackButton.js", () => ({ BackButton: () => null }));
 vi.mock("../babies/useActiveBaby.js", () => ({ useActiveBaby: () => h.baby }));
@@ -41,6 +48,7 @@ vi.mock("./plan.js", async (importOriginal) => ({
 import { EmptyState } from "../../components/ui/EmptyState.js";
 import { PageHeader } from "../../components/ui/PageHeader.js";
 import { SkeletonList } from "../../components/ui/Skeleton.js";
+import { CopySheet } from "./CopySheet.js";
 import { DailyMealsSheet } from "./DailyMealsSheet.js";
 import { PlanMealCard } from "./PlanMealCard.js";
 import { PlanPage } from "./PlanPage.js";
@@ -86,13 +94,14 @@ const week = (from: string, planned: string[]): PlanResponse => ({
 });
 
 function render(): El {
+  h.i = 0;
   return (PlanPage as unknown as () => El)();
 }
 
 beforeEach(() => {
   vi.useFakeTimers({ now: new Date("2026-10-14T15:00:00Z"), toFake: ["Date"] });
   h.search = new URLSearchParams();
-  h.pathDate = undefined;
+  h.states = [];
   h.setSearch.length = 0;
   h.sets.length = 0;
   h.open = false;
@@ -181,12 +190,36 @@ describe("PlanPage (CD-Plan-Day)", () => {
     }
   });
 
-  it("a planned meal's path (until step 4.2) shows its day, and Today then names today", () => {
-    h.pathDate = "2026-10-16";
-    const tree = render();
-    expect(dayButtons(tree)[4]!.props["aria-pressed"]).toBe(true);
-    click(byText(tree, "Today"));
-    expect(h.setSearch).toEqual([[{ date: "2026-10-14" }, { replace: true }]]);
+  it("ends the day with + Add a meal, which opens Plan a meal for a new meal on that day", () => {
+    h.search = new URLSearchParams({ date: "2026-10-16" });
+    const link = findAll(render(), (el) => "to" in el.props && text(el.props.children) === "+ Add a meal")[0]!;
+    expect(link.props.to).toBe("/plan/2026-10-16/new");
+  });
+
+  it("⋮ Copy to… opens the Copy sheet on that meal; a Copy shows its first day and Copied to {n} meals until another day", () => {
+    let tree = render();
+    expect(findAll(tree, (el) => el.type === CopySheet)[0]!.props.meal).toBeNull();
+    const cards = findAll(tree, (el) => el.type === PlanMealCard);
+    (cards[0]!.props.onCopy as () => void)();
+    tree = render();
+    const sheet = findAll(tree, (el) => el.type === CopySheet)[0]!;
+    expect(sheet.props).toMatchObject({ babyId: "baby-1", date: "2026-10-14", today: "2026-10-14" });
+    expect((sheet.props.meal as { name: string }).name).toBe("Breakfast");
+    // Nothing copied yet: the live region is there, empty.
+    const status = () => findAll(render(), (el) => el.props.role === "status")[0]!;
+    expect(text(status())).toBe("");
+
+    (sheet.props.onCopied as (filled: number, date: string) => void)(2, "2026-10-16");
+    expect(h.setSearch).toEqual([[{ date: "2026-10-16" }, { replace: true }]]);
+    expect(findAll(render(), (el) => el.type === CopySheet)[0]!.props.meal).toBeNull();
+    expect(text(status())).toBe("Copied to 2 meals");
+    click(byLabel(render(), "Next week"));
+    expect(text(status())).toBe("");
+
+    // Closing without copying changes nothing else.
+    (cards[1]!.props.onCopy as () => void)();
+    (findAll(render(), (el) => el.type === CopySheet)[0]!.props.onClose as () => void)();
+    expect(findAll(render(), (el) => el.type === CopySheet)[0]!.props.meal).toBeNull();
   });
 
   it("Daily meals waits for the plan, then opens the sheet with the saved list", () => {

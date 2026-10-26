@@ -5,10 +5,10 @@
 // is the one query stubbed, since a server render never fetches.
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it, vi } from "vitest";
-import type { Baby, FoodListItem, MealItem, StorageItem } from "@blw/shared";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Baby, FoodListItem, MealItem, PlannedMeal, PlanResponse, StorageItem } from "@blw/shared";
 
 const h = vi.hoisted(() => ({ meal: { data: undefined as unknown, isError: false }, offline: false }));
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
@@ -22,6 +22,7 @@ import { ApiError } from "../../lib/api.js";
 import { babyKeys } from "../babies/api.js";
 import { catalogKeys } from "../catalog/hooks.js";
 import { storageKeys } from "../storage/hooks.js";
+import { planKeys } from "../plan/hooks.js";
 import {
   PLATE_TITLE,
   PlateScreen,
@@ -101,7 +102,7 @@ describe("which page /log-meal is", () => {
     expect(plateMode(new URLSearchParams("storage=s1"))).toBe("serve");
     expect(plateMode(new URLSearchParams("food=f1"))).toBe("log");
     expect(plateMode(new URLSearchParams(""))).toBe("log");
-    expect(PLATE_TITLE).toEqual({ log: "Log meal", serve: "Serve", edit: "Edit meal" });
+    expect(PLATE_TITLE).toEqual({ log: "Log meal", serve: "Serve", edit: "Edit meal", plan: "Plan a meal" });
   });
 
   // Items 196/258: one way out — the X for a task, the chevron for a drill-in.
@@ -109,6 +110,95 @@ describe("which page /log-meal is", () => {
     expect(resolvePlateHeaderAffordance("log")).toBe("close");
     expect(resolvePlateHeaderAffordance("serve")).toBe("close");
     expect(resolvePlateHeaderAffordance("edit")).toBe("back");
+    expect(resolvePlateHeaderAffordance("plan")).toBe("back");
+  });
+});
+
+describe("Plan a meal (/plan/:date/:slotId, CD-Plan-Meal)", () => {
+  const LUNCH: PlannedMeal = {
+    slotId: id(51),
+    name: "Lunch",
+    time: "12:00",
+    position: 1,
+    served: null,
+    items: [{ kind: "storage", id: id(60), servings: 1, container: { ...TUB, servingsLeft: 2 } }],
+  };
+  const planWeek = (meals: PlannedMeal[]): PlanResponse => ({
+    today: "2026-10-14",
+    dailyMeals: [],
+    days: [{ date: "2026-10-14", planned: true, meals }],
+  });
+  function renderPlan(url: string, plan?: PlanResponse): string {
+    vi.useFakeTimers({ now: new Date("2026-10-14T15:00:00Z"), toFake: ["Date"] });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(babyKeys.list(false), [BABY]);
+    queryClient.setQueryData(storageKeys.list("active"), { items: [TUB] });
+    queryClient.setQueryData(storageKeys.list("history"), { items: [] });
+    if (plan) queryClient.setQueryData(planKeys.range(BABY.id, "2026-10-12", "2026-10-18"), plan);
+    return renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(
+          CelebrationProvider,
+          null,
+          createElement(
+            MemoryRouter,
+            { initialEntries: [url] },
+            createElement(Routes, null, createElement(Route, { path: "/plan/:date/:slotId", element: createElement(PlateScreen, null) })),
+          ),
+        ),
+      ),
+    )
+      .replace(/<!-- -->/g, "")
+      .replace(/\u202f/g, " ");
+  }
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("is titled Plan a meal with the chevron and no guide: Name, Day, Time, the plate without stars, + Add more, Save", () => {
+    const html = renderPlan(`/plan/2026-10-14/${LUNCH.slotId}`, planWeek([LUNCH]));
+    expect(html).toMatch(/>Plan a meal<\/h1>/);
+    expect(html).toContain('<span class="sr-only">Back</span>');
+    expect(html).not.toContain('aria-label="Close"');
+    expect(html).not.toContain("How to");
+    expect(html).toMatch(/<input [^>]*id="plan-name"[^>]*value="Lunch"/);
+    expect(html).toContain("Just for this day. Daily meals stay as they are.");
+    expect(html).toMatch(/>Day<\/span><p [^>]*>.*?<span class="min-w-0 truncate">Today<\/span><\/p>/);
+    expect(html).toContain('<span aria-hidden="true" class="">12:00 PM</span>');
+    expect(html).toMatch(/<input id="plan-time" type="time"[^>]*value="12:00"/);
+    expect(html).toContain(">Broccoli Cheese Egg Muffins</p>");
+    // Storage's live copy of the container wins over the plan's (6 left, not 2).
+    expect(html).toContain(">Fridge · 6 of 6 left</p>");
+    expect(html).toContain('aria-label="Increase servings"');
+    for (const absent of ["Rating for", "Stars are optional.", 'id="plate-when"', "Reaction", "Notes", "Save leftovers", "None left."]) {
+      expect(html, absent).not.toContain(absent);
+    }
+    const order = ['id="plan-name"', 'id="plan-time"', ">On the plate</span>", "+ Add more", ">Save</button>"];
+    const at = order.map((needle) => html.indexOf(needle));
+    expect(at.every((index) => index > -1)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+  });
+
+  it("+ Add a meal opens it empty, named by the parent, with no time yet; another day says its date", () => {
+    const html = renderPlan("/plan/2026-10-16/new");
+    expect(html).toMatch(/<input [^>]*id="plan-name"[^>]*value=""/);
+    expect(html).toContain(">Fri, Oct 16</span>");
+    expect(html).toContain(">Add time</span>");
+    expect(html).not.toContain("Remove ");
+  });
+
+  it("a meal no longer on its day, or a path that is no date, is gone (with the way back to the plan); a served one goes to its logged meal", () => {
+    for (const url of [`/plan/2026-10-14/${id(99)}`, "/plan/someday/new"]) {
+      const gone = renderPlan(url, planWeek([LUNCH]));
+      expect(gone, url).toContain("That meal is gone");
+      expect(gone, url).toContain(">Meal plan</a>");
+      expect(gone, url).not.toContain('id="plan-name"');
+    }
+    const served = renderPlan(`/plan/2026-10-14/${LUNCH.slotId}`, planWeek([{ ...LUNCH, served: { mealId: id(90), servedAt: "x" } }]));
+    expect(served).not.toContain('id="plan-name"');
+    expect(served).not.toContain("That meal is gone");
   });
 });
 
@@ -237,6 +327,20 @@ describe("resolvePlateStart", () => {
     expect(resolvePlateStart({ ...serve, storageQueries: [settled, settled] })).toEqual({ status: "missing" });
     const ready = resolvePlateStart({ ...serve, containers: [TUB], storageQueries: [{ isPending: true, isFetching: true }] });
     expect(ready.status === "ready" && ready.plate.map((entry) => entry.kind === "storage" && entry.servings)).toEqual([1]);
+  });
+
+  it("Plan a meal: a new meal is an empty plate; a planned one its items; gone once the plan has answered without it", () => {
+    const plan = { date: "2026-10-14", isNew: false, meal: undefined, settled: false, gone: false };
+    const planned: PlannedMeal = { slotId: id(51), name: "Lunch", time: null, position: 0, served: null, items: [{ kind: "recipe", id: id(61), recipe: RECIPE, leftOut: [] }] };
+    expect(resolvePlateStart({ ...base, mode: "plan", plan: { ...plan, isNew: true } })).toEqual({ status: "ready", plate: [] });
+    expect(resolvePlateStart({ ...base, mode: "plan", plan })).toEqual({ status: "loading" });
+    expect(resolvePlateStart({ ...base, mode: "plan", offline: true, plan })).toEqual({ status: "offline" });
+    expect(resolvePlateStart({ ...base, mode: "plan", plan: { ...plan, settled: true } })).toEqual({ status: "missing" });
+    expect(resolvePlateStart({ ...base, mode: "plan", plan: { ...plan, date: null, isNew: true } })).toEqual({ status: "missing" });
+    const ready = resolvePlateStart({ ...base, mode: "plan", plan: { ...plan, meal: planned } });
+    expect(ready.status === "ready" && ready.plate.map((entry) => entry.kind)).toEqual(["recipe"]);
+    // The save said it is gone: missing, whatever the plan still holds.
+    expect(resolvePlateStart({ ...base, mode: "plan", plan: { ...plan, meal: planned, gone: true } })).toEqual({ status: "missing" });
   });
 
   it("Log meal: waits for what was asked for, then puts it on", () => {

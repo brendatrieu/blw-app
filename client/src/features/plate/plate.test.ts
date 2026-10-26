@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   PLATE_NOT_AN_INGREDIENT,
   createPlateMealInputSchema,
+  plannedItemsInputSchema,
   plateInputFromItems,
   plateKey,
   updatePlateMealInputSchema,
@@ -21,6 +22,7 @@ import {
   entryKey,
   RECIPE_PLATE,
   fromMeal,
+  fromPlanned,
   hasLeftovers,
   mealLines,
   nothingCounts,
@@ -32,6 +34,7 @@ import {
   servingsMax,
   staleLeaveOut,
   toMealInput,
+  toPlanInput,
   validatePlate,
   type ContainerEntry,
   type PlateEntry,
@@ -529,7 +532,49 @@ describe("validatePlate", () => {
       const errors = validatePlate({ ...base, itemCount: 0, leftoverBestBy: "2026-09-13" });
       expect(errors.items).toBeDefined();
       expect(errors.leftoverBestBy).toBeDefined();
-      expect(PLATE_FIELD_ORDER).toEqual(["items", "leftoverBestBy"]);
+      expect(PLATE_FIELD_ORDER).toEqual(["name", "items", "leftoverBestBy"]);
     });
+  });
+});
+
+describe("a planned meal as a plate (Plan a meal, SPEC §5)", () => {
+  const planned = [
+    { kind: "recipe" as const, id: id(70), recipe: PASTA, leftOut: [CASHEW] },
+    { kind: "food" as const, id: id(71), food: EGG },
+    { kind: "storage" as const, id: id(72), servings: 2, container: CONTAINER, flags: [{ kind: "may_run_out" as const }] },
+  ];
+
+  it("opens with the plan's items, no stars, the leave-out and the planned servings; a container is new to the plate", () => {
+    const plate = fromPlanned(planned);
+    expect(plate).toMatchObject([
+      { kind: "recipe", recipe: PASTA, leftOut: [CASHEW], rating: null },
+      { kind: "food", food: EGG, rating: null },
+      { kind: "storage", storageItemId: CONTAINER.id, servings: 2, container: CONTAINER, title: "Broccoli, Carrot" },
+    ]);
+    // No saved item ids: a plan PUT replaces the whole list.
+    expect(plate.some((entry) => "id" in entry && entry.id)).toBe(false);
+    const tub = plate[2] as ContainerEntry;
+    expect(tub.savedServings).toBeUndefined();
+    expect(tub.parts.map((part) => part.rating)).toEqual([null, null]);
+  });
+
+  it("saves as the plan's own items: kind and ref, every leave-out, a container's servings, never a star", () => {
+    let plate = fromPlanned(planned);
+    plate = plateReducer(plate, { type: "rate", key: entryKey(plate[1]!), rating: 5 });
+    plate = plateReducer(plate, { type: "servings", key: entryKey(plate[2]!), servings: 3 });
+    const items = toPlanInput(plate);
+    expect(items).toEqual([
+      { kind: "recipe", recipeId: PASTA.id, leftOutFoodIds: [CASHEW.id] },
+      { kind: "food", foodId: EGG.id },
+      { kind: "storage", storageItemId: CONTAINER.id, servings: 3 },
+    ]);
+    expect(plannedItemsInputSchema.safeParse(items).success).toBe(true);
+    // An untouched plan round-trips to what it was.
+    expect(toPlanInput(fromPlanned(planned))).toEqual([
+      { kind: "recipe", recipeId: PASTA.id, leftOutFoodIds: [CASHEW.id] },
+      { kind: "food", foodId: EGG.id },
+      { kind: "storage", storageItemId: CONTAINER.id, servings: 2 },
+    ]);
+    expect(toPlanInput([])).toEqual([]);
   });
 });

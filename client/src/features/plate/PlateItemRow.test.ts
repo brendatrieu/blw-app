@@ -72,9 +72,9 @@ function tree(entry: PlateEntry, disabled = false) {
   h.store.i = 0;
   return expand(createElement(PlateItemRow, { entry, dispatch, disabled }));
 }
-function html(entry: PlateEntry) {
+function html(entry: PlateEntry, planning = false) {
   h.store.i = 0;
-  return renderToString(createElement(PlateItemRow, { entry, dispatch }));
+  return renderToString(createElement(PlateItemRow, { entry, dispatch, planning }));
 }
 
 beforeEach(() => {
@@ -317,5 +317,31 @@ describe("a container", () => {
     expect(out).toContain('<div class="flex flex-wrap items-center gap-x-3">');
     expect(out).toContain('<div class="min-w-32 flex-1">');
     expect(out).toContain('<div class="ml-auto flex shrink-0 items-center gap-1.5">');
+  });
+});
+
+describe("planning (Plan a meal, CD-Plan-Meal)", () => {
+  it("a fresh food or recipe has no stars: the plate, the name centred beside it, and ×", () => {
+    const food = html(FOOD, true);
+    expect(food).not.toContain("Rating for");
+    expect(food).toContain("grid grid-cols-[40px_minmax(0,1fr)_44px] items-center gap-x-3");
+    expect(food).toContain('aria-label="Remove Egg"');
+    const recipe = html({ ...RECIPE, leftOut: [CASHEW] }, true);
+    expect(recipe).not.toContain("Rating for");
+    // Leaving an ingredient out is planned too.
+    expect(recipe).toContain("Left out: ");
+    expect(recipe).toContain(">Ingredients</span>");
+  });
+
+  it("a container is only planned: its line and stepper, no part stars, and never \"None left\"", () => {
+    const tub = html(containerEntry(CONTAINER), true);
+    expect(tub).toContain(">Freezer · 4 of 4 left</p>");
+    expect(tub).toMatch(/aria-label="Servings: Broccoli, Carrot/);
+    expect(tub).not.toContain("Rating for");
+    expect(tub).not.toContain(">Broccoli</p>");
+    const empty = html(containerEntry({ ...MUFFINS, servingsLeft: 0 }), true);
+    expect(empty).not.toContain("None left.");
+    expect(empty).toContain('aria-label="Servings: Broccoli Cheese Egg Muffins"');
+    expect(empty).not.toContain('aria-label="Remove Broccoli Cheese Egg Muffins"');
   });
 });

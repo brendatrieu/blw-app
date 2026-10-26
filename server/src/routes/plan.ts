@@ -537,15 +537,19 @@ export function registerPlanRoutes(app: FastifyInstance, db: Database): void {
     if (!body.success) return badRequest(reply, body.error.flatten());
     const { babyId, date } = params.data;
 
+    const userId = currentUserId(request);
     const refused = await planWrite(async (tx) => {
-      await materialize(tx, babyId, date, await lockBaby(tx, babyId, currentUserId(request)));
+      await materialize(tx, babyId, date, await lockBaby(tx, babyId, userId));
       const [last] = await tx
         .select({ position: sql<number>`coalesce(max(${plannedMeals.position}), -1)::int` })
         .from(plannedMeals)
         .where(and(eq(plannedMeals.babyId, babyId), eq(plannedMeals.date, date)));
-      await tx
+      const [added] = await tx
         .insert(plannedMeals)
-        .values({ babyId, date, name: body.data.name, time: body.data.time ?? null, position: (last?.position ?? -1) + 1 });
+        .values({ babyId, date, name: body.data.name, time: body.data.time ?? null, position: (last?.position ?? -1) + 1 })
+        .returning();
+      // A refused item rolls back the new meal too (and a virtual day stays so).
+      if (body.data.items?.length) await writePlannedItems(tx, userId, added!.id, body.data.items);
     });
     if (refused) return refuse(reply, refused);
     return reply.code(201).send(await loadDay(db, babyId, date));

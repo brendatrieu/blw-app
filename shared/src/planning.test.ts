@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_DAILY_MEALS,
   NEXT_MEAL_GRACE_MIN,
+  addPlannedMealInputSchema,
   copyPlanInputSchema,
   copyWarnings,
   dailyMealsInputSchema,
@@ -122,6 +123,15 @@ describe("plan schemas", () => {
     expect(updatePlannedMealInputSchema.safeParse({ time: null }).success).toBe(true);
     expect(updatePlannedMealInputSchema.safeParse({ items: [] }).success).toBe(true);
     expect(updatePlannedMealInputSchema.safeParse({ name: "Tea" }).success).toBe(true);
+  });
+
+  it("+ Add a meal takes a name, and may bring its time and items by the same rules (step 4.2)", () => {
+    expect(addPlannedMealInputSchema.safeParse({ name: "Tea" }).success).toBe(true);
+    expect(addPlannedMealInputSchema.safeParse({ name: "Tea", time: "15:30", items: [{ kind: "food", foodId: id(1) }] }).success).toBe(true);
+    expect(addPlannedMealInputSchema.safeParse({ name: " ", items: [] }).success).toBe(false);
+    const twice = [{ kind: "food", foodId: id(1) }, { kind: "food", foodId: id(1) }];
+    expect(addPlannedMealInputSchema.safeParse({ name: "Tea", items: twice }).success).toBe(false);
+    expect(addPlannedMealInputSchema.safeParse({ name: "Tea", items: [{ kind: "storage", storageItemId: id(1) }] }).success).toBe(false);
   });
 });
 

@@ -44,3 +44,45 @@ export function planFlagLine(flag: PlanFlag): string {
       return CONTAINER_GONE_FLAG[flag.status];
   }
 }
+
+// ---------------------------------------------------------------------------
+// Copy to… (PP-COPY rounds 2-5)
+// ---------------------------------------------------------------------------
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** A clash inside its day's row: "Thu 15 already has a Dinner planned." */
+export function clashLine(day: string, meal: string): string {
+  return `${day} already has a ${meal} planned.`;
+}
+
+/** The pinned footer, with two or more clashes. */
+export function clashCountLine(n: number): string {
+  return `${n} of the selected meals are already planned.`;
+}
+
+/** The row that answers every clash at once: "All {n} days", or "All {n}
+ * meals" when a day has two of them, where "days" would miscount (PP-COPY
+ * round 4, PP-NOTES round 4 question 3). */
+export function allClashesLabel(clashes: readonly { date: string }[]): string {
+  const days = new Set(clashes.map((clash) => clash.date)).size;
+  return days === clashes.length ? `All ${days} days` : `All ${clashes.length} meals`;
+}
+
+/** The light confirmation under the week: how many meals got the copy. */
+export function copiedLabel(n: number): string {
+  return `Copied to ${plural(n, "meal", "meals")}`;
+}
+
+/** The may-run-out note's heading: "2 servings left, planned 3 times". */
+export function servingsLeftHeading(left: number, times: number): string {
+  return `${plural(left, "serving", "servings")} left, planned ${plural(times, "time", "times")}`;
+}
+
+export const mayRunOutCopyWarning = (item: string, day: string): string => `${item} may run out before ${day}. You can still copy.`;
+export const pastBestByCopyWarning = (item: string, day: string): string =>
+  `${item} will be past the Best by date on ${day}. You can still copy.`;
+export const pastUseWithinCopyWarning = (item: string, day: string): string => `${item} may not keep until ${day}. You can still copy.`;
+
+/** A real Copy that failed (the app's "Couldn't … — try again." shape). */
+export const COPY_FAILED = "Couldn't copy that — try again.";

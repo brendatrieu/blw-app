@@ -355,7 +355,7 @@ export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage
 
 /** A save refused because its recipe lost a left-out ingredient on another
  * device: that recipe's ingredients are refetched (VERIFY-p3-c1 #6). */
-function refetchChangedRecipe(queryClient: QueryClient, error: unknown): void {
+export function refetchChangedRecipe(queryClient: QueryClient, error: unknown): void {
   const stale = staleLeaveOut(error);
   if (stale) void queryClient.invalidateQueries({ queryKey: catalogKeys.recipe(stale.recipeId) });
 }

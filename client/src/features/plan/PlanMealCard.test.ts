@@ -9,9 +9,24 @@ import type { PlannedMeal, StorageItem } from "@blw/shared";
 
 const h = vi.hoisted(() => ({
   offline: false,
+  // The ⋮ menu's items, rendered inline with their handlers kept.
+  items: [] as Array<{ label: string; onSelect: () => void }>,
+  closed: 0,
   remove: { isPending: false, isError: false, calls: [] as Array<{ input: unknown; options: { onSuccess?: () => void } }> },
 }));
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
+vi.mock("../../components/ui/Menu.js", async () => {
+  const { createElement } = await import("react");
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  return {
+    Menu: ({ label, children }: { label: string; children: (close: () => void) => unknown }) =>
+      createElement("div", { "aria-label": label }, children(() => h.closed++) as never),
+    MenuItem: ({ onSelect, children }: { onSelect: () => void; children: never }) => {
+      h.items.push({ label: renderToStaticMarkup(createElement("span", null, children)).replace(/<[^>]+>/g, ""), onSelect });
+      return createElement("button", { role: "menuitem" }, children);
+    },
+  };
+});
 vi.mock("./hooks.js", () => ({
   useRemovePlannedMeal: () => ({
     mutate: (input: unknown, options: { onSuccess?: () => void }) => h.remove.calls.push({ input, options }),
@@ -63,6 +78,8 @@ function render(props: Partial<PlanMealCardProps> & { meal: PlannedMeal }): stri
 
 beforeEach(() => {
   h.offline = false;
+  h.items.length = 0;
+  h.closed = 0;
   h.remove.isPending = false;
   h.remove.isError = false;
   h.remove.calls.length = 0;
@@ -114,6 +131,23 @@ describe("PlanMealCard (CD-Plan-Day)", () => {
     expect(render({ meal: meal({ served: { mealId: id(90), servedAt: "2026-10-14T11:42:00.000Z" } }), onServe })).not.toContain(">Serve<");
     expect(canServe("2026-10-14", TODAY, meal())).toBe(true);
     expect(canServe("2026-10-15", TODAY, meal())).toBe(false);
+  });
+});
+
+describe("⋮ (CD-Plan-Day): Copy to… once something is planned, then Remove", () => {
+  it("offers Copy to… above Remove on a meal with something on it, and starts the copy from it", () => {
+    let copies = 0;
+    render({ meal: meal(), onCopy: () => copies++ });
+    expect(h.items.map((item) => item.label)).toEqual(["Copy to…", "Remove"]);
+    h.items[0]!.onSelect();
+    expect(copies).toBe(1);
+    expect(h.closed).toBe(1);
+  });
+
+  it("an empty meal has nothing to copy: Remove only (and so does a card nobody wired Copy for)", () => {
+    render({ meal: meal({ items: [] }), onCopy: () => {} });
+    render({ meal: meal() });
+    expect(h.items.map((item) => item.label)).toEqual(["Remove", "Remove"]);
   });
 });
 

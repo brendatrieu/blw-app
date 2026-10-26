@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent, type MouseEvent } from "react";
 import { PLAN_NAME_MAX, type DailyMeal } from "@blw/shared";
 import { Button } from "../../components/ui/Button.js";
 import { CloseGlyph, ICON_BUTTON_CLASSES } from "../../components/ui/iconButton.js";
@@ -52,6 +52,28 @@ function GripGlyph() {
       ))}
     </svg>
   );
+}
+
+/**
+ * The platform's own time picker, laid invisibly over a field that shows the
+ * time in the app's format (Daily meals, Plan a meal): tapping anywhere on
+ * the field opens it. Clearing a time is the picker's own (iOS: Reset).
+ */
+export function nativeTimeInput(value: string | null, onChange: (time: string | null) => void) {
+  return {
+    type: "time",
+    value: value ?? "",
+    onChange: (event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value.slice(0, 5) || null),
+    onClick: (event: MouseEvent<HTMLInputElement>) => {
+      // Desktop browsers open the picker only from its icon.
+      try {
+        event.currentTarget.showPicker();
+      } catch {
+        // Already open, or not offered: the field still works.
+      }
+    },
+    className: "absolute inset-0 h-full w-full cursor-pointer opacity-0",
+  } as const;
 }
 
 /** The plate's "+ Add more" look (CD boards' dashed button). */
@@ -179,21 +201,7 @@ export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meal
                   <span aria-hidden="true" className={row.time ? "" : "font-medium text-[var(--color-text-muted)]"}>
                     {row.time ? mealTimeLabel(row.time) : "Add time"}
                   </span>
-                  <input
-                    type="time"
-                    aria-label={`Time for ${row.name}`}
-                    value={row.time ?? ""}
-                    onChange={(event) => update(row.key, { time: event.target.value.slice(0, 5) || null })}
-                    onClick={(event) => {
-                      // Desktop browsers open the picker only from its icon.
-                      try {
-                        event.currentTarget.showPicker();
-                      } catch {
-                        // Already open, or not offered: the field still works.
-                      }
-                    }}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  />
+                  <input aria-label={`Time for ${row.name}`} {...nativeTimeInput(row.time, (time) => update(row.key, { time }))} />
                 </label>
                 <button
                   type="button"

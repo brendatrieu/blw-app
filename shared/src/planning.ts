@@ -147,13 +147,6 @@ export type PlanQuery = z.infer<typeof planQuerySchema>;
 export const planDateParamsSchema = z.object({ babyId: uuid, date: planDateSchema });
 export const planSlotParamsSchema = z.object({ babyId: uuid, date: planDateSchema, slotId: uuid });
 
-/** POST /api/babies/:babyId/plan/:date/meals ("+ Add a meal"). */
-export const addPlannedMealInputSchema = z.object({
-  name: planNameSchema,
-  time: planTimeSchema.nullable().optional(),
-});
-export type AddPlannedMealInput = z.input<typeof addPlannedMealInputSchema>;
-
 const [plateFood, plateRecipe, plateStorage] = plateItemInputSchema.options;
 
 /** A planned item is a plate item without stars (SPEC §4.3). A recipe's
@@ -172,6 +165,15 @@ export const plannedItemsInputSchema = z
   .array(plannedItemInputSchema)
   .max(PLATE_ITEMS_MAX)
   .refine((items) => new Set(items.map(plateKey)).size === items.length, "Each food, recipe and container can be on the plate once");
+
+/** POST /api/babies/:babyId/plan/:date/meals ("+ Add a meal"): the new
+ * meal and, from its Plan a meal page, what is on it, in one write. */
+export const addPlannedMealInputSchema = z.object({
+  name: planNameSchema,
+  time: planTimeSchema.nullable().optional(),
+  items: plannedItemsInputSchema.optional(),
+});
+export type AddPlannedMealInput = z.input<typeof addPlannedMealInputSchema>;
 
 /** PUT /api/babies/:babyId/plan/:date/meals/:slotId. `name` is the one
  * rename (810); `time: null` clears it; `items` on a served meal is a 409. */

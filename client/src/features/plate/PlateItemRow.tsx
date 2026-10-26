@@ -49,18 +49,22 @@ interface RowProps<E extends PlateEntry> {
   entry: E;
   dispatch: (action: PlateAction) => void;
   disabled?: boolean;
+  /** Plan a meal (CD-Plan-Meal): no stars until it is served, and a
+   * container is only planned, so nothing has "run out" of it yet. */
+  planning?: boolean;
 }
 
 /**
  * One item on the plate (plan SPEC §5): a fresh food, a fresh recipe (with
  * its "Ingredients" to leave some out), or a container from storage (its
  * servings and a star line per food or recipe it holds). Every change goes
- * through `dispatch`, the plate reducer's.
+ * through `dispatch`, the plate reducer's. Planning drops the stars.
  */
-export function PlateItemRow({ entry, dispatch, disabled }: RowProps<PlateEntry>) {
-  if (entry.kind === "food") return <FoodItemRow entry={entry} dispatch={dispatch} disabled={disabled} />;
-  if (entry.kind === "recipe") return <RecipeItemRow entry={entry} dispatch={dispatch} disabled={disabled} />;
-  return <ContainerItemRow entry={entry} dispatch={dispatch} disabled={disabled} />;
+export function PlateItemRow(props: RowProps<PlateEntry>) {
+  const { entry } = props;
+  if (entry.kind === "food") return <FoodItemRow {...props} entry={entry} />;
+  if (entry.kind === "recipe") return <RecipeItemRow {...props} entry={entry} />;
+  return <ContainerItemRow {...props} entry={entry} />;
 }
 
 interface FreshItemProps {
@@ -70,7 +74,8 @@ interface FreshItemProps {
   label: string;
   detail?: ReactNode;
   rating: number | null;
-  onRate: (rating: number | null) => void;
+  /** Absent while planning: no stars. */
+  onRate?: ((rating: number | null) => void) | undefined;
   onRemove: () => void;
   disabled: boolean | undefined;
   children?: ReactNode;
@@ -80,14 +85,15 @@ interface FreshItemProps {
  * A fresh item's frame (ratings A, CD-Log-Meal): the 40px plate, the name
  * with its stars right under it, and × at the right. Where the name column
  * is narrower than the stars (under 375 wide), the star line moves below the
- * plate and starts at the item's left edge.
+ * plate and starts at the item's left edge. Without stars, the name sits
+ * centred beside the plate.
  */
 function FreshItem({ plate, name, label, detail, rating, onRate, onRemove, disabled, children }: FreshItemProps) {
   return (
     <li className={ITEM}>
-      <div className="grid grid-cols-[40px_minmax(0,1fr)_44px] items-start gap-x-3">
+      <div className={`grid grid-cols-[40px_minmax(0,1fr)_44px] ${onRate ? "items-start" : "items-center"} gap-x-3`}>
         <FoodPlate {...plate} size={40} className="row-span-2 @max-[319px]:row-span-1" />
-        <div className="min-w-0 pt-0.5">
+        <div className={`min-w-0 ${onRate ? "pt-0.5" : ""}`}>
           <p className={TITLE}>{name}</p>
           {detail}
         </div>
@@ -101,16 +107,18 @@ function FreshItem({ plate, name, label, detail, rating, onRate, onRemove, disab
           <CloseGlyph />
         </button>
         {/* -9px: the first star's glyph, not its 44px box, lines up with the name. */}
-        <div className="col-start-2 -ml-[9px] @max-[319px]:col-span-3 @max-[319px]:col-start-1">
-          <StarRating label={`Rating for ${label}`} value={rating} onChange={onRate} disabled={disabled} />
-        </div>
+        {onRate && (
+          <div className="col-start-2 -ml-[9px] @max-[319px]:col-span-3 @max-[319px]:col-start-1">
+            <StarRating label={`Rating for ${label}`} value={rating} onChange={onRate} disabled={disabled} />
+          </div>
+        )}
       </div>
       {children}
     </li>
   );
 }
 
-export function FoodItemRow({ entry, dispatch, disabled }: RowProps<FoodEntry>) {
+export function FoodItemRow({ entry, dispatch, disabled, planning }: RowProps<FoodEntry>) {
   const key = entryKey(entry);
   return (
     <FreshItem
@@ -118,7 +126,7 @@ export function FoodItemRow({ entry, dispatch, disabled }: RowProps<FoodEntry>) 
       name={<Name food={entry.food} />}
       label={entry.food.name}
       rating={entry.rating}
-      onRate={(rating) => dispatch({ type: "rate", key, rating })}
+      onRate={planning ? undefined : (rating) => dispatch({ type: "rate", key, rating })}
       onRemove={() => dispatch({ type: "remove", key })}
       disabled={disabled}
     />
@@ -133,7 +141,7 @@ export function FoodItemRow({ entry, dispatch, disabled }: RowProps<FoodEntry>) 
  * Ingredients: it cannot tell what was left out from what the recipe gained
  * since, so ticks would claim foods the baby never had (chair 2026-10-26).
  */
-export function RecipeItemRow({ entry, dispatch, disabled }: RowProps<RecipeEntry>) {
+export function RecipeItemRow({ entry, dispatch, disabled, planning }: RowProps<RecipeEntry>) {
   const [open, setOpen] = useState(false);
   const detail = useRecipe(open ? entry.recipe.id : undefined);
   const key = entryKey(entry);
@@ -156,7 +164,7 @@ export function RecipeItemRow({ entry, dispatch, disabled }: RowProps<RecipeEntr
       name={title}
       label={title}
       rating={entry.rating}
-      onRate={(rating) => dispatch({ type: "rate", key, rating })}
+      onRate={planning ? undefined : (rating) => dispatch({ type: "rate", key, rating })}
       onRemove={() => dispatch({ type: "remove", key })}
       disabled={disabled}
       detail={
@@ -251,14 +259,15 @@ export function RecipeItemRow({ entry, dispatch, disabled }: RowProps<RecipeEntr
  * FoodPlate's 14px floor, which would spill out of them). */
 const ITEM_PLATE = {
   40: { box: "size-10", inner: 28, font: undefined, innerFont: undefined },
+  32: { box: "size-8", inner: 22, font: undefined, innerFont: 12 },
   28: { box: "size-7", inner: 20, font: undefined, innerFont: undefined },
   24: { box: "size-6", inner: 17, font: 12, innerFont: 9 },
 } as const;
 
 /** An item's mark: one plate, or a container's first two foods overlapped
- * as on the boards (40px on the plate and the meal page, 28px in the Food
- * log, 24px on the meal plan). */
-export function ItemPlate({ plates, size, className = "" }: { plates: readonly Plate[]; size: 40 | 28 | 24; className?: string }) {
+ * as on the boards (40px on the plate and the meal page, 32px in Copy to…,
+ * 28px in the Food log, 24px on the meal plan). */
+export function ItemPlate({ plates, size, className = "" }: { plates: readonly Plate[]; size: 40 | 32 | 28 | 24; className?: string }) {
   const [first = RECIPE_PLATE, second] = plates;
   const { box, inner, font, innerFont } = ITEM_PLATE[size];
   if (!second) return <FoodPlate {...first} size={size} className={className} style={font ? { fontSize: font } : undefined} />;
@@ -307,9 +316,9 @@ export function WarningGlyph() {
  * reducer clamps, as Serve always did). Where the title would get too
  * narrow, the controls wrap below it, at the right.
  */
-export function ContainerItemRow({ entry, dispatch, disabled }: RowProps<ContainerEntry>) {
+export function ContainerItemRow({ entry, dispatch, disabled, planning }: RowProps<ContainerEntry>) {
   const key = entryKey(entry);
-  const out = ranOut(entry);
+  const out = !planning && ranOut(entry);
   const removable = entry.savedServings !== undefined || out;
   const servings = out ? null : entry.servings;
   const { title } = entry;
@@ -375,7 +384,7 @@ export function ContainerItemRow({ entry, dispatch, disabled }: RowProps<Contain
           </div>
         )}
       </div>
-      {out ? (
+      {planning ? null : out ? (
         <p className="mt-2 ml-[52px] flex gap-2 rounded-[10px] bg-[var(--color-caution-soft)] px-2 py-1.5 text-[13px] leading-[1.35] text-[var(--color-caution-soft-text)]">
           <WarningGlyph />
           None left. Remove it to serve the rest.

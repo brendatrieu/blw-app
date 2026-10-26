@@ -4,6 +4,9 @@
 // shell can say and do the same.
 import {
   DAILY_MEALS_MAX,
+  type CopyPlanInput,
+  type CopyPlanResponse,
+  type CopyWarning,
   type DailyMeal,
   type DailyMealsInput,
   type PlanDay,
@@ -12,9 +15,18 @@ import {
 } from "@blw/shared";
 import { foodPlate, type Plate } from "../catalog/foodEmoji.js";
 import { storageItemCluster } from "../storage/components/StorageItemCard.js";
-import { storageItemTitle } from "../storage/format.js";
-import { RECIPE_PLATE } from "../plate/plate.js";
-import { planFlagLine } from "./copy.js";
+import { bestByLabel, countdownLabel, servePartHint, storageItemTitle } from "../storage/format.js";
+import { NOTHING_COUNTS_MESSAGE, RECIPE_PLATE } from "../plate/plate.js";
+import type { FormErrors } from "../../lib/forms.js";
+import {
+  containerGoneCopyWarning,
+  foodDeletedCopyWarning,
+  mayRunOutCopyWarning,
+  pastBestByCopyWarning,
+  pastUseWithinCopyWarning,
+  planFlagLine,
+  servingsLeftHeading,
+} from "./copy.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -75,6 +87,8 @@ export interface PlannedLine {
   name: string;
   deleted?: boolean | undefined;
   plates: Plate[];
+  /** A container's "Fridge · 2 of 6 left" (the Copy sheet's plate shows it). */
+  detail?: string;
 }
 
 /** The card's lines, in plan order: a food, a recipe, a container under
@@ -83,7 +97,12 @@ export function plannedLines(meal: Pick<PlannedMeal, "items">): PlannedLine[] {
   return meal.items.map((item): PlannedLine => {
     if (item.kind === "food") return { key: item.id, name: item.food.name, deleted: item.food.deleted, plates: [foodPlate(item.food)] };
     if (item.kind === "recipe") return { key: item.id, name: item.recipe.title, plates: [RECIPE_PLATE] };
-    return { key: item.id, name: storageItemTitle(item.container), plates: storageItemCluster(item.container).plates };
+    return {
+      key: item.id,
+      name: storageItemTitle(item.container),
+      plates: storageItemCluster(item.container).plates,
+      detail: servePartHint(item.container),
+    };
   });
 }
 
@@ -160,4 +179,186 @@ export function toDailyMealsInput(rows: readonly DailyMealRow[]): DailyMealsInpu
       time: row.time,
     })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Plan a meal (CD-Plan-Meal)
+// ---------------------------------------------------------------------------
+
+/** The slot id of Plan a meal opened from "+ Add a meal": a meal not made yet. */
+export const NEW_PLANNED_MEAL = "new";
+
+/** The read-only Day field (Q7): "Today", "Yesterday", else "Thu, Oct 15". */
+export function planDayLabel(date: string, today: string): string {
+  if (date === today) return "Today";
+  if (date === addDays(today, -1)) return "Yesterday";
+  return utc(date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+/** Plan a meal's own rules: a name (it is the one rename, 810), and, when
+ * something is planned, at least one food that counts. Nothing planned is
+ * fine: that clears the meal. */
+export function validatePlanMeal(values: { name: string; nothingCounts?: boolean }): FormErrors<"name" | "items"> {
+  const errors: FormErrors<"name" | "items"> = {};
+  if (values.name.trim() === "") errors.name = NAME_REQUIRED;
+  if (values.nothingCounts) errors.items = NOTHING_COUNTS_MESSAGE;
+  return errors;
+}
+
+/** `plan_saved.days_ahead`: how far the day is from today, never the date. */
+export function planDaysAhead(date: string, today: string): "past" | "0" | "1" | "2-7" | "8+" {
+  const days = Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / DAY_MS);
+  if (days < 0) return "past";
+  if (days <= 1) return days === 0 ? "0" : "1";
+  return days <= 7 ? "2-7" : "8+";
+}
+
+// ---------------------------------------------------------------------------
+// Copy to… (814, CD-Copy-Per-Day, CD-Copy-Warnings)
+// ---------------------------------------------------------------------------
+
+/** A day as the Copy sheet names it: "Thu 15". */
+export function shortDay(date: string): string {
+  return `${utc(date).toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" })} ${dayOfMonth(date)}`;
+}
+
+/** What is being copied: the source meal's day, slot and name. */
+export interface CopySource {
+  date: string;
+  slotId: string;
+  name: string;
+}
+
+/** Each selected day (any week) and the meals ticked on it, by slot id. */
+export type CopySelection = Readonly<Record<string, readonly string[]>>;
+/** Keep it / Replace it per clashing meal, by `copyKey`; absent = Keep it. */
+export type CopyChoices = Readonly<Record<string, "keep" | "replace">>;
+export const copyKey = (date: string, slotId: string): string => `${date}/${slotId}`;
+
+/** A meal can take the copy unless it is the source or served (never replaced). */
+export function canCopyInto(source: CopySource, date: string, meal: Pick<PlannedMeal, "slotId" | "served">): boolean {
+  return meal.served === null && !(date === source.date && meal.slotId === source.slotId);
+}
+
+/** A day tapped on or off the sheet's strip. A newly selected day starts with
+ * the meal named like the source ticked, if it has one (814). */
+export function toggleCopyDay(selection: CopySelection, day: PlanDay, source: CopySource): CopySelection {
+  if (day.date in selection) {
+    const { [day.date]: _dropped, ...rest } = selection;
+    return rest;
+  }
+  const match = day.meals.find((meal) => meal.name === source.name && canCopyInto(source, day.date, meal));
+  return { ...selection, [day.date]: match ? [match.slotId] : [] };
+}
+
+/** A meal chip tapped. Unticking the last one keeps the day's row (814). */
+export function toggleCopySlot(selection: CopySelection, date: string, slotId: string): CopySelection {
+  const ticked = selection[date] ?? [];
+  return { ...selection, [date]: ticked.includes(slotId) ? ticked.filter((id) => id !== slotId) : [...ticked, slotId] };
+}
+
+/** The selected days in date order, with what the plan holds for each. */
+export function copyRows(selection: CopySelection, dayOf: (date: string) => PlanDay | undefined) {
+  return Object.keys(selection)
+    .sort()
+    .map((date) => ({ date, day: dayOf(date), ticked: selection[date] ?? [] }));
+}
+
+/** A ticked meal that already has something planned (and isn't served). */
+export interface CopyClash {
+  date: string;
+  slotId: string;
+  name: string;
+  /** What is planned there now, for the clash box. */
+  planned: string;
+}
+
+/** The ticked meals that may take the copy, each with its Keep it / Replace it. */
+export function copyTargets(
+  selection: CopySelection,
+  dayOf: (date: string) => PlanDay | undefined,
+  source: CopySource,
+  choices: CopyChoices,
+): CopyPlanInput["targets"] {
+  return copyRows(selection, dayOf).flatMap(({ date, day, ticked }) =>
+    (day?.meals ?? [])
+      .filter((meal) => ticked.includes(meal.slotId) && canCopyInto(source, date, meal))
+      .map((meal) => ({ date, slotId: meal.slotId, onClash: choices[copyKey(date, meal.slotId)] ?? "keep" })),
+  );
+}
+
+/** The targets that already have something planned, in day and meal order. */
+export function copyClashes(
+  selection: CopySelection,
+  dayOf: (date: string) => PlanDay | undefined,
+  source: CopySource,
+): CopyClash[] {
+  return copyTargets(selection, dayOf, source, {}).flatMap(({ date, slotId }) => {
+    const meal = dayOf(date)?.meals.find((entry) => entry.slotId === slotId);
+    if (!meal || meal.items.length === 0) return [];
+    return [{ date, slotId, name: meal.name, planned: plannedLines(meal).map((line) => line.name).join(", ") }];
+  });
+}
+
+/** The All row's answer: everyone's, or null when they differ. */
+export function allClashChoice(clashes: readonly CopyClash[], choices: CopyChoices): "keep" | "replace" | null {
+  const picked = new Set(clashes.map((clash) => choices[copyKey(clash.date, clash.slotId)] ?? "keep"));
+  return picked.size === 1 ? [...picked][0]! : null;
+}
+
+/** Every clash set to one answer by the All row. */
+export function setAllClashes(clashes: readonly CopyClash[], choices: CopyChoices, choice: "keep" | "replace"): CopyChoices {
+  return { ...choices, ...Object.fromEntries(clashes.map((clash) => [copyKey(clash.date, clash.slotId), choice])) };
+}
+
+/** Which day the plan opens on after a Copy: the first it copied to (else
+ * the first target, when every one was kept or served). */
+export function firstCopiedDate(targets: CopyPlanInput["targets"], result: Pick<CopyPlanResponse, "skipped">): string | undefined {
+  const skipped = new Set(result.skipped.map((entry) => copyKey(entry.date, entry.slotId)));
+  return (targets.find((target) => !skipped.has(copyKey(target.date, target.slotId))) ?? targets[0])?.date;
+}
+
+/** One line of the sheet's warnings box: Storage's own heading, then what may
+ * happen on which day. Nothing in it blocks the copy. */
+export interface CopyWarningNote {
+  key: string;
+  heading: string | null;
+  line: string;
+}
+
+/** The dry run's warnings, worded with the source meal's own names. */
+export function copyWarningNotes(warnings: readonly CopyWarning[], source: Pick<PlannedMeal, "items">): CopyWarningNote[] {
+  return warnings.flatMap((warning, index): CopyWarningNote[] => {
+    const key = `${warning.kind}-${index}`;
+    if (warning.kind === "food_deleted") {
+      const food = source.items.find((item) => item.kind === "food" && item.food.id === warning.foodId);
+      return food?.kind === "food" ? [{ key, heading: null, line: foodDeletedCopyWarning(food.food.name) }] : [];
+    }
+    const found = source.items.find((item) => item.kind === "storage" && item.container.id === warning.storageItemId);
+    if (found?.kind !== "storage") return [];
+    const { container } = found;
+    const item = storageItemTitle(container);
+    switch (warning.kind) {
+      case "container_gone":
+        return [{ key, heading: null, line: containerGoneCopyWarning(item, warning.status) }];
+      case "may_run_out":
+        return [
+          {
+            key,
+            heading: servingsLeftHeading(warning.servingsLeft, warning.plannedTimes),
+            line: mayRunOutCopyWarning(item, shortDay(warning.date)),
+          },
+        ];
+      case "past_best_by":
+        return [
+          {
+            key,
+            heading: container.bestBy ? bestByLabel(container.bestBy) : null,
+            line: pastBestByCopyWarning(item, shortDay(warning.date)),
+          },
+        ];
+      case "past_use_within":
+        return [{ key, heading: countdownLabel(container.expiresAt), line: pastUseWithinCopyWarning(item, shortDay(warning.date)) }];
+    }
+  });
 }

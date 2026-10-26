@@ -21,6 +21,7 @@ const h = vi.hoisted(() => {
     network: { offline: false },
     creates: [] as Call[],
     updates: [] as Call[],
+    planSaves: [] as Call[],
     containersSaved: [] as Call[],
     storage: { isPending: false },
     usage: [] as unknown[],
@@ -67,6 +68,10 @@ vi.mock("../tracking/hooks.js", async (importOriginal) => ({
   },
   useUpdateMeal: () => recorder(h.updates),
 }));
+vi.mock("../plan/hooks.js", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useSavePlannedMeal: () => recorder(h.planSaves),
+}));
 vi.mock("../storage/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useCreateStorageItem: () => ({
@@ -82,13 +87,14 @@ vi.mock("../../lib/tapGuard.js", () => ({ ignoreTapsBriefly: () => h.taps.guarde
 import { ApiError } from "../../lib/api.js";
 import { Button } from "../../components/ui/Button.js";
 import { DateTimeField } from "../../components/ui/DateTimeField.js";
+import { Field } from "../../components/ui/Field.js";
 import { Textarea } from "../../components/ui/Input.js";
 import { Switch } from "../../components/ui/Switch.js";
 import { AddMoreSheet } from "../storage/components/AddMoreSheet.js";
 import { LeftoversFields } from "../storage/components/LeftoversFields.js";
 import { PlateItemRow } from "./PlateItemRow.js";
 import { PlateForm, type PlateMode } from "./PlateScreen.js";
-import { containerEntry, fromMeal, type PlateAction, type PlateEntry } from "./plate.js";
+import { containerEntry, fromMeal, fromPlanned, type PlateAction, type PlateEntry } from "./plate.js";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const EGG = { id: id(3), slug: "egg", name: "Egg", category: "protein" as const, emoji: null };
@@ -213,6 +219,7 @@ beforeEach(() => {
   props = {};
   h.creates.length = 0;
   h.updates.length = 0;
+  h.planSaves.length = 0;
   h.containersSaved.length = 0;
   h.usage.length = 0;
   h.mutation.isPending = false;
@@ -612,5 +619,163 @@ describe("offline (ledger 766)", () => {
     expect(rows(tree)[0]!.props.disabled).toBe(true);
     expect(one(tree, (element) => element.props?.id === "plate-add-more").props.disabled).toBe(true);
     expect(one(tree, byType(DateTimeField)).props.disabled).toBe(true);
+  });
+});
+
+describe("Plan a meal (/plan/:date/:slotId, CD-Plan-Meal)", () => {
+  const PLAN = { date: "2026-10-16", today: "2026-10-14", slotId: id(51), name: "Lunch", time: "12:00" };
+  const planned = (): PlateEntry[] =>
+    fromPlanned([
+      { kind: "recipe", id: id(60), recipe: PASTA, leftOut: [{ ...CASHEWS, category: "legume" }] },
+      { kind: "storage", id: id(61), servings: 1, container: MUFFINS },
+    ]);
+  const renderPlan = (plan: Record<string, unknown> = {}, initialPlate = planned()) =>
+    render("plan", initialPlate, { plan: { ...PLAN, ...plan }, onPlanGone: (mealId: string | null) => gone.push(mealId) });
+  const field = (tree: El, fieldId: string) => one(tree, (element) => element.props?.id === fieldId);
+  const type = (fieldId: string, value: string) =>
+    (field(again(), fieldId).props.onChange as (event: { target: { value: string } }) => void)({ target: { value } });
+  let gone: Array<string | null> = [];
+  beforeEach(() => {
+    gone = [];
+  });
+
+  it("has Name, Day and Time, the plate without stars, and no When, Reaction, Notes or leftovers", () => {
+    const tree = renderPlan();
+    expect(field(tree, "plan-name").props.value).toBe("Lunch");
+    expect(text(tree)).toContain("Fri, Oct 16");
+    expect(field(tree, "plan-time").props).toMatchObject({ type: "time", value: "12:00" });
+    expect(rows(tree).map((row) => row.props.planning)).toEqual([true, true]);
+    expect(findAll(tree, byType(DateTimeField))).toHaveLength(0);
+    expect(findAll(tree, byType(Textarea))).toHaveLength(0);
+    expect(findAll(tree, byType(Switch))).toHaveLength(0);
+    expect(text(tree)).not.toContain("Stars are optional.");
+    expect(saveButton(tree).props.children).toBe("Save");
+    // Add more here never needs a container.
+    (field(tree, "plate-add-more").props.onClick as () => void)();
+    expect(one(again(), byType(AddMoreSheet)).props.requireContainer).toBe(false);
+  });
+
+  it("saves the name, the time and the plate as planned (leave-outs and servings, no stars), then leaves", () => {
+    renderPlan();
+    type("plan-name", "  Picnic ");
+    type("plan-time", "12:30:00");
+    dispatch({ type: "servings", key: `storage:${MUFFINS.id}`, servings: 2 });
+    submit();
+    expect(h.planSaves.map((call) => call.input)).toEqual([
+      {
+        date: "2026-10-16",
+        slotId: id(51),
+        today: "2026-10-14",
+        input: {
+          name: "Picnic",
+          time: "12:30",
+          items: [
+            { kind: "recipe", recipeId: PASTA.id, leftOutFoodIds: [CASHEWS.id] },
+            { kind: "storage", storageItemId: MUFFINS.id, servings: 2 },
+          ],
+        },
+      },
+    ]);
+    expect(doneCalls).toEqual([]);
+    h.planSaves[0]!.options.onSuccess!();
+    expect(doneCalls).toEqual(["plan"]);
+    expect(h.creates).toEqual([]);
+    expect(h.updates).toEqual([]);
+  });
+
+  it("a time can be cleared; nothing planned is fine; an untouched meal leaves without a write", () => {
+    renderPlan();
+    submit();
+    expect(h.planSaves).toEqual([]);
+    expect(doneCalls).toEqual(["plan"]);
+
+    renderPlan();
+    type("plan-time", "");
+    addMore({ removed: { itemIds: [MUFFINS.id], recipeIds: [PASTA.id], foodIds: [] } });
+    submit();
+    expect(h.planSaves.map((call) => (call.input as { input: unknown }).input)).toEqual([{ name: "Lunch", time: null, items: [] }]);
+  });
+
+  it("+ Add a meal: no slot yet, so even an untouched one saves (POST); its name is required, focus goes there", () => {
+    renderPlan({ slotId: null, name: "", time: null }, []);
+    submit();
+    expect(h.planSaves).toEqual([]);
+    expect(one(again(), (element) => element.type === Field && element.props.htmlFor === "plan-name").props.error).toBe("Name is required");
+    type("plan-name", "Tea");
+    expect(one(again(), (element) => element.type === Field && element.props.htmlFor === "plan-name").props.error).toBeUndefined();
+    submit();
+    expect(h.planSaves.map((call) => call.input)).toEqual([
+      { date: "2026-10-16", slotId: null, today: "2026-10-14", input: { name: "Tea", time: null, items: [] } },
+    ]);
+  });
+
+  it("a planned container with nothing left (or finished) holds nothing: no ran-out line, and Save goes through", () => {
+    renderPlan({}, fromPlanned([{ kind: "storage", id: id(61), servings: 1, container: { ...MUFFINS, servingsLeft: 0, status: "finished" } }]));
+    type("plan-name", "Picnic");
+    expect(text(again()).join(" ")).not.toContain("has run out");
+    expect(saveButton(again()).props.disabled).toBe(false);
+    submit();
+    expect((h.planSaves[0]!.input as { input: { items: unknown[] } }).input.items).toEqual([
+      { kind: "storage", storageItemId: MUFFINS.id, servings: 1 },
+    ]);
+  });
+
+  it("a plate where nothing counts holds the save in its own words", () => {
+    renderPlan({}, []);
+    addMore({ recipes: [PASTA] });
+    dispatch({ type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: CASHEWS, ingredientIds: [CASHEWS.id] });
+    submit();
+    expect(h.planSaves).toEqual([]);
+    expect(text(again())).toContain("Leave at least one food on the plate.");
+  });
+
+  it("served meanwhile: off to the logged meal; gone from its day: the page says so; neither shows an error here", () => {
+    renderPlan();
+    type("plan-name", "Picnic");
+    submit();
+    const served = new ApiError(409, "already_served", { error: "already_served", mealId: id(90) });
+    h.planSaves[0]!.options.onError!(served);
+    const changed = new ApiError(409, "plan_changed", { error: "plan_changed", message: "…" });
+    h.planSaves[0]!.options.onError!(changed);
+    expect(gone).toEqual([id(90), null]);
+    for (const error of [served, changed]) {
+      h.mutation.isError = true;
+      h.mutation.error = error;
+      expect(findAll(again(), (element) => element.props?.role === "alert")).toHaveLength(0);
+    }
+    h.mutation.error = new ApiError(500, "boom");
+    expect(text(again())).toContain("Couldn't save that — try again.");
+  });
+
+  it("a stale leave-out drops it and says the recipe changed; the next save goes through without it", () => {
+    renderPlan();
+    type("plan-name", "Picnic");
+    submit();
+    const stale = new ApiError(400, "invalid_request", {
+      details: { leftOutFoodIds: PLATE_NOT_AN_INGREDIENT, recipeId: PASTA.id, foodIds: [CASHEWS.id] },
+    });
+    h.planSaves[0]!.options.onError!(stale);
+    h.mutation.isError = true;
+    h.mutation.error = stale;
+    expect(text(again())).toContain("This recipe changed. Check its ingredients and save again.");
+    expect(gone).toEqual([]);
+    h.mutation.isError = false;
+    submit();
+    expect((h.planSaves[1]!.input as { input: { items: unknown[] } }).input.items[0]).toEqual({ kind: "recipe", recipeId: PASTA.id, leftOutFoodIds: [] });
+  });
+
+  it("offline: Save waits with You're offline.; in flight it reads Saving… and every field waits", () => {
+    h.network.offline = true;
+    let tree = renderPlan();
+    expect(saveButton(tree).props.disabled).toBe(true);
+    type("plan-name", "Picnic");
+    submit();
+    expect(h.planSaves).toEqual([]);
+    h.network.offline = false;
+    h.mutation.isPending = true;
+    tree = again();
+    expect(saveButton(tree).props.children).toBe("Saving…");
+    expect(field(tree, "plan-name").props.disabled).toBe(true);
+    expect(field(tree, "plan-time").props.disabled).toBe(true);
   });
 });

@@ -340,6 +340,29 @@ describe("planning (ledger 903, step 3.1)", () => {
       expect((await put(DAY, LUNCH, {})).statusCode).toBe(400);
     });
 
+    it("+ Add a meal can bring its items in the same write; a refused item adds no meal and leaves the day virtual (4.2)", async () => {
+      const added = await add(DAY, { name: "Supper", items: [{ kind: "recipe", recipeId: fx.muffins.id, leftOutFoodIds: [fx.banana.id] }] });
+      expect(added.statusCode, added.body).toBe(201);
+      expect(meal(planDaySchema.parse(added.json()), "Supper").items).toMatchObject([
+        { kind: "recipe", recipe: { id: fx.muffins.id }, leftOut: [{ id: fx.banana.id }] },
+      ]);
+      // An empty list is a meal with nothing planned yet, as without `items`.
+      const empty = await add(DAY, { name: "Tea", items: [] });
+      expect(meal(planDaySchema.parse(empty.json()), "Tea").items).toEqual([]);
+
+      const other = "2026-11-10";
+      for (const items of [
+        [{ kind: "recipe", recipeId: fx.drizzle.id }],
+        [{ kind: "recipe", recipeId: fx.muffins.id, leftOutFoodIds: [fx.oats.id] }],
+        [{ kind: "storage", storageItemId: MISSING, servings: 1 }],
+      ]) {
+        const refused = await add(other, { name: "Supper", items });
+        expect(refused.statusCode, refused.body).toBe(400);
+      }
+      expect((await day(other)).planned).toBe(false);
+      expect(await rows(other)).toEqual([]);
+    });
+
     it("Remove takes the meal off its day; a removed or unknown slot is 409 plan_changed; an emptied day stays empty", async () => {
       const response = await remove(DAY, SNACK);
       expect(response.statusCode, response.body).toBe(200);

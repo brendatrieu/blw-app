@@ -1,8 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { DAILY_MEALS_MAX, DEFAULT_DAILY_MEALS, type PlannedMeal, type StorageItem } from "@blw/shared";
+import { DAILY_MEALS_MAX, DEFAULT_DAILY_MEALS, copyPlanInputSchema, type PlanDay, type PlannedMeal, type StorageItem } from "@blw/shared";
+import { NOTHING_COUNTS_MESSAGE } from "../plate/plate.js";
 import {
   NAME_REQUIRED,
   addDays,
+  allClashChoice,
+  canCopyInto,
+  copyClashes,
+  copyRows,
+  copyTargets,
+  copyWarningNotes,
+  firstCopiedDate,
+  planDayLabel,
+  planDaysAhead,
+  setAllClashes,
+  shortDay,
+  toggleCopyDay,
+  toggleCopySlot,
+  validatePlanMeal,
   canAddDailyMeal,
   canRemoveDailyMeal,
   dailyMealErrors,
@@ -78,6 +93,8 @@ const container = (over: Partial<StorageItem>): StorageItem =>
       { id: id(4), slug: "carrot", name: "Carrot" },
     ],
     status: "active",
+    location: "fridge",
+    quantityNote: null,
     servingsLeft: 2,
     servingsTotal: 6,
     bestBy: null,
@@ -98,15 +115,21 @@ const MEAL: Pick<PlannedMeal, "items"> = {
 };
 
 describe("a planned meal's card lines and flags (CD-Plan-Day, CD-Plan-After-Copy)", () => {
-  it("one line per item in plan order: a recipe's pot, a food's plate, a container under Storage's name", () => {
+  it("one line per item in plan order: a recipe's pot, a food's plate, a container under Storage's name and where it is", () => {
+    const detail = "Fridge · 2 of 6 left";
     expect(plannedLines(MEAL)).toEqual([
       { key: id(10), name: "Salmon Oat Patties", plates: [{ emoji: "🍲", tint: "neutral" }] },
       { key: id(11), name: "Egg", deleted: undefined, plates: [{ emoji: "🥚", tint: "dairy" }] },
       { key: id(12), name: "My mash", deleted: true, plates: [expect.objectContaining({ tint: "veg" })] },
-      { key: id(13), name: "Broccoli, Carrot", plates: [expect.objectContaining({ emoji: "🥦" }), expect.objectContaining({ emoji: "🥕" })] },
-      { key: id(14), name: "Broccoli Cheese Egg Muffins", plates: [{ emoji: "🍲", tint: "neutral" }] },
-      { key: id(15), name: "Soup", plates: [{ emoji: "📝", tint: "neutral" }] },
-      { key: id(16), name: "Broccoli, Carrot", plates: expect.any(Array) },
+      {
+        key: id(13),
+        name: "Broccoli, Carrot",
+        plates: [expect.objectContaining({ emoji: "🥦" }), expect.objectContaining({ emoji: "🥕" })],
+        detail,
+      },
+      { key: id(14), name: "Broccoli Cheese Egg Muffins", plates: [{ emoji: "🍲", tint: "neutral" }], detail },
+      { key: id(15), name: "Soup", plates: [{ emoji: "📝", tint: "neutral" }], detail },
+      { key: id(16), name: "Broccoli, Carrot", plates: expect.any(Array), detail },
     ]);
   });
 
@@ -184,5 +207,162 @@ describe("Daily meals list edits (804, CD-Daily-Meals)", () => {
         { name: "Bedtime snack", time: null },
       ],
     });
+  });
+});
+
+describe("Plan a meal (CD-Plan-Meal)", () => {
+  it("names the read-only Day: Today, Yesterday, else the short date", () => {
+    expect(planDayLabel("2026-10-14", "2026-10-14")).toBe("Today");
+    expect(planDayLabel("2026-10-13", "2026-10-14")).toBe("Yesterday");
+    expect(planDayLabel("2026-10-15", "2026-10-14")).toBe("Thu, Oct 15");
+    expect(planDayLabel("2027-01-01", "2026-12-31")).toBe("Fri, Jan 1");
+  });
+
+  it("needs a name; nothing planned is fine; a plate where nothing counts is not", () => {
+    expect(validatePlanMeal({ name: "Lunch" })).toEqual({});
+    expect(validatePlanMeal({ name: "  " })).toEqual({ name: NAME_REQUIRED });
+    expect(validatePlanMeal({ name: "Lunch", nothingCounts: true })).toEqual({ items: NOTHING_COUNTS_MESSAGE });
+  });
+
+  it("says how far ahead a saved day is, never the date (plan_saved.days_ahead)", () => {
+    const today = "2026-10-30";
+    expect(["2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01", "2026-11-06", "2026-11-07"].map((date) => planDaysAhead(date, today))).toEqual([
+      "past",
+      "0",
+      "1",
+      "2-7",
+      "2-7",
+      "8+",
+    ]);
+  });
+});
+
+describe("Copy to… (814, CD-Copy-Per-Day)", () => {
+  const meal = (n: number, name: string, over: Partial<PlannedMeal> = {}): PlannedMeal => ({
+    slotId: id(n),
+    name,
+    time: null,
+    position: n,
+    served: null,
+    items: [],
+    ...over,
+  });
+  const food = (n: number, name: string) => ({ kind: "food" as const, id: id(n), food: { ...EGG, id: id(n), name } });
+  const SOURCE = { date: "2026-10-14", slotId: id(51), name: "Lunch" };
+  const days: Record<string, PlanDay> = {
+    // The source's own day: its Lunch can't take the copy, its Dinner can.
+    "2026-10-14": { date: "2026-10-14", planned: true, meals: [meal(51, "Lunch", { items: [food(1, "Egg")] }), meal(52, "Dinner")] },
+    "2026-10-15": {
+      date: "2026-10-15",
+      planned: true,
+      meals: [meal(60, "Breakfast"), meal(61, "Lunch"), meal(62, "Dinner", { items: [food(2, "Salmon Oat Patties"), food(3, "Egg")] })],
+    },
+    "2026-10-16": {
+      date: "2026-10-16",
+      planned: true,
+      meals: [meal(70, "Breakfast", { items: [food(4, "Overnight Oats")] }), meal(71, "Lunch", { served: { mealId: id(90), servedAt: "x" } })],
+    },
+    // A virtual day: the daily meals.
+    "2026-10-21": { date: "2026-10-21", planned: false, meals: [meal(80, "Breakfast"), meal(81, "Lunch")] },
+  };
+  const dayOf = (date: string) => days[date];
+
+  it("a selected day starts with the meal named like the source ticked, unless that is the source or served", () => {
+    let selection = toggleCopyDay({}, days["2026-10-15"]!, SOURCE);
+    expect(selection).toEqual({ "2026-10-15": [id(61)] });
+    selection = toggleCopyDay(selection, days["2026-10-14"]!, SOURCE);
+    selection = toggleCopyDay(selection, days["2026-10-16"]!, SOURCE);
+    selection = toggleCopyDay(selection, days["2026-10-21"]!, SOURCE);
+    expect(selection).toEqual({ "2026-10-15": [id(61)], "2026-10-14": [], "2026-10-16": [], "2026-10-21": [id(81)] });
+    // Tapped again, a day goes, whatever was ticked on it.
+    expect(toggleCopyDay(selection, days["2026-10-15"]!, SOURCE)).toEqual({ "2026-10-14": [], "2026-10-16": [], "2026-10-21": [id(81)] });
+    expect(canCopyInto(SOURCE, "2026-10-14", days["2026-10-14"]!.meals[0]!)).toBe(false);
+    expect(canCopyInto(SOURCE, "2026-10-15", days["2026-10-15"]!.meals[1]!)).toBe(true);
+    expect(canCopyInto(SOURCE, "2026-10-16", days["2026-10-16"]!.meals[1]!)).toBe(false);
+  });
+
+  it("chips tick and untick; unticking the last keeps the day's row; rows go in date order", () => {
+    let selection = toggleCopySlot({ "2026-10-21": [id(81)] }, "2026-10-21", id(81));
+    expect(selection).toEqual({ "2026-10-21": [] });
+    selection = toggleCopySlot({ ...selection, "2026-10-15": [id(61)] }, "2026-10-15", id(62));
+    expect(copyRows(selection, dayOf).map((row) => [row.date, row.ticked])).toEqual([
+      ["2026-10-15", [id(61), id(62)]],
+      ["2026-10-21", []],
+    ]);
+  });
+
+  it("targets every ticked meal that can take it, in day and meal order, Keep it unless Replace it was picked", () => {
+    const selection = { "2026-10-21": [id(81)], "2026-10-15": [id(62), id(61)], "2026-10-16": [id(71), id(70)], "2026-10-14": [id(51), id(52)] };
+    const targets = copyTargets(selection, dayOf, SOURCE, { [`2026-10-15/${id(62)}`]: "replace" });
+    expect(targets).toEqual([
+      { date: "2026-10-14", slotId: id(52), onClash: "keep" },
+      { date: "2026-10-15", slotId: id(61), onClash: "keep" },
+      { date: "2026-10-15", slotId: id(62), onClash: "replace" },
+      { date: "2026-10-16", slotId: id(70), onClash: "keep" },
+      { date: "2026-10-21", slotId: id(81), onClash: "keep" },
+    ]);
+    expect(copyPlanInputSchema.safeParse({ source: SOURCE, targets, tz: "UTC" }).success).toBe(true);
+    // A ticked meal no longer on its day (removed elsewhere) is dropped.
+    expect(copyTargets({ "2026-10-15": [id(99)] }, dayOf, SOURCE, {})).toEqual([]);
+  });
+
+  it("a clash is a target with something planned: named, with what is there now", () => {
+    const selection = { "2026-10-15": [id(61), id(62)], "2026-10-16": [id(70), id(71)] };
+    const clashes = copyClashes(selection, dayOf, SOURCE);
+    expect(clashes).toEqual([
+      { date: "2026-10-15", slotId: id(62), name: "Dinner", planned: "Salmon Oat Patties, Egg" },
+      { date: "2026-10-16", slotId: id(70), name: "Breakfast", planned: "Overnight Oats" },
+    ]);
+    expect(allClashChoice(clashes, {})).toBe("keep");
+    const mixed = { [`2026-10-16/${id(70)}`]: "replace" as const };
+    expect(allClashChoice(clashes, mixed)).toBeNull();
+    const all = setAllClashes(clashes, mixed, "replace");
+    expect(allClashChoice(clashes, all)).toBe("replace");
+    // The All row answers the clashes only; Lunch had nothing to replace.
+    expect(copyTargets(selection, dayOf, SOURCE, all).map((target) => target.onClash)).toEqual(["keep", "replace", "replace"]);
+  });
+
+  it("after a Copy the plan shows the first day that got it, else the first target", () => {
+    const targets = [
+      { date: "2026-10-15", slotId: id(62), onClash: "keep" as const },
+      { date: "2026-10-16", slotId: id(70), onClash: "replace" as const },
+    ];
+    expect(firstCopiedDate(targets, { skipped: [{ date: "2026-10-15", slotId: id(62), reason: "kept" }] })).toBe("2026-10-16");
+    expect(firstCopiedDate(targets, { skipped: [] })).toBe("2026-10-15");
+    expect(firstCopiedDate(targets, { skipped: targets.map((target) => ({ ...target, reason: "kept" as const })) })).toBe("2026-10-15");
+    expect(firstCopiedDate([], { skipped: [] })).toBeUndefined();
+    expect(shortDay("2026-10-15")).toBe("Thu 15");
+  });
+
+  it("words the dry run's warnings with the source's names and Storage's own headings", () => {
+    const muffins = container({ id: id(31), recipeTitle: "Broccoli Cheese Egg Muffins", foods: [], bestBy: "2026-10-15" });
+    const veg = container({ expiresAt: new Date(Date.now() + 24 * 3_600_000).toISOString() });
+    const source = {
+      items: [
+        { kind: "storage" as const, id: id(40), servings: 1, container: muffins },
+        { kind: "storage" as const, id: id(41), servings: 1, container: veg },
+        { kind: "food" as const, id: id(42), food: MASH },
+      ],
+    };
+    const notes = copyWarningNotes(
+      [
+        { kind: "may_run_out", storageItemId: muffins.id, servingsLeft: 2, plannedTimes: 3, date: "2026-10-16" },
+        { kind: "past_best_by", storageItemId: muffins.id, date: "2026-10-16" },
+        { kind: "past_use_within", storageItemId: veg.id, date: "2026-10-15" },
+        { kind: "container_gone", storageItemId: veg.id, status: "discarded" },
+        { kind: "food_deleted", foodId: MASH.id },
+        // Not on this meal (a stale answer): nothing to say.
+        { kind: "past_best_by", storageItemId: id(99), date: "2026-10-16" },
+      ],
+      source,
+    );
+    expect(notes.map(({ heading, line }) => [heading, line])).toEqual([
+      ["2 servings left, planned 3 times", "Broccoli Cheese Egg Muffins may run out before Fri 16. You can still copy."],
+      [expect.stringMatching(/^Best by Thu, Oct 15$/), "Broccoli Cheese Egg Muffins will be past the Best by date on Fri 16. You can still copy."],
+      [expect.stringMatching(/^Use within (23|24)h$/), "Broccoli, Carrot may not keep until Thu 15. You can still copy."],
+      [null, "Broccoli, Carrot was discarded. You can still copy, then swap it out."],
+      [null, "My mash was deleted. You can still copy, then swap it out."],
+    ]);
+    expect(new Set(notes.map((note) => note.key)).size).toBe(notes.length);
   });
 });

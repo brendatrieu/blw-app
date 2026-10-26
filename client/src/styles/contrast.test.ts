@@ -222,6 +222,9 @@ const BASE_PAIRS: Pair[] = [
   // Interactive text accent — links, active nav label, focus-adjacent text.
   { name: "accent link/text on page", fg: "color-accent", bg: "color-bg" },
   { name: "accent link/text on elevated surface", fg: "color-accent", bg: "color-bg-elevated" },
+  // Copy to…'s Keep it / Replace it (ledger 904, CD-Copy-Per-Day): the picked
+  // half is the accent fill with the elevated surface's color as its text.
+  { name: "elevated text on accent fill (Copy's picked Keep it / Replace it)", fg: "color-bg-elevated", bg: "color-accent" },
   // The More tab's "Update available" row: its Reload sits on inset (ledger 790).
   { name: "accent text on inset surface (More update row)", fg: "color-accent", bg: "color-bg-inset" },
 

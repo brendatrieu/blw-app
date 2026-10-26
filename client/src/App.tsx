@@ -125,11 +125,10 @@ export function App() {
         <Route path="/log-meal" element={<PlateScreen />} />
         <Route path="/meals" element={<MealsPage />} />
         <Route path="/meals/:id" element={<MealDetailPage />} />
-        {/* Ledger 904: the meal plan, from Home's calendar button and More.
-            A planned meal's own page comes with plan step 4.2; until then
-            its path shows its day. */}
+        {/* Ledger 904: the meal plan, from Home's calendar button and More;
+            a planned meal opens the plate as Plan a meal ("new" = + Add a meal). */}
         <Route path="/plan" element={<PlanPage />} />
-        <Route path="/plan/:date/:slotId" element={<PlanPage />} />
+        <Route path="/plan/:date/:slotId" element={<PlateScreen />} />
         <Route path="/storage" element={<StoragePage />} />
         <Route path="/storage/add" element={<StorageAddPage />} />
         <Route path="/storage/:id/edit" element={<StorageEditPage />} />

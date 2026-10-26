@@ -21,6 +21,8 @@ export interface PlanMealCardProps {
   /** Serve (SPEC §3.5), wired in plan step 4.3: shown on an unserved meal
    * with something planned, today or before; never on a future day. */
   onServe?: () => void;
+  /** ⋮ Copy to…, offered once something is planned (there is nothing to copy before). */
+  onCopy?: () => void;
 }
 
 /** Whether a meal offers Serve: unserved, something on it, not in the future. */
@@ -42,12 +44,12 @@ function ServedChip({ servedAt }: { servedAt: string }) {
 /**
  * One meal of a plan day (CD-Plan-Day, CD-Plan-After-Copy): its name, its
  * optional time and "Served {time}", one line per planned item, a flag box
- * per flagged container, and ⋮ (Remove; Copy to… joins it in step 4.2).
+ * per flagged container, and ⋮ (Copy to… once something is planned, Remove).
  * Tapping the card opens the meal (`/plan/:date/:slotId`). A card with at
  * most one line and no flags keeps its buttons beside the whole card, as
  * the board's Morning snack does; a longer one keeps them on its name's row.
  */
-export function PlanMealCard({ babyId, date, today, meal, onServe }: PlanMealCardProps) {
+export function PlanMealCard({ babyId, date, today, meal, onServe, onCopy }: PlanMealCardProps) {
   const [removing, setRemoving] = useState(false);
   const lines = plannedLines(meal);
   const notes = flagNotes(meal);
@@ -80,14 +82,26 @@ export function PlanMealCard({ babyId, date, today, meal, onServe }: PlanMealCar
       )}
       <Menu label={`More for ${meal.name}`}>
         {(close) => (
-          <MenuItem
-            onSelect={() => {
-              setRemoving(true);
-              close();
-            }}
-          >
-            <span className="text-[var(--color-danger)]">Remove</span>
-          </MenuItem>
+          <>
+            {onCopy && meal.items.length > 0 && (
+              <MenuItem
+                onSelect={() => {
+                  onCopy();
+                  close();
+                }}
+              >
+                Copy to…
+              </MenuItem>
+            )}
+            <MenuItem
+              onSelect={() => {
+                setRemoving(true);
+                close();
+              }}
+            >
+              <span className="text-[var(--color-danger)]">Remove</span>
+            </MenuItem>
+          </>
         )}
       </Menu>
     </div>

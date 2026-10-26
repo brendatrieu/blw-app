@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
-import { localDate, planDateSchema } from "@blw/shared";
+import { Link, useSearchParams } from "react-router-dom";
+import { localDate, planDateSchema, type PlannedMeal } from "@blw/shared";
 import { BackButton } from "../../components/ui/BackButton.js";
 import { ButtonLink } from "../../components/ui/Button.js";
 import { EmptyState } from "../../components/ui/EmptyState.js";
@@ -8,10 +8,22 @@ import { ChevronLeftGlyph, ChevronRightGlyph, ICON_BUTTON_CLASSES } from "../../
 import { PageHeader } from "../../components/ui/PageHeader.js";
 import { Skeleton, SkeletonList } from "../../components/ui/Skeleton.js";
 import { useActiveBaby } from "../babies/useActiveBaby.js";
+import { copiedLabel } from "./copy.js";
+import { CopySheet } from "./CopySheet.js";
 import { DailyMealsSheet } from "./DailyMealsSheet.js";
 import { usePlan } from "./hooks.js";
 import { PlanMealCard } from "./PlanMealCard.js";
-import { WEEKDAY_INITIALS, addDays, dayHasPlan, dayName, dayOfMonth, deviceTimeZone, weekLabel, weekOf } from "./plan.js";
+import {
+  NEW_PLANNED_MEAL,
+  WEEKDAY_INITIALS,
+  addDays,
+  dayHasPlan,
+  dayName,
+  dayOfMonth,
+  deviceTimeZone,
+  weekLabel,
+  weekOf,
+} from "./plan.js";
 
 /** The header's two pills, Daily meals and Today (CD-Plan-Day). */
 export const PLAN_PILL =
@@ -33,28 +45,36 @@ function dateParam(value: string | null | undefined): string | null {
   return value && planDateSchema.safeParse(value).success ? value : null;
 }
 
+/** The plate-style dashed button ("+ Add a meal", CD-Plan-After-Copy). */
+const ADD_MEAL =
+  "flex min-h-12 items-center justify-center rounded-[var(--radius-md)] border-[1.5px] border-dashed border-[var(--color-border)] text-[15px] font-semibold text-[var(--color-accent)]";
+
 /**
  * The meal plan (ledger 904, CD-Plan-Day): a Monday-to-Sunday week strip
  * paged with ‹ ›, Today when another day is selected, and the selected day's
- * meals. The day lives in the URL (`?date=`, absent for today), so Back from
- * a meal lands on the same day. Daily meals opens its own sheet.
+ * meals, then "+ Add a meal". The day lives in the URL (`?date=`, absent
+ * for today), so Back from a meal lands on the same day. Daily meals and
+ * Copy to… open their own sheets; after a Copy the plan shows the first day
+ * it copied to, with "Copied to {n} meals" until another day is picked.
  */
 export function PlanPage() {
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
   const [searchParams, setSearchParams] = useSearchParams();
-  // Until step 4.2 gives /plan/:date/:slotId its own page, that path shows its day here.
-  const { date: pathDate } = useParams();
   const [dailyMealsOpen, setDailyMealsOpen] = useState(false);
+  const [copying, setCopying] = useState<PlannedMeal | null>(null);
+  const [copied, setCopied] = useState<number | null>(null);
   const today = localDate(new Date(), deviceTimeZone());
-  const selected = dateParam(searchParams.get("date")) ?? dateParam(pathDate) ?? today;
+  const selected = dateParam(searchParams.get("date")) ?? today;
   const week = weekOf(selected);
   const plan = usePlan(activeBaby?.id, week[0]!, week[6]!);
   const days = plan.data?.days ?? [];
   const day = days.find((entry) => entry.date === selected);
 
-  // Today needs no `?date=` (so a page left open shows the new today), except
-  // on a meal's path, whose own date would win.
-  const select = (date: string) => setSearchParams(date === today && !pathDate ? {} : { date }, { replace: true });
+  // Today needs no `?date=`, so a page left open shows the new today.
+  const select = (date: string) => {
+    setCopied(null);
+    setSearchParams(date === today ? {} : { date }, { replace: true });
+  };
 
   return (
     <div className="flex flex-col gap-1.5 p-4">
@@ -137,15 +157,55 @@ export function PlanPage() {
             })}
           </div>
 
+          {/* CD-Plan-After-Copy: a light confirmation, no Undo (round 2). The
+              live region is always there; empty, it takes back its gap. */}
+          <div role="status" className={copied === null ? "-mb-1.5" : ""}>
+            {copied !== null && (
+              <span className="mt-0.5 inline-flex h-7 items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success-soft)] px-2.5 text-[13px] font-bold text-[var(--color-success-soft-text)]">
+                <svg aria-hidden="true" width="12" height="12" viewBox="0 0 16 16">
+                  <path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {copiedLabel(copied)}
+              </span>
+            )}
+          </div>
+
           {plan.isLoading && <SkeletonList count={3} />}
           {plan.isError && !plan.data && <p className="text-sm text-[var(--color-danger)]">Couldn't load the plan.</p>}
 
           {day && (
-            <ul className="mt-0.5 flex flex-col gap-1.5">
-              {day.meals.map((meal) => (
-                <PlanMealCard key={meal.slotId} babyId={activeBaby.id} date={day.date} today={plan.data?.today ?? today} meal={meal} />
-              ))}
-            </ul>
+            <>
+              <ul className="mt-0.5 flex flex-col gap-1.5">
+                {day.meals.map((meal) => (
+                  <PlanMealCard
+                    key={meal.slotId}
+                    babyId={activeBaby.id}
+                    date={day.date}
+                    today={plan.data?.today ?? today}
+                    meal={meal}
+                    onCopy={() => setCopying(meal)}
+                  />
+                ))}
+              </ul>
+              <Link to={`/plan/${day.date}/${NEW_PLANNED_MEAL}`} className={ADD_MEAL}>
+                + Add a meal
+              </Link>
+            </>
+          )}
+
+          {day && (
+            <CopySheet
+              babyId={activeBaby.id}
+              date={day.date}
+              today={plan.data?.today ?? today}
+              meal={copying}
+              onClose={() => setCopying(null)}
+              onCopied={(filled, date) => {
+                setCopying(null);
+                if (date) select(date);
+                setCopied(filled);
+              }}
+            />
           )}
 
           {plan.data && (
