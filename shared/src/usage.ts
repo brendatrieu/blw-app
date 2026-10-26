@@ -50,6 +50,10 @@ export const ROUTE_PATTERNS = [
   "/log-meal",
   "/meals",
   "/meals/:id",
+  /** The meal plan (ledger 904) and one planned meal; the date and slot
+   * never travel, only the pattern. */
+  "/plan",
+  "/plan/:date/:slotId",
   "/storage",
   "/storage/add",
   "/storage/:id/edit",

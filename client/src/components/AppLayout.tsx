@@ -122,6 +122,28 @@ function BabySwitcher() {
   );
 }
 
+function CalendarIcon() {
+  return (
+    <svg {...ICON_PROPS} width={20} height={20}>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+
+/** Ledger 904 (CD-Home-No-Plan): the meal plan, beside the gear on Home only. */
+function PlanLink() {
+  return (
+    <Link
+      to="/plan"
+      aria-label="Meal plan"
+      className="flex min-h-11 min-w-11 items-center justify-center text-[var(--color-icon)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--color-accent)]"
+    >
+      <CalendarIcon />
+    </Link>
+  );
+}
+
 // Replaces the old initial-circle avatar menu: sign-out now lives on the
 // Settings page itself, so the header just needs a direct link there.
 function SettingsLink() {
@@ -221,7 +243,10 @@ export function AppLayout() {
             {isHome ? (
               <>
                 <BabySwitcher />
-                <SettingsLink />
+                <div className="flex shrink-0 items-center">
+                  <PlanLink />
+                  <SettingsLink />
+                </div>
               </>
             ) : (
               <>

@@ -40,6 +40,8 @@ const moreLinks: MoreRow[] = [
     description: "Step by step: foods, recipes, meals, and storage.",
     emoji: "📖",
   },
+  // Ledger 904: the meal plan's second way in, beside Home's calendar button.
+  { to: "/plan", label: "Meal plan", description: "Plan meals for the days ahead.", emoji: "🗓️" },
   { to: "/favorites", label: "Favorites", description: "Recipes you've saved.", emoji: "❤️" },
   {
     to: "/symptom-check",

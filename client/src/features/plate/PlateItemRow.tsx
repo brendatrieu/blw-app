@@ -246,17 +246,27 @@ export function RecipeItemRow({ entry, dispatch, disabled }: RowProps<RecipeEntr
   );
 }
 
+/** The overlapped pair's disc size per outer size, and the emoji size the
+ * plan card's small discs draw (CD-Plan-Day: 12px on 24, 9px on 17; below
+ * FoodPlate's 14px floor, which would spill out of them). */
+const ITEM_PLATE = {
+  40: { box: "size-10", inner: 28, font: undefined, innerFont: undefined },
+  28: { box: "size-7", inner: 20, font: undefined, innerFont: undefined },
+  24: { box: "size-6", inner: 17, font: 12, innerFont: 9 },
+} as const;
+
 /** An item's mark: one plate, or a container's first two foods overlapped
  * as on the boards (40px on the plate and the meal page, 28px in the Food
- * log). */
-export function ItemPlate({ plates, size, className = "" }: { plates: readonly Plate[]; size: 40 | 28; className?: string }) {
+ * log, 24px on the meal plan). */
+export function ItemPlate({ plates, size, className = "" }: { plates: readonly Plate[]; size: 40 | 28 | 24; className?: string }) {
   const [first = RECIPE_PLATE, second] = plates;
-  if (!second) return <FoodPlate {...first} size={size} className={className} />;
-  const inner = size === 40 ? 28 : 20;
+  const { box, inner, font, innerFont } = ITEM_PLATE[size];
+  if (!second) return <FoodPlate {...first} size={size} className={className} style={font ? { fontSize: font } : undefined} />;
+  const style = innerFont ? { fontSize: innerFont } : undefined;
   return (
-    <span aria-hidden="true" className={`relative block shrink-0 ${size === 40 ? "size-10" : "size-7"} ${className}`}>
-      <FoodPlate {...first} size={inner} className="absolute top-0 left-0" />
-      <FoodPlate {...second} size={inner} className="absolute right-0 bottom-0 ring-2 ring-[var(--color-bg-elevated)]" />
+    <span aria-hidden="true" className={`relative block shrink-0 ${box} ${className}`}>
+      <FoodPlate {...first} size={inner} className="absolute top-0 left-0" style={style} />
+      <FoodPlate {...second} size={inner} className="absolute right-0 bottom-0 ring-2 ring-[var(--color-bg-elevated)]" style={style} />
     </span>
   );
 }

@@ -85,8 +85,8 @@ describe("AppLayout header", () => {
       const header = html.slice(html.indexOf("<header"), html.indexOf("</header>"));
       // Owner (2026-10-02): no gap between the greeting and the name row.
       expect(header).toContain('<div class="flex flex-col"><span class="' + greeting![1] + '">');
-      // Only the gear icon is left in the header.
-      expect(header.match(/<svg/g)).toHaveLength(1);
+      // Only the calendar and the gear icons are left in the header (ledger 904).
+      expect(header.match(/<svg/g)).toHaveLength(2);
       // The age label is muted 14px, regular weight, and outside the name.
       expect(header).toMatch(/<span class="text-sm whitespace-nowrap text-\[var\(--color-text-muted\)\]">\d+ months?<\/span>/);
       expect(header).not.toMatch(/class="font-display[^"]*"[^>]*>[^<]*<span/);
@@ -275,6 +275,14 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
       );
       expect(inner, `${babies.length} babies`).toMatch(/<\/(?:span|label|a)><\/div><a [^>]*aria-label="Settings"[^>]*>.*?<\/a><div role="status" class="absolute inset-x-3"[^>]*><\/div>$/s);
     }
+  });
+
+  it("Home only: the calendar (\"Meal plan\", to /plan) sits just before the gear, both 44px icon links (ledger 904, CD-Home-No-Plan)", () => {
+    const home = header(layoutWith([remy], "/"));
+    expect(home).toMatch(
+      /<div class="flex shrink-0 items-center"><a aria-label="Meal plan" class="[^"]*min-h-11 min-w-11[^"]*text-\[var\(--color-icon\)\][^"]*" href="\/plan"[^>]*><svg [^>]*>.*?<\/svg><\/a><a aria-label="Settings"/s,
+    );
+    for (const p of ["/foods", "/plan", "/more"]) expect(header(layoutWith([remy], p)), p).not.toContain('aria-label="Meal plan"');
   });
 
   it("the empty back/X slot takes no space, so tab pages start with the chip (item 692)", () => {

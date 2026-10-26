@@ -78,6 +78,8 @@ const PERSISTED_QUERY_KEY_PREFIXES = new Set([
   "meals",
   "favorites",
   "allergen-progress",
+  // The meal plan (SPEC §4.4): readable offline; every plan write is off.
+  "plan",
   // Deliberately NOT here: the tour's "seen" flag (["preferences"]). A
   // restored `{ tourCompletedAt: null }` makes the query read "success"
   // before the network has said anything, and that is exactly how a parent
