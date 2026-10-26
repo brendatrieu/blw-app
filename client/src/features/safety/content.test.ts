@@ -119,15 +119,20 @@ describe("how-to guides (item 601)", () => {
     );
     expect(getGuide("how-to-add-to-storage")?.body).toContain("Use within 90d");
     const stars = steps("how-to-log-a-meal").find((s) => s.startsWith("3. ")) ?? "";
-    expect(stars).toContain("\n\nTap one to five stars, five for a big hit.\n\n");
+    // Ledger 902 put it between "Each item…" and the second-tap clear.
+    expect(stars).toContain(" Tap one to five stars, five for a big hit. ");
   });
 
   // Items 735 and 763: owner-approved copy, word for word.
   it("log-a-meal and serve-from-storage read exactly as approved", () => {
     const steps = (slug: string) => (getGuide(slug)?.body ?? "").split(/^## /m).slice(1);
     const meal = steps("how-to-log-a-meal");
+    // Ledger 902 (plan step 2.3): the one plate page. Drafted for the owner's review.
     expect(meal[0]).toContain(
-      "\n\nTap **Food** and type to search. Select each food your baby had, then tap **Done**. Made one or more recipes? Pick them under **Recipes (optional)** and their ingredients fill in for you.\n\n",
+      "\n\nTap **+ Add more** and type to search, or look under **In storage**, **Recipes**, and **Foods**. Tick everything your baby had, then tap **Done**. Each one goes on the plate as its own item. Left something out of a recipe? Tap **Ingredients** under it and untick that food, so it isn't counted as tried.\n\n",
+    );
+    expect(meal[2]).toContain(
+      "\n\nEach item on the plate has its own stars. Tap one to five stars, five for a big hit. Tap the same star again to clear it.\n\n",
     );
     expect(meal[1]).toMatch(
       /^2\. Set the time\n\n\*\*When\*\* defaults to the current time\. If the meal was earlier, tap it, scroll to the day and time, and tap \*\*Done\*\*\.\n\n!\[/,
@@ -152,11 +157,16 @@ describe("how-to guides (item 601)", () => {
     expect(serve[1]).toBe(
       "2. Serve more than one item (optional)\n\nTap **+ Add more** to serve something else with it: another item from storage, or a fresh food or recipe that isn't in storage.\n\n![Under Serving, Sweet Potato Lentil Patties and a Broccoli, Carrot container each have their own servings, and a fresh Banana is added.](/guides/serve-2-more.webp)\n\n",
     );
-    expect(serve[2]).toMatch(/^3\. Rate it with stars \(optional\)\n\nTap one to five stars, five for a big hit\.\n\n!\[/);
+    expect(serve[2]).toMatch(
+      /^3\. Rate it with stars \(optional\)\n\nEach item on the plate has its own stars, and a container holding several foods gets a row for each\. Tap one to five stars, five for a big hit\. Tap the same star again to clear it\.\n\n!\[/,
+    );
     expect(serve[3]).toMatch(/^4\. Add a reaction or a note \(optional\)\n/);
+    // The plate page's one label (PP-COPY round 1).
+    expect(serve[3]).toContain("Everything else goes in **Notes**.");
     // Item 786: serve Undo removed (785); deleting the meal reverses a serve; pre-780 shot and alt.
+    // Ledger 902: Edit meal changes a kept container's servings (chair decision, SPEC §1.4.5).
     expect(serve[4]).toBe(
-      '5. Tap Serve\n\nThe servings left go down, and the meal lands in your **Food log** marked **From storage**. Served by mistake? Delete the meal from your **Food log**, and the servings go back.\n\n![The storage item now reads 7 of 8 servings left.](/guides/serve-5-served.webp)',
+      '5. Tap Serve\n\nThe servings left go down, and the meal lands in your **Food log** marked **From storage**. Served by mistake? Delete the meal from your **Food log**, and the servings go back. Served a different amount? Edit the meal and change its servings.\n\n![The storage item now reads 7 of 8 servings left.](/guides/serve-5-served.webp)',
     );
     // Item 784 (owner kept the chair's wording): "Turn on", plus the edit/delete sentences.
     expect(meal[4]).toContain(
@@ -190,7 +200,7 @@ describe("how-to guides (item 601)", () => {
     expect(guideArticles.map((guide) => guide.body.match(/^## 1\. (.+)$/m)?.[1])).toEqual([
       "Name it",
       "Name it and pick an age",
-      "Pick the foods",
+      "Add what your baby had",
       "Choose what you're storing",
       "Set the servings and time",
     ]);
@@ -290,7 +300,7 @@ describe("Markdown bold (optional)", () => {
       expect(html.match(/\(optional\)<\/span><\/strong>/g)?.length ?? 0, guide.slug).toBe(marked);
       expect(html, guide.slug).not.toMatch(/ \(optional\)<\/strong>/);
     }
-    expect(total).toBe(3); // Recipes, Emoji, Notes
+    expect(total).toBe(2); // Emoji, Notes (Recipes went with the old Log meal form, ledger 902)
   });
 });
 

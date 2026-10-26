@@ -44,9 +44,8 @@ export function MealsPage() {
         emoji="📖"
         leading={<BackButton fallback="/" />}
         action={
-          <ButtonLink to="/log-meal" size="sm">
-            Log meal
-          </ButtonLink>
+          // CD-Food-Log: a 44px target, as every control on the boards.
+          <ButtonLink to="/log-meal">Log meal</ButtonLink>
         }
       />
       <ServeLogList babyId={activeBaby.id} showHeading={false} />

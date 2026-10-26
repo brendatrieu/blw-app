@@ -67,8 +67,6 @@ export function StorageItemCard({ item, actions, linkable = true }: StorageItemC
 
   const info = (
     <>
-      {/* The meal row's plates too (`MealCard`) — a container and the meal
-          it becomes are the same thing twice. */}
       <FoodPlates {...cluster} />
       <div className="flex flex-col">
         <span className="text-sm font-medium text-[var(--color-text)]">

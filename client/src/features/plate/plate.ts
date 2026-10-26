@@ -8,11 +8,11 @@ import {
   type CreatePlateMealInput,
   type MealItem,
   type PlateFood,
-  type PlateItem,
   type PlateItemInput,
   type StorageItem,
   type StorageLocation,
 } from "@blw/shared";
+import { foodPlate, type Plate } from "../catalog/foodEmoji.js";
 import { containerRecipes, type AddMoreChange, type AddMoreIds } from "../storage/addMoreSelection.js";
 import { clampServings, hasNoServingsLeft, storageItemTitle } from "../storage/format.js";
 import { isBestByBeforePrepared, BEST_BY_BEFORE_PREPARED_MESSAGE } from "../storage/freshness.js";
@@ -219,6 +219,56 @@ export function validatePlate(values: {
   return errors;
 }
 
+/** A recipe's mark on the plate, the meal page and the Food log (CD boards). */
+export const RECIPE_PLATE: Plate = { emoji: "🍲", tint: "neutral" };
+
+type PartRef = { kind: "food"; food: PlateFoodRef } | { kind: "recipe"; recipe: PlateRecipeRef };
+
+/** A container's mark: its foods' plates (the boards draw the first two,
+ * overlapped), else the recipe pot. */
+export function partPlates(parts: readonly PartRef[]): Plate[] {
+  const plates = parts.flatMap((part) => (part.kind === "food" ? [foodPlate(part.food)] : []));
+  return plates.length > 0 ? plates : [RECIPE_PLATE];
+}
+
+/** A saved container's name, Storage's own rule: its label, else its
+ * recipe, else its foods. */
+export function containerTitle(item: { label: string | null; parts: readonly PartRef[] }): string {
+  const recipe = item.parts.find((part) => part.kind === "recipe");
+  return storageItemTitle({
+    label: item.label,
+    recipeTitle: recipe?.kind === "recipe" ? recipe.recipe.title : null,
+    foods: item.parts.flatMap((part) => (part.kind === "food" ? [part.food] : [])),
+  });
+}
+
+/** One line of a saved meal in the Food log (CD-Food-Log). */
+export interface MealLine {
+  key: string;
+  name: string;
+  /** A fresh food its owner has since deleted. */
+  deleted?: boolean | undefined;
+  plates: Plate[];
+}
+
+/**
+ * A saved meal as the Food log lists it (PP-NOTES round 5, decision 8): one
+ * line per item in plate order, a container under its own name. A cached
+ * body from before items lists its foods.
+ */
+export function mealLines(meal: Pick<MealItem, "items" | "foods">): MealLine[] {
+  if (!meal.items) {
+    return meal.foods.map((food) => ({ key: food.id, name: food.name, deleted: food.deleted, plates: [foodPlate(food)] }));
+  }
+  return meal.items.map((item): MealLine => {
+    if (item.kind === "food") {
+      return { key: item.id, name: item.food.name, deleted: item.food.deleted, plates: [foodPlate(item.food)] };
+    }
+    if (item.kind === "recipe") return { key: item.id, name: item.recipe.title, plates: [RECIPE_PLATE] };
+    return { key: item.storageItemId, name: containerTitle(item), plates: partPlates(item.parts) };
+  });
+}
+
 /** The plate a saved meal shows (GET /api/meals/:id), kept items by id.
  * `containers` (Storage's list) adds each container's live counts. */
 export function fromMeal(meal: Pick<MealItem, "items">, containers: readonly StorageItem[] = []): PlateEntry[] {
@@ -240,15 +290,10 @@ export function fromMeal(meal: Pick<MealItem, "items">, containers: readonly Sto
           ? { kind: "food", food: part.food, rating: part.rating }
           : { kind: "recipe", recipe: part.recipe, rating: part.rating },
     );
-    const firstRecipe = parts.find((part) => part.kind === "recipe");
     return {
       kind: "storage",
       storageItemId: item.storageItemId,
-      title: storageItemTitle({
-        label: item.label,
-        recipeTitle: firstRecipe?.kind === "recipe" ? firstRecipe.recipe.title : null,
-        foods: parts.flatMap((part) => (part.kind === "food" ? [part.food] : [])),
-      }),
+      title: containerTitle(item),
       location: item.location,
       servings: item.servings,
       savedServings: item.servings,
@@ -381,34 +426,4 @@ export function toMealInput(plate: readonly PlateEntry[], { servedAt, reactionNo
     reactionNote: reactionNote.trim() || null,
     notes: notes.trim() || null,
   } satisfies CreatePlateMealInput;
-}
-
-/** One star line on a saved meal's page. `id` is the meal item's (a
- * container part is an item of its own), which PATCH `itemRatings` names. */
-export interface ItemRatingRow {
-  id: string;
-  label: string;
-  value: number | null;
-}
-
-/**
- * The saved meal's stars (item 574, plan SPEC §0): one line per fresh food
- * and recipe, and per food or recipe a container held, in plate order.
- * `pending` (by item id) shows a tap while it saves.
- */
-export function mealItemRatingRows(
-  items: readonly PlateItem[] = [],
-  pending: Readonly<Record<string, number | null>> = {},
-): ItemRatingRow[] {
-  return items.flatMap((item) => {
-    const targets =
-      item.kind === "storage"
-        ? item.parts.map((part) => ({
-            id: part.id,
-            label: part.kind === "food" ? part.food.name : part.recipe.title,
-            rating: part.rating,
-          }))
-        : [{ id: item.id, label: item.kind === "food" ? item.food.name : item.recipe.title, rating: item.rating }];
-    return targets.map(({ id, label, rating }) => ({ id, label, value: id in pending ? pending[id]! : rating }));
-  });
 }

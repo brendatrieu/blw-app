@@ -17,8 +17,10 @@ import {
   attachContainers,
   containerEntry,
   entryKey,
+  RECIPE_PLATE,
   fromMeal,
   hasLeftovers,
+  mealLines,
   plateAddMoreServing,
   plateLeftoverSource,
   plateReducer,
@@ -292,6 +294,35 @@ describe("fromMeal", () => {
 
   it("an older cached body without items is an empty plate", () => {
     expect(fromMeal({})).toEqual([]);
+  });
+});
+
+describe("mealLines (CD-Food-Log)", () => {
+  it("one line per item in plate order: a container under its own name, its first foods' plates", () => {
+    expect(mealLines({ items: ITEMS, foods: [] })).toEqual([
+      { key: id(100), name: PASTA.title, plates: [RECIPE_PLATE] },
+      { key: id(101), name: "Egg", deleted: undefined, plates: [{ emoji: "🥚", tint: "dairy" }] },
+      {
+        key: CONTAINER.id,
+        name: "Broccoli, Carrot",
+        plates: [
+          { emoji: "🥦", tint: "veg" },
+          { emoji: "🥕", tint: "veg" },
+        ],
+      },
+      { key: id(104), name: PATTIES.title, plates: [RECIPE_PLATE] },
+      // A recipe container wears the pot; its label names it.
+      { key: MUFFIN_TUB.id, name: "Muffins (old batch)", plates: [RECIPE_PLATE] },
+    ]);
+  });
+
+  it("marks a deleted food; a cached body from before items lists its foods", () => {
+    const gone = { ...EGG, deleted: true };
+    expect(mealLines({ items: [{ kind: "food", id: id(101), food: gone, rating: null }], foods: [] })[0]).toMatchObject({ name: "Egg", deleted: true });
+    expect(mealLines({ foods: [{ ...BROCCOLI, storageItemId: null }, { ...gone, storageItemId: null }] }).map((line) => [line.key, line.name, line.deleted])).toEqual([
+      [BROCCOLI.id, "Broccoli", undefined],
+      [EGG.id, "Egg", true],
+    ]);
   });
 });
 

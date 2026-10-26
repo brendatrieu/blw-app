@@ -349,8 +349,7 @@ describe("StorageItemCard freshness chip (item 333)", () => {
 });
 
 // Item 347: a storage container holds a whole meal, so its card reads like a
-// meal row — the emoji cluster and the comma-joined names, sharing
-// `emojiCluster` with `MealCard` rather than a second copy of the rule.
+// meal row did before ledger 902: the emoji cluster and the comma-joined names.
 describe("StorageItemCard food cluster (item 347)", () => {
   const threeFoods = [itemFood("chicken", "Chicken"), itemFood("carrot", "Carrot"), itemFood("rice", "Rice")];
 

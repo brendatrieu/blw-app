@@ -63,6 +63,9 @@ function headingOf(html: string): string {
 
 const MUTED_MARK = '<span class="font-normal text-[var(--color-text-muted)]">\u00a0(deleted)</span>';
 
+/** The "Counted as tried" chips (CD-Meal-Page): `meal.foods`. */
+const COUNTED = 'aria-labelledby="meal-counted"';
+
 describe("MealDetailPage title", () => {
   it("uses the recipe title when the meal has one", () => {
     expect(headingOf(renderMeal({ ...MEAL, recipeId: "r1", recipeTitle: "Iron-Rich Purée" }))).toContain(
@@ -105,7 +108,7 @@ describe("MealDetailPage title", () => {
     const meal: MealItem = { ...MEAL, foods: [{ ...MEAL.foods[0]!, deleted: true }, MEAL.foods[1]!] };
     const html = renderMeal(meal);
     expect(headingOf(html)).toContain(`Avocado${MUTED_MARK}, Chicken`);
-    const chipRow = html.slice(html.indexOf('class="flex flex-wrap items-center gap-1.5"')).replace(/<!-- -->/g, "");
+    const chipRow = html.slice(html.indexOf(COUNTED)).replace(/<!-- -->/g, "");
     expect(chipRow).toContain(`Avocado${MUTED_MARK}`);
     expect(chipRow).not.toContain(`Chicken${MUTED_MARK}`);
   });
@@ -121,7 +124,7 @@ describe("MealDetailPage", () => {
     expect(html).not.toContain("Avocado");
   });
 
-  it("renders the found meal's foods, served time, notes, and a storage provenance link", () => {
+  it("renders the found meal's counted foods, served time and notes", () => {
     const html = renderToString(
       createElement(QueryClientProvider, { client: seededClient([MEAL]) }, renderAtMealDetailRoute(MEAL.id)),
     );
@@ -131,21 +134,13 @@ describe("MealDetailPage", () => {
     // Item 673: the title leads with the FIRST food's 40px plate, in the h1.
     const heading = /<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]!;
     expect(heading).toMatch(/^<span aria-hidden="true" class="flex shrink-0 [^"]*" style="width:40px;height:40px;font-size:20px;background:var\(--color-plate-fruit\)">🥑<\/span>/);
-    // Item 659: each food chip leads with a 24px plate.
-    expect(html).toContain("width:24px;height:24px;font-size:14px;background:var(--color-plate-fruit)");
-    expect(html).toContain("width:24px;height:24px;font-size:14px;background:var(--color-plate-protein)");
+    // CD-Meal-Page: the counted chips carry the name (and allergen badges), no plate.
+    const chips = html.slice(html.indexOf(COUNTED));
+    expect(chips).toMatch(/^aria-labelledby="meal-counted" class="mt-1.5 flex flex-wrap gap-1.5"><li class="[^"]*">Avocado/);
+    expect(chips).not.toContain("width:24px");
     expect(html).toContain("ate the whole thing");
     expect(html).toMatch(/2:05\s?PM/);
-    expect(html).toContain(`href="/storage/${MEAL.foods[0]!.storageItemId}"`);
-    // Only the first food is storage-linked; the second has no provenance link.
-    expect((html.match(/href="\/storage\//g) ?? []).length).toBe(1);
-  });
-
-  it("omits the storage provenance link when no food in the meal has a storageItemId", () => {
-    const noBatch: MealItem = { ...MEAL, foods: MEAL.foods.map((food) => ({ ...food, storageItemId: null })) };
-    const html = renderToString(
-      createElement(QueryClientProvider, { client: seededClient([noBatch]) }, renderAtMealDetailRoute(noBatch.id)),
-    );
+    // A meal with no items yet (an older cached body) links nowhere in storage.
     expect(html).not.toContain('href="/storage/');
   });
 
@@ -214,7 +209,7 @@ describe("MealDetailPage allergen marks (item 334, ledger 554)", () => {
     const html = renderMeal(FISH_MEAL);
     // Scoped to the food-chip row: the page title is "Salmon, Pear" too, so
     // a whole-document index comparison would be meaningless.
-    const chipRow = html.slice(html.indexOf('class="flex flex-wrap items-center gap-1.5"'));
+    const chipRow = html.slice(html.indexOf(COUNTED));
     expect(chipRow).toContain("Fish");
     expect(chipRow.indexOf("Fish")).toBeGreaterThan(chipRow.indexOf("Salmon"));
     expect(chipRow.indexOf("Fish")).toBeLessThan(chipRow.indexOf("Pear"));
@@ -258,7 +253,7 @@ describe("MealDetailPage allergen marks (item 334, ledger 554)", () => {
     };
     // The cached list is what the pickers see: the deleted food is absent.
     const html = renderMeal(meal, []);
-    const chipRow = html.slice(html.indexOf('class="flex flex-wrap items-center gap-1.5"'));
+    const chipRow = html.slice(html.indexOf(COUNTED));
     expect(chipRow).toContain("Egg");
   });
 });
@@ -273,11 +268,12 @@ describe("MealDetailPage ratings (item 574, ledger 902)", () => {
     ],
   };
 
-  it("shows one star line per item ABOVE the reaction note", () => {
+  it("shows one star line per item ABOVE the reaction note, with no Rating heading (CD-Meal-Page)", () => {
     const html = renderMeal(RATED);
-    const stars = html.indexOf("Rating<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
+    const stars = html.indexOf('aria-label="Rating for Avocado"');
     expect(stars).toBeGreaterThan(-1);
     expect(stars).toBeLessThan(html.indexOf("Reaction:"));
+    expect(html).not.toContain("Rating<!-- --> <span");
     expect(html).toContain('aria-label="Rating for Avocado"');
     expect(html).toContain('aria-label="Rating for Chicken"');
     expect(html).toMatch(/aria-checked="true" aria-label="5 stars"/);
@@ -324,10 +320,10 @@ describe("MealDetailPage, several recipes (ledger 761)", () => {
     ],
   };
 
-  it("shows one 🍳 line per recipe and the 🍳 plate", () => {
+  it("keeps the 🍳 title plate, and lists the recipes as items, not 🍳 lines", () => {
     const html = renderMeal(SEVERAL).replace(/<!-- -->/g, "");
-    expect(html).toContain(">🍳 Lentil Patties</span>");
-    expect(html).toContain(">🍳 Salmon Cakes</span>");
+    expect(/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]).toContain(">🍳</span>");
+    expect(html).not.toContain("🍳 Lentil Patties");
   });
 
   // Ledger 902: each item rates itself; an ingredient of a recipe has no line
@@ -362,5 +358,90 @@ describe("MealDetailPage title plate for a custom food (item 673)", () => {
     expect(/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]).toMatch(
       /^<span aria-hidden="true" class="flex shrink-0 [^"]*" style="[^"]*background:var\(--color-plate-grain\)">🥘<\/span>/,
     );
+  });
+});
+
+// Plan SPEC §5 / CD-Meal-Page: the items on the plate, then "Counted as tried".
+describe("MealDetailPage items (CD-Meal-Page, ledger 902)", () => {
+  const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+  const BROCCOLI = { id: uuid(1), slug: "broccoli", name: "Broccoli", category: "veg" as const };
+  const CARROT = { id: uuid(2), slug: "carrot", name: "Carrot", category: "veg" as const };
+  const CASHEWS = { id: uuid(3), slug: "cashew", name: "Cashews", category: "legume" as const };
+  const PASTA_MEAL: MealItem = {
+    ...MEAL,
+    recipeId: uuid(20),
+    recipeTitle: "Creamy Cashew & Broccoli Pasta",
+    foods: [
+      { ...BROCCOLI, storageItemId: uuid(30) },
+      { ...CARROT, storageItemId: uuid(30) },
+      { id: uuid(4), slug: "garlic", name: "Garlic", category: "veg", storageItemId: null },
+    ],
+    items: [
+      { kind: "recipe", id: uuid(10), recipe: { id: uuid(20), title: "Creamy Cashew & Broccoli Pasta" }, leftOut: [CASHEWS], inferred: false, rating: 5 },
+      {
+        kind: "storage",
+        storageItemId: uuid(30),
+        label: null,
+        location: "fridge",
+        servings: 1,
+        parts: [
+          { kind: "food", id: uuid(11), food: BROCCOLI, rating: 4 },
+          { kind: "food", id: uuid(12), food: CARROT, rating: 2 },
+        ],
+      },
+      {
+        kind: "storage",
+        storageItemId: uuid(31),
+        label: null,
+        location: "freezer",
+        servings: null,
+        parts: [{ kind: "recipe", id: uuid(13), recipe: { id: uuid(21), title: "Broccoli Cheese Egg Muffins" }, rating: null }],
+      },
+      { kind: "recipe", id: uuid(14), recipe: { id: uuid(22), title: "Salmon Oat Patties" }, leftOut: [CASHEWS], inferred: true, rating: null },
+    ],
+  };
+  const html = () => renderMeal(PASTA_MEAL).replace(/<!-- -->/g, "");
+  const plate = () => /<ul aria-label="On the plate"[^>]*>([\s\S]*?)<\/ul><span id="meal-counted"/.exec(html())![1]!;
+  const items = () => plate().split(/<li class="@container/).slice(1);
+
+  it("lists every item in plate order, each its own card, before Counted as tried", () => {
+    const titles = items().map((item) => /<p class="font-semibold[^"]*">([^<]*)<\/p>/.exec(item)![1]!.replace(/&amp;/g, "&"));
+    expect(titles).toEqual(["Creamy Cashew & Broccoli Pasta", "Broccoli, Carrot", "Broccoli Cheese Egg Muffins", "Salmon Oat Patties"]);
+    expect(html().indexOf('aria-label="On the plate"')).toBeLessThan(html().indexOf(">Counted as tried<"));
+    // A recipe wears the pot, as on the plate.
+    expect(items()[0]).toContain("background:var(--color-plate-neutral)\">🍲</span>");
+  });
+
+  it("says what a recipe left out, but not on one rebuilt from a meal logged before the plate (chair §10.1)", () => {
+    expect(items()[0]).toContain("Left out: Cashews");
+    expect(items()[3]).not.toContain("Left out");
+  });
+
+  it("a container says From storage, linking to its batch (the traceback), and rates each food it held", () => {
+    const [, container, oldServe] = items();
+    expect(container).toMatch(/<a [^>]*href="\/storage\/00000000-0000-4000-8000-000000000030"[^>]*>From storage<\/a>/);
+    expect(oldServe).toContain('href="/storage/00000000-0000-4000-8000-000000000031"');
+    expect((html().match(/href="\/storage\//g) ?? []).length).toBe(2);
+    expect([...container!.matchAll(/role="radiogroup" aria-label="Rating for ([^"]+)"/g)].map((m) => m[1])).toEqual([
+      "Broccoli",
+      "Carrot",
+    ]);
+    // One thing in it: its stars sit right under the title, no part line.
+    expect([...oldServe!.matchAll(/role="radiogroup" aria-label="([^"]+)"/g)].map((m) => m[1])).toEqual([
+      "Rating for Broccoli Cheese Egg Muffins",
+    ]);
+    expect(oldServe).toContain('class="mt-0.5 ml-[43px] @max-[262px]:-ml-[9px]"');
+  });
+
+  it("no ×, stepper or Ingredients: the page edits only the stars", () => {
+    expect(plate()).not.toContain('aria-label="Remove');
+    expect(plate()).not.toContain("servings");
+    expect(plate()).not.toContain("Ingredients");
+  });
+
+  it("Counted as tried is the meal's foods: a left-out food is not there", () => {
+    const counted = html().slice(html().indexOf(COUNTED));
+    expect([...counted.split("</ul>")[0]!.matchAll(/<li [^>]*>([^<]+)/g)].map((m) => m[1])).toEqual(["Broccoli", "Carrot", "Garlic"]);
+    expect(counted.split("</ul>")[0]).not.toContain("Cashews");
   });
 });

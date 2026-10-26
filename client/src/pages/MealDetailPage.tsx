@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { awaitingDetail } from "../lib/detailQuery.js";
 import type { MealItem } from "@blw/shared";
 import { useMeals, useUpdateMeal } from "../features/tracking/hooks.js";
-import { mealItemRatingRows } from "../features/plate/plate.js";
+import { SavedItemRow } from "../features/plate/PlateItemRow.js";
 import { mealRecipes, recipesTitle } from "../features/tracking/mealRecipes.js";
 import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
@@ -11,8 +11,6 @@ import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
 import { DeletedMark, FoodNames } from "../features/catalog/components/DeletedMark.js";
 import { foodPlate } from "../features/catalog/foodEmoji.js";
 import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
-import { StarRating } from "../components/ui/StarRating.js";
-import { OptionalLabel } from "../components/ui/Field.js";
 import { BackButton, useBackNavigate } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
@@ -51,11 +49,12 @@ function servedAtLabel(iso: string): string {
  * uses. An id not found there redirects home instead of rendering a dead
  * page.
  *
- * The body mirrors `MealCard`'s content (food chips, recipe title, reaction
- * note, general notes) but stands alone under this page's own title instead
- * of inside a list row, and adds one thing the list doesn't show per food:
- * a 📦 link back to the storage batch it was served from, when it has one —
- * making the storage ⇄ meal traceback navigable in both directions.
+ * The body is CD-Meal-Page (plan SPEC §5): what was on the plate, one item
+ * card each with its stars (a tap saves that item), then "Counted as tried"
+ * (`meal.foods`, the foods this meal counts toward, so a parent can see a
+ * left-out food was not counted), the reaction note and the notes. A
+ * container links back to the storage batch it was served from, so the
+ * storage ⇄ meal traceback stays navigable in both directions.
  */
 export function MealDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -95,7 +94,6 @@ export function MealDetailPage() {
   }
 
   const recipes = mealRecipes(meal);
-  const ratingRows = mealItemRatingRows(meal.items, pending?.itemRatings);
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -110,79 +108,57 @@ export function MealDetailPage() {
         leading={<BackButton fallback="/" />}
       />
 
-      <Card padding="sm" className="flex flex-col gap-2">
-        <span className="text-xs text-[var(--color-text-muted)]">{servedAtLabel(meal.servedAt)}</span>
+      <Card padding="sm" className="flex flex-col">
+        <span className="mb-2 text-xs text-[var(--color-text-muted)]">{servedAtLabel(meal.servedAt)}</span>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          {meal.foods.map((food) => (
-            <span
-              key={food.id}
-              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] px-2 py-1 text-sm text-[var(--color-text)]"
-            >
-              <FoodPlate {...foodPlate(food)} size={24} />
-              {food.name}
-              <DeletedMark deleted={food.deleted} />
-              <AllergenChips allergens={food.allergens ?? []} />
-              {food.storageItemId && (
-                <Link
-                  to={`/storage/${food.storageItemId}`}
-                  aria-label={`View the storage batch this ${food.name} was served from`}
-                  title="From storage"
-                  className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                >
-                  📦
-                </Link>
-              )}
-            </span>
-          ))}
-        </div>
-
-        {recipes.length > 0 && (
-          <div className="flex flex-col gap-0.5">
-            {recipes.map((recipe) => (
-              <span key={recipe.id} className="text-xs font-medium text-[var(--color-text-muted)]">
-                🍳 {recipe.title}
-              </span>
+        {meal.items && meal.items.length > 0 && (
+          <ul aria-label="On the plate" className="flex flex-col gap-2">
+            {meal.items.map((item) => (
+              <SavedItemRow
+                key={item.kind === "storage" ? item.storageItemId : item.id}
+                item={item}
+                pending={pending?.itemRatings}
+                // One item per tap, merged server-side.
+                onRate={(itemId, value) => updateMeal.mutate({ id: meal.id, input: { itemRatings: { [itemId]: value } } })}
+              />
             ))}
-          </div>
-        )}
-
-        {ratingRows.length > 0 && (
-          <div role="group" aria-labelledby="meal-ratings-heading" className="flex flex-col gap-1">
-            <span id="meal-ratings-heading" className="text-sm font-medium text-[var(--color-text)]">
-              <OptionalLabel label="Rating (optional)" />
-            </span>
-            {ratingRows.map((row) => (
-              <div key={row.id} className="flex flex-col">
-                <span className="text-sm text-[var(--color-text-muted)]">{row.label}</span>
-                <StarRating
-                  label={`Rating for ${row.label}`}
-                  value={row.value}
-                  // One item per tap, merged server-side.
-                  onChange={(value) => updateMeal.mutate({ id: meal.id, input: { itemRatings: { [row.id]: value } } })}
-                />
-              </div>
-            ))}
-          </div>
+          </ul>
         )}
         {updateMeal.isError && (
-          <p role="alert" className="text-xs text-[var(--color-danger)]">
+          <p role="alert" className="mt-2 text-xs text-[var(--color-danger)]">
             Couldn't save that rating — try again.
           </p>
         )}
 
+        <span id="meal-counted" className="mt-3 text-sm font-semibold text-[var(--color-text)]">
+          Counted as tried
+        </span>
+        <ul aria-labelledby="meal-counted" className="mt-1.5 flex flex-wrap gap-1.5">
+          {meal.foods.map((food) => (
+            <li
+              key={food.id}
+              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] px-[9px] py-[3px] text-[13px] text-[var(--color-text)]"
+            >
+              {food.name}
+              <DeletedMark deleted={food.deleted} />
+              <AllergenChips allergens={food.allergens ?? []} />
+            </li>
+          ))}
+        </ul>
+
         {meal.reactionNote && (
-          <span className="text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</span>
+          <span className="mt-2.5 text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</span>
         )}
 
-        {meal.notes && <span className="text-xs text-[var(--color-text-muted)]">{meal.notes}</span>}
+        {meal.notes && <span className="mt-2.5 text-xs text-[var(--color-text-muted)]">{meal.notes}</span>}
       </Card>
 
       <div className="flex items-center gap-2">
-        <ButtonLink to={`/log-meal?edit=${meal.id}`} size="sm" variant="secondary">
+        {/* CD-Meal-Page: 44px targets, as every control on the boards. */}
+        <ButtonLink to={`/log-meal?edit=${meal.id}`} variant="secondary">
           Edit
         </ButtonLink>
-        <Button type="button" variant="danger-quiet" size="sm" onClick={() => setConfirmingDelete(true)}>
+        <Button type="button" variant="danger-quiet" onClick={() => setConfirmingDelete(true)}>
           Delete
         </Button>
         <MealDeleteDialog

@@ -572,8 +572,15 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       const firstInRow = [...html.matchAll(/<li class="[^"]*not-first:before:inset-x-3\.5[^"]*">(?:<div[^>]*>)?<a [^>]*>(.{0,80})/g)].map(
         (m) => m[1]!,
       );
-      expect(firstInRow).toHaveLength(7);
+      // Up next 2, Storage 3.
+      expect(firstInRow).toHaveLength(5);
       for (const start of firstInRow) expect(start.startsWith(PLATE)).toBe(true);
+      // Food log 2 (CD-Food-Log): under the date line, each item line starts
+      // with its plate at the row's own padding, where the line starts.
+      const logLines = html.match(
+        /<a [^>]*><ul aria-label="On the plate" class="flex flex-col"><li class="flex items-center gap-2 py-\[3px\]"><span aria-hidden="true" class="flex shrink-0 /g,
+      );
+      expect(logLines).toHaveLength(2);
     });
 
     it("leaves expired items to Storage", () => {

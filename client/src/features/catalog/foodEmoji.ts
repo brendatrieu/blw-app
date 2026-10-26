@@ -368,8 +368,8 @@ export function foodPlate(food: EmojiClusterFood): Plate {
  * "+N" plate for the rest, so the slot never holds more than three discs.
  *
  * Lived in `tracking/components/ServeLogList.tsx` until item 347 gave a
- * storage container its own food list; it moved here (and is still
- * re-exported there) so the meal card and the storage card cannot drift.
+ * storage container its own food list. The Food log row has listed one line
+ * per item since ledger 902 (CD-Food-Log); the storage card keeps the cluster.
  */
 export function emojiCluster(foods: readonly EmojiClusterFood[]): EmojiCluster {
   const shown = foods.length <= 3 ? foods : foods.slice(0, 2);

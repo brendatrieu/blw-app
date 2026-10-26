@@ -2,10 +2,9 @@ import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { MealFood, MealItem } from "@blw/shared";
 import { useDeleteMeal, useMeals } from "../hooks.js";
-import { mealRecipes } from "../mealRecipes.js";
-import { emojiCluster, type EmojiCluster } from "../../catalog/foodEmoji.js";
-import { FoodNames } from "../../catalog/components/DeletedMark.js";
-import { FoodPlates } from "../../catalog/components/FoodPlate.js";
+import { DeletedMark } from "../../catalog/components/DeletedMark.js";
+import { mealLines } from "../../plate/plate.js";
+import { ItemPlate } from "../../plate/PlateItemRow.js";
 import { MealActionsMenu } from "./MealActionsMenu.js";
 import { Badge } from "../../catalog/components/Badge.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
@@ -41,12 +40,6 @@ export function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
-/** Re-exported from `catalog/foodEmoji.ts`, where it moved when a storage
- * container grew its own food list (item 347) and needed the same stack.
- * Meal rows still reach it through this module, which is where every caller
- * — and this file's own tests — have always imported it from. */
-export { emojiCluster, type EmojiCluster };
-
 /** The muted "when" line that replaced the old day headers, e.g.
  * "Today · 2:05 PM" or "Wed, Aug 26 · 12:00 PM". */
 export function servedLine(servedAt: string): string {
@@ -58,6 +51,12 @@ export function servedLine(servedAt: string): string {
  * to say the meal came out of storage, the detail page names which batch). */
 export function hasStorageFood(foods: readonly MealFood[]): boolean {
   return foods.some((food) => Boolean(food.storageItemId));
+}
+
+/** The badge's rule on a saved meal: a container on its plate, or (a cached
+ * body from before items) a food served from one. */
+export function fromStorage(meal: Pick<MealItem, "items" | "foods">): boolean {
+  return meal.items ? meal.items.some((item) => item.kind === "storage") : hasStorageFood(meal.foods);
 }
 
 export interface MealDeleteDialogProps {
@@ -123,10 +122,10 @@ export interface MealCardProps {
 }
 
 /**
- * One meal in the food log, styled after `StorageItemCard`: an emoji cluster
- * and the food names on the left, the "From storage" badge plus the kebab on
- * the right, and a muted "Today · 2:05 PM" line where the list used to have
- * day headers. Exported standalone-renderable per the app's convention for
+ * One meal in the food log (CD-Food-Log, PP-NOTES round 5 decision 8): the
+ * muted "Today · 2:05 PM" line with the "From storage" badge and the kebab
+ * at the top, then one line per item on the plate (its plate and name), then
+ * the notes. Exported standalone-renderable per the app's convention for
  * card-shaped list items.
  */
 export function MealCard({
@@ -150,65 +149,59 @@ export function MealCard({
       actions
     );
 
-  const info = (
-    <>
-      <FoodPlates {...emojiCluster(meal.foods)} />
-      <div className="flex flex-col">
-        {/* Every food's name, comma-joined, a deleted one marked, clamped to
-            two lines with "…" (ledger 761). Deliberately NOT the recipe
-            titles: each gets its own line underneath, so the title always
-            answers "what did baby eat?". */}
-        <span className="line-clamp-2 text-sm font-medium text-[var(--color-text)]">
-          <FoodNames foods={meal.foods} />
-        </span>
-        {mealRecipes(meal).map((recipe) => (
-          <span key={recipe.id} className="text-xs font-medium text-[var(--color-text-muted)]">
-            🍳 {recipe.title}
+  const lines = (
+    <ul aria-label="On the plate" className="flex flex-col">
+      {mealLines(meal).map((line) => (
+        <li key={line.key} className="flex items-center gap-2 py-[3px]">
+          <ItemPlate plates={line.plates} size={28} />
+          <span className="min-w-0 text-sm leading-[1.3] font-medium break-words text-[var(--color-text)]">
+            {line.name}
+            <DeletedMark deleted={line.deleted} />
           </span>
-        ))}
-        <span className="text-xs text-[var(--color-text-muted)]">{servedLine(meal.servedAt)}</span>
-      </div>
-    </>
+        </li>
+      ))}
+    </ul>
   );
 
   return (
     <li
       className={
         grouped
-          ? `relative flex flex-col gap-2 py-2.5 pr-1 pl-3.5 ${CARD_ROW_DIVIDER}`
-          : "relative flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-divider)] bg-[var(--color-bg-elevated)] p-3"
+          ? `relative flex flex-col pt-1.5 pr-1 pb-2.5 pl-3.5 ${CARD_ROW_DIVIDER}`
+          : "relative flex flex-col rounded-[var(--radius-lg)] border border-[var(--color-divider)] bg-[var(--color-bg-elevated)] pt-1.5 pr-1.5 pb-2.5 pl-3"
       }
     >
-      {/* Wraps instead of overflowing (ledger 776): the info has no flex
-          basis, so the badge + kebab stay on its line until the info would
-          drop below its narrowest (longest word); past that — a recipe meal
-          from storage at 320px — they move to a line of their own,
-          right-aligned, and the info takes the full width. */}
-      <div className="flex flex-wrap items-start justify-end gap-2">
-        {/* Stretched link: the anchor's ::after overlay covers the whole card
-            so tapping anywhere opens the meal for editing (which is why there
-            is no separate Edit link). The kebab sits ABOVE
-            the overlay (relative z-10) as siblings — nothing interactive is
-            ever nested inside the anchor (same rule `StorageItemCard` follows). */}
-        {linkable ? (
-          <Link
-            to={`/log-meal?edit=${meal.id}`}
-            className="flex flex-1 items-start gap-2 rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-          >
-            {info}
-          </Link>
-        ) : (
-          <div className="flex flex-1 items-start gap-2">{info}</div>
-        )}
-        <div className="relative z-10 flex shrink-0 items-center gap-1">
-          {hasStorageFood(meal.foods) && <Badge tone="neutral">📦 From storage</Badge>}
+      {/* Wraps instead of overflowing (ledger 776): at 320px a long date
+          line plus the badge and kebab put those two on a line of their own,
+          right-aligned. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-2">
+        <span className="text-xs text-[var(--color-text-muted)]">{servedLine(meal.servedAt)}</span>
+        {/* Above the stretched link's overlay (relative z-10), as siblings:
+            nothing interactive is ever nested inside the anchor (the rule
+            `StorageItemCard` follows too). */}
+        <div className="relative z-10 flex shrink-0 items-center gap-0.5 ml-auto">
+          {fromStorage(meal) && <Badge tone="neutral">📦 From storage</Badge>}
           {actionsSlot}
         </div>
       </div>
 
-      {meal.notes && <p className="text-xs text-[var(--color-text-muted)]">{meal.notes}</p>}
+      {/* Stretched link: the anchor's ::after overlay covers the whole card,
+          so tapping anywhere opens the meal for editing (which is why there
+          is no separate Edit link). */}
+      {linkable ? (
+        <Link
+          to={`/log-meal?edit=${meal.id}`}
+          className="-mt-1 block rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+        >
+          {lines}
+        </Link>
+      ) : (
+        <div className="-mt-1">{lines}</div>
+      )}
 
-      {meal.reactionNote && <p className="text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</p>}
+      {meal.notes && <p className="mt-1 text-xs text-[var(--color-text-muted)]">{meal.notes}</p>}
+
+      {meal.reactionNote && <p className="mt-1 text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</p>}
     </li>
   );
 }

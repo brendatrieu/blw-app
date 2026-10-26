@@ -124,7 +124,7 @@ describe("one (optional) treatment everywhere (item 736)", () => {
       if (all !== ok) offenders.push(path.relative(srcRoot, file));
     }
     expect(offenders).toEqual([]);
-    expect(sites).toBeGreaterThanOrEqual(25);
+    expect(sites).toBeGreaterThanOrEqual(24);
   });
 
   it("no element wrapping an OptionalLabel is muted as a whole", () => {
@@ -137,7 +137,8 @@ describe("one (optional) treatment everywhere (item 736)", () => {
         expect(m[1], path.relative(srcRoot, file)).toContain("text-[var(--color-text)]");
       }
     }
-    // Field, MealDetailPage's ratings, SymptomSurveyForm x2, CustomRecipeForm x2.
-    expect(checked).toBe(6);
+    // Field, SymptomSurveyForm x2, CustomRecipeForm x2 (the meal page's
+    // "Rating (optional)" went with its item cards, ledger 902).
+    expect(checked).toBe(5);
   });
 });

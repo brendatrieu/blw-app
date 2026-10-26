@@ -4,10 +4,11 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { MealFood, MealItem } from "@blw/shared";
+import { emojiCluster } from "../../catalog/foodEmoji.js";
 import {
   dayKey,
   dayLabel,
-  emojiCluster,
+  fromStorage,
   hasStorageFood,
   HOME_MEAL_LIMIT,
   MealCard,
@@ -114,29 +115,6 @@ describe("timeLabel", () => {
   });
 });
 
-// The card's title line (item 192): every food's name, comma-joined, never
-// the recipe title. `<!-- -->` is React's text-node separator in SSR output.
-describe("MealCard title (item 192, ledger 555)", () => {
-  const titleOf = (foods: MealFood[]) => {
-    const html = renderMealCard({ ...baseMeal, recipeId: "r1", recipeTitle: "Iron-Rich Purée", foods });
-    return /<span class="line-clamp-2 text-sm font-medium text-\[var\(--color-text\)\]">([\s\S]*?)<\/span><span/.exec(html)![1]!.replace(/<!-- -->/g, "");
-  };
-
-  it("comma-joins every food name", () => {
-    expect(titleOf([food({ name: "Avocado" }), food({ id: "f2", name: "Chicken" })])).toBe("Avocado, Chicken");
-  });
-
-  it("is just the name for a single food", () => {
-    expect(titleOf([food({ name: "Avocado" })])).toBe("Avocado");
-  });
-
-  it("marks a food its owner deleted with the one muted mark (ledger 543/555)", () => {
-    expect(titleOf([food({ name: "Banana bread", deleted: true }), food({ id: "f2", name: "Chicken" })])).toBe(
-      '<span>Banana bread<span class="font-normal text-[var(--color-text-muted)]">\u00a0(deleted)</span>, Chicken</span>',
-    );
-  });
-});
-
 describe("emojiCluster (items 192, 658)", () => {
   const many = (n: number) => Array.from({ length: n }, (_, i) => food({ id: `f${i}` }));
 
@@ -216,51 +194,99 @@ const baseMeal: MealItem = {
   ],
 };
 
+// CD-Food-Log (PP-NOTES round 5, decision 8): one line per item on the plate,
+// in plate order, replacing the comma list of every food plus the 🍳 lines.
+// `<!-- -->` is React's text-node separator in SSR output.
+describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
+  const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+  const BROCCOLI = { id: uuid(1), slug: "broccoli", name: "Broccoli", category: "veg" as const };
+  const CARROT = { id: uuid(2), slug: "carrot", name: "Carrot", category: "veg" as const };
+  const EGG = { id: uuid(3), slug: "egg", name: "Egg", category: "protein" as const };
+  const PLATE_MEAL: MealItem = {
+    ...baseMeal,
+    items: [
+      { kind: "recipe", id: uuid(10), recipe: { id: uuid(20), title: "Creamy Cashew & Broccoli Pasta" }, leftOut: [], inferred: false, rating: 5 },
+      {
+        kind: "storage",
+        storageItemId: uuid(30),
+        label: null,
+        location: "fridge",
+        servings: 1,
+        parts: [
+          { kind: "food", id: uuid(11), food: BROCCOLI, rating: 4 },
+          { kind: "food", id: uuid(12), food: CARROT, rating: null },
+        ],
+      },
+      { kind: "food", id: uuid(13), food: { ...EGG, deleted: true }, rating: null },
+    ],
+  };
+  const linesOf = (html: string) => {
+    const list = /<ul aria-label="On the plate"[^>]*>([\s\S]*?)<\/ul>/.exec(html)![1]!;
+    return [...list.matchAll(/<li [^>]*>([\s\S]*?)<\/li>/g)].map((m) => m[1]!);
+  };
+  const names = (html: string) =>
+    linesOf(html).map((line) => /<span class="min-w-0[^"]*">([\s\S]*)<\/span>$/.exec(line)![1]!.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&"));
+
+  it("one line per item in plate order: the recipe, the container under its name, the food", () => {
+    expect(names(renderMealCard(PLATE_MEAL))).toEqual(["Creamy Cashew & Broccoli Pasta", "Broccoli, Carrot", "Egg\u00a0(deleted)"]);
+  });
+
+  it("each line leads with a 28px plate: the pot for a recipe, a container's first two foods overlapped at 20px", () => {
+    const [recipe, container, egg] = linesOf(renderMealCard(PLATE_MEAL));
+    expect(recipe).toContain('style="width:28px;height:28px;font-size:14px;background:var(--color-plate-neutral)">🍲</span>');
+    expect(container).toMatch(/^<span aria-hidden="true" class="relative block shrink-0 size-7 ">/);
+    expect(container!.match(/width:20px;height:20px/g)).toHaveLength(2);
+    expect(container).toContain("ring-2 ring-[var(--color-bg-elevated)]");
+    expect(egg).toContain("width:28px;height:28px");
+    // The deleted mark is the one muted mark (ledger 543/555).
+    expect(egg).toContain('<span class="font-normal text-[var(--color-text-muted)]">\u00a0<!-- -->(deleted)</span>');
+  });
+
+  it("a cached body from before items lists its foods, one line each", () => {
+    expect(names(renderMealCard(baseMeal))).toEqual(["Avocado", "Chicken"]);
+  });
+
+  it("keeps every line inside the edit link, the date line, badge and kebab above them", () => {
+    const html = renderMealCard(PLATE_MEAL);
+    const link = /<a [^>]*href="\/log-meal\?edit=meal-1"[^>]*>([\s\S]*?)<\/a>/.exec(html)![1]!;
+    expect(link).toContain('<ul aria-label="On the plate"');
+    expect(link).toContain("Broccoli, Carrot");
+    expect(html.indexOf(servedLine(baseMeal.servedAt))).toBeLessThan(html.indexOf("<a "));
+    expect(html.indexOf("From storage")).toBeLessThan(html.indexOf("<a "));
+    expect(html.indexOf('aria-label="Actions"')).toBeLessThan(html.indexOf("<a "));
+  });
+
+  it("the badge follows the plate: a container on it, not the foods' links", () => {
+    expect(fromStorage(PLATE_MEAL)).toBe(true);
+    expect(fromStorage({ ...PLATE_MEAL, items: PLATE_MEAL.items!.filter((item) => item.kind !== "storage") })).toBe(false);
+    // A cached body from before items: a food served from a batch.
+    expect(fromStorage({ ...baseMeal, foods: [food({ storageItemId: "storage-1" })] })).toBe(true);
+    expect(fromStorage(baseMeal)).toBe(false);
+    expect(renderMealCard(PLATE_MEAL)).toMatch(/📦 (?:<!-- -->)?From storage/);
+  });
+});
+
 describe("MealCard (render, storage-card styling — item 192)", () => {
-  it("uses the same card chrome as StorageItemCard (relative li, rounded-lg, border, elevated bg, p-3)", () => {
+  it("uses the card chrome of the boards (relative li, rounded-lg, border, elevated bg; 6/6/10/12 padding for the 44px kebab)", () => {
     const html = renderMealCard(baseMeal);
     expect(html).toMatch(/<li class="relative [^"]*rounded-\[var\(--radius-lg\)\][^"]*"/);
     expect(html).toMatch(/<li class="[^"]*border border-\[var\(--color-divider\)\][^"]*"/);
     expect(html).toMatch(/<li class="[^"]*bg-\[var\(--color-bg-elevated\)\][^"]*"/);
-    expect(html).toMatch(/<li class="[^"]*\bp-3\b/);
+    expect(html).toMatch(/<li class="[^"]*\bpt-1\.5 pr-1\.5 pb-2\.5 pl-3\b/);
   });
 
-  it("titles the card with the food names joined by ', '", () => {
+  it("no comma list and no emoji cluster: the old per-meal title is gone", () => {
     const html = renderMealCard(baseMeal);
-    expect(html).toContain("Avocado, Chicken");
-    // The old per-food chip markup is gone — one title line, not two pills.
-    expect(html).not.toContain("rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)]");
+    expect(html).not.toContain("Avocado, Chicken");
+    expect(html).not.toContain("h-[44px] w-[48px]");
+    expect(html).not.toContain("🍳");
   });
 
-  it("renders the leading plates in one fixed aria-hidden 48x44 slot", () => {
-    const html = renderMealCard(baseMeal);
-    expect(html).toContain('<span aria-hidden="true" class="relative block h-[44px] w-[48px] shrink-0">');
-    for (const { emoji } of emojiCluster(baseMeal.foods).plates) expect(html).toContain(emoji);
-  });
-
-  it("wraps the badge + kebab under the info instead of overflowing at 320px (ledger 776)", () => {
-    // The row wraps, right-aligned; the info (link or plain div) has no flex
-    // basis, so the badge + kebab only move down once it would shrink past
-    // its longest word. Measured live: 329px → 320px at a 320 viewport.
+  it("wraps the badge + kebab under the date line instead of overflowing at 320px (ledger 776)", () => {
     for (const html of [renderMealCard(baseMeal), renderMealCard(baseMeal, false)]) {
-      expect(html).toMatch(/<div class="flex flex-wrap items-start justify-end gap-2">/);
-      const info = html.match(/<(?:a|div) [^>]*class="(flex flex-1 items-start gap-2(?: [^"]*)?)"/)?.[1];
-      expect(info).toBeDefined();
-      // min-w-0 squeezes the names beside the badge at 320; a basis always wraps it.
-      expect(info).not.toMatch(/(^| )(min-w-0|basis-\S+)( |$)/);
+      expect(html).toMatch(/<div class="flex flex-wrap items-center justify-between gap-x-2"><span class="text-xs text-\[var\(--color-text-muted\)\]">/);
+      expect(html).toContain('<div class="relative z-10 flex shrink-0 items-center gap-0.5 ml-auto">');
     }
-  });
-
-  it("shows two plates and a +N count from four foods on (5 foods: +3)", () => {
-    const html = renderMealCard({
-      ...baseMeal,
-      foods: Array.from({ length: 5 }, (_, i) => food({ id: `food-${i}`, name: `Food ${i}` })),
-    });
-    expect(html).toContain(">+3</span>");
-  });
-
-  it("shows no overflow count when every food fits", () => {
-    expect(renderMealCard(baseMeal)).not.toMatch(/\+(?:<!-- -->)?\d/);
   });
 
   it("renders the muted day · time line that replaced the day headers", () => {
@@ -284,40 +310,10 @@ describe("MealCard (render, storage-card styling — item 192)", () => {
     expect(renderMealCard(baseMeal)).not.toContain("From storage");
   });
 
-  it("shows the recipe title line when the meal has one", () => {
-    const html = renderMealCard({ ...baseMeal, recipeId: "recipe-1", recipeTitle: "Iron-Rich Purée" });
-    expect(html).toContain("🍳");
-    expect(html).toContain("Iron-Rich Purée");
-  });
-
-  it("shows one 🍳 line per recipe, in the meal's order (ledger 761)", () => {
-    const html = renderMealCard({
-      ...baseMeal,
-      recipeId: "r1",
-      recipeTitle: "Lentil Patties",
-      recipes: [
-        { id: "r1", title: "Lentil Patties", rating: null },
-        { id: "r2", title: "Salmon Cakes", rating: 4 },
-      ],
-    }).replace(/<!-- -->/g, "");
-    expect(html.match(/🍳/g)).toHaveLength(2);
-    expect(html).toContain('<span class="text-xs font-medium text-[var(--color-text-muted)]">🍳 Lentil Patties</span>');
-    expect(html.indexOf("🍳 Lentil Patties")).toBeLessThan(html.indexOf("🍳 Salmon Cakes"));
-  });
-
-  it("clamps the foods line to two lines with an ellipsis (ledger 761)", () => {
-    const html = renderMealCard(baseMeal);
-    expect(html).toMatch(/<span class="line-clamp-2 text-sm font-medium text-\[var\(--color-text\)\]">Avocado/);
-  });
-
-  it("omits the recipe title line when the meal has none", () => {
-    expect(renderMealCard(baseMeal)).not.toContain("🍳");
-  });
-
   it("shows the reaction note in danger text when present", () => {
     const html = renderMealCard({ ...baseMeal, reactionNote: "mild rash around mouth" });
     expect(html).toContain("mild rash around mouth");
-    expect(html).toMatch(/class="text-xs text-\[var\(--color-danger\)\]">Reaction: /);
+    expect(html).toMatch(/class="mt-1 text-xs text-\[var\(--color-danger\)\]">Reaction: /);
   });
 
   it("omits the reaction note when absent", () => {
@@ -395,10 +391,12 @@ describe("MealCard tap-through link (item 195)", () => {
 
   it("keeps the kebab outside the info anchor (no nested-interactive markup)", () => {
     const html = renderMealCard(baseMeal);
+    const anchorOpen = html.indexOf("<a ");
     const anchorClose = html.indexOf("</a>");
     const kebabIndex = html.indexOf('aria-label="Actions"');
     expect(anchorClose).toBeGreaterThan(-1);
-    expect(kebabIndex).toBeGreaterThan(anchorClose);
+    // CD-Food-Log: the kebab sits on the date line, before the lines' anchor.
+    expect(kebabIndex).toBeLessThan(anchorOpen);
     expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*<(?:button|a|input)\b/s);
   });
 });
@@ -436,6 +434,9 @@ describe("Home paging (item 694)", () => {
       ),
     );
   }
+
+  /** The log's own list, not a card's "On the plate" lines. */
+  const LIST_UL = /<ul\b(?! aria-label="On the plate")/g;
 
   // Item 775: every page is a slide on the swipe track; off-screen slides are
   // inert, so the one without `inert` is the page on show.
@@ -484,9 +485,9 @@ describe("Home paging (item 694)", () => {
 
   it("grouped (Home, item 664): one card of divided rows, each kebab named after its meal", () => {
     const [html] = shownSlides(renderList(3, "/meals", true));
-    expect((html!.match(/<ul\b/g) ?? []).length).toBe(1);
+    expect((html!.match(LIST_UL) ?? []).length).toBe(1);
     expect(html).toMatch(/<ul class="rounded-\[var\(--radius-lg\)\] border border-\[var\(--color-border\)\] bg-\[var\(--color-bg-elevated\)\][^"]*"/);
-    const rows = html!.match(/<li class="[^"]*"/g) ?? [];
+    const rows = html!.match(/<li class="relative[^"]*"/g) ?? [];
     expect(rows).toHaveLength(3);
     for (const row of rows) {
       expect(row).toContain("not-first:before:h-px not-first:before:bg-[var(--color-divider)]");
@@ -507,7 +508,7 @@ describe("Home paging (item 694)", () => {
   it("renders one flat newest-first <ul> with no day headers (item 193)", () => {
     const html = renderList(undefined);
     expect(html).not.toContain("<h3");
-    expect((html.match(/<ul\b/g) ?? []).length).toBe(1);
+    expect((html.match(LIST_UL) ?? []).length).toBe(1);
     // Newest first: the meals arrive newest-first and the list preserves that.
     expect(html.indexOf("Food 0")).toBeLessThan(html.indexOf("Food 1"));
     expect(html.indexOf("Food 1")).toBeLessThan(html.indexOf("Food 4"));

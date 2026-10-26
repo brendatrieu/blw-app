@@ -38,6 +38,7 @@ import { MealDetailPage } from "./MealDetailPage.js";
 import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
 import { Button } from "../components/ui/Button.js";
 import { StarRating } from "../components/ui/StarRating.js";
+import { SavedItemRow } from "../features/plate/PlateItemRow.js";
 
 interface El {
   type: unknown;
@@ -98,7 +99,11 @@ function render(meal: MealItem, pending?: unknown): El {
   h.mutations.length = 0;
   return (MealDetailPage as unknown as () => El)();
 }
-const stars = (tree: El) => findAll(tree, StarRating);
+/** Every star line, through each item card (a plain function: no hooks). */
+const stars = (tree: El) =>
+  findAll(tree, SavedItemRow).flatMap((row) =>
+    findAll((SavedItemRow as unknown as (props: unknown) => El)(row.props), StarRating),
+  );
 const lines = (tree: El) => stars(tree).map((star) => [star.props.label, star.props.value]);
 const tap = (tree: El, label: string, value: number | null) =>
   (stars(tree).find((star) => star.props.label === `Rating for ${label}`)!.props.onChange as (value: number | null) => void)(value);
@@ -118,10 +123,13 @@ describe("MealDetailPage stars (item 574, ledger 902)", () => {
     tap(tree, "Egg", 5);
     tap(tree, "Banana", null);
     tap(tree, "Salmon Oat Patties", 4);
+    // A container's second part names its own item, not the container's first.
+    tap(tree, "Carrot", 2);
     expect(h.mutations).toEqual([
       { id: MEAL.id, input: { itemRatings: { [id(11)]: 5 } } },
       { id: MEAL.id, input: { itemRatings: { [id(12)]: null } } },
       { id: MEAL.id, input: { itemRatings: { [id(10)]: 4 } } },
+      { id: MEAL.id, input: { itemRatings: { [id(13)]: 2 } } },
     ]);
   });
 
