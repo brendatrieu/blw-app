@@ -578,7 +578,8 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     // referenced recipe is a 409 the parent can act on, with the counts the
     // UI needs to say what is in the way. Favorites are NOT in this list:
     // un-favoriting is not a decision worth blocking a delete on, so the
-    // caller's own row is simply removed below.
+    // caller's own row is simply removed below. Nor are plans: a planned use
+    // cascades away silently (ledger 903, chair §10.5).
     //
     // Ledger 754 (DESIGN-B §6): the counts run INSIDE the delete transaction,
     // behind a lock on the recipe row. A meal or container written meanwhile

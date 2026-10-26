@@ -370,7 +370,7 @@ export async function loadMeals(
 
 /** Foods as plate items show them, with their allergen chips (deleted foods
  * included: a past meal keeps them). */
-async function loadPlateFoods(db: Database, foodIds: readonly string[]): Promise<Map<string, PlateFood>> {
+export async function loadPlateFoods(db: Database, foodIds: readonly string[]): Promise<Map<string, PlateFood>> {
   if (foodIds.length === 0) return new Map();
   const rows = await db
     .select({

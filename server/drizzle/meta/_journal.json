@@ -176,6 +176,13 @@
       "when": 1792981019272,
       "tag": "0024_meal_items",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793031270815,
+      "tag": "0025_planning",
+      "breakpoints": true
     }
   ]
 }

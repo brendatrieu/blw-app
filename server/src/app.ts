@@ -17,6 +17,7 @@ import { registerBabyRoutes } from "./routes/babies.js";
 import { registerMealRoutes } from "./routes/meals.js";
 import { registerFavoriteRoutes } from "./routes/favorites.js";
 import { registerStorageRoutes } from "./routes/storage.js";
+import { registerPlanRoutes } from "./routes/plan.js";
 import { registerRecipeRoutes } from "./routes/recipes.js";
 import { registerAiKeyRoutes } from "./routes/ai-keys.js";
 import { registerSymptomRoutes, type SymptomRoutesOptions } from "./routes/symptom.js";
@@ -251,6 +252,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     registerMealRoutes(app, db); // meals + allergen progress
     registerFavoriteRoutes(app, db); // recipe favorites
     registerStorageRoutes(app, db); // storage items + expiry tracking
+    registerPlanRoutes(app, db); // meal plans + daily meals (ledger 903)
     // Switched off, the symptom check never gets a client, whatever key is on
     // file: triage + the fixed-rule ranking only.
     registerSymptomRoutes(

@@ -284,12 +284,14 @@ describe("migration 0024 — meal_items backfill", () => {
     await boot();
     await boot();
     const after = await record();
-    expect(after).toMatchObject({ migrations: 25, plate: true });
+    // Every migration there is (0025 planning came after this test).
+    const latest = (await readJournal()).entries.length;
+    expect(after).toMatchObject({ migrations: latest, plate: true });
 
     const { pass, lines } = await compareDryRun(db, before, after);
     expect(pass).toBe(true);
     expect(lines).toEqual([
-      "before: 24 migrations, meal_items absent; after: 25 migrations, meal_items present; database now: 25 migrations, meal_items present",
+      `before: 24 migrations, meal_items absent; after: ${latest} migrations, meal_items present; database now: ${latest} migrations, meal_items present`,
       "meals checked: 29 before, 29 after; babies checked: 2",
       ...Object.keys(before.record).map((observable) => `mismatches ${observable}: 0`),
       "drift after the second heal: 0 meals",

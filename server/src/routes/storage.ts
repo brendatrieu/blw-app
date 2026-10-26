@@ -30,7 +30,6 @@ import {
   MEAL_FOODS_MAX,
   MEAL_RECIPES_MAX,
   type CreateStorageItemResponse,
-  type StorageItem,
   type StorageResponse,
   type ServeStorageItemResponse,
   type ServeStorageResponse,
@@ -60,9 +59,9 @@ import {
 import { mapRecipeRequest, validateRatings } from "./meals.js";
 import {
   NO_SERVINGS_LEFT,
-  containerWindowHours,
-  deriveFreshness,
-  loadContainerRecipes,
+  STORAGE_SELECTION,
+  hydrateStorageItems,
+  loadStorageItem,
   loadStorageItemFoods,
   notServable,
 } from "../services/storage.js";
@@ -100,123 +99,6 @@ function currentUserId(request: FastifyRequest): string {
     throw new Error("currentUserId called on an unauthenticated request");
   }
   return id;
-}
-
-// No foods join: what a container holds lives in `storage_item_foods` and is
-// loaded per item by `loadStorageItemFoods` during hydration (item 345).
-const STORAGE_SELECTION = {
-  id: storageItems.id,
-  label: storageItems.label,
-  recipeId: storageItems.recipeId,
-  recipeTitle: recipes.title,
-  recipeFridgeHoursOverride: recipes.fridgeHoursOverride,
-  recipeFreezerOverride: recipes.freezerDaysOverride,
-  preparedAt: storageItems.preparedAt,
-  location: storageItems.location,
-  status: storageItems.status,
-  statusChangedAt: storageItems.statusChangedAt,
-  quantityNote: storageItems.quantityNote,
-  servingsTotal: storageItems.servingsTotal,
-  servingsLeft: storageItems.servingsLeft,
-  bestBy: storageItems.bestBy,
-  notes: storageItems.notes,
-} as const;
-
-type StorageRow = {
-  id: string;
-  label: string | null;
-  recipeId: string | null;
-  recipeTitle: string | null;
-  recipeFridgeHoursOverride: number | null;
-  recipeFreezerOverride: number | null;
-  preparedAt: Date;
-  location: "fridge" | "freezer" | "counter";
-  status: "active" | "finished" | "discarded";
-  statusChangedAt: Date;
-  quantityNote: string | null;
-  servingsTotal: number | null;
-  servingsLeft: number | null;
-  /** `date` columns come back as `YYYY-MM-DD` strings, not Dates. */
-  bestBy: string | null;
-  notes: string | null;
-};
-
-/**
- * Loads each row's foods, resolves its storage window from them, and derives
- * `expiresAt`/`useSoon`/`expired`. Batches every lookup it needs (the foods
- * themselves, recipe-only items' food category via their first ingredient,
- * and the `storage_guidelines` rows) so a list of N items costs three extra
- * queries, not 3N.
- *
- * The window rule itself is `services/storage.ts` — shared with the AI tool,
- * which used to keep its own copy.
- */
-async function hydrateStorageItems(db: Database, rows: StorageRow[]): Promise<StorageItem[]> {
-  const foodsByItemId = await loadStorageItemFoods(
-    db,
-    rows.map((row) => row.id),
-  );
-  const recipesByItemId = await loadContainerRecipes(db, rows);
-  // Every food (or recipe) in the container speaks: the shortest window
-  // among them is what the item gets.
-  const windowByItemId = await containerWindowHours(db, rows, foodsByItemId, recipesByItemId);
-
-  const now = Date.now();
-
-  return rows.map((row) => {
-    const freshness = deriveFreshness(row.preparedAt, windowByItemId.get(row.id) as number, now, row.bestBy);
-
-    const item: StorageItem = {
-      id: row.id,
-      label: row.label,
-      // In the order the parent saved them. Empty for a recipe-sourced or
-      // label-only container. `emoji` is only ever set on a custom food; the
-      // client falls back to its own slug/category table when it is null.
-      foods: (foodsByItemId.get(row.id) ?? []).map((food) => ({
-        id: food.id,
-        slug: food.slug,
-        name: food.name,
-        emoji: food.emoji,
-        deleted: food.deleted,
-      })),
-      recipeId: row.recipeId,
-      recipeTitle: row.recipeTitle,
-      // Ledger 753: every recipe, in order (one container can hold the
-      // leftovers of several); `recipeId`/`recipeTitle` stay the first.
-      recipes: (recipesByItemId.get(row.id) ?? []).map((recipe) => ({ id: recipe.id, title: recipe.title })),
-      preparedAt: row.preparedAt.toISOString(),
-      location: row.location,
-      status: row.status,
-      statusChangedAt: row.statusChangedAt.toISOString(),
-      expiresAt: freshness.expiresAt,
-      useSoon: freshness.useSoon,
-      expired: freshness.expired,
-      quantityNote: row.quantityNote,
-      // Servings and best-by are stored, not derived: an untracked item
-      // reports nulls, exactly as it did before these columns existed.
-      servingsTotal: row.servingsTotal,
-      servingsLeft: row.servingsLeft,
-      bestBy: row.bestBy,
-      notes: row.notes,
-    };
-    return item;
-  });
-}
-
-/** One item, joined and hydrated the same way the list route does it. */
-async function loadStorageItem(db: Database, id: string): Promise<StorageItem> {
-  const rows = await db
-    .select(STORAGE_SELECTION)
-    .from(storageItems)
-    .leftJoin(recipes, eq(storageItems.recipeId, recipes.id))
-    .where(eq(storageItems.id, id))
-    .limit(1);
-
-  const [item] = await hydrateStorageItems(db, rows);
-  if (!item) {
-    throw new Error("Hydration of a just-written storage item produced no item");
-  }
-  return item;
 }
 
 /**

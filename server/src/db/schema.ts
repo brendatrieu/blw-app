@@ -9,6 +9,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -17,6 +18,7 @@ import {
   primaryKey,
   smallint,
   text,
+  time,
   timestamp,
   uniqueIndex,
   uuid,
@@ -347,6 +349,11 @@ export const babies = pgTable(
     notes: text("notes"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // Ledger 903 (plan SPEC §3.1, migration 0025): the meals a new plan day
+    // starts with, `[{id, name, time: "HH:MM" | null}]`, 1 to 12. NULL means
+    // DEFAULT_DAILY_MEALS (shared/src/planning.ts). Spelled out rather than
+    // imported, like `recipes.extra_ingredients`.
+    dailyMeals: jsonb("daily_meals").$type<{ id: string; name: string; time: string | null }[]>(),
   },
   (t) => [index("babies_user_id_idx").on(t.userId)],
 );
@@ -655,6 +662,88 @@ export const storageItemRecipes = pgTable(
   (t) => [
     primaryKey({ columns: [t.storageItemId, t.recipeId] }),
     index("storage_item_recipes_recipe_id_idx").on(t.recipeId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Meal planning (ledger 903, plan SPEC §3, migration 0025), per baby.
+// ---------------------------------------------------------------------------
+
+// A plan day that has its own meals (SPEC §3.2). A day without a row here is
+// VIRTUAL: it shows the baby's current daily meals and stores nothing. The
+// first write to it inserts this row and one `planned_meals` row per daily
+// meal; the primary key is what makes two concurrent first writes give ONE
+// set of rows (the loser's insert does nothing). It also keeps a day whose
+// meals were all removed empty, rather than virtual again.
+export const plannedDays = pgTable(
+  "planned_days",
+  {
+    babyId: uuid("baby_id")
+      .notNull()
+      .references(() => babies.id, { onDelete: "cascade" }),
+    // The parent's local calendar day; string mode, so no JS Date shifts it.
+    date: date("date", { mode: "string" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.babyId, t.date] })],
+);
+
+// One meal of a plan day, in the parent's order (`position`). `daily_meal_id`
+// is the daily meal it was materialized from (NULL for "+ Add a meal"), so a
+// client still holding the virtual day's slot id finds it. Deleting the
+// logged meal un-serves it; removing a planned meal never touches the meal.
+export const plannedMeals = pgTable(
+  "planned_meals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    babyId: uuid("baby_id").notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    dailyMealId: uuid("daily_meal_id"),
+    name: text("name").notNull(),
+    // Optional local wall-clock time; Postgres answers "HH:MM:SS", the API
+    // speaks "HH:MM".
+    time: time("time"),
+    position: integer("position").notNull(),
+    servedMealId: uuid("served_meal_id").references(() => meals.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // Its day, which hangs off the baby: a baby delete takes both.
+    foreignKey({ columns: [t.babyId, t.date], foreignColumns: [plannedDays.babyId, plannedDays.date] }).onDelete("cascade"),
+    index("planned_meals_baby_date_idx").on(t.babyId, t.date, t.position),
+    uniqueIndex("planned_meals_served_meal_idx").on(t.servedMealId).where(sql`${t.servedMealId} IS NOT NULL`),
+    check("planned_meals_name_length", sql`char_length(${t.name}) BETWEEN 1 AND 40`),
+  ],
+);
+
+// What is planned for one meal, in the plate's item shapes (SPEC §4.3): a
+// fresh food, a fresh recipe with the ingredients to leave out (intent; what
+// counts is decided at Serve), or a container with the servings to take.
+// Every reference cascades: a deleted custom recipe leaves the plan silently
+// (chair §10.5); a custom food is only soft-deleted (the plan shows it
+// "(deleted)") or re-pointed by Replace; containers go only with the account.
+export const plannedItems = pgTable(
+  "planned_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    plannedMealId: uuid("planned_meal_id")
+      .notNull()
+      .references(() => plannedMeals.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    foodId: uuid("food_id").references(() => foods.id, { onDelete: "cascade" }),
+    recipeId: uuid("recipe_id").references(() => recipes.id, { onDelete: "cascade" }),
+    storageItemId: uuid("storage_item_id").references(() => storageItems.id, { onDelete: "cascade" }),
+    servings: integer("servings"),
+    leftOutFoodIds: uuid("left_out_food_ids").array().notNull().default(sql`'{}'::uuid[]`),
+  },
+  (t) => [
+    index("planned_items_meal_idx").on(t.plannedMealId, t.position),
+    index("planned_items_food_id_idx").on(t.foodId),
+    index("planned_items_recipe_id_idx").on(t.recipeId),
+    index("planned_items_storage_item_id_idx").on(t.storageItemId),
+    check("planned_items_one_ref", sql`num_nonnulls(${t.foodId}, ${t.recipeId}, ${t.storageItemId}) = 1`),
+    check("planned_items_servings", sql`(${t.storageItemId} IS NULL) = (${t.servings} IS NULL)`),
+    check("planned_items_servings_range", sql`${t.servings} BETWEEN 1 AND 99`),
+    check("planned_items_left_out", sql`${t.recipeId} IS NOT NULL OR cardinality(${t.leftOutFoodIds}) = 0`),
   ],
 );
 

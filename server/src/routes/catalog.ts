@@ -48,6 +48,7 @@ import {
   mealFoods,
   mealItems,
   meals,
+  plannedItems,
   storageItemFoods,
   recipeIngredients,
   recipes,
@@ -713,6 +714,29 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
         }
         for (const mealId of mealIds) await syncLegacy(tx, mealId, new Set());
       }
+
+      // Plans (ledger 903, SPEC §1.5): a planned meal that already has the
+      // replacement as a fresh food keeps that item; elsewhere the item is
+      // re-pointed. Leave-outs follow, deduped. Without this the delete below
+      // would cascade the planned foods away.
+      await tx
+        .delete(plannedItems)
+        .where(
+          and(
+            eq(plannedItems.foodId, existing.id),
+            inArray(
+              plannedItems.plannedMealId,
+              tx.select({ id: plannedItems.plannedMealId }).from(plannedItems).where(eq(plannedItems.foodId, replacement.id)),
+            ),
+          ),
+        );
+      await tx.update(plannedItems).set({ foodId: replacement.id }).where(eq(plannedItems.foodId, existing.id));
+      await tx
+        .update(plannedItems)
+        .set({
+          leftOutFoodIds: sql`array(select distinct x from unnest(array_replace(${plannedItems.leftOutFoodIds}, ${existing.id}::uuid, ${replacement.id}::uuid)) x order by x)`,
+        })
+        .where(sql`${existing.id}::uuid = any(${plannedItems.leftOutFoodIds})`);
 
       // Nothing names it any more; `food_allergens` cascades with it.
       await tx.delete(foods).where(and(eq(foods.id, existing.id), eq(foods.ownerId, userId)));
