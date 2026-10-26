@@ -291,6 +291,7 @@ export async function loadMeals(
       name: foods.name,
       category: foods.category,
       emoji: foods.emoji,
+      kind: foods.kind,
       storageItemId: mealFoods.storageItemId,
       rating: mealFoods.rating,
       // A deleted food stays in the meal it was eaten in, marked.
@@ -355,6 +356,7 @@ export async function loadMeals(
       allergens: allergensByFoodId.get(row.id) ?? [],
       rating: row.rating,
       inRecipe: ingredientsByMealId.get(row.mealId)?.has(row.id) ?? false,
+      kind: row.kind,
     });
   }
 

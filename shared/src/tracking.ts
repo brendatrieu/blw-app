@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { foodCategorySchema } from "./catalog.js";
+import { foodCategorySchema, foodKindSchema } from "./catalog.js";
 import { plateItemSchema, plateItemsInputSchema, plateRatingsSchema, starRatingSchema } from "./plate.js";
 
 /**
@@ -292,6 +292,10 @@ export const mealFoodSchema = z.object({
    * already holds a rating of its own). Optional so an older cached body
    * still parses. */
   inRecipe: z.boolean().optional(),
+  /** See `foodKindSchema`: an `info` food (whole milk) is on the meal but
+   * never counted as tried. Optional so an older cached body still parses;
+   * absent reads as `food`. */
+  kind: foodKindSchema.optional(),
 });
 export type MealFood = z.infer<typeof mealFoodSchema>;
 

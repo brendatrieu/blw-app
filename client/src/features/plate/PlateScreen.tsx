@@ -1,6 +1,13 @@
 import { useRef, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
-import type { CreateStorageItemInput, FoodListItem, MealItem, StorageItem, StorageLocation } from "@blw/shared";
+import {
+  PLATE_NOTHING_COUNTS,
+  type CreateStorageItemInput,
+  type FoodListItem,
+  type MealItem,
+  type StorageItem,
+  type StorageLocation,
+} from "@blw/shared";
 import { useActiveBaby } from "../babies/useActiveBaby.js";
 import { useFoods, useRecipe } from "../catalog/hooks.js";
 import { HowToLink } from "../safety/HowToLink.js";
@@ -27,12 +34,14 @@ import { useIsOffline } from "../../lib/online.js";
 import { ignoreTapsBriefly } from "../../lib/tapGuard.js";
 import { PlateItemRow, WarningGlyph } from "./PlateItemRow.js";
 import {
+  NOTHING_COUNTS_MESSAGE,
   PLATE_FIELD_ORDER,
   attachContainers,
   containerEntry,
   entryKey,
   fromMeal,
   hasLeftovers,
+  nothingCounts,
   plateAddMoreServing,
   plateLeftoverSource,
   plateReducer,
@@ -65,13 +74,19 @@ export function resolvePlateHeaderAffordance(mode: PlateMode): HeaderAffordance 
   return resolveHeaderAffordance({ drilledInto: mode === "edit", openedAsTask: mode !== "edit" });
 }
 
-export type PlateStart = { status: "loading" } | { status: "missing" } | { status: "ready"; plate: PlateEntry[] };
+export type PlateStart =
+  | { status: "loading" }
+  | { status: "offline" }
+  | { status: "missing" }
+  | { status: "ready"; plate: PlateEntry[] };
 
 /**
  * What the plate opens with, once what it needs has answered.
  *
  * - **Edit:** the meal as GET /api/meals/:id answers it; a failed fetch (gone,
- *   or never this account's) is `missing`.
+ *   or never this account's) is `missing`. Offline with no answer yet it is
+ *   `offline`: the fetch waits for the network (VERIFY-p2-c1 #6), and a
+ *   failure then is no proof the meal is gone.
  * - **Serve:** the container, from Storage's active or history list (a
  *   finished one opens flagged, CD-Serve-Ran-Out); in neither is `missing`.
  * - **Log meal:** the food or recipe a food or recipe page passed. One that
@@ -79,6 +94,7 @@ export type PlateStart = { status: "loading" } | { status: "missing" } | { statu
  */
 export function resolvePlateStart(input: {
   mode: PlateMode;
+  offline: boolean;
   /** Edit: GET /api/meals/:id. */
   meal: { isError: boolean; data: MealItem | undefined };
   /** Serve: the container's id, Storage's lists, and those lists' queries. */
@@ -90,6 +106,7 @@ export function resolvePlateStart(input: {
 }): PlateStart {
   if (input.mode === "edit") {
     if (input.meal.data) return { status: "ready", plate: fromMeal(input.meal.data) };
+    if (input.offline) return { status: "offline" };
     return input.meal.isError ? { status: "missing" } : { status: "loading" };
   }
   if (input.mode === "serve") {
@@ -117,6 +134,13 @@ export const isMealChanged = (error: unknown): boolean =>
   error instanceof ApiError &&
   error.status === 409 &&
   (error.body as { error?: unknown } | undefined)?.error === "meal_changed";
+
+/** The server's 400 when nothing on the plate counts as a food: the plate
+ * says what to do instead of "try again" (VERIFY-p2-c1 #3). */
+export const isNothingCounts = (error: unknown): boolean =>
+  error instanceof ApiError &&
+  error.status === 400 &&
+  (error.body as { details?: { items?: unknown } } | undefined)?.details?.items === PLATE_NOTHING_COUNTS;
 
 /**
  * What the submit may do once a Log meal save has progressed. Pinned so the
@@ -147,6 +171,7 @@ export function PlateScreen() {
   const foodId = mode === "log" ? searchParams.get("food") : null;
   const recipeId = mode === "log" ? searchParams.get("recipe") : null;
   const goBack = useBackNavigate("/");
+  const offline = useIsOffline();
   // Bumped once a 409 meal_changed refetch lands: the plate starts over
   // from the meal as it is now, and says so.
   const [reloads, setReloads] = useState(0);
@@ -160,6 +185,7 @@ export function PlateScreen() {
 
   const start = resolvePlateStart({
     mode,
+    offline,
     meal: mealQuery,
     storageId,
     containers,
@@ -193,6 +219,10 @@ export function PlateScreen() {
           description="Once a baby profile exists you can start logging foods."
           action={<ButtonLink to="/settings">Add a baby</ButtonLink>}
         />
+      )}
+
+      {!babyLoading && activeBaby && start.status === "offline" && (
+        <p className="text-sm text-[var(--color-text-muted)]">You're offline.</p>
       )}
 
       {!babyLoading && activeBaby && start.status === "missing" && mode === "serve" && <Navigate to="/storage" replace />}
@@ -299,7 +329,7 @@ export function PlateForm({
   const serve = mode === "serve";
 
   const { errors, attemptSubmit } = useSubmitValidation(
-    { itemCount: plate.length, leftoversOpen, leftoverBestBy },
+    { itemCount: plate.length, nothingCounts: nothingCounts(plate), leftoversOpen, leftoverBestBy },
     validatePlate,
     PLATE_FIELD_ORDER,
     { items: "plate-add-more", leftoverBestBy: "log-food-leftover-best-by" },
@@ -482,7 +512,11 @@ export function PlateForm({
       {/* A `meal_changed` refusal reloads the plate, which says so itself. */}
       {mutation.isError && !offline && !runOut && !isMealChanged(mutation.error) && (
         <p role="alert" className="text-xs text-[var(--color-danger)]">
-          {serve ? "Couldn't serve — try again." : "Couldn't save that — try again."}
+          {isNothingCounts(mutation.error)
+            ? NOTHING_COUNTS_MESSAGE
+            : serve
+              ? "Couldn't serve — try again."
+              : "Couldn't save that — try again."}
         </p>
       )}
 

@@ -444,4 +444,15 @@ describe("MealDetailPage items (CD-Meal-Page, ledger 902)", () => {
     expect([...counted.split("</ul>")[0]!.matchAll(/<li [^>]*>([^<]+)/g)].map((m) => m[1])).toEqual(["Broccoli", "Carrot", "Garlic"]);
     expect(counted.split("</ul>")[0]).not.toContain("Cashews");
   });
+
+  it("Counted as tried leaves out an info food (whole milk), as foods tried does (VERIFY-p2-c1 #4)", () => {
+    const milk = { id: uuid(5), slug: "milk", name: "Whole Milk", category: "dairy" as const, storageItemId: null };
+    const butter = { id: uuid(6), slug: "unsalted_butter", name: "Unsalted Butter", category: "dairy" as const, storageItemId: null };
+    const out = renderMeal({
+      ...PASTA_MEAL,
+      foods: [{ ...butter, kind: "ingredient" }, { ...milk, kind: "info" }, { ...BROCCOLI, storageItemId: null }],
+    }).replace(/<!-- -->/g, "");
+    const counted = out.slice(out.indexOf(COUNTED)).split("</ul>")[0]!;
+    expect([...counted.matchAll(/<li [^>]*>([^<]+)/g)].map((m) => m[1])).toEqual(["Unsalted Butter", "Broccoli"]);
+  });
 });

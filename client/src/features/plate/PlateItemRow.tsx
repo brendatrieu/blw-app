@@ -128,7 +128,10 @@ export function FoodItemRow({ entry, dispatch, disabled }: RowProps<FoodEntry>) 
 /**
  * A fresh recipe (CD-Leave-Out): "Left out: …" once something is unticked,
  * and "Ingredients", which opens the recipe's current ingredients as ticks.
- * They load on the first opening (the recipe detail's cache).
+ * They load on the first opening (the recipe detail's cache). A saved item
+ * rebuilt from a meal logged before the plate (`inferred`) offers no
+ * Ingredients: it cannot tell what was left out from what the recipe gained
+ * since, so ticks would claim foods the baby never had (chair 2026-10-26).
  */
 export function RecipeItemRow({ entry, dispatch, disabled }: RowProps<RecipeEntry>) {
   const [open, setOpen] = useState(false);
@@ -157,6 +160,7 @@ export function RecipeItemRow({ entry, dispatch, disabled }: RowProps<RecipeEntr
       onRemove={() => dispatch({ type: "remove", key })}
       disabled={disabled}
       detail={
+        !entry.inferred && (
         <div className={`flex min-h-5 flex-wrap items-center ${DETAIL}`}>
           {entry.leftOut.length > 0 && (
             <>
@@ -194,6 +198,7 @@ export function RecipeItemRow({ entry, dispatch, disabled }: RowProps<RecipeEntr
             </svg>
           </button>
         </div>
+        )
       }
     >
       {open && (
@@ -219,7 +224,9 @@ export function RecipeItemRow({ entry, dispatch, disabled }: RowProps<RecipeEntr
                         type="checkbox"
                         checked={!out}
                         disabled={disabled}
-                        onChange={() => dispatch({ type: "toggleLeftOut", key, food })}
+                        onChange={() =>
+                          dispatch({ type: "toggleLeftOut", key, food, ingredientIds: ingredients.map(({ id }) => id) })
+                        }
                         className="size-6 shrink-0 accent-[var(--color-accent)]"
                       />
                       <span
@@ -392,6 +399,8 @@ interface SavedItemRowProps {
   pending?: Readonly<Record<string, number | null>> | undefined;
   /** A star tap: the meal item's id (a container's part is an item of its own) and the value. */
   onRate: (id: string, value: number | null) => void;
+  /** Offline: every plate write waits (SPEC §4.4), stars included. */
+  disabled?: boolean;
 }
 
 /** Where a saved item's stars drop below its plate: with no × beside the
@@ -407,12 +416,13 @@ const SAVED_STARS = "col-start-2 -ml-[9px] @max-[262px]:col-span-2 @max-[262px]:
  * from storage, linking to its batch (the storage ⇄ meal traceback, item
  * 162), and rates each food or recipe it held, as on the plate.
  */
-export function SavedItemRow({ item, pending = {}, onRate }: SavedItemRowProps) {
+export function SavedItemRow({ item, pending = {}, onRate, disabled }: SavedItemRowProps) {
   const stars = (id: string, label: string, rating: number | null) => (
     <StarRating
       label={`Rating for ${label}`}
       value={id in pending ? pending[id]! : rating}
       onChange={(value) => onRate(id, value)}
+      disabled={disabled}
     />
   );
 

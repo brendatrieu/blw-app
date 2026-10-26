@@ -103,7 +103,12 @@ export function StarRating({ value, onChange, label, disabled = false }: StarRat
         <button
           type="button"
           disabled={disabled}
-          onClick={() => onChange(null)}
+          onClick={(event) => {
+            onChange(null);
+            // The button unmounts once the rating is null: hand focus to the
+            // first star, the group's tab stop from now on (VERIFY-p2-c1 #8).
+            (event.currentTarget.previousElementSibling?.firstElementChild as HTMLElement | null)?.focus();
+          }}
           aria-label={`Clear ${label.charAt(0).toLowerCase()}${label.slice(1)}`}
           className={`sr-only min-h-11 rounded-[var(--radius-sm)] px-2 text-sm font-medium text-[var(--color-text-muted)] underline focus-visible:not-sr-only ${FOCUS_RING}`}
         >

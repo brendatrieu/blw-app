@@ -1269,6 +1269,7 @@ describe("ownership", () => {
           rating: null,
           // A food container has no recipe (ledger 752).
           inRecipe: false,
+          kind: "food",
         },
       ]);
       // Default servings is 1.

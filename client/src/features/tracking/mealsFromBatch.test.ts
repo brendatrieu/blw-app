@@ -50,4 +50,30 @@ describe("mealsFromStorageItem", () => {
   it("returns an empty array for an empty meal list", () => {
     expect(mealsFromStorageItem([], "batch-1")).toEqual([]);
   });
+
+  // VERIFY-p2-c1 #2: a meal's items are exact; its foods link each food to one container only.
+  describe("from the meal's items (ledger 902)", () => {
+    const container = (storageItemId: string) => ({
+      kind: "storage" as const,
+      storageItemId,
+      label: null,
+      location: "fridge" as const,
+      servings: 1,
+      parts: [],
+    });
+
+    it("finds a meal through every container on its plate, though its foods link only the first", () => {
+      const plate = {
+        ...meal("m1", [{ id: "f1", storageItemId: "batch-1" }]),
+        items: [container("batch-1"), container("batch-2")],
+      };
+      expect(mealsFromStorageItem([plate], "batch-1")).toEqual([plate]);
+      expect(mealsFromStorageItem([plate], "batch-2")).toEqual([plate]);
+    });
+
+    it("decides by the items when present: a food's stale storageItemId does not count", () => {
+      const plate = { ...meal("m1", [{ id: "f1", storageItemId: "batch-1" }]), items: [] };
+      expect(mealsFromStorageItem([plate], "batch-1")).toEqual([]);
+    });
+  });
 });

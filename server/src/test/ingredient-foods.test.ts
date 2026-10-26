@@ -406,5 +406,18 @@ describe("ingredient foods and ladder counting (ledger 836, 838)", () => {
       const detailResponse = await app.inject({ method: "GET", url: "/api/foods/milk" });
       expect(detailResponse.json()).toMatchObject({ kind: "info" });
     });
+
+    it("tells the client each meal food's kind, so the meal page leaves whole milk out of Counted as tried (VERIFY-p2-c1 #4)", async () => {
+      const logged = await meal({
+        recipeIds: [fx.eggBake.id],
+        foodIds: [id("egg"), id("milk"), id("unsalted_butter")],
+        servedAt: "2026-03-01T08:00:00.000Z",
+      });
+      const kinds = Object.fromEntries(logged.foods.map((f) => [f.slug, f.kind]));
+      expect(kinds).toEqual({ egg: "food", milk: "info", unsalted_butter: "ingredient" });
+      const listed = await app.inject({ method: "GET", url: `/api/babies/${babyId}/meals`, headers: { cookie: user.cookie } });
+      const [first] = listed.json<{ items: MealItem[] }>().items;
+      expect(first?.foods.find((f) => f.slug === "milk")?.kind).toBe("info");
+    });
   });
 });

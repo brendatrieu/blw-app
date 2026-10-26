@@ -29,6 +29,11 @@ export type StorageLocation = z.infer<typeof storageLocationSchema>;
  */
 export const PLATE_ITEMS_MAX = 70;
 export const PLATE_LEFT_OUT_MAX = 50;
+
+/** The 400's `details.items` when nothing on a plate counts as a food
+ * (every ingredient of its only recipe left out): the client says so in its
+ * own words instead of a generic "try again" (VERIFY-p2-c1 #3). */
+export const PLATE_NOTHING_COUNTS = "nothing on the plate counts as a food";
 export const PLATE_SERVINGS_MAX = 99;
 
 const uuid = z.string().uuid();

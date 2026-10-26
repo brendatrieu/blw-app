@@ -6,7 +6,7 @@
 // unchanged. Older request shapes never come here: they run their own code
 // verbatim and end with the per-meal heal (db/migrate.ts `healMealItems`).
 import { and, asc, eq, inArray, notInArray, sql } from "drizzle-orm";
-import { MEAL_FOODS_MAX, MEAL_RECIPES_MAX, type PlateItemInput } from "@blw/shared";
+import { MEAL_FOODS_MAX, MEAL_RECIPES_MAX, PLATE_NOTHING_COUNTS, type PlateItemInput } from "@blw/shared";
 import { healMealItems } from "../db/migrate.js";
 import { mealFoods, mealItems, mealRecipes, mealStorageItems, meals, storageItemRecipes, storageItems } from "../db/schema.js";
 import {
@@ -300,7 +300,7 @@ export async function writePlate(tx: Transaction, write: PlateWrite): Promise<st
 
   // 4. Something on the plate has to count, and the legacy limits hold.
   const exposure = new Set(desired.flatMap((row) => (row.foodId ? [row.foodId] : row.countedFoodIds)));
-  if (exposure.size === 0) throw bad({ items: "nothing on the plate counts as a food" });
+  if (exposure.size === 0) throw bad({ items: PLATE_NOTHING_COUNTS });
   if (exposure.size > MEAL_FOODS_MAX) throw bad({ items: `at most ${MEAL_FOODS_MAX} foods per meal` });
   if (new Set(desired.flatMap((row) => (row.recipeId ? [row.recipeId] : []))).size > MEAL_RECIPES_MAX) {
     throw bad({ items: `at most ${MEAL_RECIPES_MAX} recipes per meal` });

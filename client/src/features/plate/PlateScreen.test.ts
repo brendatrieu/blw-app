@@ -10,7 +10,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import type { Baby, FoodListItem, MealItem, StorageItem } from "@blw/shared";
 
-const h = vi.hoisted(() => ({ meal: { data: undefined as unknown, isError: false } }));
+const h = vi.hoisted(() => ({ meal: { data: undefined as unknown, isError: false }, offline: false }));
+vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
 vi.mock("../tracking/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useMeal: () => ({ ...h.meal, refetch: async () => ({}) }),
@@ -173,10 +174,31 @@ describe("PlateScreen (render)", () => {
     expect(gone).not.toContain('id="plate-when"');
     h.meal = { data: undefined, isError: false };
   });
+
+  it("Edit opened offline with no meal yet says so, not an endless skeleton or \"gone\" (VERIFY-p2-c1 #6)", () => {
+    h.offline = true;
+    for (const meal of [
+      { data: undefined, isError: false },
+      { data: undefined, isError: true },
+    ]) {
+      h.meal = meal;
+      const html = renderAt(`/log-meal?edit=${MEAL.id}`);
+      expect(html).toContain("You&#x27;re offline.");
+      expect(html).not.toContain("skeleton");
+      expect(html).not.toContain("That meal is gone");
+      expect(html).not.toContain('id="plate-when"');
+    }
+    // A meal already in hand opens as usual (Save waits, as ledger 766 has it).
+    h.meal = { data: MEAL, isError: false };
+    expect(renderAt(`/log-meal?edit=${MEAL.id}`)).toContain('id="plate-when"');
+    h.offline = false;
+    h.meal = { data: undefined, isError: false };
+  });
 });
 
 describe("resolvePlateStart", () => {
   const base = {
+    offline: false,
     meal: { isError: false, data: undefined },
     storageId: null,
     containers: [] as StorageItem[],
@@ -190,6 +212,15 @@ describe("resolvePlateStart", () => {
     expect(resolvePlateStart({ ...base, mode: "edit", meal: { isError: true, data: undefined } })).toEqual({ status: "missing" });
     const ready = resolvePlateStart({ ...base, mode: "edit", meal: { isError: false, data: MEAL } });
     expect(ready.status === "ready" && ready.plate.map((entry) => entry.kind)).toEqual(["recipe"]);
+  });
+
+  it("Edit offline: offline until the meal answers, whatever the paused fetch says; a meal in hand is ready", () => {
+    const offline = { ...base, mode: "edit" as const, offline: true };
+    expect(resolvePlateStart(offline)).toEqual({ status: "offline" });
+    expect(resolvePlateStart({ ...offline, meal: { isError: true, data: undefined } })).toEqual({ status: "offline" });
+    expect(resolvePlateStart({ ...offline, meal: { isError: false, data: MEAL } }).status).toBe("ready");
+    // Log meal and Serve are unchanged offline.
+    expect(resolvePlateStart({ ...base, mode: "log", offline: true })).toEqual({ status: "ready", plate: [] });
   });
 
   it("Serve: the container from either list; missing only once both lists have answered without it", () => {

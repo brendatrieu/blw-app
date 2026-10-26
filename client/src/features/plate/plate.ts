@@ -49,6 +49,13 @@ export interface RecipeEntry {
    * only when the parent changed it: an unchanged one keeps what the item
    * counted (BUILD-2.0). Empty on a new item. */
   savedLeftOut: string[];
+  /** The recipe's current ingredients, once its Ingredients panel has
+   * loaded them (the first tick sends them), so the plate can tell when
+   * every one is left out. */
+  ingredientIds?: string[];
+  /** A saved item rebuilt from a meal logged before the plate (chair
+   * §10.1): it cannot know what was left out, so it offers no Ingredients. */
+  inferred?: boolean;
   rating: number | null;
 }
 
@@ -81,7 +88,8 @@ export type PlateAction =
   | { type: "remove"; key: string }
   /** `partId` (a food or recipe id) names a container's part. */
   | { type: "rate"; key: string; partId?: string; rating: number | null }
-  | { type: "toggleLeftOut"; key: string; food: PlateFoodRef }
+  /** `ingredientIds`: the recipe's current ingredients, as the panel shows them. */
+  | { type: "toggleLeftOut"; key: string; food: PlateFoodRef; ingredientIds?: string[] }
   | { type: "servings"; key: string; servings: number };
 
 /** Ledger 799: one key per thing that can be on the plate once, the server's own rule. */
@@ -192,6 +200,27 @@ export function plateLeftoverSource(plate: readonly PlateEntry[]): LeftoverSourc
 export const hasLeftovers = (source: LeftoverSourceKind): boolean =>
   source.kind === "recipe" || source.foodIds.length > 0;
 
+/**
+ * Nothing on the plate would count as a food: only recipes, each with every
+ * ingredient left out (the server refuses it, `PLATE_NOTHING_COUNTS`). A
+ * recipe whose ingredients were never loaded, a food or a container always
+ * counts here; the server's answer covers the rest.
+ */
+export function nothingCounts(plate: readonly PlateEntry[]): boolean {
+  return (
+    plate.length > 0 &&
+    plate.every(
+      (entry) =>
+        entry.kind === "recipe" &&
+        entry.ingredientIds !== undefined &&
+        entry.ingredientIds.every((id) => entry.leftOut.some((food) => food.id === id)),
+    )
+  );
+}
+
+/** What the plate says when nothing on it counts (VERIFY-p2-c1 #3). */
+export const NOTHING_COUNTS_MESSAGE = "Leave at least one food on the plate.";
+
 export type PlateField = "items" | "leftoverBestBy";
 export type PlateErrors = FormErrors<PlateField>;
 
@@ -199,13 +228,16 @@ export type PlateErrors = FormErrors<PlateField>;
 export const PLATE_FIELD_ORDER: readonly PlateField[] = ["items", "leftoverBestBy"];
 
 /**
- * The plate's own rules (item 235): something on the plate, and, while the
+ * The plate's own rules (item 235): something on the plate that counts as
+ * a food, and, while the
  * leftovers switch is on, a Best by no earlier than the day they are put
  * away (these leftovers are prepared now). When is never empty and every
  * other field is optional. An empty object means valid.
  */
 export function validatePlate(values: {
   itemCount: number;
+  /** `nothingCounts` of the plate. */
+  nothingCounts?: boolean;
   leftoversOpen?: boolean;
   leftoverBestBy?: string;
   /** What the leftovers are prepared at, i.e. now; passed so this stays pure. */
@@ -213,6 +245,7 @@ export function validatePlate(values: {
 }): PlateErrors {
   const errors: PlateErrors = {};
   if (values.itemCount === 0) errors.items = "Add at least one food";
+  else if (values.nothingCounts) errors.items = NOTHING_COUNTS_MESSAGE;
   if (values.leftoversOpen && isBestByBeforePrepared(values.leftoverBestBy, values.leftoverPreparedAt ?? new Date())) {
     errors.leftoverBestBy = BEST_BY_BEFORE_PREPARED_MESSAGE;
   }
@@ -281,6 +314,7 @@ export function fromMeal(meal: Pick<MealItem, "items">, containers: readonly Sto
         recipe: item.recipe,
         leftOut: item.leftOut,
         savedLeftOut: item.leftOut.map((food) => food.id),
+        inferred: item.inferred,
         rating: item.rating,
       };
     }
@@ -365,6 +399,7 @@ export function plateReducer(plate: readonly PlateEntry[], action: PlateAction):
         const out = entry.leftOut.some((food) => food.id === action.food.id);
         return {
           ...entry,
+          ingredientIds: action.ingredientIds ?? entry.ingredientIds,
           leftOut: out
             ? entry.leftOut.filter((food) => food.id !== action.food.id)
             : [...entry.leftOut, action.food].sort(byName),

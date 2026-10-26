@@ -8,6 +8,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import type { PGlite } from "@electric-sql/pglite";
 import type { FastifyInstance } from "fastify";
 import {
+  PLATE_NOTHING_COUNTS,
   mealItemSchema,
   plateInputFromItems,
   type AllergenProgressResponse,
@@ -223,6 +224,11 @@ describe("plate writes (ledger 901, step 1b)", () => {
         const response = await create(payload);
         expect(response.statusCode, JSON.stringify(payload)).toBe(code);
       }
+      // The client words this one itself (VERIFY-p2-c1 #3), keyed on the shared constant.
+      const allOut = await create({
+        items: [{ kind: "recipe", recipeId: fx.muffins.id, leftOutFoodIds: [fx.egg.id, fx.banana.id] }],
+      });
+      expect(allOut.json()).toEqual({ error: "invalid_request", details: { items: PLATE_NOTHING_COUNTS } });
       expect(await db.select().from(schema.meals)).toEqual(before);
     });
 

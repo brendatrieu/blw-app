@@ -218,6 +218,7 @@ describe("tracking routes", () => {
           rating: null,
           // An ingredient of the meal's recipe (ledger 752).
           inRecipe: true,
+          kind: "food",
         },
       ]);
       // Ledger 752: the recipe list beside the single-recipe fields.

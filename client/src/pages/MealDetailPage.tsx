@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { awaitingDetail } from "../lib/detailQuery.js";
+import { useIsOffline } from "../lib/online.js";
 import type { MealItem } from "@blw/shared";
 import { useMeals, useUpdateMeal } from "../features/tracking/hooks.js";
 import { SavedItemRow } from "../features/plate/PlateItemRow.js";
@@ -52,7 +53,9 @@ function servedAtLabel(iso: string): string {
  * The body is CD-Meal-Page (plan SPEC §5): what was on the plate, one item
  * card each with its stars (a tap saves that item), then "Counted as tried"
  * (`meal.foods`, the foods this meal counts toward, so a parent can see a
- * left-out food was not counted), the reaction note and the notes. A
+ * left-out food was not counted; an `info` food such as whole milk is never
+ * a food tried, so it is left out here too), the reaction note and the
+ * notes. Offline the stars wait, like every plate write (SPEC §4.4). A
  * container links back to the storage batch it was served from, so the
  * storage ⇄ meal traceback stays navigable in both directions.
  */
@@ -69,6 +72,7 @@ export function MealDetailPage() {
   // value while it does. A 409 `meal_changed` (an item another write
   // replaced) refetches the meal like any settled edit.
   const updateMeal = useUpdateMeal(activeBaby?.id);
+  const offline = useIsOffline();
   const goBack = useBackNavigate("/");
 
   const meal = meals.data?.items.find((candidate) => candidate.id === id) ?? null;
@@ -118,13 +122,15 @@ export function MealDetailPage() {
                 key={item.kind === "storage" ? item.storageItemId : item.id}
                 item={item}
                 pending={pending?.itemRatings}
+                disabled={offline}
                 // One item per tap, merged server-side.
                 onRate={(itemId, value) => updateMeal.mutate({ id: meal.id, input: { itemRatings: { [itemId]: value } } })}
               />
             ))}
           </ul>
         )}
-        {updateMeal.isError && (
+        {offline && <p className="mt-2 text-xs text-[var(--color-text-muted)]">You're offline.</p>}
+        {updateMeal.isError && !offline && (
           <p role="alert" className="mt-2 text-xs text-[var(--color-danger)]">
             Couldn't save that rating — try again.
           </p>
@@ -134,7 +140,9 @@ export function MealDetailPage() {
           Counted as tried
         </span>
         <ul aria-labelledby="meal-counted" className="mt-1.5 flex flex-wrap gap-1.5">
-          {meal.foods.map((food) => (
+          {meal.foods
+            .filter((food) => food.kind !== "info")
+            .map((food) => (
             <li
               key={food.id}
               className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] px-[9px] py-[3px] text-[13px] text-[var(--color-text)]"
@@ -143,7 +151,7 @@ export function MealDetailPage() {
               <DeletedMark deleted={food.deleted} />
               <AllergenChips allergens={food.allergens ?? []} />
             </li>
-          ))}
+            ))}
         </ul>
 
         {meal.reactionNote && (

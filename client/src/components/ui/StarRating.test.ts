@@ -94,8 +94,15 @@ describe("StarRating behaviour", () => {
 
   it("the hidden Clear resets to not rated (null, never 0)", () => {
     const set: (number | null)[] = [];
-    (clear(tree(2, (value) => set.push(value)))!.props.onClick as () => void)();
+    (clear(tree(2, (value) => set.push(value)))!.props.onClick as (event: unknown) => void)({ currentTarget: {} });
     expect(set).toEqual([null]);
+  });
+
+  it("the hidden Clear hands focus to the first star, since it unmounts itself (VERIFY-p2-c1 #8)", () => {
+    const focused: number[] = [];
+    const group = { firstElementChild: { focus: () => focused.push(1) } };
+    (clear(tree(4))!.props.onClick as (event: unknown) => void)({ currentTarget: { previousElementSibling: group } });
+    expect(focused).toEqual([1]);
   });
 
   it("arrow keys move the choice and the focus together", () => {

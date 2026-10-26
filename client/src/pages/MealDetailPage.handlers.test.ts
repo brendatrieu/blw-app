@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   mutations: [] as unknown[],
   pending: undefined as unknown,
   sets: [] as unknown[],
+  offline: false,
 }));
 
 vi.mock("react", async (importOriginal) => {
@@ -20,6 +21,7 @@ vi.mock("react-router-dom", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, useParams: () => ({ id: (h.meal as MealItem).id }) };
 });
+vi.mock("../lib/online.js", () => ({ useIsOffline: () => h.offline }));
 vi.mock("../components/ui/BackButton.js", () => ({ BackButton: () => null, useBackNavigate: () => () => {} }));
 vi.mock("../features/babies/useActiveBaby.js", () => ({
   useActiveBaby: () => ({ activeBaby: { id: "baby-1" }, isLoading: false }),
@@ -144,6 +146,16 @@ describe("MealDetailPage stars (item 574, ledger 902)", () => {
 
   it("ignores a save in flight for another meal", () => {
     expect(lines(render(MEAL, { id: "other", input: { itemRatings: { [id(11)]: 1 } } }))[1]).toEqual(["Rating for Egg", null]);
+  });
+
+  it("offline, every star waits, and the page says why (SPEC §4.4, VERIFY-p2-c1 #7)", () => {
+    h.offline = true;
+    const tree = render(MEAL);
+    h.offline = false;
+    expect(stars(tree).map((star) => star.props.disabled)).toEqual([true, true, true, true]);
+    expect(JSON.stringify(tree)).toContain("You're offline.");
+    expect(stars(render(MEAL)).map((star) => star.props.disabled)).toEqual([false, false, false, false]);
+    expect(JSON.stringify(render(MEAL))).not.toContain("You're offline.");
   });
 
   it("an older cached body without items shows no stars until the list refreshes", () => {

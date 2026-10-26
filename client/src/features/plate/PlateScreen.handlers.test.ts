@@ -9,7 +9,7 @@
 // React's useState/useRef are a store, so the form is called as a plain
 // function, its element tree read and its callbacks invoked.
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { MealItem, StorageItem } from "@blw/shared";
+import { PLATE_NOTHING_COUNTS, type MealItem, type StorageItem } from "@blw/shared";
 
 const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], refs: [] as { current: unknown }[], i: 0, r: 0 };
@@ -290,6 +290,33 @@ describe("Log meal: Add more is the only adder (ledger 902)", () => {
     expect(saveButton(again()).props.disabled).toBe(true);
     submit();
     expect(h.creates).toEqual([]);
+  });
+
+  it("leaving every ingredient of the only recipe out holds the save, in its own words (VERIFY-p2-c1 #3)", () => {
+    render("log");
+    addMore({ recipes: [PASTA] });
+    dispatch({ type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: CASHEWS, ingredientIds: [CASHEWS.id, EGG.id] });
+    dispatch({ type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: EGG });
+    expect(saveButton(again()).props.disabled).toBe(false);
+    submit();
+    expect(h.creates).toEqual([]);
+    expect(text(again())).toContain("Leave at least one food on the plate.");
+    expect(text(again())).not.toContain("Couldn't save that — try again.");
+    // Ticking one back lets it save.
+    dispatch({ type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: EGG });
+    expect(text(again())).not.toContain("Leave at least one food on the plate.");
+    submit();
+    expect(h.creates).toHaveLength(1);
+  });
+
+  it("the server's own nothing-counts 400 says the same, not \"try again\"; any other 400 stays generic", () => {
+    render("edit", fromMeal(MEAL), { meal: MEAL });
+    h.mutation.isError = true;
+    h.mutation.error = new ApiError(400, "invalid_request", { error: "invalid_request", details: { items: PLATE_NOTHING_COUNTS } });
+    expect(text(again())).toContain("Leave at least one food on the plate.");
+    expect(text(again())).not.toContain("Couldn't save that — try again.");
+    h.mutation.error = new ApiError(400, "invalid_request", { error: "invalid_request", details: { items: "at most 50 foods per meal" } });
+    expect(text(again())).toContain("Couldn't save that — try again.");
   });
 
   it("says Couldn't save that when a save fails", () => {

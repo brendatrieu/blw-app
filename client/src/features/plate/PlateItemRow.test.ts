@@ -219,8 +219,22 @@ describe("a fresh recipe (CD-Leave-Out)", () => {
         type: "toggleLeftOut",
         key: `recipe:${PASTA.id}`,
         food: { id: id(5), slug: "garlic", name: "Garlic", emoji: null, deleted: undefined },
+        // The panel's ingredients (A–Z), so the plate can tell when all are out (VERIFY-p2-c1 #3).
+        ingredientIds: [id(1), id(4), id(5), id(6)],
       },
     ]);
+  });
+
+  it("rebuilt from a meal logged before the plate (inferred): no Ingredients, no Left out (VERIFY-p2-c1 #1)", () => {
+    const inferred = { ...RECIPE, id: id(30), inferred: true };
+    const out = html(inferred);
+    expect(out).not.toContain("Ingredients");
+    expect(out).not.toContain("aria-controls");
+    expect(out).not.toContain("Left out");
+    expect(out).toContain('role="radiogroup" aria-label="Rating for Creamy Cashew');
+    expect(out).toContain(`aria-label="Remove ${PASTA.title.replace("&", "&amp;")}"`);
+    // The same recipe saved with the plate keeps its Ingredients.
+    expect(html({ ...inferred, inferred: false })).toContain(">Ingredients</span>");
   });
 
   it("while the ingredients load, a placeholder; if they can't, says so", () => {

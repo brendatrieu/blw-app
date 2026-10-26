@@ -21,6 +21,7 @@ import {
   fromMeal,
   hasLeftovers,
   mealLines,
+  nothingCounts,
   plateAddMoreServing,
   plateLeftoverSource,
   plateReducer,
@@ -31,6 +32,7 @@ import {
   validatePlate,
   type ContainerEntry,
   type PlateEntry,
+  type PlateFoodRef,
   type RecipeEntry,
 } from "./plate.js";
 
@@ -268,7 +270,17 @@ const FIELDS = { servedAt: new Date("2026-10-14T12:20:00.000Z"), reactionNote: "
 describe("fromMeal", () => {
   it("a saved meal as a plate: kept items by id, stars, leave-out, servings as taken", () => {
     const plate = fromMeal(MEAL, [CONTAINER]);
-    expect(plate[0]).toEqual({ kind: "recipe", id: id(100), recipe: PASTA, leftOut: [CASHEW], savedLeftOut: [CASHEW.id], rating: 5 });
+    expect(plate[0]).toEqual({
+      kind: "recipe",
+      id: id(100),
+      recipe: PASTA,
+      leftOut: [CASHEW],
+      savedLeftOut: [CASHEW.id],
+      inferred: false,
+      rating: 5,
+    });
+    // A legacy (inferred) recipe says so, so the row offers no Ingredients (VERIFY-p2-c1 #1).
+    expect(plate[3]).toMatchObject({ kind: "recipe", recipe: PATTIES, inferred: true });
     expect(plate[1]).toEqual({ kind: "food", id: id(101), food: EGG, rating: null });
     expect(plate[2]).toEqual({
       kind: "storage",
@@ -421,11 +433,45 @@ describe("plateLeftoverSource", () => {
   });
 });
 
+describe("nothingCounts (VERIFY-p2-c1 #3)", () => {
+  const PASTA_IDS = [CASHEW.id, GARLIC.id];
+  const leaveOut = (plate: PlateEntry[], key: string, ...foods: PlateFoodRef[]) =>
+    foods.reduce((acc, food) => plateReducer(acc, { type: "toggleLeftOut", key, food, ingredientIds: PASTA_IDS }), plate);
+
+  it("is a plate of recipes each with every current ingredient left out", () => {
+    const plate = leaveOut(add({ recipes: [PASTA] }), `recipe:${PASTA.id}`, CASHEW, GARLIC);
+    expect((plate[0] as RecipeEntry).ingredientIds).toEqual(PASTA_IDS);
+    expect(nothingCounts(plate)).toBe(true);
+    // Ticking one back: it counts again.
+    expect(nothingCounts(leaveOut(plate, `recipe:${PASTA.id}`, GARLIC))).toBe(false);
+  });
+
+  it("is false while anything else is on the plate, or one ingredient is still ticked, or the ingredients never loaded", () => {
+    expect(nothingCounts(leaveOut(add({ recipes: [PASTA] }), `recipe:${PASTA.id}`, CASHEW))).toBe(false);
+    expect(nothingCounts(leaveOut(add({ recipes: [PASTA], foods: [EGG] }), `recipe:${PASTA.id}`, CASHEW, GARLIC))).toBe(false);
+    expect(nothingCounts(leaveOut(add({ items: [CONTAINER], recipes: [PASTA] }), `recipe:${PASTA.id}`, CASHEW, GARLIC))).toBe(false);
+    expect(nothingCounts(add({ recipes: [PASTA] }))).toBe(false);
+    expect(nothingCounts([])).toBe(false);
+  });
+
+  it("a toggle that names no ingredients keeps the ones already known", () => {
+    let plate = leaveOut(add({ recipes: [PASTA] }), `recipe:${PASTA.id}`, CASHEW);
+    plate = plateReducer(plate, { type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: GARLIC });
+    expect(nothingCounts(plate)).toBe(true);
+  });
+});
+
 // Item 235's rules, ported from LogFoodForm's validateLogFood.
 describe("validatePlate", () => {
   it("needs something on the plate, phrased as a list error, and clears once there is", () => {
     expect(validatePlate({ itemCount: 0 }).items).toBe("Add at least one food");
     expect(validatePlate({ itemCount: 1 })).toEqual({});
+  });
+
+  it("refuses a plate where nothing counts, in its own words (VERIFY-p2-c1 #3)", () => {
+    expect(validatePlate({ itemCount: 1, nothingCounts: true }).items).toBe("Leave at least one food on the plate.");
+    expect(validatePlate({ itemCount: 0, nothingCounts: true }).items).toBe("Add at least one food");
+    expect(validatePlate({ itemCount: 1, nothingCounts: false })).toEqual({});
   });
 
   // Item 333: leftovers are prepared NOW, so a best-by date behind today
