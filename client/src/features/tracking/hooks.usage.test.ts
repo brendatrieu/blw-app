@@ -62,18 +62,42 @@ function optionsFor(create: () => unknown): Options {
   return captured[0]!;
 }
 
+/** A Log meal save in the plate shape (ledger 902): two fresh foods and a
+ * fresh recipe. */
 const INPUT: {
-  foodIds: string[];
-  recipeId: string | null;
-  recipeIds?: string[];
+  items: Array<Record<string, unknown>>;
   servedAt: string;
   reactionNote: string | null;
   notes: string | null;
 } = {
-  foodIds: ["f1", "f2", "f3"],
-  recipeId: null,
+  items: [
+    { kind: "food", foodId: "f1", rating: null },
+    { kind: "food", foodId: "f2", rating: null },
+  ],
   servedAt: "2026-09-13T12:00:00.000Z",
   reactionNote: null,
+  notes: null,
+};
+/** The saved meal the server answers with: three foods counted as tried. */
+const CREATED = { id: "m1", foods: [{ id: "f1" }, { id: "f2" }, { id: "f3" }], recipes: [], recipeId: null };
+
+const CONTAINER = {
+  id: "s1",
+  label: "Leftovers",
+  foods: [{ id: "f-oats", slug: "oats", name: "Oats", emoji: null }],
+  recipeId: null,
+  recipeTitle: null,
+  preparedAt: "2026-09-08T12:00:00.000Z",
+  location: "fridge",
+  status: "active",
+  statusChangedAt: "2026-09-08T12:00:00.000Z",
+  expiresAt: "2026-09-15T12:00:00.000Z",
+  useSoon: true,
+  expired: false,
+  quantityNote: null,
+  servingsTotal: 4,
+  servingsLeft: 2,
+  bestBy: null,
   notes: null,
 };
 
@@ -88,10 +112,15 @@ afterEach(() => {
 });
 
 describe("useCreateMeal — meal_logged", () => {
-  function succeed(overrides: Partial<typeof INPUT> = {}, context?: { hadAnyMeals: boolean }) {
-    const options = optionsFor(() => useCreateMeal("baby-1", { leftoversSaved: true }));
+  function succeed(
+    overrides: Partial<typeof INPUT> = {},
+    context?: { hadAnyMeals: boolean },
+    created: Record<string, unknown> = {},
+    usage: Record<string, unknown> = { leftoversSaved: true },
+  ) {
+    const options = optionsFor(() => useCreateMeal("baby-1", usage as never));
     options.onSuccess!(
-      { id: "m1" } as never,
+      { ...CREATED, ...created } as never,
       { ...INPUT, ...overrides } as never,
       (context ?? { hadAnyMeals: true, previousProgress: undefined }) as never,
     );
@@ -104,6 +133,7 @@ describe("useCreateMeal — meal_logged", () => {
       [
         "meal_logged",
         {
+          // What the meal counts as tried (the saved meal), not the item count.
           food_count: "3",
           recipe_kind: "none",
           from_storage: false,
@@ -113,13 +143,14 @@ describe("useCreateMeal — meal_logged", () => {
           is_first_meal: false,
           backdated: "now",
           offline: false,
+          has_left_out: false,
         },
       ],
     ]);
     vi.useRealTimers();
   });
 
-  it("derives `via` from the route the form was opened at", () => {
+  it("derives `via` from the route the plate was opened at", () => {
     vi.stubGlobal("window", { location: { pathname: "/log-meal", search: "?food=sweet-potato-id" } });
     expect(succeed()[0]![1]).toMatchObject({ via: "food_page" });
     tracked.length = 0;
@@ -147,14 +178,96 @@ describe("useCreateMeal — meal_logged", () => {
     vi.stubGlobal("navigator", { onLine: false });
     expect(succeed()[0]![1]).toMatchObject({ offline: true });
   });
-  // Ledger 759: the Log meal form sends `recipeIds`; two or more are
-  // `several`, one reads as that recipe's kind.
-  it("reads the recipe kind off recipeIds", () => {
-    const two = succeed({ recipeIds: ["r1", "r2"] })[0]![1];
+
+  // Ledger 759 / SPEC §6: the kind reads the meal's distinct recipes — fresh
+  // or inside a container, a recipe twice is one.
+  it("reads the recipe kind off the saved meal's recipes", () => {
+    const two = succeed({}, undefined, { recipes: [{ id: "r1" }, { id: "r2" }], recipeId: "r1" })[0]![1];
     expect(two).toMatchObject({ recipe_kind: "several", includes_basic: false });
     tracked.length = 0;
-    expect(succeed({ recipeIds: ["r1"] })[0]![1]).toMatchObject({ recipe_kind: "catalog" });
-    expect(succeed({ recipeIds: ["r1"] })[0]![1]).not.toHaveProperty("includes_basic");
+    expect(succeed({}, undefined, { recipes: [{ id: "r1" }], recipeId: "r1" })[0]![1]).toMatchObject({ recipe_kind: "catalog" });
+    expect(succeed({}, undefined, { recipes: [{ id: "r1" }], recipeId: "r1" })[0]![1]).not.toHaveProperty("includes_basic");
+  });
+
+  // SPEC §6: a flag, never which ingredient.
+  it("says whether a recipe left something out, never what", () => {
+    const leftOut = { kind: "recipe", recipeId: "r1", leftOutFoodIds: ["f-cashew"], rating: null };
+    const props = succeed({ items: [...INPUT.items, leftOut] })[0]![1];
+    expect(props).toMatchObject({ has_left_out: true });
+    expect(JSON.stringify(props)).not.toContain("f-cashew");
+    tracked.length = 0;
+    expect(succeed({ items: [{ ...leftOut, leftOutFoodIds: [] }] })[0]![1]).toMatchObject({ has_left_out: false });
+  });
+});
+
+// Ledger 902: Serve is the plate page too (`/log-meal?storage=`), so a serve
+// is a meal_logged with from_storage, and a container it empties is closed.
+describe("useCreateMeal — a serve from storage", () => {
+  const SERVE = { ...INPUT, items: [{ kind: "storage", storageItemId: "s1", servings: 2 }] };
+  function serve(containers: Array<Record<string, unknown>>, items: Array<Record<string, unknown>> = SERVE.items) {
+    vi.stubGlobal("window", { location: { pathname: "/log-meal", search: "?storage=s1" } });
+    const options = optionsFor(() => useCreateMeal("baby-1", { leftoversSaved: false, containers } as never));
+    options.onSuccess!({ ...CREATED, foods: [{ id: "f-oats" }] } as never, { ...SERVE, items } as never, {
+      hadAnyMeals: true,
+    } as never);
+    return tracked;
+  }
+
+  it("logs the meal with from_storage and the storage_serve entry point", () => {
+    vi.setSystemTime(new Date("2026-09-13T12:00:30.000Z"));
+    expect(serve([{ ...CONTAINER, servingsLeft: 4 }])).toEqual([
+      [
+        "meal_logged",
+        {
+          food_count: "1",
+          recipe_kind: "none",
+          from_storage: true,
+          via: "storage_serve",
+          leftovers_saved: false,
+          has_notes: false,
+          is_first_meal: false,
+          backdated: "now",
+          offline: false,
+          has_left_out: false,
+        },
+      ],
+    ]);
+    vi.useRealTimers();
+  });
+
+  it("also closes a container the serve emptied, in buckets only", () => {
+    vi.setSystemTime(new Date("2026-09-13T12:00:00.000Z"));
+    const events = serve([CONTAINER]); // 2 left, 2 served
+    expect(events.map(([name]) => name)).toEqual(["meal_logged", "storage_item_closed"]);
+    expect(events[1]![1]).toEqual({
+      to: "finished",
+      via: "serve_depleted",
+      freshness_at_change: "use_soon",
+      // Prepared on the 8th, served on the 13th.
+      age_days_bucket: "4-7",
+    });
+    vi.useRealTimers();
+  });
+
+  // Ledger 760: one sitting, several containers — one meal event, and one
+  // close for EACH container this save emptied (and none for the others).
+  it("sends one close per container emptied, none for one with servings left, untracked or kept", () => {
+    const containers = [
+      CONTAINER,
+      { ...CONTAINER, id: "s2", servingsLeft: 3 },
+      { ...CONTAINER, id: "s3", servingsLeft: 1 },
+      { ...CONTAINER, id: "s4", servingsTotal: null, servingsLeft: null },
+      { ...CONTAINER, id: "s5", servingsLeft: 1 },
+    ];
+    const items = [
+      { kind: "storage", storageItemId: "s1", servings: 2 },
+      { kind: "storage", storageItemId: "s2", servings: 2 },
+      { kind: "storage", storageItemId: "s3", servings: 1 },
+      { kind: "storage", storageItemId: "s4", servings: 5 },
+      // A container kept by an edit sends no servings: it takes nothing new.
+      { kind: "storage", storageItemId: "s5" },
+    ];
+    expect(serve(containers, items).map(([name]) => name)).toEqual(["meal_logged", "storage_item_closed", "storage_item_closed"]);
   });
 });
 

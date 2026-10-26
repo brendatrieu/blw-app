@@ -129,6 +129,8 @@ describe("via — derived from the route, never wired to a button", () => {
     expect(mealViaFromLocation({ pathname: "/log-meal", search: "" })).toBe("log_page");
     expect(mealViaFromLocation({ pathname: "/log-meal", search: "?food=abc" })).toBe("food_page");
     expect(mealViaFromLocation({ pathname: "/log-meal", search: "?recipe=abc" })).toBe("recipe_page");
+    // Ledger 902: a container's Serve opens the same page.
+    expect(mealViaFromLocation({ pathname: "/log-meal", search: "?storage=abc" })).toBe("storage_serve");
     // Editing (`?edit=`) is still the log page.
     expect(mealViaFromLocation({ pathname: "/log-meal", search: "?edit=abc" })).toBe("log_page");
     expect(mealViaFromLocation({ pathname: "/", search: "" })).toBe("log_page");

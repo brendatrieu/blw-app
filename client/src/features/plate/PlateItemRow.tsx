@@ -10,6 +10,7 @@ import { servePartHint } from "../storage/format.js";
 import {
   entryKey,
   partId,
+  ranOut,
   type ContainerEntry,
   type ContainerPart,
   type FoodEntry,
@@ -254,21 +255,46 @@ function ContainerPlate({ parts }: { parts: readonly ContainerPart[] }) {
 
 const partLabel = (part: ContainerPart) => (part.kind === "food" ? part.food.name : part.recipe.title);
 
+/** The warning triangle of the run-out lines (CD-Serve-Ran-Out). */
+export function WarningGlyph() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="mt-px shrink-0"
+    >
+      <path d="M12 3.5 2.8 19.5h18.4z" />
+      <path d="M12 10v4.2" />
+      <circle cx="12" cy="17" r=".5" fill="currentColor" />
+    </svg>
+  );
+}
+
 /**
  * A container (CD-Serve-From-Storage): plate, title over where it is and
  * what is left, the servings stepper, then its stars: right under the title
  * when it holds one thing, else a line per food or recipe (plate, name,
  * stars), as CD-Log-Meal draws them. A container the saved meal already had
  * also gets × (chair decision, SPEC §5), which puts its servings back; one
- * served before servings were recorded gets × only. The stepper stays
- * between 1 and what the container can give (the reducer clamps, as Serve
- * always did). Where the title would get too narrow, the controls wrap
- * below it, at the right.
+ * served before servings were recorded gets × only. One that has run out
+ * (`ranOut`, CD-Serve-Ran-Out) gets × and its flag instead of a stepper and
+ * stars. The stepper stays between 1 and what the container can give (the
+ * reducer clamps, as Serve always did). Where the title would get too
+ * narrow, the controls wrap below it, at the right.
  */
 export function ContainerItemRow({ entry, dispatch, disabled }: RowProps<ContainerEntry>) {
   const key = entryKey(entry);
-  const kept = entry.savedServings !== undefined;
-  const { servings, title } = entry;
+  const out = ranOut(entry);
+  const removable = entry.savedServings !== undefined || out;
+  const servings = out ? null : entry.servings;
+  const { title } = entry;
   const stars = (part: ContainerPart) => (
     <StarRating
       label={`Rating for ${partLabel(part)}`}
@@ -287,7 +313,7 @@ export function ContainerItemRow({ entry, dispatch, disabled }: RowProps<Contain
           <p className={TITLE}>{title}</p>
           <p className={DETAIL}>{entry.container ? servePartHint(entry.container) : "From storage"}</p>
         </div>
-        {(servings !== null || kept) && (
+        {(servings !== null || removable) && (
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
             {servings !== null && (
               <div className="flex items-center gap-1.5" role="group" aria-label={`Servings: ${title}`}>
@@ -317,7 +343,7 @@ export function ContainerItemRow({ entry, dispatch, disabled }: RowProps<Contain
                 </button>
               </div>
             )}
-            {kept && (
+            {removable && (
               <button
                 type="button"
                 aria-label={`Remove ${title}`}
@@ -331,7 +357,12 @@ export function ContainerItemRow({ entry, dispatch, disabled }: RowProps<Contain
           </div>
         )}
       </div>
-      {entry.parts.length === 1 && only ? (
+      {out ? (
+        <p className="mt-2 ml-[52px] flex gap-2 rounded-[10px] bg-[var(--color-caution-soft)] px-2 py-1.5 text-[13px] leading-[1.35] text-[var(--color-caution-soft-text)]">
+          <WarningGlyph />
+          None left. Remove it to serve the rest.
+        </p>
+      ) : entry.parts.length === 1 && only ? (
         <div className="mt-0.5 ml-[43px]">{stars(only)}</div>
       ) : (
         <div className="mt-0.5">

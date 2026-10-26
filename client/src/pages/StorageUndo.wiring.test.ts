@@ -61,7 +61,7 @@ import { StorageDetailPage } from "./StorageDetailPage.js";
 import { DashboardPage, StorageSection, UpNextCard } from "./DashboardPage.js";
 import { StorageStatusBanner } from "../features/storage/components/StorageStatusBanner.js";
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
-import { ServeSheet } from "../features/storage/components/ServeSheet.js";
+import { MenuLinkItem } from "../components/ui/Menu.js";
 import { PageTrack } from "../components/ui/Pager.js";
 
 interface El {
@@ -124,8 +124,11 @@ describe("Undo after Remove only (ledger 785)", () => {
     for (const menu of menus) expect(menu.props).not.toHaveProperty("onServed");
   });
 
-  it("the kebab's Serve sheet carries no onServed", () => {
+  // Ledger 902: Serve is the plate page now, with this container on it.
+  it("the kebab's Serve opens the plate page for this container", () => {
     const tree = call(StorageItemActionsMenu, { item: h.item, babyId: "baby-1" });
-    expect(findAll(tree, ServeSheet)[0]!.props).not.toHaveProperty("onServed");
+    const rows = (tree.props.children as (close: () => void) => unknown)(() => {});
+    const serve = findAll(rows, MenuLinkItem).find((link) => link.props.children === "Serve");
+    expect(serve!.props.to).toBe(`/log-meal?storage=${h.item.id}`);
   });
 });

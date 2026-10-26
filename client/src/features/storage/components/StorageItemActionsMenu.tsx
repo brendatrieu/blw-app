@@ -1,9 +1,7 @@
-import { useState } from "react";
 import type { StorageItem } from "@blw/shared";
 import { Menu, MenuItem, MenuLinkItem } from "../../../components/ui/Menu.js";
 import { useUpdateStorageItem } from "../hooks.js";
 import { resolveStorageItemMenuActions } from "../format.js";
-import { ServeSheet } from "./ServeSheet.js";
 
 /** The rows this menu can show, in the order it shows them. */
 export type StorageMenuRow = "serve" | "edit" | "remove" | "restore";
@@ -42,7 +40,8 @@ export interface StorageItemActionsMenuProps {
   item: StorageItem;
   /** The baby to serve as. Optional because a list can render before a baby
    * resolves (and History rows never serve at all) — Serve is simply
-   * withheld until there's one, exactly as `StorageItemCard` gates it. */
+   * withheld until there's one, exactly as `StorageItemCard` gates it. The
+   * plate page serves as the active baby. */
   babyId?: string;
   /** Overrides the menu's own discard mutation — `StoragePage` passes its
    * undoable `useStorageStatusChange` setter so removing from the Storage tab
@@ -62,8 +61,9 @@ export interface StorageItemActionsMenuProps {
  * The compact three-dot Actions menu a storage row carries — on Home and,
  * since item 264, on the Storage tab too, replacing that page's
  * Serve/Remove/Edit/Restore footer row so both lists offer one identical
- * action surface. Serve opens the shared `ServeSheet` (item 263); Edit
- * navigates; Remove and Restore are status changes, run by the caller's
+ * action surface. Serve opens the plate page with this container on it
+ * (`/log-meal?storage=:id`, ledger 902); Edit navigates; Remove and Restore
+ * are status changes, run by the caller's
  * handler when it has one (so `StoragePage` keeps its undo banner) and by
  * this menu's own mutation otherwise.
  *
@@ -79,63 +79,51 @@ export function StorageItemActionsMenu({
   busy = false,
   label = "Actions",
 }: StorageItemActionsMenuProps) {
-  const [serveOpen, setServeOpen] = useState(false);
   const updateItem = useUpdateStorageItem();
   const rows = storageMenuRows(item, { hasBaby: Boolean(babyId), canRestore: Boolean(onRestore) });
   const pending = busy || updateItem.isPending;
 
   return (
-    <>
-      <Menu label={label}>
-        {(close) => (
-          <>
-            {rows.includes("serve") && (
-              <MenuItem
-                onSelect={() => {
-                  setServeOpen(true);
-                  close();
-                }}
-              >
-                {STORAGE_MENU_ROW_LABEL.serve}
-              </MenuItem>
-            )}
-            {rows.includes("edit") && (
-              <MenuLinkItem to={`/storage/${item.id}/edit`} onSelect={close}>
-                {STORAGE_MENU_ROW_LABEL.edit}
-              </MenuLinkItem>
-            )}
-            {rows.includes("remove") && (
-              <MenuItem
-                disabled={pending}
-                onSelect={() => {
-                  // Manual removal = discarded; "finished" is reserved for
-                  // automatic depletion when tracked servings reach zero.
-                  if (onRemove) onRemove();
-                  else updateItem.mutate({ id: item.id, input: { status: "discarded" } });
-                  close();
-                }}
-              >
-                {STORAGE_MENU_ROW_LABEL.remove}
-              </MenuItem>
-            )}
-            {rows.includes("restore") && (
-              <MenuItem
-                disabled={pending}
-                onSelect={() => {
-                  onRestore?.();
-                  close();
-                }}
-              >
-                {STORAGE_MENU_ROW_LABEL.restore}
-              </MenuItem>
-            )}
-          </>
-        )}
-      </Menu>
-
-      {babyId && (
-        <ServeSheet item={item} babyId={babyId} open={serveOpen} onClose={() => setServeOpen(false)} />
+    <Menu label={label}>
+      {(close) => (
+        <>
+          {rows.includes("serve") && (
+            <MenuLinkItem to={`/log-meal?storage=${item.id}`} onSelect={close}>
+              {STORAGE_MENU_ROW_LABEL.serve}
+            </MenuLinkItem>
+          )}
+          {rows.includes("edit") && (
+            <MenuLinkItem to={`/storage/${item.id}/edit`} onSelect={close}>
+              {STORAGE_MENU_ROW_LABEL.edit}
+            </MenuLinkItem>
+          )}
+          {rows.includes("remove") && (
+            <MenuItem
+              disabled={pending}
+              onSelect={() => {
+                // Manual removal = discarded; "finished" is reserved for
+                // automatic depletion when tracked servings reach zero.
+                if (onRemove) onRemove();
+                else updateItem.mutate({ id: item.id, input: { status: "discarded" } });
+                close();
+              }}
+            >
+              {STORAGE_MENU_ROW_LABEL.remove}
+            </MenuItem>
+          )}
+          {rows.includes("restore") && (
+            <MenuItem
+              disabled={pending}
+              onSelect={() => {
+                onRestore?.();
+                close();
+              }}
+            >
+              {STORAGE_MENU_ROW_LABEL.restore}
+            </MenuItem>
+          )}
+        </>
       )}
-    </>
+    </Menu>
   );
 }

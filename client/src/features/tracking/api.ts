@@ -1,7 +1,7 @@
 import type {
   AllergenDetail,
   AllergenProgressResponse,
-  CreateMealInput,
+  CreatePlateMealInput,
   FavoritesResponse,
   MarkAllergenEstablishedInput,
   MealItem,
@@ -9,7 +9,7 @@ import type {
   RatingHistoryQuery,
   RatingHistoryResponse,
   RatingsResponse,
-  UpdateMealInput,
+  UpdatePlateMealInput,
 } from "@blw/shared";
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from "../../lib/api.js";
 
@@ -69,11 +69,18 @@ export function fetchMeals(babyId: string, query: MealsQuery = {}): Promise<Meal
   return apiGet<MealsResponse>(`/api/babies/${babyId}/meals${buildMealsQueryString(query)}`);
 }
 
-export function createMeal(babyId: string, input: CreateMealInput): Promise<MealItem> {
+/** One meal with its plate (ledger 901), for Edit meal. */
+export function fetchMeal(id: string): Promise<MealItem> {
+  return apiGet<MealItem>(`/api/meals/${id}`);
+}
+
+/** The app saves meals in the plate shape only (ledger 902); the server
+ * still takes the legacy one from older app versions. */
+export function createMeal(babyId: string, input: CreatePlateMealInput): Promise<MealItem> {
   return apiPost<MealItem>(`/api/babies/${babyId}/meals`, input);
 }
 
-export function updateMeal(id: string, input: UpdateMealInput): Promise<MealItem> {
+export function updateMeal(id: string, input: UpdatePlateMealInput): Promise<MealItem> {
   return apiPatch<MealItem>(`/api/meals/${id}`, input);
 }
 

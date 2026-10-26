@@ -59,7 +59,7 @@ describe("StorageItemActionsMenu (render)", () => {
     expect(html).toContain('aria-label="Actions"');
     expect(html).toContain('aria-haspopup="menu"');
     expect(html).toContain('aria-expanded="false"');
-    // The menu panel and the Serve sheet are both closed by default.
+    // The menu panel is closed by default (Serve opens a page, ledger 902).
     expect(html).not.toContain('role="menu"');
     expect(html).not.toContain('role="dialog"');
   });

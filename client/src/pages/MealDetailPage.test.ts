@@ -263,13 +263,18 @@ describe("MealDetailPage allergen marks (item 334, ledger 554)", () => {
   });
 });
 
-describe("MealDetailPage ratings (item 574)", () => {
-  it("shows one star row per food ABOVE the reaction note", () => {
-    const html = renderMeal({
-      ...MEAL,
-      reactionNote: "rash",
-      foods: [{ ...MEAL.foods[0]!, rating: 5 }, MEAL.foods[1]!],
-    });
+describe("MealDetailPage ratings (item 574, ledger 902)", () => {
+  const RATED: MealItem = {
+    ...MEAL,
+    reactionNote: "rash",
+    items: [
+      { kind: "food", id: "33333333-3333-4333-8333-333333333331", food: MEAL.foods[0]!, rating: 5 },
+      { kind: "food", id: "33333333-3333-4333-8333-333333333332", food: MEAL.foods[1]!, rating: null },
+    ],
+  };
+
+  it("shows one star line per item ABOVE the reaction note", () => {
+    const html = renderMeal(RATED);
     const stars = html.indexOf("Rating<!-- --> <span class=\"font-normal text-[var(--color-text-muted)]\">(optional)</span>");
     expect(stars).toBeGreaterThan(-1);
     expect(stars).toBeLessThan(html.indexOf("Reaction:"));
@@ -278,8 +283,23 @@ describe("MealDetailPage ratings (item 574)", () => {
     expect(html).toMatch(/aria-checked="true" aria-label="5 stars"/);
   });
 
-  it("shows one row, for the recipe, on a recipe meal", () => {
-    const html = renderMeal({ ...MEAL, recipeId: "r1", recipeTitle: "Iron-Rich Purée", recipeRating: 3 });
+  it("shows one line, for the recipe, on a meal of one recipe", () => {
+    const html = renderMeal({
+      ...MEAL,
+      recipeId: "r1",
+      recipeTitle: "Iron-Rich Purée",
+      recipeRating: 3,
+      items: [
+        {
+          kind: "recipe",
+          id: "33333333-3333-4333-8333-333333333333",
+          recipe: { id: "44444444-4444-4444-8444-444444444444", title: "Iron-Rich Purée" },
+          leftOut: [],
+          inferred: true,
+          rating: 3,
+        },
+      ],
+    });
     expect(html.match(/role="radiogroup"/g)).toHaveLength(1);
     expect(html).toContain('aria-label="Rating for Iron-Rich Purée"');
     expect(html).toMatch(/aria-checked="true" aria-label="3 stars"/);
@@ -310,12 +330,21 @@ describe("MealDetailPage, several recipes (ledger 761)", () => {
     expect(html).toContain(">🍳 Salmon Cakes</span>");
   });
 
-  it("rates each recipe, then each food not rated through a recipe (DESIGN-B §2)", () => {
-    const html = renderMeal(SEVERAL);
+  // Ledger 902: each item rates itself; an ingredient of a recipe has no line
+  // of its own unless it was put on the plate on its own too.
+  it("rates each item in plate order: the recipes, then the foods put on the plate on their own", () => {
+    const item = (n: number) => `55555555-5555-4555-8555-55555555555${n}`;
+    const html = renderMeal({
+      ...SEVERAL,
+      items: [
+        { kind: "recipe", id: item(1), recipe: { id: item(5), title: "Lentil Patties" }, leftOut: [], inferred: true, rating: 4 },
+        { kind: "recipe", id: item(2), recipe: { id: item(6), title: "Salmon Cakes" }, leftOut: [], inferred: true, rating: 5 },
+        { kind: "food", id: item(3), food: SEVERAL.foods[1]!, rating: 3 },
+        { kind: "food", id: item(4), food: SEVERAL.foods[3]!, rating: null },
+      ],
+    });
     const labels = [...html.matchAll(/role="radiogroup" aria-label="Rating for ([^"]+)"/g)].map((m) => m[1]);
-    // Egg is an unrated ingredient: no row. Oats is an ingredient that
-    // already holds its own rating: its row stays.
-    expect(labels).toEqual(["Lentil Patties", "Salmon Cakes", "Broccoli", "Oats", "Banana"]);
+    expect(labels).toEqual(["Lentil Patties", "Salmon Cakes", "Broccoli", "Banana"]);
   });
 });
 

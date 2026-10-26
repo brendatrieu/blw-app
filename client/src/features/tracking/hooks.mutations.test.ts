@@ -146,19 +146,21 @@ describe("meal mutations refresh the baby's ratings", () => {
   });
 });
 
-// Ledger 760: a meal delete (and the Serve sheet's Undo, which IS one) can
-// give containers their servings back, so storage refreshes too; an edit can
-// take a served part off the meal, so it does as well.
-describe("meal edits and deletes refresh storage (ledger 760)", () => {
+// Ledger 760/902: every meal write can move servings — a serve takes them, an
+// edit resizes or removes a container, a delete gives them back — and (Phase
+// 4) serve or un-serve a planned meal, so storage and the plan refresh too.
+describe("meal writes refresh storage and the plan (ledgers 760, 902)", () => {
   it.each([
+    ["useCreateMeal", () => useCreateMeal(BABY_ID)],
     ["useUpdateMeal", () => useUpdateMeal(BABY_ID)],
     ["useDeleteMeal", () => useDeleteMeal(BABY_ID)],
-  ])("%s invalidates every storage view on settle", (_name, create) => {
+  ])("%s invalidates every storage view and the plan on settle", (_name, create) => {
     captured.length = 0;
     create();
     invalidated.length = 0;
     (captured[0]!.onSettled as () => void)();
     expect(invalidated).toContainEqual(["storage"]);
+    expect(invalidated).toContainEqual(["plan"]);
   });
 });
 

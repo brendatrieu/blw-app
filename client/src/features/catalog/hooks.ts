@@ -1,4 +1,4 @@
-import { useMutation, useQueries, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type {
   CreateCustomFoodInput,
   CreateCustomRecipeInput,
@@ -97,18 +97,6 @@ export function useRecipe(id: string | undefined) {
     queryFn: () => fetchRecipe(id as string),
     enabled: Boolean(id),
     staleTime: 5 * 60 * 1000,
-  });
-}
-
-/** `useRecipe` for several ids at once, same key and policy (ledger 760:
- * the Serve sheet needs every served recipe's ingredients for its star rows). */
-export function useRecipeDetails(ids: readonly string[]) {
-  return useQueries({
-    queries: ids.map((id) => ({
-      queryKey: catalogKeys.recipe(id),
-      queryFn: () => fetchRecipe(id),
-      staleTime: 5 * 60 * 1000,
-    })),
   });
 }
 

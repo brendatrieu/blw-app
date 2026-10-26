@@ -48,7 +48,7 @@ export function servingsLabel(servingsLeft: number, servingsTotal: number): stri
 }
 
 /**
- * A container's quiet second line in the Serve sheet and its Add more list
+ * A container's quiet second line on the plate and in its Add more list
  * (MR-Serve, ledger 760): "Fridge · 7 of 8 left", or the quantity note on an
  * untracked one ("Fridge · 2 jars"), or just the location.
  */

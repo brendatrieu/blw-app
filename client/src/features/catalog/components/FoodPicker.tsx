@@ -15,9 +15,8 @@ import { HowToLink } from "../../safety/HowToLink.js";
 /**
  * One food as the picker shows it: the id is what meals and storage items are
  * saved against, and the emoji is the food's own when it has one (item 177).
- * Exported so the callers that still need the same option shape for their
- * OTHER controls (LogFoodForm's "which food did the leftovers come from?"
- * select) build it identically instead of re-deriving it.
+ * Exported so a caller that needs the same option shape for its own control
+ * builds it identically instead of re-deriving it.
  *
  * `markers` carries the food's allergens (item 334), which is why building
  * every option through this one function matters: log a meal, add to

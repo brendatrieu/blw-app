@@ -231,6 +231,10 @@ const eventProps = {
       is_first_meal: z.boolean(),
       backdated: backdatedBucketSchema,
       offline: z.boolean(),
+      /** Ledger 902 (plan SPEC §6): whether a recipe on the plate had an
+       * ingredient left out. Never which. Optional: older apps never send it,
+       * and an older server 400s it. */
+      has_left_out: z.boolean().optional(),
     })
     .strict(),
 

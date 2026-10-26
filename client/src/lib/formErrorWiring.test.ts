@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CustomRecipeForm } from "../features/catalog/components/CustomRecipeForm.js";
 import { CustomFoodForm } from "../features/catalog/components/CustomFoodForm.js";
-import { LogFoodForm } from "../features/tracking/components/LogFoodForm.js";
+import { PlateForm } from "../features/plate/PlateScreen.js";
 import { AddStorageItemForm } from "../features/storage/components/AddStorageItemForm.js";
 import { SymptomSurveyForm } from "../features/symptom/components/SymptomSurveyForm.js";
 import { CelebrationProvider } from "../components/ui/Celebration.js";
@@ -119,9 +119,20 @@ describe("required-field errors reach their own field (item 237)", () => {
     expectSubmitEnabled(html);
   });
 
-  it("LogFoodForm: the list message under the Food field", () => {
-    const html = render(createElement(LogFoodForm, { babyId: "baby-1", onDone: () => {} }));
-    expectErrorUnder(html, 'id="log-food-food"', "Add at least one food");
+  it("PlateForm (Log meal): the list message under + Add more, before When", () => {
+    const html = render(
+      createElement(PlateForm, {
+        mode: "log",
+        babyId: "baby-1",
+        initialPlate: [],
+        containers: [],
+        onDone: () => {},
+        onMealChanged: () => {},
+        reloaded: false,
+      }),
+      "/log-meal",
+    );
+    expectErrorUnder(html, 'id="plate-add-more"', "Add at least one food", 'id="plate-when"');
     expect(alertCount(html)).toBe(1);
     expectSubmitEnabled(html);
   });

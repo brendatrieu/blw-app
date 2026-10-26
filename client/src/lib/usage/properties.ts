@@ -157,12 +157,13 @@ export function readLocation(): LocationLike {
  * Where a meal was logged from.
  *
  * `/log-meal?recipe=<id>` is a recipe page's "Log meal"; `?food=<id>` is a
- * food page's. Only the PRESENCE of the param is read — the id itself never
- * leaves this function.
+ * food page's; `?storage=<id>` is a container's Serve (ledger 902). Only the
+ * PRESENCE of the param is read — the id itself never leaves this function.
  */
 export function mealViaFromLocation(location: LocationLike = readLocation()): MealVia {
   if (toRoutePattern(location.pathname) !== "/log-meal") return "log_page";
   const params = new URLSearchParams(location.search);
+  if (params.has("storage")) return "storage_serve";
   if (params.has("recipe")) return "recipe_page";
   if (params.has("food")) return "food_page";
   return "log_page";

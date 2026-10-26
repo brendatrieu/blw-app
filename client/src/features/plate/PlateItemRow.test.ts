@@ -279,6 +279,25 @@ describe("a container", () => {
     expect(out).toContain(">From storage</p>");
   });
 
+  // CD-Serve-Ran-Out: × and the flag, no stepper and no stars.
+  it("run out (Storage says 0 left): its line, the flag, and × in place of the stepper and stars", () => {
+    const entry = containerEntry({ ...MUFFINS, servingsLeft: 0 });
+    const out = html(entry);
+    expect(out).toContain(">Fridge · 0 of 6 left</p>");
+    expect(out).toMatch(
+      /<p class="mt-2 ml-\[52px\] flex gap-2 rounded-\[10px\] bg-\[var\(--color-caution-soft\)\] [^"]*text-\[var\(--color-caution-soft-text\)\]"><svg aria-hidden="true"[^>]*>.*<\/svg>None left\. Remove it to serve the rest\.<\/p>/,
+    );
+    expect(out).not.toContain("Servings:");
+    expect(out).not.toContain('role="radiogroup"');
+    click(byLabel(tree(entry), "Remove Broccoli Cheese Egg Muffins"));
+    expect(actions).toEqual([{ type: "remove", key: `storage:${MUFFINS.id}` }]);
+    // A finished or discarded one too; one the saved meal holds never is.
+    expect(html(containerEntry({ ...MUFFINS, status: "discarded" }))).toContain("None left.");
+    expect(html({ ...containerEntry({ ...MUFFINS, status: "finished", servingsLeft: 0 }), savedServings: 2 })).not.toContain(
+      "None left.",
+    );
+  });
+
   it("lets the controls wrap under a title that would get narrower than 8rem", () => {
     const out = html(containerEntry(MUFFINS));
     expect(out).toContain('<div class="flex flex-wrap items-center gap-x-3">');

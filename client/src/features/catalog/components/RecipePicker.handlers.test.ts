@@ -1,5 +1,5 @@
-// Ledger 759: the picker hands Log meal the whole pick list in multiple mode,
-// and still resolves to one recipe in single mode (a storage container).
+// The picker resolves to one recipe (a storage container's). A meal's
+// recipes are added through the plate's Add more since ledger 902.
 // Called as a plain function with its two hooks stubbed (no DOM, CLAUDE.md).
 import { describe, expect, it, vi } from "vitest";
 
@@ -18,16 +18,7 @@ import { RecipePicker } from "./RecipePicker.js";
 type Combobox = { props: { mode: string; value: string[]; onChange: (next: string[]) => void } };
 const picker = (props: unknown) => (RecipePicker as unknown as (props: unknown) => Combobox)(props);
 
-describe("RecipePicker onChange (ledger 759)", () => {
-  it("multiple: passes every pick through, in order", () => {
-    const onChange = vi.fn();
-    const combobox = picker({ id: "x", multiple: true, value: ["a"], onChange });
-    expect(combobox.props.mode).toBe("multi");
-    expect(combobox.props.value).toEqual(["a"]);
-    combobox.props.onChange(["a", "b"]);
-    expect(onChange).toHaveBeenCalledWith(["a", "b"]);
-  });
-
+describe("RecipePicker onChange", () => {
   it("single: a second pick replaces the first", () => {
     const onChange = vi.fn();
     const combobox = picker({ id: "x", value: "a", onChange });

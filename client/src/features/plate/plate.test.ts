@@ -13,13 +13,20 @@ import {
 } from "@blw/shared";
 import { addMoreDiff, type AddMoreChange, type AddMoreIds, type FreshFood } from "../storage/addMoreSelection.js";
 import {
+  PLATE_FIELD_ORDER,
+  attachContainers,
   containerEntry,
   entryKey,
   fromMeal,
+  hasLeftovers,
   plateAddMoreServing,
+  plateLeftoverSource,
   plateReducer,
+  ranOut,
+  ranOutEntry,
   servingsMax,
   toMealInput,
+  validatePlate,
   type ContainerEntry,
   type PlateEntry,
   type RecipeEntry,
@@ -99,7 +106,6 @@ describe("identity (ledger 799)", () => {
       itemIds: [CONTAINER.id, MUFFIN_TUB.id],
       recipeIds: [PASTA.id],
       foodIds: [EGG.id],
-      covered: { recipeIds: [], foodIds: [] },
     });
   });
 
@@ -336,5 +342,88 @@ describe("toMealInput", () => {
     expect(toMealInput(add({ items: [MUFFIN_TUB] }), FIELDS).items).toEqual([
       { kind: "storage", storageItemId: MUFFIN_TUB.id, servings: 1 },
     ]);
+  });
+});
+
+// CD-Serve-Ran-Out: a container new to the plate that Storage says can give
+// nothing more holds the save until it comes off.
+describe("ranOut", () => {
+  const tub = (patch: Partial<StorageItem>) => containerEntry({ ...MUFFIN_TUB, ...patch });
+
+  it("a new container that is finished, discarded or tracked at 0 left; not one with servings, or untracked", () => {
+    expect(ranOut(tub({ servingsLeft: 0 }))).toBe(true);
+    expect(ranOut(tub({ status: "finished", servingsLeft: 0 }))).toBe(true);
+    expect(ranOut(tub({ status: "discarded" }))).toBe(true);
+    expect(ranOut(tub({}))).toBe(false);
+    expect(ranOut(tub({ servingsTotal: null, servingsLeft: null }))).toBe(false);
+  });
+
+  it("never one the saved meal already holds, nor one whose live copy is unknown", () => {
+    expect(ranOut({ ...tub({ status: "finished", servingsLeft: 0 }), savedServings: 2 })).toBe(false);
+    expect(ranOut({ ...tub({}), container: undefined })).toBe(false);
+  });
+
+  it("attachContainers keeps each container current, so a refetch that finds it empty flags it", () => {
+    const plate = add({ items: [CONTAINER, MUFFIN_TUB], foods: [EGG] });
+    expect(ranOutEntry(plate)).toBeUndefined();
+    const emptied = { ...MUFFIN_TUB, status: "finished" as const, servingsLeft: 0 };
+    const live = attachContainers(plate, [emptied]);
+    expect(ranOutEntry(live)?.storageItemId).toBe(MUFFIN_TUB.id);
+    expect((live[0] as ContainerEntry).container).toBe(CONTAINER); // not in the list: kept as it was
+    expect(live[2]).toBe(plate[2]);
+  });
+});
+
+// Item 152 on the plate: the fresh recipes are the leftovers, else the fresh
+// foods; a container is already in storage.
+describe("plateLeftoverSource", () => {
+  it("fresh recipes win, then fresh foods; a container alone leaves nothing to save", () => {
+    const plate = add({ items: [MUFFIN_TUB], recipes: [PASTA, PATTIES], foods: [EGG] });
+    expect(plateLeftoverSource(plate)).toEqual({ kind: "recipe", recipeIds: [PASTA.id, PATTIES.id] });
+    expect(plateLeftoverSource(add({ items: [MUFFIN_TUB], foods: [EGG, BROCCOLI] }))).toEqual({
+      kind: "foods",
+      foodIds: [EGG.id, BROCCOLI.id],
+    });
+    const containerOnly = plateLeftoverSource(add({ items: [MUFFIN_TUB] }));
+    expect(hasLeftovers(containerOnly)).toBe(false);
+    expect(hasLeftovers(plateLeftoverSource(add({ foods: [EGG] })))).toBe(true);
+  });
+});
+
+// Item 235's rules, ported from LogFoodForm's validateLogFood.
+describe("validatePlate", () => {
+  it("needs something on the plate, phrased as a list error, and clears once there is", () => {
+    expect(validatePlate({ itemCount: 0 }).items).toBe("Add at least one food");
+    expect(validatePlate({ itemCount: 1 })).toEqual({});
+  });
+
+  // Item 333: leftovers are prepared NOW, so a best-by date behind today
+  // would file a container the parent just saved as already expired.
+  describe("leftovers best-by", () => {
+    const prepared = new Date(2026, 8, 14, 18, 0);
+    const base = { itemCount: 1, leftoversOpen: true, leftoverPreparedAt: prepared };
+
+    it("rejects a date before the day the leftovers are being saved", () => {
+      expect(validatePlate({ ...base, leftoverBestBy: "2026-09-13" }).leftoverBestBy).toBe(
+        "Best by can't be before the prepared date",
+      );
+    });
+
+    it("accepts today and any later day, and an unset field", () => {
+      expect(validatePlate({ ...base, leftoverBestBy: "2026-09-14" }).leftoverBestBy).toBeUndefined();
+      expect(validatePlate({ ...base, leftoverBestBy: "2026-09-21" }).leftoverBestBy).toBeUndefined();
+      expect(validatePlate({ ...base, leftoverBestBy: "" }).leftoverBestBy).toBeUndefined();
+    });
+
+    it("ignores the date entirely while the leftovers switch is off", () => {
+      expect(validatePlate({ ...base, leftoversOpen: false, leftoverBestBy: "2026-09-13" }).leftoverBestBy).toBeUndefined();
+    });
+
+    it("is judged after the plate, which is what a failed save focuses first", () => {
+      const errors = validatePlate({ ...base, itemCount: 0, leftoverBestBy: "2026-09-13" });
+      expect(errors.items).toBeDefined();
+      expect(errors.leftoverBestBy).toBeDefined();
+      expect(PLATE_FIELD_ORDER).toEqual(["items", "leftoverBestBy"]);
+    });
   });
 });

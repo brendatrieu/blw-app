@@ -45,8 +45,6 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => fakeQueryClient,
 }));
 
-vi.mock("../../components/ui/Celebration.js", () => ({ useCelebration: () => ({ celebrate: () => {} }) }));
-vi.mock("../tracking/api.js", () => ({ fetchAllergenProgress: async () => ({ items: [] }) }));
 
 const tracked: Array<[string, Record<string, unknown>]> = [];
 vi.mock("../../lib/usage/track.js", async (importOriginal) => {
@@ -54,8 +52,7 @@ vi.mock("../../lib/usage/track.js", async (importOriginal) => {
   return { ...actual, track: (...args: unknown[]) => tracked.push(args as [string, Record<string, unknown>]) };
 });
 
-import { ApiError } from "../../lib/api.js";
-import { useCreateStorageItem, useStorageServe, useStorageStatusChange } from "./hooks.js";
+import { useCreateStorageItem, useStorageStatusChange } from "./hooks.js";
 
 const fakeQueryClient = {
   getQueryData: () => undefined,
@@ -186,108 +183,6 @@ describe("useCreateStorageItem — storage_item_added", () => {
   it("distinguishes a food page's Add to storage from the Storage tab's", () => {
     vi.stubGlobal("window", { location: { pathname: "/storage/add", search: "?food=f1" } });
     expect(add({ foodIds: ["f1"], location: "fridge" })[0]![1]).toMatchObject({ via: "food_page" });
-  });
-});
-
-describe("useStorageServe — meal_logged from storage", () => {
-  function serve(items: Array<Record<string, unknown>>, servedAt?: string, meal: Record<string, unknown> = {}) {
-    const options = firstOptions(() => useStorageServe("baby-1"));
-    options.onSuccess!(
-      {
-        meal: { id: "m1", foods: [{ id: "f1" }], recipes: [], recipeId: null, notes: null, reactionNote: null, ...meal },
-        items,
-      } as never,
-      { babyId: "baby-1", parts: items.map((item) => ({ storageItemId: item.id, servings: 1 })), servedAt } as never,
-      { hadAnyMeals: true } as never,
-    );
-    return tracked;
-  }
-
-  it("logs the meal with from_storage and the storage_serve entry point", () => {
-    expect(serve([{ ...ITEM, servingsLeft: 1 }])).toEqual([
-      [
-        "meal_logged",
-        {
-          food_count: "1",
-          recipe_kind: "none",
-          from_storage: true,
-          via: "storage_serve",
-          leftovers_saved: false,
-          has_notes: false,
-          is_first_meal: false,
-          backdated: "now",
-          offline: false,
-        },
-      ],
-    ]);
-  });
-
-  it("buckets the sheet's When field, now that a serve can be backdated (item 354)", () => {
-    const servedAt = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
-    expect(serve([{ ...ITEM, servingsLeft: 1 }], servedAt)[0]![1]).toMatchObject({ backdated: "<1d" });
-  });
-
-  it("also closes the container when the serve emptied it", () => {
-    const events = serve([{ ...ITEM, status: "finished", servingsLeft: 0 }]);
-    expect(events.map(([name]) => name)).toEqual(["meal_logged", "storage_item_closed"]);
-    expect(events[1]![1]).toEqual({
-      to: "finished",
-      via: "serve_depleted",
-      freshness_at_change: "use_soon",
-      // Prepared on the 8th, served on the 13th.
-      age_days_bucket: "4-7",
-    });
-  });
-
-  // Ledger 760: one serve, several containers — one meal event, and one close
-  // for EACH container this serve emptied (and none for the others).
-  it("sends one meal_logged and one close per container the serve emptied", () => {
-    const events = serve([
-      { ...ITEM, id: "s1", status: "finished", servingsLeft: 0 },
-      { ...ITEM, id: "s2", servingsLeft: 3 },
-      { ...ITEM, id: "s3", status: "finished", servingsLeft: 0 },
-    ]);
-    expect(events.map(([name]) => name)).toEqual(["meal_logged", "storage_item_closed", "storage_item_closed"]);
-  });
-
-  it("reads a two-recipe serve as `several`, with whether one is a basic (ledger 754)", () => {
-    const meal = {
-      recipes: [
-        { id: "r1", title: "Lentil Patties", rating: null },
-        { id: "r2", title: "Salmon Cakes", rating: null },
-      ],
-      recipeId: "r1",
-    };
-    expect(serve([ITEM], undefined, meal)[0]![1]).toMatchObject({ recipe_kind: "several", includes_basic: false });
-    tracked.length = 0;
-    expect(serve([ITEM], undefined, { recipes: [{ id: "r1", title: "Lentil Patties", rating: null }], recipeId: "r1" })[0]![1]).toEqual(
-      expect.not.objectContaining({ includes_basic: expect.anything() }),
-    );
-  });
-
-  it("reports a failed serve as a meal_save_failed, with no message", () => {
-    const options = firstOptions(() => useStorageServe("baby-1"));
-    options.onError!(new ApiError(500, "internal_error") as never);
-    expect(tracked).toEqual([["meal_save_failed", { via: "storage_serve", kind: "5xx", offline: false }]]);
-  });
-
-  // Item 718: a serve can carry a rating, so the food page's rating line has
-  // to refresh after one, as it does after Log meal.
-  it("refreshes this baby's ratings (summaries and every history) when a serve settles", () => {
-    const client = fakeQueryClient as unknown as { invalidateQueries: (filter: { queryKey: unknown }) => Promise<void> };
-    const original = client.invalidateQueries;
-    const keys: unknown[] = [];
-    client.invalidateQueries = (filter) => {
-      keys.push(filter.queryKey);
-      return Promise.resolve();
-    };
-    try {
-      const options = firstOptions(() => useStorageServe("baby-1"));
-      (options.onSettled as () => void)();
-    } finally {
-      client.invalidateQueries = original;
-    }
-    expect(keys).toContainEqual(["ratings", "baby-1"]);
   });
 });
 

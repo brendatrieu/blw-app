@@ -236,9 +236,9 @@ const MEAL_FETCH_LIMIT = 100;
  * The meal history: one flat newest-first list of `MealCard`s (each carrying
  * its own date line — the old per-day `<h3>` headers are gone). Rendered as a
  * Home section paged `HOME_MEAL_LIMIT` at a time, and whole on /meals. Logging
- * itself happens on the full-screen /log-meal page (see LogFoodPage /
- * LogFoodForm), which a card also reopens (as `/log-meal?edit=:id`) to edit
- * that meal in place.
+ * itself happens on the full-screen /log-meal page (the plate,
+ * features/plate/PlateScreen.tsx), which a card also reopens (as
+ * `/log-meal?edit=:id`) to edit that meal in place.
  */
 export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, grouped = false }: ServeLogListProps) {
   const { data, isLoading, isError } = useMeals(babyId, { limit: MEAL_FETCH_LIMIT });

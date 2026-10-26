@@ -14,7 +14,7 @@ interface AllergenActionProps {
  * The mark sheet's BODY: a "When" field defaulting to the current minute and
  * one primary button that writes the override.
  *
- * Exported standalone (the `ServeControl` idiom) so a handler test can drive
+ * Exported standalone (the plate's `PlateForm` idiom) so a handler test can drive
  * its state as a plain function and pin the one thing item 365 turns on —
  * which instant actually reaches the mutation. The date is the whole point of
  * the sheet: the maintenance countdown starts from it, so a dropped value

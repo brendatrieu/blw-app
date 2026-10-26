@@ -55,6 +55,7 @@ const SAMPLE_PROPS: Record<UsageEventName, Record<string, unknown>> = {
     is_first_meal: false,
     backdated: "<1d",
     offline: false,
+    has_left_out: true,
   },
   meal_save_failed: { via: "storage_serve", kind: "5xx", offline: false },
   storage_item_added: {
@@ -161,6 +162,17 @@ describe("the P1 catalog", () => {
     ).toBe(false);
     // And a missing prop is a rejection too, so a half-wired call site is loud.
     expect(usageEventSchema.safeParse({ name: "tour_opened", props: {} }).success).toBe(false);
+  });
+
+  // Ledger 902: whether an ingredient was left out, as a flag, and optional
+  // (older apps never send it).
+  it("takes meal_logged's has_left_out as an optional boolean only", () => {
+    const { has_left_out: _, ...older } = SAMPLE_PROPS.meal_logged;
+    expect(usageEventSchema.safeParse({ name: "meal_logged", props: older }).success).toBe(true);
+    for (const value of [false, true]) {
+      expect(usageEventSchema.safeParse({ name: "meal_logged", props: { ...older, has_left_out: value } }).success).toBe(true);
+    }
+    expect(usageEventSchema.safeParse({ name: "meal_logged", props: { ...older, has_left_out: "Cashews" } }).success).toBe(false);
   });
 
   it("keeps every prop inside a closed set — no field can hold free text", () => {

@@ -2,29 +2,21 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CreateStorageItemInput,
-  MealsResponse,
   StorageItem,
   StorageResponse,
   StorageStatus,
   StorageView,
-  ServeStorageInput,
   UpdateStorageItemInput,
 } from "@blw/shared";
-import { createStorageItem, fetchStorage, serveStorage, updateStorageItem } from "./api.js";
+import { createStorageItem, fetchStorage, updateStorageItem } from "./api.js";
 import { storageItemTitle } from "./format.js";
 import { sortActiveByFreshness } from "./freshness.js";
-import { useCelebration } from "../../components/ui/Celebration.js";
-import { celebrateForNewMeal, snapshotMealCelebrationContext, trackingKeys } from "../tracking/hooks.js";
 import { track } from "../../lib/usage/track.js";
 import {
   ageDaysBucket,
-  backdatedBucket,
   daysBetween,
-  failureKind,
   foodCountBucket,
   freshnessAtChange,
-  isOffline,
-  mealRecipeKindProps,
   storageAddViaFromLocation,
   storageClosedVia,
   storageSourceFromInput,
@@ -132,79 +124,6 @@ export function useUpdateStorageItem() {
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["storage"] });
-    },
-  });
-}
-
-/**
- * Serving creates a meal in the same stroke, so it drives the exact same
- * celebration moments as logging one directly — see `celebrateForNewMeal` in
- * the tracking feature, which this mirrors rather than duplicates (never both
- * this AND `useCreateMeal` firing for the same action; a serve never goes
- * through `useCreateMeal`).
- *
- * Ledger 760: one serve can take from several containers at once (plus fresh
- * foods and recipes), all or nothing, through POST /api/storage/serve.
- *
- * Both segments of the storage cache are invalidated on settle: a tracked
- * container that hits 0 servings flips to "finished" server-side and moves
- * from Active into History in the same response.
- */
-export function useStorageServe(babyId: string | undefined) {
-  const queryClient = useQueryClient();
-  const { celebrate } = useCelebration();
-  return useMutation({
-    mutationFn: (input: ServeStorageInput) => serveStorage(input),
-    onMutate: () => snapshotMealCelebrationContext(queryClient, babyId),
-    onSuccess: ({ meal, items }, input, context) => {
-      // A serve IS a logged meal, so it sends the same event the log form
-      // does — same props, `from_storage` true, `via: storage_serve`.
-      track("meal_logged", {
-        food_count: foodCountBucket(meal.foods.length),
-        ...mealRecipeKindProps(queryClient, meal.recipes?.map((recipe) => recipe.id) ?? (meal.recipeId ? [meal.recipeId] : [])),
-        from_storage: true,
-        via: "storage_serve",
-        leftovers_saved: false,
-        has_notes: Boolean(meal.notes || meal.reactionNote),
-        is_first_meal: context?.hadAnyMeals !== true,
-        // The Serve sheet asks when (item 354), so a serve is bucketed the
-        // same way a directly logged meal is — read off the input rather
-        // than hard-coded to "now".
-        backdated: backdatedBucket(input.servedAt ?? new Date()),
-        offline: isOffline(),
-      });
-      // A tracked container that hit zero servings flips to `finished`
-      // server-side in this same response. That is a close, and the serve
-      // path is the only way it happens without anyone pressing Remove. Every
-      // part was active when the server locked it, so a non-active one here
-      // is one THIS serve emptied.
-      for (const item of items) {
-        if (item.status === "active") continue;
-        track("storage_item_closed", {
-          to: item.status,
-          via: "serve_depleted",
-          freshness_at_change: freshnessAtChange(item),
-          age_days_bucket: ageDaysBucket(daysBetween(item.preparedAt)),
-        });
-      }
-      if (!babyId) return;
-      const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
-      for (const [key, data] of snapshots) {
-        if (data) queryClient.setQueryData(key, { items: [meal, ...data.items] });
-      }
-      celebrateForNewMeal(babyId, context, celebrate);
-    },
-    onError: (error) => {
-      track("meal_save_failed", { via: "storage_serve", kind: failureKind(error), offline: isOffline() });
-    },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["storage"] });
-      if (!babyId) return;
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.allergenProgress(babyId) });
-      // Item 718: a serve can carry a rating, so the food/recipe pages'
-      // rating line and history refresh like after Log meal.
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.ratings(babyId) });
     },
   });
 }

@@ -8,12 +8,16 @@ import {
   type CreatePlateMealInput,
   type MealItem,
   type PlateFood,
+  type PlateItem,
   type PlateItemInput,
   type StorageItem,
   type StorageLocation,
 } from "@blw/shared";
-import { containerRecipes, type AddMoreChange, type AddMoreServing } from "../storage/addMoreSelection.js";
-import { clampServings, storageItemTitle } from "../storage/format.js";
+import { containerRecipes, type AddMoreChange, type AddMoreIds } from "../storage/addMoreSelection.js";
+import { clampServings, hasNoServingsLeft, storageItemTitle } from "../storage/format.js";
+import { isBestByBeforePrepared, BEST_BY_BEFORE_PREPARED_MESSAGE } from "../storage/freshness.js";
+import { resolveLeftoverSource, type LeftoverSourceKind } from "../storage/leftovers.js";
+import type { FormErrors } from "../../lib/forms.js";
 
 /** A food as an item or a container part shows it. Container foods carry no
  * category, so it is optional (the plate tint falls back to the slug). */
@@ -126,6 +130,95 @@ export function servingsMax(entry: ContainerEntry): number {
   return Math.min(PLATE_SERVINGS_MAX, (entry.savedServings ?? 0) + extra);
 }
 
+/**
+ * A container on the plate that Storage says can give nothing more:
+ * finished, discarded, or tracked at 0 left (CD-Serve-Ran-Out). It shows
+ * "None left. Remove it to serve the rest." and × in place of its stepper,
+ * and the plate can't be saved until it comes off. Only one NEW to the
+ * plate: what a kept one took is already the meal's.
+ */
+export function ranOut(entry: ContainerEntry): boolean {
+  const { container } = entry;
+  return (
+    entry.savedServings === undefined &&
+    container !== undefined &&
+    (container.status !== "active" || hasNoServingsLeft(container))
+  );
+}
+
+/** The first container on the plate that has run out, if any. */
+export const ranOutEntry = (plate: readonly PlateEntry[]): ContainerEntry | undefined =>
+  plate.find((entry): entry is ContainerEntry => entry.kind === "storage" && ranOut(entry));
+
+/** Each container with Storage's latest copy of it, when the lists have one,
+ * so its line, its stepper's limit and its run-out flag stay current. */
+export function attachContainers(plate: readonly PlateEntry[], containers: readonly StorageItem[]): PlateEntry[] {
+  return plate.map((entry) => {
+    if (entry.kind !== "storage") return entry;
+    const container = containers.find((candidate) => candidate.id === entry.storageItemId);
+    return container && container !== entry.container ? { ...entry, container } : entry;
+  });
+}
+
+/**
+ * The containers a new meal empties, as Storage had them before it: an
+ * active, tracked one asked for at least what it has left. The server
+ * finishes those in the same write (services/plate.ts), which is the
+ * `storage_item_closed` "serve_depleted" event; the save answers with the
+ * meal alone, so this reads it off what was sent.
+ */
+export function containersEmptiedBy(
+  items: readonly PlateItemInput[],
+  containers: readonly StorageItem[],
+): StorageItem[] {
+  return items.flatMap((item) => {
+    if (item.kind !== "storage" || item.servings === undefined) return [];
+    const container = containers.find((candidate) => candidate.id === item.storageItemId);
+    if (!container || container.status !== "active" || container.servingsTotal === null) return [];
+    return (container.servingsLeft ?? 0) <= item.servings ? [container] : [];
+  });
+}
+
+/** What "Save leftovers to storage" keeps (item 152): the fresh recipes when
+ * there are any, else the fresh foods. A container is already in storage. */
+export function plateLeftoverSource(plate: readonly PlateEntry[]): LeftoverSourceKind {
+  return resolveLeftoverSource(
+    plate.flatMap((entry) => (entry.kind === "recipe" ? [entry.recipe.id] : [])),
+    plate.flatMap((entry) => (entry.kind === "food" ? [entry.food.id] : [])),
+  );
+}
+
+/** Nothing fresh on the plate: no leftovers to save. */
+export const hasLeftovers = (source: LeftoverSourceKind): boolean =>
+  source.kind === "recipe" || source.foodIds.length > 0;
+
+export type PlateField = "items" | "leftoverBestBy";
+export type PlateErrors = FormErrors<PlateField>;
+
+/** Visual order — what a failed save focuses first (item 235). */
+export const PLATE_FIELD_ORDER: readonly PlateField[] = ["items", "leftoverBestBy"];
+
+/**
+ * The plate's own rules (item 235): something on the plate, and, while the
+ * leftovers switch is on, a Best by no earlier than the day they are put
+ * away (these leftovers are prepared now). When is never empty and every
+ * other field is optional. An empty object means valid.
+ */
+export function validatePlate(values: {
+  itemCount: number;
+  leftoversOpen?: boolean;
+  leftoverBestBy?: string;
+  /** What the leftovers are prepared at, i.e. now; passed so this stays pure. */
+  leftoverPreparedAt?: Date;
+}): PlateErrors {
+  const errors: PlateErrors = {};
+  if (values.itemCount === 0) errors.items = "Add at least one food";
+  if (values.leftoversOpen && isBestByBeforePrepared(values.leftoverBestBy, values.leftoverPreparedAt ?? new Date())) {
+    errors.leftoverBestBy = BEST_BY_BEFORE_PREPARED_MESSAGE;
+  }
+  return errors;
+}
+
 /** The plate a saved meal shows (GET /api/meals/:id), kept items by id.
  * `containers` (Storage's list) adds each container's live counts. */
 export function fromMeal(meal: Pick<MealItem, "items">, containers: readonly StorageItem[] = []): PlateEntry[] {
@@ -170,12 +263,11 @@ export function fromMeal(meal: Pick<MealItem, "items">, containers: readonly Sto
  * Nothing on the plate hides anything else (799): a fresh recipe is still
  * offered beside a container of it, a fresh food beside a container holding it.
  */
-export function plateAddMoreServing(plate: readonly PlateEntry[]): AddMoreServing {
+export function plateAddMoreServing(plate: readonly PlateEntry[]): AddMoreIds {
   return {
     itemIds: plate.flatMap((entry) => (entry.kind === "storage" ? [entry.storageItemId] : [])),
     recipeIds: plate.flatMap((entry) => (entry.kind === "recipe" ? [entry.recipe.id] : [])),
     foodIds: plate.flatMap((entry) => (entry.kind === "food" ? [entry.food.id] : [])),
-    covered: { recipeIds: [], foodIds: [] },
   };
 }
 
@@ -289,4 +381,34 @@ export function toMealInput(plate: readonly PlateEntry[], { servedAt, reactionNo
     reactionNote: reactionNote.trim() || null,
     notes: notes.trim() || null,
   } satisfies CreatePlateMealInput;
+}
+
+/** One star line on a saved meal's page. `id` is the meal item's (a
+ * container part is an item of its own), which PATCH `itemRatings` names. */
+export interface ItemRatingRow {
+  id: string;
+  label: string;
+  value: number | null;
+}
+
+/**
+ * The saved meal's stars (item 574, plan SPEC §0): one line per fresh food
+ * and recipe, and per food or recipe a container held, in plate order.
+ * `pending` (by item id) shows a tap while it saves.
+ */
+export function mealItemRatingRows(
+  items: readonly PlateItem[] = [],
+  pending: Readonly<Record<string, number | null>> = {},
+): ItemRatingRow[] {
+  return items.flatMap((item) => {
+    const targets =
+      item.kind === "storage"
+        ? item.parts.map((part) => ({
+            id: part.id,
+            label: part.kind === "food" ? part.food.name : part.recipe.title,
+            rating: part.rating,
+          }))
+        : [{ id: item.id, label: item.kind === "food" ? item.food.name : item.recipe.title, rating: item.rating }];
+    return targets.map(({ id, label, rating }) => ({ id, label, value: id in pending ? pending[id]! : rating }));
+  });
 }

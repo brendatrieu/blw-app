@@ -1,5 +1,6 @@
 // Item 574: the meal page's stars are its one inline edit — each tap is a
-// PATCH through `useUpdateMeal`, and the tapped value shows while it saves.
+// PATCH through `useUpdateMeal` (one item's `itemRatings`, ledger 902), and
+// the tapped value shows while it saves.
 // Called as a plain function with the hooks mocked (no DOM).
 import { describe, expect, it, vi } from "vitest";
 import type { MealItem } from "@blw/shared";
@@ -34,143 +35,122 @@ vi.mock("../features/tracking/hooks.js", () => ({
 }));
 
 import { MealDetailPage } from "./MealDetailPage.js";
-import { MealRatingsField, type MealRatingRow } from "../features/tracking/components/MealRatingsField.js";
 import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
 import { Button } from "../components/ui/Button.js";
+import { StarRating } from "../components/ui/StarRating.js";
 
 interface El {
   type: unknown;
   props: Record<string, unknown> & { children?: unknown };
 }
 function find(node: unknown, type: unknown): El | null {
+  return findAll(node, type)[0] ?? null;
+}
+function findAll(node: unknown, type: unknown, out: El[] = []): El[] {
   if (Array.isArray(node)) {
-    for (const child of node) {
-      const found = find(child, type);
-      if (found) return found;
-    }
-    return null;
+    for (const child of node) findAll(child, type, out);
+    return out;
   }
-  if (!node || typeof node !== "object" || !("props" in node)) return null;
+  if (!node || typeof node !== "object" || !("props" in node)) return out;
   const el = node as El;
-  return el.type === type ? el : find(el.props.children, type);
+  if (el.type === type) out.push(el);
+  findAll(el.props.children, type, out);
+  return out;
 }
 
-const LOOSE: MealItem = {
+const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+const EGG = { id: id(1), slug: "egg", name: "Egg", category: "protein" as const };
+const BANANA = { id: id(2), slug: "banana", name: "Banana", category: "fruit" as const };
+const CARROT = { id: id(3), slug: "carrot", name: "Carrot", category: "veg" as const };
+
+// Ledger 902: one star line per item, a container per part, keyed by the
+// meal item's id. Egg sits in the patties AND on its own (800).
+const MEAL: MealItem = {
   id: "22222222-2222-4222-8222-222222222222",
   babyId: "baby-1",
   servedAt: "2026-09-20T12:00:00.000Z",
   reactionNote: null,
   notes: null,
-  recipeId: null,
-  recipeTitle: null,
-  recipeRating: null,
-  foods: [
-    { id: "food-1", slug: "egg", name: "Egg", category: "protein", storageItemId: null, rating: 2 },
-    { id: "food-2", slug: "banana", name: "Banana", category: "fruit", storageItemId: null, rating: null },
-  ],
-};
-
-// Ledger 761: two recipes; Egg is an unrated ingredient (no row of its own).
-const SEVERAL: MealItem = {
-  ...LOOSE,
   recipeId: "r1",
-  recipeTitle: "Lentil Patties",
+  recipeTitle: "Salmon Oat Patties",
   recipeRating: 3,
-  recipes: [
-    { id: "r1", title: "Lentil Patties", rating: 3 },
-    { id: "r2", title: "Salmon Cakes", rating: null },
-  ],
-  foods: [
-    { ...LOOSE.foods[0]!, rating: null, inRecipe: true },
-    { ...LOOSE.foods[1]!, inRecipe: false },
+  foods: [{ ...EGG, storageItemId: null }],
+  items: [
+    { kind: "recipe", id: id(10), recipe: { id: id(20), title: "Salmon Oat Patties" }, leftOut: [], inferred: false, rating: 3 },
+    { kind: "food", id: id(11), food: EGG, rating: null },
+    {
+      kind: "storage",
+      storageItemId: id(30),
+      label: null,
+      location: "freezer",
+      servings: 1,
+      parts: [
+        { kind: "food", id: id(12), food: BANANA, rating: 2 },
+        { kind: "food", id: id(13), food: CARROT, rating: null },
+      ],
+    },
   ],
 };
 
-function field(meal: MealItem, pending?: unknown): El {
+function render(meal: MealItem, pending?: unknown): El {
   h.meal = meal;
   h.pending = pending;
   h.mutations.length = 0;
-  const tree = (MealDetailPage as unknown as () => El)();
-  const found = find(tree, MealRatingsField);
-  if (!found) throw new Error("the meal page should render its ratings");
-  return found;
+  return (MealDetailPage as unknown as () => El)();
 }
-const tap = (el: El, key: string, value: number | null) =>
-  (el.props.onChange as (key: string, value: number | null) => void)(key, value);
+const stars = (tree: El) => findAll(tree, StarRating);
+const lines = (tree: El) => stars(tree).map((star) => [star.props.label, star.props.value]);
+const tap = (tree: El, label: string, value: number | null) =>
+  (stars(tree).find((star) => star.props.label === `Rating for ${label}`)!.props.onChange as (value: number | null) => void)(value);
 
-describe("MealDetailPage stars (item 574)", () => {
-  it("saves a food's tap as a per-food PATCH, and Clear as null", () => {
-    const el = field(LOOSE);
-    tap(el, "food-2", 5);
-    tap(el, "food-1", null);
-    expect(h.mutations).toEqual([
-      { id: LOOSE.id, input: { foodRatings: { "food-2": 5 } } },
-      { id: LOOSE.id, input: { foodRatings: { "food-1": null } } },
+describe("MealDetailPage stars (item 574, ledger 902)", () => {
+  it("one line per item in plate order, a container per food it held, the recipe and a fresh Egg each their own", () => {
+    expect(lines(render(MEAL))).toEqual([
+      ["Rating for Salmon Oat Patties", 3],
+      ["Rating for Egg", null],
+      ["Rating for Banana", 2],
+      ["Rating for Carrot", null],
     ]);
   });
 
-  it("saves a recipe's tap as recipeRatings, never the legacy recipeRating (ledger 761)", () => {
-    const el = field({ ...LOOSE, recipeId: "r1", recipeTitle: "Pancakes", recipeRating: 1 });
-    tap(el, "recipe:r1", 4);
-    expect(h.mutations).toEqual([{ id: LOOSE.id, input: { recipeRatings: { r1: 4 } } }]);
-  });
-
-  it("on a meal with several recipes, each row saves its own recipe", () => {
-    const el = field(SEVERAL);
-    expect((el.props.rows as MealRatingRow[]).map((row) => row.key)).toEqual(["recipe:r1", "recipe:r2", "food-2"]);
-    tap(el, "recipe:r2", 5);
-    tap(el, "recipe:r1", null);
+  it("saves a tap as that one item's itemRatings, and a cleared star as null", () => {
+    const tree = render(MEAL);
+    tap(tree, "Egg", 5);
+    tap(tree, "Banana", null);
+    tap(tree, "Salmon Oat Patties", 4);
     expect(h.mutations).toEqual([
-      { id: LOOSE.id, input: { recipeRatings: { r2: 5 } } },
-      { id: LOOSE.id, input: { recipeRatings: { r1: null } } },
+      { id: MEAL.id, input: { itemRatings: { [id(11)]: 5 } } },
+      { id: MEAL.id, input: { itemRatings: { [id(12)]: null } } },
+      { id: MEAL.id, input: { itemRatings: { [id(10)]: 4 } } },
     ]);
   });
 
-  it("shows a recipe's tapped value while it saves, and only that recipe's", () => {
-    const rows = field(SEVERAL, { id: LOOSE.id, input: { recipeRatings: { r2: 1 } } }).props.rows as MealRatingRow[];
-    expect(rows.map((row) => [row.key, row.value])).toEqual([
-      ["recipe:r1", 3],
-      ["recipe:r2", 1],
-      ["food-2", null],
+  it("shows the tapped value while it saves, on that item only", () => {
+    expect(lines(render(MEAL, { id: MEAL.id, input: { itemRatings: { [id(12)]: null, [id(11)]: 1 } } }))).toEqual([
+      ["Rating for Salmon Oat Patties", 3],
+      ["Rating for Egg", 1],
+      ["Rating for Banana", null],
+      ["Rating for Carrot", null],
     ]);
   });
 
   it("ignores a save in flight for another meal", () => {
-    const rows = field(SEVERAL, { id: "other", input: { recipeRatings: { r2: 1 } } }).props.rows as MealRatingRow[];
-    expect(rows[1]).toEqual({ key: "recipe:r2", label: "Salmon Cakes", value: null });
+    expect(lines(render(MEAL, { id: "other", input: { itemRatings: { [id(11)]: 1 } } }))[1]).toEqual(["Rating for Egg", null]);
   });
 
-  it("keeps a rated ingredient's row while its Clear saves", () => {
-    const meal: MealItem = {
-      ...SEVERAL,
-      foods: [{ ...SEVERAL.foods[0]!, rating: 2 }, SEVERAL.foods[1]!],
-    };
-    const rows = field(meal, { id: LOOSE.id, input: { foodRatings: { "food-1": null } } }).props.rows as MealRatingRow[];
-    expect(rows.map((row) => [row.key, row.value])).toEqual([
-      ["recipe:r1", 3],
-      ["recipe:r2", null],
-      ["food-1", null],
-      ["food-2", null],
-    ]);
-  });
-
-  it("shows the tapped value while the save is in flight", () => {
-    const rows = field(LOOSE, { id: LOOSE.id, input: { foodRatings: { "food-2": 3 } } }).props.rows as MealRatingRow[];
-    expect(rows.map((row) => [row.key, row.value])).toEqual([
-      ["food-1", 2],
-      ["food-2", 3],
-    ]);
+  it("an older cached body without items shows no stars until the list refreshes", () => {
+    expect(stars(render({ ...MEAL, items: undefined }))).toEqual([]);
   });
 });
 
 describe("MealDetailPage delete (item 599)", () => {
   it("Delete opens the question sheet instead of deleting", () => {
-    h.meal = LOOSE;
+    h.meal = MEAL;
     h.sets.length = 0;
     const tree = (MealDetailPage as unknown as () => El)();
     const sheet = find(tree, MealDeleteDialog)!;
     expect(sheet.props.open).toBe(false);
-    expect(sheet.props.meal).toBe(LOOSE);
+    expect(sheet.props.meal).toBe(MEAL);
 
     const buttons: El[] = [];
     const walk = (node: unknown): void => {

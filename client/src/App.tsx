@@ -8,7 +8,7 @@ import { AboutPage } from "./pages/AboutPage.js";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage.js";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
-import { LogFoodPage } from "./pages/LogFoodPage.js";
+import { PlateScreen } from "./features/plate/PlateScreen.js";
 import { StoragePage } from "./pages/StoragePage.js";
 import { StorageAddPage } from "./pages/StorageAddPage.js";
 import { StorageEditPage } from "./pages/StorageEditPage.js";
@@ -121,7 +121,7 @@ export function App() {
         }
       >
         <Route path="/" element={<DashboardPage />} />
-        <Route path="/log-meal" element={<LogFoodPage />} />
+        <Route path="/log-meal" element={<PlateScreen />} />
         <Route path="/meals" element={<MealsPage />} />
         <Route path="/meals/:id" element={<MealDetailPage />} />
         <Route path="/storage" element={<StoragePage />} />

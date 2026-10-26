@@ -4,8 +4,6 @@ import type {
   StorageItem,
   StorageResponse,
   StorageView,
-  ServeStorageInput,
-  ServeStorageResponse,
   UpdateStorageItemInput,
 } from "@blw/shared";
 import { apiGet, apiPatch, apiPost } from "../../lib/api.js";
@@ -26,10 +24,4 @@ export function createStorageItem(input: CreateStorageItemInput): Promise<Storag
 
 export function updateStorageItem(id: string, input: UpdateStorageItemInput): Promise<StorageItem> {
   return apiPatch<StorageItem>(`/api/storage/${id}`, input);
-}
-
-/** One sitting from one or more containers, plus fresh foods and recipes
- * (ledger 760). Deleting the meal gives the servings back. */
-export function serveStorage(input: ServeStorageInput): Promise<ServeStorageResponse> {
-  return apiPost<ServeStorageResponse>("/api/storage/serve", input);
 }

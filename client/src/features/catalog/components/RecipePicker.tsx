@@ -51,21 +51,12 @@ export function recipePickerOptions(recipes: RecipeListItem[]): MultiComboboxOpt
     }));
 }
 
-type RecipePickerProps = { id: string } & (
-  | {
-      multiple?: false;
-      /** "" = no recipe attached. */
-      value: string;
-      onChange: (next: string) => void;
-    }
-  | {
-      /** Ledger 759: Log meal's "Recipes (optional)" — several recipes, in
-       * the order picked. */
-      multiple: true;
-      value: string[];
-      onChange: (next: string[]) => void;
-    }
-);
+interface RecipePickerProps {
+  id: string;
+  /** "" = no recipe attached. */
+  value: string;
+  onChange: (next: string) => void;
+}
 
 /**
  * Searchable select over every recipe the parent can see — the
@@ -79,26 +70,25 @@ type RecipePickerProps = { id: string } & (
  * Same query key, so the Recipes tab keeps its cache — only this observer
  * refetches on mount.
  *
- * Single-select (the default; a storage container's recipe) is
- * `MultiCombobox` in `mode="single"`, driven through
- * `resolveSingleSelection`: picking a second recipe replaces the first, and
- * toggling the current one off clears the field (the "None" option the old
- * select needed). Single mode is also what closes the menu on a pick (item
- * 230) — there is no second recipe to type. `multiple` (ledger 759) is the
- * plain multi-select: a meal can be made from several recipes.
+ * A storage container's recipe: `MultiCombobox` in `mode="single"`, driven
+ * through `resolveSingleSelection`: picking a second recipe replaces the
+ * first, and toggling the current one off clears the field (the "None"
+ * option the old select needed). Single mode is also what closes the menu on
+ * a pick (item 230) — there is no second recipe to type. (A meal's recipes
+ * are added through the plate's Add more, ledger 902.)
  */
-export function RecipePicker(props: RecipePickerProps) {
+export function RecipePicker({ id, value, onChange }: RecipePickerProps) {
   const { data, isLoading } = useRecipes({}, { fresh: true });
   const recipes = data?.recipes ?? [];
   const options = useMemo(() => recipePickerOptions(recipes), [recipes]);
 
   return (
     <MultiCombobox
-      id={props.id}
-      mode={props.multiple ? "multi" : "single"}
+      id={id}
+      mode="single"
       options={options}
-      value={props.multiple ? props.value : props.value ? [props.value] : []}
-      onChange={(next) => (props.multiple ? props.onChange(next) : props.onChange(resolveSingleSelection(next)))}
+      value={value ? [value] : []}
+      onChange={(next) => onChange(resolveSingleSelection(next))}
       disabled={isLoading}
       placeholder={isLoading ? "Loading recipes…" : "Search recipes…"}
       emptyMessage="No recipes match"

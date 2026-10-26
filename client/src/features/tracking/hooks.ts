@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type {
   AllergenProgressResponse,
-  CreateMealInput,
+  CreatePlateMealInput,
   FavoriteItem,
   FavoritesResponse,
   MealItem,
   MealsResponse,
   RatingHistoryQuery,
-  UpdateMealInput,
+  StorageItem,
+  UpdatePlateMealInput,
 } from "@blw/shared";
 import {
   createMeal,
@@ -17,6 +18,7 @@ import {
   fetchAllergenDetail,
   fetchAllergenProgress,
   fetchFavorites,
+  fetchMeal,
   fetchMeals,
   fetchRatingHistory,
   fetchRatings,
@@ -29,17 +31,24 @@ import { useCelebration, type CelebrationOptions } from "../../components/ui/Cel
 import { ApiError } from "../../lib/api.js";
 import { track } from "../../lib/usage/track.js";
 import {
+  ageDaysBucket,
   backdatedBucket,
+  daysBetween,
   failureKind,
   foodCountBucket,
+  freshnessAtChange,
   isBackdatedMark,
   isOffline,
   mealRecipeKindProps,
   mealViaFromLocation,
 } from "../../lib/usage/properties.js";
+import { containersEmptiedBy } from "../plate/plate.js";
 
 export const trackingKeys = {
   meals: (babyId: string) => ["meals", babyId] as const,
+  /** One meal (GET /api/meals/:id). Not under "meals": those caches hold
+   * lists, and every meal mutation rewrites them as lists. */
+  meal: (id: string) => ["meal", id] as const,
   allergenProgress: (babyId: string) => ["allergen-progress", babyId] as const,
   /** Prefix covering every allergen's detail for one baby — invalidating it
    * refreshes whichever detail page happens to be cached, without the caller
@@ -68,6 +77,25 @@ export function useMeals(babyId: string | undefined, query: MealsQuery = {}) {
     queryFn: () => fetchMeals(babyId as string, query),
     enabled: Boolean(babyId),
     staleTime: 15_000,
+  });
+}
+
+/**
+ * One meal with its plate, for Edit meal (ledger 902). Fetched fresh on
+ * every visit and dropped when the page closes (`gcTime: 0`), and never on
+ * its own afterwards: the plate is built once from it, and a save names its
+ * item ids, so it must never be a cached copy another save has replaced
+ * (the server's 409 `meal_changed`). The page refetches it on that 409.
+ */
+export function useMeal(id: string | undefined) {
+  return useQuery({
+    queryKey: trackingKeys.meal(id ?? ""),
+    queryFn: () => fetchMeal(id as string),
+    enabled: Boolean(id),
+    gcTime: 0,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -189,9 +217,8 @@ export interface MealCelebrationContext {
  * Snapshot taken just before a new meal is created — whether any meals
  * already existed, and each allergen's status — so `celebrateForNewMeal` can
  * later diff a fresh fetch against it and fire at most one celebration.
- * Shared by every mutation that produces a brand-new meal (ordinary logging
- * via `useCreateMeal`, and storage's `useStorageServe`) so they fire the exact
- * same celebration logic instead of each duplicating it.
+ * Taken by `useCreateMeal`, the one mutation that produces a brand-new meal
+ * (Log meal and Serve alike).
  */
 export function snapshotMealCelebrationContext(
   queryClient: QueryClient,
@@ -245,32 +272,41 @@ export interface CreateMealUsage {
    * is `storage_item_added`'s business, not this event's.
    */
   leftoversSaved: boolean;
+  /** The plate's containers as Storage had them when Save was pressed, so a
+   * serve that empties one sends its `storage_item_closed` (the save's answer
+   * is the meal alone). */
+  containers?: readonly StorageItem[];
 }
 
 /**
- * Creating a meal also drives the app's celebration moments — see
- * `celebrateForNewMeal` — and never fires on edit/delete.
+ * Creating a meal (Log meal and Serve, both the plate page since ledger 902)
+ * also drives the app's celebration moments — see `celebrateForNewMeal` —
+ * and never fires on edit/delete.
  *
  * It is also where `meal_logged` is measured: once, on success, never per
  * network attempt, so a retried save cannot be counted twice. The props are
- * buckets and booleans derived from the input the caller already built —
- * `has_notes` is whether a note exists, never the note.
+ * buckets and booleans read off the input and the saved meal — `has_notes`
+ * is whether a note exists, never the note; `food_count` is what the meal
+ * counts as tried, and `recipe_kind` reads its distinct recipes (SPEC §6).
  */
 export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage = { leftoversSaved: false }) {
   const queryClient = useQueryClient();
   const { celebrate } = useCelebration();
   return useMutation({
-    mutationFn: (input: CreateMealInput) => {
+    mutationFn: (input: CreatePlateMealInput) => {
       if (!babyId) throw new Error("useCreateMeal called with no active baby");
       return createMeal(babyId, input);
     },
     onMutate: () => snapshotMealCelebrationContext(queryClient, babyId),
     onSuccess: (created, input, context) => {
       track("meal_logged", {
-        food_count: foodCountBucket(input.foodIds.length),
+        food_count: foodCountBucket(created.foods.length),
         // Ledger 759: two or more recipes are `several` (+ `includes_basic`).
-        ...mealRecipeKindProps(queryClient, input.recipeIds ?? (input.recipeId ? [input.recipeId] : [])),
-        from_storage: false,
+        ...mealRecipeKindProps(
+          queryClient,
+          created.recipes?.map((recipe) => recipe.id) ?? (created.recipeId ? [created.recipeId] : []),
+        ),
+        from_storage: input.items.some((item) => item.kind === "storage"),
         via: mealViaFromLocation(),
         leftovers_saved: usage.leftoversSaved,
         has_notes: Boolean(input.notes || input.reactionNote),
@@ -280,7 +316,19 @@ export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage
         is_first_meal: context?.hadAnyMeals !== true,
         backdated: backdatedBucket(input.servedAt ?? new Date()),
         offline: isOffline(),
+        has_left_out: input.items.some((item) => item.kind === "recipe" && (item.leftOutFoodIds?.length ?? 0) > 0),
       });
+      // A tracked container this serve emptied is finished by the server in
+      // the same write: that is a close, and the only one nobody presses
+      // Remove for. Never the container itself, only buckets.
+      for (const item of containersEmptiedBy(input.items, usage.containers ?? [])) {
+        track("storage_item_closed", {
+          to: "finished",
+          via: "serve_depleted",
+          freshness_at_change: freshnessAtChange(item),
+          age_days_bucket: ageDaysBucket(daysBetween(item.preparedAt)),
+        });
+      }
       if (!babyId) return;
       const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
       for (const [key, data] of snapshots) {
@@ -292,6 +340,9 @@ export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage
       track("meal_save_failed", { via: mealViaFromLocation(), kind: failureKind(error), offline: isOffline() });
     },
     onSettled: () => {
+      // A plate can take servings from containers, and (Phase 4) fill a
+      // planned meal.
+      invalidatePlateQueries(queryClient);
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
       invalidateAllergenQueries(queryClient, babyId);
@@ -300,21 +351,32 @@ export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage
   });
 }
 
+/** Storage and the meal plan, which every meal write can change: servings
+ * taken or given back, a planned meal served or not. */
+function invalidatePlateQueries(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: ["storage"] });
+  void queryClient.invalidateQueries({ queryKey: ["plan"] });
+}
+
 /**
  * Editing a meal never fires a celebration (only a fresh log does) but can
- * still change allergen exposure counts (a food swap via `foodIds`), so both
- * the meal list and allergen progress are invalidated on settle.
+ * still change allergen exposure counts (a food left out, an item taken
+ * off), so both the meal list and allergen progress are invalidated on
+ * settle.
  */
 export function useUpdateMeal(babyId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateMealInput }) => updateMeal(id, input),
+    mutationFn: ({ id, input }: { id: string; input: UpdatePlateMealInput }) => updateMeal(id, input),
     // An edit is not a new meal, so it never sends `meal_logged` — but it IS
     // a meal mutation that can fail, and the quality panel counts those.
     onError: (error) => {
       track("meal_save_failed", { via: mealViaFromLocation(), kind: failureKind(error), offline: isOffline() });
     },
     onSuccess: (updated: MealItem) => {
+      // The save's own answer, which can carry new item ids (a heal
+      // regroups an orphan, BUILD-2.0), so nothing edits from an older copy.
+      queryClient.setQueryData(trackingKeys.meal(updated.id), updated);
       if (!babyId) return;
       const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
       for (const [key, data] of snapshots) {
@@ -323,9 +385,9 @@ export function useUpdateMeal(babyId: string | undefined) {
       }
     },
     onSettled: () => {
-      // Ledger 751/760: an edit that takes a served container's part off the
-      // meal gives that container its servings back.
-      void queryClient.invalidateQueries({ queryKey: ["storage"] });
+      // Ledger 751/760: an edit that takes a container off the meal, or
+      // changes its servings, moves servings in storage.
+      invalidatePlateQueries(queryClient);
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
       invalidateAllergenQueries(queryClient, babyId);
@@ -364,7 +426,7 @@ export function useDeleteMeal(babyId: string | undefined) {
       });
     },
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["storage"] });
+      invalidatePlateQueries(queryClient);
       if (!babyId) return;
       void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
       invalidateAllergenQueries(queryClient, babyId);

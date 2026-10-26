@@ -11,7 +11,7 @@ import { useMeals } from "../../tracking/hooks.js";
 import { mealRecipes } from "../../tracking/mealRecipes.js";
 import { hasNoServingsLeft, isLabelOnly, servePartHint, storageItemTitle } from "../format.js";
 import { useStorageItems } from "../hooks.js";
-import { addMoreCanApply, addMoreDiff, addMoreNeedsContainer, type AddMoreChange, type AddMoreServing } from "../addMoreSelection.js";
+import { addMoreCanApply, addMoreDiff, addMoreNeedsContainer, type AddMoreChange, type AddMoreIds } from "../addMoreSelection.js";
 import { storageItemCluster } from "./StorageItemCard.js";
 
 type AddMoreTab = "storage" | "recipe" | "food";
@@ -35,11 +35,9 @@ export const ADD_MORE_SEARCH_TABS: SegmentedControlOption<AddMoreTab | "all">[] 
 /** How many recent recipes or foods head their tab (the MR2 board shows three). */
 export const RECENT_LIMIT = 3;
 
-export type { AddMoreServing };
-
 /**
- * The containers "In storage" lists (items 730/760): every one already in
- * the Serving list (shown ticked, ledger 878, whatever it has left), and any
+ * The containers "In storage" lists (items 730/760): every one already on
+ * the plate (shown ticked, ledger 878, whatever it has left), and any
  * other that is active, servable (a Free-form label has nothing to log) and
  * has a serving left (a tracked container at 0 — after a Restore or a resize
  * — is the server's 409 at routes/storage.ts, which would sink the whole
@@ -112,27 +110,31 @@ function PickRow({ checked, onToggle, plate, title, detail }: PickRowProps) {
 
 interface AddMoreSheetProps {
   babyId: string;
-  /** What is already in the Serving list: it opens ticked. */
-  serving: AddMoreServing;
-  /** Done: what to take off the Serving list and what to put on it. */
+  /** What is already on the plate: it opens ticked. */
+  serving: AddMoreIds;
+  /** Serve: Done waits while no container is ticked, and says why (878b). */
+  requireContainer: boolean;
+  /** Done: what to take off the plate and what to put on it. */
   onDone: (change: AddMoreChange) => void;
   onClose: () => void;
 }
 
 /**
- * The Serve sheet's "Add more" (MR2 boards, ledger 789): one search box over
- * three tabs — "In storage" (containers), "Recipes" and "Foods" made fresh,
- * each of the last two opening with this baby's recent ones, then A–Z.
- * Typing searches all three at once: "All" (grouped) or one kind, keeping the
- * text (ledger 794). It opens with the Serving list ticked, each in its own
- * row (ledger 878); ticks are kept across tabs and searches until "Done",
- * pinned at the bottom, which adds the new ones and takes off the unticked
- * ones. The sheet is a fixed height from the start, so nothing moves while
+ * The plate's "Add more", its only way to add an item (MR2 boards, ledger
+ * 789; plan SPEC §5): one search box over three tabs — "In storage"
+ * (containers), "Recipes" and "Foods" made fresh, each of the last two
+ * opening with this baby's recent ones, then A–Z. Typing searches all three
+ * at once: "All" (grouped) or one kind, keeping the text (ledger 794). It
+ * opens with the plate ticked, each in its own row (ledger 878); ticks are
+ * kept across tabs and searches until "Done", pinned at the bottom, which
+ * adds the new ones and takes off the unticked ones. Nothing on the plate
+ * hides anything else (799): a fresh recipe is offered beside a container
+ * of it. The sheet is a fixed height from the start, so nothing moves while
  * typing, switching tabs or as the results change. Rendered only while
- * open, so every opening starts from the Serving list; closing without Done
+ * open, so every opening starts from the plate; closing without Done
  * changes nothing.
  */
-export function AddMoreSheet({ babyId, serving, onDone, onClose }: AddMoreSheetProps) {
+export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClose }: AddMoreSheetProps) {
   const [tab, setTab] = useState<AddMoreTab>("storage");
   const [query, setQuery] = useState("");
   // Which kind a search shows; every new search starts on "All".
@@ -149,25 +151,16 @@ export function AddMoreSheet({ babyId, serving, onDone, onClose }: AddMoreSheetP
   const meals = useMeals(babyId, { limit: 100 });
 
   const available = addMoreStorageItems(storage.data?.items ?? [], serving.itemIds);
-  const allFoods = useMemo(
-    () =>
-      (foods.data?.foods ?? [])
-        .filter((food) => !serving.covered.foodIds.includes(food.id))
-        .sort(byLabel((food) => food.name)),
-    [foods.data, serving.covered.foodIds],
-  );
+  const allFoods = useMemo(() => [...(foods.data?.foods ?? [])].sort(byLabel((food) => food.name)), [foods.data]);
   const allRecipes = useMemo(
-    () =>
-      (recipes.data?.recipes ?? [])
-        .filter((recipe) => !serving.covered.recipeIds.includes(recipe.id))
-        .sort(byLabel((recipe: RecipeListItem) => recipe.title)),
-    [recipes.data, serving.covered.recipeIds],
+    () => [...(recipes.data?.recipes ?? [])].sort(byLabel((recipe: RecipeListItem) => recipe.title)),
+    [recipes.data],
   );
   const recent = useMemo(() => recentIds(meals.data?.items ?? []), [meals.data]);
   const recentRecipes = resolveIds(recent.recipeIds, allRecipes).slice(0, RECENT_LIMIT);
   const recentFoods = resolveIds(recent.foodIds, allFoods).slice(0, RECENT_LIMIT);
   const ticks = { itemIds, recipeIds, foodIds };
-  const needsContainer = addMoreNeedsContainer(ticks);
+  const needsContainer = requireContainer && addMoreNeedsContainer(ticks);
   const q = query.trim().toLowerCase();
 
   const toggle = (set: (update: (current: string[]) => string[]) => void, id: string) => (checked: boolean) =>
@@ -284,7 +277,7 @@ export function AddMoreSheet({ babyId, serving, onDone, onClose }: AddMoreSheetP
         <Button
           type="button"
           className="w-full"
-          disabled={!addMoreCanApply(serving, ticks)}
+          disabled={!addMoreCanApply(serving, ticks, requireContainer)}
           aria-describedby={needsContainer ? "add-more-needs-storage" : undefined}
           onClick={() => {
             const { added, removed } = addMoreDiff(serving, ticks);

@@ -137,7 +137,7 @@ describe("one (optional) treatment everywhere (item 736)", () => {
         expect(m[1], path.relative(srcRoot, file)).toContain("text-[var(--color-text)]");
       }
     }
-    // Field, ServeSheet x2, MealRatingsField, SymptomSurveyForm x2, CustomRecipeForm x2.
-    expect(checked).toBe(8);
+    // Field, MealDetailPage's ratings, SymptomSurveyForm x2, CustomRecipeForm x2.
+    expect(checked).toBe(6);
   });
 });

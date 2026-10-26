@@ -1,4 +1,4 @@
-// The Serve sheet's "Add more" (MR2 boards, ledger 789), called as a plain
+// The plate's "Add more" (MR2 boards, ledger 789; 902), called as a plain
 // function with its hooks mocked (the vi.hoisted store idiom), so ticking,
 // searching, switching tabs and "Done" run in node. The markup is pinned by
 // rendering the sheet's own children: the open Sheet portals to a
@@ -73,7 +73,8 @@ vi.mock("../../catalog/hooks.js", async (importOriginal) => ({
   }),
 }));
 
-import { ADD_MORE_SEARCH_TABS, ADD_MORE_TABS, AddMoreSheet, RECENT_LIMIT, addMoreStorageItems, recentIds, type AddMoreServing } from "./AddMoreSheet.js";
+import { ADD_MORE_SEARCH_TABS, ADD_MORE_TABS, AddMoreSheet, RECENT_LIMIT, addMoreStorageItems, recentIds } from "./AddMoreSheet.js";
+import type { AddMoreIds } from "../addMoreSelection.js";
 import { Button } from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.js";
@@ -142,18 +143,22 @@ const one = (tree: El, type: unknown) => {
 
 const done: unknown[] = [];
 const NONE = { itemIds: [], recipeIds: [], foodIds: [] };
-let serving: AddMoreServing = { ...NONE, itemIds: [BASE.id], covered: { recipeIds: [], foodIds: [] } };
+let serving: AddMoreIds = { ...NONE, itemIds: [BASE.id] };
+/** Serve (true) or Log meal / Edit meal (false). */
+let requireContainer = true;
 function render(): El {
   h.store.i = 0;
   return (AddMoreSheet as unknown as (props: unknown) => El)({
     babyId: "baby-1",
     serving,
+    requireContainer,
     onDone: (change: unknown) => done.push(change),
     onClose: () => {},
   });
 }
-function reset(storage: StorageItem[], meals: MealItem[] = [], listed: Partial<AddMoreServing> = {}) {
-  serving = { itemIds: [BASE.id], recipeIds: [], foodIds: [], covered: { recipeIds: [], foodIds: [] }, ...listed };
+function reset(storage: StorageItem[], meals: MealItem[] = [], listed: Partial<AddMoreIds> = {}, serve = true) {
+  serving = { itemIds: [BASE.id], recipeIds: [], foodIds: [], ...listed };
+  requireContainer = serve;
   h.store.states = [];
   h.storage = storage;
   h.storageLoading = false;
@@ -190,7 +195,7 @@ describe("addMoreStorageItems — what 'In storage' offers (items 730, 760; ledg
     ]);
   });
 
-  it("always lists a container already in the Serving list, even one that would otherwise be left out", () => {
+  it("always lists a container already on the plate, even one that would otherwise be left out", () => {
     const empty = { ...PEAR_FOODS, servingsTotal: 2, servingsLeft: 0 };
     expect(addMoreStorageItems([empty], [empty.id])).toEqual([empty]);
     expect(addMoreStorageItems([empty], [])).toEqual([]);
@@ -240,7 +245,7 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     expect(out).toMatch(/<div class="-mx-4 shrink-0 border-t [^"]*"><div role="status"><\/div><button[^>]*>Done<\/button><\/div>$/);
   });
 
-  it("ends in a plain Done, disabled until the ticks differ from the Serving list (ledger 878)", () => {
+  it("ends in a plain Done, disabled until the ticks differ from the plate (ledger 878)", () => {
     reset([BASE, SALMON]);
     const button = one(render(), Button);
     expect(button.props.disabled).toBe(true);
@@ -430,18 +435,18 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     expect(out).toMatch(/<label class="flex min-h-14 cursor-pointer[^"]*"><input type="checkbox"/);
   });
 
-  it("never offers what a listed container already holds: not under Recent, All or a search, and Recent still fills up (ledger 793)", () => {
-    const meals = [meal("m2", ["r-dal", "r-egg"], [{ id: "food-banana" }]), meal("m1", ["r-cod", "r-oat"], [{ id: "food-pear" }])];
-    reset([BASE], meals, { covered: { recipeIds: ["r-dal"], foodIds: ["food-banana"] } });
+  // Ledger 799 (replacing 793): nothing on the plate hides anything else. A
+  // fresh recipe or food is its own item beside a container of it.
+  it("offers a recipe or food a container on the plate holds, under Recent, All and a search", () => {
+    const meals = [meal("m1", ["r-oat"], [{ id: "food-pear" }])];
+    const OAT_TUB = { ...SALMON, recipeId: "r-oat", recipeTitle: "Oat Pancakes" };
+    reset([BASE, OAT_TUB, PEAR_FOODS], meals, { itemIds: [OAT_TUB.id, PEAR_FOODS.id] });
     goTo("recipe");
-    expect(titles(render())).toEqual(["Egg Muffins", "Baked Cod", "Oat Pancakes", "Apple Oatmeal", "Baked Cod", "Egg Muffins", "Oat Pancakes"]);
+    expect(titles(render())).toEqual(["Oat Pancakes", "Apple Oatmeal", "Baked Cod", "Egg Muffins", "Oat Pancakes", "Red Lentil Dal"]);
     goTo("food");
-    expect(titles(render())).toEqual(["Pear", "Oats", "Pear", "Whole Milk"]);
-    type("a"); // matches Banana, Red Lentil Dal and the rest
-    expect(titles(render())).not.toContain("Banana");
-    expect(titles(render())).not.toContain("Red Lentil Dal");
-    type("banana");
-    expect(html(render())).toContain("No matches");
+    expect(titles(render())).toEqual(["Pear", "Banana", "Oats", "Pear", "Whole Milk"]);
+    type("pancakes");
+    expect(titles(render())).toEqual(["Oat Pancakes", "Oat Pancakes"]); // the ticked container, then the recipe fresh
   });
 
   it("says so when storage has nothing to list, and nothing at all while it loads", () => {
@@ -453,14 +458,13 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
   });
 });
 
-describe("AddMoreSheet opens with the Serving list ticked (ledger 878)", () => {
-  // On the list: the Avocado container, Salmon Oat Cakes' container (its
-  // recipe r-oat is covered), Red Lentil Dal fresh and Banana fresh.
-  const listed: Partial<AddMoreServing> = {
+describe("AddMoreSheet opens with the plate ticked (ledger 878)", () => {
+  // On the plate: the Avocado container, Salmon Oat Cakes' container, Red
+  // Lentil Dal fresh and Banana fresh.
+  const listed: Partial<AddMoreIds> = {
     itemIds: [BASE.id, SALMON.id],
     recipeIds: ["r-dal"],
     foodIds: ["food-banana"],
-    covered: { recipeIds: ["r-oat"], foodIds: ["food-1"] },
   };
   const meals = [meal("m1", ["r-dal", "r-oat", "r-egg"], [{ id: "food-banana" }, { id: "food-pear" }])];
   const ticked = (tree: El) => rows(tree).filter((row) => row.props.checked).map((row) => row.props.title);
@@ -482,13 +486,6 @@ describe("AddMoreSheet opens with the Serving list ticked (ledger 878)", () => {
     expect(one(render(), Button).props.disabled).toBe(true);
   });
 
-  it("does not offer a recipe that is on the list only inside a container: its container row is the ticked one", () => {
-    reset([BASE, SALMON], meals, listed);
-    goTo("recipe");
-    expect(titles(render())).not.toContain("Oat Pancakes");
-    type("pancakes");
-    expect(html(render())).toContain("No matches");
-  });
 
   it("untick + Done takes off exactly that one; nothing is added", () => {
     reset([BASE, SALMON, PEAR_FOODS], meals, listed);
@@ -512,7 +509,7 @@ describe("AddMoreSheet opens with the Serving list ticked (ledger 878)", () => {
     expect(done).toEqual([{ removed: NONE, items: [PEAR_FOODS], foods: [], recipes: [{ id: "r-egg", title: "Egg Muffins" }] }]);
   });
 
-  it("Done is enabled only while the ticks differ from the list and a container stays ticked (a serve needs one)", () => {
+  it("Serve: Done is enabled only while the ticks differ from the plate and a container stays ticked", () => {
     reset([BASE, SALMON, PEAR_FOODS], meals, listed);
     const enabled = () => !one(render(), Button).props.disabled;
     expect(enabled()).toBe(false);
@@ -548,6 +545,24 @@ describe("AddMoreSheet opens with the Serving list ticked (ledger 878)", () => {
     expect(html(render())).not.toContain(LINE);
     expect(html(render())).toContain('<div role="status"></div>');
     expect(done().disabled).toBe(false);
+  });
+
+  it("Log meal and Edit: a plate needs no container, so Done follows the ticks alone and never says it", () => {
+    reset([BASE, SALMON, PEAR_FOODS], meals, listed, false);
+    const enabled = () => !one(render(), Button).props.disabled;
+    tick("Avocado", false);
+    tick("Salmon Oat Cakes", false);
+    expect(enabled()).toBe(true);
+    expect(html(render())).not.toContain("Serve needs at least one item from storage.");
+    expect(one(render(), Button).props["aria-describedby"]).toBeUndefined();
+    press();
+    expect(done).toEqual([{ removed: { ...NONE, itemIds: [BASE.id, SALMON.id] }, items: [], foods: [], recipes: [] }]);
+
+    // An empty plate opens with nothing ticked; the first pick turns Done on.
+    reset([BASE, SALMON], meals, { itemIds: [] }, false);
+    expect(enabled()).toBe(false);
+    tick("Avocado");
+    expect(enabled()).toBe(true);
   });
 
   it("shows a listed container ticked even with no servings left", () => {

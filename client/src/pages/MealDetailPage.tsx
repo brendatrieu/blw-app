@@ -3,11 +3,7 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { awaitingDetail } from "../lib/detailQuery.js";
 import type { MealItem } from "@blw/shared";
 import { useMeals, useUpdateMeal } from "../features/tracking/hooks.js";
-import {
-  MealRatingsField,
-  RECIPE_ROW_PREFIX,
-  mealRatingRows,
-} from "../features/tracking/components/MealRatingsField.js";
+import { mealItemRatingRows } from "../features/plate/plate.js";
 import { mealRecipes, recipesTitle } from "../features/tracking/mealRecipes.js";
 import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
@@ -15,6 +11,8 @@ import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
 import { DeletedMark, FoodNames } from "../features/catalog/components/DeletedMark.js";
 import { foodPlate } from "../features/catalog/foodEmoji.js";
 import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
+import { StarRating } from "../components/ui/StarRating.js";
+import { OptionalLabel } from "../components/ui/Field.js";
 import { BackButton, useBackNavigate } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
@@ -67,8 +65,10 @@ export function MealDetailPage() {
   // History must not depend on the foods LIST, which hides a deleted food —
   // a past meal keeps that food's allergen chips.
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  // Item 574: the stars are this page's one inline edit; each tap saves like
-  // any other meal edit (PATCH), and shows the tapped value while it does.
+  // Item 574: the stars are this page's one inline edit; each tap saves that
+  // one item's stars (PATCH `itemRatings`, ledger 902), and shows the tapped
+  // value while it does. A 409 `meal_changed` (an item another write
+  // replaced) refetches the meal like any settled edit.
   const updateMeal = useUpdateMeal(activeBaby?.id);
   const goBack = useBackNavigate("/");
 
@@ -77,15 +77,8 @@ export function MealDetailPage() {
   // only a real baby's meals are waited on; with none, the meal is missing.
   const isLoading = babyLoading || (activeBaby !== null && awaitingDetail(meals, Boolean(meal)));
 
-  // While a tap is saving, show what was tapped rather than the old value,
-  // keyed like the star rows.
+  // While a tap is saving, show what was tapped rather than the old value.
   const pending = updateMeal.isPending && updateMeal.variables?.id === id ? updateMeal.variables.input : undefined;
-  const pendingRatings: Record<string, number | null> = {
-    ...pending?.foodRatings,
-    ...Object.fromEntries(
-      Object.entries(pending?.recipeRatings ?? {}).map(([recipeId, value]) => [`${RECIPE_ROW_PREFIX}${recipeId}`, value]),
-    ),
-  };
 
   if (isLoading) {
     return (
@@ -102,6 +95,7 @@ export function MealDetailPage() {
   }
 
   const recipes = mealRecipes(meal);
+  const ratingRows = mealItemRatingRows(meal.items, pending?.itemRatings);
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -153,19 +147,24 @@ export function MealDetailPage() {
           </div>
         )}
 
-        <MealRatingsField
-          rows={mealRatingRows(recipes, meal.foods, pendingRatings)}
-          // One key per tap, in the new shape: the legacy `recipeRating`
-          // only ever reaches the first recipe.
-          onChange={(key, value) =>
-            updateMeal.mutate({
-              id: meal.id,
-              input: key.startsWith(RECIPE_ROW_PREFIX)
-                ? { recipeRatings: { [key.slice(RECIPE_ROW_PREFIX.length)]: value } }
-                : { foodRatings: { [key]: value } },
-            })
-          }
-        />
+        {ratingRows.length > 0 && (
+          <div role="group" aria-labelledby="meal-ratings-heading" className="flex flex-col gap-1">
+            <span id="meal-ratings-heading" className="text-sm font-medium text-[var(--color-text)]">
+              <OptionalLabel label="Rating (optional)" />
+            </span>
+            {ratingRows.map((row) => (
+              <div key={row.id} className="flex flex-col">
+                <span className="text-sm text-[var(--color-text-muted)]">{row.label}</span>
+                <StarRating
+                  label={`Rating for ${row.label}`}
+                  value={row.value}
+                  // One item per tap, merged server-side.
+                  onChange={(value) => updateMeal.mutate({ id: meal.id, input: { itemRatings: { [row.id]: value } } })}
+                />
+              </div>
+            ))}
+          </div>
+        )}
         {updateMeal.isError && (
           <p role="alert" className="text-xs text-[var(--color-danger)]">
             Couldn't save that rating — try again.

@@ -36,9 +36,11 @@ describe("HowToLink (item 603)", () => {
     expect(howToLinkUses()).toEqual([
       // Item 726: the full-screen add-food page and the picker's sheet.
       ["features/catalog/components/FoodPicker.tsx", "how-to-add-custom-food"],
-      ["features/storage/components/ServeSheet.tsx", "how-to-serve-from-storage"],
+      // Ledger 902: one plate page, its guide by entry (Log meal and Edit
+      // meal, or Serve).
+      ["features/plate/PlateScreen.tsx", "how-to-log-a-meal"],
+      ["features/plate/PlateScreen.tsx", "how-to-serve-from-storage"],
       ["pages/FoodCreatePage.tsx", "how-to-add-custom-food"],
-      ["pages/LogFoodPage.tsx", "how-to-log-a-meal"],
       ["pages/RecipeCreatePage.tsx", "how-to-custom-recipe"],
       ["pages/StorageAddPage.tsx", "how-to-add-to-storage"],
     ]);
