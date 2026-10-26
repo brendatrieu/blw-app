@@ -75,5 +75,13 @@ describe("mealsFromStorageItem", () => {
       const plate = { ...meal("m1", [{ id: "f1", storageItemId: "batch-1" }]), items: [] };
       expect(mealsFromStorageItem([plate], "batch-1")).toEqual([]);
     });
+
+    // VERIFY-p3-c1 pin (mutant c5): a meal that served container A is not one of B's.
+    it("lists only the meals that took from THIS container", () => {
+      const a = { ...meal("m1", [{ id: "f1", storageItemId: "batch-1" }]), items: [container("batch-1")] };
+      const b = { ...meal("m2", [{ id: "f1", storageItemId: "batch-2" }]), items: [container("batch-2")] };
+      expect(mealsFromStorageItem([a, b], "batch-1")).toEqual([a]);
+      expect(mealsFromStorageItem([a, b], "batch-2")).toEqual([b]);
+    });
   });
 });

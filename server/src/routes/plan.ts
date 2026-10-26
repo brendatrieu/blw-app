@@ -21,6 +21,7 @@ import {
   DEFAULT_DAILY_MEALS,
   MEAL_FOODS_MAX,
   MEAL_RECIPES_MAX,
+  PLATE_NOT_AN_INGREDIENT,
   PLATE_NOTHING_COUNTS,
   addPlannedMealInputSchema,
   babyIdRouteParamSchema,
@@ -61,7 +62,7 @@ import {
   type Queryable,
   type Transaction,
 } from "../services/meals.js";
-import { PlateAborted, writePlate } from "../services/plate.js";
+import { PLATE_LABEL_ONLY, PlateAborted, writePlate } from "../services/plate.js";
 import { loadStorageItems, notServable } from "../services/storage.js";
 
 /** Thrown inside a plan write's transaction to roll it back with a reply. */
@@ -168,7 +169,7 @@ async function writePlannedItems(tx: Transaction, userId: string, plannedMealId:
   for (const item of recipeItems) {
     const now = ingredients.get(item.recipeId) ?? new Set<string>();
     const strays = (item.leftOutFoodIds ?? []).filter((id) => !now.has(id));
-    if (strays.length > 0) throw bad({ leftOutFoodIds: "not an ingredient of this recipe", foodIds: strays });
+    if (strays.length > 0) throw bad({ leftOutFoodIds: PLATE_NOT_AN_INGREDIENT, recipeId: item.recipeId, foodIds: strays });
     for (const id of now) if (!item.leftOutFoodIds?.includes(id)) counted.add(id);
   }
 
@@ -185,6 +186,11 @@ async function writePlannedItems(tx: Transaction, userId: string, plannedMealId:
     const planned = new Set(current.map((row) => row.storageItemId));
     const closed = owned.find((row) => row.status !== "active" && !planned.has(row.id));
     if (closed) throw new PlanAborted(409, { error: "conflict", message: notServable(closed.status), storageItemId: closed.id });
+    // A plan never holds what Serve would refuse (§3.5): the plate's own 400.
+    const added = await loadStorageItems(tx, containerIds.filter((id) => !planned.has(id)));
+    if (added.some((item) => item.foods.length === 0 && item.recipeId === null && !item.recipes?.length)) {
+      throw bad({ items: PLATE_LABEL_ONLY });
+    }
   }
 
   if (items.length > 0 && containerIds.length === 0 && counted.size === 0) throw bad({ items: PLATE_NOTHING_COUNTS });
@@ -654,7 +660,21 @@ export function registerPlanRoutes(app: FastifyInstance, db: Database): void {
       if (!dryRun) {
         for (const date of [...new Set(targets.map((target) => target.date))].sort()) days.push(await loadDay(tx, babyId, date, flags));
       }
-      answer = { filled, skipped, warnings: copyWarnings(uses, flags, copied, containers), days };
+      // A deleted custom food copies as it is (it shows "(deleted)") but
+      // Serve would block it, so the sheet says so. Ids only.
+      const sourceFoodIds = sourceRows.flatMap((row) => (row.foodId ? [row.foodId] : []));
+      const deleted =
+        copied.size === 0 || sourceFoodIds.length === 0
+          ? []
+          : await tx
+              .select({ id: foods.id })
+              .from(foods)
+              .where(and(inArray(foods.id, sourceFoodIds), isNotNull(foods.deletedAt)));
+      const warnings: CopyPlanResponse["warnings"] = [
+        ...copyWarnings(uses, flags, copied, containers),
+        ...deleted.map((row) => ({ kind: "food_deleted" as const, foodId: row.id })),
+      ];
+      answer = { filled, skipped, warnings, days };
       if (dryRun) tx.rollback();
     });
     if (refused) return refuse(reply, refused);

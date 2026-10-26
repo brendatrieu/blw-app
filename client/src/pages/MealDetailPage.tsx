@@ -55,7 +55,7 @@ function servedAtLabel(iso: string): string {
  * (`meal.foods`, the foods this meal counts toward, so a parent can see a
  * left-out food was not counted; an `info` food such as whole milk is never
  * a food tried, so it is left out here too), the reaction note and the
- * notes. Offline the stars wait, like every plate write (SPEC §4.4). A
+ * notes. Offline the stars and Delete wait, like every plate write (SPEC §4.4). A
  * container links back to the storage batch it was served from, so the
  * storage ⇄ meal traceback stays navigable in both directions.
  */
@@ -129,7 +129,11 @@ export function MealDetailPage() {
             ))}
           </ul>
         )}
-        {offline && <p className="mt-2 text-xs text-[var(--color-text-muted)]">You're offline.</p>}
+        {offline && (
+          <p id="meal-offline" className="mt-2 text-xs text-[var(--color-text-muted)]">
+            You're offline.
+          </p>
+        )}
         {updateMeal.isError && !offline && (
           <p role="alert" className="mt-2 text-xs text-[var(--color-danger)]">
             Couldn't save that rating — try again.
@@ -166,7 +170,14 @@ export function MealDetailPage() {
         <ButtonLink to={`/log-meal?edit=${meal.id}`} variant="secondary">
           Edit
         </ButtonLink>
-        <Button type="button" variant="danger-quiet" onClick={() => setConfirmingDelete(true)}>
+        {/* A delete is a plate write: it waits while offline (SPEC §4.4). */}
+        <Button
+          type="button"
+          variant="danger-quiet"
+          disabled={offline}
+          aria-describedby={offline ? "meal-offline" : undefined}
+          onClick={() => setConfirmingDelete(true)}
+        >
           Delete
         </Button>
         <MealDeleteDialog

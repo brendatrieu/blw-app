@@ -3,6 +3,7 @@
 // the request that saves it. The plate screen only holds this state and
 // renders it (native-ready: the same rules for a native shell).
 import {
+  PLATE_NOT_AN_INGREDIENT,
   PLATE_SERVINGS_MAX,
   plateKey,
   type CreatePlateMealInput,
@@ -17,6 +18,7 @@ import { containerRecipes, type AddMoreChange, type AddMoreIds } from "../storag
 import { clampServings, hasNoServingsLeft, storageItemTitle } from "../storage/format.js";
 import { isBestByBeforePrepared, BEST_BY_BEFORE_PREPARED_MESSAGE } from "../storage/freshness.js";
 import { resolveLeftoverSource, type LeftoverSourceKind } from "../storage/leftovers.js";
+import { ApiError } from "../../lib/api.js";
 import type { FormErrors } from "../../lib/forms.js";
 
 /** A food as an item or a container part shows it. Container foods carry no
@@ -90,7 +92,10 @@ export type PlateAction =
   | { type: "rate"; key: string; partId?: string; rating: number | null }
   /** `ingredientIds`: the recipe's current ingredients, as the panel shows them. */
   | { type: "toggleLeftOut"; key: string; food: PlateFoodRef; ingredientIds?: string[] }
-  | { type: "servings"; key: string; servings: number };
+  | { type: "servings"; key: string; servings: number }
+  /** A recipe lost these ingredients since the plate opened: they can no
+   * longer be left out (the server's stale leave-out 400). */
+  | { type: "dropLeftOut"; recipeId: string; foodIds: string[] };
 
 /** Ledger 799: one key per thing that can be on the plate once, the server's own rule. */
 export function entryKey(entry: PlateEntry): string {
@@ -220,6 +225,20 @@ export function nothingCounts(plate: readonly PlateEntry[]): boolean {
 
 /** What the plate says when nothing on it counts (VERIFY-p2-c1 #3). */
 export const NOTHING_COUNTS_MESSAGE = "Leave at least one food on the plate.";
+
+/** What the plate says when a leave-out is no longer one of its recipe's
+ * ingredients: another device edited the recipe (VERIFY-p3-c1 #6). */
+export const RECIPE_CHANGED_MESSAGE = "This recipe changed. Check its ingredients and save again.";
+
+/** The server's 400 for that case: which recipe, and the leave-outs it no
+ * longer has. The plate drops them and the recipe is refetched. */
+export function staleLeaveOut(error: unknown): { recipeId: string; foodIds: string[] } | null {
+  if (!(error instanceof ApiError) || error.status !== 400) return null;
+  const details = (error.body as { details?: { leftOutFoodIds?: unknown; recipeId?: unknown; foodIds?: unknown } } | undefined)
+    ?.details;
+  if (details?.leftOutFoodIds !== PLATE_NOT_AN_INGREDIENT || typeof details.recipeId !== "string") return null;
+  return { recipeId: details.recipeId, foodIds: Array.isArray(details.foodIds) ? details.foodIds.filter((id) => typeof id === "string") : [] };
+}
 
 export type PlateField = "items" | "leftoverBestBy";
 export type PlateErrors = FormErrors<PlateField>;
@@ -405,6 +424,16 @@ export function plateReducer(plate: readonly PlateEntry[], action: PlateAction):
             : [...entry.leftOut, action.food].sort(byName),
         };
       });
+    case "dropLeftOut":
+      return plate.map((entry) =>
+        entry.kind === "recipe" && entry.recipe.id === action.recipeId
+          ? {
+              ...entry,
+              leftOut: entry.leftOut.filter((food) => !action.foodIds.includes(food.id)),
+              ...(entry.ingredientIds && { ingredientIds: entry.ingredientIds.filter((id) => !action.foodIds.includes(id)) }),
+            }
+          : entry,
+      );
     case "servings":
       return plate.map((entry) =>
         entry.kind === "storage" && entry.servings !== null && entryKey(entry) === action.key

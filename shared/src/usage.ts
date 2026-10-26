@@ -374,7 +374,8 @@ const eventProps = {
     .object({
       item_count: foodCountBucketSchema,
       has_storage: z.boolean(),
-      days_ahead: z.enum(["0", "1", "2-7", "8+"]),
+      /** `past`: past days are editable too (chair §12.3). */
+      days_ahead: z.enum(["past", "0", "1", "2-7", "8+"]),
     })
     .strict(),
 

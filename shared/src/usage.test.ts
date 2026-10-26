@@ -184,6 +184,9 @@ describe("the P1 catalog", () => {
   it("plan events carry buckets and booleans only: no day, no food, no meal name", () => {
     const parse = (name: UsageEventName, props: Record<string, unknown>) => usageEventSchema.safeParse({ name, props }).success;
     expect(parse("plan_saved", { ...SAMPLE_PROPS.plan_saved, days_ahead: "3" })).toBe(false);
+    // Past days are editable (chair §12.3): a save on one is "past", never how long ago.
+    expect(parse("plan_saved", { ...SAMPLE_PROPS.plan_saved, days_ahead: "past" })).toBe(true);
+    expect(parse("plan_saved", { ...SAMPLE_PROPS.plan_saved, days_ahead: "-2" })).toBe(false);
     expect(parse("plan_saved", { ...SAMPLE_PROPS.plan_saved, date: "2026-11-02" })).toBe(false);
     expect(parse("plan_copied", { ...SAMPLE_PROPS.plan_copied, target_count: 4 })).toBe(false);
     expect(parse("daily_meals_saved", { ...SAMPLE_PROPS.daily_meals_saved, names: ["Lunch"] })).toBe(false);

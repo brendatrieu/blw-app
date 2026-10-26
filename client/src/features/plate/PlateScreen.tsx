@@ -36,6 +36,7 @@ import { PlateItemRow, WarningGlyph } from "./PlateItemRow.js";
 import {
   NOTHING_COUNTS_MESSAGE,
   PLATE_FIELD_ORDER,
+  RECIPE_CHANGED_MESSAGE,
   attachContainers,
   containerEntry,
   entryKey,
@@ -46,6 +47,7 @@ import {
   plateLeftoverSource,
   plateReducer,
   ranOutEntry,
+  staleLeaveOut,
   toMealInput,
   validatePlate,
   type PlateAction,
@@ -221,10 +223,9 @@ export function PlateScreen() {
         />
       )}
 
-      {!babyLoading && activeBaby && start.status === "offline" && (
-        <p className="text-sm text-[var(--color-text-muted)]">You're offline.</p>
-      )}
-
+      {/* Edit offline with the meal not loaded (start "offline"): the page
+          shows nothing more, since the banner already says "You're offline."
+          (VERIFY-p3-c1). The fetch resumes once back online. */}
       {!babyLoading && activeBaby && start.status === "missing" && mode === "serve" && <Navigate to="/storage" replace />}
 
       {!babyLoading && activeBaby && start.status === "missing" && mode === "edit" && (
@@ -362,6 +363,12 @@ export function PlateForm({
     if (postSave === "noop" || mutation.isPending || offline || runOut) return;
     if (!attemptSubmit()) return;
     const input = toMealInput(plate, { servedAt, reactionNote, notes });
+    // A leave-out the recipe lost on another device: drop it, and the
+    // recipe refetches (the mutation hooks), so the next save goes through.
+    const dropStale = (error: unknown) => {
+      const stale = staleLeaveOut(error);
+      if (stale) dispatch({ type: "dropLeftOut", ...stale });
+    };
     if (mode === "edit" && meal) {
       updateMeal.mutate(
         { id: meal.id, input },
@@ -369,6 +376,7 @@ export function PlateForm({
           onSuccess: finish,
           onError: (error) => {
             if (isMealChanged(error)) onMealChanged();
+            dropStale(error);
           },
         },
       );
@@ -376,6 +384,7 @@ export function PlateForm({
     }
     const leftovers = mode === "log" && leftoversOpen && hasLeftovers(leftoverSource) ? leftoverSource : null;
     createMeal.mutate(input, {
+      onError: dropStale,
       onSuccess: () => {
         mealSavedRef.current = true;
         if (!leftovers) {
@@ -514,9 +523,11 @@ export function PlateForm({
         <p role="alert" className="text-xs text-[var(--color-danger)]">
           {isNothingCounts(mutation.error)
             ? NOTHING_COUNTS_MESSAGE
-            : serve
-              ? "Couldn't serve — try again."
-              : "Couldn't save that — try again."}
+            : staleLeaveOut(mutation.error)
+              ? RECIPE_CHANGED_MESSAGE
+              : serve
+                ? "Couldn't serve — try again."
+                : "Couldn't save that — try again."}
         </p>
       )}
 

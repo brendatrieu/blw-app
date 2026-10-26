@@ -9,7 +9,7 @@
 // React's useState/useRef are a store, so the form is called as a plain
 // function, its element tree read and its callbacks invoked.
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { PLATE_NOTHING_COUNTS, type MealItem, type StorageItem } from "@blw/shared";
+import { PLATE_NOT_AN_INGREDIENT, PLATE_NOTHING_COUNTS, type MealItem, type StorageItem } from "@blw/shared";
 
 const h = vi.hoisted(() => {
   const store = { states: [] as unknown[], refs: [] as { current: unknown }[], i: 0, r: 0 };
@@ -317,6 +317,43 @@ describe("Log meal: Add more is the only adder (ledger 902)", () => {
     expect(text(again())).not.toContain("Couldn't save that — try again.");
     h.mutation.error = new ApiError(400, "invalid_request", { error: "invalid_request", details: { items: "at most 50 foods per meal" } });
     expect(text(again())).toContain("Couldn't save that — try again.");
+  });
+
+  // VERIFY-p3-c1 #6: another device took an ingredient out of the recipe while the plate was open.
+  it("a stale leave-out 400 says the recipe changed, drops that leave-out, and the next save goes through", () => {
+    const stale = new ApiError(400, "invalid_request", {
+      error: "invalid_request",
+      details: { leftOutFoodIds: PLATE_NOT_AN_INGREDIENT, recipeId: PASTA.id, foodIds: [CASHEWS.id] },
+    });
+    render("log");
+    addMore({ recipes: [PASTA] });
+    dispatch({ type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: CASHEWS });
+    dispatch({ type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: EGG });
+    submit();
+    expect(h.creates[0]!.input).toMatchObject({ items: [{ kind: "recipe", leftOutFoodIds: [CASHEWS.id, EGG.id] }] });
+    h.creates[0]!.options.onError!(stale);
+    h.mutation.isError = true;
+    h.mutation.error = stale;
+    expect(text(again())).toContain("This recipe changed. Check its ingredients and save again.");
+    expect(text(again())).not.toContain("Couldn't save that — try again.");
+    h.mutation.isError = false;
+    submit();
+    expect(h.creates[1]!.input).toMatchObject({ items: [{ kind: "recipe", leftOutFoodIds: [EGG.id] }] });
+  });
+
+  it("Edit: the same 400 drops the stale leave-out too; a 409 meal_changed still reloads", () => {
+    const stale = new ApiError(400, "invalid_request", {
+      error: "invalid_request",
+      details: { leftOutFoodIds: PLATE_NOT_AN_INGREDIENT, recipeId: PASTA.id, foodIds: [CASHEWS.id] },
+    });
+    render("edit", fromMeal(MEAL), { meal: MEAL });
+    dispatch({ type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: CASHEWS });
+    dispatch({ type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: EGG });
+    submit();
+    h.updates[0]!.options.onError!(stale);
+    expect(mealChanged).toEqual([]);
+    submit();
+    expect((h.updates[1]!.input as { input: { items: unknown[] } }).input.items[0]).toMatchObject({ leftOutFoodIds: [EGG.id] });
   });
 
   it("says Couldn't save that when a save fails", () => {

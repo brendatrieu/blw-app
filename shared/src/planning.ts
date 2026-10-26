@@ -233,7 +233,9 @@ const byPlanOrder = (a: PlanFlagUse, b: PlanFlagUse) =>
  * Each counted use's flags, by planned item id (SPEC §3.4). `uses` should be
  * every container use of the account's plans, all babies, from `today` on;
  * past and served ones are skipped here anyway. A tracked container has
- * `servingsLeft` left, an untracked one never runs out.
+ * `servingsLeft` left, an untracked one never runs out. A container marked
+ * finished or discarded has ONLY `container_gone` (chair, VERIFY-p3-c1 #7):
+ * once it is gone, how long it keeps is beside the point.
  */
 export function planFlags(
   uses: readonly PlanFlagUse[],
@@ -246,10 +248,12 @@ export function planFlags(
   for (const use of uses.filter((entry) => !entry.served && entry.date >= today).sort(byPlanOrder)) {
     const container = containers.get(use.storageItemId);
     if (!container) continue;
-    const list: PlanFlag[] = [];
     if (container.status !== "active") {
-      list.push({ kind: "container_gone", status: container.status });
-    } else if (container.servingsLeft !== null) {
+      flags.set(use.id, [{ kind: "container_gone", status: container.status }]);
+      continue;
+    }
+    const list: PlanFlag[] = [];
+    if (container.servingsLeft !== null) {
       const total = (planned.get(container.id) ?? 0) + use.servings;
       planned.set(container.id, total);
       if (total > container.servingsLeft) list.push({ kind: "may_run_out" });
@@ -402,6 +406,9 @@ export const copyWarningSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("past_use_within"), storageItemId: uuid, date: planDateSchema }),
   /** Marked finished or discarded in Storage; wording by status (§12). */
   z.object({ kind: z.literal("container_gone"), storageItemId: uuid, status: z.enum(["finished", "discarded"]) }),
+  /** "{food} was deleted. You can still copy, then swap it out.": a custom
+   * food deleted since it was planned (Serve would block it). */
+  z.object({ kind: z.literal("food_deleted"), foodId: uuid }),
 ]);
 export type CopyWarning = z.infer<typeof copyWarningSchema>;
 

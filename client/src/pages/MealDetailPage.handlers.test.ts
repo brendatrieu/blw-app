@@ -186,5 +186,26 @@ describe("MealDetailPage delete (item 599)", () => {
     expect(buttons[0]!.props.variant).toBe("danger-quiet");
     (buttons[0]!.props.onClick as () => void)();
     expect(h.sets).toEqual([true]);
+    expect(buttons[0]!.props.disabled).toBe(false);
+  });
+
+  it("offline, Delete waits like every plate write, and points at the page's offline line (VERIFY-p3-c1)", () => {
+    h.meal = MEAL;
+    h.offline = true;
+    const tree = (MealDetailPage as unknown as () => El)();
+    h.offline = false;
+    const found: El[] = [];
+    const walk = (node: unknown): void => {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (!node || typeof node !== "object" || !("props" in node)) return;
+      const el = node as El;
+      if ((el.type === Button && el.props.children === "Delete") || el.props.id === "meal-offline") found.push(el);
+      Object.values(el.props).forEach(walk);
+    };
+    walk(tree);
+    const [line, del] = [found.find((el) => el.props.id === "meal-offline"), found.find((el) => el.type === Button)];
+    expect(line?.props.children).toBe("You're offline.");
+    expect(del?.props.disabled).toBe(true);
+    expect(del?.props["aria-describedby"]).toBe("meal-offline");
   });
 });

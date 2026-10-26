@@ -201,6 +201,17 @@ describe("planFlags (SPEC §3.4)", () => {
     expect([...flags.values()]).toEqual([[{ kind: "container_gone", status: "finished" }], [{ kind: "container_gone", status: "discarded" }]]);
   });
 
+  it("a gone container shows ONLY the gone flag, past its Best by or its window too", () => {
+    const flags = run(
+      [use(id(1), "2026-11-05"), use(id(2), "2026-11-05")],
+      [
+        box(1, { status: "finished", servingsLeft: 0, bestBy: "2026-11-01" }),
+        box(2, { status: "discarded", servingsLeft: 4, bestBy: null, expiresAt: "2026-10-01T00:00:00.000Z" }),
+      ],
+    );
+    expect([...flags.values()]).toEqual([[{ kind: "container_gone", status: "finished" }], [{ kind: "container_gone", status: "discarded" }]]);
+  });
+
   it("Best by is calendar days (the day itself is fine) and wins over the window", () => {
     const pear = box(1, { bestBy: "2026-11-02", expiresAt: "2026-10-01T00:00:00.000Z" });
     const onTheDay = use(pear.id, "2026-11-02", { time: "23:00" });
@@ -273,11 +284,11 @@ describe("Copy to… (SPEC §3.3)", () => {
     expect(warnings).toEqual([
       { kind: "may_run_out", storageItemId: id(1), servingsLeft: 2, plannedTimes: 4, date: "2026-11-03" },
       { kind: "past_best_by", storageItemId: id(1), date: "2026-11-03" },
+      // A gone container is ONLY the gone line, though its window has passed.
       { kind: "container_gone", storageItemId: id(2), status: "finished" },
-      { kind: "past_use_within", storageItemId: id(2), date: "2026-11-02" },
     ]);
     // No copy of a container, no warning about it.
-    expect(copyWarnings(uses, flags, new Set([id(15)]), containers).map((w) => w.storageItemId)).toEqual([id(2), id(2)]);
+    expect(copyWarnings(uses, flags, new Set([id(15)]), containers).map((w) => w.storageItemId)).toEqual([id(2)]);
     // Only 12 (the 4th) is a copy: running out still counts the 3rd, which
     // was planned already, but Best by speaks of the copy's day only.
     expect(copyWarnings(uses, flags, new Set([id(12)]), containers)).toEqual([

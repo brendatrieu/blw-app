@@ -74,7 +74,7 @@ six buckets is as much as it can ever carry.
 | `usage_sharing_changed` | the Privacy switch moves | `enabled` |
 | `feedback_sent` | a message sent from Send feedback (the message itself never leaves the database) | — |
 | `allergen_marked` | an allergen marked established by hand, or that mark undone | `action` (`mark` / `undo`), `backdated` (the chosen instant is >1h before the tap) |
-| `plan_saved` | a planned meal's items saved (not sent for a save that empties a meal: the bucket starts at 1) | `item_count` (the `food_count` buckets, counting plate items), `has_storage` (a container is planned), `days_ahead` (`0` / `1` / `2-7` / `8+` days after today; never the date) |
+| `plan_saved` | a planned meal's items saved (not sent for a save that empties a meal: the bucket starts at 1) | `item_count` (the `food_count` buckets, counting plate items), `has_storage` (a container is planned), `days_ahead` (`past` for a day before today, else `0` / `1` / `2-7` / `8+` days after today; never the date) |
 | `plan_copied` | a Copy to… that persisted | `target_count` (the `food_count` buckets), `replaced` (any target was Replace it), `warned` (the dry run showed warnings) |
 | `daily_meals_saved` | Daily meals saved | `meal_count` (the `food_count` buckets), `has_times` (any meal has a time); never the names |
 

@@ -48,6 +48,7 @@ vi.mock("./api.js", () => ({
   deleteFavorite: async () => ({}),
 }));
 
+import { PLATE_NOT_AN_INGREDIENT } from "@blw/shared";
 import { ApiError } from "../../lib/api.js";
 import {
   trackingKeys,
@@ -188,6 +189,32 @@ describe("useDeleteMeal treats a meal that is already gone as deleted (ledger 76
       await expect(mutationFnFor(() => useDeleteMeal(BABY_ID))("meal-1" as never)).rejects.toBeInstanceOf(TypeError);
     } finally {
       deleteMealImpl = async () => undefined;
+    }
+  });
+});
+
+// VERIFY-p3-c1 #6: a save refused because the recipe lost a left-out
+// ingredient on another device refetches THAT recipe, so its Ingredients
+// panel shows what it holds now. Any other failure refetches no recipe.
+describe("a stale leave-out refetches its recipe", () => {
+  const stale = new ApiError(400, "invalid_request", {
+    error: "invalid_request",
+    details: { leftOutFoodIds: PLATE_NOT_AN_INGREDIENT, recipeId: "recipe-1", foodIds: ["food-1"] },
+  });
+  const onErrorOf = (create: () => unknown) => {
+    captured.length = 0;
+    create();
+    return captured[0]!.onError as unknown as (error: unknown) => void;
+  };
+
+  it("on Log meal and on Edit", () => {
+    for (const create of [() => useCreateMeal(BABY_ID), () => useUpdateMeal(BABY_ID)]) {
+      invalidated.length = 0;
+      onErrorOf(create)(stale);
+      expect(invalidated).toEqual([["recipe", "recipe-1"]]);
+      invalidated.length = 0;
+      onErrorOf(create)(new ApiError(400, "invalid_request", { details: { items: "x" } }));
+      expect(invalidated).toEqual([]);
     }
   });
 });

@@ -100,13 +100,14 @@ describe("POST /api/usage", () => {
     };
     const events = [
       usageEnvelope({ name: "plan_saved", route: "/settings", props: { item_count: "2", has_storage: true, days_ahead: "8+" } }),
+      usageEnvelope({ name: "plan_saved", route: "/settings", props: { item_count: "1", has_storage: false, days_ahead: "past" } }),
       usageEnvelope({ name: "plan_copied", route: "/settings", props: { target_count: "6+", replaced: false, warned: true } }),
       usageEnvelope({ name: "daily_meals_saved", route: "/settings", props: { meal_count: "4-5", has_times: true } }),
       usageEnvelope({ name: "meal_logged", route: "/settings", props: mealProps }),
     ];
     expect((await post({ events }, user.cookie)).statusCode).toBe(204);
     const rows = await db.select().from(schema.usageEvents);
-    expect(rows.map((row) => row.name).sort()).toEqual(["daily_meals_saved", "meal_logged", "plan_copied", "plan_saved"]);
+    expect(rows.map((row) => row.name).sort()).toEqual(["daily_meals_saved", "meal_logged", "plan_copied", "plan_saved", "plan_saved"]);
     expect(rows.find((row) => row.name === "meal_logged")!.props).toEqual(mealProps);
     // A date where a bucket belongs fails the whole batch.
     const dated = usageEnvelope({ name: "plan_saved", route: "/settings", props: { item_count: "2", has_storage: true, days_ahead: "2026-11-02" } });

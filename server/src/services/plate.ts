@@ -6,7 +6,7 @@
 // unchanged. Older request shapes never come here: they run their own code
 // verbatim and end with the per-meal heal (db/migrate.ts `healMealItems`).
 import { and, asc, eq, inArray, notInArray, sql } from "drizzle-orm";
-import { MEAL_FOODS_MAX, MEAL_RECIPES_MAX, PLATE_NOTHING_COUNTS, type PlateItemInput } from "@blw/shared";
+import { MEAL_FOODS_MAX, MEAL_RECIPES_MAX, PLATE_NOT_AN_INGREDIENT, PLATE_NOTHING_COUNTS, type PlateItemInput } from "@blw/shared";
 import { healMealItems } from "../db/migrate.js";
 import { mealFoods, mealItems, mealRecipes, mealStorageItems, meals, storageItemRecipes, storageItems } from "../db/schema.js";
 import {
@@ -17,6 +17,10 @@ import {
   type Transaction,
 } from "./meals.js";
 import { NO_SERVINGS_LEFT, loadStorageItemFoods, notServable, returnServings } from "./storage.js";
+
+/** A container that holds neither a food nor a recipe has nothing to log;
+ * the plate refuses it, and so does a plan (VERIFY-p3-c1 #2). */
+export const PLATE_LABEL_ONLY = "a label-only storage item has no food to log — add a food or a recipe to serve it";
 
 /** Thrown inside the write's transaction to roll it back with a reply. */
 export class PlateAborted extends Error {
@@ -230,7 +234,7 @@ export async function writePlate(tx: Transaction, write: PlateWrite): Promise<st
       const kept = item.id ? byId.get(item.id) : undefined;
       const current = ingredients.get(item.recipeId) ?? new Set<string>();
       const strays = (item.leftOutFoodIds ?? []).filter((id) => !current.has(id));
-      if (strays.length > 0) throw bad({ leftOutFoodIds: "not an ingredient of this recipe", foodIds: strays });
+      if (strays.length > 0) throw bad({ leftOutFoodIds: PLATE_NOT_AN_INGREDIENT, recipeId: item.recipeId, foodIds: strays });
       const leftOut = new Set(item.leftOutFoodIds ?? []);
       // A kept row never re-derives what was eaten from the recipe as it is
       // NOW (901b): foods the recipe lost since stay counted, and an inferred
@@ -270,7 +274,7 @@ export async function writePlate(tx: Transaction, write: PlateWrite): Promise<st
       const foodsHeld = (heldFoods.get(item.storageItemId) ?? []).map((food) => food.id);
       const recipesHeld = containerRecipes(item.storageItemId);
       if (foodsHeld.length === 0 && recipesHeld.length === 0) {
-        throw bad({ items: "a label-only storage item has no food to log — add a food or a recipe to serve it" });
+        throw bad({ items: PLATE_LABEL_ONLY });
       }
       const parts = new Set([...foodsHeld, ...recipesHeld]);
       const strays = Object.keys(ratings).filter((id) => !parts.has(id));

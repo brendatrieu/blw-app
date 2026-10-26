@@ -433,7 +433,7 @@ describe("planning (ledger 903, step 3.1)", () => {
         [[{ kind: "food", foodId: theirs!.id }], 400, { foodIds: "unknown food" }],
         [[{ kind: "food", foodId: MISSING }], 400, { foodIds: "unknown food" }],
         [[{ kind: "recipe", recipeId: MISSING }], 400, { recipeIds: "unknown recipe" }],
-        [[{ kind: "recipe", recipeId: fx.muffins.id, leftOutFoodIds: [fx.oats.id] }], 400, { leftOutFoodIds: "not an ingredient of this recipe" }],
+        [[{ kind: "recipe", recipeId: fx.muffins.id, leftOutFoodIds: [fx.oats.id] }], 400, { leftOutFoodIds: "not an ingredient of this recipe", recipeId: fx.muffins.id, foodIds: [fx.oats.id] }],
         [[{ kind: "recipe", recipeId: fx.muffins.id, leftOutFoodIds: [fx.egg.id, fx.banana.id] }], 400, { items: PLATE_NOTHING_COUNTS }],
         [[{ kind: "recipe", recipeId: fx.drizzle.id }], 400, { items: PLATE_NOTHING_COUNTS }],
         [[{ kind: "storage", storageItemId: theirBox, servings: 1 }], 400, { items: "unknown storage item" }],

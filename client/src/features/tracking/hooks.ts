@@ -42,7 +42,8 @@ import {
   mealRecipeKindProps,
   mealViaFromLocation,
 } from "../../lib/usage/properties.js";
-import { containersEmptiedBy } from "../plate/plate.js";
+import { catalogKeys } from "../catalog/hooks.js";
+import { containersEmptiedBy, staleLeaveOut } from "../plate/plate.js";
 
 export const trackingKeys = {
   meals: (babyId: string) => ["meals", babyId] as const,
@@ -338,6 +339,7 @@ export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage
     },
     onError: (error) => {
       track("meal_save_failed", { via: mealViaFromLocation(), kind: failureKind(error), offline: isOffline() });
+      refetchChangedRecipe(queryClient, error);
     },
     onSettled: () => {
       // A plate can take servings from containers, and (Phase 4) fill a
@@ -349,6 +351,13 @@ export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage
       void queryClient.invalidateQueries({ queryKey: trackingKeys.ratings(babyId) });
     },
   });
+}
+
+/** A save refused because its recipe lost a left-out ingredient on another
+ * device: that recipe's ingredients are refetched (VERIFY-p3-c1 #6). */
+function refetchChangedRecipe(queryClient: QueryClient, error: unknown): void {
+  const stale = staleLeaveOut(error);
+  if (stale) void queryClient.invalidateQueries({ queryKey: catalogKeys.recipe(stale.recipeId) });
 }
 
 /** Storage and the meal plan, which every meal write can change: servings
@@ -372,6 +381,7 @@ export function useUpdateMeal(babyId: string | undefined) {
     // a meal mutation that can fail, and the quality panel counts those.
     onError: (error) => {
       track("meal_save_failed", { via: mealViaFromLocation(), kind: failureKind(error), offline: isOffline() });
+      refetchChangedRecipe(queryClient, error);
     },
     onSuccess: (updated: MealItem) => {
       // The save's own answer, which can carry new item ids (a heal

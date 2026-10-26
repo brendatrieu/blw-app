@@ -175,7 +175,8 @@ describe("PlateScreen (render)", () => {
     h.meal = { data: undefined, isError: false };
   });
 
-  it("Edit opened offline with no meal yet says so, not an endless skeleton or \"gone\" (VERIFY-p2-c1 #6)", () => {
+  // VERIFY-p2-c1 #6; VERIFY-p3-c1: "You're offline." once, and that is the app's banner, not this page.
+  it("Edit opened offline with no meal yet shows no skeleton, no \"gone\" and no second offline line", () => {
     h.offline = true;
     for (const meal of [
       { data: undefined, isError: false },
@@ -183,7 +184,8 @@ describe("PlateScreen (render)", () => {
     ]) {
       h.meal = meal;
       const html = renderAt(`/log-meal?edit=${MEAL.id}`);
-      expect(html).toContain("You&#x27;re offline.");
+      expect(html).not.toContain("offline");
+      expect(html).toContain("Edit meal");
       expect(html).not.toContain("skeleton");
       expect(html).not.toContain("That meal is gone");
       expect(html).not.toContain('id="plate-when"');

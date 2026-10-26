@@ -34,6 +34,11 @@ export const PLATE_LEFT_OUT_MAX = 50;
  * (every ingredient of its only recipe left out): the client says so in its
  * own words instead of a generic "try again" (VERIFY-p2-c1 #3). */
 export const PLATE_NOTHING_COUNTS = "nothing on the plate counts as a food";
+/** The 400's `details.leftOutFoodIds` when a leave-out is no longer one of
+ * its recipe's ingredients (another device edited the recipe). The details
+ * also name `recipeId` and the stray `foodIds`, so the client can drop them
+ * and refetch the recipe (VERIFY-p3-c1 #6). */
+export const PLATE_NOT_AN_INGREDIENT = "not an ingredient of this recipe";
 export const PLATE_SERVINGS_MAX = 99;
 
 const uuid = z.string().uuid();

@@ -3,6 +3,7 @@
 // checked against the shared schemas the server parses with.
 import { describe, expect, it } from "vitest";
 import {
+  PLATE_NOT_AN_INGREDIENT,
   createPlateMealInputSchema,
   plateInputFromItems,
   plateKey,
@@ -11,6 +12,7 @@ import {
   type PlateItem,
   type StorageItem,
 } from "@blw/shared";
+import { ApiError } from "../../lib/api.js";
 import { addMoreDiff, type AddMoreChange, type AddMoreIds, type FreshFood } from "../storage/addMoreSelection.js";
 import {
   PLATE_FIELD_ORDER,
@@ -28,6 +30,7 @@ import {
   ranOut,
   ranOutEntry,
   servingsMax,
+  staleLeaveOut,
   toMealInput,
   validatePlate,
   type ContainerEntry,
@@ -458,6 +461,32 @@ describe("nothingCounts (VERIFY-p2-c1 #3)", () => {
     let plate = leaveOut(add({ recipes: [PASTA] }), `recipe:${PASTA.id}`, CASHEW);
     plate = plateReducer(plate, { type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: GARLIC });
     expect(nothingCounts(plate)).toBe(true);
+  });
+});
+
+describe("a stale leave-out (VERIFY-p3-c1 #6)", () => {
+  const details = { leftOutFoodIds: PLATE_NOT_AN_INGREDIENT, recipeId: PASTA.id, foodIds: [CASHEW.id] };
+  it("reads the server's 400, and nothing else", () => {
+    expect(staleLeaveOut(new ApiError(400, "invalid_request", { error: "invalid_request", details }))).toEqual({
+      recipeId: PASTA.id,
+      foodIds: [CASHEW.id],
+    });
+    expect(staleLeaveOut(new ApiError(409, "conflict", { details }))).toBeNull();
+    expect(staleLeaveOut(new ApiError(400, "invalid_request", { details: { ...details, recipeId: undefined } }))).toBeNull();
+    expect(staleLeaveOut(new ApiError(400, "invalid_request", { details: { items: "x" } }))).toBeNull();
+    expect(staleLeaveOut(new Error("network"))).toBeNull();
+  });
+
+  it("drops those leave-outs from that recipe only; another recipe leaving out the same food keeps it", () => {
+    let plate = add({ recipes: [PASTA, PATTIES] });
+    plate = plateReducer(plate, { type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: CASHEW, ingredientIds: [CASHEW.id, GARLIC.id] });
+    plate = plateReducer(plate, { type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: GARLIC });
+    plate = plateReducer(plate, { type: "toggleLeftOut", key: `recipe:${PATTIES.id}`, food: CASHEW });
+    plate = plateReducer(plate, { type: "dropLeftOut", recipeId: PASTA.id, foodIds: [CASHEW.id] });
+    const [pasta, patties] = plate as RecipeEntry[];
+    expect(pasta!.leftOut.map((food) => food.id)).toEqual([GARLIC.id]);
+    expect(pasta!.ingredientIds).toEqual([GARLIC.id]);
+    expect(patties!.leftOut.map((food) => food.id)).toEqual([CASHEW.id]);
   });
 });
 
