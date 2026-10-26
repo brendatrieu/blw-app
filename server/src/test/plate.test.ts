@@ -4,7 +4,7 @@
 // per-meal heal. After every write the §2.2 invariants hold and a second
 // heal changes nothing.
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import type { PGlite } from "@electric-sql/pglite";
 import type { FastifyInstance } from "fastify";
 import {
@@ -470,6 +470,29 @@ describe("plate writes (ledger 901, step 1b)", () => {
       // replacement keeps it.
       expect(after.foods.find((food) => food.id === fx.banana.id)?.storageItemId).toBe(pears);
       await expectExact(db);
+    });
+
+    // Verifier p1-c2 blocker 1 (probe Q10): a restored Postgres runs its
+    // first ANALYZE on its own, often between the dry run's two records. On
+    // identical data the record must not change: readers that leave ties to
+    // the plan (one meal's foods in the snapshot, the profile's reactive
+    // foods) moved with it.
+    it("the parity record is the same before and after ANALYZE on identical data", async () => {
+      // 40 legacy meals of 3-4 foods each, sent in reverse name order, every
+      // fourth one with a reaction note (the AI profile's reactive foods).
+      const pool = [fx.pear, fx.oats, fx.egg, fx.carrot, fx.banana].map((food) => food.id);
+      for (let k = 0; k < 40; k++) {
+        const response = await create({
+          foodIds: pool.slice(k % 2, (k % 2) + 3 + (k % 3 === 0 ? 1 : 0)),
+          servedAt: new Date(Date.UTC(2026, 8, 1 + Math.floor(k / 2), 8 + (k % 2) * 6)).toISOString(),
+          ...(k % 4 === 0 ? { reactionNote: "rash" } : {}),
+        });
+        expect(response.statusCode, response.body).toBe(201);
+      }
+      const before = await recordPlateParity(db);
+      await db.execute(sql`ANALYZE`);
+      const after = await recordPlateParity(db);
+      expect(Object.fromEntries(Object.entries(comparePlateParity(before, after)).filter(([, n]) => n > 0))).toEqual({});
     });
   });
 

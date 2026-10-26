@@ -140,7 +140,26 @@ export async function recordPlateParity(db: Database): Promise<ParityRecord> {
     };
   }
 
-  return JSON.parse(JSON.stringify(record)) as ParityRecord;
+  const out = JSON.parse(JSON.stringify(record)) as ParityRecord;
+  // Rows that tie on a reader's ORDER BY come back in plan order, and the
+  // plan moves when ANALYZE runs (a restored Postgres analyzes itself within
+  // a minute, often between the dry run's two records): one meal's foods in
+  // the snapshot (by served_at only), the profile's reactive foods (no
+  // order), same-name foods (by name only). Put ties in a fixed order; every
+  // value is still compared (verifier p1-c2).
+  type Named = { name: string; id: string };
+  const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+  const byNameId = (a: Named, b: Named) => cmp(a.name, b.name) || cmp(a.id, b.id);
+  for (const list of Object.values(out.snapshot!) as { servedAt: string }[][]) {
+    list.sort((a, b) => cmp(b.servedAt, a.servedAt) || cmp(JSON.stringify(a), JSON.stringify(b)));
+  }
+  for (const profile of Object.values(out.profile!) as ({ knownReactiveFoods: string[] } | null)[]) profile?.knownReactiveFoods.sort();
+  for (const detail of Object.values(out.allergenDetail!) as ({ foods: Named[]; exposures: { foods: Named[] }[] } | null)[]) {
+    detail?.foods.sort(byNameId);
+    for (const exposure of detail?.exposures ?? []) exposure.foods.sort(byNameId);
+  }
+  for (const meal of Object.values(out.loadMeals!) as { foods: Named[] }[]) meal.foods.sort(byNameId);
+  return out;
 }
 
 /**

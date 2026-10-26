@@ -340,6 +340,7 @@ never leaves it, and the script prints only counts and pass/fail.
    sleep 5   # let it start
    gunzip -c blw-<STAMP>.sql.gz | docker exec -i blw-dry psql -U blw blw
    docker exec blw-dry psql -U blw blw -tc 'SELECT count(*) FROM drizzle.__drizzle_migrations'   # 24 = at 0023
+   docker exec blw-dry psql -U blw blw -c 'ANALYZE'   # what autovacuum would do a minute later
    ```
 3. From `server/`, with `DATABASE_URL=postgres://blw:dry@localhost:55432/blw`
    (the script refuses any host but localhost):
