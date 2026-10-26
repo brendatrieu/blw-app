@@ -65,7 +65,8 @@ const DELETE_WINDOW_MS = 15 * 60 * 1000;
 export async function deleteUserAndOwnedData(db: Database, userId: string): Promise<void> {
   // Almost everything the account owns hangs off `user` by an ON DELETE
   // CASCADE chain, so one delete takes it all:
-  //   user -> babies -> meals -> meal_foods, meal_recipes, meal_storage_items
+  //   user -> babies -> meals -> meal_foods, meal_recipes, meal_storage_items,
+  //                               meal_items
   //   user -> babies -> symptom_checks
   //   user -> storage_items -> meal_storage_items, storage_item_recipes
   //   user -> babies -> allergen_overrides

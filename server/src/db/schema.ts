@@ -486,6 +486,50 @@ export const mealStorageItems = pgTable(
   ],
 );
 
+// Ledger 901 (plan SPEC §1.2, migration 0024): what is ON the plate, one row
+// per rating target. A fresh food or a fresh recipe is one row; a container
+// is the group of rows sharing its `storage_item_id` (one per held food, or
+// one per recipe). `meal_foods` stays THE exposure table, derived from these
+// rows (every food row plus every `counted_food_ids`), and `meal_recipes`
+// the distinct recipes in order of first appearance; readers there never
+// change. `counted_food_ids` snapshots what a recipe row counted, so a later
+// recipe edit never moves exposure; "left out" = current ingredients minus
+// it. No unique index: the identity rules (SPEC §4.3) live in zod and the
+// route. `food_id` cascades (unlike `meal_foods.food_id`) only so an older
+// image's custom-food Replace cannot 500; `meal_foods` still blocks deleting
+// a food in use.
+export const mealItems = pgTable(
+  "meal_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    mealId: uuid("meal_id")
+      .notNull()
+      .references(() => meals.id, { onDelete: "cascade" }),
+    // Plate order; a container's rows are consecutive once a plate write
+    // renumbers (a backfilled meal may hold them apart, SPEC §2.2 C).
+    position: integer("position").notNull(),
+    foodId: uuid("food_id").references(() => foods.id, { onDelete: "cascade" }),
+    recipeId: uuid("recipe_id").references(() => recipes.id, { onDelete: "cascade" }),
+    storageItemId: uuid("storage_item_id").references(() => storageItems.id, { onDelete: "set null" }),
+    countedFoodIds: uuid("counted_food_ids").array().notNull().default(sql`'{}'::uuid[]`),
+    rating: smallint("rating"),
+    // True for rows the 0024 backfill or the boot heal rebuilt from the
+    // legacy tables (chair §10.1): the plate never shows "Left out" for them,
+    // because a recipe that gained an ingredient after the meal would
+    // otherwise read as one left out.
+    inferred: boolean("inferred").notNull().default(false),
+  },
+  (t) => [
+    index("meal_items_meal_id_idx").on(t.mealId, t.position),
+    index("meal_items_food_id_idx").on(t.foodId),
+    index("meal_items_recipe_id_idx").on(t.recipeId),
+    index("meal_items_storage_item_id_idx").on(t.storageItemId),
+    check("meal_items_one_ref", sql`num_nonnulls(${t.foodId}, ${t.recipeId}) = 1`),
+    check("meal_items_counted_recipe_only", sql`${t.recipeId} IS NOT NULL OR cardinality(${t.countedFoodIds}) = 0`),
+    check("meal_items_rating_range", sql`${t.rating} BETWEEN 1 AND 5`),
+  ],
+);
+
 // Parent-declared "this allergen was already established before we started
 // using the app". Purely ADDITIVE to the derived ladder: allergen progress is
 // still counted from `meal_foods` JOIN `meals`, and a row here can only ever

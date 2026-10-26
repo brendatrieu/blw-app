@@ -11,7 +11,7 @@
 // Ledger 752: a meal's recipes live in `meal_recipes` (several per meal, each
 // with its own rating, in picked order). `meals.recipe_id` / `recipe_rating`
 // are only a legacy mirror of the first one, written here and never read.
-import { and, asc, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import type { MealItem, MealRecipe, RatingHistoryQuery, RatingHistoryResponse, RatingSummary, RatingsResponse } from "@blw/shared";
 import type { Database } from "../db/index.js";
 import {
@@ -386,4 +386,19 @@ export async function countServed(db: Database, babyId: string, query: RatingHis
         .innerJoin(mealRecipes, eq(mealRecipes.mealId, meals.id))
         .where(and(eq(meals.babyId, babyId), eq(mealRecipes.recipeId, query.recipeId!)));
   return row?.count ?? 0;
+}
+
+/**
+ * Home's "N foods tried" (item 680): distinct foods over every meal of this
+ * baby. Ledger 838/855: an 'info' food (whole milk) is not a food tried, even
+ * logged on its own; ingredients and spices are.
+ */
+export async function countFoodsTried(db: Database, babyId: string): Promise<number> {
+  const [tried] = await db
+    .select({ count: sql<number>`count(distinct ${mealFoods.foodId})::int` })
+    .from(mealFoods)
+    .innerJoin(meals, eq(mealFoods.mealId, meals.id))
+    .innerJoin(foods, eq(mealFoods.foodId, foods.id))
+    .where(and(eq(meals.babyId, babyId), ne(foods.kind, "info")));
+  return tried?.count ?? 0;
 }
