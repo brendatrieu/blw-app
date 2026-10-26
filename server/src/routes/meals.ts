@@ -6,18 +6,21 @@
 // it only unions into the reported status (see `unionAllergenStatus`). Every
 // route sits behind requireAuth and every baby/meal lookup is scoped to the
 // caller's own rows — a miss (wrong owner or unknown id) is 404, never 403.
-import { and, desc, eq, inArray, isNotNull, isNull, lt, notInArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, lt, notInArray } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   allergenDetailParamsSchema,
   allergenKeyParamSchema,
   babyIdRouteParamSchema,
   createMealInputSchema,
+  createPlateMealInputSchema,
+  isPlateMealBody,
   markAllergenEstablishedInputSchema,
   mealIdParamSchema,
   mealsQuerySchema,
   ratingHistoryQuerySchema,
   updateMealInputSchema,
+  updatePlateMealInputSchema,
   type AllergenDetail,
   type AllergenProgressResponse,
   type MealsResponse,
@@ -26,22 +29,21 @@ import {
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
+import { healMealItems } from "../db/migrate.js";
 import {
   allergenOverrides,
   allergens,
   babies,
-  foods,
   mealFoods,
   mealRecipes,
   mealStorageItems,
   meals,
-  recipes,
   storageItemRecipes,
   storageItems,
 } from "../db/schema.js";
 import { returnServings } from "../services/storage.js";
+import { PlateAborted, writePlate } from "../services/plate.js";
 import { loadAllergenDetail, loadAllergenProgress } from "../services/allergens.js";
-import { visibleRecipesCondition } from "../services/recipes.js";
 import {
   countFoodsTried,
   countServed,
@@ -53,8 +55,9 @@ import {
   loadRatingHistory,
   loadRatingSummaries,
   ownsBaby,
+  validateFoodIds,
+  validateRecipeIds,
   writeMealMirror,
-  type Queryable,
   type Transaction,
 } from "../services/meals.js";
 
@@ -83,39 +86,6 @@ function ownedMealCondition(db: Database, mealId: string, userId: string) {
 type Validated<T> = { ok: true; value: T } | { ok: false; details: unknown };
 
 /**
- * Deduped, existence-checked food ids — the same check POST and PATCH share.
- * "Exists" means visible to THIS user: the seeded catalog plus their own
- * custom foods. Another account's custom food reads as an unknown id, so it
- * can never be logged into a meal (and the 400 says nothing about whether it
- * exists elsewhere). A food its owner DELETED passes only when it is
- * already on THIS meal (`keptFoodIds`): editing an old meal resends the foods
- * it already has, but a deleted food can never be added to a new or edited
- * meal — it reads as unknown, like any food the caller cannot choose.
- */
-export async function validateFoodIds(
-  db: Queryable,
-  rawFoodIds: string[],
-  userId: string,
-  keptFoodIds: ReadonlySet<string> = new Set(),
-): Promise<Validated<string[]>> {
-  // Dedupe so the same food twice in one submission is one row, not a
-  // unique-index violation.
-  const foodIds = [...new Set(rawFoodIds)];
-
-  const foodRows = await db
-    .select({ id: foods.id, deletedAt: foods.deletedAt })
-    .from(foods)
-    .where(and(inArray(foods.id, foodIds), or(isNull(foods.ownerId), eq(foods.ownerId, userId))));
-  const known = new Set(foodRows.filter((row) => !row.deletedAt || keptFoodIds.has(row.id)).map((row) => row.id));
-  const unknownFoodIds = foodIds.filter((id) => !known.has(id));
-  if (unknownFoodIds.length > 0) {
-    return { ok: false, details: { foodIds: "unknown food", unknownFoodIds } };
-  }
-
-  return { ok: true, value: foodIds };
-}
-
-/**
  * Resolves `:key` against the CANONICAL allergen list — the seeded
  * `allergens` table. Both a malformed slug and a well-formed one that names
  * no allergen are 400s: neither can ever become a meaningful override, and
@@ -134,33 +104,6 @@ async function validateAllergenKey(db: Database, rawKey: unknown): Promise<Valid
   if (!row) return { ok: false, details: { key: "unknown allergen" } };
 
   return { ok: true, value: row.slug };
-}
-
-/**
- * Recipe ids are attribution, but each still has to name a recipe this user
- * can see: the catalog plus their own. Another account's custom recipe reads
- * as an unknown id, exactly as its foods do in `validateFoodIds`. One query
- * for the whole list. `field` names the key the 400 is about, so an older
- * app's single `recipeId` still gets `{recipeId: "unknown recipe"}`.
- */
-export async function validateRecipeIds(
-  db: Queryable,
-  recipeIds: readonly string[],
-  userId: string,
-  field: "recipeId" | "recipeIds",
-): Promise<Validated<null>> {
-  if (recipeIds.length === 0) return { ok: true, value: null };
-  const rows = await db
-    .select({ id: recipes.id })
-    .from(recipes)
-    .where(and(inArray(recipes.id, [...recipeIds]), visibleRecipesCondition(userId)));
-  const known = new Set(rows.map((row) => row.id));
-  const unknownRecipeIds = recipeIds.filter((id) => !known.has(id));
-  if (unknownRecipeIds.length === 0) return { ok: true, value: null };
-  return {
-    ok: false,
-    details: field === "recipeId" ? { recipeId: "unknown recipe" } : { recipeIds: "unknown recipe", unknownRecipeIds },
-  };
 }
 
 /** The meal's rating state that one write is checked against (DESIGN-B §2). */
@@ -347,6 +290,12 @@ async function returnRemovedParts(
   );
 }
 
+/** The reply for a plate write that was refused (services/plate.ts). */
+function plateRefused(reply: FastifyReply, error: PlateAborted): FastifyReply {
+  const { outcome } = error;
+  return outcome.code === 400 ? badRequest(reply, outcome.details) : reply.code(409).send(outcome.body);
+}
+
 /** Thrown inside the PATCH transaction to roll it back with a reply. */
 class MealEditAborted extends Error {
   constructor(readonly outcome: { code: 404 } | { code: 409; message: string } | { code: 400; details: unknown }) {
@@ -389,12 +338,57 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
   });
 
   // -----------------------------------------------------------------------
+  // GET /api/meals/:id (ledger 901)
+  // -----------------------------------------------------------------------
+  // One meal with its plate, for Edit meal and a meal older than the list's
+  // page. A miss (unknown, or another account's) is 404.
+  app.get("/api/meals/:id", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = mealIdParamSchema.safeParse(request.params);
+    if (!params.success) return notFound(reply);
+    const [owned] = await db
+      .select({ id: meals.id })
+      .from(meals)
+      .where(ownedMealCondition(db, params.data.id, currentUserId(request)));
+    const item = owned && (await loadMeals(db, [owned.id])).get(owned.id);
+    if (!item) return notFound(reply);
+    return reply.send(item);
+  });
+
+  // -----------------------------------------------------------------------
   // POST /api/babies/:babyId/meals
   // -----------------------------------------------------------------------
   app.post("/api/babies/:babyId/meals", { preHandler: app.requireAuth }, async (request, reply) => {
     const params = babyIdRouteParamSchema.safeParse(request.params);
     if (!params.success) return notFound(reply);
     if (!(await ownsBaby(db, params.data.babyId, currentUserId(request)))) return notFound(reply);
+
+    // Ledger 901: the plate shape (`items`) goes through writePlate; every
+    // other body is the legacy shape and runs the code below unchanged.
+    if (isPlateMealBody(request.body)) {
+      const plate = createPlateMealInputSchema.safeParse(request.body);
+      if (!plate.success) return badRequest(reply, plate.error.flatten());
+      let created: string;
+      try {
+        created = await db.transaction((tx) =>
+          writePlate(tx, {
+            userId: currentUserId(request),
+            babyId: params.data.babyId,
+            items: plate.data.items,
+            columns: {
+              servedAt: plate.data.servedAt ? new Date(plate.data.servedAt) : new Date(),
+              reactionNote: plate.data.reactionNote,
+              notes: plate.data.notes,
+            },
+          }),
+        );
+      } catch (error) {
+        if (error instanceof PlateAborted) return plateRefused(reply, error);
+        throw error;
+      }
+      const meal = (await loadMeals(db, [created])).get(created);
+      if (!meal) throw new Error("Meal was inserted but could not be read back");
+      return reply.code(201).send(meal);
+    }
 
     const body = createMealInputSchema.safeParse(request.body);
     if (!body.success) return badRequest(reply, body.error.flatten());
@@ -438,16 +432,20 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     // recipes and every one of its foods land, or nothing does. Hand-logged
     // meals never link to a storage item — that link is what the serve
     // endpoint alone creates.
-    const mealId = await db.transaction((tx) =>
-      insertMeal(tx, {
+    const mealId = await db.transaction(async (tx) => {
+      const id = await insertMeal(tx, {
         babyId: params.data.babyId,
         recipes: recipeIds.map((recipeId) => ({ recipeId, rating: mapped.value.recipeRatings?.[recipeId] ?? null })),
         servedAt,
         reactionNote: body.data.reactionNote,
         notes: body.data.notes,
         foods: children.value.map((foodId) => ({ foodId, rating: body.data.foodRatings?.[foodId] ?? null })),
-      }),
-    );
+      });
+      // Ledger 901 (SPEC §2.5): the legacy rows above, then the plate's items
+      // backfilled from them in the same transaction.
+      await healMealItems(tx, [id]);
+      return id;
+    });
 
     const item = (await loadMeals(db, [mealId])).get(mealId);
     if (!item) throw new Error("Meal was inserted but could not be read back");
@@ -478,6 +476,24 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
           .where(ownedMealCondition(db, params.data.id, userId))
           .for("update");
         if (!locked) throw new MealEditAborted({ code: 404 });
+
+        // Ledger 901: the plate shape (`items` or `itemRatings`) goes through
+        // writePlate under this same lock; the legacy shape runs below.
+        if (isPlateMealBody(request.body)) {
+          const plate = updatePlateMealInputSchema.safeParse(request.body);
+          if (!plate.success) throw new MealEditAborted({ code: 400, details: plate.error.flatten() });
+          return writePlate(tx, {
+            userId,
+            mealId: locked.id,
+            items: plate.data.items,
+            itemRatings: plate.data.itemRatings,
+            columns: {
+              servedAt: plate.data.servedAt !== undefined ? new Date(plate.data.servedAt) : undefined,
+              reactionNote: plate.data.reactionNote,
+              notes: plate.data.notes,
+            },
+          });
+        }
 
         const body = updateMealInputSchema.safeParse(request.body);
         if (!body.success) throw new MealEditAborted({ code: 400, details: body.error.flatten() });
@@ -626,9 +642,14 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
 
         // Last, from the rows just written.
         await writeMealMirror(tx, locked.id);
+        // Ledger 901 (SPEC §2.5): then the plate's items follow the legacy
+        // rows (a food, recipe or container change rebuilds them; a rating
+        // lands on the first item of that food or recipe), still under the lock.
+        await healMealItems(tx, [locked.id]);
         return locked.id;
       });
     } catch (error) {
+      if (error instanceof PlateAborted) return plateRefused(reply, error);
       if (error instanceof MealEditAborted) {
         const { outcome } = error;
         if (outcome.code === 404) return notFound(reply);

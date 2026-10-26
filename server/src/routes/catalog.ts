@@ -15,7 +15,7 @@
 // Deleting a custom food is SOFT (`deleted_at`): choosing and browsing reads
 // hide it, history keeps it. Only a replace removes a food for good, and only
 // after every row naming it has moved to the replacement.
-import { and, asc, eq, ilike, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, isNotNull, isNull, lte, notInArray, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   createCustomFoodSchema,
@@ -38,12 +38,16 @@ import { choosableFoodsCondition, visibleFoodsCondition } from "../services/food
 import { visibleRecipesCondition } from "../services/recipes.js";
 import { buildCandidateSlug, isUniqueViolation, SLUG_ATTEMPTS } from "../services/slugs.js";
 import { type Transaction } from "../services/meals.js";
+import { syncLegacy } from "../services/plate.js";
+import { healMealItems } from "../db/migrate.js";
 import {
   allergens,
   foodAllergens,
   foodPairings,
   foods,
   mealFoods,
+  mealItems,
+  meals,
   storageItemFoods,
   recipeIngredients,
   recipes,
@@ -565,6 +569,19 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
       // re-pointed or merged into a row that already held it.
       const usage = await loadFoodUsage(tx, existing.id);
 
+      // Ledger 901 (SPEC §1.5): the meals that ate this food, locked like
+      // every meal write (id order) and their items made exact first: a
+      // no-op in steady state, a rebuild for a meal an older writer drifted.
+      const mealIds = (
+        await tx
+          .select({ id: meals.id })
+          .from(meals)
+          .where(inArray(meals.id, tx.select({ id: mealFoods.mealId }).from(mealFoods).where(eq(mealFoods.foodId, existing.id))))
+          .orderBy(asc(meals.id))
+          .for("update")
+      ).map((row) => row.id);
+      if (mealIds.length > 0) await healMealItems(tx, mealIds);
+
       // A meal that already holds the replacement keeps that row; if only
       // this food's row said which storage item it was served from, the kept
       // row inherits that, so the serve provenance survives the merge.
@@ -656,6 +673,46 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Database): void 
         .update(recipeIngredients)
         .set({ foodId: replacement.id })
         .where(eq(recipeIngredients.foodId, existing.id));
+
+      // The plate (SPEC §1.5), after the legacy merge above: re-point the
+      // items and the recipes' counted snapshots, merge what that made
+      // identical (the row that already held the replacement stays, and takes
+      // the other's rating only when it has none, as above), then derive the
+      // legacy rows again. syncLegacy keeps the links the merge above set.
+      if (mealIds.length > 0) {
+        const repointed = await tx
+          .update(mealItems)
+          .set({ foodId: replacement.id })
+          .where(eq(mealItems.foodId, existing.id))
+          .returning();
+        await tx
+          .update(mealItems)
+          .set({
+            countedFoodIds: sql`array(select distinct x from unnest(array_replace(${mealItems.countedFoodIds}, ${existing.id}::uuid, ${replacement.id}::uuid)) x order by x)`,
+          })
+          .where(sql`${existing.id}::uuid = any(${mealItems.countedFoodIds})`);
+        const repointedIds = repointed.map((row) => row.id);
+        for (const row of repointed) {
+          const [twin] = await tx
+            .select({ id: mealItems.id, rating: mealItems.rating })
+            .from(mealItems)
+            .where(
+              and(
+                eq(mealItems.mealId, row.mealId),
+                eq(mealItems.foodId, replacement.id),
+                row.storageItemId ? eq(mealItems.storageItemId, row.storageItemId) : isNull(mealItems.storageItemId),
+                notInArray(mealItems.id, repointedIds),
+              ),
+            )
+            .limit(1);
+          if (!twin) continue;
+          if (twin.rating === null && row.rating !== null) {
+            await tx.update(mealItems).set({ rating: row.rating }).where(eq(mealItems.id, twin.id));
+          }
+          await tx.delete(mealItems).where(eq(mealItems.id, row.id));
+        }
+        for (const mealId of mealIds) await syncLegacy(tx, mealId, new Set());
+      }
 
       // Nothing names it any more; `food_allergens` cascades with it.
       await tx.delete(foods).where(and(eq(foods.id, existing.id), eq(foods.ownerId, userId)));

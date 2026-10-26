@@ -25,11 +25,13 @@ import {
   foodAllergens,
   foods,
   mealFoods,
+  mealItems,
   mealRecipes,
   meals,
   recipeIngredients,
 } from "../db/schema.js";
 import { visibleFoodsCondition } from "./foods.js";
+import type { MealReads } from "./meals.js";
 
 /** Newest 50 exposures. The history is a page, not an archive — a baby with
  * a year of egg on the log does not need all of it to answer "how is this
@@ -43,18 +45,33 @@ const EXPOSURE_LIMIT = 50;
  * cannot disagree.
  *
  * A counting tag always counts. A `counts_when_alone` tag (ledger 864: whole
- * milk -> Milk) counts only when the food is NOT an ingredient of any of the
- * meal's recipes: a cup of milk is a serving, milk cooked into the egg bake
- * is not. "Ingredient" is the recipe's CURRENT ingredients, the same rule as
- * `MealFood.inRecipe` and ratings in services/meals.ts. Every other
- * non-counting tag (butter, sesame oil) never counts.
+ * milk -> Milk) counts only when the food is on the plate as ITS OWN item (a
+ * fresh food, or a food of a plain container), never when it only reaches
+ * the meal through a recipe item: a cup of milk is a serving, milk cooked
+ * into the egg bake is not, and a cup of milk beside the egg bake is
+ * (SPEC-NOTE 864). An INFERRED food row (rebuilt from a meal logged before
+ * the plate) keeps the legacy reading as well: it counts only when the food
+ * is not a CURRENT ingredient of any of the meal's recipes, the same rule as
+ * `MealFood.inRecipe`, so the ladder is identical across the migration.
+ * Every other non-counting tag (butter, sesame oil) never counts.
+ * `reads: "legacy"` is that legacy rule alone, for a database from before
+ * `meal_items` (services/meals.ts `MealReads`).
  */
-function countsAsServing(mealId: AnyColumn, foodId: AnyColumn): SQL<boolean> {
-  return sql<boolean>`(${foodAllergens.countsTowardProgress} or (${foodAllergens.countsWhenAlone} and not exists (
+function countsAsServing(mealId: AnyColumn, foodId: AnyColumn, reads: MealReads): SQL<boolean> {
+  const inARecipe = sql`exists (
     select 1 from ${mealRecipes}
     inner join ${recipeIngredients} on ${recipeIngredients.recipeId} = ${mealRecipes.recipeId}
     where ${mealRecipes.mealId} = ${mealId} and ${recipeIngredients.foodId} = ${foodId}
-  )))`;
+  )`;
+  const alone =
+    reads === "legacy"
+      ? sql`not ${inARecipe}`
+      : sql`exists (
+    select 1 from ${mealItems}
+    where ${mealItems.mealId} = ${mealId} and ${mealItems.foodId} = ${foodId}
+      and (not ${mealItems.inferred} or not ${inARecipe})
+  )`;
+  return sql<boolean>`(${foodAllergens.countsTowardProgress} or (${foodAllergens.countsWhenAlone} and ${alone}))`;
 }
 
 /**
@@ -80,7 +97,11 @@ function countsAsServing(mealId: AnyColumn, foodId: AnyColumn): SQL<boolean> {
  * `allergenReactionPauses`/`deriveAllergenStatus`, so the ladder, the detail
  * page and the AI baby-profile summary cannot disagree about a paused row.
  */
-export async function loadAllergenProgress(db: Database, babyId: string): Promise<AllergenProgressItem[]> {
+export async function loadAllergenProgress(
+  db: Database,
+  babyId: string,
+  reads: MealReads = "items",
+): Promise<AllergenProgressItem[]> {
   const allergenRows = await db
     .select({
       id: allergens.id,
@@ -98,7 +119,7 @@ export async function loadAllergenProgress(db: Database, babyId: string): Promis
   // already collapses "" to null (`optionalReactionNote`), and the trim here
   // catches whitespace written by any other path.
   const hasReaction = sql`${meals.reactionNote} is not null and btrim(${meals.reactionNote}) <> ''`;
-  const counts = countsAsServing(mealFoods.mealId, mealFoods.foodId);
+  const counts = countsAsServing(mealFoods.mealId, mealFoods.foodId, reads);
   const exposureRows = await db
     .select({
       allergenId: foodAllergens.allergenId,
@@ -189,8 +210,9 @@ export async function loadAllergenDetail(
   babyId: string,
   slug: string,
   userId: string,
+  reads: MealReads = "items",
 ): Promise<AllergenDetail | null> {
-  const progress = (await loadAllergenProgress(db, babyId)).find((item) => item.allergenSlug === slug);
+  const progress = (await loadAllergenProgress(db, babyId, reads)).find((item) => item.allergenSlug === slug);
   if (!progress) return null;
 
   // Joined on THIS allergen's tag, because the counting flag lives on the
@@ -263,7 +285,7 @@ export async function loadAllergenDetail(
             name: foods.name,
             emoji: foods.emoji,
             deleted: sql<boolean>`${foods.deletedAt} is not null`,
-            counts: countsAsServing(mealFoods.mealId, mealFoods.foodId),
+            counts: countsAsServing(mealFoods.mealId, mealFoods.foodId, reads),
           })
           .from(mealFoods)
           .innerJoin(foods, eq(mealFoods.foodId, foods.id))

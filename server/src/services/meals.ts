@@ -1,3 +1,7 @@
+// Ledger 901: a plate-shaped write (`items`) goes through services/plate.ts
+// instead; `insertMeal` below is the legacy shapes' insert, which the routes
+// follow with the per-meal heal so the meal gets its `meal_items`.
+//
 // Meal writing and reading, shared by the three routes that create meals:
 // POST /api/babies/:babyId/meals (a meal logged by hand), and
 // POST /api/storage/:id/serve and POST /api/storage/serve (a meal logged by
@@ -11,8 +15,18 @@
 // Ledger 752: a meal's recipes live in `meal_recipes` (several per meal, each
 // with its own rating, in picked order). `meals.recipe_id` / `recipe_rating`
 // are only a legacy mirror of the first one, written here and never read.
-import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
-import type { MealItem, MealRecipe, RatingHistoryQuery, RatingHistoryResponse, RatingSummary, RatingsResponse } from "@blw/shared";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import type {
+  MealItem,
+  MealRecipe,
+  PlateFood,
+  PlateItem,
+  PlatePart,
+  RatingHistoryQuery,
+  RatingHistoryResponse,
+  RatingSummary,
+  RatingsResponse,
+} from "@blw/shared";
 import type { Database } from "../db/index.js";
 import {
   allergens,
@@ -20,11 +34,15 @@ import {
   foodAllergens,
   foods,
   mealFoods,
+  mealItems,
   mealRecipes,
+  mealStorageItems,
   meals,
   recipeIngredients,
   recipes,
+  storageItems,
 } from "../db/schema.js";
+import { visibleRecipesCondition } from "./recipes.js";
 
 /**
  * The transaction handle `db.transaction()` hands its callback. Named here so
@@ -112,6 +130,68 @@ export async function insertMeal(tx: Transaction, input: MealInsert): Promise<st
   return meal.id;
 }
 
+export type Validated<T> = { ok: true; value: T } | { ok: false; details: unknown };
+
+/**
+ * Deduped, existence-checked food ids — the same check POST and PATCH share.
+ * "Exists" means visible to THIS user: the seeded catalog plus their own
+ * custom foods. Another account's custom food reads as an unknown id, so it
+ * can never be logged into a meal (and the 400 says nothing about whether it
+ * exists elsewhere). A food its owner DELETED passes only when it is
+ * already on THIS meal (`keptFoodIds`): editing an old meal resends the foods
+ * it already has, but a deleted food can never be added to a new or edited
+ * meal — it reads as unknown, like any food the caller cannot choose.
+ */
+export async function validateFoodIds(
+  db: Queryable,
+  rawFoodIds: string[],
+  userId: string,
+  keptFoodIds: ReadonlySet<string> = new Set(),
+): Promise<Validated<string[]>> {
+  // Dedupe so the same food twice in one submission is one row, not a
+  // unique-index violation.
+  const foodIds = [...new Set(rawFoodIds)];
+
+  const foodRows = await db
+    .select({ id: foods.id, deletedAt: foods.deletedAt })
+    .from(foods)
+    .where(and(inArray(foods.id, foodIds), or(isNull(foods.ownerId), eq(foods.ownerId, userId))));
+  const known = new Set(foodRows.filter((row) => !row.deletedAt || keptFoodIds.has(row.id)).map((row) => row.id));
+  const unknownFoodIds = foodIds.filter((id) => !known.has(id));
+  if (unknownFoodIds.length > 0) {
+    return { ok: false, details: { foodIds: "unknown food", unknownFoodIds } };
+  }
+
+  return { ok: true, value: foodIds };
+}
+
+/**
+ * Recipe ids are attribution, but each still has to name a recipe this user
+ * can see: the catalog plus their own. Another account's custom recipe reads
+ * as an unknown id, exactly as its foods do in `validateFoodIds`. One query
+ * for the whole list. `field` names the key the 400 is about, so an older
+ * app's single `recipeId` still gets `{recipeId: "unknown recipe"}`.
+ */
+export async function validateRecipeIds(
+  db: Queryable,
+  recipeIds: readonly string[],
+  userId: string,
+  field: "recipeId" | "recipeIds",
+): Promise<Validated<null>> {
+  if (recipeIds.length === 0) return { ok: true, value: null };
+  const rows = await db
+    .select({ id: recipes.id })
+    .from(recipes)
+    .where(and(inArray(recipes.id, [...recipeIds]), visibleRecipesCondition(userId)));
+  const known = new Set(rows.map((row) => row.id));
+  const unknownRecipeIds = recipeIds.filter((id) => !known.has(id));
+  if (unknownRecipeIds.length === 0) return { ok: true, value: null };
+  return {
+    ok: false,
+    details: field === "recipeId" ? { recipeId: "unknown recipe" } : { recipeIds: "unknown recipe", unknownRecipeIds },
+  };
+}
+
 /** A meal's recipes in their one canonical order: (position, recipe_id). */
 export async function loadMealRecipeRows(
   db: Queryable,
@@ -172,7 +252,11 @@ export function ingredientUnion(byRecipe: ReadonlyMap<string, ReadonlySet<string
  * fixed order (foods by name) so the same meal always renders the same way.
  * Ownership is the caller's business — this only reads by id.
  */
-export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<string, MealItem>> {
+export async function loadMeals(
+  db: Database,
+  mealIds: string[],
+  options: { items: boolean } = { items: true },
+): Promise<Map<string, MealItem>> {
   if (mealIds.length === 0) return new Map();
 
   const mealRows = await db
@@ -274,6 +358,124 @@ export async function loadMeals(db: Database, mealIds: string[]): Promise<Map<st
     });
   }
 
+  if (options.items) {
+    const plates = await loadPlateItems(db, mealIds);
+    for (const [mealId, meal] of byMealId) meal.items = plates.get(mealId) ?? [];
+  }
+
+  return byMealId;
+}
+
+/** Foods as plate items show them, with their allergen chips (deleted foods
+ * included: a past meal keeps them). */
+async function loadPlateFoods(db: Database, foodIds: readonly string[]): Promise<Map<string, PlateFood>> {
+  if (foodIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      id: foods.id,
+      slug: foods.slug,
+      name: foods.name,
+      category: foods.category,
+      emoji: foods.emoji,
+      deleted: sql<boolean>`${foods.deletedAt} is not null`,
+    })
+    .from(foods)
+    .where(inArray(foods.id, [...foodIds]));
+  const allergenRows = await db
+    .select({ foodId: foodAllergens.foodId, slug: allergens.slug })
+    .from(foodAllergens)
+    .innerJoin(allergens, eq(foodAllergens.allergenId, allergens.id))
+    .where(inArray(foodAllergens.foodId, [...foodIds]))
+    .orderBy(asc(allergens.slug));
+  return new Map(
+    rows.map((row) => [
+      row.id,
+      { ...row, allergens: allergenRows.filter((tag) => tag.foodId === row.id).map((tag) => tag.slug) },
+    ]),
+  );
+}
+
+/**
+ * Ledger 901 (SPEC §4.3): each meal's plate, from `meal_items` in position
+ * order. A container is ONE item at its first row's position, holding its
+ * rows as parts. A recipe's `leftOut` is its current ingredients minus what
+ * it counted, and always empty on an inferred (rebuilt) item.
+ */
+async function loadPlateItems(db: Database, mealIds: string[]): Promise<Map<string, PlateItem[]>> {
+  const rows = await db
+    .select({
+      id: mealItems.id,
+      mealId: mealItems.mealId,
+      foodId: mealItems.foodId,
+      recipeId: mealItems.recipeId,
+      recipeTitle: recipes.title,
+      storageItemId: mealItems.storageItemId,
+      countedFoodIds: mealItems.countedFoodIds,
+      rating: mealItems.rating,
+      inferred: mealItems.inferred,
+    })
+    .from(mealItems)
+    .leftJoin(recipes, eq(mealItems.recipeId, recipes.id))
+    .where(inArray(mealItems.mealId, mealIds))
+    .orderBy(asc(mealItems.mealId), asc(mealItems.position), asc(mealItems.id));
+  if (rows.length === 0) return new Map();
+
+  const ingredients = await loadIngredientFoodIds(db, [...new Set(rows.flatMap((row) => (row.recipeId ? [row.recipeId] : [])))]);
+  const leftOutOf = (row: (typeof rows)[number]): string[] =>
+    row.recipeId && !row.inferred ? [...(ingredients.get(row.recipeId) ?? [])].filter((id) => !row.countedFoodIds.includes(id)) : [];
+  const foodById = await loadPlateFoods(db, [
+    ...new Set(rows.flatMap((row) => (row.foodId ? [row.foodId] : leftOutOf(row)))),
+  ]);
+  const containerIds = [...new Set(rows.flatMap((row) => (row.storageItemId ? [row.storageItemId] : [])))];
+  const containers =
+    containerIds.length === 0
+      ? []
+      : await db
+          .select({ id: storageItems.id, label: storageItems.label, location: storageItems.location })
+          .from(storageItems)
+          .where(inArray(storageItems.id, containerIds));
+  const served =
+    containerIds.length === 0
+      ? []
+      : await db
+          .select({ mealId: mealStorageItems.mealId, storageItemId: mealStorageItems.storageItemId, servings: mealStorageItems.servings })
+          .from(mealStorageItems)
+          .where(inArray(mealStorageItems.mealId, mealIds));
+
+  const food = (id: string) => {
+    const found = foodById.get(id);
+    if (!found) throw new Error(`plate food ${id} not found`);
+    return found;
+  };
+  const byMealId = new Map<string, PlateItem[]>();
+  for (const row of rows) {
+    const plate = byMealId.get(row.mealId) ?? [];
+    byMealId.set(row.mealId, plate);
+    const recipe = row.recipeId ? { id: row.recipeId, title: row.recipeTitle ?? "" } : null;
+    if (row.storageItemId) {
+      const part: PlatePart = recipe
+        ? { kind: "recipe", id: row.id, recipe, rating: row.rating }
+        : { kind: "food", id: row.id, food: food(row.foodId!), rating: row.rating };
+      const group = plate.find((item) => item.kind === "storage" && item.storageItemId === row.storageItemId);
+      if (group?.kind === "storage") {
+        group.parts.push(part);
+        continue;
+      }
+      const container = containers.find((entry) => entry.id === row.storageItemId)!;
+      plate.push({
+        kind: "storage",
+        storageItemId: row.storageItemId,
+        label: container.label,
+        location: container.location,
+        servings: served.find((entry) => entry.mealId === row.mealId && entry.storageItemId === row.storageItemId)?.servings ?? null,
+        parts: [part],
+      });
+    } else if (recipe) {
+      plate.push({ kind: "recipe", id: row.id, recipe, leftOut: leftOutOf(row).map(food), inferred: row.inferred, rating: row.rating });
+    } else {
+      plate.push({ kind: "food", id: row.id, food: food(row.foodId!), rating: row.rating });
+    }
+  }
   return byMealId;
 }
 
@@ -288,15 +490,37 @@ export async function ownsBaby(db: Database, babyId: string, userId: string): Pr
 }
 
 /**
- * One row per rating, newest meal first. Foods: every food rating on any of
- * this baby's meals. Item 573's "a recipe's rating never counts toward its
- * ingredient foods" still holds, now by the write rule instead of a filter
- * here (ledger 754, DESIGN-B §2): a food rated as part of a recipe has no
- * rating of its own (adding a recipe clears its ingredients' stars), so
- * every stored food rating is the parent's own, e.g. a loose extra beside
- * the meal's recipes.
+ * Which tables the rating and allergen readers derive from: the plate's
+ * `meal_items` (the app), or the legacy tables alone. "legacy" is today's
+ * reading before 0024, kept ONLY so db/plateParity.ts can record a database
+ * that has no `meal_items` yet with the readers that database's app used.
  */
-function ratedFoodRows(db: Database, babyId: string, foodId?: string) {
+// ponytail: delete "legacy" with the plate cleanup migration (SPEC §2.7).
+export type MealReads = "items" | "legacy";
+
+/**
+ * One row per rating, newest meal first. Foods: every rated food ROW of the
+ * plate (SPEC §1.3: a food in two items of one meal gives two points), ties
+ * within a meal broken by plate position. Item 573's "a recipe's rating
+ * never counts toward its ingredient foods" holds by construction: a
+ * recipe's stars sit on its recipe row, never on a food row.
+ */
+function ratedFoodRows(db: Database, babyId: string, foodId?: string, reads: MealReads = "items") {
+  if (reads === "items") {
+    return db
+      .select({ id: mealItems.foodId, rating: mealItems.rating, servedAt: meals.servedAt })
+      .from(mealItems)
+      .innerJoin(meals, eq(mealItems.mealId, meals.id))
+      .where(
+        and(
+          eq(meals.babyId, babyId),
+          isNotNull(mealItems.foodId),
+          isNotNull(mealItems.rating),
+          foodId === undefined ? undefined : eq(mealItems.foodId, foodId),
+        ),
+      )
+      .orderBy(desc(meals.servedAt), desc(meals.id), asc(mealItems.position));
+  }
   return db
     .select({ id: mealFoods.foodId, rating: mealFoods.rating, servedAt: meals.servedAt })
     .from(mealFoods)
@@ -311,8 +535,24 @@ function ratedFoodRows(db: Database, babyId: string, foodId?: string) {
     .orderBy(desc(meals.servedAt), desc(meals.id));
 }
 
-/** Recipes: every rated recipe of every meal, whatever its position (754). */
-function ratedRecipeRows(db: Database, babyId: string, recipeId?: string) {
+/** Recipes: every rated recipe of every meal, whatever its position (754);
+ * on the plate, every rated recipe row. */
+function ratedRecipeRows(db: Database, babyId: string, recipeId?: string, reads: MealReads = "items") {
+  if (reads === "items") {
+    return db
+      .select({ id: mealItems.recipeId, rating: mealItems.rating, servedAt: meals.servedAt })
+      .from(mealItems)
+      .innerJoin(meals, eq(mealItems.mealId, meals.id))
+      .where(
+        and(
+          eq(meals.babyId, babyId),
+          isNotNull(mealItems.recipeId),
+          isNotNull(mealItems.rating),
+          recipeId === undefined ? undefined : eq(mealItems.recipeId, recipeId),
+        ),
+      )
+      .orderBy(desc(meals.servedAt), desc(meals.id), asc(mealItems.position));
+  }
   return db
     .select({ id: mealRecipes.recipeId, rating: mealRecipes.rating, servedAt: meals.servedAt })
     .from(mealRecipes)
@@ -348,8 +588,11 @@ function summarize(rows: { id: string | null; rating: number | null; servedAt: D
 
 // ponytail: aggregates in JS over one baby's rated rows (hundreds a year);
 // move to GROUP BY if a baby ever has tens of thousands.
-export async function loadRatingSummaries(db: Database, babyId: string): Promise<RatingsResponse> {
-  const [foodRows, recipeRows] = await Promise.all([ratedFoodRows(db, babyId), ratedRecipeRows(db, babyId)]);
+export async function loadRatingSummaries(db: Database, babyId: string, reads: MealReads = "items"): Promise<RatingsResponse> {
+  const [foodRows, recipeRows] = await Promise.all([
+    ratedFoodRows(db, babyId, undefined, reads),
+    ratedRecipeRows(db, babyId, undefined, reads),
+  ]);
   return { foods: summarize(foodRows), recipes: summarize(recipeRows) };
 }
 
@@ -357,10 +600,11 @@ export async function loadRatingHistory(
   db: Database,
   babyId: string,
   query: RatingHistoryQuery,
+  reads: MealReads = "items",
 ): Promise<RatingHistoryResponse["points"]> {
   const rows = query.foodId
-    ? await ratedFoodRows(db, babyId, query.foodId)
-    : await ratedRecipeRows(db, babyId, query.recipeId);
+    ? await ratedFoodRows(db, babyId, query.foodId, reads)
+    : await ratedRecipeRows(db, babyId, query.recipeId, reads);
   return rows
     .flatMap((row) => (row.rating === null ? [] : [{ servedAt: row.servedAt.toISOString(), rating: row.rating }]))
     .reverse();

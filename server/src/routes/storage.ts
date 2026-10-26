@@ -37,6 +37,7 @@ import {
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
+import { healMealItems } from "../db/migrate.js";
 import {
   babies,
   foods,
@@ -53,13 +54,17 @@ import {
   loadIngredientFoodIds,
   loadMeals,
   ownsBaby,
+  validateFoodIds,
+  validateRecipeIds,
 } from "../services/meals.js";
-import { mapRecipeRequest, validateFoodIds, validateRatings, validateRecipeIds } from "./meals.js";
+import { mapRecipeRequest, validateRatings } from "./meals.js";
 import {
+  NO_SERVINGS_LEFT,
   containerWindowHours,
   deriveFreshness,
   loadContainerRecipes,
   loadStorageItemFoods,
+  notServable,
 } from "../services/storage.js";
 
 function badRequest(reply: FastifyReply, details: unknown): FastifyReply {
@@ -262,8 +267,6 @@ interface ServeRequest {
   ratings: { recipeRatings: Record<string, number | null> | undefined } | { legacyRecipeRating: number | undefined };
 }
 
-const NO_SERVINGS_LEFT = "This storage item has no servings left — mark it finished or edit its servings first.";
-const notServable = (status: string) => `This storage item is ${status} and cannot be served. Restore it first.`;
 
 /**
  * The one serve (ledger 753, DESIGN-B §5), behind both serve routes. In ONE
@@ -480,6 +483,8 @@ async function serveParts(db: Database, req: ServeRequest): Promise<string> {
     }
     await tx.insert(mealStorageItems).values(taken);
 
+    // Ledger 901 (SPEC §2.5): the plate's items, backfilled from the rows above.
+    await healMealItems(tx, [mealId]);
     return mealId;
   });
 }

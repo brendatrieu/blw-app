@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { foodCategorySchema } from "./catalog.js";
+import { plateItemSchema, plateItemsInputSchema, plateRatingsSchema, starRatingSchema } from "./plate.js";
 
 /**
  * Per-baby tracking: meals (one sitting, one or more foods — the completion
@@ -107,12 +108,9 @@ export const mealFoodIdsSchema = z.array(z.string().uuid()).min(1).max(MEAL_FOOD
 export const MEAL_RECIPES_MAX = 10;
 export const mealRecipeIdsSchema = z.array(z.string().uuid()).max(MEAL_RECIPES_MAX);
 
-/**
- * Item 572: a baby's star rating, a whole number of stars from 1 to 5.
- * "Not rated" is `null`, never 0 — there is no 0-star state anywhere.
- */
-export const STAR_RATING_MAX = 5;
-export const starRatingSchema = z.number().int().min(1).max(STAR_RATING_MAX);
+// Item 572's star rating lives in plate.ts (a leaf module); re-exported here
+// so every older import of it keeps working.
+export { STAR_RATING_MAX, starRatingSchema } from "./plate.js";
 
 /**
  * Per-food ratings keyed by food id; `null` clears. Since ledger 752 a food
@@ -218,6 +216,48 @@ export const updateMealInputSchema = z
 export type UpdateMealInput = z.input<typeof updateMealInputSchema>;
 
 /**
+ * Ledger 901 (plan SPEC §4.1): the plate shape of POST /api/babies/:babyId/meals.
+ * A body with `items` takes this path; one without takes the legacy schema
+ * above, unchanged, so older app versions get exactly today's answers.
+ * Strict, so `items` beside a legacy key (`foodIds`, `recipeIds`, ...) is a
+ * 400 rather than one of the two silently winning.
+ */
+export const createPlateMealInputSchema = z
+  .object({
+    items: plateItemsInputSchema,
+    servedAt: servedAtSchema.optional(),
+    reactionNote: optionalReactionNote,
+    notes: optionalNotes,
+  })
+  .strict();
+export type CreatePlateMealInput = z.input<typeof createPlateMealInputSchema>;
+
+/**
+ * The plate shape of PATCH /api/meals/:id, taken when the body has `items` or
+ * `itemRatings`. `items` is the whole plate (kept items by id); a star tap
+ * sends `itemRatings` only, merged per item id. An id that is not on the meal
+ * any more (another device or a rebuild replaced it) is a 409 `meal_changed`.
+ */
+export const updatePlateMealInputSchema = z
+  .object({
+    items: plateItemsInputSchema.optional(),
+    itemRatings: plateRatingsSchema.optional(),
+    servedAt: servedAtSchema.optional(),
+    reactionNote: patchReactionNote,
+    notes: patchNotes,
+  })
+  .strict()
+  .refine((value) => (value.items === undefined) !== (value.itemRatings === undefined), {
+    message: "Send items or itemRatings, not both",
+  });
+export type UpdatePlateMealInput = z.input<typeof updatePlateMealInputSchema>;
+
+/** Which PATCH/POST shape a body is: the plate's, or the legacy one. */
+export function isPlateMealBody(body: unknown): boolean {
+  return typeof body === "object" && body !== null && ("items" in body || "itemRatings" in body);
+}
+
+/**
  * A food as it appears inside a meal. `category` is carried so the client
  * can resolve its emoji from the client-side table (keyed by slug with a
  * category fallback); `emoji` overrides that when a parent picked one on a
@@ -281,6 +321,9 @@ export const mealItemSchema = z.object({
   recipeRating: starRatingSchema.nullable().optional(),
   /** Always at least one food, ordered by name for a stable render. */
   foods: z.array(mealFoodSchema),
+  /** Ledger 901: what was on the plate, in plate order. `foods` stays the
+   * foods counted as tried. Optional so a cached older body still parses. */
+  items: z.array(plateItemSchema).optional(),
 });
 export type MealItem = z.infer<typeof mealItemSchema>;
 

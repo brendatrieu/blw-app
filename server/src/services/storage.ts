@@ -357,6 +357,11 @@ export function deriveFreshness(
 // Servings back (ledger 751, DESIGN-B §5a)
 // ---------------------------------------------------------------------------
 
+/** The 409 messages of a serve that cannot take from a container (both
+ * serve routes, and a plate that adds one). */
+export const NO_SERVINGS_LEFT = "This storage item has no servings left — mark it finished or edit its servings first.";
+export const notServable = (status: string) => `This storage item is ${status} and cannot be served. Restore it first.`;
+
 /** What one serve took from one container (`meal_storage_items`). */
 export interface ServedFromStorage {
   storageItemId: string;

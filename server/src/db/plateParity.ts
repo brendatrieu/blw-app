@@ -13,7 +13,14 @@ import { sql, type SQL } from "drizzle-orm";
 import { fetchBabyProfileSummary } from "../ai/tools.js";
 import { buildExposureSnapshot } from "../ai/snapshot.js";
 import { loadAllergenDetail, loadAllergenProgress } from "../services/allergens.js";
-import { countFoodsTried, countServed, loadMeals, loadRatingHistory, loadRatingSummaries } from "../services/meals.js";
+import {
+  countFoodsTried,
+  countServed,
+  loadMeals,
+  loadRatingHistory,
+  loadRatingSummaries,
+  type MealReads,
+} from "../services/meals.js";
 import type { Database } from "./index.js";
 
 /** observable -> key -> value, JSON only. */
@@ -34,7 +41,15 @@ function groupBy<T extends Record<string, unknown>>(list: T[], key: keyof T): Re
 
 const LOAD_MEALS_CHUNK = 500;
 
+/**
+ * A database from before 0024 has no `meal_items`: it is recorded with the
+ * readers its own app used (`MealReads` "legacy"); a migrated one with
+ * today's readers, which read the plate. `loadMeals` is read without
+ * `items` on both sides: the comparison is of what every older reader sees.
+ */
 export async function recordPlateParity(db: Database): Promise<ParityRecord> {
+  const [{ plate } = { plate: null }] = await rows<{ plate: string | null }>(db, `SELECT to_regclass('meal_items')::text AS "plate"`);
+  const reads: MealReads = plate ? "items" : "legacy";
   const record: ParityRecord = {
     meals: groupBy(
       await rows<Record<string, unknown>>(
@@ -84,7 +99,7 @@ export async function recordPlateParity(db: Database): Promise<ParityRecord> {
 
   const mealIds = Object.keys(record.meals!);
   for (let i = 0; i < mealIds.length; i += LOAD_MEALS_CHUNK) {
-    const loaded = await loadMeals(db, mealIds.slice(i, i + LOAD_MEALS_CHUNK));
+    const loaded = await loadMeals(db, mealIds.slice(i, i + LOAD_MEALS_CHUNK), { items: false });
     for (const [id, meal] of loaded) record.loadMeals![id] = meal;
   }
 
@@ -92,10 +107,10 @@ export async function recordPlateParity(db: Database): Promise<ParityRecord> {
   const babies = await rows<{ id: string; user_id: string }>(db, `SELECT "id", "user_id" FROM "babies" ORDER BY "id"`);
   for (const baby of babies) {
     const b = baby.id;
-    record.allergenProgress![b] = await loadAllergenProgress(db, b);
-    for (const slug of slugs) record.allergenDetail![`${b}/${slug}`] = await loadAllergenDetail(db, b, slug, baby.user_id);
+    record.allergenProgress![b] = await loadAllergenProgress(db, b, reads);
+    for (const slug of slugs) record.allergenDetail![`${b}/${slug}`] = await loadAllergenDetail(db, b, slug, baby.user_id, reads);
     record.foodsTried![b] = await countFoodsTried(db, b);
-    record.ratingSummaries![b] = await loadRatingSummaries(db, b);
+    record.ratingSummaries![b] = await loadRatingSummaries(db, b, reads);
     const refs = await rows<{ kind: "foodId" | "recipeId"; id: string }>(
       db,
       sql`SELECT DISTINCT 'foodId' AS "kind", mf."food_id" AS "id" FROM "meal_foods" mf JOIN "meals" m ON m."id" = mf."meal_id" WHERE m."baby_id" = ${b}
@@ -104,7 +119,7 @@ export async function recordPlateParity(db: Database): Promise<ParityRecord> {
     );
     for (const ref of refs) {
       const query = { [ref.kind]: ref.id };
-      record.ratingHistory![`${b}/${ref.id}`] = await loadRatingHistory(db, b, query);
+      record.ratingHistory![`${b}/${ref.id}`] = await loadRatingHistory(db, b, query, reads);
       record.servedCount![`${b}/${ref.id}`] = await countServed(db, b, query);
     }
     const servedAts = await rows<{ served_at: Date | string }>(
@@ -115,7 +130,7 @@ export async function recordPlateParity(db: Database): Promise<ParityRecord> {
       const onset = new Date(served_at);
       record.snapshot![`${b}@${onset.toISOString()}`] = await buildExposureSnapshot(db, b, onset);
     }
-    const profile = await fetchBabyProfileSummary(db, baby.user_id, b);
+    const profile = await fetchBabyProfileSummary(db, baby.user_id, b, reads);
     // `ageMonths` moves with the clock, not with the migration.
     record.profile![b] = profile && {
       foodsIntroducedCount: profile.foodsIntroducedCount,

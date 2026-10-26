@@ -21,6 +21,7 @@ import { ageInMonths, formatExtraIngredient } from "@blw/shared";
 import type { Database } from "../db/index.js";
 import { babies, foods, mealFoods, meals, storageItems, recipes } from "../db/schema.js";
 import { loadAllergenProgress } from "../services/allergens.js";
+import type { MealReads } from "../services/meals.js";
 import { choosableFoodsCondition } from "../services/foods.js";
 import { visibleRecipesCondition } from "../services/recipes.js";
 import { deriveIronFocus, loadRecipeNutrition, nutritionFor } from "../services/recipeNutrition.js";
@@ -53,6 +54,8 @@ export async function fetchBabyProfileSummary(
   db: Database,
   userId: string,
   babyId: string,
+  /** Only db/plateParity.ts passes "legacy" (services/meals.ts `MealReads`). */
+  reads: MealReads = "items",
 ): Promise<BabyProfileSummary | null> {
   const [baby] = await db
     .select({ birthDate: babies.birthDate })
@@ -81,7 +84,7 @@ export async function fetchBabyProfileSummary(
   // because a serving got a reaction note can never reach the model as
   // established. Overrides are per-baby, and this baby is already proven to
   // be the caller's by the lookup above.
-  const progress = await loadAllergenProgress(db, babyId);
+  const progress = await loadAllergenProgress(db, babyId, reads);
   const establishedTop9Allergens = progress
     .filter((item) => item.status === "established")
     .map((item) => item.allergenSlug)

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseCalendarDate } from "./babies.js";
+import { storageLocationSchema } from "./plate.js";
 import {
   foodRatingsSchema,
   MEAL_RECIPES_MAX,
@@ -19,8 +20,9 @@ import {
  * features/storage/** query layer.
  */
 
-export const storageLocationSchema = z.enum(["fridge", "freezer", "counter"]);
-export type StorageLocation = z.infer<typeof storageLocationSchema>;
+// Defined in plate.ts (a leaf module, so a plate's container can name it);
+// re-exported here, where it has always been imported from.
+export { storageLocationSchema, type StorageLocation } from "./plate.js";
 
 export const storageStatusSchema = z.enum(["active", "finished", "discarded"]);
 export type StorageStatus = z.infer<typeof storageStatusSchema>;

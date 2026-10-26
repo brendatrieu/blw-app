@@ -980,11 +980,18 @@ describe("custom foods", () => {
   // Ratings x soft-delete / replace (mutation gaps S36/S37/S39)
   // -----------------------------------------------------------------------
   describe("ratings and custom-food lifecycle", () => {
+    // Ledger 901: through the API (the legacy PATCH an old bundle sends), not
+    // a raw meal_foods UPDATE: ratings are read from the plate's items now,
+    // which every writer and the boot heal keep in step with meal_foods; a
+    // raw write is what only a rolled-back image does, and the next boot heals.
     async function rateMealFood(mealId: string, foodId: string, rating: number) {
-      await db
-        .update(schema.mealFoods)
-        .set({ rating })
-        .where(and(eq(schema.mealFoods.mealId, mealId), eq(schema.mealFoods.foodId, foodId)));
+      const response = await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${mealId}`,
+        headers: { cookie: owner.cookie },
+        payload: { foodRatings: { [foodId]: rating } },
+      });
+      expect(response.statusCode).toBe(200);
     }
     async function del(user: TestUser, id: string) {
       return app.inject({ method: "DELETE", url: `/api/foods/${id}`, headers: { cookie: user.cookie } });
