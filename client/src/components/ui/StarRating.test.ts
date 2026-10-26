@@ -1,4 +1,4 @@
-// Item 574/578: the star control. Markup is pinned with renderToString;
+// Item 574/578, ratings option A (ledger 807): the star control. Markup is pinned with renderToString;
 // behaviour by calling the (hook-free) component as a plain function and
 // firing its handlers by hand — no DOM.
 import { createElement } from "react";
@@ -35,23 +35,33 @@ describe("StarRating markup", () => {
     expect(html.match(/h-11 w-11/g)).toHaveLength(5);
     expect(html.match(/aria-checked="true"/g)).toHaveLength(1);
     expect(html).toMatch(/aria-checked="true" aria-label="3 stars"/);
-    // Three filled, two empty.
-    expect(html.match(/★/g)).toHaveLength(3);
-    expect(html.match(/☆/g)).toHaveLength(2);
-    expect(html).toContain(">Clear<");
+    // Three filled, two empty: 26px outline stars, no text glyphs.
+    expect(html.match(/<svg aria-hidden="true" width="26" height="26"/g)).toHaveLength(5);
+    expect(html.match(/class="fill-current"/g)).toHaveLength(3);
+    expect(html.match(/class="fill-\[var\(--color-apricot-soft\)\]"/g)).toHaveLength(2);
+    expect(html).not.toMatch(/[★☆]/);
   });
 
-  it("paints filled stars in the apricot graphic, empty ones muted (item 640)", () => {
+  it("keeps Clear only for a screen reader (and keyboard focus): visually hidden, named for the item", () => {
     const html = renderToString(createElement(StarRating, { value: 3, onChange: () => {}, label: "Rating for Banana" }));
-    expect(html.match(/text-\[var\(--color-apricot-graphic\)\]"[^>]*><span aria-hidden="true">★/g)).toHaveLength(3);
-    expect(html.match(/text-\[var\(--color-text-muted\)\]"[^>]*><span aria-hidden="true">☆/g)).toHaveLength(2);
+    // Right after the group, so a screen reader meets it next.
+    expect(html).toMatch(/<\/div><button type="button" aria-label="Clear rating for Banana" class="sr-only [^"]*focus-visible:not-sr-only[^"]*">Clear<\/button>/);
+  });
+
+  it("paints filled stars in the apricot graphic, empty ones a soft fill with an apricot-text outline (item 640, ratings A)", () => {
+    const html = renderToString(createElement(StarRating, { value: 3, onChange: () => {}, label: "Rating for Banana" }));
+    expect(html.match(/text-\[var\(--color-apricot-graphic\)\]"[^>]*><svg[^>]*><path[^>]*stroke="currentColor"[^>]*class="fill-current"/g)).toHaveLength(3);
+    expect(
+      html.match(/text-\[var\(--color-apricot-text\)\]"[^>]*><svg[^>]*><path[^>]*stroke="currentColor"[^>]*class="fill-\[var\(--color-apricot-soft\)\]"/g),
+    ).toHaveLength(2);
     expect(html).not.toContain("text-[var(--color-accent)]");
+    expect(html).not.toContain("text-[var(--color-text-muted)]\"");
   });
 
   it("never shows a 0-star state: unrated means nothing checked, all empty, no Clear", () => {
     const html = renderToString(createElement(StarRating, { value: null, onChange: () => {}, label: "Rating for Banana" }));
     expect(html).not.toContain('aria-checked="true"');
-    expect(html).not.toContain("★");
+    expect(html).not.toContain('class="fill-current"');
     expect(html).not.toMatch(/\b0 stars?\b/);
     expect(html).not.toContain(">Clear<");
   });
@@ -73,7 +83,16 @@ describe("StarRating behaviour", () => {
     expect(set).toEqual([5, 3, 1]);
   });
 
-  it("Clear resets to not rated (null, never 0)", () => {
+  it("tapping the lit star again clears it (null, never 0); another star moves the rating", () => {
+    const set: (number | null)[] = [];
+    const buttons = stars(tree(3, (value) => set.push(value)));
+    (buttons[2]!.props.onClick as () => void)();
+    (buttons[3]!.props.onClick as () => void)();
+    (buttons[1]!.props.onClick as () => void)();
+    expect(set).toEqual([null, 4, 2]);
+  });
+
+  it("the hidden Clear resets to not rated (null, never 0)", () => {
     const set: (number | null)[] = [];
     (clear(tree(2, (value) => set.push(value)))!.props.onClick as () => void)();
     expect(set).toEqual([null]);

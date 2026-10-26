@@ -39,12 +39,20 @@ export function starForKey(key: string, value: number | null): number | null {
   }
 }
 
+/** The star outline (24 box), as the ratings A boards draw it. */
+const STAR_PATH = "M12 2.8l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.7l-5.4 2.9 1.1-6.1-4.5-4.3 6.1-.8z";
+
 /**
- * Item 574: five tappable stars. Tapping star N sets N (the right-most is 5,
- * the middle one 3); "Clear" puts it back to not rated. A `radiogroup` of
- * `radio` buttons like `SegmentedControl`, with the roving tabindex and arrow
- * keys that one lacks: Tab lands on the chosen star (or the first), arrows
- * move the choice and the focus together. Every target is 44px.
+ * Item 574, ratings option A (ledger 807): five tappable stars. Tapping star
+ * N sets N (the right-most is 5, the middle one 3), and tapping the lit one
+ * again puts it back to not rated, so there is no visible "Clear". A screen
+ * reader cannot hear that second tap, so a rated group is followed by a
+ * visually hidden "Clear rating for {item}" button, which shows itself while
+ * it has keyboard focus. A `radiogroup` of `radio` buttons like
+ * `SegmentedControl`, with the roving tabindex and arrow keys that one lacks:
+ * Tab lands on the chosen star (or the first), arrows move the choice and
+ * the focus together. Every target is 44px. Filled stars wear the apricot
+ * graphic; empty ones a soft apricot fill with an apricot-text outline.
  */
 export function StarRating({ value, onChange, label, disabled = false }: StarRatingProps) {
   const focusable = value ?? 1;
@@ -59,7 +67,7 @@ export function StarRating({ value, onChange, label, disabled = false }: StarRat
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center">
       <div role="radiogroup" aria-label={label} className="flex">
         {STARS.map((star) => {
           const filled = value !== null && star <= value;
@@ -72,13 +80,21 @@ export function StarRating({ value, onChange, label, disabled = false }: StarRat
               aria-label={star === 1 ? "1 star" : `${star} stars`}
               tabIndex={star === focusable ? 0 : -1}
               disabled={disabled}
-              onClick={() => onChange(star)}
+              onClick={() => onChange(value === star ? null : star)}
               onKeyDown={handleKeyDown}
-              className={`flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] text-2xl leading-none ${FOCUS_RING} ${
-                filled ? "text-[var(--color-apricot-graphic)]" : "text-[var(--color-text-muted)]"
+              className={`flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] ${FOCUS_RING} ${
+                filled ? "text-[var(--color-apricot-graphic)]" : "text-[var(--color-apricot-text)]"
               }`}
             >
-              <span aria-hidden="true">{filled ? "★" : "☆"}</span>
+              <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24">
+                <path
+                  d={STAR_PATH}
+                  stroke="currentColor"
+                  strokeWidth={filled ? 1.4 : 1.3}
+                  strokeLinejoin="round"
+                  className={filled ? "fill-current" : "fill-[var(--color-apricot-soft)]"}
+                />
+              </svg>
             </button>
           );
         })}
@@ -89,7 +105,7 @@ export function StarRating({ value, onChange, label, disabled = false }: StarRat
           disabled={disabled}
           onClick={() => onChange(null)}
           aria-label={`Clear ${label.charAt(0).toLowerCase()}${label.slice(1)}`}
-          className={`min-h-11 rounded-[var(--radius-sm)] px-2 text-sm font-medium text-[var(--color-text-muted)] underline hover:text-[var(--color-text)] ${FOCUS_RING}`}
+          className={`sr-only min-h-11 rounded-[var(--radius-sm)] px-2 text-sm font-medium text-[var(--color-text-muted)] underline focus-visible:not-sr-only ${FOCUS_RING}`}
         >
           Clear
         </button>

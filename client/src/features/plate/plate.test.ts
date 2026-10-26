@@ -1,0 +1,340 @@
+// Plan SPEC §5 (ledger 902): the plate as plain data. The reducer, the
+// identity rule (799), a saved meal as a plate, and the request that saves it,
+// checked against the shared schemas the server parses with.
+import { describe, expect, it } from "vitest";
+import {
+  createPlateMealInputSchema,
+  plateInputFromItems,
+  plateKey,
+  updatePlateMealInputSchema,
+  type MealItem,
+  type PlateItem,
+  type StorageItem,
+} from "@blw/shared";
+import { addMoreDiff, type AddMoreChange, type AddMoreIds, type FreshFood } from "../storage/addMoreSelection.js";
+import {
+  containerEntry,
+  entryKey,
+  fromMeal,
+  plateAddMoreServing,
+  plateReducer,
+  servingsMax,
+  toMealInput,
+  type ContainerEntry,
+  type PlateEntry,
+  type RecipeEntry,
+} from "./plate.js";
+
+const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+const BROCCOLI = { id: id(1), slug: "broccoli", name: "Broccoli", category: "veg" as const, emoji: null };
+const CARROT = { id: id(2), slug: "carrot", name: "Carrot", category: "veg" as const, emoji: null };
+const EGG = { id: id(3), slug: "egg", name: "Egg", category: "protein" as const, emoji: null };
+const CASHEW = { id: id(4), slug: "cashew", name: "Cashews", category: "legume" as const, emoji: null };
+const GARLIC = { id: id(5), slug: "garlic", name: "Garlic", category: "veg" as const, emoji: null };
+const PASTA = { id: id(10), title: "Creamy Cashew & Broccoli Pasta" };
+const MUFFINS = { id: id(11), title: "Broccoli Cheese Egg Muffins" };
+const PATTIES = { id: id(12), title: "Salmon Oat Patties" };
+
+const CONTAINER: StorageItem = {
+  id: id(20),
+  label: null,
+  foods: [
+    { id: BROCCOLI.id, slug: "broccoli", name: "Broccoli", emoji: null },
+    { id: CARROT.id, slug: "carrot", name: "Carrot", emoji: null },
+  ],
+  recipeId: null,
+  recipeTitle: null,
+  preparedAt: "2026-10-14T10:00:00.000Z",
+  location: "freezer",
+  status: "active",
+  statusChangedAt: "2026-10-14T10:00:00.000Z",
+  expiresAt: "2026-11-14T10:00:00.000Z",
+  useSoon: false,
+  expired: false,
+  quantityNote: null,
+  servingsTotal: 4,
+  servingsLeft: 4,
+  bestBy: null,
+  notes: null,
+};
+const MUFFIN_TUB: StorageItem = {
+  ...CONTAINER,
+  id: id(21),
+  foods: [],
+  recipeId: MUFFINS.id,
+  recipeTitle: MUFFINS.title,
+  location: "fridge",
+  servingsTotal: 6,
+  servingsLeft: 2,
+};
+const NONE = { itemIds: [], recipeIds: [], foodIds: [] };
+
+/** Add more's Done, as the sheet builds it: ticks in, the change out. */
+function done(plate: PlateEntry[], ticks: Partial<AddMoreIds>, picks: Partial<AddMoreChange> = {}) {
+  const serving = plateAddMoreServing(plate);
+  const { removed } = addMoreDiff(serving, { ...NONE, ...ticks });
+  return plateReducer(plate, { type: "addMore", change: { removed, items: [], recipes: [], foods: [], ...picks } });
+}
+const add = (change: { items?: StorageItem[]; recipes?: { id: string; title: string }[]; foods?: FreshFood[] }) =>
+  plateReducer([], { type: "addMore", change: { removed: NONE, items: [], recipes: [], foods: [], ...change } });
+
+describe("identity (ledger 799)", () => {
+  it("keys each entry exactly as the server's plateKey does", () => {
+    const plate = add({ items: [CONTAINER], recipes: [PASTA], foods: [EGG] });
+    expect(plate.map(entryKey)).toEqual([
+      plateKey({ kind: "storage", storageItemId: CONTAINER.id }),
+      plateKey({ kind: "recipe", recipeId: PASTA.id }),
+      plateKey({ kind: "food", foodId: EGG.id }),
+    ]);
+  });
+
+  it("a fresh Broccoli beside a Broccoli + Carrot container, and fresh muffins beside a tub of them, are four items", () => {
+    const plate = add({ items: [CONTAINER, MUFFIN_TUB], recipes: [MUFFINS], foods: [BROCCOLI] });
+    expect(plate.map((entry) => entry.kind)).toEqual(["storage", "storage", "recipe", "food"]);
+  });
+
+  it("Add more hides nothing behind what is on the plate: no food or recipe is covered", () => {
+    const plate = add({ items: [CONTAINER, MUFFIN_TUB], recipes: [PASTA], foods: [EGG] });
+    expect(plateAddMoreServing(plate)).toEqual({
+      itemIds: [CONTAINER.id, MUFFIN_TUB.id],
+      recipeIds: [PASTA.id],
+      foodIds: [EGG.id],
+      covered: { recipeIds: [], foodIds: [] },
+    });
+  });
+
+  it("the exact same thing is never added twice", () => {
+    const plate = add({ items: [CONTAINER], foods: [EGG] });
+    const again = plateReducer(plate, {
+      type: "addMore",
+      change: { removed: NONE, items: [CONTAINER], recipes: [PASTA, PASTA], foods: [EGG] },
+    });
+    expect(again.map(entryKey)).toEqual([...plate.map(entryKey), plateKey({ kind: "recipe", recipeId: PASTA.id })]);
+  });
+});
+
+describe("containerEntry: a container as the server expands it", () => {
+  it("a food container: one part per food, one serving, its live counts", () => {
+    expect(containerEntry(CONTAINER)).toEqual({
+      kind: "storage",
+      storageItemId: CONTAINER.id,
+      title: "Broccoli, Carrot",
+      location: "freezer",
+      servings: 1,
+      container: CONTAINER,
+      parts: [
+        { kind: "food", food: CONTAINER.foods[0], rating: null },
+        { kind: "food", food: CONTAINER.foods[1], rating: null },
+      ],
+    });
+  });
+
+  it("recipes first (every recipe of a leftovers container), then held foods", () => {
+    const both: StorageItem = { ...MUFFIN_TUB, recipes: [MUFFINS, PATTIES], foods: [CONTAINER.foods[0]!] };
+    expect(containerEntry(both).parts.map((part) => (part.kind === "food" ? part.food.id : part.recipe.id))).toEqual([
+      MUFFINS.id,
+      PATTIES.id,
+      BROCCOLI.id,
+    ]);
+    expect(containerEntry(MUFFIN_TUB).parts).toEqual([{ kind: "recipe", recipe: MUFFINS, rating: null }]);
+    expect(containerEntry(MUFFIN_TUB).title).toBe(MUFFINS.title);
+  });
+});
+
+describe("plateReducer", () => {
+  const start = () => add({ items: [CONTAINER], recipes: [PASTA], foods: [EGG] });
+
+  it("Done (ledger 878): unticked things come off, new picks go on at the end, the rest keeps its stars and servings", () => {
+    let plate = start();
+    plate = plateReducer(plate, { type: "rate", key: entryKey(plate[2]!), rating: 4 });
+    plate = plateReducer(plate, { type: "servings", key: entryKey(plate[0]!), servings: 3 });
+    const next = done(plate, { itemIds: [CONTAINER.id], foodIds: [EGG.id] }, { items: [MUFFIN_TUB], recipes: [], foods: [GARLIC] });
+    expect(next.map(entryKey)).toEqual([entryKey(plate[0]!), entryKey(plate[2]!), `storage:${MUFFIN_TUB.id}`, `food:${GARLIC.id}`]);
+    expect(next[0]).toBe(plate[0]);
+    expect(next[1]).toBe(plate[2]);
+    expect((next[0] as ContainerEntry).servings).toBe(3);
+    expect((next[2] as ContainerEntry).servings).toBe(1);
+  });
+
+  it("Done with everything still ticked and nothing new changes nothing", () => {
+    const plate = start();
+    const serving = plateAddMoreServing(plate);
+    expect(done(plate, serving)).toEqual(plate);
+  });
+
+  it("× takes off exactly that item", () => {
+    const plate = start();
+    expect(plateReducer(plate, { type: "remove", key: `recipe:${PASTA.id}` }).map(entryKey)).toEqual([
+      `storage:${CONTAINER.id}`,
+      `food:${EGG.id}`,
+    ]);
+  });
+
+  it("stars: an item's own, or one part of a container; null clears", () => {
+    let plate = start();
+    plate = plateReducer(plate, { type: "rate", key: `food:${EGG.id}`, rating: 5 });
+    plate = plateReducer(plate, { type: "rate", key: `storage:${CONTAINER.id}`, partId: CARROT.id, rating: 2 });
+    plate = plateReducer(plate, { type: "rate", key: `recipe:${PASTA.id}`, rating: 3 });
+    plate = plateReducer(plate, { type: "rate", key: `recipe:${PASTA.id}`, rating: null });
+    expect((plate[2] as { rating: number | null }).rating).toBe(5);
+    expect((plate[1] as RecipeEntry).rating).toBeNull();
+    expect((plate[0] as ContainerEntry).parts.map((part) => part.rating)).toEqual([null, 2]);
+  });
+
+  it("leave out: unticking adds the food (A–Z), ticking it again takes it back, only on that recipe", () => {
+    let plate = add({ recipes: [PASTA, PATTIES] });
+    plate = plateReducer(plate, { type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: GARLIC });
+    plate = plateReducer(plate, { type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: CASHEW });
+    expect((plate[0] as RecipeEntry).leftOut.map((food) => food.name)).toEqual(["Cashews", "Garlic"]);
+    expect((plate[1] as RecipeEntry).leftOut).toEqual([]);
+    plate = plateReducer(plate, { type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: GARLIC });
+    expect((plate[0] as RecipeEntry).leftOut).toEqual([CASHEW]);
+  });
+
+  it("servings stay between 1 and what the container can give", () => {
+    let plate = add({ items: [MUFFIN_TUB] });
+    const key = `storage:${MUFFIN_TUB.id}`;
+    plate = plateReducer(plate, { type: "servings", key, servings: 0 });
+    expect((plate[0] as ContainerEntry).servings).toBe(1);
+    plate = plateReducer(plate, { type: "servings", key, servings: 5 });
+    expect((plate[0] as ContainerEntry).servings).toBe(2);
+  });
+});
+
+describe("servingsMax", () => {
+  const entry = (patch: Partial<ContainerEntry>, container: Partial<StorageItem> | null = {}): ContainerEntry => ({
+    ...containerEntry(MUFFIN_TUB),
+    ...patch,
+    container: container ? { ...MUFFIN_TUB, ...container } : undefined,
+  });
+
+  it("new to the plate: what is left", () => {
+    expect(servingsMax(entry({}))).toBe(2);
+  });
+  it("kept: what the meal took plus what is left, while active", () => {
+    expect(servingsMax(entry({ savedServings: 3 }))).toBe(5);
+    expect(servingsMax(entry({ savedServings: 3 }, { status: "finished", servingsLeft: 0 }))).toBe(3);
+    expect(servingsMax(entry({ savedServings: 3 }, { status: "discarded" }))).toBe(3);
+  });
+  it("untracked and active: the input's ceiling; unknown live state: never more than the meal took", () => {
+    expect(servingsMax(entry({ savedServings: 2 }, { servingsTotal: null, servingsLeft: null }))).toBe(99);
+    expect(servingsMax(entry({ savedServings: 2 }, null))).toBe(2);
+  });
+});
+
+// A saved meal as GET /api/meals/:id answers it: every item kind.
+const ITEMS: PlateItem[] = [
+  {
+    kind: "recipe",
+    id: id(100),
+    recipe: PASTA,
+    leftOut: [CASHEW],
+    inferred: false,
+    rating: 5,
+  },
+  { kind: "food", id: id(101), food: EGG, rating: null },
+  {
+    kind: "storage",
+    storageItemId: CONTAINER.id,
+    label: null,
+    location: "freezer",
+    servings: 2,
+    parts: [
+      { kind: "food", id: id(102), food: BROCCOLI, rating: 4 },
+      { kind: "food", id: id(103), food: CARROT, rating: null },
+    ],
+  },
+  { kind: "recipe", id: id(104), recipe: PATTIES, leftOut: [], inferred: true, rating: null },
+  {
+    kind: "storage",
+    storageItemId: MUFFIN_TUB.id,
+    label: "Muffins (old batch)",
+    location: "fridge",
+    servings: null,
+    parts: [{ kind: "recipe", id: id(105), recipe: MUFFINS, rating: 3 }],
+  },
+];
+const MEAL = { items: ITEMS } as Pick<MealItem, "items">;
+const FIELDS = { servedAt: new Date("2026-10-14T12:20:00.000Z"), reactionNote: "  ", notes: " Loved the pasta. " };
+
+describe("fromMeal", () => {
+  it("a saved meal as a plate: kept items by id, stars, leave-out, servings as taken", () => {
+    const plate = fromMeal(MEAL, [CONTAINER]);
+    expect(plate[0]).toEqual({ kind: "recipe", id: id(100), recipe: PASTA, leftOut: [CASHEW], savedLeftOut: [CASHEW.id], rating: 5 });
+    expect(plate[1]).toEqual({ kind: "food", id: id(101), food: EGG, rating: null });
+    expect(plate[2]).toEqual({
+      kind: "storage",
+      storageItemId: CONTAINER.id,
+      title: "Broccoli, Carrot",
+      location: "freezer",
+      servings: 2,
+      savedServings: 2,
+      container: CONTAINER,
+      parts: [
+        { kind: "food", food: BROCCOLI, rating: 4 },
+        { kind: "food", food: CARROT, rating: null },
+      ],
+    });
+    // A container's label wins; one served before 0020 has no servings and no live counts here.
+    expect(plate[4]).toMatchObject({ title: "Muffins (old batch)", servings: null, savedServings: null, container: undefined });
+  });
+
+  it("a container with no label is named by its recipe, else its foods", () => {
+    const plate = fromMeal({ items: [{ ...ITEMS[4]!, label: null } as PlateItem] });
+    expect((plate[0] as ContainerEntry).title).toBe(MUFFINS.title);
+  });
+
+  it("an older cached body without items is an empty plate", () => {
+    expect(fromMeal({})).toEqual([]);
+  });
+});
+
+describe("toMealInput", () => {
+  it("an untouched saved meal saves as the shared no-op input (ids kept, no servings, no leave-out)", () => {
+    const input = toMealInput(fromMeal(MEAL, [CONTAINER, MUFFIN_TUB]), FIELDS);
+    expect(input.items).toEqual(plateInputFromItems(ITEMS));
+    expect(input).toMatchObject({ servedAt: "2026-10-14T12:20:00.000Z", reactionNote: null, notes: "Loved the pasta." });
+    expect(updatePlateMealInputSchema.safeParse(input).success).toBe(true);
+  });
+
+  it("an edit sends only what changed: a new leave-out, a resized container; a toggle undone sends nothing", () => {
+    let plate = fromMeal(MEAL, [CONTAINER]);
+    plate = plateReducer(plate, { type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: GARLIC });
+    plate = plateReducer(plate, { type: "toggleLeftOut", key: `recipe:${PATTIES.id}`, food: EGG });
+    plate = plateReducer(plate, { type: "toggleLeftOut", key: `recipe:${PATTIES.id}`, food: EGG });
+    plate = plateReducer(plate, { type: "servings", key: `storage:${CONTAINER.id}`, servings: 3 });
+    const items = toMealInput(plate, FIELDS).items;
+    expect(items[0]).toEqual({ kind: "recipe", id: id(100), recipeId: PASTA.id, rating: 5, leftOutFoodIds: [CASHEW.id, GARLIC.id] });
+    expect(items[3]).toEqual({ kind: "recipe", id: id(104), recipeId: PATTIES.id, rating: null });
+    expect(items[2]).toEqual({ kind: "storage", storageItemId: CONTAINER.id, servings: 3, ratings: { [BROCCOLI.id]: 4, [CARROT.id]: null } });
+  });
+
+  it("ticking every ingredient back on a kept recipe sends an empty leave-out", () => {
+    const plate = plateReducer(fromMeal(MEAL), { type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: CASHEW });
+    expect(toMealInput(plate, FIELDS).items[0]).toMatchObject({ leftOutFoodIds: [] });
+  });
+
+  it("× on a kept container leaves it out of the items, which puts its servings back", () => {
+    const plate = plateReducer(fromMeal(MEAL), { type: "remove", key: `storage:${CONTAINER.id}` });
+    expect(toMealInput(plate, FIELDS).items.map((item) => item.kind)).toEqual(["recipe", "food", "recipe", "storage"]);
+  });
+
+  it("a new plate: no ids; a container's servings and only its given stars; a leave-out only when there is one", () => {
+    let plate = add({ items: [CONTAINER], recipes: [PASTA, PATTIES], foods: [EGG] });
+    plate = plateReducer(plate, { type: "rate", key: `storage:${CONTAINER.id}`, partId: CARROT.id, rating: 2 });
+    plate = plateReducer(plate, { type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: CASHEW });
+    const input = toMealInput(plate, { ...FIELDS, reactionNote: " mild rash " });
+    expect(input.items).toEqual([
+      { kind: "storage", storageItemId: CONTAINER.id, servings: 1, ratings: { [CARROT.id]: 2 } },
+      { kind: "recipe", recipeId: PASTA.id, rating: null, leftOutFoodIds: [CASHEW.id] },
+      { kind: "recipe", recipeId: PATTIES.id, rating: null },
+      { kind: "food", foodId: EGG.id, rating: null },
+    ]);
+    expect(input.reactionNote).toBe("mild rash");
+    expect(createPlateMealInputSchema.safeParse(input).success).toBe(true);
+    // An unrated new container sends no ratings at all.
+    expect(toMealInput(add({ items: [MUFFIN_TUB] }), FIELDS).items).toEqual([
+      { kind: "storage", storageItemId: MUFFIN_TUB.id, servings: 1 },
+    ]);
+  });
+});
