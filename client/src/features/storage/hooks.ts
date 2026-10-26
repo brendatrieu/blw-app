@@ -50,7 +50,8 @@ export function useStorageItems(view: StorageView) {
   });
 }
 
-export function useCreateStorageItem() {
+/** `via`: where the form is when its route can't tell (the plate's run-out row). */
+export function useCreateStorageItem(via?: "plate_ran_out") {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateStorageItemInput) => createStorageItem(input),
@@ -69,12 +70,11 @@ export function useCreateStorageItem() {
       // `split: true`). Counting containers rather than submissions is what
       // makes those two readings comparable at all.
       const source = storageSourceFromInput(input);
-      const via = storageAddViaFromLocation();
       for (const item of created) {
         track("storage_item_added", {
           location: input.location,
           source,
-          via,
+          via: via ?? storageAddViaFromLocation(),
           has_servings: input.servingsTotal !== undefined && input.servingsTotal !== null,
           has_best_by: Boolean(input.bestBy),
           split: Boolean(input.separateItems),

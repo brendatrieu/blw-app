@@ -9,7 +9,10 @@ import { storageKeys } from "../features/storage/hooks.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
 import { CARD_ROW_DIVIDER } from "../components/ui/Card.js";
 import { DashboardPage, HOME_STORAGE_LIMIT, UP_NEXT_END_DIVIDER, UP_NEXT_LIMIT, upNextRows } from "./DashboardPage.js";
-import type { MealItem } from "@blw/shared";
+import { localDate, type MealItem, type PlanResponse } from "@blw/shared";
+import { CelebrationProvider } from "../components/ui/Celebration.js";
+import { planKeys } from "../features/plan/hooks.js";
+import { deviceTimeZone, weekOf } from "../features/plan/plan.js";
 
 /** The markup minus the swipe track's off-screen (`inert`) slides (item 775):
  * what Home shows. Every page of a paged list is rendered, one slide each. */
@@ -32,6 +35,56 @@ function shown(html: string): string {
   }
   return out;
 }
+
+// SPEC §5 (ledger 904): Today's plan sits first on Home only when something
+// is planned today; otherwise Home is exactly what it was (CD-Home-No-Plan).
+describe("DashboardPage with a meal plan", () => {
+  const baby: Baby = {
+    id: "baby-1",
+    name: "Baby",
+    birthDate: "2026-01-01",
+    notes: null,
+    archived: false,
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+  const today = localDate(new Date(), deviceTimeZone());
+  const week = weekOf(today);
+  const egg = { kind: "food" as const, id: "00000000-0000-4000-8000-000000000009", food: { id: "f-egg", slug: "egg", name: "Egg", category: "dairy" as const, emoji: null } };
+  const day = (items: PlanResponse["days"][number]["meals"][number]["items"]): PlanResponse => ({
+    today,
+    dailyMeals: [],
+    days: [{ date: today, planned: true, meals: [{ slotId: "00000000-0000-4000-8000-000000000001", name: "Breakfast", time: null, position: 0, served: null, items }] }],
+  });
+  function home(plan: PlanResponse | undefined): string {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(babyKeys.list(false), [baby]);
+    queryClient.setQueryData(storageKeys.list("active"), { items: [] });
+    queryClient.setQueryData(trackingKeys.allergenProgress(baby.id), { items: [] });
+    queryClient.setQueryData([...trackingKeys.meals(baby.id), { limit: 100 }], { items: [] });
+    if (plan) queryClient.setQueryData(planKeys.range(baby.id, week[0]!, week[6]!), plan);
+    return renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(CelebrationProvider, null, createElement(MemoryRouter, null, createElement(DashboardPage, null))),
+      ),
+    );
+  }
+
+  it("puts Today's plan first, above Log meal / Add to storage, when today has something planned", () => {
+    const html = home(day([egg]));
+    expect(html).toContain(">Today&#x27;s plan</h2>");
+    expect(html).toContain('aria-label="Serve Breakfast"');
+    expect(html.indexOf("Today&#x27;s plan")).toBeLessThan(html.indexOf(">Log meal<"));
+  });
+
+  it("is exactly the Home it was when nothing is planned today, or the plan isn't in yet", () => {
+    const before = home(undefined);
+    expect(before).not.toContain("Today&#x27;s plan");
+    expect(home(day([]))).toBe(before);
+  });
+});
 
 describe("DashboardPage", () => {
   it("renders without throwing (no active baby yet, in the loading/empty states)", () => {

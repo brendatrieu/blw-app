@@ -20,6 +20,7 @@ import { containerRecipes, type AddMoreChange, type AddMoreIds } from "../storag
 import { clampServings, hasNoServingsLeft, storageItemTitle } from "../storage/format.js";
 import { isBestByBeforePrepared, BEST_BY_BEFORE_PREPARED_MESSAGE } from "../storage/freshness.js";
 import { resolveLeftoverSource, type LeftoverSourceKind } from "../storage/leftovers.js";
+import type { StoragePrefill } from "../storage/components/AddStorageItemForm.js";
 import { ApiError } from "../../lib/api.js";
 import type { FormErrors } from "../../lib/forms.js";
 
@@ -82,6 +83,10 @@ export interface ContainerEntry {
   savedServings?: number | null;
   /** The container as Storage has it now, when loaded: its counts and status. */
   container?: StorageItem;
+  /** What the plan asked for, on a planned meal's plate. Serving it, the
+   * stepper starts at what is left when that is less (SPEC §11), and the
+   * row says so (`shortOf`). */
+  planned?: number;
   parts: ContainerPart[];
 }
 
@@ -97,7 +102,9 @@ export type PlateAction =
   | { type: "servings"; key: string; servings: number }
   /** A recipe lost these ingredients since the plate opened: they can no
    * longer be left out (the server's stale leave-out 400). */
-  | { type: "dropLeftOut"; recipeId: string; foodIds: string[] };
+  | { type: "dropLeftOut"; recipeId: string; foodIds: string[] }
+  /** CD-Ran-Out-Add: a new batch takes a run-out container's place. */
+  | { type: "replaceContainer"; key: string; items: StorageItem[] };
 
 /** Ledger 799: one key per thing that can be on the plate once, the server's own rule. */
 export function entryKey(entry: PlateEntry): string {
@@ -164,6 +171,23 @@ export function ranOut(entry: ContainerEntry): boolean {
 /** The first container on the plate that has run out, if any. */
 export const ranOutEntry = (plate: readonly PlateEntry[]): ContainerEntry | undefined =>
   plate.find((entry): entry is ContainerEntry => entry.kind === "storage" && ranOut(entry));
+
+/**
+ * How many servings a planned container still has, when that is fewer than
+ * the plan asked for but more than none ("Only {n} left."); null otherwise.
+ * The stepper stops there (round 5, decision 5). None left is `ranOut`.
+ */
+export function shortOf(entry: ContainerEntry): number | null {
+  if (entry.planned === undefined || ranOut(entry) || entry.container?.servingsTotal == null) return null;
+  const left = servingsMax(entry);
+  return left < entry.planned ? left : null;
+}
+
+/** A food deleted from the catalog, new to this plate: only a planned
+ * meal's plate can hold one (SPEC §3.5 `deleted`), and the server refuses
+ * it, so serving waits until it comes off. */
+export const deletedFoodEntry = (plate: readonly PlateEntry[]): FoodEntry | undefined =>
+  plate.find((entry): entry is FoodEntry => entry.kind === "food" && entry.id === undefined && entry.food.deleted === true);
 
 /** Each container with Storage's latest copy of it, when the lists have one,
  * so its line, its stepper's limit and its run-out flag stay current. */
@@ -361,17 +385,44 @@ export function fromMeal(meal: Pick<MealItem, "items">, containers: readonly Sto
 
 /**
  * The plate a planned meal shows on Plan a meal (SPEC §5): its items as
- * planned, with no stars. A container takes the servings planned and counts
- * as new to the plate: a plan has taken nothing from it yet.
+ * planned, with no stars. Everything is new to a meal: a container takes
+ * the servings planned (a plan has taken nothing from it yet), and a
+ * recipe's leave-outs are intent no meal has saved, so serving sends them.
  */
 export function fromPlanned(items: readonly PlannedItem[]): PlateEntry[] {
   return items.map((item): PlateEntry => {
     if (item.kind === "food") return { kind: "food", food: item.food, rating: null };
-    if (item.kind === "recipe") {
-      return { kind: "recipe", recipe: item.recipe, leftOut: item.leftOut, savedLeftOut: item.leftOut.map((food) => food.id), rating: null };
-    }
-    return { ...containerEntry(item.container), servings: item.servings };
+    if (item.kind === "recipe") return { kind: "recipe", recipe: item.recipe, leftOut: item.leftOut, savedLeftOut: [], rating: null };
+    return { ...containerEntry(item.container), servings: item.servings, planned: item.servings };
   });
+}
+
+/**
+ * The plate a planned meal is SERVED from (SPEC §3.5, CD-Serve-Ran-Out): as
+ * planned, each container as Storage has it now, its stepper at what it can
+ * still give when that is less than planned. One with none left stays as
+ * planned, flagged (`ranOut`) until a new batch takes its place or it comes off.
+ */
+export function servePlanned(items: readonly PlannedItem[], containers: readonly StorageItem[]): PlateEntry[] {
+  return attachContainers(fromPlanned(items), containers).map((entry) =>
+    entry.kind === "storage" && !ranOut(entry) ? { ...entry, servings: clampServings(entry.servings ?? 1, servingsMax(entry)) } : entry,
+  );
+}
+
+/**
+ * What CD-Ran-Out-Add's Add to storage opens with, from the run-out
+ * container (PP-NOTES round 6, decision 3): the same recipe, else the same
+ * foods, the same place and the same total servings. Best by stays empty:
+ * the old batch's date would be wrong for a new one.
+ */
+export function restockPrefill(entry: ContainerEntry): StoragePrefill {
+  const recipe = entry.parts.find((part) => part.kind === "recipe");
+  const foodIds = entry.parts.flatMap((part) => (part.kind === "food" ? [part.food.id] : []));
+  return {
+    ...(recipe?.kind === "recipe" ? { source: "recipe", recipeId: recipe.recipe.id } : { source: "food", foodIds }),
+    location: entry.location,
+    ...(entry.container?.servingsTotal != null && { servingsTotal: entry.container.servingsTotal }),
+  };
 }
 
 /** A plan write's `items` (PUT or "+ Add a meal" POST): the whole plate as
@@ -468,6 +519,16 @@ export function plateReducer(plate: readonly PlateEntry[], action: PlateAction):
           ? { ...entry, servings: clampServings(action.servings, servingsMax(entry)) }
           : entry,
       );
+    case "replaceContainer":
+      // In its place, at the servings it was asked for (what the new batch
+      // can give, at most), still marked with what the plan asked for.
+      return plate.flatMap((entry) => {
+        if (entry.kind !== "storage" || entryKey(entry) !== action.key) return [entry];
+        return action.items.map((item): ContainerEntry => {
+          const fresh: ContainerEntry = { ...containerEntry(item), ...(entry.planned !== undefined && { planned: entry.planned }) };
+          return { ...fresh, servings: clampServings(entry.servings ?? 1, servingsMax(fresh)) };
+        });
+      });
   }
 }
 

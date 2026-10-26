@@ -6,6 +6,7 @@ import type {
   DailyMealsResponse,
   PlanDay,
   PlanResponse,
+  ServePlannedMealResponse,
   UpdatePlannedMealInput,
 } from "@blw/shared";
 import { apiDelete, apiGet, apiPost, apiPut } from "../../lib/api.js";
@@ -41,4 +42,9 @@ export function removePlannedMeal(babyId: string, date: string, slotId: string):
 /** Copy to… (`dryRun` asks only what it would do, with its warnings). */
 export function copyPlan(babyId: string, input: CopyPlanInput): Promise<CopyPlanResponse> {
   return apiPost<CopyPlanResponse>(`${base(babyId)}/plan/copy`, input);
+}
+
+/** Today's one-tap Serve: logs the meal exactly as planned, now (SPEC §3.5). */
+export function servePlannedMeal(babyId: string, date: string, slotId: string, tz: string): Promise<ServePlannedMealResponse> {
+  return apiPost<ServePlannedMealResponse>(`${base(babyId)}/plan/${date}/meals/${slotId}/serve`, { tz });
 }

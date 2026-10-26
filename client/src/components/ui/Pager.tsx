@@ -43,7 +43,7 @@ interface PagerProps {
 // aria-disabled, not `disabled`: a natively disabled › drops keyboard focus
 // to <body> the moment you reach the last page. The handlers are no-ops at
 // the ends instead, and AT still hears "dimmed".
-const PAGER_BUTTON = `${ICON_BUTTON_CLASSES} aria-disabled:*:opacity-60 aria-disabled:cursor-default focus-visible:outline-offset-[-2px] motion-reduce:transition-none`;
+export const PAGER_BUTTON = `${ICON_BUTTON_CLASSES} aria-disabled:*:opacity-60 aria-disabled:cursor-default focus-visible:outline-offset-[-2px] motion-reduce:transition-none`;
 
 /**
  * A Home section header's "1–3 of 8 ‹ ›" (item 694). Renders nothing when

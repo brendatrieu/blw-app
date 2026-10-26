@@ -18,8 +18,9 @@ import {
 } from "../features/storage/components/StorageItemCard.js";
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
 import { FoodPlates } from "../features/catalog/components/FoodPlate.js";
+import { TodaysPlanCard } from "../features/plan/TodaysPlanCard.js";
 import { ButtonLink } from "../components/ui/Button.js";
-import { Card, CARD_ROW_DIVIDER, CardLink } from "../components/ui/Card.js";
+import { Card, CARD_ROW_DIVIDER, CardLink, UP_NEXT_LABEL_CLASS } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { ProgressRing } from "../components/ui/ProgressRing.js";
 import { HEADING_CONTROL_INSET, SectionLink } from "../components/ui/SectionLink.js";
@@ -93,10 +94,6 @@ function UpNextRowShell({
  * (item 778) reads as the end of the list. */
 export const UP_NEXT_END_DIVIDER =
   "*:last:after:absolute *:last:after:inset-x-3.5 *:last:after:bottom-0 *:last:after:h-px *:last:after:bg-[var(--color-divider)]";
-
-// The Home greeting's small uppercase apricot label (AppLayout), for the
-// card's own label (CSS uppercases it, so the copy stays "Up next").
-const UP_NEXT_LABEL_CLASS = "text-[11px] leading-[normal] font-bold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
 
 /**
  * "Up next" (item 660, A-Home): what needs doing soon, each row with its own
@@ -348,6 +345,8 @@ export function DashboardPage() {
       {/* The visible greeting lives in the shared AppLayout header; this keeps
           the document outline rooted for screen readers. */}
       <h1 className="sr-only">Home</h1>
+      {/* Only when something is planned today (SPEC §5): renders nothing otherwise. */}
+      <TodaysPlanCard key={`plan-${activeBaby.id}`} babyId={activeBaby.id} />
       {/* Keyed per baby so a switch starts on page one; prefixed, like
           ServeLogList below, so the two sibling keys never match (item 712). */}
       <UpNextCard key={`up-next-${activeBaby.id}`} babyId={activeBaby.id} />

@@ -90,10 +90,12 @@ import { DateTimeField } from "../../components/ui/DateTimeField.js";
 import { Field } from "../../components/ui/Field.js";
 import { Textarea } from "../../components/ui/Input.js";
 import { Switch } from "../../components/ui/Switch.js";
+import { Sheet } from "../../components/ui/Sheet.js";
 import { AddMoreSheet } from "../storage/components/AddMoreSheet.js";
+import { AddStorageItemForm } from "../storage/components/AddStorageItemForm.js";
 import { LeftoversFields } from "../storage/components/LeftoversFields.js";
 import { PlateItemRow } from "./PlateItemRow.js";
-import { PlateForm, type PlateMode } from "./PlateScreen.js";
+import { PlateForm, planServeStart, type PlateMode } from "./PlateScreen.js";
 import { containerEntry, fromMeal, fromPlanned, type PlateAction, type PlateEntry } from "./plate.js";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -212,7 +214,8 @@ function addMore(change: Partial<{ items: StorageItem[]; foods: unknown[]; recip
 }
 const rows = (tree: El) => findAll(tree, byType(PlateItemRow));
 const dispatch = (action: PlateAction) => (rows(again())[0]!.props.dispatch as (a: PlateAction) => void)(action);
-const submit = () => (again().props.onSubmit as (event: { preventDefault: () => void }) => void)({ preventDefault: () => {} });
+// The page is the plate's form, then (outside it) CD-Ran-Out-Add's sheet.
+const submit = () => (one(again(), byType("form")).props.onSubmit as (event: { preventDefault: () => void }) => void)({ preventDefault: () => {} });
 const saveButton = (tree: El) => one(tree, (element) => element.type === Button && element.props.type === "submit");
 
 beforeEach(() => {
@@ -522,6 +525,141 @@ describe("a container that has run out", () => {
     h.mutation.isError = true;
     h.mutation.error = new ApiError(409, "conflict", { error: "conflict", storageItemId: TUB.id });
     expect(text(again())).not.toContain("Couldn't save that — try again.");
+  });
+});
+
+// SPEC §3.5: a past day's Serve, and today's after a blocked one tap, go
+// through the plate, linked to the planned meal (CD-Serve-Ran-Out,
+// CD-Ran-Out-Add, CD-Ran-Out-Added).
+describe("a planned meal's Serve (/plan/:date/:slotId?serve=1)", () => {
+  const PLAN = { date: "2026-10-14", today: "2026-10-14", slotId: id(51), name: "Lunch", time: "12:00" };
+  const finished = { ...MUFFINS, status: "finished" as const, servingsLeft: 0 };
+  const NEW_BATCH: StorageItem = { ...MUFFINS, id: id(22), servingsLeft: 6, preparedAt: "2026-10-14T16:05:00.000Z" };
+  let gone: Array<string | null> = [];
+  const renderServe = (initialPlate: PlateEntry[], plan: Record<string, unknown> = {}, containers: StorageItem[] = []) =>
+    render("planServe", initialPlate, { plan: { ...PLAN, ...plan }, containers, onPlanGone: (mealId: string | null) => gone.push(mealId) });
+  const planned = () =>
+    fromPlanned([
+      { kind: "recipe", id: id(60), recipe: PASTA, leftOut: [{ ...CASHEWS, category: "legume" }] },
+      { kind: "storage", id: id(61), servings: 2, container: MUFFINS },
+    ]);
+  const form = (tree: El) => one(tree, byType("form"));
+  beforeEach(() => {
+    gone = [];
+  });
+
+  it("is the plate with its stars, When, Reaction and Notes, no plan fields; Serve sends the planned items linked to the meal", () => {
+    const tree = renderServe(planned());
+    expect(findAll(tree, (element) => element.props?.id === "plan-name")).toHaveLength(0);
+    expect(rows(tree).map((row) => row.props.planning)).toEqual([false, false]);
+    expect(findAll(tree, byType(Textarea))).toHaveLength(2);
+    expect(saveButton(tree).props.children).toBe("Serve");
+    // Today: When is now.
+    expect(Math.abs((one(tree, byType(DateTimeField)).props.value as Date).getTime() - Date.now())).toBeLessThan(60_000);
+    // Add more doesn't insist on a container here.
+    (one(tree, (element) => element.props?.id === "plate-add-more").props.onClick as () => void)();
+    expect(one(again(), byType(AddMoreSheet)).props.requireContainer).toBe(false);
+    submit();
+    const input = h.creates[0]!.input as Record<string, unknown>;
+    expect(input).toMatchObject({
+      plannedMealId: id(51),
+      // The planned leave-out is new to this meal, so it is sent.
+      items: [
+        { kind: "recipe", recipeId: PASTA.id, rating: null, leftOutFoodIds: [CASHEWS.id] },
+        { kind: "storage", storageItemId: MUFFINS.id, servings: 2 },
+      ],
+      reactionNote: null,
+      notes: null,
+    });
+    expect(typeof input.tz).toBe("string");
+    expect(doneCalls).toEqual([]);
+    h.creates[0]!.options.onSuccess!();
+    expect(doneCalls).toEqual(["planServe"]);
+  });
+
+  it("a past day starts When at its planned time, or noon without one; today at now", () => {
+    const at = (time: string | null) => planServeStart({ date: "2026-10-13", today: "2026-10-14", time });
+    expect(at("07:30")).toEqual(new Date(2026, 9, 13, 7, 30));
+    expect(at(null)).toEqual(new Date(2026, 9, 13, 12, 0));
+    const now = new Date(2026, 9, 14, 9, 41, 27);
+    expect(planServeStart({ date: "2026-10-14", today: "2026-10-14", time: "07:30" }, now)).toEqual(new Date(2026, 9, 14, 9, 41));
+    const tree = renderServe(planned(), { date: "2026-10-13", time: "07:30" });
+    expect(one(tree, byType(DateTimeField)).props.value).toEqual(new Date(2026, 9, 13, 7, 30));
+  });
+
+  it("a run-out container holds Serve with the meal's own line (finished, or discarded), until it comes off", () => {
+    let tree = renderServe(planned(), {}, [finished]);
+    expect(text(tree)).toContain("Egg Muffins has run out, so Lunch isn't served yet.");
+    expect(saveButton(tree).props.disabled).toBe(true);
+    submit();
+    expect(h.creates).toEqual([]);
+    tree = renderServe(planned(), {}, [{ ...MUFFINS, status: "discarded" }]);
+    expect(text(tree)).toContain("Egg Muffins was discarded, so Lunch isn't served yet.");
+    dispatch({ type: "remove", key: `storage:${MUFFINS.id}` });
+    expect(saveButton(again()).props.disabled).toBe(false);
+  });
+
+  it("Add to storage on the spot: the app's form in a sheet outside the plate's form, prefilled from the empty one; the new batch takes its place; nothing is logged", () => {
+    renderServe(planned(), {}, [finished]);
+    expect(findAll(again(), byType(Sheet))).toHaveLength(0);
+    (rows(again())[1]!.props.onAddToStorage as (entry: PlateEntry) => void)(rows(again())[1]!.props.entry as PlateEntry);
+    const tree = again();
+    const addForm = one(tree, byType(AddStorageItemForm));
+    expect(one(tree, byType(Sheet)).props).toMatchObject({ open: true, title: "Add to storage", showClose: true, fixedHeight: true });
+    expect(findAll(form(tree), byType(AddStorageItemForm))).toHaveLength(0);
+    expect(addForm.props.prefill).toEqual({ source: "recipe", recipeId: MUFFINS.recipeId, location: "fridge", servingsTotal: 6 });
+    expect(addForm.props.via).toBe("plate_ran_out");
+    (addForm.props.onAdded as (items: StorageItem[]) => void)([NEW_BATCH]);
+    (addForm.props.onDone as () => void)();
+    const after = again();
+    expect(findAll(after, byType(Sheet))).toHaveLength(0);
+    expect(rows(after).map((row) => (row.props.entry as PlateEntry & { storageItemId?: string }).storageItemId ?? "fresh")).toEqual([
+      "fresh",
+      NEW_BATCH.id,
+    ]);
+    expect(findAll(after, (element) => element.props?.id === "plate-ran-out")).toHaveLength(0);
+    expect(h.creates).toEqual([]);
+    submit();
+    expect((h.creates[0]!.input as { items: unknown[] }).items[1]).toEqual({ kind: "storage", storageItemId: NEW_BATCH.id, servings: 2 });
+  });
+
+  it("closing Add to storage changes nothing: still flagged, both ways forward", () => {
+    renderServe(planned(), {}, [finished]);
+    (rows(again())[1]!.props.onAddToStorage as (entry: PlateEntry) => void)(rows(again())[1]!.props.entry as PlateEntry);
+    (one(again(), byType(Sheet)).props.onClose as () => void)();
+    const tree = again();
+    expect(findAll(tree, byType(Sheet))).toHaveLength(0);
+    expect(text(tree)).toContain("Egg Muffins has run out, so Lunch isn't served yet.");
+    expect((rows(tree)[1]!.props.entry as { storageItemId: string }).storageItemId).toBe(MUFFINS.id);
+    expect(h.containersSaved).toEqual([]);
+  });
+
+  it("a planned food deleted since holds Serve in its own line until × takes it off", () => {
+    renderServe(fromPlanned([{ kind: "food", id: id(62), food: { ...EGG, deleted: true } }, { kind: "food", id: id(63), food: BANANA }]));
+    expect(text(again())).toContain("Egg was deleted, so Lunch isn't served yet.");
+    expect(saveButton(again()).props.disabled).toBe(true);
+    // Enter submits a form whatever the button says: still nothing is sent.
+    submit();
+    expect(h.creates).toEqual([]);
+    dispatch({ type: "remove", key: `food:${EGG.id}` });
+    expect(saveButton(again()).props.disabled).toBe(false);
+    // Elsewhere a deleted food never holds a save (Edit keeps one by id).
+    render("log", fromPlanned([{ kind: "food", id: id(62), food: { ...EGG, deleted: true } }]));
+    expect(saveButton(again()).props.disabled).toBe(false);
+  });
+
+  it("served elsewhere meanwhile: off to that meal; gone from its day: the page says so; neither shows an error", () => {
+    renderServe(planned());
+    submit();
+    const served = new ApiError(409, "already_served", { error: "already_served", mealId: id(90) });
+    h.creates[0]!.options.onError!(served);
+    h.creates[0]!.options.onError!(new ApiError(409, "plan_changed", { error: "plan_changed", message: "…" }));
+    expect(gone).toEqual([id(90), null]);
+    h.mutation.isError = true;
+    h.mutation.error = served;
+    expect(findAll(again(), (element) => element.props?.role === "alert")).toHaveLength(0);
+    h.mutation.error = new ApiError(500, "boom");
+    expect(text(again())).toContain("Couldn't serve — try again.");
   });
 });
 

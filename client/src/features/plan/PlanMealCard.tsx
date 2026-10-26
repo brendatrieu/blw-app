@@ -18,9 +18,12 @@ export interface PlanMealCardProps {
   /** The caller's today, `YYYY-MM-DD`. */
   today: string;
   meal: PlannedMeal;
-  /** Serve (SPEC §3.5), wired in plan step 4.3: shown on an unserved meal
-   * with something planned, today or before; never on a future day. */
+  /** Serve (SPEC §3.5): shown on an unserved meal with something planned,
+   * today (one tap) or before (the plate); never on a future day. */
   onServe?: () => void;
+  /** Today's one tap is on its way ("Serving…"), or failed ("try again"). */
+  serving?: boolean;
+  serveFailed?: boolean;
   /** ⋮ Copy to…, offered once something is planned (there is nothing to copy before). */
   onCopy?: () => void;
 }
@@ -30,7 +33,8 @@ export function canServe(date: string, today: string, meal: Pick<PlannedMeal, "s
   return meal.served === null && meal.items.length > 0 && date <= today;
 }
 
-function ServedChip({ servedAt }: { servedAt: string }) {
+/** "Served {time}" beside a served meal's name (here and on Today's plan). */
+export function ServedChip({ servedAt }: { servedAt: string }) {
   return (
     <span className="inline-flex h-[22px] items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success-soft)] px-2 text-xs font-bold whitespace-nowrap text-[var(--color-success-soft-text)]">
       <svg aria-hidden="true" width="12" height="12" viewBox="0 0 16 16">
@@ -49,8 +53,11 @@ function ServedChip({ servedAt }: { servedAt: string }) {
  * most one line and no flags keeps its buttons beside the whole card, as
  * the board's Morning snack does; a longer one keeps them on its name's row.
  */
-export function PlanMealCard({ babyId, date, today, meal, onServe, onCopy }: PlanMealCardProps) {
+export function PlanMealCard({ babyId, date, today, meal, onServe, serving = false, serveFailed = false, onCopy }: PlanMealCardProps) {
   const [removing, setRemoving] = useState(false);
+  const offline = useIsOffline();
+  const serves = Boolean(onServe) && canServe(date, today, meal);
+  const offlineId = `serve-offline-${meal.slotId}`;
   const lines = plannedLines(meal);
   const notes = flagNotes(meal);
   const compact = lines.length <= 1 && notes.length === 0;
@@ -75,9 +82,16 @@ export function PlanMealCard({ babyId, date, today, meal, onServe, onCopy }: Pla
   const actions = (
     // The 44px buttons overhang the row, so they don't make it taller.
     <div className="relative z-10 -my-[9px] -mr-2.5 flex shrink-0 items-center gap-1">
-      {onServe && canServe(date, today, meal) && (
-        <Button type="button" aria-label={`Serve ${meal.name}`} onClick={onServe}>
-          Serve
+      {serves && (
+        // Every write waits offline (SPEC §4.4), the plate's Serve pattern.
+        <Button
+          type="button"
+          aria-label={`Serve ${meal.name}`}
+          aria-describedby={offline ? offlineId : undefined}
+          disabled={serving || offline}
+          onClick={onServe}
+        >
+          {serving ? "Serving…" : "Serve"}
         </Button>
       )}
       <Menu label={`More for ${meal.name}`}>
@@ -138,6 +152,16 @@ export function PlanMealCard({ babyId, date, today, meal, onServe, onCopy }: Pla
           </div>
         </div>
       ))}
+      {serves && offline && (
+        <p id={offlineId} className="mt-1 text-xs text-[var(--color-text-muted)]">
+          You're offline.
+        </p>
+      )}
+      {serves && serveFailed && !offline && (
+        <p role="alert" className="mt-1 text-xs text-[var(--color-danger)]">
+          Couldn't serve — try again.
+        </p>
+      )}
     </>
   );
 

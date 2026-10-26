@@ -1,11 +1,19 @@
 import { keepPreviousData, useMutation, useQueries, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import type { CopyPlanInput, DailyMealsInput, PlanDay, PlannedItemInput } from "@blw/shared";
-import { addPlannedMeal, copyPlan, fetchPlan, removePlannedMeal, saveDailyMeals, updatePlannedMeal } from "./api.js";
+import { useNavigate } from "react-router-dom";
+import type { CopyPlanInput, DailyMealsInput, PlanDay, PlannedItemInput, PlannedMeal } from "@blw/shared";
+import { addPlannedMeal, copyPlan, fetchPlan, removePlannedMeal, saveDailyMeals, servePlannedMeal, updatePlannedMeal } from "./api.js";
 import { addDays, deviceTimeZone, planDaysAhead } from "./plan.js";
+import { useCelebration } from "../../components/ui/Celebration.js";
 import { ApiError } from "../../lib/api.js";
 import { track } from "../../lib/usage/track.js";
-import { foodCountBucket } from "../../lib/usage/properties.js";
-import { refetchChangedRecipe } from "../tracking/hooks.js";
+import { failureKind, foodCountBucket, isOffline, mealRecipeKindProps } from "../../lib/usage/properties.js";
+import { containersEmptiedBy } from "../plate/plate.js";
+import {
+  afterNewMeal,
+  invalidateAfterNewMeal,
+  refetchChangedRecipe,
+  snapshotMealCelebrationContext,
+} from "../tracking/hooks.js";
 
 export const planKeys = {
   range: (babyId: string, from: string, to: string) => ["plan", babyId, from, to] as const,
@@ -138,4 +146,111 @@ export function useCopyPlan(babyId: string) {
     },
     onSettled: () => refetchPlans(queryClient),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Serve (SPEC §3.5)
+// ---------------------------------------------------------------------------
+
+/** The 409 a one-tap Serve gets when something can't be served exactly as
+ * planned (run out, discarded, a deleted food): nothing was logged, and the
+ * plate opens with it flagged. */
+export function cannotServeAsPlanned(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 409 && (error.body as { error?: unknown } | undefined)?.error === "cannot_serve_as_planned";
+}
+
+/** Where a planned meal is served through the plate: a past day's Serve,
+ * and today's after a blocked one tap (`/plan/:date/:slotId?serve=1`). */
+export const planServePath = (date: string, slotId: string): string => `/plan/${date}/${slotId}?serve=1`;
+
+export interface ServePlannedMealVariables {
+  date: string;
+  meal: PlannedMeal;
+}
+
+/**
+ * Today's one-tap Serve. A new meal like any other once it lands
+ * (`afterNewMeal`), measured as `meal_logged` via "plan", `one_tap`: the
+ * plan's own route answers with the meal, so the props are read off it.
+ */
+export function useServePlannedMeal(babyId: string | undefined) {
+  const queryClient = useQueryClient();
+  const { celebrate } = useCelebration();
+  return useMutation({
+    mutationFn: ({ date, meal }: ServePlannedMealVariables) => {
+      if (!babyId) throw new Error("useServePlannedMeal called with no active baby");
+      return servePlannedMeal(babyId, date, meal.slotId, deviceTimeZone());
+    },
+    onMutate: () => snapshotMealCelebrationContext(queryClient, babyId),
+    onSuccess: ({ meal: created }, { meal }, context) => {
+      const items = created.items ?? [];
+      track("meal_logged", {
+        food_count: foodCountBucket(created.foods.length),
+        ...mealRecipeKindProps(queryClient, created.recipes?.map((recipe) => recipe.id) ?? (created.recipeId ? [created.recipeId] : [])),
+        from_storage: items.some((item) => item.kind === "storage"),
+        via: "plan",
+        one_tap: true,
+        leftovers_saved: false,
+        has_notes: false,
+        is_first_meal: context?.hadAnyMeals !== true,
+        backdated: "now",
+        offline: isOffline(),
+        has_left_out: items.some((item) => item.kind === "recipe" && item.leftOut.length > 0),
+      });
+      // What it emptied, read off the plan as the card showed it.
+      const planned = meal.items.flatMap((item) => (item.kind === "storage" ? [item] : []));
+      const emptied = containersEmptiedBy(
+        planned.map((item) => ({ kind: "storage" as const, storageItemId: item.container.id, servings: item.servings })),
+        planned.map((item) => item.container),
+      );
+      afterNewMeal(queryClient, babyId, created, emptied, context, celebrate);
+    },
+    onError: (error) => {
+      // A blocked one tap opens the plate: that is the flow, not a failure.
+      if (!cannotServeAsPlanned(error)) track("meal_save_failed", { via: "plan", kind: failureKind(error), offline: isOffline() });
+    },
+    onSettled: () => invalidateAfterNewMeal(queryClient, babyId),
+  });
+}
+
+/**
+ * Serve on a planned meal's card (the plan and Home's Today's plan):
+ * - today, one tap; when something can't be served as planned, the plate
+ *   opens with it flagged; a meal already served elsewhere opens that meal;
+ *   a page left open past midnight just refetches (`not_today`), and the
+ *   day then offers the past-day Serve;
+ * - an earlier day, the plate prefilled from the plan (When = its time);
+ * - a later day has no Serve (`canServe`).
+ * `failedSlot` is the meal whose one tap failed otherwise ("try again").
+ */
+export function useOneTapServe(babyId: string | undefined) {
+  const serve = useServePlannedMeal(babyId);
+  const navigate = useNavigate();
+  const error = serve.error;
+  const handled = cannotServeAsPlanned(error) || servedMealId(error) !== null || isNotToday(error);
+  return {
+    pendingSlot: serve.isPending ? (serve.variables?.meal.slotId ?? null) : null,
+    failedSlot: serve.isError && !handled ? (serve.variables?.meal.slotId ?? null) : null,
+    serve: (date: string, today: string, meal: PlannedMeal) => {
+      if (date < today) {
+        navigate(planServePath(date, meal.slotId));
+        return;
+      }
+      serve.mutate(
+        { date, meal },
+        {
+          onError: (failure) => {
+            if (cannotServeAsPlanned(failure)) navigate(planServePath(date, meal.slotId));
+            const served = servedMealId(failure);
+            if (served) navigate(`/meals/${served}`);
+          },
+        },
+      );
+    },
+  };
+}
+
+/** The 400 a one tap gets once its day is no longer today (SPEC §3.5 step 0). */
+export function isNotToday(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 400 && (error.body as { error?: unknown } | undefined)?.error === "not_today";
 }

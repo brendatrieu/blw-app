@@ -17,6 +17,9 @@ const h = vi.hoisted(() => ({
   baby: { activeBaby: { id: "baby-1" } as { id: string } | null, isLoading: false },
   plan: { data: undefined as PlanResponse | undefined, isLoading: false, isError: false },
   planArgs: [] as unknown[][],
+  // useOneTapServe: what the cards asked to serve, and its state.
+  serves: [] as unknown[][],
+  oneTap: { pendingSlot: null as string | null, failedSlot: null as string | null },
 }));
 
 vi.mock("react", async (importOriginal) => ({
@@ -39,6 +42,7 @@ vi.mock("./hooks.js", () => ({
     h.planArgs.push(args);
     return h.plan;
   },
+  useOneTapServe: () => ({ ...h.oneTap, serve: (...args: unknown[]) => h.serves.push(args) }),
 }));
 vi.mock("./plan.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./plan.js")>()),
@@ -108,6 +112,8 @@ beforeEach(() => {
   h.baby = { activeBaby: { id: "baby-1" }, isLoading: false };
   h.plan = { data: week("2026-10-12", ["2026-10-13", "2026-10-14"]), isLoading: false, isError: false };
   h.planArgs.length = 0;
+  h.serves.length = 0;
+  h.oneTap = { pendingSlot: null, failedSlot: null };
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -131,8 +137,19 @@ describe("PlanPage (CD-Plan-Day)", () => {
       ["2026-10-14", "2026-10-14", "Breakfast"],
       ["2026-10-14", "2026-10-14", "Lunch 2026-10-14"],
     ]);
-    // Serve is wired in step 4.3.
-    expect(cards[0]!.props.onServe).toBeUndefined();
+  });
+
+  it("each card's Serve goes to the one-tap hook with its day and today; the in-flight and failed meal are told apart", () => {
+    h.oneTap = { pendingSlot: id(1), failedSlot: id(2) };
+    const cards = findAll(render(), (el) => el.type === PlanMealCard);
+    expect(cards.map((card) => [card.props.serving, card.props.serveFailed])).toEqual([
+      [true, false],
+      [false, true],
+    ]);
+    (cards[1]!.props.onServe as () => void)();
+    expect(h.serves.map(([date, today, meal]) => [date, today, (meal as { name: string }).name])).toEqual([
+      ["2026-10-14", "2026-10-14", "Lunch 2026-10-14"],
+    ]);
   });
 
   it("dots each day with something planned; the selected day's dot is ink on apricot", () => {

@@ -300,6 +300,7 @@ export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage
     },
     onMutate: () => snapshotMealCelebrationContext(queryClient, babyId),
     onSuccess: (created, input, context) => {
+      const via = mealViaFromLocation();
       track("meal_logged", {
         food_count: foodCountBucket(created.foods.length),
         // Ledger 759: two or more recipes are `several` (+ `includes_basic`).
@@ -308,7 +309,9 @@ export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage
           created.recipes?.map((recipe) => recipe.id) ?? (created.recipeId ? [created.recipeId] : []),
         ),
         from_storage: input.items.some((item) => item.kind === "storage"),
-        via: mealViaFromLocation(),
+        via,
+        // A planned meal served through the plate (SPEC §6).
+        ...(via === "plan" && { one_tap: false }),
         leftovers_saved: usage.leftoversSaved,
         has_notes: Boolean(input.notes || input.reactionNote),
         // The celebration snapshot already answers "had this baby eaten
@@ -319,38 +322,55 @@ export function useCreateMeal(babyId: string | undefined, usage: CreateMealUsage
         offline: isOffline(),
         has_left_out: input.items.some((item) => item.kind === "recipe" && (item.leftOutFoodIds?.length ?? 0) > 0),
       });
-      // A tracked container this serve emptied is finished by the server in
-      // the same write: that is a close, and the only one nobody presses
-      // Remove for. Never the container itself, only buckets.
-      for (const item of containersEmptiedBy(input.items, usage.containers ?? [])) {
-        track("storage_item_closed", {
-          to: "finished",
-          via: "serve_depleted",
-          freshness_at_change: freshnessAtChange(item),
-          age_days_bucket: ageDaysBucket(daysBetween(item.preparedAt)),
-        });
-      }
-      if (!babyId) return;
-      const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
-      for (const [key, data] of snapshots) {
-        if (data) queryClient.setQueryData(key, { items: [created, ...data.items] });
-      }
-      celebrateForNewMeal(babyId, context, celebrate);
+      afterNewMeal(queryClient, babyId, created, containersEmptiedBy(input.items, usage.containers ?? []), context, celebrate);
     },
     onError: (error) => {
       track("meal_save_failed", { via: mealViaFromLocation(), kind: failureKind(error), offline: isOffline() });
       refetchChangedRecipe(queryClient, error);
     },
-    onSettled: () => {
-      // A plate can take servings from containers, and (Phase 4) fill a
-      // planned meal.
-      invalidatePlateQueries(queryClient);
-      if (!babyId) return;
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
-      invalidateAllergenQueries(queryClient, babyId);
-      void queryClient.invalidateQueries({ queryKey: trackingKeys.ratings(babyId) });
-    },
+    onSettled: () => invalidateAfterNewMeal(queryClient, babyId),
   });
+}
+
+/**
+ * What every brand-new meal does once saved, whichever route logged it (the
+ * plate, or a planned meal's one-tap Serve): each tracked container it
+ * emptied is a close the server made in the same write, the only one nobody
+ * presses Remove for (never the container itself, only buckets); the meal
+ * joins the cached lists; and the celebrations fire.
+ */
+export function afterNewMeal(
+  queryClient: QueryClient,
+  babyId: string | undefined,
+  created: MealItem,
+  emptied: readonly StorageItem[],
+  context: MealCelebrationContext | undefined,
+  celebrate: (options: CelebrationOptions) => void,
+): void {
+  for (const item of emptied) {
+    track("storage_item_closed", {
+      to: "finished",
+      via: "serve_depleted",
+      freshness_at_change: freshnessAtChange(item),
+      age_days_bucket: ageDaysBucket(daysBetween(item.preparedAt)),
+    });
+  }
+  if (!babyId) return;
+  const snapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
+  for (const [key, data] of snapshots) {
+    if (data) queryClient.setQueryData(key, { items: [created, ...data.items] });
+  }
+  celebrateForNewMeal(babyId, context, celebrate);
+}
+
+/** Everything a new meal (or a failed try) can change: containers' servings,
+ * a planned meal served, the meal lists, allergen progress and ratings. */
+export function invalidateAfterNewMeal(queryClient: QueryClient, babyId: string | undefined): void {
+  invalidatePlateQueries(queryClient);
+  if (!babyId) return;
+  void queryClient.invalidateQueries({ queryKey: trackingKeys.meals(babyId) });
+  invalidateAllergenQueries(queryClient, babyId);
+  void queryClient.invalidateQueries({ queryKey: trackingKeys.ratings(babyId) });
 }
 
 /** A save refused because its recipe lost a left-out ingredient on another

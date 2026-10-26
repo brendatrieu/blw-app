@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { PlateItem } from "@blw/shared";
+import { Button } from "../../components/ui/Button.js";
 import { CloseGlyph, ICON_BUTTON_CLASSES } from "../../components/ui/iconButton.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";
 import { StarRating } from "../../components/ui/StarRating.js";
@@ -16,6 +17,7 @@ import {
   partId,
   partPlates,
   ranOut,
+  shortOf,
   type ContainerEntry,
   type ContainerPart,
   type FoodEntry,
@@ -37,6 +39,9 @@ const FOCUS_RING =
 const STEP_BUTTON =
   "flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] text-sm font-medium text-[var(--color-text)] disabled:opacity-60";
 const REMOVE_BUTTON = `${ICON_BUTTON_CLASSES} text-[var(--color-text-muted)]`;
+/** A container's caution line under its title (CD-Serve-Ran-Out). */
+const RUN_OUT_LINE =
+  "mt-2 ml-[52px] flex gap-2 rounded-[10px] bg-[var(--color-caution-soft)] px-2 py-1.5 text-[13px] leading-[1.35] text-[var(--color-caution-soft-text)]";
 
 const Name = ({ food }: { food: PlateFoodRef }) => (
   <>
@@ -52,6 +57,11 @@ interface RowProps<E extends PlateEntry> {
   /** Plan a meal (CD-Plan-Meal): no stars until it is served, and a
    * container is only planned, so nothing has "run out" of it yet. */
   planning?: boolean;
+  /** CD-Ran-Out-Add: a run-out container's "Add to storage" (a new batch
+   * takes its place). Absent, the row offers only ×. */
+  onAddToStorage?: ((entry: ContainerEntry) => void) | undefined;
+  /** The add waits offline, like every write (SPEC §4.4). */
+  offline?: boolean;
 }
 
 /**
@@ -259,15 +269,16 @@ export function RecipeItemRow({ entry, dispatch, disabled, planning }: RowProps<
  * FoodPlate's 14px floor, which would spill out of them). */
 const ITEM_PLATE = {
   40: { box: "size-10", inner: 28, font: undefined, innerFont: undefined },
+  36: { box: "size-9", inner: 25, font: undefined, innerFont: undefined },
   32: { box: "size-8", inner: 22, font: undefined, innerFont: 12 },
   28: { box: "size-7", inner: 20, font: undefined, innerFont: undefined },
   24: { box: "size-6", inner: 17, font: 12, innerFont: 9 },
 } as const;
 
 /** An item's mark: one plate, or a container's first two foods overlapped
- * as on the boards (40px on the plate and the meal page, 32px in Copy to…,
- * 28px in the Food log, 24px on the meal plan). */
-export function ItemPlate({ plates, size, className = "" }: { plates: readonly Plate[]; size: 40 | 32 | 28 | 24; className?: string }) {
+ * as on the boards (40px on the plate and the meal page, 36px on Home's
+ * Today's plan, 32px in Copy to…, 28px in the Food log, 24px on the meal plan). */
+export function ItemPlate({ plates, size, className = "" }: { plates: readonly Plate[]; size: keyof typeof ITEM_PLATE; className?: string }) {
   const [first = RECIPE_PLATE, second] = plates;
   const { box, inner, font, innerFont } = ITEM_PLATE[size];
   if (!second) return <FoodPlate {...first} size={size} className={className} style={font ? { fontSize: font } : undefined} />;
@@ -312,13 +323,16 @@ export function WarningGlyph() {
  * also gets × (chair decision, SPEC §5), which puts its servings back; one
  * served before servings were recorded gets × only. One that has run out
  * (`ranOut`, CD-Serve-Ran-Out) gets × and its flag instead of a stepper and
- * stars. The stepper stays between 1 and what the container can give (the
- * reducer clamps, as Serve always did). Where the title would get too
- * narrow, the controls wrap below it, at the right.
+ * stars, and "Add to storage" for a new batch (CD-Ran-Out-Add). The stepper
+ * stays between 1 and what the container can give (the reducer clamps, as
+ * Serve always did); a planned one with less left than planned says so.
+ * Where the title would get too narrow, the controls wrap below it, at the
+ * right.
  */
-export function ContainerItemRow({ entry, dispatch, disabled, planning }: RowProps<ContainerEntry>) {
+export function ContainerItemRow({ entry, dispatch, disabled, planning, onAddToStorage, offline }: RowProps<ContainerEntry>) {
   const key = entryKey(entry);
   const out = !planning && ranOut(entry);
+  const short = planning ? null : shortOf(entry);
   const removable = entry.savedServings !== undefined || out;
   const servings = out ? null : entry.servings;
   const { title } = entry;
@@ -384,11 +398,32 @@ export function ContainerItemRow({ entry, dispatch, disabled, planning }: RowPro
           </div>
         )}
       </div>
-      {planning ? null : out ? (
-        <p className="mt-2 ml-[52px] flex gap-2 rounded-[10px] bg-[var(--color-caution-soft)] px-2 py-1.5 text-[13px] leading-[1.35] text-[var(--color-caution-soft-text)]">
+      {short !== null && (
+        <p className={RUN_OUT_LINE}>
           <WarningGlyph />
-          None left. Remove it to serve the rest.
+          Only {short} left.
         </p>
+      )}
+      {planning ? null : out ? (
+        <>
+          <p className={RUN_OUT_LINE}>
+            <WarningGlyph />
+            None left. Add a new batch or remove it.
+          </p>
+          {onAddToStorage && (
+            <Button
+              type="button"
+              variant="tonal"
+              aria-label={`Add to storage: ${title}`}
+              aria-describedby={offline ? "plate-offline" : undefined}
+              disabled={disabled || offline}
+              onClick={() => onAddToStorage(entry)}
+              className="mt-2 mb-1 ml-[52px]"
+            >
+              Add to storage
+            </Button>
+          )}
+        </>
       ) : entry.parts.length === 1 && only ? (
         <div className="mt-0.5 ml-[43px]">{stars(only)}</div>
       ) : (

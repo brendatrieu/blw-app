@@ -192,6 +192,12 @@ describe("the P1 catalog", () => {
     expect(parse("daily_meals_saved", { ...SAMPLE_PROPS.daily_meals_saved, names: ["Lunch"] })).toBe(false);
   });
 
+  it("takes storage_item_added via \"plate_ran_out\" (ledger 904, CD-Ran-Out-Add), and no other new value", () => {
+    const props = (via: string) => ({ name: "storage_item_added", props: { ...SAMPLE_PROPS.storage_item_added, via } });
+    expect(usageEventSchema.safeParse(props("plate_ran_out")).success).toBe(true);
+    expect(usageEventSchema.safeParse(props("plan")).success).toBe(false);
+  });
+
   it("takes meal_logged's has_left_out as an optional boolean only", () => {
     const { has_left_out: _, ...older } = SAMPLE_PROPS.meal_logged;
     expect(usageEventSchema.safeParse({ name: "meal_logged", props: older }).success).toBe(true);

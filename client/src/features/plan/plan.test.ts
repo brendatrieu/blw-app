@@ -32,6 +32,10 @@ import {
   toDailyMealsInput,
   weekLabel,
   weekOf,
+  localClock,
+  todaysPlanIndex,
+  todaysPlanPages,
+  todaysPlanStep,
 } from "./plan.js";
 import { planFlagLine } from "./copy.js";
 
@@ -364,5 +368,61 @@ describe("Copy to… (814, CD-Copy-Per-Day)", () => {
       [null, "My mash was deleted. You can still copy, then swap it out."],
     ]);
     expect(new Set(notes.map((note) => note.key)).size).toBe(notes.length);
+  });
+});
+
+// SPEC §5 + chair §4.3: Home's Today's plan (CD-Home-Today, CD-After-Serve,
+// CD-Home-Today-Done, CD-Home-No-Plan).
+describe("Today's plan on Home", () => {
+  const item = { kind: "food" as const, id: id(9), food: { id: id(3), slug: "egg", name: "Egg", category: "protein" as const, emoji: null } };
+  const meal = (n: number, over: Partial<PlannedMeal> = {}): PlannedMeal => ({
+    slotId: id(n),
+    name: `Meal ${n}`,
+    time: null,
+    position: n,
+    served: null,
+    items: [item],
+    ...over,
+  });
+  const day = (meals: PlannedMeal[]): PlanDay => ({ date: "2026-10-14", planned: true, meals });
+  const served = { mealId: id(90), servedAt: "2026-10-14T11:42:00.000Z" };
+
+  it("pages through today's meals with something planned, in order; nothing planned (or no day) is no card", () => {
+    const pages = todaysPlanPages(day([meal(1), meal(2, { items: [] }), meal(3)]));
+    expect(pages.map((page) => (page === "done" ? page : page.name))).toEqual(["Meal 1", "Meal 3"]);
+    expect(todaysPlanPages(day([meal(1, { items: [] })]))).toEqual([]);
+    expect(todaysPlanPages(undefined)).toEqual([]);
+    // Everything served: a last page says so.
+    expect(todaysPlanPages(day([meal(1, { served }), meal(2, { served })])).at(-1)).toBe("done");
+    expect(todaysPlanPages(day([meal(1, { served }), meal(2)]))).not.toContain("done");
+  });
+
+  it("opens on the next meal: the first unserved, a timed one skipped once 2 h past while a later one waits", () => {
+    const pages = todaysPlanPages(day([meal(1, { served, time: "07:30" }), meal(2, { time: "07:30" }), meal(3, { time: "12:00" })]));
+    expect(todaysPlanIndex(pages, null, "08:00")).toBe(1);
+    expect(todaysPlanIndex(pages, null, "09:31")).toBe(2);
+    // Times never reorder; the last unserved stays next however late.
+    expect(todaysPlanIndex(pages, null, "23:59")).toBe(2);
+    // All served: the done page.
+    const done = todaysPlanPages(day([meal(1, { served })]));
+    expect(todaysPlanIndex(done, null, "12:00")).toBe(1);
+  });
+
+  it("keeps the page the parent paged to or served while it is there; ‹ › step by key, nothing past either end", () => {
+    const pages = todaysPlanPages(day([meal(1), meal(2), meal(3)]));
+    expect(todaysPlanIndex(pages, id(3), "08:00")).toBe(2);
+    expect(todaysPlanIndex(pages, id(99), "08:00")).toBe(0);
+    expect(todaysPlanStep(pages, 0, 1)).toBe(id(2));
+    expect(todaysPlanStep(pages, 0, -1)).toBeNull();
+    expect(todaysPlanStep(pages, 2, 1)).toBeNull();
+    const done = todaysPlanPages(day([meal(1, { served })]));
+    expect(todaysPlanStep(done, 0, 1)).toBe("done");
+    expect(todaysPlanIndex(done, "done", "08:00")).toBe(1);
+    expect(todaysPlanStep(done, 1, -1)).toBe(id(1));
+  });
+
+  it("reads the wall clock as HH:MM", () => {
+    expect(localClock(new Date(2026, 9, 14, 7, 5))).toBe("07:05");
+    expect(localClock(new Date(2026, 9, 14, 23, 59))).toBe("23:59");
   });
 });

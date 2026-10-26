@@ -134,6 +134,9 @@ describe("via — derived from the route, never wired to a button", () => {
     // Editing (`?edit=`) is still the log page.
     expect(mealViaFromLocation({ pathname: "/log-meal", search: "?edit=abc" })).toBe("log_page");
     expect(mealViaFromLocation({ pathname: "/", search: "" })).toBe("log_page");
+    // Ledger 904: a planned meal served through the plate (SPEC §6).
+    expect(mealViaFromLocation({ pathname: "/plan/2026-10-14/abc", search: "?serve=1" })).toBe("plan");
+    expect(mealViaFromLocation({ pathname: "/plan", search: "" })).toBe("log_page");
   });
 
   it("reads the storage form's entry point the same way, including Home vs the Storage tab", () => {

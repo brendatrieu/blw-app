@@ -112,8 +112,8 @@ describe("useCreateStorageItem — storage_item_added", () => {
    * case — ONE container holding every food the input named (item 347) — so
    * only the tests that care about splitting have to spell it out.
    */
-  function add(input: Record<string, unknown>, created?: Array<Record<string, unknown>>) {
-    const options = firstOptions(() => useCreateStorageItem());
+  function add(input: Record<string, unknown>, created?: Array<Record<string, unknown>>, via?: "plate_ran_out") {
+    const options = firstOptions(() => useCreateStorageItem(via));
     const foodIds = (input.foodIds as string[] | undefined) ?? [];
     const container = { id: "s2", foods: foodIds.map((id) => ({ id })) };
     options.onSuccess!((created ?? [container]) as never, input as never);
@@ -178,6 +178,14 @@ describe("useCreateStorageItem — storage_item_added", () => {
   it("calls a leftovers save from the log form log_leftovers", () => {
     vi.stubGlobal("window", { location: { pathname: "/log-meal", search: "" } });
     expect(add({ foodIds: ["f1"], location: "fridge" })[0]![1]).toMatchObject({ via: "log_leftovers" });
+  });
+
+  it("a plate's run-out row says so itself, whatever page the plate is on (CD-Ran-Out-Add)", () => {
+    for (const pathname of ["/log-meal", "/plan/2026-10-14/abc"]) {
+      vi.stubGlobal("window", { location: { pathname, search: "?serve=1" } });
+      tracked.length = 0;
+      expect(add({ recipeId: "r1", location: "fridge" }, undefined, "plate_ran_out")[0]![1]).toMatchObject({ via: "plate_ran_out" });
+    }
   });
 
   it("distinguishes a food page's Add to storage from the Storage tab's", () => {

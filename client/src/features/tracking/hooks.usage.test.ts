@@ -156,6 +156,12 @@ describe("useCreateMeal — meal_logged", () => {
     tracked.length = 0;
     vi.stubGlobal("window", { location: { pathname: "/log-meal", search: "?recipe=r1" } });
     expect(succeed()[0]![1]).toMatchObject({ via: "recipe_page" });
+    expect(tracked[0]![1]).not.toHaveProperty("one_tap");
+  });
+
+  it("a planned meal served through the plate is via plan, not one tap (SPEC §6)", () => {
+    vi.stubGlobal("window", { location: { pathname: "/plan/2026-10-14/slot-1", search: "?serve=1" } });
+    expect(succeed()[0]![1]).toMatchObject({ via: "plan", one_tap: false });
   });
 
   it("says whether a note exists, never what it says", () => {

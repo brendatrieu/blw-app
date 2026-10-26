@@ -5,6 +5,7 @@ import {
   PLATE_NOTHING_COUNTS,
   localDate,
   planDateSchema,
+  plannedServedAt,
   type CreateStorageItemInput,
   type FoodListItem,
   type MealItem,
@@ -17,10 +18,12 @@ import { useFoods, useRecipe } from "../catalog/hooks.js";
 import { HowToLink } from "../safety/HowToLink.js";
 import { useCreateStorageItem, useStorageItems } from "../storage/hooks.js";
 import { AddMoreSheet } from "../storage/components/AddMoreSheet.js";
+import { AddStorageItemForm } from "../storage/components/AddStorageItemForm.js";
 import { LeftoversFields } from "../storage/components/LeftoversFields.js";
 import { buildLeftoverStorageInput } from "../storage/leftovers.js";
 import type { ContainerChoice } from "../storage/format.js";
 import { useCreateMeal, useMeal, useUpdateMeal } from "../tracking/hooks.js";
+import { containerGoneBlocked, foodDeletedBlocked } from "../plan/copy.js";
 import { nativeTimeInput } from "../plan/DailyMealsSheet.js";
 import { isPlanChanged, servedMealId, usePlan, useSavePlannedMeal } from "../plan/hooks.js";
 import { NEW_PLANNED_MEAL, deviceTimeZone, mealTimeLabel, planDayLabel, validatePlanMeal, weekOf } from "../plan/plan.js";
@@ -32,6 +35,7 @@ import { EmptyState } from "../../components/ui/EmptyState.js";
 import { Field } from "../../components/ui/Field.js";
 import { Input, Textarea } from "../../components/ui/Input.js";
 import { PageHeader, resolveHeaderAffordance, type HeaderAffordance } from "../../components/ui/PageHeader.js";
+import { Sheet } from "../../components/ui/Sheet.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";
 import { Switch } from "../../components/ui/Switch.js";
 import { ApiError } from "../../lib/api.js";
@@ -46,6 +50,7 @@ import {
   RECIPE_CHANGED_MESSAGE,
   attachContainers,
   containerEntry,
+  deletedFoodEntry,
   entryKey,
   fromMeal,
   fromPlanned,
@@ -55,18 +60,22 @@ import {
   plateLeftoverSource,
   plateReducer,
   ranOutEntry,
+  restockPrefill,
+  servePlanned,
   staleLeaveOut,
   toMealInput,
   toPlanInput,
   validatePlate,
+  type ContainerEntry,
   type PlateAction,
   type PlateEntry,
 } from "./plate.js";
 
 /** Which page /log-meal is (plan SPEC §5): `?edit=` an Edit meal, `?storage=`
  * a container's Serve, anything else Log meal (with `?food=` / `?recipe=`).
- * `/plan/:date/:slotId` is Plan a meal. */
-export type PlateMode = "log" | "serve" | "edit" | "plan";
+ * `/plan/:date/:slotId` is Plan a meal, and with `?serve=1` on today or an
+ * earlier day it is that planned meal's Serve (`planServe`, SPEC §3.5). */
+export type PlateMode = "log" | "serve" | "edit" | "plan" | "planServe";
 
 export function plateMode(params: URLSearchParams): PlateMode {
   if (params.get("edit")) return "edit";
@@ -75,12 +84,19 @@ export function plateMode(params: URLSearchParams): PlateMode {
 }
 
 /** Entry wording follows the button the parent tapped (PP-NOTES round 1). */
-export const PLATE_TITLE: Record<PlateMode, string> = { log: "Log meal", serve: "Serve", edit: "Edit meal", plan: "Plan a meal" };
+export const PLATE_TITLE: Record<PlateMode, string> = {
+  log: "Log meal",
+  serve: "Serve",
+  edit: "Edit meal",
+  plan: "Plan a meal",
+  planServe: "Serve",
+};
 
 /**
  * The header's way out (items 258/259): Edit meal and Plan a meal are reached
  * by drilling into a meal, so they get the back chevron; Log meal and Serve
- * are tasks opened from anywhere, so they get the X. Never both.
+ * (a planned meal's too, CD-Serve-Ran-Out) are tasks opened from anywhere,
+ * so they get the X. Never both.
  */
 export function resolvePlateHeaderAffordance(mode: PlateMode): HeaderAffordance {
   const drilledInto = mode === "edit" || mode === "plan";
@@ -108,6 +124,8 @@ export type PlateStart =
  *   "+ Add a meal" makes. A day that isn't a date, a meal not on its day
  *   (removed elsewhere), or a save the server says is no longer there is
  *   `missing`; offline before the plan was ever read is `offline`.
+ * - **A planned meal's Serve:** the same meal, once Storage's lists have
+ *   answered too, so each container opens as it is now (`servePlanned`).
  */
 export function resolvePlateStart(input: {
   mode: PlateMode;
@@ -124,10 +142,15 @@ export function resolvePlateStart(input: {
    * meal as the plan holds it, and the plan query's state. */
   plan?: { date: string | null; isNew: boolean; meal: PlannedMeal | undefined; settled: boolean; gone: boolean };
 }): PlateStart {
-  if (input.mode === "plan") {
+  if (input.mode === "plan" || input.mode === "planServe") {
     const plan = input.plan;
     if (!plan?.date || plan.gone) return { status: "missing" };
     if (plan.isNew) return { status: "ready", plate: [] };
+    if (plan.meal && input.mode === "planServe") {
+      return input.storageQueries.some((query) => awaitingDetail(query, false))
+        ? { status: "loading" }
+        : { status: "ready", plate: servePlanned(plan.meal.items, input.containers) };
+    }
     if (plan.meal) return { status: "ready", plate: fromPlanned(plan.meal.items) };
     if (plan.settled) return { status: "missing" };
     return input.offline ? { status: "offline" } : { status: "loading" };
@@ -194,17 +217,20 @@ export function PlateScreen() {
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
   const [searchParams] = useSearchParams();
   const params = useParams();
-  const mode: PlateMode = params.date !== undefined ? "plan" : plateMode(searchParams);
+  const localToday = localDate(new Date(), deviceTimeZone());
+  // Plan a meal: its day, as the plan page shows it (?date=, none for today).
+  const planDate = params.date !== undefined && planDateSchema.safeParse(params.date).success ? params.date : null;
+  const isNewMeal = params.slotId === NEW_PLANNED_MEAL;
+  // A future day has no Serve (SPEC §3.5): `?serve=1` there is just the meal.
+  const servesPlan = searchParams.get("serve") === "1" && planDate !== null && planDate <= localToday && !isNewMeal;
+  const mode: PlateMode = params.date !== undefined ? (servesPlan ? "planServe" : "plan") : plateMode(searchParams);
+  const fromPlan = mode === "plan" || mode === "planServe";
   const editId = mode === "edit" ? searchParams.get("edit") : null;
   const storageId = mode === "serve" ? searchParams.get("storage") : null;
   const foodId = mode === "log" ? searchParams.get("food") : null;
   const recipeId = mode === "log" ? searchParams.get("recipe") : null;
-  // Plan a meal: its day, as the plan page shows it (?date=, none for today).
-  const planDate = mode === "plan" && planDateSchema.safeParse(params.date).success ? params.date! : null;
-  const isNewMeal = params.slotId === NEW_PLANNED_MEAL;
-  const localToday = localDate(new Date(), deviceTimeZone());
   const planBack = !planDate || planDate === localToday ? "/plan" : `/plan?date=${planDate}`;
-  const goBack = useBackNavigate(mode === "plan" ? planBack : "/");
+  const goBack = useBackNavigate(fromPlan ? planBack : "/");
   const navigate = useNavigate();
   const offline = useIsOffline();
   // Bumped once a 409 meal_changed refetch lands: the plate starts over
@@ -226,6 +252,9 @@ export function PlateScreen() {
   if (found) opened.current = found;
   const plannedMeal = found ?? opened.current;
   const [planGone, setPlanGone] = useState(false);
+  // A planned meal's Serve waits for Storage once, to open on fresh counts;
+  // a later refetch (its own Add to storage) must not unmount the plate.
+  const opensOnce = useRef(false);
 
   const start = resolvePlateStart({
     mode,
@@ -233,7 +262,7 @@ export function PlateScreen() {
     meal: mealQuery,
     storageId,
     containers,
-    storageQueries: [active, history],
+    storageQueries: mode === "planServe" && opensOnce.current ? [] : [active, history],
     prefill: {
       // Only what was asked for is waited on: a plain Log meal opens at once.
       loading: (Boolean(foodId) && foods.isLoading) || recipe.isLoading,
@@ -242,6 +271,7 @@ export function PlateScreen() {
     },
     plan: { date: planDate, isNew: isNewMeal, meal: plannedMeal, settled: Boolean(plan.data) || plan.isError, gone: planGone },
   });
+  if (start.status === "ready") opensOnce.current = true;
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -249,9 +279,9 @@ export function PlateScreen() {
         title={PLATE_TITLE[mode]}
         leading={
           resolvePlateHeaderAffordance(mode) === "back" ? (
-            <BackButton fallback={mode === "plan" ? planBack : "/"} />
+            <BackButton fallback={fromPlan ? planBack : "/"} />
           ) : (
-            <CloseButton fallback="/" />
+            <CloseButton fallback={fromPlan ? planBack : "/"} />
           )
         }
       />
@@ -276,12 +306,12 @@ export function PlateScreen() {
           (VERIFY-p3-c1). The fetch resumes once back online. */}
       {!babyLoading && activeBaby && start.status === "missing" && mode === "serve" && <Navigate to="/storage" replace />}
 
-      {!babyLoading && activeBaby && start.status === "missing" && (mode === "edit" || mode === "plan") && (
+      {!babyLoading && activeBaby && start.status === "missing" && (mode === "edit" || fromPlan) && (
         <EmptyState
           icon="🤷"
           title="That meal is gone"
           description="It may have already been deleted, or something went wrong loading it."
-          action={mode === "plan" ? <ButtonLink to={planBack}>Meal plan</ButtonLink> : <ButtonLink to="/">Back home</ButtonLink>}
+          action={fromPlan ? <ButtonLink to={planBack}>Meal plan</ButtonLink> : <ButtonLink to="/">Back home</ButtonLink>}
         />
       )}
 
@@ -302,7 +332,8 @@ export function PlateScreen() {
               ? {
                   date: planDate,
                   today: plan.data?.today ?? localToday,
-                  slotId: isNewMeal ? null : (params.slotId ?? null),
+                  // The row id once the day has rows (a served meal links to it).
+                  slotId: isNewMeal ? null : (plannedMeal?.slotId ?? params.slotId ?? null),
                   name: plannedMeal?.name ?? "",
                   time: plannedMeal?.time ?? null,
                 }
@@ -340,11 +371,18 @@ export interface PlateFormProps {
   /** Edit: this plate is the meal as reloaded after `meal_changed`. */
   reloaded: boolean;
   /** Plan a meal: its day and the caller's today, its slot (null for a meal
-   * "+ Add a meal" makes on Save), and its name and time as planned. */
+   * "+ Add a meal" makes on Save), and its name and time as planned. A
+   * planned meal's Serve links the meal it logs to that slot. */
   plan?: { date: string; today: string; slotId: string | null; name: string; time: string | null };
-  /** Plan a meal: the save found the meal served (its logged meal's id) or
-   * gone from its day (null). */
+  /** Plan a meal or its Serve: the save found the meal served (its logged
+   * meal's id) or gone from its day (null). */
   onPlanGone?: (servedMealId: string | null) => void;
+}
+
+/** When a planned meal's Serve starts (SPEC §3.5): a past day at the time it
+ * was planned for (noon without one), today now. */
+export function planServeStart(plan: { date: string; today: string; time: string | null }, now: Date = new Date()): Date {
+  return plan.date < plan.today ? nowAtMinute(plannedServedAt(plan.date, plan.time, deviceTimeZone())) : nowAtMinute(now);
 }
 
 /**
@@ -371,10 +409,14 @@ export function PlateForm({
   const plate = attachContainers(entries, containers);
   const dispatch = (action: PlateAction) =>
     setEntries((current) => plateReducer(attachContainers(current, containers), action));
-  const [servedAt, setServedAt] = useState(() => (meal ? nowAtMinute(new Date(meal.servedAt)) : nowAtMinute()));
+  const [servedAt, setServedAt] = useState(() =>
+    meal ? nowAtMinute(new Date(meal.servedAt)) : mode === "planServe" && plan ? planServeStart(plan) : nowAtMinute(),
+  );
   const [reactionNote, setReactionNote] = useState(() => meal?.reactionNote ?? "");
   const [notes, setNotes] = useState(() => meal?.notes ?? "");
   const [addingMore, setAddingMore] = useState(false);
+  // CD-Ran-Out-Add: the run-out container a new batch is being added for.
+  const [restocking, setRestocking] = useState<ContainerEntry | null>(null);
   // Plan a meal's Name and Time (CD-Plan-Meal).
   const [planName, setPlanName] = useState(() => plan?.name ?? "");
   const [planTime, setPlanTime] = useState<string | null>(() => plan?.time ?? null);
@@ -405,8 +447,11 @@ export function PlateForm({
   const busy = mutation.isPending && !offline;
   // A plan takes nothing from a container yet, so nothing "runs out" here.
   const runOut = planning ? undefined : ranOutEntry(plate);
+  // A planned meal's plate can hold a food deleted since (SPEC §3.5).
+  const deletedFood = mode === "planServe" ? deletedFoodEntry(plate) : undefined;
+  const blocked = runOut ?? deletedFood;
   const leftoverSource = plateLeftoverSource(plate);
-  const serve = mode === "serve";
+  const serve = mode === "serve" || mode === "planServe";
 
   const { errors, attemptSubmit } = useSubmitValidation(
     { itemCount: plate.length, nothingCounts: nothingCounts(plate), leftoversOpen, leftoverBestBy, name: planName },
@@ -439,7 +484,7 @@ export function PlateForm({
       saveStorage(storageFailure!);
       return;
     }
-    if (postSave === "noop" || mutation.isPending || offline || runOut) return;
+    if (postSave === "noop" || mutation.isPending || offline || blocked) return;
     if (!attemptSubmit()) return;
     // A leave-out the recipe lost on another device: drop it, and the
     // recipe refetches (the mutation hooks), so the next save goes through.
@@ -474,6 +519,21 @@ export function PlateForm({
       return;
     }
     const input = toMealInput(plate, { servedAt, reactionNote, notes });
+    if (mode === "planServe" && plan?.slotId) {
+      // Linked to its planned meal in the same write (SPEC §3.5).
+      createMeal.mutate(
+        { ...input, plannedMealId: plan.slotId, tz: deviceTimeZone() },
+        {
+          onSuccess: finish,
+          onError: (error) => {
+            dropStale(error);
+            const served = servedMealId(error);
+            if (served || isPlanChanged(error)) onPlanGone?.(served);
+          },
+        },
+      );
+      return;
+    }
     if (mode === "edit" && meal) {
       updateMeal.mutate(
         { id: meal.id, input },
@@ -510,199 +570,231 @@ export function PlateForm({
   }
 
   return (
-    // `noValidate`: the plate answers its own required field inline (item 236).
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
-      {/* CD-Serve-Ran-Out: why the save waits. The row says what to do. */}
-      {runOut && (
-        <p
-          id="plate-ran-out"
-          role="status"
-          className={`${NOTICE} bg-[var(--color-caution-soft)] text-[var(--color-caution-soft-text)]`}
-        >
-          <WarningGlyph />
-          {`${runOut.title} has run out, so this meal isn't ${serve ? "served" : "saved"} yet.`}
-        </p>
-      )}
-      {planning &&
-        planMealFields({
-          name: planName,
-          onNameChange: setPlanName,
-          nameError: errors.name,
-          day: plan ? planDayLabel(plan.date, plan.today) : "",
-          time: planTime,
-          onTimeChange: setPlanTime,
-          disabled: busy,
-        })}
-      {reloaded && (
-        <p role="status" className={`${NOTICE} bg-[var(--color-caution-soft)] text-[var(--color-caution-soft-text)]`}>
-          This meal was changed somewhere else, so it's been reloaded. Make your changes again.
-        </p>
-      )}
-
-      <div role="group" aria-labelledby="plate-items-label" className="flex flex-col gap-2">
-        <div>
-          <span id="plate-items-label" className="text-sm font-medium text-[var(--color-text)]">
-            On the plate
-          </span>
-          {plate.length > 0 && !planning && <p className="text-xs text-[var(--color-text-muted)]">Stars are optional.</p>}
-        </div>
-        {plate.length > 0 && (
-          <ul aria-labelledby="plate-items-label" className="flex flex-col gap-2">
-            {plate.map((entry) => (
-              <PlateItemRow key={entryKey(entry)} entry={entry} dispatch={dispatch} disabled={busy} planning={planning} />
-            ))}
-          </ul>
-        )}
-        <button
-          id="plate-add-more"
-          type="button"
-          disabled={busy}
-          onClick={() => setAddingMore(true)}
-          className={ADD_MORE_BUTTON}
-        >
-          + Add more
-        </button>
-        {errors.items && (
-          <p role="alert" className="text-xs font-medium text-[var(--color-danger)]">
-            {errors.items}
+    <>
+      {/* `noValidate`: the plate answers its own required field inline (item 236). */}
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        {/* CD-Serve-Ran-Out: why the save waits. The row says what to do. */}
+        {blocked && (
+          <p
+            id="plate-ran-out"
+            role="status"
+            className={`${NOTICE} bg-[var(--color-caution-soft)] text-[var(--color-caution-soft-text)]`}
+          >
+            <WarningGlyph />
+            {blockedLine(blocked, mode === "planServe" ? plan?.name : undefined, serve)}
           </p>
         )}
-      </div>
+        {planning &&
+          planMealFields({
+            name: planName,
+            onNameChange: setPlanName,
+            nameError: errors.name,
+            day: plan ? planDayLabel(plan.date, plan.today) : "",
+            time: planTime,
+            onTimeChange: setPlanTime,
+            disabled: busy,
+          })}
+        {reloaded && (
+          <p role="status" className={`${NOTICE} bg-[var(--color-caution-soft)] text-[var(--color-caution-soft-text)]`}>
+            This meal was changed somewhere else, so it's been reloaded. Make your changes again.
+          </p>
+        )}
 
-      {/* Plan a meal has no When, Reaction or Notes until it is served (SPEC §5). */}
-      {!planning && (
-        <>
-          <Field label="When" htmlFor="plate-when">
-            <DateTimeField id="plate-when" value={servedAt} onChange={setServedAt} disabled={busy} />
-          </Field>
-
-          {/* Always visible (item 263): the reaction note feeds allergen tracking. */}
-          <Field
-            label="Reaction (optional)"
-            htmlFor="plate-reaction"
-            description="Only for hives, vomiting, rash or other reaction signs."
-          >
-            <Textarea
-              id="plate-reaction"
-              value={reactionNote}
-              onChange={(e) => setReactionNote(e.target.value)}
-              rows={2}
-              placeholder="e.g. mild rash around mouth"
-            />
-          </Field>
-
-          <Field label="Notes (optional)" htmlFor="plate-notes">
-            <Textarea
-              id="plate-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              placeholder="e.g. ate the whole thing"
-            />
-          </Field>
-        </>
-      )}
-
-      {mode === "log" && !storageFailure && (
-        <div className="flex flex-col gap-3">
-          {/* Borderless row + switch: a bordered box read as a tappable card,
-              and a checkbox as form data (user feedback). */}
-          <div className="flex min-h-11 items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-sm font-medium text-[var(--color-text)]">
-              <span aria-hidden="true" className="text-lg leading-none">
-                📦
-              </span>
-              Save leftovers to storage
+        <div role="group" aria-labelledby="plate-items-label" className="flex flex-col gap-2">
+          <div>
+            <span id="plate-items-label" className="text-sm font-medium text-[var(--color-text)]">
+              On the plate
             </span>
-            <Switch
-              checked={leftoversOpen}
-              disabled={!hasLeftovers(leftoverSource)}
-              onChange={setLeftoversOpen}
-              aria-label="Save leftovers to storage"
-            />
+            {plate.length > 0 && !planning && <p className="text-xs text-[var(--color-text-muted)]">Stars are optional.</p>}
           </div>
-          {leftoversOpen && (
-            <LeftoversFields
-              source={leftoverSource}
-              containerChoice={leftoverContainerChoice}
-              onContainerChoiceChange={setLeftoverContainerChoice}
-              location={leftoverLocation}
-              onLocationChange={setLeftoverLocation}
-              servingsTotal={leftoverServingsTotal}
-              onServingsTotalChange={setLeftoverServingsTotal}
-              bestBy={leftoverBestBy}
-              onBestByChange={setLeftoverBestBy}
-              bestByError={errors.leftoverBestBy}
-            />
+          {plate.length > 0 && (
+            <ul aria-labelledby="plate-items-label" className="flex flex-col gap-2">
+              {plate.map((entry) => (
+                <PlateItemRow
+                  key={entryKey(entry)}
+                  entry={entry}
+                  dispatch={dispatch}
+                  disabled={busy}
+                  planning={planning}
+                  onAddToStorage={setRestocking}
+                  offline={offline}
+                />
+              ))}
+            </ul>
+          )}
+          <button
+            id="plate-add-more"
+            type="button"
+            disabled={busy}
+            onClick={() => setAddingMore(true)}
+            className={ADD_MORE_BUTTON}
+          >
+            + Add more
+          </button>
+          {errors.items && (
+            <p role="alert" className="text-xs font-medium text-[var(--color-danger)]">
+              {errors.items}
+            </p>
           )}
         </div>
-      )}
 
-      {/* A `meal_changed` refusal reloads the plate, which says so itself; a
-          plan's "served" or "gone" answer leaves the page. */}
-      {mutation.isError &&
-        !offline &&
-        !runOut &&
-        !isMealChanged(mutation.error) &&
-        !isPlanChanged(mutation.error) &&
-        !servedMealId(mutation.error) && (
-        <p role="alert" className="text-xs text-[var(--color-danger)]">
-          {isNothingCounts(mutation.error)
-            ? NOTHING_COUNTS_MESSAGE
-            : staleLeaveOut(mutation.error)
-              ? RECIPE_CHANGED_MESSAGE
-              : serve
-                ? "Couldn't serve — try again."
-                : "Couldn't save that — try again."}
-        </p>
-      )}
+        {/* Plan a meal has no When, Reaction or Notes until it is served (SPEC §5). */}
+        {!planning && (
+          <>
+            <Field label="When" htmlFor="plate-when">
+              <DateTimeField id="plate-when" value={servedAt} onChange={setServedAt} disabled={busy} />
+            </Field>
 
-      {storageFailure ? (
-        <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
-          <p role="alert" className="text-sm font-medium text-[var(--color-danger)]">
-            Meal saved — couldn't save leftovers. Try again, or close this page to skip it.
-          </p>
-          {/* Retry only (item 257): the meal is saved, and the header's X
-              leaves without retrying. */}
-          <Button type="button" size="sm" onClick={() => saveStorage(storageFailure)} disabled={createStorageItem.isPending}>
-            {createStorageItem.isPending ? "Retrying…" : "Retry"}
-          </Button>
-        </div>
-      ) : (
-        // No gap: the empty live region must add no space while online.
-        <div className="flex flex-col">
-          <Button
-            type="submit"
-            disabled={busy || offline || Boolean(runOut)}
-            aria-describedby={offline ? "plate-offline" : runOut ? "plate-ran-out" : undefined}
-            className="w-full"
-          >
-            {busy ? (serve ? "Serving…" : "Saving…") : serve ? "Serve" : "Save"}
-          </Button>
-          <div role="status">
-            {offline && (
-              <p id="plate-offline" className="mt-1.5 text-center text-xs text-[var(--color-text-muted)]">
-                You're offline.
-              </p>
+            {/* Always visible (item 263): the reaction note feeds allergen tracking. */}
+            <Field
+              label="Reaction (optional)"
+              htmlFor="plate-reaction"
+              description="Only for hives, vomiting, rash or other reaction signs."
+            >
+              <Textarea
+                id="plate-reaction"
+                value={reactionNote}
+                onChange={(e) => setReactionNote(e.target.value)}
+                rows={2}
+                placeholder="e.g. mild rash around mouth"
+              />
+            </Field>
+
+            <Field label="Notes (optional)" htmlFor="plate-notes">
+              <Textarea
+                id="plate-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+                placeholder="e.g. ate the whole thing"
+              />
+            </Field>
+          </>
+        )}
+
+        {mode === "log" && !storageFailure && (
+          <div className="flex flex-col gap-3">
+            {/* Borderless row + switch: a bordered box read as a tappable card,
+                and a checkbox as form data (user feedback). */}
+            <div className="flex min-h-11 items-center justify-between gap-3">
+              <span className="flex items-center gap-2 text-sm font-medium text-[var(--color-text)]">
+                <span aria-hidden="true" className="text-lg leading-none">
+                  📦
+                </span>
+                Save leftovers to storage
+              </span>
+              <Switch
+                checked={leftoversOpen}
+                disabled={!hasLeftovers(leftoverSource)}
+                onChange={setLeftoversOpen}
+                aria-label="Save leftovers to storage"
+              />
+            </div>
+            {leftoversOpen && (
+              <LeftoversFields
+                source={leftoverSource}
+                containerChoice={leftoverContainerChoice}
+                onContainerChoiceChange={setLeftoverContainerChoice}
+                location={leftoverLocation}
+                onLocationChange={setLeftoverLocation}
+                servingsTotal={leftoverServingsTotal}
+                onServingsTotalChange={setLeftoverServingsTotal}
+                bestBy={leftoverBestBy}
+                onBestByChange={setLeftoverBestBy}
+                bestByError={errors.leftoverBestBy}
+              />
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {addingMore && (
-        <AddMoreSheet
-          babyId={babyId}
-          serving={plateAddMoreServing(plate)}
-          requireContainer={serve}
-          onClose={() => setAddingMore(false)}
-          onDone={(change) => {
-            dispatch({ type: "addMore", change });
-            setAddingMore(false);
-          }}
-        />
+        {/* A `meal_changed` refusal reloads the plate, which says so itself; a
+            plan's "served" or "gone" answer leaves the page. */}
+        {mutation.isError &&
+          !offline &&
+          !blocked &&
+          !isMealChanged(mutation.error) &&
+          !isPlanChanged(mutation.error) &&
+          !servedMealId(mutation.error) && (
+          <p role="alert" className="text-xs text-[var(--color-danger)]">
+            {isNothingCounts(mutation.error)
+              ? NOTHING_COUNTS_MESSAGE
+              : staleLeaveOut(mutation.error)
+                ? RECIPE_CHANGED_MESSAGE
+                : serve
+                  ? "Couldn't serve — try again."
+                  : "Couldn't save that — try again."}
+          </p>
+        )}
+
+        {storageFailure ? (
+          <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
+            <p role="alert" className="text-sm font-medium text-[var(--color-danger)]">
+              Meal saved — couldn't save leftovers. Try again, or close this page to skip it.
+            </p>
+            {/* Retry only (item 257): the meal is saved, and the header's X
+                leaves without retrying. */}
+            <Button type="button" size="sm" onClick={() => saveStorage(storageFailure)} disabled={createStorageItem.isPending}>
+              {createStorageItem.isPending ? "Retrying…" : "Retry"}
+            </Button>
+          </div>
+        ) : (
+          // No gap: the empty live region must add no space while online.
+          <div className="flex flex-col">
+            <Button
+              type="submit"
+              disabled={busy || offline || Boolean(blocked)}
+              aria-describedby={offline ? "plate-offline" : blocked ? "plate-ran-out" : undefined}
+              className="w-full"
+            >
+              {busy ? (serve ? "Serving…" : "Saving…") : serve ? "Serve" : "Save"}
+            </Button>
+            <div role="status">
+              {offline && (
+                <p id="plate-offline" className="mt-1.5 text-center text-xs text-[var(--color-text-muted)]">
+                  You're offline.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {addingMore && (
+          <AddMoreSheet
+            babyId={babyId}
+            serving={plateAddMoreServing(plate)}
+            requireContainer={mode === "serve"}
+            onClose={() => setAddingMore(false)}
+            onDone={(change) => {
+              dispatch({ type: "addMore", change });
+              setAddingMore(false);
+            }}
+          />
+        )}
+      </form>
+      {/* CD-Ran-Out-Add, outside the plate's form: a portal's submit still
+          bubbles through React's tree, and would serve the meal. Nothing is
+          logged here; closing it changes nothing. */}
+      {restocking && (
+        <Sheet open onClose={() => setRestocking(null)} title="Add to storage" showClose fixedHeight>
+          <AddStorageItemForm
+            prefill={restockPrefill(restocking)}
+            via="plate_ran_out"
+            onAdded={(items) => dispatch({ type: "replaceContainer", key: entryKey(restocking), items })}
+            onDone={() => setRestocking(null)}
+          />
+        </Sheet>
       )}
-    </form>
+    </>
   );
+}
+
+/** The status line over a plate that can't be saved yet: a run-out
+ * container, or a planned food deleted since. On a planned meal it names
+ * the meal (903b's wording); elsewhere "this meal". */
+export function blockedLine(entry: ContainerEntry | { kind: "food"; food: { name: string } }, meal: string | undefined, serve: boolean): string {
+  if (entry.kind === "food") return foodDeletedBlocked(entry.food.name, meal ?? "this meal");
+  if (meal) return containerGoneBlocked(entry.title, meal, entry.container?.status === "discarded" ? "discarded" : "finished");
+  return `${entry.title} has run out, so this meal isn't ${serve ? "served" : "saved"} yet.`;
 }
 
 /** The look of a one-line field (the app's Input), for Day and Time. */

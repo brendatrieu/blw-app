@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { CreateStorageItemInput, StorageLocation } from "@blw/shared";
+import type { CreateStorageItemInput, StorageItem, StorageLocation } from "@blw/shared";
 import { FoodPicker } from "../../catalog/components/FoodPicker.js";
 import { RecipePicker } from "../../catalog/components/RecipePicker.js";
 import { useCreateStorageItem } from "../hooks.js";
@@ -124,6 +124,11 @@ export interface StoragePrefill {
   source: "food" | "recipe" | null;
   foodId?: string;
   recipeId?: string;
+  /** A new batch of a run-out container (CD-Ran-Out-Add): all its foods,
+   * its place and its total servings. */
+  foodIds?: string[];
+  location?: StorageLocation;
+  servingsTotal?: number;
 }
 
 export function resolveStoragePrefill(params: URLSearchParams): StoragePrefill {
@@ -143,6 +148,10 @@ interface AddStorageItemFormProps {
   onDone: () => void;
   /** From the page's query string — see `resolveStoragePrefill`. */
   prefill?: StoragePrefill;
+  /** What the save made, before `onDone` (the plate's new batch). */
+  onAdded?: (items: StorageItem[]) => void;
+  /** Where the form is, when its route can't tell (`storage_item_added`). */
+  via?: "plate_ran_out";
 }
 
 /**
@@ -155,22 +164,22 @@ interface AddStorageItemFormProps {
  * tabs and pickers are the parent's to change, and re-rendering never drags
  * them back to where the link pointed.
  */
-export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps) {
+export function AddStorageItemForm({ onDone, prefill, onAdded, via }: AddStorageItemFormProps) {
   const [source, setSource] = useState<Source>(prefill?.source ?? "food");
-  const [foodIds, setFoodIds] = useState<string[]>(prefill?.foodId ? [prefill.foodId] : []);
+  const [foodIds, setFoodIds] = useState<string[]>(prefill?.foodIds ?? (prefill?.foodId ? [prefill.foodId] : []));
   const [recipeId, setRecipeId] = useState(prefill?.recipeId ?? "");
   // Item 348: several foods go into ONE container unless the parent says
   // otherwise. Only read while the food tab is open with two or more foods
   // picked — see `offersContainerChoice`.
   const [containerChoice, setContainerChoice] = useState<ContainerChoice>("one");
-  const [location, setLocation] = useState<StorageLocation>("fridge");
+  const [location, setLocation] = useState<StorageLocation>(prefill?.location ?? "fridge");
   const [preparedAt, setPreparedAt] = useState(() => nowAtMinute());
   const [quantityNote, setQuantityNote] = useState("");
-  const [servingsTotal, setServingsTotal] = useState("");
+  const [servingsTotal, setServingsTotal] = useState(prefill?.servingsTotal === undefined ? "" : String(prefill.servingsTotal));
   const [bestBy, setBestBy] = useState("");
   const [notes, setNotes] = useState("");
 
-  const createItem = useCreateStorageItem();
+  const createItem = useCreateStorageItem(via);
 
   // Item 235: "Add to storage" stays enabled, the missing answer shows under
   // whichever source field is on screen, and a failed submit focuses it.
@@ -202,7 +211,12 @@ export function AddStorageItemForm({ onDone, prefill }: AddStorageItemFormProps)
         bestBy,
         notes,
       }),
-      { onSuccess: onDone },
+      {
+        onSuccess: (created) => {
+          onAdded?.(created);
+          onDone();
+        },
+      },
     );
   }
 

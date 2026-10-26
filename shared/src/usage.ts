@@ -263,7 +263,9 @@ const eventProps = {
       /** What the container holds: a catalog/custom food, a recipe, or a
        * free-text label (whose text is never sent). */
       source: z.enum(["food", "recipe", "label"]),
-      via: z.enum(["storage_page", "home", "food_page", "recipe_page", "log_leftovers"]),
+      /** Ledger 904 (CD-Ran-Out-Add): `plate_ran_out` is the Add to storage
+       * on a plate's run-out container row. An older server 400s it. */
+      via: z.enum(["storage_page", "home", "food_page", "recipe_page", "log_leftovers", "plate_ran_out"]),
       has_servings: z.boolean(),
       has_best_by: z.boolean(),
       /** How many foods went into THIS container (item 345 — a container

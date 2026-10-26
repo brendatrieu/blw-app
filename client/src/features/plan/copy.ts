@@ -30,6 +30,12 @@ export function containerGoneBlocked(item: string, meal: string, status: Gone): 
   return status === "finished" ? `${item} has run out, so ${meal} isn't served yet.` : `${item} was discarded, so ${meal} isn't served yet.`;
 }
 
+/** A planned meal served through the plate, with a custom food deleted
+ * since it was planned (SPEC §3.5 `deleted`; same shape as the lines above). */
+export function foodDeletedBlocked(food: string, meal: string): string {
+  return `${food} was deleted, so ${meal} isn't served yet.`;
+}
+
 /** A planned container's flag line, under its name (PP-COPY rounds 4-5;
  * a gone container's from above). */
 export function planFlagLine(flag: PlanFlag): string {

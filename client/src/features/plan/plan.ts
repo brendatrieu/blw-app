@@ -4,6 +4,7 @@
 // shell can say and do the same.
 import {
   DAILY_MEALS_MAX,
+  nextPlannedMeal,
   type CopyPlanInput,
   type CopyPlanResponse,
   type CopyWarning,
@@ -361,4 +362,47 @@ export function copyWarningNotes(warnings: readonly CopyWarning[], source: Pick<
         return [{ key, heading: countdownLabel(container.expiresAt), line: pastUseWithinCopyWarning(item, shortDay(warning.date)) }];
     }
   });
+}
+
+// ---------------------------------------------------------------------------
+// Today's plan on Home (CD-Home-Today, CD-After-Serve, CD-Home-Today-Done)
+// ---------------------------------------------------------------------------
+
+/** One page of the card: a meal, or the "everything is served" page. */
+export type TodayPage = PlannedMeal | "done";
+
+/** The card's pages: today's meals with something planned, in the parent's
+ * order, then, once every one is served, the done page. None: no card at
+ * all, so Home looks as it always has (CD-Home-No-Plan). */
+export function todaysPlanPages(day: PlanDay | undefined): TodayPage[] {
+  const meals = (day?.meals ?? []).filter((meal) => meal.items.length > 0);
+  return meals.length > 0 && meals.every((meal) => meal.served) ? [...meals, "done"] : meals;
+}
+
+const pageKey = (page: TodayPage): string => (page === "done" ? "done" : page.slotId);
+
+/**
+ * Which page shows: the one the parent paged to (or just served) while it is
+ * still there; else the next meal (`nextPlannedMeal`, chair §4.3); else, all
+ * served, the done page. `nowLocal` is the wall clock, `HH:MM`.
+ */
+export function todaysPlanIndex(pages: readonly TodayPage[], picked: string | null, nowLocal: string): number {
+  const at = picked === null ? -1 : pages.findIndex((page) => pageKey(page) === picked);
+  if (at >= 0) return at;
+  const next = nextPlannedMeal(
+    pages.filter((page): page is PlannedMeal => page !== "done"),
+    nowLocal,
+  );
+  return next ? pages.indexOf(next) : pages.length - 1;
+}
+
+/** What ‹ or › lands on, by its key (null at either end). */
+export function todaysPlanStep(pages: readonly TodayPage[], index: number, step: -1 | 1): string | null {
+  const page = pages[index + step];
+  return page === undefined ? null : pageKey(page);
+}
+
+/** The device's wall clock as `HH:MM` (what `nextPlannedMeal` reads). */
+export function localClock(now: Date = new Date()): string {
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }

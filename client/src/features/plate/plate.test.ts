@@ -19,6 +19,7 @@ import {
   PLATE_FIELD_ORDER,
   attachContainers,
   containerEntry,
+  deletedFoodEntry,
   entryKey,
   RECIPE_PLATE,
   fromMeal,
@@ -31,7 +32,10 @@ import {
   plateReducer,
   ranOut,
   ranOutEntry,
+  restockPrefill,
+  servePlanned,
   servingsMax,
+  shortOf,
   staleLeaveOut,
   toMealInput,
   toPlanInput,
@@ -576,5 +580,80 @@ describe("a planned meal as a plate (Plan a meal, SPEC §5)", () => {
       { kind: "storage", storageItemId: CONTAINER.id, servings: 2 },
     ]);
     expect(toPlanInput([])).toEqual([]);
+  });
+});
+
+// SPEC §3.5 + §11: a planned meal SERVED through the plate (a past day, or
+// today after a blocked one tap), and CD-Ran-Out-Add's new batch.
+describe("a planned meal served through the plate", () => {
+  const planned = [
+    { kind: "recipe" as const, id: id(70), recipe: PASTA, leftOut: [CASHEW] },
+    { kind: "storage" as const, id: id(72), servings: 3, container: CONTAINER },
+    { kind: "storage" as const, id: id(73), servings: 1, container: MUFFIN_TUB },
+  ];
+  const NEW_TUB: StorageItem = { ...MUFFIN_TUB, id: id(22), servingsLeft: 6 };
+
+  it("a planned leave-out is sent: no meal has saved it, so it is new to this one", () => {
+    const [recipe] = servePlanned(planned, []);
+    expect(recipe).toMatchObject({ kind: "recipe", leftOut: [CASHEW], savedLeftOut: [] });
+    const input = toMealInput([recipe!], FIELDS);
+    expect(input.items).toEqual([{ kind: "recipe", recipeId: PASTA.id, rating: null, leftOutFoodIds: [CASHEW.id] }]);
+    expect(createPlateMealInputSchema.safeParse(input).success).toBe(true);
+  });
+
+  it("each container as Storage has it now: the stepper at what is left when that is less, the plan's ask kept", () => {
+    const now = { ...CONTAINER, servingsLeft: 2 };
+    const plate = servePlanned(planned, [now, { ...MUFFIN_TUB, status: "finished", servingsLeft: 0 }]);
+    const [, veg, tub] = plate as [PlateEntry, ContainerEntry, ContainerEntry];
+    expect([veg.servings, veg.planned, veg.container]).toEqual([2, 3, now]);
+    expect(shortOf(veg)).toBe(2);
+    // None left: flagged as run out, untouched (× or a new batch decides).
+    expect(ranOut(tub)).toBe(true);
+    expect([tub.servings, shortOf(tub)]).toEqual([1, null]);
+    // Enough left: as planned, nothing to say.
+    const plenty = servePlanned(planned, [])[1] as ContainerEntry;
+    expect([plenty.servings, shortOf(plenty)]).toEqual([3, null]);
+    // Untracked never runs short; a container no plan asked for never says so.
+    expect(shortOf({ ...veg, container: { ...now, servingsTotal: null, servingsLeft: null } })).toBeNull();
+    expect(shortOf({ ...veg, planned: undefined })).toBeNull();
+  });
+
+  it("Add to storage opens with the same recipe, else the same foods, the place and the total; never the old Best by", () => {
+    const tub = fromPlanned(planned)[2] as ContainerEntry;
+    expect(restockPrefill(tub)).toEqual({ source: "recipe", recipeId: MUFFINS.id, location: "fridge", servingsTotal: 6 });
+    const veg = fromPlanned(planned)[1] as ContainerEntry;
+    expect(restockPrefill(veg)).toEqual({ source: "food", foodIds: [BROCCOLI.id, CARROT.id], location: "freezer", servingsTotal: 4 });
+    expect(restockPrefill({ ...veg, container: { ...CONTAINER, servingsTotal: null, bestBy: "2026-10-20" } })).toEqual({
+      source: "food",
+      foodIds: [BROCCOLI.id, CARROT.id],
+      location: "freezer",
+    });
+  });
+
+  it("the new batch takes the run-out one's place at the servings asked for (what it can give, at most)", () => {
+    const plate = servePlanned(planned, [{ ...MUFFIN_TUB, status: "finished", servingsLeft: 0 }]);
+    const key = entryKey(plate[2]!);
+    const after = plateReducer(plate, { type: "replaceContainer", key, items: [NEW_TUB] });
+    expect(after.map(entryKey)).toEqual([entryKey(plate[0]!), entryKey(plate[1]!), `storage:${NEW_TUB.id}`]);
+    expect(after[2]).toMatchObject({ storageItemId: NEW_TUB.id, servings: 1, planned: 1, container: NEW_TUB });
+    expect(ranOutEntry(after)).toBeUndefined();
+    // Two containers made at once ("Separate containers") both go in its place.
+    const two = plateReducer(plate, { type: "replaceContainer", key, items: [NEW_TUB, { ...NEW_TUB, id: id(23), servingsLeft: 1, servingsTotal: 1 }] });
+    expect(two.map((entry) => entry.kind === "storage" && [entry.storageItemId, entry.servings])).toEqual([
+      false,
+      [CONTAINER.id, 3],
+      [NEW_TUB.id, 1],
+      [id(23), 1],
+    ]);
+    // A bigger ask stops at what the new batch holds.
+    const big = plateReducer([{ ...containerEntry(MUFFIN_TUB), servings: 5 }], { type: "replaceContainer", key: `storage:${MUFFIN_TUB.id}`, items: [{ ...NEW_TUB, servingsLeft: 3 }] });
+    expect((big[0] as ContainerEntry).servings).toBe(3);
+  });
+
+  it("a food deleted since it was planned is found only while new to the plate", () => {
+    const gone = { ...EGG, deleted: true };
+    expect(deletedFoodEntry(fromPlanned([{ kind: "food", id: id(74), food: gone }]))).toMatchObject({ food: gone });
+    expect(deletedFoodEntry([{ kind: "food", id: id(75), food: gone, rating: null }])).toBeUndefined();
+    expect(deletedFoodEntry(fromPlanned([{ kind: "food", id: id(74), food: EGG }]))).toBeUndefined();
   });
 });

@@ -132,6 +132,22 @@ describe("PlanMealCard (CD-Plan-Day)", () => {
     expect(canServe("2026-10-14", TODAY, meal())).toBe(true);
     expect(canServe("2026-10-15", TODAY, meal())).toBe(false);
   });
+
+  it("Serve in flight reads Serving… and waits; a failed one says try again; offline it waits and says why", () => {
+    const onServe = () => {};
+    const pending = render({ meal: meal(), onServe, serving: true });
+    expect(pending).toMatch(/<button [^>]*aria-label="Serve Lunch" disabled=""[^>]*>Serving…<\/button>/);
+    const failed = render({ meal: meal(), onServe, serveFailed: true });
+    expect(failed).toContain('<p role="alert" class="mt-1 text-xs text-[var(--color-danger)]">Couldn&#x27;t serve — try again.</p>');
+    expect(render({ meal: meal(), onServe })).not.toContain("try again");
+    h.offline = true;
+    const offline = render({ meal: meal(), onServe, serveFailed: true });
+    expect(offline).toMatch(new RegExp(`aria-label="Serve Lunch" aria-describedby="serve-offline-${id(50)}" disabled=""`));
+    expect(offline).toContain(`<p id="serve-offline-${id(50)}" class="mt-1 text-xs text-[var(--color-text-muted)]">You&#x27;re offline.</p>`);
+    expect(offline).not.toContain("try again");
+    // No Serve, no offline line.
+    expect(render({ meal: meal(), onServe, date: "2026-10-15" })).not.toContain("You&#x27;re offline.");
+  });
 });
 
 describe("⋮ (CD-Plan-Day): Copy to… once something is planned, then Remove", () => {

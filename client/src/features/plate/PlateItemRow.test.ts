@@ -68,13 +68,13 @@ const click = (el: El) => (el.props.onClick as () => void)();
 
 const actions: PlateAction[] = [];
 const dispatch = (action: PlateAction) => actions.push(action);
-function tree(entry: PlateEntry, disabled = false) {
+function tree(entry: PlateEntry, disabled = false, extra: Record<string, unknown> = {}) {
   h.store.i = 0;
-  return expand(createElement(PlateItemRow, { entry, dispatch, disabled }));
+  return expand(createElement(PlateItemRow, { entry, dispatch, disabled, ...extra }));
 }
-function html(entry: PlateEntry, planning = false) {
+function html(entry: PlateEntry, planning = false, extra: Record<string, unknown> = {}) {
   h.store.i = 0;
-  return renderToString(createElement(PlateItemRow, { entry, dispatch, planning }));
+  return renderToString(createElement(PlateItemRow, { entry, dispatch, planning, ...extra }));
 }
 
 beforeEach(() => {
@@ -299,7 +299,7 @@ describe("a container", () => {
     const out = html(entry);
     expect(out).toContain(">Fridge · 0 of 6 left</p>");
     expect(out).toMatch(
-      /<p class="mt-2 ml-\[52px\] flex gap-2 rounded-\[10px\] bg-\[var\(--color-caution-soft\)\] [^"]*text-\[var\(--color-caution-soft-text\)\]"><svg aria-hidden="true"[^>]*>.*<\/svg>None left\. Remove it to serve the rest\.<\/p>/,
+      /<p class="mt-2 ml-\[52px\] flex gap-2 rounded-\[10px\] bg-\[var\(--color-caution-soft\)\] [^"]*text-\[var\(--color-caution-soft-text\)\]"><svg aria-hidden="true"[^>]*>.*<\/svg>None left\. Add a new batch or remove it\.<\/p>/,
     );
     expect(out).not.toContain("Servings:");
     expect(out).not.toContain('role="radiogroup"');
@@ -310,6 +310,39 @@ describe("a container", () => {
     expect(html({ ...containerEntry({ ...MUFFINS, status: "finished", servingsLeft: 0 }), savedServings: 2 })).not.toContain(
       "None left.",
     );
+    // No way to add a batch was given: × is the only way forward.
+    expect(out).not.toContain("Add to storage");
+  });
+
+  // CD-Ran-Out-Add: the second way forward, under the flag.
+  it("run out with a way to add a batch: a tonal Add to storage named for the item, which hands the row over; offline it waits", () => {
+    const entry = containerEntry({ ...MUFFINS, servingsLeft: 0, status: "finished" });
+    const asked: unknown[] = [];
+    const onAddToStorage = (picked: unknown) => asked.push(picked);
+    const out = html(entry, false, { onAddToStorage });
+    expect(out).toMatch(/None left\. Add a new batch or remove it\.<\/p><button[^>]*aria-label="Add to storage: Broccoli Cheese Egg Muffins"[^>]*>Add to storage<\/button>/);
+    expect(out).toContain("bg-[var(--color-success)]");
+    click(byLabel(tree(entry, false, { onAddToStorage }), "Add to storage: Broccoli Cheese Egg Muffins"));
+    expect(asked).toEqual([entry]);
+    expect(actions).toEqual([]);
+    const offline = byLabel(tree(entry, false, { onAddToStorage, offline: true }), "Add to storage: Broccoli Cheese Egg Muffins");
+    expect(offline.props).toMatchObject({ disabled: true, "aria-describedby": "plate-offline" });
+    // A container with servings left never offers it.
+    expect(html(containerEntry(MUFFINS), false, { onAddToStorage })).not.toContain("Add to storage");
+  });
+
+  it("planned for more than is left: the stepper stays, and the row says Only {n} left.", () => {
+    const short = { ...containerEntry({ ...MUFFINS, servingsLeft: 1 }), servings: 1, planned: 2 };
+    const out = html(short);
+    expect(out).toMatch(/<\/svg>Only <!-- -->1<!-- --> left\.<\/p>/);
+    expect(out).toContain('aria-label="Servings: Broccoli Cheese Egg Muffins"');
+    expect(out).not.toContain("None left.");
+    // As planned, or untracked, or not planned at all: nothing to say.
+    expect(html({ ...short, planned: 1 })).not.toContain("Only");
+    expect(html({ ...containerEntry({ ...MUFFINS, servingsTotal: null, servingsLeft: null }), planned: 3 })).not.toContain("Only");
+    expect(html(containerEntry({ ...MUFFINS, servingsLeft: 1 }))).not.toContain("Only");
+    // Planning never says it.
+    expect(html(short, true)).not.toContain("Only");
   });
 
   it("lets the controls wrap under a title that would get narrower than 8rem", () => {

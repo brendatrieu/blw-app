@@ -11,7 +11,7 @@ import { useActiveBaby } from "../babies/useActiveBaby.js";
 import { copiedLabel } from "./copy.js";
 import { CopySheet } from "./CopySheet.js";
 import { DailyMealsSheet } from "./DailyMealsSheet.js";
-import { usePlan } from "./hooks.js";
+import { useOneTapServe, usePlan } from "./hooks.js";
 import { PlanMealCard } from "./PlanMealCard.js";
 import {
   NEW_PLANNED_MEAL,
@@ -69,6 +69,7 @@ export function PlanPage() {
   const plan = usePlan(activeBaby?.id, week[0]!, week[6]!);
   const days = plan.data?.days ?? [];
   const day = days.find((entry) => entry.date === selected);
+  const oneTap = useOneTapServe(activeBaby?.id);
 
   // Today needs no `?date=`, so a page left open shows the new today.
   const select = (date: string) => {
@@ -183,6 +184,9 @@ export function PlanPage() {
                     date={day.date}
                     today={plan.data?.today ?? today}
                     meal={meal}
+                    onServe={() => oneTap.serve(day.date, plan.data?.today ?? today, meal)}
+                    serving={oneTap.pendingSlot === meal.slotId}
+                    serveFailed={oneTap.failedSlot === meal.slotId}
                     onCopy={() => setCopying(meal)}
                   />
                 ))}

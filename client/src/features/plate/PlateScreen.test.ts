@@ -102,7 +102,7 @@ describe("which page /log-meal is", () => {
     expect(plateMode(new URLSearchParams("storage=s1"))).toBe("serve");
     expect(plateMode(new URLSearchParams("food=f1"))).toBe("log");
     expect(plateMode(new URLSearchParams(""))).toBe("log");
-    expect(PLATE_TITLE).toEqual({ log: "Log meal", serve: "Serve", edit: "Edit meal", plan: "Plan a meal" });
+    expect(PLATE_TITLE).toEqual({ log: "Log meal", serve: "Serve", edit: "Edit meal", plan: "Plan a meal", planServe: "Serve" });
   });
 
   // Items 196/258: one way out — the X for a task, the chevron for a drill-in.
@@ -111,6 +111,8 @@ describe("which page /log-meal is", () => {
     expect(resolvePlateHeaderAffordance("serve")).toBe("close");
     expect(resolvePlateHeaderAffordance("edit")).toBe("back");
     expect(resolvePlateHeaderAffordance("plan")).toBe("back");
+    // A planned meal's Serve is a task too (CD-Serve-Ran-Out).
+    expect(resolvePlateHeaderAffordance("planServe")).toBe("close");
   });
 });
 
@@ -128,11 +130,11 @@ describe("Plan a meal (/plan/:date/:slotId, CD-Plan-Meal)", () => {
     dailyMeals: [],
     days: [{ date: "2026-10-14", planned: true, meals }],
   });
-  function renderPlan(url: string, plan?: PlanResponse): string {
+  function renderPlan(url: string, plan?: PlanResponse, active: StorageItem[] = [TUB]): string {
     vi.useFakeTimers({ now: new Date("2026-10-14T15:00:00Z"), toFake: ["Date"] });
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     queryClient.setQueryData(babyKeys.list(false), [BABY]);
-    queryClient.setQueryData(storageKeys.list("active"), { items: [TUB] });
+    queryClient.setQueryData(storageKeys.list("active"), { items: active });
     queryClient.setQueryData(storageKeys.list("history"), { items: [] });
     if (plan) queryClient.setQueryData(planKeys.range(BABY.id, "2026-10-12", "2026-10-18"), plan);
     return renderToString(
@@ -199,6 +201,47 @@ describe("Plan a meal (/plan/:date/:slotId, CD-Plan-Meal)", () => {
     const served = renderPlan(`/plan/2026-10-14/${LUNCH.slotId}`, planWeek([{ ...LUNCH, served: { mealId: id(90), servedAt: "x" } }]));
     expect(served).not.toContain('id="plan-name"');
     expect(served).not.toContain("That meal is gone");
+    // Serving one already served goes to its logged meal too.
+    const again = renderPlan(`/plan/2026-10-14/${LUNCH.slotId}?serve=1`, planWeek([{ ...LUNCH, served: { mealId: id(90), servedAt: "x" } }]));
+    expect(again).not.toContain(">Serve</button>");
+  });
+
+  // SPEC §3.5: today after a blocked one tap, or an earlier day.
+  it("?serve=1 is the meal's Serve: titled Serve with the X and no guide, its plate with stars, When; no plan fields", () => {
+    const html = renderPlan(`/plan/2026-10-14/${LUNCH.slotId}?serve=1`, planWeek([LUNCH]));
+    expect(html).toMatch(/>Serve<\/h1>/);
+    expect(html).toContain('aria-label="Close"');
+    expect(html).not.toContain('<span class="sr-only">Back</span>');
+    expect(html).not.toContain("How to");
+    expect(html).not.toContain('id="plan-name"');
+    expect(html).toContain("Rating for Broccoli Cheese Egg Muffins");
+    expect(html).toContain('id="plate-when"');
+    expect(html).toContain(">Serve</button>");
+    // Storage's live copy: 6 left, so the 1 planned is served as it is.
+    expect(html).toContain(">Fridge · 6 of 6 left</p>");
+  });
+
+  it("?serve=1 on a future day is just the meal (no Serve there); on a meal that ran out it opens flagged with Add to storage", () => {
+    const future = renderPlan(`/plan/2026-10-16/${LUNCH.slotId}?serve=1`, {
+      ...planWeek([]),
+      days: [{ date: "2026-10-16", planned: true, meals: [LUNCH] }],
+    });
+    expect(future).toMatch(/>Plan a meal<\/h1>/);
+    const ran = renderPlan(`/plan/2026-10-14/${LUNCH.slotId}?serve=1`, planWeek([LUNCH]), [{ ...TUB, status: "finished", servingsLeft: 0 }]);
+    expect(ran).toContain("Broccoli Cheese Egg Muffins has run out, so Lunch isn&#x27;t served yet.");
+    expect(ran).toContain("None left. Add a new batch or remove it.");
+    expect(ran).toContain(">Add to storage</button>");
+    expect(ran).toMatch(/<button[^>]*type="submit"[^>]*disabled=""[^>]*>Serve<\/button>/);
+  });
+
+  it("?serve=1 with less left than planned: the stepper starts at what is left, and the row says so", () => {
+    const html = renderPlan(
+      `/plan/2026-10-14/${LUNCH.slotId}?serve=1`,
+      planWeek([{ ...LUNCH, items: [{ ...LUNCH.items[0]!, servings: 3 } as PlannedMeal["items"][number]] }]),
+      [{ ...TUB, servingsLeft: 2 }],
+    );
+    expect(html).toContain("Only 2 left.");
+    expect(html).toMatch(/aria-live="polite"[^>]*>2<\/span>/);
   });
 });
 
@@ -245,7 +288,8 @@ describe("PlateScreen (render)", () => {
 
   it("Serve of a container Storage has since finished opens it flagged (CD-Serve-Ran-Out)", () => {
     const html = renderAt(`/log-meal?storage=${TUB.id}`, { history: [{ ...TUB, status: "finished", servingsLeft: 0 }] });
-    expect(html).toContain("None left. Remove it to serve the rest.");
+    expect(html).toContain("None left. Add a new batch or remove it.");
+    expect(html).toContain('aria-label="Add to storage: Broccoli Cheese Egg Muffins"');
     expect(html).toContain("has run out, so this meal isn&#x27;t served yet.");
   });
 
@@ -341,6 +385,24 @@ describe("resolvePlateStart", () => {
     expect(ready.status === "ready" && ready.plate.map((entry) => entry.kind)).toEqual(["recipe"]);
     // The save said it is gone: missing, whatever the plan still holds.
     expect(resolvePlateStart({ ...base, mode: "plan", plan: { ...plan, meal: planned, gone: true } })).toEqual({ status: "missing" });
+  });
+
+  it("a planned meal's Serve waits for Storage's lists too, then opens each container as it is now", () => {
+    const planned: PlannedMeal = {
+      slotId: id(51),
+      name: "Lunch",
+      time: null,
+      position: 0,
+      served: null,
+      items: [{ kind: "storage", id: id(60), servings: 3, container: TUB }],
+    };
+    const serve = { ...base, mode: "planServe" as const, plan: { date: "2026-10-14", isNew: false, meal: planned, settled: true, gone: false } };
+    expect(resolvePlateStart({ ...serve, storageQueries: [{ isPending: false, isFetching: true }, settled] })).toEqual({ status: "loading" });
+    const ready = resolvePlateStart({ ...serve, containers: [{ ...TUB, servingsLeft: 2 }], storageQueries: [settled, settled] });
+    expect(ready.status === "ready" && ready.plate.map((entry) => entry.kind === "storage" && [entry.servings, entry.planned])).toEqual([[2, 3]]);
+    // Plan a meal never waits on Storage, and keeps what was planned.
+    const plan = resolvePlateStart({ ...serve, mode: "plan", containers: [{ ...TUB, servingsLeft: 2 }], storageQueries: [{ isPending: true, isFetching: true }] });
+    expect(plan.status === "ready" && plan.plate.map((entry) => entry.kind === "storage" && entry.servings)).toEqual([3]);
   });
 
   it("Log meal: waits for what was asked for, then puts it on", () => {

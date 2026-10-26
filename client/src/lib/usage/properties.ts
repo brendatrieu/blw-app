@@ -161,7 +161,10 @@ export function readLocation(): LocationLike {
  * PRESENCE of the param is read — the id itself never leaves this function.
  */
 export function mealViaFromLocation(location: LocationLike = readLocation()): MealVia {
-  if (toRoutePattern(location.pathname) !== "/log-meal") return "log_page";
+  const pattern = toRoutePattern(location.pathname);
+  // A planned meal's Serve through the plate (SPEC §3.5, §6).
+  if (pattern === "/plan/:date/:slotId") return "plan";
+  if (pattern !== "/log-meal") return "log_page";
   const params = new URLSearchParams(location.search);
   if (params.has("storage")) return "storage_serve";
   if (params.has("recipe")) return "recipe_page";
