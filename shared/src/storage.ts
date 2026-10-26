@@ -137,7 +137,7 @@ export const BEST_BY_BEFORE_PREPARED_ERROR = "bestBy cannot be before the prepar
  * Server-side backstop for "best by is before the prepared date" — the
  * combination that, since item 333, would make a just-prepared container
  * render as Expired. The client checks it against LOCAL calendar days,
- * which is the honest comparison; the server has no timezone at all, so it
+ * which is the honest comparison; a storage write carries no timezone, so it
  * allows the same ONE DAY of slack `preparedAtSchema` allows for exactly
  * the same reason (a parent east of UTC saves "today" on a UTC day that has
  * not started). Only a date genuinely earlier than that is rejected.
@@ -328,12 +328,13 @@ export const storageItemSchema = z.object({
    * `YYYY-MM-DD`, or null.
    *
    * `expiresAt`/`useSoon`/`expired` beside it stay derived from `preparedAt`
-   * + the category storage window and are NOT affected by it — the server
-   * never learns the caller's timezone, so it cannot say which local day a
-   * calendar date is. When a best-by date IS set it nonetheless wins: the
-   * client resolves the Use soon / Expired chip from it, and falls back to
-   * these three fields only when it is null (item 333, `resolveFreshness` in
-   * client/src/features/storage/freshness.ts).
+   * + the category storage window and are NOT affected by it — storage reads
+   * carry no timezone, so the server cannot say which local day a calendar
+   * date is. (Plan reads and writes DO send the caller's `tz`, and the plan's
+   * flags use it: shared/src/planning.ts `planFlags`.) When a best-by date IS
+   * set it nonetheless wins: the client resolves the Use soon / Expired chip
+   * from it, and falls back to these three fields only when it is null
+   * (item 333, `resolveFreshness` in client/src/features/storage/freshness.ts).
    */
   bestBy: z.string().nullable(),
   /** Free-form note about the container, or null. */

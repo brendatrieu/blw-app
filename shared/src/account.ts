@@ -20,7 +20,7 @@ import { userPreferencesSchema } from "./preferences.js";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 19;
+export const ACCOUNT_EXPORT_VERSION = 20;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -57,6 +57,38 @@ export const exportBabySchema = z.object({
   notes: z.string().nullable(),
   archivedAt: z.string().nullable(),
   createdAt: z.string(),
+  /** v20 (ledger 903). The baby's daily meals for planning, in order; null
+   * until the parent first edits them (the app then shows Breakfast, Lunch,
+   * Dinner and Snack). */
+  dailyMeals: z.array(z.object({ id: z.string(), name: z.string(), time: z.string().nullable() })).nullable(),
+});
+
+/** v20 (ledger 903). A day of a baby's meal plan that has its own meals
+ * (possibly none: every meal removed). Any other day shows the daily meals. */
+export const exportPlannedDaySchema = z.object({ babyId: z.string(), date: z.string() });
+
+/** v20. One planned meal, in its day's order, and what is planned for it: a
+ * food, a recipe (with the ingredients to leave out) or a container (with
+ * the servings to take). `servedMealId` is the meal it was served as. */
+export const exportPlannedMealSchema = z.object({
+  id: z.string(),
+  babyId: z.string(),
+  date: z.string(),
+  name: z.string(),
+  /** Local wall-clock `HH:MM`, or null. */
+  time: z.string().nullable(),
+  position: z.number().int(),
+  servedMealId: z.string().nullable(),
+  createdAt: z.string(),
+  items: z.array(
+    z.object({
+      foodId: z.string().nullable(),
+      recipeId: z.string().nullable(),
+      storageItemId: z.string().nullable(),
+      servings: z.number().int().nullable(),
+      leftOutFoodIds: z.array(z.string()),
+    }),
+  ),
 });
 
 /** Food and recipe names are denormalised in so the file reads on its own.
@@ -329,6 +361,10 @@ export const accountExportSchema = z.object({
   usageEvents: z.array(exportUsageEventSchema),
   /** v14. Messages this account sent the admins, oldest first. */
   feedback: z.array(exportFeedbackSchema),
+  /** v20. Meal-plan days with their own meals, by baby then date. */
+  plannedDays: z.array(exportPlannedDaySchema),
+  /** v20. Planned meals, by baby, date and position. */
+  plannedMeals: z.array(exportPlannedMealSchema),
 });
 
 export type AccountExport = z.infer<typeof accountExportSchema>;
@@ -348,6 +384,7 @@ export type ExportChatThread = z.infer<typeof exportChatThreadSchema>;
 export type ExportChatMessage = z.infer<typeof exportChatMessageSchema>;
 export type ExportUsageEvent = z.infer<typeof exportUsageEventSchema>;
 export type ExportFeedback = z.infer<typeof exportFeedbackSchema>;
+export type ExportPlannedMeal = z.infer<typeof exportPlannedMealSchema>;
 
 // ---------------------------------------------------------------------------
 // DELETE /api/account

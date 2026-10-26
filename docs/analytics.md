@@ -58,7 +58,7 @@ six buckets is as much as it can ever carry.
 |---|---|---|
 | `session_started` | boot, or the first event after 30 minutes idle | — |
 | `screen_viewed` | route change | `route_pattern`, `from_route` |
-| `meal_logged` | a meal that persisted (Log meal or Serve, both the plate page) | `food_count` (foods counted as tried), `recipe_kind` (`none`/`basic`/`catalog`/`custom`, or `several` for 2+ distinct recipes), `includes_basic` (only with `several`: any of them a one-ingredient basic; optional), `from_storage` (a container was on the plate), `via` (`storage_serve` = `/log-meal?storage=`), `leftovers_saved`, `has_notes`, `is_first_meal`, `backdated`, `offline`, `has_left_out` (a recipe on the plate had an ingredient left out, never which; optional, sent by the plate app only) |
+| `meal_logged` | a meal that persisted (Log meal or Serve, both the plate page) | `food_count` (foods counted as tried), `recipe_kind` (`none`/`basic`/`catalog`/`custom`, or `several` for 2+ distinct recipes), `includes_basic` (only with `several`: any of them a one-ingredient basic; optional), `from_storage` (a container was on the plate), `via` (`storage_serve` = `/log-meal?storage=`; `plan` = a planned meal's Serve), `leftovers_saved`, `has_notes`, `is_first_meal`, `backdated`, `offline`, `has_left_out` (a recipe on the plate had an ingredient left out, never which; optional, sent by the plate app only), `one_tap` (only with `via: plan`: today's one-tap Serve, or false through the plate; optional) |
 | `meal_save_failed` | a meal create/edit/serve that failed | `via`, `kind`, `offline` |
 | `storage_item_added` | a container saved (one event per container, so a "Separate containers" save of three foods sends three) | `location`, `source`, `via`, `has_servings`, `has_best_by`, `food_count` (food containers only), `split` |
 | `storage_item_closed` | a status change, including restore and undo | `to`, `via`, `freshness_at_change`, `age_days_bucket` |
@@ -74,6 +74,9 @@ six buckets is as much as it can ever carry.
 | `usage_sharing_changed` | the Privacy switch moves | `enabled` |
 | `feedback_sent` | a message sent from Send feedback (the message itself never leaves the database) | — |
 | `allergen_marked` | an allergen marked established by hand, or that mark undone | `action` (`mark` / `undo`), `backdated` (the chosen instant is >1h before the tap) |
+| `plan_saved` | a planned meal's items saved (not sent for a save that empties a meal: the bucket starts at 1) | `item_count` (the `food_count` buckets, counting plate items), `has_storage` (a container is planned), `days_ahead` (`0` / `1` / `2-7` / `8+` days after today; never the date) |
+| `plan_copied` | a Copy to… that persisted | `target_count` (the `food_count` buckets), `replaced` (any target was Replace it), `warned` (the dry run showed warnings) |
+| `daily_meals_saved` | Daily meals saved | `meal_count` (the `food_count` buckets), `has_times` (any meal has a time); never the names |
 
 `via` is always DERIVED from the route and its query parameters — `/log-meal?food=`
 is `food_page`, `/storage/add` reached from Home is `home` — never wired to a

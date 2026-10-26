@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { parseCalendarDate } from "./babies.js";
-import { PLATE_ITEMS_MAX, plateFoodSchema, plateItemInputSchema, plateKey } from "./plate.js";
-import { storageItemSchema } from "./storage.js";
+import { PLATE_ITEMS_MAX, plateFoodSchema, plateItemInputSchema, plateKey, timeZoneSchema } from "./plate.js";
+import { storageItemSchema, type StorageItem } from "./storage.js";
+import type { MealItem } from "./tracking.js";
 
 /**
  * Ledger 903 (plan SPEC §3, §4.2-4.3): meal planning, per baby. A plan day
@@ -31,19 +32,6 @@ export const planTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "a t
 
 export const planNameSchema = z.string().trim().min(1).max(PLAN_NAME_MAX);
 
-export function isTimeZone(value: string): boolean {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: value });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** The caller's IANA zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`).
- * Required wherever "today" matters; the server never assumes one. */
-export const timeZoneSchema = z.string().min(1).max(64).refine(isTimeZone, "an IANA time zone");
-
 /** The calendar day `at` falls on in `timeZone`, as `YYYY-MM-DD`. */
 export function localDate(at: Date, timeZone: string): string {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -64,6 +52,45 @@ export function planDates(from: string, to: string): string[] {
   const dates: string[] = [];
   for (let ms = start; ms <= end; ms += DAY_MS) dates.push(new Date(ms).toISOString().slice(0, 10));
   return dates;
+}
+
+/** How far `timeZone`'s wall clock is ahead of UTC at the instant `at`, in ms. */
+function zoneOffset(at: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+  }).formatToParts(new Date(at));
+  const part = (type: string) => Number(parts.find((entry) => entry.type === type)?.value);
+  const wall = Date.UTC(part("year"), part("month") - 1, part("day"), part("hour"), part("minute"), part("second"));
+  return wall - Math.floor(at / 1000) * 1000;
+}
+
+/**
+ * The instant a local wall-clock time names in `timeZone` (SPEC §3.4
+ * `localInstant`; the start of a day is `"00:00"`). The zone's offsets a day
+ * either side tell a DST change apart: in a repeated hour the earlier instant
+ * wins, and a skipped hour moves forward by the gap (Temporal's
+ * "compatible"), so 02:30 on a spring-forward night is 03:30.
+ */
+export function localInstant(date: string, time: string, timeZone: string): Date {
+  const [year, month, day] = date.split("-").map(Number);
+  const wall = Date.UTC(year!, month! - 1, day!, Number(time.slice(0, 2)), Number(time.slice(3, 5)));
+  const before = zoneOffset(wall - DAY_MS, timeZone);
+  const valid = [before, zoneOffset(wall + DAY_MS, timeZone)]
+    .map((offset) => wall - offset)
+    .filter((at) => at + zoneOffset(at, timeZone) === wall);
+  return new Date(valid.length > 0 ? Math.min(...valid) : wall - before);
+}
+
+/** When a past day's Serve prefills (SPEC §3.5): the planned time, or noon. */
+export function plannedServedAt(date: string, time: string | null, timeZone: string): Date {
+  return localInstant(date, time ?? "12:00", timeZone);
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +185,87 @@ export const updatePlannedMealInputSchema = z
 export type UpdatePlannedMealInput = z.input<typeof updatePlannedMealInputSchema>;
 
 // ---------------------------------------------------------------------------
+// Flags (SPEC §3.4): computed on every read, never stored
+// ---------------------------------------------------------------------------
+
+/**
+ * What a planned container may need the parent to know. Only an UNSERVED
+ * item on today or later carries any.
+ * - `may_run_out`: counting every unserved use from today on, across all of
+ *   the account's babies, in plan order, this one goes past what is left.
+ * - `container_gone`: marked finished or discarded in Storage (instead of
+ *   `may_run_out`; Serve still refuses it). Its own wording, by status.
+ * - `past_best_by`: the day is after the container's Best by date.
+ * - `past_use_within`: no Best by, and the storage window has run out by the
+ *   meal's time (the start of the day when the meal has none).
+ */
+export const planFlagSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("may_run_out") }),
+  z.object({ kind: z.literal("container_gone"), status: z.enum(["finished", "discarded"]) }),
+  z.object({ kind: z.literal("past_best_by") }),
+  z.object({ kind: z.literal("past_use_within") }),
+]);
+export type PlanFlag = z.infer<typeof planFlagSchema>;
+
+/** One planned use of a container, as the flags read it. */
+export interface PlanFlagUse {
+  /** The planned item's id. */
+  id: string;
+  date: string;
+  /** The planned meal's time, `HH:MM`, or null. */
+  time: string | null;
+  mealPosition: number;
+  position: number;
+  served: boolean;
+  storageItemId: string;
+  servings: number;
+}
+export type PlanFlagContainer = Pick<StorageItem, "id" | "status" | "servingsLeft" | "bestBy" | "expiresAt">;
+
+/** Plan order: day, meal, item (and id, so two babies' meals never tie). */
+const byPlanOrder = (a: PlanFlagUse, b: PlanFlagUse) =>
+  (a.date < b.date ? -1 : a.date > b.date ? 1 : 0) ||
+  a.mealPosition - b.mealPosition ||
+  a.position - b.position ||
+  (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
+/**
+ * Each counted use's flags, by planned item id (SPEC §3.4). `uses` should be
+ * every container use of the account's plans, all babies, from `today` on;
+ * past and served ones are skipped here anyway. A tracked container has
+ * `servingsLeft` left, an untracked one never runs out.
+ */
+export function planFlags(
+  uses: readonly PlanFlagUse[],
+  containers: ReadonlyMap<string, PlanFlagContainer>,
+  today: string,
+  timeZone: string,
+): Map<string, PlanFlag[]> {
+  const flags = new Map<string, PlanFlag[]>();
+  const planned = new Map<string, number>();
+  for (const use of uses.filter((entry) => !entry.served && entry.date >= today).sort(byPlanOrder)) {
+    const container = containers.get(use.storageItemId);
+    if (!container) continue;
+    const list: PlanFlag[] = [];
+    if (container.status !== "active") {
+      list.push({ kind: "container_gone", status: container.status });
+    } else if (container.servingsLeft !== null) {
+      const total = (planned.get(container.id) ?? 0) + use.servings;
+      planned.set(container.id, total);
+      if (total > container.servingsLeft) list.push({ kind: "may_run_out" });
+    }
+    if (container.bestBy !== null) {
+      // "Best by the 15th" means the 15th is fine (storage/freshness.ts).
+      if (use.date > container.bestBy) list.push({ kind: "past_best_by" });
+    } else if (localInstant(use.date, use.time ?? "00:00", timeZone).getTime() >= Date.parse(container.expiresAt)) {
+      list.push({ kind: "past_use_within" });
+    }
+    flags.set(use.id, list);
+  }
+  return flags;
+}
+
+// ---------------------------------------------------------------------------
 // Responses
 // ---------------------------------------------------------------------------
 
@@ -170,7 +278,16 @@ export const plannedItemSchema = z.discriminatedUnion("kind", [
     /** The planned leave-outs that are still ingredients of the recipe. */
     leftOut: z.array(plateFoodSchema),
   }),
-  z.object({ kind: z.literal("storage"), id: uuid, servings: z.number().int(), container: storageItemSchema }),
+  z.object({
+    kind: z.literal("storage"),
+    id: uuid,
+    servings: z.number().int(),
+    container: storageItemSchema,
+    /** Present on answers that know the caller's day (the plan GET, Copy and
+     * Serve); absent on the echo of a plain plan write, which sends no `tz`.
+     * Any write can move another day's flags, so the client refetches. */
+    flags: z.array(planFlagSchema).optional(),
+  }),
 ]);
 export type PlannedItem = z.infer<typeof plannedItemSchema>;
 
@@ -229,3 +346,142 @@ export function nextPlannedMeal<T extends { position: number; time: string | nul
     null
   );
 }
+
+// ---------------------------------------------------------------------------
+// Copy to… (SPEC §3.3; 805/808/814)
+// ---------------------------------------------------------------------------
+
+export const COPY_TARGETS_MAX = 50;
+
+const slotRefSchema = z.object({ date: planDateSchema, slotId: uuid });
+
+/**
+ * POST /api/babies/:babyId/plan/copy. The source meal's items go to each
+ * target in turn, in ONE transaction; a target that already has items keeps
+ * them or has them replaced, as the parent chose per meal, and a served
+ * target is never touched. Targets are today or later in `tz`. `dryRun`
+ * writes nothing and answers what the copy would do, with its warnings.
+ */
+export const copyPlanInputSchema = z
+  .object({
+    source: slotRefSchema,
+    targets: z
+      .array(slotRefSchema.extend({ onClash: z.enum(["keep", "replace"]) }))
+      .min(1)
+      .max(COPY_TARGETS_MAX),
+    dryRun: z.boolean().optional(),
+    tz: timeZoneSchema,
+  })
+  .superRefine(({ source, targets }, ctx) => {
+    const keys = targets.map((target) => `${target.date}/${target.slotId}`);
+    if (new Set(keys).size !== keys.length) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["targets"], message: "Each meal can be a target once" });
+    }
+    if (keys.includes(`${source.date}/${source.slotId}`)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["targets"], message: "A meal cannot be copied onto itself" });
+    }
+  });
+export type CopyPlanInput = z.input<typeof copyPlanInputSchema>;
+
+/** The sheet's box (PP-COPY round 5), one entry per container and kind; the
+ * client names the container from the source meal it already shows. */
+export const copyWarningSchema = z.discriminatedUnion("kind", [
+  /** "{n} servings left, planned {m} times" / "may run out before {day}":
+   * `date` is the first day a use goes past what is left. */
+  z.object({
+    kind: z.literal("may_run_out"),
+    storageItemId: uuid,
+    servingsLeft: z.number().int(),
+    plannedTimes: z.number().int(),
+    date: planDateSchema,
+  }),
+  /** "past the Best by date on {day}": the first copied day after it. */
+  z.object({ kind: z.literal("past_best_by"), storageItemId: uuid, date: planDateSchema }),
+  /** "{item} may not keep until {day}. You can still copy.": the first
+   * copied meal the storage window does not reach (at that meal's time). */
+  z.object({ kind: z.literal("past_use_within"), storageItemId: uuid, date: planDateSchema }),
+  /** Marked finished or discarded in Storage; wording by status (§12). */
+  z.object({ kind: z.literal("container_gone"), storageItemId: uuid, status: z.enum(["finished", "discarded"]) }),
+]);
+export type CopyWarning = z.infer<typeof copyWarningSchema>;
+
+export const copyPlanResponseSchema = z.object({
+  /** Targets that got the copy ("Copied to {n} meals"). */
+  filled: z.number().int(),
+  skipped: z.array(slotRefSchema.extend({ reason: z.enum(["served", "kept"]) })),
+  warnings: z.array(copyWarningSchema),
+  /** Each target day as it now is; empty on a dry run. */
+  days: z.array(planDaySchema),
+});
+export type CopyPlanResponse = z.infer<typeof copyPlanResponseSchema>;
+
+/**
+ * The warnings of a copy, read off the flags of the plan as it stands WITH
+ * the copies (`copied` = the new planned item ids). Running out counts every
+ * use of the container; Best by and use within speak only of the copies,
+ * since a copy takes its target's day and time.
+ */
+export function copyWarnings(
+  uses: readonly PlanFlagUse[],
+  flags: ReadonlyMap<string, readonly PlanFlag[]>,
+  copied: ReadonlySet<string>,
+  containers: ReadonlyMap<string, PlanFlagContainer>,
+): CopyWarning[] {
+  const counted = uses.filter((use) => flags.has(use.id)).sort(byPlanOrder);
+  const warnings: CopyWarning[] = [];
+  for (const storageItemId of new Set(counted.filter((use) => copied.has(use.id)).map((use) => use.storageItemId))) {
+    const container = containers.get(storageItemId);
+    if (!container) continue;
+    const mine = counted.filter((use) => use.storageItemId === storageItemId);
+    const first = (kind: PlanFlag["kind"], copiesOnly: boolean) =>
+      mine.find((use) => (!copiesOnly || copied.has(use.id)) && flags.get(use.id)!.some((flag) => flag.kind === kind))?.date;
+    if (container.status !== "active") warnings.push({ kind: "container_gone", storageItemId, status: container.status });
+    const runsOut = first("may_run_out", false);
+    if (runsOut && container.servingsLeft !== null) {
+      warnings.push({ kind: "may_run_out", storageItemId, servingsLeft: container.servingsLeft, plannedTimes: mine.length, date: runsOut });
+    }
+    const pastBestBy = first("past_best_by", true);
+    if (pastBestBy) warnings.push({ kind: "past_best_by", storageItemId, date: pastBestBy });
+    const pastUseWithin = first("past_use_within", true);
+    if (pastUseWithin) warnings.push({ kind: "past_use_within", storageItemId, date: pastUseWithin });
+  }
+  return warnings;
+}
+
+// ---------------------------------------------------------------------------
+// Serve a planned meal (SPEC §3.5)
+// ---------------------------------------------------------------------------
+
+/** POST /api/babies/:babyId/plan/:date/meals/:slotId/serve: one tap, TODAY
+ * in `tz` only (else 400 `not_today`). A past day serves through the plate
+ * (`plannedServedAt`); a future day has no Serve. */
+export const servePlannedMealInputSchema = z.object({ tz: timeZoneSchema });
+export type ServePlannedMealInput = z.input<typeof servePlannedMealInputSchema>;
+
+/** 201: the logged meal and the day, now showing it served. */
+export interface ServePlannedMealResponse {
+  meal: MealItem;
+  day: PlanDay;
+}
+
+/**
+ * Why a one-tap Serve could not serve an item exactly as planned. The 409
+ * `cannot_serve_as_planned` lists every one and writes nothing; the client
+ * opens the plate with them flagged (pick 3). Nothing leaves the plan.
+ * - `short`: fewer servings left than planned (`servingsLeft` says how many);
+ * - `finished` / `discarded`: the container's status;
+ * - `deleted`: a custom food deleted since it was planned;
+ * - `nothing_counts`: every ingredient of the plate's recipes is left out
+ *   (a recipe changed since it was planned).
+ */
+export const plannedServeBlockSchema = z.object({
+  plannedItemId: uuid,
+  reason: z.enum(["short", "finished", "discarded", "deleted", "nothing_counts"]),
+  servingsLeft: z.number().int().nullable(),
+});
+export type PlannedServeBlock = z.infer<typeof plannedServeBlockSchema>;
+export const cannotServeAsPlannedSchema = z.object({
+  error: z.literal("cannot_serve_as_planned"),
+  message: z.string(),
+  blocked: z.array(plannedServeBlockSchema).min(1),
+});

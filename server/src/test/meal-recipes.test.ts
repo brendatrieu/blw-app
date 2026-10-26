@@ -674,7 +674,7 @@ describe("several recipes per meal (ledger 752)", () => {
     await twoRecipeMeal();
     const response = await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: parent.cookie } });
     const bundle = accountExportSchema.parse(response.json());
-    expect(bundle.exportVersion).toBe(19);
+    expect(bundle.exportVersion).toBe(20);
     expect(bundle.meals[0]?.recipes).toEqual([
       { recipeId: fx.pancakes.id, recipeTitle: "Pancakes", rating: 4 },
       { recipeId: fx.porridge.id, recipeTitle: "Porridge", rating: 2 },

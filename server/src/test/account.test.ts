@@ -561,13 +561,15 @@ describe("account export", () => {
         "preferences",
         "usageEvents",
         "feedback",
+        "plannedDays",
+        "plannedMeals",
         "profile",
         "meals",
         "symptomChecks",
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(19);
+    expect(bundle.exportVersion).toBe(20);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -718,7 +720,7 @@ describe("account export", () => {
     const bundle = accountExportSchema.parse(
       (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: user.cookie } })).json(),
     );
-    expect(bundle.exportVersion).toBe(19);
+    expect(bundle.exportVersion).toBe(20);
     expect(bundle.customFoods).toHaveLength(1);
     expect(bundle.customFoods[0]).toMatchObject({ id: food.id, name: "Satay sauce" });
     expect(Date.parse(bundle.customFoods[0]!.deletedAt!)).not.toBeNaN();

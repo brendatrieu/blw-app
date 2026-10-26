@@ -10,11 +10,11 @@
 // Those three are the FALLBACK, not the last word: a parent-entered
 // `bestBy` beats them, and the client resolves the chip it shows from it
 // (item 333). That resolution cannot happen here — `bestBy` is a plain
-// calendar date and the server never learns the caller's timezone, so it
-// cannot say when "the 14th" starts or ends. What the server does do is
-// refuse the one combination that could only be a mis-tap: a best-by date
-// before the prepared date, on create (the schema's own refine) and on
-// PATCH (below, against the merged values).
+// calendar date and a storage request never carries the caller's timezone
+// (only plan requests do), so it cannot say when "the 14th" starts or ends.
+// What the server does do is refuse the one combination that could only be
+// a mis-tap: a best-by date before the prepared date, on create (the
+// schema's own refine) and on PATCH (below, against the merged values).
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";

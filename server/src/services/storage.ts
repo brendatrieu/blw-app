@@ -164,7 +164,7 @@ export async function loadContainerRecipes(
  * own overrides, and the SHORTEST window wins, as it does across foods.
  */
 export async function containerWindowHours(
-  db: Database,
+  db: Database | Transaction,
   rows: readonly ContainerRow[],
   foodsByItemId: ReadonlyMap<string, StorageItemFoodRow[]>,
   recipesByItemId: ReadonlyMap<string, ContainerRecipe[]>,
@@ -228,7 +228,7 @@ export async function containerWindowHours(
  * deterministic, if arbitrary, pick — the same one this has always made.
  */
 export async function loadRecipeIngredientCategories(
-  db: Database,
+  db: Database | Transaction,
   recipeIds: string[],
 ): Promise<Map<string, string>> {
   const byRecipeId = new Map<string, string>();
@@ -303,7 +303,7 @@ export function resolveStorageWindowHours(
 
 /** The `storage_guidelines` rows for these categories, keyed by category. */
 export async function loadStorageGuidelines(
-  db: Database,
+  db: Database | Transaction,
   categories: string[],
 ): Promise<Map<string, StorageGuideline>> {
   if (categories.length === 0) return new Map();
@@ -473,7 +473,7 @@ export type StorageRow = {
  * The window rule itself is `services/storage.ts` — shared with the AI tool,
  * which used to keep its own copy.
  */
-export async function hydrateStorageItems(db: Database, rows: StorageRow[]): Promise<StorageItem[]> {
+export async function hydrateStorageItems(db: Database | Transaction, rows: StorageRow[]): Promise<StorageItem[]> {
   const foodsByItemId = await loadStorageItemFoods(
     db,
     rows.map((row) => row.id),
@@ -526,7 +526,7 @@ export async function hydrateStorageItems(db: Database, rows: StorageRow[]): Pro
 }
 
 /** One item, joined and hydrated the same way the list route does it. */
-export async function loadStorageItem(db: Database, id: string): Promise<StorageItem> {
+export async function loadStorageItem(db: Database | Transaction, id: string): Promise<StorageItem> {
   const rows = await db
     .select(STORAGE_SELECTION)
     .from(storageItems)
@@ -542,7 +542,7 @@ export async function loadStorageItem(db: Database, id: string): Promise<Storage
 }
 
 /** Items by id, hydrated like the list, in any status (plan reads). */
-export async function loadStorageItems(db: Database, ids: readonly string[]): Promise<StorageItem[]> {
+export async function loadStorageItems(db: Database | Transaction, ids: readonly string[]): Promise<StorageItem[]> {
   if (ids.length === 0) return [];
   const rows = await db
     .select(STORAGE_SELECTION)

@@ -11,9 +11,11 @@
 // day's primary key is what guarantees one set of rows on its own.
 //
 // Past days are editable like any other (chair §12.3); only Copy targets
-// will need to be today or later.
+// must be today or later. Flags (SPEC §3.4) are computed on every read that
+// knows the caller's day (`tz`), never stored. Serve is one tap on TODAY
+// only (§3.5); a past day serves through the plate (routes/meals.ts).
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
+import { TransactionRollbackError, and, asc, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   DEFAULT_DAILY_MEALS,
@@ -22,31 +24,44 @@ import {
   PLATE_NOTHING_COUNTS,
   addPlannedMealInputSchema,
   babyIdRouteParamSchema,
+  copyPlanInputSchema,
+  copyWarnings,
   dailyMealsInputSchema,
   localDate,
   planDateParamsSchema,
   planDates,
+  planFlags,
   planQuerySchema,
   planSlotParamsSchema,
+  servePlannedMealInputSchema,
   updatePlannedMealInputSchema,
+  type CopyPlanResponse,
   type DailyMeal,
   type DailyMealsResponse,
   type PlanDay,
+  type PlanFlag,
+  type PlanFlagUse,
   type PlannedItem,
   type PlannedItemInput,
+  type PlannedServeBlock,
   type PlanResponse,
+  type PlateItemInput,
+  type ServePlannedMealResponse,
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
-import { babies, meals, plannedDays, plannedItems, plannedMeals, recipes, storageItems } from "../db/schema.js";
+import { babies, foods, meals, plannedDays, plannedItems, plannedMeals, recipes, storageItems } from "../db/schema.js";
 import {
   loadIngredientFoodIds,
+  loadMeals,
   loadPlateFoods,
   ownsBaby,
   validateFoodIds,
   validateRecipeIds,
+  type Queryable,
   type Transaction,
 } from "../services/meals.js";
+import { PlateAborted, writePlate } from "../services/plate.js";
 import { loadStorageItems, notServable } from "../services/storage.js";
 
 /** Thrown inside a plan write's transaction to roll it back with a reply. */
@@ -191,8 +206,50 @@ async function writePlannedItems(tx: Transaction, userId: string, plannedMealId:
   );
 }
 
-/** Each planned meal's items, hydrated, in plan order. */
-async function loadPlannedItems(db: Database, plannedMealIds: string[]): Promise<Map<string, PlannedItem[]>> {
+/**
+ * The flags of every planned container use the caller has from `today` on,
+ * across ALL their babies, since containers are per account (SPEC §3.4).
+ */
+async function loadFlags(db: Queryable, userId: string, today: string, timeZone: string) {
+  const rows = await db
+    .select({
+      id: plannedItems.id,
+      date: plannedMeals.date,
+      time: plannedMeals.time,
+      mealPosition: plannedMeals.position,
+      position: plannedItems.position,
+      storageItemId: plannedItems.storageItemId,
+      servings: plannedItems.servings,
+    })
+    .from(plannedItems)
+    .innerJoin(plannedMeals, eq(plannedItems.plannedMealId, plannedMeals.id))
+    .innerJoin(babies, eq(plannedMeals.babyId, babies.id))
+    .where(
+      and(
+        eq(babies.userId, userId),
+        isNull(plannedMeals.servedMealId),
+        gte(plannedMeals.date, today),
+        isNotNull(plannedItems.storageItemId),
+      ),
+    );
+  const uses: PlanFlagUse[] = rows.map((row) => ({
+    ...row,
+    time: hhmm(row.time),
+    served: false,
+    storageItemId: row.storageItemId!,
+    servings: row.servings!,
+  }));
+  const containers = new Map(
+    (await loadStorageItems(db, [...new Set(uses.map((use) => use.storageItemId))])).map((item) => [item.id, item]),
+  );
+  return { uses, containers, flags: planFlags(uses, containers, today, timeZone) };
+}
+
+type Flags = ReadonlyMap<string, readonly PlanFlag[]>;
+
+/** Each planned meal's items, hydrated, in plan order. With `flags`, every
+ * container carries its own (none on a past or served meal). */
+async function loadPlannedItems(db: Queryable, plannedMealIds: string[], flags?: Flags): Promise<Map<string, PlannedItem[]>> {
   if (plannedMealIds.length === 0) return new Map();
   const rows = await db
     .select({
@@ -233,7 +290,13 @@ async function loadPlannedItems(db: Database, plannedMealIds: string[]): Promise
     if (row.storageItemId) {
       const container = containerById.get(row.storageItemId);
       if (!container) throw new Error(`planned container ${row.storageItemId} not found`);
-      list.push({ kind: "storage", id: row.id, servings: row.servings!, container });
+      list.push({
+        kind: "storage",
+        id: row.id,
+        servings: row.servings!,
+        container,
+        ...(flags ? { flags: [...(flags.get(row.id) ?? [])] } : {}),
+      });
     } else if (row.recipeId) {
       list.push({
         kind: "recipe",
@@ -250,7 +313,7 @@ async function loadPlannedItems(db: Database, plannedMealIds: string[]): Promise
 
 /** The baby's days from `from` to `to`: its own meals where it has them, the
  * current daily meals where it is virtual. Ownership is the caller's. */
-async function loadPlan(db: Database, babyId: string, from: string, to: string): Promise<Omit<PlanResponse, "today">> {
+async function loadPlan(db: Queryable, babyId: string, from: string, to: string, flags?: Flags): Promise<Omit<PlanResponse, "today">> {
   const [baby] = await db.select({ dailyMeals: babies.dailyMeals }).from(babies).where(eq(babies.id, babyId));
   const dailyMeals = [...(baby?.dailyMeals ?? DEFAULT_DAILY_MEALS)];
   const planned = new Set(
@@ -278,6 +341,7 @@ async function loadPlan(db: Database, babyId: string, from: string, to: string):
   const itemsByMeal = await loadPlannedItems(
     db,
     mealRows.map((row) => row.id),
+    flags,
   );
 
   const days = planDates(from, to).map(
@@ -306,22 +370,115 @@ async function loadPlan(db: Database, babyId: string, from: string, to: string):
   return { dailyMeals, days };
 }
 
-async function loadDay(db: Database, babyId: string, date: string): Promise<PlanDay> {
-  const [day] = (await loadPlan(db, babyId, date, date)).days;
+async function loadDay(db: Queryable, babyId: string, date: string, flags?: Flags): Promise<PlanDay> {
+  const [day] = (await loadPlan(db, babyId, date, date, flags)).days;
   if (!day) throw new Error("A plan day could not be read back");
   return day;
+}
+
+/** A planned meal's items as stored, in plan order. */
+async function loadPlannedRows(tx: Transaction, plannedMealId: string) {
+  return tx
+    .select({
+      id: plannedItems.id,
+      foodId: plannedItems.foodId,
+      recipeId: plannedItems.recipeId,
+      storageItemId: plannedItems.storageItemId,
+      servings: plannedItems.servings,
+      leftOutFoodIds: plannedItems.leftOutFoodIds,
+    })
+    .from(plannedItems)
+    .where(eq(plannedItems.plannedMealId, plannedMealId))
+    .orderBy(asc(plannedItems.position), asc(plannedItems.id));
+}
+
+/**
+ * SPEC §3.5 steps 3-4: the plate a planned meal serves as, EXACTLY as
+ * planned, or the 409 that lists everything in the way and writes nothing
+ * (the client opens the plate with those items flagged; nothing leaves the
+ * plan). Its containers are locked first, in id order like every serve, so
+ * what is checked here is what writePlate then takes. A recipe's leave-outs
+ * are kept only where they are still ingredients, so a recipe edited since
+ * it was planned serves instead of failing the plate's subset check.
+ */
+async function plateAsPlanned(
+  tx: Transaction,
+  userId: string,
+  rows: Awaited<ReturnType<typeof loadPlannedRows>>,
+): Promise<PlateItemInput[]> {
+  const containerIds = [...new Set(rows.flatMap((row) => (row.storageItemId ? [row.storageItemId] : [])))].sort();
+  const containers = new Map(
+    (containerIds.length === 0
+      ? []
+      : await tx
+          .select({ id: storageItems.id, status: storageItems.status, servingsLeft: storageItems.servingsLeft, servingsTotal: storageItems.servingsTotal })
+          .from(storageItems)
+          .where(and(inArray(storageItems.id, containerIds), eq(storageItems.userId, userId)))
+          .orderBy(asc(storageItems.id))
+          .for("no key update")
+    ).map((row) => [row.id, row]),
+  );
+  const foodIds = rows.flatMap((row) => (row.foodId ? [row.foodId] : []));
+  const deleted = new Set(
+    (foodIds.length === 0
+      ? []
+      : await tx
+          .select({ id: foods.id })
+          .from(foods)
+          .where(and(inArray(foods.id, foodIds), isNotNull(foods.deletedAt)))
+    ).map((row) => row.id),
+  );
+  const ingredients = await loadIngredientFoodIds(tx, [...new Set(rows.flatMap((row) => (row.recipeId ? [row.recipeId] : [])))]);
+  const leftOut = (row: (typeof rows)[number]) => row.leftOutFoodIds.filter((id) => ingredients.get(row.recipeId!)?.has(id));
+
+  const blocked: PlannedServeBlock[] = [];
+  const counted = new Set<string>();
+  for (const row of rows) {
+    if (row.storageItemId) {
+      const container = containers.get(row.storageItemId);
+      if (!container) throw new Error(`planned container ${row.storageItemId} is not the caller's`);
+      const { status, servingsLeft } = container;
+      if (status !== "active") blocked.push({ plannedItemId: row.id, reason: status, servingsLeft });
+      else if (container.servingsTotal !== null && (servingsLeft ?? 0) < row.servings!) {
+        blocked.push({ plannedItemId: row.id, reason: "short", servingsLeft });
+      }
+    } else if (row.foodId) {
+      if (deleted.has(row.foodId)) blocked.push({ plannedItemId: row.id, reason: "deleted", servingsLeft: null });
+      else counted.add(row.foodId);
+    } else {
+      const out = leftOut(row);
+      for (const id of ingredients.get(row.recipeId!) ?? []) if (!out.includes(id)) counted.add(id);
+    }
+  }
+  if (containerIds.length === 0 && counted.size === 0) {
+    for (const row of rows) if (row.recipeId) blocked.push({ plannedItemId: row.id, reason: "nothing_counts", servingsLeft: null });
+  }
+  if (blocked.length > 0) {
+    throw new PlanAborted(409, {
+      error: "cannot_serve_as_planned",
+      message: "Part of this meal can't be served as planned.",
+      blocked,
+    });
+  }
+  return rows.map((row): PlateItemInput => {
+    if (row.storageItemId) return { kind: "storage", storageItemId: row.storageItemId, servings: row.servings! };
+    if (row.foodId) return { kind: "food", foodId: row.foodId };
+    return { kind: "recipe", recipeId: row.recipeId!, leftOutFoodIds: leftOut(row) };
+  });
 }
 
 export function registerPlanRoutes(app: FastifyInstance, db: Database): void {
   /** Runs one plan write; a PlanAborted rolls it back and comes back as the
    * refusal to send. (Not the sent reply: a FastifyReply is a thenable, so an
-   * async function returning one resolves to undefined.) */
+   * async function returning one resolves to undefined.) A dry run ends with
+   * `tx.rollback()`, which is no refusal. */
   async function planWrite(write: (tx: Transaction) => Promise<void>): Promise<PlanAborted | null> {
     try {
       await db.transaction(write);
       return null;
     } catch (error) {
       if (error instanceof PlanAborted) return error;
+      if (error instanceof TransactionRollbackError) return null;
       throw error;
     }
   }
@@ -337,8 +494,11 @@ export function registerPlanRoutes(app: FastifyInstance, db: Database): void {
     const query = planQuerySchema.safeParse(request.query);
     if (!query.success) return badRequest(reply, query.error.flatten());
 
-    const plan = await loadPlan(db, params.data.babyId, query.data.from, query.data.to);
-    return reply.send({ today: localDate(new Date(), query.data.tz), ...plan } satisfies PlanResponse);
+    const { from, to, tz } = query.data;
+    const today = localDate(new Date(), tz);
+    const { flags } = await loadFlags(db, currentUserId(request), today, tz);
+    const plan = await loadPlan(db, params.data.babyId, from, to, flags);
+    return reply.send({ today, ...plan } satisfies PlanResponse);
   });
 
   // -----------------------------------------------------------------------
@@ -429,5 +589,120 @@ export function registerPlanRoutes(app: FastifyInstance, db: Database): void {
     });
     if (refused) return refuse(reply, refused);
     return reply.send(await loadDay(db, babyId, date));
+  });
+
+  // -----------------------------------------------------------------------
+  // POST /api/babies/:babyId/plan/copy (Copy to…, SPEC §3.3)
+  // -----------------------------------------------------------------------
+  // ONE transaction: every target or none. A dry run does the very same
+  // writes, reads the warnings off the result and rolls it all back.
+  app.post("/api/babies/:babyId/plan/copy", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = babyIdRouteParamSchema.safeParse(request.params);
+    if (!params.success) return notFound(reply);
+    const body = copyPlanInputSchema.safeParse(request.body);
+    if (!body.success) return badRequest(reply, body.error.flatten());
+    const { babyId } = params.data;
+    const { source, targets, dryRun = false, tz } = body.data;
+    const userId = currentUserId(request);
+    const today = localDate(new Date(), tz);
+    if (targets.some((target) => target.date < today)) return badRequest(reply, { targets: "Copy to today or a later day" });
+
+    let answer: CopyPlanResponse | null = null;
+    const refused = await planWrite(async (tx) => {
+      const dailyMeals = await lockBaby(tx, babyId, userId);
+      // Copy is offered on a meal with items, so a source without any (or a
+      // virtual day's) means the client's copy of the plan is stale.
+      const from = await resolveSlot(tx, babyId, source.date, source.slotId);
+      const sourceRows = await loadPlannedRows(tx, from.id);
+      if (sourceRows.length === 0) throw planChanged();
+
+      const seen = new Set([from.id]);
+      const copied = new Set<string>();
+      const skipped: CopyPlanResponse["skipped"] = [];
+      let filled = 0;
+      for (const target of targets) {
+        await materialize(tx, babyId, target.date, dailyMeals);
+        const slot = await resolveSlot(tx, babyId, target.date, target.slotId);
+        // A daily meal's id and its row's id name one meal.
+        if (seen.has(slot.id)) throw bad({ targets: "Each meal can be a target once, and never the source" });
+        seen.add(slot.id);
+        if (slot.servedMealId) {
+          skipped.push({ date: target.date, slotId: target.slotId, reason: "served" });
+          continue;
+        }
+        const [existing] = await tx
+          .select({ id: plannedItems.id })
+          .from(plannedItems)
+          .where(eq(plannedItems.plannedMealId, slot.id))
+          .limit(1);
+        if (existing && target.onClash === "keep") {
+          skipped.push({ date: target.date, slotId: target.slotId, reason: "kept" });
+          continue;
+        }
+        if (existing) await tx.delete(plannedItems).where(eq(plannedItems.plannedMealId, slot.id));
+        // Kind, ref, servings and leave-outs; the target keeps its name and time.
+        const inserted = await tx
+          .insert(plannedItems)
+          .values(sourceRows.map(({ id: _id, ...row }, position) => ({ ...row, plannedMealId: slot.id, position })))
+          .returning();
+        for (const row of inserted) copied.add(row.id);
+        filled += 1;
+      }
+
+      const { uses, containers, flags } = await loadFlags(tx, userId, today, tz);
+      const days: PlanDay[] = [];
+      if (!dryRun) {
+        for (const date of [...new Set(targets.map((target) => target.date))].sort()) days.push(await loadDay(tx, babyId, date, flags));
+      }
+      answer = { filled, skipped, warnings: copyWarnings(uses, flags, copied, containers), days };
+      if (dryRun) tx.rollback();
+    });
+    if (refused) return refuse(reply, refused);
+    return reply.send(answer);
+  });
+
+  // -----------------------------------------------------------------------
+  // POST /api/babies/:babyId/plan/:date/meals/:slotId/serve (SPEC §3.5)
+  // -----------------------------------------------------------------------
+  // One tap, TODAY only, exactly as planned, logged at now. A double tap
+  // queues on the baby lock and gets 409 already_served (the client opens
+  // the meal). Anything that cannot be served as planned is the 409 blocked
+  // list, and nothing is written.
+  app.post("/api/babies/:babyId/plan/:date/meals/:slotId/serve", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = planSlotParamsSchema.safeParse(request.params);
+    if (!params.success) return notFound(reply);
+    const body = servePlannedMealInputSchema.safeParse(request.body);
+    if (!body.success) return badRequest(reply, body.error.flatten());
+    const { babyId, date, slotId } = params.data;
+    const { tz } = body.data;
+    const userId = currentUserId(request);
+    // A past day serves through the plate, a future day not at all; a page
+    // left open past midnight lands here, and the client refetches.
+    const today = localDate(new Date(), tz);
+    if (date !== today) return reply.code(400).send({ error: "not_today", today });
+
+    let mealId = "";
+    const refused = await planWrite(async (tx) => {
+      await lockBaby(tx, babyId, userId);
+      const slot = await resolveSlot(tx, babyId, date, slotId);
+      if (slot.servedMealId) throw new PlanAborted(409, { error: "already_served", mealId: slot.servedMealId });
+      const rows = await loadPlannedRows(tx, slot.id);
+      if (rows.length === 0) throw planChanged();
+      const items = await plateAsPlanned(tx, userId, rows);
+      try {
+        mealId = await writePlate(tx, { userId, babyId, items, columns: { servedAt: new Date() } });
+      } catch (error) {
+        if (!(error instanceof PlateAborted)) throw error;
+        const { outcome } = error;
+        throw outcome.code === 400 ? bad(outcome.details) : new PlanAborted(409, outcome.body);
+      }
+      await tx.update(plannedMeals).set({ servedMealId: mealId }).where(eq(plannedMeals.id, slot.id));
+    });
+    if (refused) return refuse(reply, refused);
+
+    const meal = (await loadMeals(db, [mealId])).get(mealId);
+    if (!meal) throw new Error("A served meal could not be read back");
+    const { flags } = await loadFlags(db, userId, today, tz);
+    return reply.code(201).send({ meal, day: await loadDay(db, babyId, date, flags) } satisfies ServePlannedMealResponse);
   });
 }

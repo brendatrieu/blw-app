@@ -15,6 +15,7 @@ import {
   createMealInputSchema,
   createPlateMealInputSchema,
   isPlateMealBody,
+  localDate,
   markAllergenEstablishedInputSchema,
   mealIdParamSchema,
   mealsQuerySchema,
@@ -38,6 +39,7 @@ import {
   mealRecipes,
   mealStorageItems,
   meals,
+  plannedMeals,
   storageItemRecipes,
   storageItems,
 } from "../db/schema.js";
@@ -290,6 +292,10 @@ async function returnRemovedParts(
   );
 }
 
+/** The planned meal a plate names is not (any more) on this baby's plan:
+ * removed on another device, or never this baby's. The client refetches. */
+const PLAN_CHANGED = { error: "plan_changed", message: "This plan was changed somewhere else. Reload it and try again." };
+
 /** The reply for a plate write that was refused (services/plate.ts). */
 function plateRefused(reply: FastifyReply, error: PlateAborted): FastifyReply {
   const { outcome } = error;
@@ -367,20 +373,51 @@ export function registerMealRoutes(app: FastifyInstance, db: Database): void {
     if (isPlateMealBody(request.body)) {
       const plate = createPlateMealInputSchema.safeParse(request.body);
       if (!plate.success) return badRequest(reply, plate.error.flatten());
+      const { babyId } = params.data;
+      const { plannedMealId, tz } = plate.data;
+      // Ledger 903 (SPEC §3.5): serving a planned meal through the plate (a
+      // past day, or today after a blocked one tap) links it in the same
+      // transaction. Never a future day's: no Serve there, on the server too.
+      // A planned meal never changes day, so its date is read up front.
+      if (plannedMealId) {
+        const [planned] = await db
+          .select({ date: plannedMeals.date })
+          .from(plannedMeals)
+          .where(and(eq(plannedMeals.id, plannedMealId), eq(plannedMeals.babyId, babyId)));
+        if (!planned) return reply.code(409).send(PLAN_CHANGED);
+        if (planned.date > localDate(new Date(), tz!)) {
+          return reply.code(400).send({ error: "future_plan", message: "A meal planned for a later day can't be served yet." });
+        }
+      }
       let created: string;
       try {
-        created = await db.transaction((tx) =>
-          writePlate(tx, {
+        created = await db.transaction(async (tx) => {
+          if (plannedMealId) {
+            // The plan's lock order: the baby, then the planned meal.
+            await tx.select({ id: babies.id }).from(babies).where(eq(babies.id, babyId)).for("no key update");
+            const [planned] = await tx
+              .select({ servedMealId: plannedMeals.servedMealId })
+              .from(plannedMeals)
+              .where(and(eq(plannedMeals.id, plannedMealId), eq(plannedMeals.babyId, babyId)))
+              .for("update");
+            if (!planned) throw new PlateAborted({ code: 409, body: PLAN_CHANGED });
+            if (planned.servedMealId) {
+              throw new PlateAborted({ code: 409, body: { error: "already_served", mealId: planned.servedMealId } });
+            }
+          }
+          const mealId = await writePlate(tx, {
             userId: currentUserId(request),
-            babyId: params.data.babyId,
+            babyId,
             items: plate.data.items,
             columns: {
               servedAt: plate.data.servedAt ? new Date(plate.data.servedAt) : new Date(),
               reactionNote: plate.data.reactionNote,
               notes: plate.data.notes,
             },
-          }),
-        );
+          });
+          if (plannedMealId) await tx.update(plannedMeals).set({ servedMealId: mealId }).where(eq(plannedMeals.id, plannedMealId));
+          return mealId;
+        });
       } catch (error) {
         if (error instanceof PlateAborted) return plateRefused(reply, error);
         throw error;

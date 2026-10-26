@@ -35,6 +35,9 @@ import {
   mealItems,
   mealStorageItems,
   meals,
+  plannedDays,
+  plannedItems,
+  plannedMeals,
   storageItemFoods,
   storageItems,
   recipeIngredients,
@@ -550,6 +553,35 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       .where(eq(feedback.userId, userId))
       .orderBy(asc(feedback.createdAt));
 
+    // v20 (ledger 903): the meal plan hangs off babies like meals do. Times
+    // come back "HH:MM:SS"; the plan speaks "HH:MM".
+    const plannedDayRows = babyIds.length
+      ? await db
+          .select()
+          .from(plannedDays)
+          .where(inArray(plannedDays.babyId, babyIds))
+          .orderBy(asc(plannedDays.babyId), asc(plannedDays.date))
+      : [];
+    const plannedMealRows = babyIds.length
+      ? await db
+          .select()
+          .from(plannedMeals)
+          .where(inArray(plannedMeals.babyId, babyIds))
+          .orderBy(asc(plannedMeals.babyId), asc(plannedMeals.date), asc(plannedMeals.position), asc(plannedMeals.id))
+      : [];
+    const plannedItemRows = plannedMealRows.length
+      ? await db
+          .select()
+          .from(plannedItems)
+          .where(
+            inArray(
+              plannedItems.plannedMealId,
+              plannedMealRows.map((row) => row.id),
+            ),
+          )
+          .orderBy(asc(plannedItems.position), asc(plannedItems.id))
+      : [];
+
     // Status only. `encryptedKey` is deliberately not selected: the column
     // never enters this process during an export, so it cannot leak from it.
     const [aiKeyRow] = await db
@@ -576,6 +608,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         notes: row.notes,
         archivedAt: isoOrNull(row.archivedAt),
         createdAt: row.createdAt.toISOString(),
+        dailyMeals: row.dailyMeals,
       })),
       meals: mealRows.map((row) => ({
         id: row.id,
@@ -689,6 +722,26 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         status: row.status,
         routePattern: row.routePattern,
         createdAt: row.createdAt.toISOString(),
+      })),
+      plannedDays: plannedDayRows.map((row) => ({ babyId: row.babyId, date: row.date })),
+      plannedMeals: plannedMealRows.map((row) => ({
+        id: row.id,
+        babyId: row.babyId,
+        date: row.date,
+        name: row.name,
+        time: row.time === null ? null : row.time.slice(0, 5),
+        position: row.position,
+        servedMealId: row.servedMealId,
+        createdAt: row.createdAt.toISOString(),
+        items: plannedItemRows
+          .filter((item) => item.plannedMealId === row.id)
+          .map((item) => ({
+            foodId: item.foodId,
+            recipeId: item.recipeId,
+            storageItemId: item.storageItemId,
+            servings: item.servings,
+            leftOutFoodIds: item.leftOutFoodIds,
+          })),
       })),
     };
 

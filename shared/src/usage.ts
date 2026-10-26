@@ -151,8 +151,9 @@ export const babyCountBucketSchema = z.enum(["0", "1", "2+"]);
 // ---------------------------------------------------------------------------
 
 /** Where a meal was logged from. Derived from the route and its query params
- * on the client, never hand-wired per button. */
-export const mealViaSchema = z.enum(["log_page", "food_page", "recipe_page", "storage_serve"]);
+ * on the client, never hand-wired per button. `plan` (ledger 903): a planned
+ * meal's Serve, one tap or through the plate. */
+export const mealViaSchema = z.enum(["log_page", "food_page", "recipe_page", "storage_serve", "plan"]);
 /** Recipe attribution on a meal: none, one of the generated one-ingredient
  * basics, a curated catalog recipe, one the parent wrote, or (ledger 754)
  * two or more recipes on one meal. */
@@ -235,6 +236,10 @@ const eventProps = {
        * ingredient left out. Never which. Optional: older apps never send it,
        * and an older server 400s it. */
       has_left_out: z.boolean().optional(),
+      /** Ledger 903 (SPEC §6): sent only with `via: "plan"` — true for
+       * today's one-tap Serve, false for a planned meal served through the
+       * plate. Optional: older apps never send it, and an older server 400s it. */
+      one_tap: z.boolean().optional(),
     })
     .strict(),
 
@@ -362,6 +367,33 @@ const eventProps = {
       backdated: z.boolean(),
     })
     .strict(),
+
+  /** Ledger 903 (SPEC §6): a planned meal's items saved. Never which foods,
+   * never the date: the day only as a distance from today. */
+  plan_saved: z
+    .object({
+      item_count: foodCountBucketSchema,
+      has_storage: z.boolean(),
+      days_ahead: z.enum(["0", "1", "2-7", "8+"]),
+    })
+    .strict(),
+
+  /** A Copy to… that persisted. `warned`: the dry run showed the box. */
+  plan_copied: z
+    .object({
+      target_count: foodCountBucketSchema,
+      replaced: z.boolean(),
+      warned: z.boolean(),
+    })
+    .strict(),
+
+  /** Daily meals saved. How many and whether any has a time, never names. */
+  daily_meals_saved: z
+    .object({
+      meal_count: foodCountBucketSchema,
+      has_times: z.boolean(),
+    })
+    .strict(),
 } as const;
 
 /** Every P1 event name, in catalog order. Pinned against the union below. */
@@ -386,6 +418,9 @@ export const USAGE_EVENT_NAMES = [
   "usage_sharing_changed",
   "feedback_sent",
   "allergen_marked",
+  "plan_saved",
+  "plan_copied",
+  "daily_meals_saved",
 ] as const;
 
 export type UsageEventName = (typeof USAGE_EVENT_NAMES)[number];
@@ -521,6 +556,9 @@ export const usageEventSchema = z
     event("usage_sharing_changed"),
     event("feedback_sent"),
     event("allergen_marked"),
+    event("plan_saved"),
+    event("plan_copied"),
+    event("daily_meals_saved"),
   ])
   .superRefine(rejectPii);
 
@@ -579,6 +617,9 @@ export const usageEventEnvelopeSchema = z
     envelope("usage_sharing_changed"),
     envelope("feedback_sent"),
     envelope("allergen_marked"),
+    envelope("plan_saved"),
+    envelope("plan_copied"),
+    envelope("daily_meals_saved"),
   ])
   .superRefine((value, ctx) => {
     rejectPii(value, ctx);

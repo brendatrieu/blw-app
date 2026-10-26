@@ -94,6 +94,9 @@ const SAMPLE_PROPS: Record<UsageEventName, Record<string, unknown>> = {
   usage_sharing_changed: { enabled: false },
   feedback_sent: {},
   allergen_marked: { action: "mark", backdated: true },
+  plan_saved: { item_count: "3", has_storage: true, days_ahead: "2-7" },
+  plan_copied: { target_count: "4-5", replaced: false, warned: true },
+  daily_meals_saved: { meal_count: "4-5", has_times: true },
 };
 
 function envelopeFor(name: UsageEventName, overrides: Record<string, unknown> = {}) {
@@ -110,7 +113,7 @@ function envelopeFor(name: UsageEventName, overrides: Record<string, unknown> = 
 }
 
 describe("the P1 catalog", () => {
-  it("is exactly the 20 events the plan lists, in order", () => {
+  it("is exactly the 23 events the plan lists, in order", () => {
     expect(USAGE_EVENT_NAMES).toEqual([
       "session_started",
       "screen_viewed",
@@ -132,6 +135,9 @@ describe("the P1 catalog", () => {
       "usage_sharing_changed",
       "feedback_sent",
       "allergen_marked",
+      "plan_saved",
+      "plan_copied",
+      "daily_meals_saved",
     ]);
 
     // The exported list and the union it documents cannot drift apart.
@@ -166,6 +172,23 @@ describe("the P1 catalog", () => {
 
   // Ledger 902: whether an ingredient was left out, as a flag, and optional
   // (older apps never send it).
+  it("takes meal_logged's via \"plan\" and one_tap (ledger 903), one_tap as an optional boolean only", () => {
+    const props = { ...SAMPLE_PROPS.meal_logged, via: "plan" };
+    expect(usageEventSchema.safeParse({ name: "meal_logged", props }).success).toBe(true);
+    for (const one_tap of [true, false]) {
+      expect(usageEventSchema.safeParse({ name: "meal_logged", props: { ...props, one_tap } }).success).toBe(true);
+    }
+    expect(usageEventSchema.safeParse({ name: "meal_logged", props: { ...props, one_tap: "yes" } }).success).toBe(false);
+  });
+
+  it("plan events carry buckets and booleans only: no day, no food, no meal name", () => {
+    const parse = (name: UsageEventName, props: Record<string, unknown>) => usageEventSchema.safeParse({ name, props }).success;
+    expect(parse("plan_saved", { ...SAMPLE_PROPS.plan_saved, days_ahead: "3" })).toBe(false);
+    expect(parse("plan_saved", { ...SAMPLE_PROPS.plan_saved, date: "2026-11-02" })).toBe(false);
+    expect(parse("plan_copied", { ...SAMPLE_PROPS.plan_copied, target_count: 4 })).toBe(false);
+    expect(parse("daily_meals_saved", { ...SAMPLE_PROPS.daily_meals_saved, names: ["Lunch"] })).toBe(false);
+  });
+
   it("takes meal_logged's has_left_out as an optional boolean only", () => {
     const { has_left_out: _, ...older } = SAMPLE_PROPS.meal_logged;
     expect(usageEventSchema.safeParse({ name: "meal_logged", props: older }).success).toBe(true);

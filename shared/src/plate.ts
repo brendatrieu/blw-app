@@ -37,6 +37,21 @@ export const PLATE_NOTHING_COUNTS = "nothing on the plate counts as a food";
 export const PLATE_SERVINGS_MAX = 99;
 
 const uuid = z.string().uuid();
+
+export function isTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The caller's IANA zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`).
+ * Required wherever "today" matters (plans, and a plate that serves a planned
+ * meal); the server never assumes one. */
+export const timeZoneSchema = z.string().min(1).max(64).refine(isTimeZone, "an IANA time zone");
+
 /** On a kept item, absent keeps the stored rating; `null` clears it. */
 const ratingInput = starRatingSchema.nullable().optional();
 /** A container's stars, keyed by the food or recipe id of the part. */

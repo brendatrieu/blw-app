@@ -84,6 +84,35 @@ describe("POST /api/usage", () => {
     expect(rows[0]?.receivedAt).toBeInstanceOf(Date);
   });
 
+  it("accepts the planner's events and a meal served from the plan (ledger 903)", async () => {
+    const mealProps = {
+      food_count: "3",
+      recipe_kind: "catalog",
+      from_storage: true,
+      via: "plan",
+      leftovers_saved: false,
+      has_notes: false,
+      is_first_meal: false,
+      backdated: "now",
+      offline: false,
+      has_left_out: false,
+      one_tap: true,
+    };
+    const events = [
+      usageEnvelope({ name: "plan_saved", route: "/settings", props: { item_count: "2", has_storage: true, days_ahead: "8+" } }),
+      usageEnvelope({ name: "plan_copied", route: "/settings", props: { target_count: "6+", replaced: false, warned: true } }),
+      usageEnvelope({ name: "daily_meals_saved", route: "/settings", props: { meal_count: "4-5", has_times: true } }),
+      usageEnvelope({ name: "meal_logged", route: "/settings", props: mealProps }),
+    ];
+    expect((await post({ events }, user.cookie)).statusCode).toBe(204);
+    const rows = await db.select().from(schema.usageEvents);
+    expect(rows.map((row) => row.name).sort()).toEqual(["daily_meals_saved", "meal_logged", "plan_copied", "plan_saved"]);
+    expect(rows.find((row) => row.name === "meal_logged")!.props).toEqual(mealProps);
+    // A date where a bucket belongs fails the whole batch.
+    const dated = usageEnvelope({ name: "plan_saved", route: "/settings", props: { item_count: "2", has_storage: true, days_ahead: "2026-11-02" } });
+    expect((await post({ events: [dated] }, user.cookie)).statusCode).toBe(400);
+  });
+
   // Ledger 754: a meal with two or more recipes is `recipe_kind: "several"`,
   // with `includes_basic` saying whether one of them is a basic. Optional, so
   // the shipped app's events (without it) keep landing.

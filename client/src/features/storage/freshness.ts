@@ -5,9 +5,9 @@ import { formatYmd } from "../../components/ui/DateField.js";
  * One place decides how fresh a storage item is (item 333).
  *
  * The server derives `expiresAt`/`useSoon`/`expired` from `preparedAt` + the
- * food's storage window, and it has to: it never learns the parent's
- * timezone, so it cannot say which local calendar day a `YYYY-MM-DD` best-by
- * date is. The parent's own best-by date is the better answer whenever there
+ * food's storage window, and it has to: a storage read never carries the
+ * parent's timezone (only plan reads do), so it cannot say which local
+ * calendar day a `YYYY-MM-DD` best-by date is. The parent's own best-by date is the better answer whenever there
  * IS one — two containers with the same date used to disagree because their
  * foods carried different windows — so the resolution happens HERE, on the
  * client, where "today" is a real thing.

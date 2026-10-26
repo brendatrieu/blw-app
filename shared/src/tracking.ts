@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { foodCategorySchema, foodKindSchema } from "./catalog.js";
-import { plateItemSchema, plateItemsInputSchema, plateRatingsSchema, starRatingSchema } from "./plate.js";
+import { plateItemSchema, plateItemsInputSchema, plateRatingsSchema, starRatingSchema, timeZoneSchema } from "./plate.js";
 
 /**
  * Per-baby tracking: meals (one sitting, one or more foods — the completion
@@ -228,8 +228,19 @@ export const createPlateMealInputSchema = z
     servedAt: servedAtSchema.optional(),
     reactionNote: optionalReactionNote,
     notes: optionalNotes,
+    /** Ledger 903 (SPEC §3.5): the planned meal this plate serves (a past
+     * day's Serve, or today's after a blocked one tap), linked in the same
+     * transaction. A planned meal already served is a 409 `already_served`;
+     * one dated after today in `tz` is a 400 `future_plan`. */
+    plannedMealId: z.string().uuid().optional(),
+    /** Required with `plannedMealId`: "today" is the caller's. */
+    tz: timeZoneSchema.optional(),
   })
-  .strict();
+  .strict()
+  .refine((value) => value.plannedMealId === undefined || value.tz !== undefined, {
+    message: "tz is required with plannedMealId",
+    path: ["tz"],
+  });
 export type CreatePlateMealInput = z.input<typeof createPlateMealInputSchema>;
 
 /**
