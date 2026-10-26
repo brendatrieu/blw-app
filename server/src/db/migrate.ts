@@ -90,7 +90,9 @@ WITH "scope" AS (
   SELECT m."id" FROM "meals" m
    WHERE NOT EXISTS (SELECT 1 FROM "meal_items" i WHERE i."meal_id" = m."id")`;
 
-const BACKFILL_TAIL = `
+/** The backfill's passes as CTEs (closing "scope" first), shared by the
+ * INSERT below and `backfillPassCounts`. */
+const BACKFILL_CTES = `
 ),
 ${LINKED_CTES},
 -- R input: each meal recipe and what it counted (the meal's foods among its
@@ -164,7 +166,9 @@ ${LINKED_CTES},
     JOIN "foods" f ON f."id" = mf."food_id"
    WHERE NOT EXISTS (SELECT 1 FROM "container_recipes" cr WHERE cr."id" = l."id")
      AND NOT EXISTS (SELECT 1 FROM "grouped" g WHERE g."meal_id" = l."meal_id" AND g."storage_item_id" = l."id")
-)
+)`;
+
+const BACKFILL_TAIL = `${BACKFILL_CTES}
 INSERT INTO "meal_items" ("meal_id", "position", "food_id", "recipe_id", "storage_item_id", "counted_food_ids", "rating", "inferred")
 SELECT "meal_id", "pos", NULL, "recipe_id", "storage_item_id", "food_ids", "rating", true FROM "r_rows"
 UNION ALL
@@ -178,6 +182,22 @@ SELECT c."meal_id", n."r" + n."f" + row_number() OVER (PARTITION BY c."meal_id" 
 /** The backfill statement migration 0024 ends with, verbatim (a test pins
  * the file to this text). Every row it writes is `inferred`. */
 export const MEAL_ITEMS_BACKFILL = BACKFILL_HEAD + BACKFILL_TAIL;
+
+/**
+ * How many rows the §2.2 backfill makes for EVERY meal, by pass (the plate
+ * dry run's "rows made by R, F and C", SPEC §8.1). It reads no `meal_items`,
+ * so it answers before 0024 and after it alike; on a database where the
+ * migration made every item, r + f + c is the item count.
+ */
+export async function backfillPassCounts(db: Queryable): Promise<{ r: number; f: number; c: number }> {
+  const result = await db.execute(
+    sql.raw(`WITH "scope" AS (
+  SELECT m."id" FROM "meals" m${BACKFILL_CTES}
+SELECT (SELECT count(*) FROM "r_rows")::int AS "r", (SELECT count(*) FROM "f_rows")::int AS "f",
+       (SELECT count(*) FROM "c_rows")::int AS "c"`),
+  );
+  return (result as unknown as { rows: { r: number; f: number; c: number }[] }).rows[0]!;
+}
 
 /** `AND <meal id> IN (...)` for a per-meal heal, nothing for the boot heal. */
 const inScope = (mealIds: readonly string[] | undefined, prefix: string) =>

@@ -75,7 +75,7 @@ describe("account export v16", () => {
   });
 
   it("bumped its version and carries usage events alongside the preferences", () => {
-    expect(ACCOUNT_EXPORT_VERSION).toBe(18);
+    expect(ACCOUNT_EXPORT_VERSION).toBe(19);
 
     const shape = accountExportSchema.shape;
     expect(shape.preferences.safeParse(null).success).toBe(true);
@@ -215,5 +215,41 @@ describe("account export v16", () => {
     expect(accountExportSchema.shape.profile.safeParse(profile).success).toBe(false);
     expect(accountExportSchema.shape.profile.safeParse({ ...profile, role: "parent" }).success).toBe(true);
     expect(accountExportSchema.shape.profile.safeParse({ ...profile, role: "admin" }).success).toBe(true);
+  });
+});
+
+describe("account export v19", () => {
+  // v19 (ledger 901): every meal carries its plate, one entry per thing with
+  // its own stars. A v18 meal, without the key, is not a v19 meal.
+  it("carries each meal's plate items and requires the key", () => {
+    const meal = {
+      id: "m1",
+      babyId: "b1",
+      recipes: [],
+      servedAt: "2026-10-01T09:00:00.000Z",
+      reactionNote: null,
+      notes: null,
+      createdAt: "2026-10-01T09:00:00.000Z",
+      foods: [],
+      servedFromStorage: [],
+    };
+    const recipe = {
+      position: 0,
+      foodId: null,
+      foodName: null,
+      recipeId: "r1",
+      recipeTitle: "Porridge",
+      storageItemId: null,
+      rating: 4,
+      countedFoodIds: ["f1"],
+      inferred: false,
+    };
+    const food = { ...recipe, position: 1, foodId: "f2", foodName: "Egg", recipeId: null, recipeTitle: null, countedFoodIds: [], rating: null };
+    const meals = accountExportSchema.shape.meals;
+    expect(meals.safeParse([{ ...meal, items: [recipe, food] }]).success).toBe(true);
+    expect(meals.safeParse([{ ...meal, items: [] }]).success).toBe(true);
+    expect(meals.safeParse([meal]).success).toBe(false);
+    const { inferred: _inferred, ...withoutInferred } = recipe;
+    expect(meals.safeParse([{ ...meal, items: [withoutInferred] }]).success).toBe(false);
   });
 });

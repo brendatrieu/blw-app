@@ -17,6 +17,7 @@ import {
 } from "./helpers.js";
 import { encryptSecret, lastFour } from "../ai/crypto.js";
 import type { Database } from "../db/index.js";
+import { healMealItems } from "../db/migrate.js";
 import * as schema from "../db/schema.js";
 
 /** Never sent anywhere real — only ever stored, then asserted absent. */
@@ -152,7 +153,7 @@ async function seedOneOfEverything(
   // delete sweep to prove `meal_foods` goes with its parent. Served from the
   // active storage item and carrying a meal note, so the export round-trips
   // both `storageItemId` and both notes fields with real, non-null values.
-  await insertMeals(db, [
+  const mealIds = await insertMeals(db, [
     {
       babyId: baby!.id,
       foodIds: [catalog.food.id, catalog.secondFood.id],
@@ -163,6 +164,9 @@ async function seedOneOfEverything(
       storageItemId: activeStorageItem!.id,
     },
   ]);
+  // Its plate (`meal_items`, ledger 901), as the boot heal gives every meal
+  // a legacy writer saved.
+  await db.transaction((tx) => healMealItems(tx, mealIds));
 
   // A parent's manual "established before we started using the app" mark.
   // Non-empty on purpose: an export test where the array is [] either way
@@ -328,6 +332,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     accounts,
     meals,
     mealFoods,
+    mealItems,
     symptomChecks,
     messages,
     overrides,
@@ -359,6 +364,11 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
         .from(schema.mealFoods)
         .innerJoin(schema.meals, eq(schema.mealFoods.mealId, schema.meals.id))
         .where(eq(schema.meals.babyId, seeded.babyId)),
+      db
+        .select()
+        .from(schema.mealItems)
+        .innerJoin(schema.meals, eq(schema.mealItems.mealId, schema.meals.id))
+        .where(eq(schema.meals.babyId, seeded.babyId)),
       db.select().from(schema.symptomChecks).where(eq(schema.symptomChecks.babyId, seeded.babyId)),
       db.select().from(schema.chatMessages).where(eq(schema.chatMessages.threadId, seeded.threadId)),
       db.select().from(schema.allergenOverrides).where(eq(schema.allergenOverrides.babyId, seeded.babyId)),
@@ -373,6 +383,7 @@ async function ownedRowCounts(db: Database, seeded: SeededAccount) {
     babies: babies.length,
     meals: meals.length,
     mealFoods: mealFoods.length,
+    mealItems: mealItems.length,
     favorites: favorites.length,
     storageItems: storage.length,
     storageItemFoods: storageFoods.length,
@@ -395,6 +406,7 @@ const FULL_COUNTS = {
   babies: 1,
   meals: 1,
   mealFoods: 2,
+  mealItems: 3,
   favorites: 1,
   storageItems: 2,
   storageItemFoods: 2,
@@ -416,6 +428,7 @@ const EMPTY_COUNTS = {
   babies: 0,
   meals: 0,
   mealFoods: 0,
+  mealItems: 0,
   favorites: 0,
   storageItems: 0,
   storageItemFoods: 0,
@@ -554,7 +567,7 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(18);
+    expect(bundle.exportVersion).toBe(19);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -705,7 +718,7 @@ describe("account export", () => {
     const bundle = accountExportSchema.parse(
       (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: user.cookie } })).json(),
     );
-    expect(bundle.exportVersion).toBe(18);
+    expect(bundle.exportVersion).toBe(19);
     expect(bundle.customFoods).toHaveLength(1);
     expect(bundle.customFoods[0]).toMatchObject({ id: food.id, name: "Satay sauce" });
     expect(Date.parse(bundle.customFoods[0]!.deletedAt!)).not.toBeNaN();
@@ -752,6 +765,67 @@ describe("account export", () => {
 
     // Seeded catalog recipes are nobody's export.
     expect(bundle.customRecipes.map((r) => r.title)).not.toContain("Sweet Potato Strips");
+  });
+
+  // v19 (ledger 901): each meal's plate, one entry per thing with its own
+  // stars, in plate order.
+  it("exports each meal's plate (v19), and the rest of the meal reads the same without it", async () => {
+    const exportNow = async () =>
+      accountExportSchema.parse(
+        (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: user.cookie } })).json(),
+      );
+    const healed = await exportNow();
+    const containerId = healed.storageItems.find((item) => item.status === "active")!.id;
+    const row = { foodId: null, foodName: null, recipeId: null, recipeTitle: null, storageItemId: null, rating: null, countedFoodIds: [] };
+    // The seeded meal was rebuilt by the heal: its recipe (which lists no
+    // ingredients here) first, then the two foods the container gave.
+    expect(healed.meals[0]!.items).toEqual([
+      { ...row, position: 0, recipeId: catalog.recipe.id, recipeTitle: "Sweet Potato Strips", inferred: true },
+      { ...row, position: 1, foodId: catalog.secondFood.id, foodName: "Broccoli", storageItemId: containerId, inferred: true },
+      { ...row, position: 2, foodId: catalog.food.id, foodName: "Sweet potato", storageItemId: containerId, inferred: true },
+    ]);
+
+    // A meal an older image saved has no plate yet; everything else in the
+    // export is exactly what it was (REVIEW test 1: the export minus items).
+    await db.delete(schema.mealItems);
+    const legacy = await exportNow();
+    expect(legacy.meals[0]!.items).toEqual([]);
+    const withoutItems = (bundle: AccountExport) => bundle.meals.map(({ items: _items, ...meal }) => meal);
+    expect(withoutItems(legacy)).toEqual(withoutItems(healed));
+
+    // A plate the new client saves: a fresh food with its stars, a recipe
+    // with its own food left out, and the container rated per food.
+    const created = await app.inject({
+      method: "POST",
+      url: `/api/babies/${seeded.babyId}/meals`,
+      headers: { cookie: user.cookie },
+      payload: {
+        items: [
+          { kind: "food", foodId: catalog.secondFood.id, rating: 5 },
+          { kind: "recipe", recipeId: seeded.customRecipeId, leftOutFoodIds: [seeded.customFoodId], rating: 2 },
+          { kind: "storage", storageItemId: containerId, servings: 1, ratings: { [catalog.food.id]: 4 } },
+        ],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const plate = (await exportNow()).meals.find((meal) => meal.id === created.json<{ id: string }>().id)!;
+    expect(plate.items).toEqual([
+      { ...row, position: 0, foodId: catalog.secondFood.id, foodName: "Broccoli", rating: 5, inferred: false },
+      {
+        ...row,
+        position: 1,
+        recipeId: seeded.customRecipeId,
+        recipeTitle: "Satay noodles",
+        rating: 2,
+        countedFoodIds: [catalog.food.id],
+        inferred: false,
+      },
+      { ...row, position: 2, foodId: catalog.food.id, foodName: "Sweet potato", storageItemId: containerId, rating: 4, inferred: false },
+      { ...row, position: 3, foodId: seeded.customFoodId, foodName: "Satay sauce", storageItemId: containerId, inferred: false },
+    ]);
+    // `foods` stays everything eaten: the left-out sauce came in the container.
+    expect(plate.foods.map((food) => food.name)).toEqual(["Broccoli", "Satay sauce", "Sweet potato"]);
+    expect(plate.servedFromStorage).toEqual([{ storageItemId: containerId, servings: 1 }]);
   });
 
   it("carries the AI key status but no key material anywhere in the bundle", async () => {

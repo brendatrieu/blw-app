@@ -17,6 +17,7 @@ import {
   type AccountExport,
   type ExportChatMessage,
   type ExportCustomRecipe,
+  type ExportMealItem,
 } from "@blw/shared";
 import { createPerUserRateLimit, perUserRateLimitHook } from "../ai/client.js";
 import type { Database } from "../db/index.js";
@@ -31,6 +32,7 @@ import {
   foodAllergens,
   foods,
   mealFoods,
+  mealItems,
   mealStorageItems,
   meals,
   storageItemFoods,
@@ -278,6 +280,40 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         const existing = servedByMealId.get(mealId);
         if (existing) existing.push(entry);
         else servedByMealId.set(mealId, [entry]);
+      }
+    }
+
+    // v19 (ledger 901): the plate, one row per thing with its own stars, in
+    // plate order, names joined in like the foods above.
+    const itemsByMealId = new Map<string, ExportMealItem[]>();
+    if (mealRows.length) {
+      const itemRows = await db
+        .select({
+          mealId: mealItems.mealId,
+          position: mealItems.position,
+          foodId: mealItems.foodId,
+          foodName: foods.name,
+          recipeId: mealItems.recipeId,
+          recipeTitle: recipes.title,
+          storageItemId: mealItems.storageItemId,
+          rating: mealItems.rating,
+          countedFoodIds: mealItems.countedFoodIds,
+          inferred: mealItems.inferred,
+        })
+        .from(mealItems)
+        .leftJoin(foods, eq(mealItems.foodId, foods.id))
+        .leftJoin(recipes, eq(mealItems.recipeId, recipes.id))
+        .where(
+          inArray(
+            mealItems.mealId,
+            mealRows.map((row) => row.id),
+          ),
+        )
+        .orderBy(asc(mealItems.mealId), asc(mealItems.position), asc(mealItems.id));
+      for (const { mealId, ...entry } of itemRows) {
+        const existing = itemsByMealId.get(mealId);
+        if (existing) existing.push(entry);
+        else itemsByMealId.set(mealId, [entry]);
       }
     }
 
@@ -551,6 +587,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         createdAt: row.createdAt.toISOString(),
         foods: foodsByMealId.get(row.id) ?? [],
         servedFromStorage: servedByMealId.get(row.id) ?? [],
+        items: itemsByMealId.get(row.id) ?? [],
       })),
       favorites: favoriteRows.map((row) => ({
         recipeId: row.recipeId,

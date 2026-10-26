@@ -20,7 +20,7 @@ import { userPreferencesSchema } from "./preferences.js";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 18;
+export const ACCOUNT_EXPORT_VERSION = 19;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -71,8 +71,27 @@ export const exportMealFoodSchema = z.object({
   storageItemId: z.string().nullable(),
   /** v17. The baby's 1-5 star rating of this food; null when not rated
    * (there is no 0). v18: a food's own stars, so never set for a food rated
-   * as part of its recipe. */
+   * as part of its recipe. v19: the first of this food's own stars on the
+   * plate (`items`), which holds every one. */
   rating: z.number().int().nullable(),
+});
+
+/** v19 (ledger 901). One thing on the meal's plate that has its own stars, in
+ * plate order: a fresh food or recipe is one entry, a storage container one
+ * entry per food or recipe it held (sharing its `storageItemId`).
+ * `countedFoodIds` (recipes only) is what that recipe counted as eaten when
+ * it was saved; `meals[].foods` stays the full list of foods eaten.
+ * `inferred` marks an entry rebuilt from a meal saved before plates existed. */
+export const exportMealItemSchema = z.object({
+  position: z.number().int(),
+  foodId: z.string().nullable(),
+  foodName: z.string().nullable(),
+  recipeId: z.string().nullable(),
+  recipeTitle: z.string().nullable(),
+  storageItemId: z.string().nullable(),
+  rating: z.number().int().nullable(),
+  countedFoodIds: z.array(z.string()),
+  inferred: z.boolean(),
 });
 
 /** v18. One recipe of a meal, with the baby's 1-5 rating of it (null when
@@ -100,6 +119,8 @@ export const exportMealSchema = z.object({
    * container, ordered by `storageItemId`. Empty for a meal not served from
    * storage, and for one served before this was recorded. */
   servedFromStorage: z.array(z.object({ storageItemId: z.string(), servings: z.number().int() })),
+  /** v19. The plate, entry by entry (see `exportMealItemSchema`). */
+  items: z.array(exportMealItemSchema),
 });
 
 export const exportFavoriteSchema = z.object({
@@ -316,6 +337,7 @@ export type ExportBaby = z.infer<typeof exportBabySchema>;
 export type ExportMeal = z.infer<typeof exportMealSchema>;
 export type ExportMealFood = z.infer<typeof exportMealFoodSchema>;
 export type ExportMealRecipe = z.infer<typeof exportMealRecipeSchema>;
+export type ExportMealItem = z.infer<typeof exportMealItemSchema>;
 export type ExportFavorite = z.infer<typeof exportFavoriteSchema>;
 export type ExportStorageItem = z.infer<typeof exportStorageItemSchema>;
 export type ExportAllergenOverride = z.infer<typeof exportAllergenOverrideSchema>;

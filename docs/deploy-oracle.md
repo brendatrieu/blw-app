@@ -281,11 +281,12 @@ The container's start command is `node dist/db/migrate.js && tsx db/seeds/index.
 
 1. `migrate.js` logs "Migration failed:" and exits 1, so the app never starts.
 2. If a MIGRATION fails, the database is untouched: drizzle runs every pending
-   migration in one transaction, which rolls back. The boot heal
-   `healMealRecipes` runs after that, in its own transaction: if IT fails, the
-   migrations (0020/0021) are already committed and only the heal rolls back.
-   Pinning the previous image is still safe then, because those migrations
-   only add tables (and the next boot of the new image runs the heal again).
+   migration in one transaction, which rolls back. The boot heals
+   `healMealRecipes` and `healMealItems` (0024) run after that, each in its
+   own transaction: if one fails, the migrations are already committed and
+   only that heal rolls back. Pinning the previous image is still safe then,
+   because those migrations only add tables and columns (and the next boot of
+   the new image runs the heals again).
 3. `restart: unless-stopped` restarts it into the same failure (a crash loop),
    `docker compose up -d --wait` fails, and the Deploy job turns red.
 4. **The site is down** (Caddy answers 502). `up -d` has already replaced the
@@ -311,6 +312,48 @@ Rollback limit for 0020/0021 (several recipes per meal): rolling back to the
 image before 0020 is safe while the installed app still sends one recipe per
 meal (the boot heal folds back what the older image wrote). Once the app that
 sends `recipeIds` ships, never roll back past the first image with 0020.
+
+Rollback limit for 0024 (plate items, ledger 901): rolling back to the 0023
+image is safe until the client that sends `items` ships; the boot heal
+rebuilds the items of every meal an older image wrote. Once that client ships,
+never roll back past the first 0024 image: an older server answers 400 to
+every meal create, silently drops an `items` edit sent with other fields, and
+400s analytics batches carrying the new values. Once the planning client
+ships, never roll back past the planning server image either (the plan
+endpoints would 404). Take the backup before each of those deploys.
+
+### Plate migration dry run (0024)
+
+The 0024 push waits for this run on a restored production backup: 0 mismatches
+and drift 0. It runs on the machine that already holds the backups; the backup
+never leaves it, and the script prints only counts and pass/fail.
+
+1. Bring the commit over as a `git bundle` (never a push to `main`). Needs
+   Docker, Node 24 and pnpm; in the checkout, `pnpm install` and
+   `pnpm --filter @blw/shared build`.
+2. Restore the newest dump into a throwaway Postgres (production's image and
+   user, so the dump's `OWNER TO blw` lines apply; port 55432 avoids the dev
+   ports), and check it is one migration behind:
+
+   ```bash
+   docker run -d --name blw-dry -e POSTGRES_USER=blw -e POSTGRES_DB=blw -e POSTGRES_PASSWORD=dry -p 55432:5432 postgres:17-alpine
+   sleep 5   # let it start
+   gunzip -c blw-<STAMP>.sql.gz | docker exec -i blw-dry psql -U blw blw
+   docker exec blw-dry psql -U blw blw -tc 'SELECT count(*) FROM drizzle.__drizzle_migrations'   # 24 = at 0023
+   ```
+3. From `server/`, with `DATABASE_URL=postgres://blw:dry@localhost:55432/blw`
+   (the script refuses any host but localhost):
+
+   ```bash
+   pnpm exec tsx scripts/plate-dry-run.ts record before.json
+   pnpm exec tsx scripts/plate-dry-run.ts migrate     # boot 1, timed
+   pnpm exec tsx scripts/plate-dry-run.ts migrate     # boot 2, timed
+   pnpm exec tsx scripts/plate-dry-run.ts record after.json
+   pnpm exec tsx scripts/plate-dry-run.ts compare before.json after.json
+   ```
+4. Paste the printed lines (they hold no names, foods or ids) to whoever runs
+   the deploy, then `docker rm -f blw-dry` and delete `before.json` and
+   `after.json`, which do hold them.
 
 ## Uptime monitoring
 

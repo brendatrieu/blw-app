@@ -17,6 +17,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import type { Database } from "../db/index.js";
 import { MEAL_ITEMS_BACKFILL, findDriftedMeals, healMealItems, healMealRecipes } from "../db/migrate.js";
 import { checkPlateInvariants, comparePlateParity, recordPlateParity } from "../db/plateParity.js";
+import { compareDryRun, describeRecord, recordDryRun, type DryRunRecord } from "../db/plateDryRun.js";
 import * as schema from "../db/schema.js";
 import { B1, B2, F, M, R, X, plateCorpusSql } from "./plateCorpus.js";
 
@@ -271,6 +272,55 @@ describe("migration 0024 — meal_items backfill", () => {
     expect(mismatches.meals).toBe(0);
   });
 
+  // SPEC §8.1: the prod-backup dry run, on the corpus. It must pass here,
+  // fail on a break, and print nothing that names anything.
+  it("the dry run passes on the corpus, fails on a break, and prints only counts", async () => {
+    // Through JSON, as the record files go.
+    const record = async () => JSON.parse(JSON.stringify(await recordDryRun(db))) as DryRunRecord;
+    const before = await record();
+    expect(before).toMatchObject({ migrations: 24, plate: false });
+    // Records taken in the wrong order are a FAIL, not a vacuous pass.
+    expect((await compareDryRun(db, before, before)).lines.at(-1)).toBe("result: FAIL");
+    await boot();
+    await boot();
+    const after = await record();
+    expect(after).toMatchObject({ migrations: 25, plate: true });
+
+    const { pass, lines } = await compareDryRun(db, before, after);
+    expect(pass).toBe(true);
+    expect(lines).toEqual([
+      "before: 24 migrations, meal_items absent; after: 25 migrations, meal_items present; database now: 25 migrations, meal_items present",
+      "meals checked: 29 before, 29 after; babies checked: 2",
+      ...Object.keys(before.record).map((observable) => `mismatches ${observable}: 0`),
+      "drift after the second heal: 0 meals",
+      "invariant violations: 0",
+      "orphans (allowed, reported): 2",
+      expect.stringMatching(/^meal_items: (\d+) \(inferred \1\); backfill rows R \d+ \+ F \d+ \+ C \d+ = \1$/),
+      "result: PASS",
+    ]);
+    // Every pass made rows on this corpus.
+    expect(lines.at(-2)).toMatch(/R [1-9]\d* \+ F [1-9]\d* \+ C [1-9]/);
+    expect((await compareDryRun(db, after, after)).pass).toBe(false);
+
+    // A legacy rating an older image changed is caught, by observable.
+    await client.exec(`UPDATE "meal_foods" SET "rating" = 1 WHERE "meal_id" = '${M(1)}' AND "food_id" = '${F(3)}'`);
+    const broken = await compareDryRun(db, before, await record());
+    expect(broken.pass).toBe(false);
+    expect(broken.lines).toContain("mismatches mealFoods: 1");
+    expect(broken.lines.at(-1)).toBe("result: FAIL");
+
+    // Nothing printed names a food, recipe, baby or account, or holds an id.
+    const printed = [describeRecord(before), describeRecord(after), ...lines, ...broken.lines].join("\n");
+    expect(printed).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/i);
+    const names = await rows(
+      client,
+      `SELECT "name" AS "v" FROM "foods" UNION SELECT "title" FROM "recipes" UNION SELECT "name" FROM "babies"
+       UNION SELECT "name" FROM "user" UNION SELECT "email" FROM "user"`,
+    );
+    expect(names.length).toBeGreaterThan(60);
+    for (const { v } of names) expect(printed).not.toContain(String(v));
+  });
+
   it("ends 0024 with MEAL_ITEMS_BACKFILL verbatim", async () => {
     const file = await fs.readFile(path.join(migrationsFolder, "0024_meal_items.sql"), "utf8");
     expect(file.split("--> statement-breakpoint").at(-1)!.trim()).toBe(MEAL_ITEMS_BACKFILL.trim());
@@ -418,6 +468,15 @@ describe("healMealItems — what older writers leave behind", () => {
     expect(await rows(client, `SELECT "position", "rating" FROM "meal_items" WHERE "meal_id" = '${M(12)}' ORDER BY "position"`)).toEqual([
       { position: 0, rating: 4 },
       { position: 1, rating: null },
+    ]);
+    // The same for a food: m13 holds Banana in two containers (REVIEW-c2 R2-1).
+    await client.exec(`UPDATE "meal_foods" SET "rating" = 3 WHERE "meal_id" = '${M(13)}' AND "food_id" = '${F(1)}'`);
+    await heal();
+    expect(
+      await rows(client, `SELECT "position", "rating" FROM "meal_items" WHERE "meal_id" = '${M(13)}' AND "food_id" = '${F(1)}' ORDER BY "position"`),
+    ).toEqual([
+      { position: 0, rating: 3 },
+      { position: 2, rating: null },
     ]);
   });
 

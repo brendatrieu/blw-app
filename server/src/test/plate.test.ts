@@ -331,6 +331,18 @@ describe("plate writes (ledger 901, step 1b)", () => {
       await expectExact(db);
     });
 
+    // REVIEW-c2 R2-2: a decrease on a discarded container is no 409; nothing
+    // goes back into it (returnServings skips discarded), the meal records 1.
+    it("lowering the servings of a container discarded since is no 409 and returns nothing", async () => {
+      const pears = await container({ foodIds: [fx.pear.id], servingsTotal: 5 });
+      const meal = await created([{ kind: "storage", storageItemId: pears, servings: 3 }]);
+      expect((await inject("PATCH", `/api/storage/${pears}`, { status: "discarded" })).statusCode).toBe(200);
+      await patched(meal.id, { items: [{ kind: "storage", storageItemId: pears, servings: 1 }] });
+      expect(await box(pears)).toEqual({ left: 2, status: "discarded" });
+      expect(await served(meal.id)).toEqual([{ storageItemId: pears, servings: 1 }]);
+      await expectExact(db);
+    });
+
     it("a container served before servings were recorded can be removed, not resized", async () => {
       const pears = await container({ foodIds: [fx.pear.id], servingsTotal: 5 });
       const meal = await created([{ kind: "storage", storageItemId: pears, servings: 2 }]);
@@ -454,6 +466,9 @@ describe("plate writes (ledger 901, step 1b)", () => {
       const [porridgeRow] = await db.select().from(schema.mealItems).where(eq(schema.mealItems.recipeId, fx.porridge.id));
       expect(porridgeRow!.countedFoodIds).toEqual([fx.oats.id, fx.banana.id].sort());
       expect(after.foods.find((food) => food.id === fx.banana.id)?.rating).toBe(3);
+      // REVIEW-c2 R2-5: only My mash's row had a link (the container); the
+      // replacement keeps it.
+      expect(after.foods.find((food) => food.id === fx.banana.id)?.storageItemId).toBe(pears);
       await expectExact(db);
     });
   });
