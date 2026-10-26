@@ -50,7 +50,9 @@ export const plateItemInputSchema = z.discriminatedUnion("kind", [
     id: uuid.optional(),
     recipeId: uuid,
     /** Current ingredients the baby did not get. Absent on a kept item keeps
-     * what it counted; on a new item it means nothing was left out. */
+     * what it counted; on a new item it means nothing was left out. Sent on
+     * a kept item, foods the recipe lost since stay counted, and an inferred
+     * item can only lose foods (server/src/services/plate.ts). */
     leftOutFoodIds: z.array(uuid).max(PLATE_LEFT_OUT_MAX).optional(),
     rating: ratingInput,
   }),

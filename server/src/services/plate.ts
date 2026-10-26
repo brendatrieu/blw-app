@@ -232,15 +232,24 @@ export async function writePlate(tx: Transaction, write: PlateWrite): Promise<st
       const strays = (item.leftOutFoodIds ?? []).filter((id) => !current.has(id));
       if (strays.length > 0) throw bad({ leftOutFoodIds: "not an ingredient of this recipe", foodIds: strays });
       const leftOut = new Set(item.leftOutFoodIds ?? []);
+      // A kept row never re-derives what was eaten from the recipe as it is
+      // NOW (901b): foods the recipe lost since stay counted, and an inferred
+      // row can only lose foods, so echoing the plate it was shown is a no-op.
+      // counted = (stored − current) ∪ (inferred ? (stored ∩ current) − L : current − L)
+      const stored = kept?.countedFoodIds ?? [];
+      const base = kept?.inferred ? stored.filter((id) => current.has(id)) : [...current];
       desired.push({
         keepId: kept?.id,
         foodId: null,
         recipeId: item.recipeId,
         storageItemId: null,
         countedFoodIds:
-          kept && item.leftOutFoodIds === undefined ? kept.countedFoodIds : sorted([...current].filter((id) => !leftOut.has(id))),
+          kept && item.leftOutFoodIds === undefined
+            ? kept.countedFoodIds
+            : sorted([...stored.filter((id) => !current.has(id)), ...base.filter((id) => !leftOut.has(id))]),
         rating: pick(item.rating, kept?.rating ?? null),
-        // Once the parent says what was left out, "Left out" is exact again.
+        // Once the parent says what was left out, the item shows "Left out"
+        // like any other (current ingredients − counted).
         inferred: Boolean(kept?.inferred) && item.leftOutFoodIds === undefined,
       });
     } else {
@@ -393,6 +402,11 @@ export async function writePlate(tx: Transaction, write: PlateWrite): Promise<st
 
   // 7.
   await syncLegacy(tx, mealId, new Set(removed));
+  // 8. Invariants hold after every write (901b): adding fresh what a linked
+  // ORPHAN container holds now makes that container fillable, so the meal is
+  // drifted; rebuild it here, and the answer is the rebuilt plate. A no-op
+  // otherwise.
+  await healMealItems(tx, [mealId]);
   return mealId;
 }
 

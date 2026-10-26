@@ -24,7 +24,8 @@ import type { Database } from "../db/index.js";
 import { findDriftedMeals, healMealItems, healMealRecipes } from "../db/migrate.js";
 import { checkPlateInvariants, comparePlateParity, recordPlateParity } from "../db/plateParity.js";
 import * as schema from "../db/schema.js";
-import { M, R, X, plateCorpusSql } from "./plateCorpus.js";
+import { loadMeals } from "../services/meals.js";
+import { B1, F, M, R, X, plateCorpusSql } from "./plateCorpus.js";
 
 async function seedFixtures(db: Database) {
   await db
@@ -494,6 +495,46 @@ describe("plate writes (ledger 901, step 1b)", () => {
       const after = await recordPlateParity(db);
       expect(Object.fromEntries(Object.entries(comparePlateParity(before, after)).filter(([, n]) => n > 0))).toEqual({});
     });
+
+    // Verifier p1-c3 probe Q11: no query PLAN may change the record either,
+    // same-name ties included (a custom food named like a catalog one), which
+    // ANALYZE alone does not reach.
+    it("the parity record is the same under every forced plan shape, same-name foods included", async () => {
+      const twin = await inject("POST", "/api/foods", { name: "Whole Milk", category: "dairy", allergenSlugs: ["milk"] });
+      expect(twin.statusCode, twin.body).toBe(201);
+      const twinId = twin.json<{ id: string }>().id;
+      const egg2 = (await inject("POST", "/api/foods", { name: "Egg", category: "protein" })).json<{ id: string }>().id;
+      for (let k = 0; k < 24; k++) {
+        const pair = k % 2 ? [twinId, fx.milk.id] : [fx.milk.id, twinId];
+        const eggs = k % 3 ? [fx.egg.id, egg2] : [egg2, fx.egg.id];
+        const response = await create({
+          foodIds: [...pair, ...eggs, fx.pear.id],
+          servedAt: new Date(Date.UTC(2026, 8, 1 + Math.floor(k / 2), 9)).toISOString(),
+          ...(k % 4 === 0 ? { reactionNote: "rash" } : {}),
+        });
+        expect(response.statusCode, response.body).toBe(201);
+      }
+      const shapes = [
+        "SET enable_indexscan = off; SET enable_bitmapscan = off; SET enable_indexonlyscan = off",
+        "SET enable_hashjoin = off; SET enable_nestloop = off",
+        "SET enable_mergejoin = off; SET enable_nestloop = off",
+        "SET enable_hashjoin = off; SET enable_mergejoin = off",
+        "SET random_page_cost = 0.01; SET cpu_tuple_cost = 5",
+        "ANALYZE",
+      ];
+      const reset =
+        "RESET enable_indexscan; RESET enable_bitmapscan; RESET enable_indexonlyscan; RESET enable_hashjoin; RESET enable_nestloop; RESET enable_mergejoin; RESET random_page_cost; RESET cpu_tuple_cost";
+      const client = (db as unknown as { $client: PGlite }).$client;
+      const base = await recordPlateParity(db);
+      const found: Record<string, number> = {};
+      for (const shape of shapes) {
+        await client.exec(reset);
+        await client.exec(shape);
+        for (const [name, n] of Object.entries(comparePlateParity(base, await recordPlateParity(db)))) if (n > 0) found[`${shape} | ${name}`] = n;
+      }
+      await client.exec(reset);
+      expect(found).toEqual({});
+    });
   });
 
   // SPEC §8 row 1, test 3: random sequences of every writer, old and new.
@@ -613,6 +654,10 @@ describe("plate writes (ledger 901, step 1b)", () => {
 
       try {
         await expectExact(db);
+        // Chair §10.1: an inferred recipe item never shows Left out.
+        for (const meal of (await loadMeals(db, await meals())).values()) {
+          for (const item of meal.items ?? []) if (item.kind === "recipe" && item.inferred) expect(item.leftOut, item.id).toEqual([]);
+        }
         // What every tracked container gave is exactly what its meals hold.
         for (const id of boxes) {
           const [row] = await db
@@ -644,7 +689,8 @@ describe("a no-op items edit of every corpus meal (SPEC §8 row 1, test 2)", () 
   let parent: TestUser;
 
   beforeEach(async () => {
-    ({ app, db, close } = await createTestApp());
+    // The random walk below sends a few hundred requests a minute.
+    ({ app, db, close } = await createTestApp({ GLOBAL_RATE_LIMIT_MAX: 1_000_000 }));
     parent = await signUpUser(app);
     const [user] = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, parent.email));
     await (db as unknown as { $client: PGlite }).$client.exec(plateCorpusSql(user!.id, { withUser: false }));
@@ -657,7 +703,7 @@ describe("a no-op items edit of every corpus meal (SPEC §8 row 1, test 2)", () 
     await close();
   });
 
-  const inject = (method: "GET" | "PATCH", url: string, payload?: object) =>
+  const inject = (method: "GET" | "POST" | "PATCH" | "DELETE", url: string, payload?: object) =>
     app.inject({ method, url, headers: { cookie: parent.cookie }, ...(payload ? { payload } : {}) });
   const itemIds = async (mealId: string) =>
     (await db.select({ id: schema.mealItems.id }).from(schema.mealItems).where(eq(schema.mealItems.mealId, mealId))).map((row) => row.id).sort();
@@ -722,4 +768,129 @@ describe("a no-op items edit of every corpus meal (SPEC §8 row 1, test 2)", () 
     expect(after.mealStorageItems![M(12)]).toEqual([{ storage_item_id: X(6), servings: 1 }]);
     await expectExact(db);
   });
+
+  // Verifier p1-c3 V6/V6b (901b): adding fresh what an ORPHAN container (one
+  // edited in Storage after it was served) holds now makes it fillable. The
+  // write's own trailing heal regroups it, so the answer is the rebuilt plate
+  // and the invariants hold right after the write.
+  it("adding fresh what an orphan recipe container holds now regroups it in the write's own answer", async () => {
+    expect(await findDriftedMeals(db)).toEqual([]);
+    const meal = mealItemSchema.parse((await inject("GET", `/api/meals/${M(16)}`)).json());
+    // X(12) was served to M(16) as Banana Pancakes and holds Broccoli Egg now.
+    const response = await inject("PATCH", `/api/meals/${M(16)}`, {
+      items: [...plateInputFromItems(meal.items!), { kind: "recipe", recipeId: R(6), rating: 1 }],
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    const written = mealItemSchema.parse(response.json());
+    const shape = written.items!.map((i) =>
+      i.kind === "storage"
+        ? `storage ${i.storageItemId}: ${i.parts.map((p) => (p.kind === "recipe" ? `${p.recipe.id} ${p.rating}` : p.food.id)).join(",")}`
+        : i.kind === "recipe"
+          ? `recipe ${i.recipe.id} inferred=${i.inferred}`
+          : `food ${i.food.id}`,
+    );
+    // The fresh Broccoli Egg reads as X(12)'s part, its stars kept.
+    expect(shape).toEqual([`recipe ${R(1)} inferred=true`, `storage ${X(12)}: ${R(6)} 1`]);
+    await expectExact(db);
+    // The answer's ids are current: sending it back is a no-op, not a 409.
+    const again = await inject("PATCH", `/api/meals/${M(16)}`, { items: plateInputFromItems(written.items!) });
+    expect(again.statusCode, again.body).toBe(200);
+    expect(mealItemSchema.parse(again.json()).items).toEqual(written.items);
+  });
+
+  it("the same for a FOOD orphan: fresh Carrot on M(17), whose X(14) held Banana and holds Carrot now", async () => {
+    const meal = mealItemSchema.parse((await inject("GET", `/api/meals/${M(17)}`)).json());
+    expect(meal.items!.some((i) => i.kind === "food" && i.food.id === F(3))).toBe(false);
+    const response = await inject("PATCH", `/api/meals/${M(17)}`, {
+      items: [...plateInputFromItems(meal.items!), { kind: "food", foodId: F(3), rating: 2 }],
+    });
+    expect(response.statusCode, response.body).toBe(200);
+    const written = mealItemSchema.parse(response.json());
+    expect(written.items!.some((i) => i.kind === "storage" && i.storageItemId === X(14))).toBe(true);
+    await expectExact(db);
+  });
+
+  // Verifier p1-c3: random edits over every backfilled shape (orphans, pass C
+  // groups, split container recipes, merged serves, pre-0020 containers),
+  // which the fresh-fixture walk above cannot reach. Ids are random, so a
+  // walk's path differs from run to run (without the trailing heal, about one
+  // walk in six hits the orphan case the two tests above pin exactly).
+  it.each([77, 4096])("random edits over every backfilled corpus shape keep invariants 1-5, a no-op heal and chair §10.1 (seed %i)", async (start) => {
+    let seed = start;
+    const random = () => {
+      seed = (seed + 0x6d2b79f5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const pick = <T,>(list: readonly T[]): T => list[Math.floor(random() * list.length)]!;
+    const stars = () => (random() < 0.3 ? null : 1 + Math.floor(random() * 5));
+    const foodPool = Array.from({ length: 9 }, (_, i) => F(i + 1));
+    const recipePool = Array.from({ length: 6 }, (_, i) => R(i + 1));
+    const boxes = Array.from({ length: 18 }, (_, i) => X(i + 1));
+    const statuses: Record<string, number> = {};
+    const mealIds = async () => (await db.select({ id: schema.meals.id }).from(schema.meals).orderBy(asc(schema.meals.id))).map((r) => r.id);
+    for (let step = 0; step < 200; step += 1) {
+      const ids = await mealIds();
+      const op = random();
+      let label: string;
+      let status: number;
+      if (op < 0.45 && ids.length > 0) {
+        label = "edit";
+        const id = pick(ids);
+        const meal = mealItemSchema.parse((await inject("GET", `/api/meals/${id}`)).json());
+        let input = plateInputFromItems(meal.items!);
+        const c = random();
+        if (c < 0.25 && input.length > 1) input.splice(Math.floor(random() * input.length), 1);
+        else if (c < 0.4) input.push({ kind: "food", foodId: pick(foodPool), rating: stars() });
+        else if (c < 0.5) input.push({ kind: "recipe", recipeId: pick(recipePool), rating: stars() });
+        else if (c < 0.6) input.push({ kind: "storage", storageItemId: pick(boxes), servings: 1 + Math.floor(random() * 2) });
+        else if (c < 0.75) input = input.map((it) => (it.kind === "storage" && random() < 0.5 ? { ...it, servings: 1 + Math.floor(random() * 3) } : it));
+        else if (c < 0.85) input = input.map((it) => (it.kind === "recipe" && random() < 0.5 ? { ...it, leftOutFoodIds: [] } : it));
+        else input = input.map((it) => (it.kind === "storage" ? it : { ...it, rating: stars() }));
+        status = (await inject("PATCH", `/api/meals/${id}`, { items: input })).statusCode;
+      } else if (op < 0.6 && ids.length > 0) {
+        label = "rate";
+        const id = pick(ids);
+        const rows = await db.select({ id: schema.mealItems.id }).from(schema.mealItems).where(eq(schema.mealItems.mealId, id));
+        status = (await inject("PATCH", `/api/meals/${id}`, { itemRatings: Object.fromEntries(rows.filter(() => random() < 0.5).map((r) => [r.id, stars()])) }))
+          .statusCode;
+      } else if (op < 0.8 && ids.length > 0) {
+        label = "legacy patch";
+        const id = pick(ids);
+        const current = (await db.select({ foodId: schema.mealFoods.foodId }).from(schema.mealFoods).where(eq(schema.mealFoods.mealId, id))).map(
+          (r) => r.foodId,
+        );
+        const shape = random();
+        const payload =
+          shape < 0.3
+            ? { foodIds: [...current.filter(() => random() < 0.8), pick(foodPool)] }
+            : shape < 0.55
+              ? { recipeIds: recipePool.filter(() => random() < 0.3) }
+              : shape < 0.85
+                ? { foodRatings: { [pick(current)]: stars() } }
+                : { notes: `s${step}` };
+        status = (await inject("PATCH", `/api/meals/${id}`, payload)).statusCode;
+      } else if (op < 0.95) {
+        label = "legacy serve";
+        status = (await inject("POST", "/api/storage/serve", { babyId: B1, parts: [{ storageItemId: pick(boxes), servings: 1 }] })).statusCode;
+      } else {
+        label = "delete";
+        status = ids.length > 0 ? (await inject("DELETE", `/api/meals/${pick(ids)}`)).statusCode : 0;
+      }
+      statuses[`${label} ${status}`] = (statuses[`${label} ${status}`] ?? 0) + 1;
+      expect([0, 200, 201, 204, 400, 409], `${label} at step ${step}`).toContain(status);
+      try {
+        await expectExact(db);
+        for (const meal of (await loadMeals(db, await mealIds())).values()) {
+          for (const item of meal.items ?? []) if (item.kind === "recipe" && item.inferred) expect(item.leftOut, item.id).toEqual([]);
+        }
+      } catch (error) {
+        throw new Error(`after ${label} (${status}) at step ${step}: ${String(error)}`);
+      }
+    }
+    for (const label of ["edit 200", "rate 200", "legacy patch 200", "legacy serve 201"]) {
+      expect(statuses[label] ?? 0, `${label} in ${JSON.stringify(statuses)}`).toBeGreaterThan(0);
+    }
+  }, 1_800_000);
 });

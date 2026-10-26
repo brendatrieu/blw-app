@@ -50,9 +50,11 @@ const EXPOSURE_LIMIT = 50;
  * the meal through a recipe item: a cup of milk is a serving, milk cooked
  * into the egg bake is not, and a cup of milk beside the egg bake is
  * (SPEC-NOTE 864). An INFERRED food row (rebuilt from a meal logged before
- * the plate) keeps the legacy reading as well: it counts only when the food
- * is not a CURRENT ingredient of any of the meal's recipes, the same rule as
- * `MealFood.inRecipe`, so the ladder is identical across the migration.
+ * the plate) keeps the legacy reading as well: it counts only when no recipe
+ * row of the meal counted the food (`counted_food_ids`). At the rebuild that
+ * is exactly "not a current ingredient of the meal's recipes" (the legacy
+ * rule), so the ladder is identical across the migration; after it, the
+ * snapshot is frozen, so a later recipe edit never moves that meal (901b).
  * Every other non-counting tag (butter, sesame oil) never counts.
  * `reads: "legacy"` is that legacy rule alone, for a database from before
  * `meal_items` (services/meals.ts `MealReads`).
@@ -69,7 +71,10 @@ function countsAsServing(mealId: AnyColumn, foodId: AnyColumn, reads: MealReads)
       : sql`exists (
     select 1 from ${mealItems}
     where ${mealItems.mealId} = ${mealId} and ${mealItems.foodId} = ${foodId}
-      and (not ${mealItems.inferred} or not ${inARecipe})
+      and (not ${mealItems.inferred} or not exists (
+        select 1 from ${mealItems} r
+        where r.meal_id = ${mealId} and ${foodId} = any(r.counted_food_ids)
+      ))
   )`;
   return sql<boolean>`(${foodAllergens.countsTowardProgress} or (${foodAllergens.countsWhenAlone} and ${alone}))`;
 }

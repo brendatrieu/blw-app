@@ -337,8 +337,8 @@ never leaves it, and the script prints only counts and pass/fail.
 
    ```bash
    docker run -d --name blw-dry -e POSTGRES_USER=blw -e POSTGRES_DB=blw -e POSTGRES_PASSWORD=dry -p 55432:5432 postgres:17-alpine
-   sleep 5   # let it start
-   gunzip -c blw-<STAMP>.sql.gz | docker exec -i blw-dry psql -U blw blw
+   until docker exec blw-dry pg_isready -h 127.0.0.1 -U blw; do sleep 1; done   # TCP: up only after init
+   gunzip -c blw-<STAMP>.sql.gz | docker exec -i blw-dry psql -v ON_ERROR_STOP=1 -U blw blw
    docker exec blw-dry psql -U blw blw -tc 'SELECT count(*) FROM drizzle.__drizzle_migrations'   # 24 = at 0023
    docker exec blw-dry psql -U blw blw -c 'ANALYZE'   # what autovacuum would do a minute later
    ```

@@ -368,6 +368,60 @@ describe("migration 0024 — meal_items backfill", () => {
     expect(pass).toBe(true);
   });
 
+  // Verifier p1-c3 pins (901b): the dry run is the push gate, so each of its
+  // PASS conditions must FAIL it on its own, and the comparison must count a
+  // reorder, a one-sided key and a changed value, but not object key order.
+  it("comparePlateParity counts a reorder, a one-sided key and a changed value; ignores object key order", () => {
+    const before = { o: { a: [1, 2], b: { x: 1, y: 2 }, c: 1 } };
+    expect(comparePlateParity(before, { o: { a: [1, 2], b: { y: 2, x: 1 }, c: 1 } })).toEqual({ o: 0 });
+    expect(comparePlateParity(before, { o: { a: [2, 1], b: { x: 1, y: 2 }, c: 1 } })).toEqual({ o: 1 });
+    expect(comparePlateParity(before, { o: { a: [1, 2], b: { x: 1, y: 2 } } })).toEqual({ o: 1 });
+    expect(comparePlateParity(before, { o: { a: [1, 2], b: { x: 1, y: 2 }, c: 1, d: 0 } })).toEqual({ o: 1 });
+    expect(comparePlateParity(before, { o: { a: [1, 2], b: { x: 1, y: 3 }, c: 1 } })).toEqual({ o: 1 });
+  });
+
+  describe("the dry run FAILs on each condition alone", () => {
+    const line = (lines: string[], prefix: string) => lines.find((l) => l.startsWith(prefix));
+    const allMatch = (lines: string[]) => lines.filter((l) => l.startsWith("mismatches ")).every((l) => l.endsWith(": 0"));
+
+    it("a mismatch (a meal's notes changed under the migration)", async () => {
+      const before = await recordDryRun(db);
+      await boot();
+      await client.exec(`UPDATE "meals" SET "notes" = 'changed' WHERE "id" = '${M(1)}'`);
+      const { pass, lines } = await compareDryRun(db, before, await recordDryRun(db));
+      expect(line(lines, "mismatches meals:")).toBe("mismatches meals: 1");
+      expect(line(lines, "drift after")).toBe("drift after the second heal: 0 meals");
+      expect(line(lines, "invariant violations")).toBe("invariant violations: 0");
+      expect(pass).toBe(false);
+    });
+
+    it("an invariant violation (an item's stars disagree with the legacy mirror)", async () => {
+      const before = await recordDryRun(db);
+      await boot();
+      const after = await recordDryRun(db);
+      // After both records: they still agree and nothing drifts; only invariant 3 breaks.
+      await client.exec(`UPDATE "meal_items" SET "rating" = CASE WHEN "rating" = 1 THEN 2 ELSE 1 END
+                          WHERE "id" = (SELECT "id" FROM "meal_items" WHERE "meal_id" = '${M(1)}' AND "rating" IS NOT NULL ORDER BY "position" LIMIT 1)`);
+      const { pass, lines } = await compareDryRun(db, before, after);
+      expect(allMatch(lines)).toBe(true);
+      expect(line(lines, "drift after")).toBe("drift after the second heal: 0 meals");
+      expect(line(lines, "invariant violations")).not.toBe("invariant violations: 0");
+      expect(pass).toBe(false);
+    });
+
+    it("an item no backfill pass accounts for (an extra unrated copy of a food row)", async () => {
+      const before = await recordDryRun(db);
+      await boot();
+      await client.exec(`INSERT INTO "meal_items" ("meal_id", "position", "food_id")
+                         SELECT "meal_id", 99, "food_id" FROM "meal_items" WHERE "meal_id" = '${M(1)}' AND "food_id" IS NOT NULL ORDER BY "position" LIMIT 1`);
+      const { pass, lines } = await compareDryRun(db, before, await recordDryRun(db));
+      expect(allMatch(lines)).toBe(true);
+      expect(line(lines, "drift after")).toBe("drift after the second heal: 0 meals");
+      expect(line(lines, "invariant violations")).toBe("invariant violations: 0");
+      expect(pass).toBe(false);
+    });
+  });
+
   it("ends 0024 with MEAL_ITEMS_BACKFILL verbatim", async () => {
     const file = await fs.readFile(path.join(migrationsFolder, "0024_meal_items.sql"), "utf8");
     expect(file.split("--> statement-breakpoint").at(-1)!.trim()).toBe(MEAL_ITEMS_BACKFILL.trim());
