@@ -9,6 +9,7 @@
 // of the legacy tables, and returns plain JSON (it holds names and ids, so a
 // dry run keeps it on the machine that made it and prints only
 // `comparePlateParity`'s counts).
+import { isDeepStrictEqual } from "node:util";
 import { sql, type SQL } from "drizzle-orm";
 import { fetchBabyProfileSummary } from "../ai/tools.js";
 import { buildExposureSnapshot } from "../ai/snapshot.js";
@@ -142,14 +143,20 @@ export async function recordPlateParity(db: Database): Promise<ParityRecord> {
   return JSON.parse(JSON.stringify(record)) as ParityRecord;
 }
 
-/** Mismatched keys per observable (a key missing on one side counts). */
+/**
+ * Mismatched keys per observable (a key missing on one side counts). Values
+ * compare as JSON VALUES: arrays in order, object keys in any order. Rating
+ * summaries are id-keyed objects built in row order, and within one meal the
+ * legacy rows had no order (as the old client sent them) while the plate's
+ * are by position; every client reads them by key (verifier p1-c1).
+ */
 export function comparePlateParity(before: ParityRecord, after: ParityRecord): Record<string, number> {
   const out: Record<string, number> = {};
   for (const name of new Set([...Object.keys(before), ...Object.keys(after)])) {
     const a = before[name] ?? {};
     const b = after[name] ?? {};
     out[name] = [...new Set([...Object.keys(a), ...Object.keys(b)])].filter(
-      (key) => !(key in a) || !(key in b) || JSON.stringify(a[key]) !== JSON.stringify(b[key]),
+      (key) => !(key in a) || !(key in b) || !isDeepStrictEqual(a[key], b[key]),
     ).length;
   }
   return out;

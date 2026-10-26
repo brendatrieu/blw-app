@@ -19,7 +19,7 @@ import { MEAL_ITEMS_BACKFILL, findDriftedMeals, healMealItems, healMealRecipes }
 import { checkPlateInvariants, comparePlateParity, recordPlateParity } from "../db/plateParity.js";
 import { compareDryRun, describeRecord, recordDryRun, type DryRunRecord } from "../db/plateDryRun.js";
 import * as schema from "../db/schema.js";
-import { B1, B2, F, M, R, X, plateCorpusSql } from "./plateCorpus.js";
+import { B1, B2, F, M, R, X, id, plateCorpusSql } from "./plateCorpus.js";
 
 const migrationsFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../drizzle");
 
@@ -319,6 +319,53 @@ describe("migration 0024 — meal_items backfill", () => {
     );
     expect(names.length).toBeGreaterThan(60);
     for (const { v } of names) expect(printed).not.toContain(String(v));
+  });
+
+  // Verifier p1-c1 blocker 1: the old client rated every food of a loose
+  // meal and sent them in its own order; the legacy reader returns a meal's
+  // rows in whatever order the engine leaves ties, the plate by name. The
+  // rating summaries then hold the same values with their ids in another
+  // order, which is no difference (every client reads them by key).
+  it("the dry run passes when a baby's latest meal rated two loose foods sent Z before A (or A before Z)", async () => {
+    // Two new babies with one meal each, alike but for the order sent: B3's
+    // Yogurt then Broccoli, B4's Broccoli then Yogurt. Whatever the engine
+    // does with ties, it does the same to both, so one of them reads back
+    // in another order than the plate's.
+    const [B3, B4] = [id("b", 3), id("b", 4)];
+    await client.exec(`
+      INSERT INTO "babies" ("id", "user_id", "name", "birth_date") VALUES
+        ('${B3}', '${U}', 'Sky', '2025-02-01'), ('${B4}', '${U}', 'Ash', '2025-02-01');
+      INSERT INTO "meals" ("id", "baby_id", "served_at") VALUES
+        ('${M(30)}', '${B3}', '2026-09-03T08:00:00Z'), ('${M(31)}', '${B4}', '2026-09-03T08:00:00Z');
+      INSERT INTO "meal_foods" ("meal_id", "food_id", "rating") VALUES ('${M(30)}', '${F(5)}', 4);
+      INSERT INTO "meal_foods" ("meal_id", "food_id", "rating") VALUES ('${M(30)}', '${F(8)}', 2);
+      INSERT INTO "meal_foods" ("meal_id", "food_id", "rating") VALUES ('${M(31)}', '${F(8)}', 2);
+      INSERT INTO "meal_foods" ("meal_id", "food_id", "rating") VALUES ('${M(31)}', '${F(5)}', 4);
+    `);
+    const record = async () => JSON.parse(JSON.stringify(await recordDryRun(db))) as DryRunRecord;
+    const before = await record();
+    await boot();
+    await boot();
+    const after = await record();
+
+    const foods = (file: DryRunRecord, baby: string) =>
+      (file.record.ratingSummaries![baby] as { foods: Record<string, unknown> }).foods;
+    for (const baby of [B3, B4]) {
+      expect(foods(after, baby)).toEqual(foods(before, baby));
+      expect(foods(after, baby)).toEqual({
+        [F(8)]: { count: 1, average: 2, latest: 2, lastRatedAt: "2026-09-03T08:00:00.000Z" },
+        [F(5)]: { count: 1, average: 4, latest: 4, lastRatedAt: "2026-09-03T08:00:00.000Z" },
+      });
+      // On the plate, Broccoli then Yogurt.
+      expect(Object.keys(foods(after, baby))).toEqual([F(8), F(5)]);
+    }
+    // The case is really here: one of the two read Yogurt first before.
+    expect([B3, B4].map((baby) => Object.keys(foods(before, baby))[0])).toContain(F(5));
+
+    const { pass, lines } = await compareDryRun(db, before, after);
+    expect(lines).toContain("mismatches ratingSummaries: 0");
+    expect(lines.at(-1)).toBe("result: PASS");
+    expect(pass).toBe(true);
   });
 
   it("ends 0024 with MEAL_ITEMS_BACKFILL verbatim", async () => {
