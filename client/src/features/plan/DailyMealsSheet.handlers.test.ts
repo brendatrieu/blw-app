@@ -204,7 +204,7 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     for (const row of rows(tree)) {
       expect(classes(row)).toEqual(expect.arrayContaining(["select-none", "[-webkit-touch-callout:none]"]));
       expect(classes(row)).toEqual(
-        expect.arrayContaining(["transition-[scale,box-shadow]", "duration-[var(--duration-fast)]", "motion-reduce:transition-none"]),
+        expect.arrayContaining(["transition-[scale,box-shadow]", "duration-[var(--duration-fast)]", "ease-[var(--ease-out)]", "motion-reduce:transition-none"]),
       );
     }
     for (const handle of findAll(tree, (el) => String(el.props["aria-label"]).startsWith("Move "))) expect(classes(handle)).toContain("touch-none");

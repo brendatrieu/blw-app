@@ -442,6 +442,8 @@ describe("planning (ledger 903, step 3.1)", () => {
       // A daily meal's id and its row's id name one meal: sent both, it is stale.
       const lunchRow = (await rows()).find((row) => row.name === "Lunch")!;
       expect((await reorder(DAY, [BREAKFAST, LUNCH, lunchRow.id, DINNER])).statusCode).toBe(409);
+      // Every meal once plus one named twice (5 ids for 4 meals) is stale too, not a gap in positions.
+      expect((await reorder(DAY, [BREAKFAST, LUNCH, lunchRow.id, DINNER, SNACK])).statusCode).toBe(409);
       expect((await rows()).map((row) => [row.id, row.position])).toEqual(before);
       // A refused write on a virtual day leaves it virtual.
       expect((await reorder("2026-11-09", [BREAKFAST, LUNCH])).statusCode).toBe(409);
