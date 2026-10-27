@@ -206,8 +206,10 @@ export function useServePlannedMeal(babyId: string | undefined) {
       afterNewMeal(queryClient, babyId, created, emptied, context, celebrate);
     },
     onError: (error) => {
-      // A blocked one tap opens the plate: that is the flow, not a failure.
-      if (!cannotServeAsPlanned(error)) track("meal_save_failed", { via: "plan", kind: failureKind(error), offline: isOffline() });
+      // The answers the card handles are the flow, not failures: a blocked
+      // one tap opens the plate, an already served meal opens that meal, and
+      // a day that is no longer today refetches (VERIFY-p4-c1 #3).
+      if (!cannotServeAsPlanned(error) && servedMealId(error) === null && !isNotToday(error)) track("meal_save_failed", { via: "plan", kind: failureKind(error), offline: isOffline() });
     },
     onSettled: () => invalidateAfterNewMeal(queryClient, babyId),
   });

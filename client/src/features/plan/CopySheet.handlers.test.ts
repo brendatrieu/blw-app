@@ -245,6 +245,22 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
     expect(copyButton(tree).props.disabled).toBe(true);
   });
 
+  it("Copy is off while no ticked meal would be filled: every clash on Keep it and nothing empty (VERIFY-p4-c1 #4)", () => {
+    render();
+    click(dayButtons(again())[3]); // Thu 15: Lunch (empty) starts ticked
+    click(chip(again(), "2026-10-15", "Dinner"));
+    click(chip(again(), "2026-10-15", "Lunch"));
+    let tree = again();
+    expect((h.checks.at(-1) as { targets: unknown[] }).targets).toEqual([{ date: "2026-10-15", slotId: id(62), onClash: "keep" }]);
+    expect(copyButton(tree).props.disabled).toBe(true);
+    click(radio(radioGroups(tree)[0]!, "Replace it"));
+    tree = again();
+    expect(copyButton(tree).props.disabled).toBe(false);
+    click(radio(radioGroups(tree)[0]!, "Keep it"));
+    click(chip(again(), "2026-10-15", "Lunch"));
+    expect(copyButton(again()).props.disabled).toBe(false);
+  });
+
   it("two or more clashes add the pinned count and the All row, which answers them all; mixed answers light neither", () => {
     render();
     click(dayButtons(again())[3]);

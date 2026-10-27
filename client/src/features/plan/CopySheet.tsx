@@ -14,6 +14,7 @@ import {
   allClashChoice,
   canCopyInto,
   copyClashes,
+  copyFillsAny,
   copyKey,
   copyRows,
   copyTargets,
@@ -275,7 +276,7 @@ export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheet
           type="button"
           size="lg"
           className="w-full"
-          disabled={targets.length === 0 || offline || copy.isPending}
+          disabled={!copyFillsAny(targets, clashes) || offline || copy.isPending}
           aria-describedby={offline ? "copy-offline" : undefined}
           onClick={() =>
             copy.mutate(

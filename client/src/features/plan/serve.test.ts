@@ -139,10 +139,12 @@ describe("useServePlannedMeal (today's one tap)", () => {
     expect(h.invalidated).toEqual([BABY]);
   });
 
-  it("a blocked one tap is the flow, not a failure; anything else is measured as one", () => {
+  it("the answers the card handles (blocked, already served, not today) are the flow, not failures; anything else is measured as one (VERIFY-p4-c1 #3)", () => {
     useServePlannedMeal(BABY);
     const onError = h.options[0]!.onError as (error: unknown) => void;
     onError(blocked);
+    onError(served);
+    onError(notToday);
     expect(h.tracked).toEqual([]);
     onError(new ApiError(500, "boom"));
     expect(h.tracked).toEqual([["meal_save_failed", { via: "plan", kind: "5xx", offline: false }]]);

@@ -9,11 +9,12 @@ import { DeletedMark, FoodNames } from "../catalog/components/DeletedMark.js";
 import { FoodPlate } from "../catalog/components/FoodPlate.js";
 import { foodPlate, type Plate } from "../catalog/foodEmoji.js";
 import { useRecipe } from "../catalog/hooks.js";
-import { servePartHint } from "../storage/format.js";
+import { LOCATION_LABEL, servePartHint } from "../storage/format.js";
 import {
   RECIPE_PLATE,
   containerTitle,
   entryKey,
+  goneLine,
   partId,
   partPlates,
   ranOut,
@@ -332,6 +333,7 @@ export function WarningGlyph() {
 export function ContainerItemRow({ entry, dispatch, disabled, planning, onAddToStorage, offline }: RowProps<ContainerEntry>) {
   const key = entryKey(entry);
   const out = !planning && ranOut(entry);
+  const gone = goneLine(entry, Boolean(planning));
   const short = planning ? null : shortOf(entry);
   const removable = entry.savedServings !== undefined || out;
   const servings = out ? null : entry.servings;
@@ -352,7 +354,9 @@ export function ContainerItemRow({ entry, dispatch, disabled, planning, onAddToS
         <ItemPlate plates={partPlates(entry.parts)} size={40} />
         <div className="min-w-32 flex-1">
           <p className={TITLE}>{title}</p>
-          <p className={DETAIL}>{entry.container ? servePartHint(entry.container) : "From storage"}</p>
+          <p className={DETAIL}>
+            {entry.container ? (gone ? LOCATION_LABEL[entry.container.location] : servePartHint(entry.container)) : "From storage"}
+          </p>
         </div>
         {(servings !== null || removable) && (
           <div className="ml-auto flex shrink-0 items-center gap-1.5">
@@ -404,11 +408,18 @@ export function ContainerItemRow({ entry, dispatch, disabled, planning, onAddToS
           Only {short} left.
         </p>
       )}
-      {planning ? null : out ? (
+      {planning ? (
+        gone && (
+          <p className={RUN_OUT_LINE}>
+            <WarningGlyph />
+            {gone}
+          </p>
+        )
+      ) : out ? (
         <>
           <p className={RUN_OUT_LINE}>
             <WarningGlyph />
-            None left. Add a new batch or remove it.
+            {`${gone ?? "None left."} Add a new batch or remove it.`}
           </p>
           {onAddToStorage && (
             <Button

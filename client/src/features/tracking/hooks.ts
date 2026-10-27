@@ -218,17 +218,31 @@ export interface MealCelebrationContext {
  * Snapshot taken just before a new meal is created — whether any meals
  * already existed, and each allergen's status — so `celebrateForNewMeal` can
  * later diff a fresh fetch against it and fire at most one celebration.
- * Taken by `useCreateMeal`, the one mutation that produces a brand-new meal
- * (Log meal and Serve alike).
+ * Taken by both mutations that produce a brand-new meal (`useCreateMeal` and
+ * the plan's one-tap Serve).
+ *
+ * "Any meals" is never read off a list the cache doesn't hold (a cold /plan
+ * has none, VERIFY-p4-c1 #1): only a loaded first page (no `before` cursor)
+ * can say "none", and with no such page one meal is asked for. When that ask
+ * fails the answer is "had meals": a missed "First food logged!" beats a
+ * wrong one.
  */
-export function snapshotMealCelebrationContext(
+export async function snapshotMealCelebrationContext(
   queryClient: QueryClient,
   babyId: string | undefined,
-): MealCelebrationContext | undefined {
+): Promise<MealCelebrationContext | undefined> {
   if (!babyId) return undefined;
   const previousProgress = queryClient.getQueryData<AllergenProgressResponse>(trackingKeys.allergenProgress(babyId));
-  const mealSnapshots = queryClient.getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) });
-  const hadAnyMeals = mealSnapshots.some(([, data]) => (data?.items.length ?? 0) > 0);
+  const firstPages = queryClient
+    .getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) })
+    .filter(([key, data]) => data !== undefined && !(key[2] as MealsQuery | undefined)?.before);
+  if (firstPages.length > 0) {
+    return { previousProgress, hadAnyMeals: firstPages.some(([, data]) => data!.items.length > 0) };
+  }
+  const hadAnyMeals = await fetchMeals(babyId, { limit: 1 }).then(
+    ({ items }) => items.length > 0,
+    () => true,
+  );
   return { previousProgress, hadAnyMeals };
 }
 

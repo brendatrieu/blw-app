@@ -306,7 +306,15 @@ describe("a container", () => {
     click(byLabel(tree(entry), "Remove Broccoli Cheese Egg Muffins"));
     expect(actions).toEqual([{ type: "remove", key: `storage:${MUFFINS.id}` }]);
     // A finished or discarded one too; one the saved meal holds never is.
-    expect(html(containerEntry({ ...MUFFINS, status: "discarded" }))).toContain("None left.");
+    // One still showing servings says the plan card's gone line over its
+    // location alone, never "None left." beside "2 of 6 left" (VERIFY-p4-c1 #5).
+    for (const status of ["finished", "discarded"] as const) {
+      const gone = html(containerEntry({ ...MUFFINS, status }));
+      expect(gone).toContain(`</svg>Marked ${status} in Storage. Add a new batch or remove it.</p>`);
+      expect(gone).toContain(">Fridge</p>");
+      expect(gone).not.toContain("None left.");
+      expect(gone).not.toContain(" left</p>");
+    }
     expect(html({ ...containerEntry({ ...MUFFINS, status: "finished", servingsLeft: 0 }), savedServings: 2 })).not.toContain(
       "None left.",
     );
@@ -376,5 +384,17 @@ describe("planning (Plan a meal, CD-Plan-Meal)", () => {
     expect(empty).not.toContain("None left.");
     expect(empty).toContain('aria-label="Servings: Broccoli Cheese Egg Muffins"');
     expect(empty).not.toContain('aria-label="Remove Broccoli Cheese Egg Muffins"');
+  });
+
+  it("a container marked finished or discarded in Storage says the plan card's gone line, with no count (VERIFY-p4-c1 #5)", () => {
+    for (const servingsLeft of [2, 0]) {
+      const gone = html(containerEntry({ ...MUFFINS, status: "finished", servingsLeft }), true);
+      expect(gone).toContain("</svg>Marked finished in Storage.</p>");
+      expect(gone).toContain(">Fridge</p>");
+      expect(gone).not.toContain(" left</p>");
+      expect(gone).not.toContain("None left.");
+    }
+    expect(html(containerEntry({ ...MUFFINS, status: "discarded" }), true)).toContain("</svg>Marked discarded in Storage.</p>");
+    expect(html(containerEntry(MUFFINS), true)).not.toContain("in Storage.");
   });
 });

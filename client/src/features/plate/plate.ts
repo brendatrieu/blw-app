@@ -16,6 +16,7 @@ import {
   type StorageLocation,
 } from "@blw/shared";
 import { foodPlate, type Plate } from "../catalog/foodEmoji.js";
+import { CONTAINER_GONE_FLAG } from "../plan/copy.js";
 import { containerRecipes, type AddMoreChange, type AddMoreIds } from "../storage/addMoreSelection.js";
 import { clampServings, hasNoServingsLeft, storageItemTitle } from "../storage/format.js";
 import { isBestByBeforePrepared, BEST_BY_BEFORE_PREPARED_MESSAGE } from "../storage/freshness.js";
@@ -166,6 +167,20 @@ export function ranOut(entry: ContainerEntry): boolean {
     container !== undefined &&
     (container.status !== "active" || hasNoServingsLeft(container))
   );
+}
+
+/**
+ * The plan card's gone line ("Marked finished in Storage.") for a container
+ * Storage has closed, so the plate never says "None left." beside "2 of 2
+ * left" (VERIFY-p4-c1 #5): while planning, for any closed container, as the
+ * card does; when serving, for a run-out one that still shows servings (one
+ * at 0 left keeps "None left."). Its row then shows the location alone.
+ */
+export function goneLine(entry: ContainerEntry, planning: boolean): string | null {
+  const { container } = entry;
+  if (!container || container.status === "active") return null;
+  if (!planning && (!ranOut(entry) || hasNoServingsLeft(container))) return null;
+  return CONTAINER_GONE_FLAG[container.status];
 }
 
 /** The first container on the plate that has run out, if any. */

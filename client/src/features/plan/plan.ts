@@ -301,6 +301,14 @@ export function copyClashes(
   });
 }
 
+/** Whether a Copy would fill any meal: an empty one, or a clash set to
+ * Replace it. With every clash on Keep it and nothing empty, Copy stays off,
+ * never "Copied to 0 meals" (VERIFY-p4-c1 #4). */
+export function copyFillsAny(targets: CopyPlanInput["targets"], clashes: readonly CopyClash[]): boolean {
+  const clashed = new Set(clashes.map((clash) => copyKey(clash.date, clash.slotId)));
+  return targets.some((target) => target.onClash === "replace" || !clashed.has(copyKey(target.date, target.slotId)));
+}
+
 /** The All row's answer: everyone's, or null when they differ. */
 export function allClashChoice(clashes: readonly CopyClash[], choices: CopyChoices): "keep" | "replace" | null {
   const picked = new Set(clashes.map((clash) => choices[copyKey(clash.date, clash.slotId)] ?? "keep"));
