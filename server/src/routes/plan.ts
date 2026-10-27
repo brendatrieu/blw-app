@@ -34,6 +34,7 @@ import {
   planFlags,
   planQuerySchema,
   planSlotParamsSchema,
+  reorderPlanDayInputSchema,
   servePlannedMealInputSchema,
   updatePlannedMealInputSchema,
   type CopyPlanResponse,
@@ -578,6 +579,37 @@ export function registerPlanRoutes(app: FastifyInstance, db: Database): void {
       if (body.data.time !== undefined) columns.time = body.data.time;
       if (Object.keys(columns).length > 0) await tx.update(plannedMeals).set(columns).where(eq(plannedMeals.id, slot.id));
       if (body.data.items !== undefined) await writePlannedItems(tx, userId, slot.id, body.data.items);
+    });
+    if (refused) return refuse(reply, refused);
+    return reply.send(await loadDay(db, babyId, date));
+  });
+
+  // -----------------------------------------------------------------------
+  // PUT /api/babies/:babyId/plan/:date/order (⋮ Move up / Move down, 909)
+  // -----------------------------------------------------------------------
+  // That day only (Daily meals stay); served meals move like any other. The
+  // body names every meal of the day once, by its slot id (a client holding
+  // the virtual day may send the daily meals' ids); any other set is stale.
+  app.put("/api/babies/:babyId/plan/:date/order", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = planDateParamsSchema.safeParse(request.params);
+    if (!params.success) return notFound(reply);
+    const body = reorderPlanDayInputSchema.safeParse(request.body);
+    if (!body.success) return badRequest(reply, body.error.flatten());
+    const { babyId, date } = params.data;
+
+    const refused = await planWrite(async (tx) => {
+      await materialize(tx, babyId, date, await lockBaby(tx, babyId, currentUserId(request)));
+      const rows = await tx
+        .select({ id: plannedMeals.id, dailyMealId: plannedMeals.dailyMealId })
+        .from(plannedMeals)
+        .where(and(eq(plannedMeals.babyId, babyId), eq(plannedMeals.date, date)))
+        .for("update");
+      const order = body.data.slotIds.map((slotId) => rows.find((row) => row.id === slotId) ?? rows.find((row) => row.dailyMealId === slotId));
+      const ids = new Set(order.map((row) => row?.id));
+      if (order.length !== rows.length || ids.has(undefined) || ids.size !== rows.length) throw planChanged();
+      for (const [position, row] of order.entries()) {
+        await tx.update(plannedMeals).set({ position }).where(eq(plannedMeals.id, row!.id));
+      }
     });
     if (refused) return refuse(reply, refused);
     return reply.send(await loadDay(db, babyId, date));

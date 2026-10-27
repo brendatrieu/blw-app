@@ -137,6 +137,8 @@ describe("PlanPage (CD-Plan-Day)", () => {
       ["2026-10-14", "2026-10-14", "Breakfast"],
       ["2026-10-14", "2026-10-14", "Lunch 2026-10-14"],
     ]);
+    // ⋮ Move up / Move down (909) work from the shown day's order.
+    expect(cards.map((card) => card.props.daySlotIds)).toEqual(cards.map(() => cards.map((card) => (card.props.meal as { slotId: string }).slotId)));
   });
 
   it("each card's Serve goes to the one-tap hook with its day and today; the in-flight and failed meal are told apart", () => {

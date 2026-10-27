@@ -10,9 +10,10 @@ import type { PlannedMeal, StorageItem } from "@blw/shared";
 const h = vi.hoisted(() => ({
   offline: false,
   // The ⋮ menu's items, rendered inline with their handlers kept.
-  items: [] as Array<{ label: string; onSelect: () => void }>,
+  items: [] as Array<{ label: string; onSelect: () => void; disabled?: boolean }>,
   closed: 0,
   remove: { isPending: false, isError: false, calls: [] as Array<{ input: unknown; options: { onSuccess?: () => void } }> },
+  reorder: { busy: false, isError: false, babyIds: [] as string[], calls: [] as unknown[] },
 }));
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
 vi.mock("../../components/ui/Menu.js", async () => {
@@ -21,8 +22,8 @@ vi.mock("../../components/ui/Menu.js", async () => {
   return {
     Menu: ({ label, children }: { label: string; children: (close: () => void) => unknown }) =>
       createElement("div", { "aria-label": label }, children(() => h.closed++) as never),
-    MenuItem: ({ onSelect, children }: { onSelect: () => void; children: never }) => {
-      h.items.push({ label: renderToStaticMarkup(createElement("span", null, children)).replace(/<[^>]+>/g, ""), onSelect });
+    MenuItem: ({ onSelect, disabled, children }: { onSelect: () => void; disabled?: boolean; children: never }) => {
+      h.items.push({ label: renderToStaticMarkup(createElement("span", null, children)).replace(/<[^>]+>/g, ""), onSelect, disabled });
       return createElement("button", { role: "menuitem" }, children);
     },
   };
@@ -37,6 +38,10 @@ vi.mock("./hooks.js", () => ({
       return h.remove.isError;
     },
   }),
+  useReorderPlanDay: (babyId: string) => {
+    h.reorder.babyIds.push(babyId);
+    return { mutate: (input: unknown) => h.reorder.calls.push(input), busy: h.reorder.busy, isError: h.reorder.isError };
+  },
 }));
 
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
@@ -83,6 +88,10 @@ beforeEach(() => {
   h.remove.isPending = false;
   h.remove.isError = false;
   h.remove.calls.length = 0;
+  h.reorder.busy = false;
+  h.reorder.isError = false;
+  h.reorder.babyIds.length = 0;
+  h.reorder.calls.length = 0;
 });
 
 describe("PlanMealCard (CD-Plan-Day)", () => {
@@ -164,6 +173,65 @@ describe("⋮ (CD-Plan-Day): Copy to… once something is planned, then Remove",
     render({ meal: meal({ items: [] }), onCopy: () => {} });
     render({ meal: meal() });
     expect(h.items.map((item) => item.label)).toEqual(["Remove", "Remove"]);
+  });
+});
+
+describe("⋮ Move up / Move down (909): that day's order, one place at a time", () => {
+  const DAY = [id(40), id(50), id(60)];
+  const labels = () => h.items.map((item) => item.label);
+
+  it("sits between Copy to… and Remove; the first meal has no Move up, the last no Move down, a lone meal neither", () => {
+    render({ meal: meal(), onCopy: () => {}, daySlotIds: DAY });
+    expect(labels()).toEqual(["Copy to…", "Move up", "Move down", "Remove"]);
+    h.items.length = 0;
+    render({ meal: meal({ slotId: id(40) }), daySlotIds: DAY });
+    expect(labels()).toEqual(["Move down", "Remove"]);
+    h.items.length = 0;
+    render({ meal: meal({ slotId: id(60) }), daySlotIds: DAY });
+    expect(labels()).toEqual(["Move up", "Remove"]);
+    h.items.length = 0;
+    render({ meal: meal(), daySlotIds: [id(50)] });
+    render({ meal: meal() });
+    expect(labels()).toEqual(["Remove", "Remove"]);
+  });
+
+  it("sends the whole day in its new order, for this card's baby and day, and closes the menu", () => {
+    render({ meal: meal(), daySlotIds: DAY });
+    h.items.find((item) => item.label === "Move up")!.onSelect();
+    h.items.find((item) => item.label === "Move down")!.onSelect();
+    expect(h.reorder.calls).toEqual([
+      { date: TODAY, slotIds: [id(50), id(40), id(60)] },
+      { date: TODAY, slotIds: [id(40), id(60), id(50)] },
+    ]);
+    expect(h.reorder.babyIds[0]).toBe("baby-1");
+    expect(h.closed).toBe(2);
+    // The day's own list is never changed in place.
+    expect(DAY).toEqual([id(40), id(50), id(60)]);
+  });
+
+  it("a served meal moves too", () => {
+    render({ meal: meal({ served: { mealId: id(90), servedAt: "2026-10-14T11:42:00.000Z" } }), daySlotIds: DAY });
+    expect(labels()).toEqual(["Move up", "Move down", "Remove"]);
+  });
+
+  it("waits offline and while a move is still landing; a failed one says try again", () => {
+    h.offline = true;
+    render({ meal: meal(), daySlotIds: DAY });
+    expect(h.items.filter((item) => item.label.startsWith("Move")).map((item) => item.disabled)).toEqual([true, true]);
+    h.offline = false;
+    h.items.length = 0;
+    h.reorder.busy = true;
+    render({ meal: meal(), daySlotIds: DAY });
+    expect(h.items.filter((item) => item.label.startsWith("Move")).map((item) => item.disabled)).toEqual([true, true]);
+    h.reorder.busy = false;
+    h.items.length = 0;
+    render({ meal: meal(), daySlotIds: DAY });
+    expect(h.items.filter((item) => item.label.startsWith("Move")).map((item) => item.disabled)).toEqual([false, false]);
+    expect(render({ meal: meal(), daySlotIds: DAY })).not.toContain("move that");
+    h.reorder.isError = true;
+    expect(render({ meal: meal(), daySlotIds: DAY })).toContain(
+      '<p role="alert" class="mt-1 text-xs text-[var(--color-danger)]">Couldn&#x27;t move that — try again.</p>',
+    );
   });
 });
 

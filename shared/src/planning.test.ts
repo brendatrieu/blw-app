@@ -14,6 +14,7 @@ import {
   planQuerySchema,
   plannedItemsInputSchema,
   plannedServedAt,
+  reorderPlanDayInputSchema,
   updatePlannedMealInputSchema,
   type PlanFlagContainer,
   type PlanFlagUse,
@@ -123,6 +124,16 @@ describe("plan schemas", () => {
     expect(updatePlannedMealInputSchema.safeParse({ time: null }).success).toBe(true);
     expect(updatePlannedMealInputSchema.safeParse({ items: [] }).success).toBe(true);
     expect(updatePlannedMealInputSchema.safeParse({ name: "Tea" }).success).toBe(true);
+  });
+
+  it("Move up / Move down sends the day's slot ids in order, each once (909)", () => {
+    const ok = (slotIds: unknown) => reorderPlanDayInputSchema.safeParse({ slotIds }).success;
+    expect(ok([id(1), id(2)])).toBe(true);
+    expect(ok([id(1)])).toBe(true);
+    expect(ok([])).toBe(false);
+    expect(ok([id(1), id(1)])).toBe(false);
+    expect(ok(["not-a-uuid"])).toBe(false);
+    expect(ok(Array.from({ length: 101 }, (_, n) => id(n)))).toBe(false);
   });
 
   it("+ Add a meal takes a name, and may bring its time and items by the same rules (step 4.2)", () => {

@@ -186,6 +186,19 @@ export const updatePlannedMealInputSchema = z
   .refine((body) => body.name !== undefined || body.time !== undefined || body.items !== undefined, "Nothing to change");
 export type UpdatePlannedMealInput = z.input<typeof updatePlannedMealInputSchema>;
 
+/** PUT /api/babies/:babyId/plan/:date/order (⋮ Move up / Move down, 909):
+ * every meal of that day, by slot id, in its new order. Anything but the
+ * day's own meals, each once, is 409 plan_changed. Daily meals stay. */
+export const reorderPlanDayInputSchema = z.object({
+  // ponytail: a day has no meal cap; 100 is far past any real day.
+  slotIds: z
+    .array(uuid)
+    .min(1)
+    .max(100)
+    .refine((ids) => new Set(ids).size === ids.length, "Each meal can be sent once"),
+});
+export type ReorderPlanDayInput = z.input<typeof reorderPlanDayInputSchema>;
+
 // ---------------------------------------------------------------------------
 // Flags (SPEC §3.4): computed on every read, never stored
 // ---------------------------------------------------------------------------

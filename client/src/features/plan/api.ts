@@ -6,6 +6,7 @@ import type {
   DailyMealsResponse,
   PlanDay,
   PlanResponse,
+  ReorderPlanDayInput,
   ServePlannedMealResponse,
   UpdatePlannedMealInput,
 } from "@blw/shared";
@@ -37,6 +38,11 @@ export function addPlannedMeal(babyId: string, date: string, input: AddPlannedMe
 /** ⋮ Remove: one meal off one day (a meal logged from it stays logged). */
 export function removePlannedMeal(babyId: string, date: string, slotId: string): Promise<PlanDay> {
   return apiDelete<PlanDay>(`${base(babyId)}/plan/${date}/meals/${slotId}`);
+}
+
+/** ⋮ Move up / Move down: that day's meals, every slot id, in the new order. */
+export function reorderPlanDay(babyId: string, date: string, input: ReorderPlanDayInput): Promise<PlanDay> {
+  return apiPut<PlanDay>(`${base(babyId)}/plan/${date}/order`, input);
 }
 
 /** Copy to… (`dryRun` asks only what it would do, with its warnings). */

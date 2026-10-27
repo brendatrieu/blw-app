@@ -12,6 +12,8 @@ const h = vi.hoisted(() => ({
   tracked: [] as Array<[string, unknown]>,
   removeImpl: (async () => ({})) as (...args: unknown[]) => Promise<unknown>,
   weekData: {} as Record<string, unknown>,
+  mutating: [] as unknown[],
+  mutatingCount: 0,
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -23,6 +25,10 @@ vi.mock("@tanstack/react-query", () => ({
   useQueries: ({ queries }: { queries: Array<Record<string, unknown>> }) => {
     h.queries.push(...queries);
     return queries.map((query) => ({ data: h.weekData[(query.queryKey as string[])[2]!] }));
+  },
+  useIsMutating: (filters: { mutationKey: unknown }) => {
+    h.mutating.push(filters.mutationKey);
+    return h.mutatingCount;
   },
   useMutation: (options: Record<string, (...args: never[]) => unknown>) => {
     h.mutations.push(options);
@@ -66,6 +72,7 @@ import {
   usePlan,
   usePlanWeeks,
   useRemovePlannedMeal,
+  useReorderPlanDay,
   useSaveDailyMeals,
   useSavePlannedMeal,
 } from "./hooks.js";
@@ -151,6 +158,24 @@ describe("useRemovePlannedMeal", () => {
       await expect(run()).rejects.toBe(error);
     }
     expect(isPlanChanged(new ApiError(404, "plan_changed", { error: "plan_changed" }))).toBe(false);
+  });
+});
+
+describe("useReorderPlanDay (909)", () => {
+  it("PUTs the day's order, stays pending until every plan has refetched, and is busy while any move is landing", async () => {
+    h.mutating.length = 0;
+    h.mutatingCount = 0;
+    expect(useReorderPlanDay(BABY).busy).toBe(false);
+    const options = h.mutations.at(-1)!;
+    expect(options.mutationKey).toEqual(["planReorder"]);
+    expect(h.mutating).toEqual([["planReorder"]]);
+    await (options.mutationFn as (input: unknown) => Promise<unknown>)({ date: "2026-10-14", slotIds: ["a", "b"] });
+    expect(h.calls).toEqual([["PUT", [`/api/babies/${BABY}/plan/2026-10-14/order`, { slotIds: ["a", "b"] }]]]);
+    const settled = (options.onSettled as () => unknown)();
+    expect(settled).toBeInstanceOf(Promise);
+    expect(h.invalidated).toEqual([["plan"]]);
+    h.mutatingCount = 1;
+    expect(useReorderPlanDay(BABY).busy).toBe(true);
   });
 });
 

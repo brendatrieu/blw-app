@@ -188,6 +188,7 @@ export function PlanPage() {
                     serving={oneTap.pendingSlot === meal.slotId}
                     serveFailed={oneTap.failedSlot === meal.slotId}
                     onCopy={() => setCopying(meal)}
+                    daySlotIds={day.meals.map((entry) => entry.slotId)}
                   />
                 ))}
               </ul>

@@ -107,6 +107,8 @@ describe("planning (ledger 903, step 3.1)", () => {
     inject("POST", `/api/babies/${baby}/plan/${date}/meals`, body, user);
   const remove = (date: string, slotId: string, baby = babyId, user = parent) =>
     inject("DELETE", `/api/babies/${baby}/plan/${date}/meals/${slotId}`, undefined, user);
+  const reorder = (date: string, slotIds: string[], baby = babyId, user: TestUser | null = parent) =>
+    inject("PUT", `/api/babies/${baby}/plan/${date}/order`, { slotIds }, user);
   async function planned(date: string, slotId: string, items: PlannedItemInput[]): Promise<PlanDay> {
     const response = await put(date, slotId, { items });
     expect(response.statusCode, response.body).toBe(200);
@@ -210,6 +212,7 @@ describe("planning (ledger 903, step 3.1)", () => {
     it("every plan write locks the baby row FOR NO KEY UPDATE before any other lock or write", async () => {
       const writes = [
         () => put(DAY, LUNCH, { items: [{ kind: "food", foodId: fx.egg.id }] }),
+        () => reorder(DAY, [SNACK, BREAKFAST, LUNCH, DINNER]),
         () => add(DAY, { name: "Supper" }),
         () => remove(DAY, SNACK),
         () => inject("PUT", `/api/babies/${babyId}/daily-meals`, { meals: [{ name: "Tea" }] }),
@@ -387,12 +390,74 @@ describe("planning (ledger 903, step 3.1)", () => {
       expect(readded.meals.map((entry) => [entry.name, entry.position])).toEqual([["Tea", 0]]);
     });
 
+    it("Move up / Move down (909): the day's meals in a new order, that day only; a virtual day materializes; Daily meals stay", async () => {
+      // A virtual day, by the daily meals' ids: it materializes, then moves.
+      const moved = await reorder(DAY, [BREAKFAST, DINNER, LUNCH, SNACK]);
+      expect(moved.statusCode, moved.body).toBe(200);
+      const echo = planDaySchema.parse(moved.json());
+      expect(echo.planned).toBe(true);
+      expect(echo.meals.map((entry) => [entry.name, entry.position])).toEqual([
+        ["Breakfast", 0],
+        ["Dinner", 1],
+        ["Lunch", 2],
+        ["Snack", 3],
+      ]);
+      expect((await day()).meals.map((entry) => entry.name)).toEqual(["Breakfast", "Dinner", "Lunch", "Snack"]);
+      expect((await rows()).map((row) => row.name)).toEqual(["Breakfast", "Dinner", "Lunch", "Snack"]);
+      // The next day and Daily meals keep their order.
+      expect((await day("2026-11-03")).meals.map((entry) => entry.name)).toEqual(["Breakfast", "Lunch", "Dinner", "Snack"]);
+      const plan = planResponseSchema.parse((await getPlan(DAY)).json());
+      expect(plan.dailyMeals.map((entry) => entry.name)).toEqual(["Breakfast", "Lunch", "Dinner", "Snack"]);
+
+      // Now by row ids, mixed with a daily meal's id; an added meal moves too.
+      const supper = meal(planDaySchema.parse((await add(DAY, { name: "Supper" })).json()), "Supper");
+      const ids = Object.fromEntries((await day()).meals.map((entry) => [entry.name, entry.slotId]));
+      const again = await reorder(DAY, [supper.slotId, ids.Breakfast!, LUNCH, ids.Dinner!, ids.Snack!]);
+      expect(again.statusCode, again.body).toBe(200);
+      expect((await day()).meals.map((entry) => entry.name)).toEqual(["Supper", "Breakfast", "Lunch", "Dinner", "Snack"]);
+    });
+
+    it("a served meal moves like any other (909)", async () => {
+      const lunch = meal(await planned(DAY, LUNCH, [{ kind: "food", foodId: fx.egg.id }]), "Lunch");
+      const logged = await inject("POST", `/api/babies/${babyId}/meals`, { items: [{ kind: "food", foodId: fx.egg.id }] });
+      const mealId = logged.json<{ id: string }>().id;
+      await db.update(schema.plannedMeals).set({ servedMealId: mealId }).where(eq(schema.plannedMeals.id, lunch.slotId));
+      expect((await reorder(DAY, [LUNCH, BREAKFAST, DINNER, SNACK])).statusCode).toBe(200);
+      const first = (await day()).meals[0]!;
+      expect(first).toMatchObject({ name: "Lunch", position: 0, served: { mealId } });
+    });
+
+    it("a stale set of meals is 409 plan_changed and writes nothing; a bad body is 400 (909)", async () => {
+      await planned(DAY, LUNCH, [{ kind: "food", foodId: fx.egg.id }]);
+      const before = (await rows()).map((row) => [row.id, row.position]);
+      for (const slotIds of [
+        [BREAKFAST, LUNCH, DINNER], // one missing (another device added or kept one)
+        [BREAKFAST, LUNCH, DINNER, SNACK, MISSING], // one too many
+        [BREAKFAST, LUNCH, DINNER, MISSING], // an unknown one
+      ]) {
+        const refused = await reorder(DAY, slotIds);
+        expect(refused.statusCode, refused.body).toBe(409);
+        expect(refused.json()).toMatchObject({ error: "plan_changed" });
+      }
+      // A daily meal's id and its row's id name one meal: sent both, it is stale.
+      const lunchRow = (await rows()).find((row) => row.name === "Lunch")!;
+      expect((await reorder(DAY, [BREAKFAST, LUNCH, lunchRow.id, DINNER])).statusCode).toBe(409);
+      expect((await rows()).map((row) => [row.id, row.position])).toEqual(before);
+      // A refused write on a virtual day leaves it virtual.
+      expect((await reorder("2026-11-09", [BREAKFAST, LUNCH])).statusCode).toBe(409);
+      expect((await day("2026-11-09")).planned).toBe(false);
+      expect((await reorder(DAY, [])).statusCode).toBe(400);
+      expect((await reorder(DAY, [LUNCH, LUNCH, DINNER, SNACK])).statusCode).toBe(400);
+    });
+
     it("every write is the caller's own baby: 404 for a stranger or an unknown baby, and nothing is written", async () => {
       const stranger = await signUpUser(app, "Stranger");
       const attempts = [
         put(DAY, LUNCH, { name: "Tea" }, babyId, stranger),
         add(DAY, { name: "Tea" }, babyId, stranger),
         remove(DAY, LUNCH, babyId, stranger),
+        reorder(DAY, [BREAKFAST, LUNCH, DINNER, SNACK], babyId, stranger),
+        reorder(DAY, [BREAKFAST, LUNCH, DINNER, SNACK], MISSING),
         put(DAY, LUNCH, { name: "Tea" }, MISSING),
         add(DAY, { name: "Tea" }, "not-a-uuid"),
         put("2026-02-30", LUNCH, { name: "Tea" }),
@@ -400,6 +465,7 @@ describe("planning (ledger 903, step 3.1)", () => {
       for (const attempt of attempts) expect((await attempt).statusCode).toBe(404);
       expect(await db.select().from(schema.plannedDays)).toEqual([]);
       expect((await inject("PUT", `/api/babies/${babyId}/plan/${DAY}/meals/${LUNCH}`, { name: "Tea" }, null)).statusCode).toBe(401);
+      expect((await reorder(DAY, [BREAKFAST, LUNCH, DINNER, SNACK], babyId, null)).statusCode).toBe(401);
     });
   });
 

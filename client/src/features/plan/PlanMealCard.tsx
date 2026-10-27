@@ -9,8 +9,8 @@ import { useIsOffline } from "../../lib/online.js";
 import { DeletedMark } from "../catalog/components/DeletedMark.js";
 import { ItemPlate, WarningGlyph } from "../plate/PlateItemRow.js";
 import { timeLabel } from "../tracking/components/ServeLogList.js";
-import { useRemovePlannedMeal } from "./hooks.js";
-import { flagNotes, mealTimeLabel, plannedLines } from "./plan.js";
+import { useRemovePlannedMeal, useReorderPlanDay } from "./hooks.js";
+import { flagNotes, mealTimeLabel, moveRow, plannedLines } from "./plan.js";
 
 export interface PlanMealCardProps {
   babyId: string;
@@ -26,6 +26,9 @@ export interface PlanMealCardProps {
   serveFailed?: boolean;
   /** ⋮ Copy to…, offered once something is planned (there is nothing to copy before). */
   onCopy?: () => void;
+  /** The day's meals in order, by slot id: ⋮ Move up (not on the first) and
+   * Move down (not on the last), that day only (909). */
+  daySlotIds?: readonly string[];
 }
 
 /** Whether a meal offers Serve: unserved, something on it, not in the future. */
@@ -48,14 +51,23 @@ export function ServedChip({ servedAt }: { servedAt: string }) {
 /**
  * One meal of a plan day (CD-Plan-Day, CD-Plan-After-Copy): its name, its
  * optional time and "Served {time}", one line per planned item, a flag box
- * per flagged container, and ⋮ (Copy to… once something is planned, Remove).
+ * per flagged container, and ⋮ (Copy to… once something is planned, Move
+ * up / Move down within the day, Remove).
  * Tapping the card opens the meal (`/plan/:date/:slotId`). A card with at
  * most one line and no flags keeps its buttons beside the whole card, as
  * the board's Morning snack does; a longer one keeps them on its name's row.
  */
-export function PlanMealCard({ babyId, date, today, meal, onServe, serving = false, serveFailed = false, onCopy }: PlanMealCardProps) {
+export function PlanMealCard({ babyId, date, today, meal, onServe, serving = false, serveFailed = false, onCopy, daySlotIds = [] }: PlanMealCardProps) {
   const [removing, setRemoving] = useState(false);
   const offline = useIsOffline();
+  const reorder = useReorderPlanDay(babyId);
+  const at = daySlotIds.indexOf(meal.slotId);
+  const moves = (
+    [
+      ["Move up", -1],
+      ["Move down", 1],
+    ] as const
+  ).filter(([, step]) => at >= 0 && daySlotIds[at + step] !== undefined);
   const serves = Boolean(onServe) && canServe(date, today, meal);
   const offlineId = `serve-offline-${meal.slotId}`;
   const lines = plannedLines(meal);
@@ -107,6 +119,19 @@ export function PlanMealCard({ babyId, date, today, meal, onServe, serving = fal
                 Copy to…
               </MenuItem>
             )}
+            {moves.map(([label, step]) => (
+              // Every write waits offline (SPEC §4.4).
+              <MenuItem
+                key={label}
+                disabled={offline || reorder.busy}
+                onSelect={() => {
+                  reorder.mutate({ date, slotIds: moveRow([...daySlotIds], at, at + step) });
+                  close();
+                }}
+              >
+                {label}
+              </MenuItem>
+            ))}
             <MenuItem
               onSelect={() => {
                 setRemoving(true);
@@ -155,6 +180,11 @@ export function PlanMealCard({ babyId, date, today, meal, onServe, serving = fal
       {serves && offline && (
         <p id={offlineId} className="mt-1 text-xs text-[var(--color-text-muted)]">
           You're offline.
+        </p>
+      )}
+      {reorder.isError && (
+        <p role="alert" className="mt-1 text-xs text-[var(--color-danger)]">
+          Couldn't move that — try again.
         </p>
       )}
       {serves && serveFailed && !offline && (

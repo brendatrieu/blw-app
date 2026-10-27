@@ -1,7 +1,7 @@
-import { keepPreviousData, useMutation, useQueries, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useIsMutating, useMutation, useQueries, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import type { CopyPlanInput, DailyMealsInput, PlanDay, PlannedItemInput, PlannedMeal } from "@blw/shared";
-import { addPlannedMeal, copyPlan, fetchPlan, removePlannedMeal, saveDailyMeals, servePlannedMeal, updatePlannedMeal } from "./api.js";
+import { addPlannedMeal, copyPlan, fetchPlan, removePlannedMeal, reorderPlanDay, saveDailyMeals, servePlannedMeal, updatePlannedMeal } from "./api.js";
 import { addDays, deviceTimeZone, planDaysAhead } from "./plan.js";
 import { useCelebration } from "../../components/ui/Celebration.js";
 import { ApiError } from "../../lib/api.js";
@@ -82,6 +82,26 @@ export function useRemovePlannedMeal(babyId: string) {
       }),
     onSettled: () => refetchPlans(queryClient),
   });
+}
+
+const REORDER_KEY = ["planReorder"] as const;
+
+/**
+ * ⋮ Move up / Move down (909): the day's meals in their new order. It stays
+ * pending until the plan has refetched, and `busy` holds every card's Move
+ * until then, so the next move is worked out from the order as saved. A 409
+ * plan_changed (the day changed elsewhere) fails like any other ("try again")
+ * once the refetch shows the day as it is now.
+ */
+export function useReorderPlanDay(babyId: string) {
+  const queryClient = useQueryClient();
+  const busy = useIsMutating({ mutationKey: REORDER_KEY }) > 0;
+  const mutation = useMutation({
+    mutationKey: REORDER_KEY,
+    mutationFn: ({ date, slotIds }: { date: string; slotIds: string[] }) => reorderPlanDay(babyId, date, { slotIds }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["plan"] }),
+  });
+  return { ...mutation, busy };
 }
 
 /** The 409 a plan write gets once its meal is served (`items` can't change). */
