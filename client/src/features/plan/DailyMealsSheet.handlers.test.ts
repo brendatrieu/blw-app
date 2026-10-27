@@ -178,20 +178,39 @@ describe("Daily meals (CD-Daily-Meals)", () => {
         children: [0, 1, 2, 3].map((index) => ({ getBoundingClientRect: () => ({ top: 100 + index * 52, bottom: 152 + index * 52 }) })),
       };
       (label(render(), "Move Breakfast").props.onPointerDown as (event: unknown) => void)({ button: 0 });
-      expect(String(rows(render())[0]!.props.className)).toContain("bg-[var(--color-bg-inset)]");
+      // While dragged it lifts (910): the shadow token and a slight scale.
+      expect(String(rows(render())[0]!.props.className)).toContain("scale-[1.03]");
+      expect(String(rows(render())[0]!.props.className)).toContain("shadow-[var(--shadow-lg)]");
+      expect(rows(render()).slice(1).map((row) => String(row.props.className).includes("scale-[1.03]"))).toEqual([false, false, false]);
       listeners.get("pointermove")!({ clientY: 230 });
       expect(names(render())).toEqual(["Lunch", "Dinner", "Breakfast", "Snack"]);
       listeners.get("pointermove")!({ clientY: 10 });
       expect(names(render())).toEqual(["Breakfast", "Lunch", "Dinner", "Snack"]);
       listeners.get("pointerup")!({});
       expect([...listeners.keys()]).toEqual([]);
-      expect(String(rows(render())[0]!.props.className)).not.toContain("bg-[var(--color-bg-inset)]");
+      expect(String(rows(render())[0]!.props.className)).not.toContain("scale-[1.03]");
+      expect(String(rows(render())[0]!.props.className)).not.toContain("shadow-[var(--shadow-lg)]");
       // Only the main button starts a drag.
       (label(render(), "Move Lunch").props.onPointerDown as (event: unknown) => void)({ button: 2 });
       expect(listeners.size).toBe(0);
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it("a long press on a row selects no text and opens no callout; its fields stay selectable; the lift eases, never under reduced motion (910)", () => {
+    const tree = render();
+    const classes = (el: El) => String(el.props.className).split(/\s+/);
+    for (const row of rows(tree)) {
+      expect(classes(row)).toEqual(expect.arrayContaining(["select-none", "[-webkit-touch-callout:none]"]));
+      expect(classes(row)).toEqual(
+        expect.arrayContaining(["transition-[scale,box-shadow]", "duration-[var(--duration-fast)]", "motion-reduce:transition-none"]),
+      );
+    }
+    for (const handle of findAll(tree, (el) => String(el.props["aria-label"]).startsWith("Move "))) expect(classes(handle)).toContain("touch-none");
+    const fields = findAll(tree, (el) => el.type === "input");
+    expect(fields).toHaveLength(8);
+    for (const field of fields) expect(classes(field)).toEqual(expect.arrayContaining(["select-text", "[-webkit-touch-callout:default]"]));
   });
 
   it("keeps 1 to 12 meals: × is off on the last one, + Add a meal at twelve", () => {

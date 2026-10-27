@@ -72,7 +72,8 @@ export function nativeTimeInput(value: string | null, onChange: (time: string | 
         // Already open, or not offered: the field still works.
       }
     },
-    className: "absolute inset-0 h-full w-full cursor-pointer opacity-0",
+    // A field even inside a row that selects nothing (910).
+    className: "absolute inset-0 h-full w-full cursor-pointer opacity-0 select-text [-webkit-touch-callout:default]",
   } as const;
 }
 
@@ -81,6 +82,15 @@ const ADD_BUTTON =
   "flex min-h-12 w-full items-center justify-center rounded-[var(--radius-md)] border-[1.5px] border-dashed border-[var(--color-border)] text-[15px] font-semibold text-[var(--color-accent)] disabled:opacity-60";
 
 const FIELD_BOX = "h-11 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text)]";
+
+/** A row never starts a text selection or the iOS callout on a long press
+ * (910: holding the handle to drag selected "Add time"); its fields still
+ * do, as fields. The row being dragged lifts: a shadow and a slight scale,
+ * eased in and out, instant under reduced motion. */
+const ROW =
+  "relative flex flex-col py-1 select-none [-webkit-touch-callout:none] not-first:border-t not-first:border-[var(--color-divider)] transition-[scale,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)] motion-reduce:transition-none";
+const ROW_LIFTED = "z-10 scale-[1.03] rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-lg)]";
+const FIELD_TEXT = "select-text [-webkit-touch-callout:default]";
 
 export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meals: readonly DailyMeal[]; onDone: () => void }) {
   const [rows, setRows] = useState<DailyMealRow[]>(() => dailyMealRows(meals));
@@ -137,12 +147,7 @@ export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meal
         {rows.map((row, index) => {
           const error = errors[row.key];
           return (
-            <li
-              key={row.key}
-              className={`relative flex flex-col py-1 not-first:border-t not-first:border-[var(--color-divider)] ${
-                dragging === row.key ? "rounded-[var(--radius-md)] bg-[var(--color-bg-inset)]" : ""
-              }`}
-            >
+            <li key={row.key} className={`${ROW} ${dragging === row.key ? ROW_LIFTED : ""}`}>
               {/* 2px gaps under 360 so the name keeps room for "Breakfast". */}
               <div className="flex items-center gap-0.5 min-[360px]:gap-1">
                 <button
@@ -187,7 +192,7 @@ export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meal
                   aria-invalid={error ? true : undefined}
                   aria-describedby={error ? fieldId(row, "error") : undefined}
                   onChange={(event) => update(row.key, { name: event.target.value })}
-                  className={`${FIELD_BOX} min-w-0 flex-1 px-2 text-base font-bold outline-none focus:border-[var(--color-accent)] ${
+                  className={`${FIELD_BOX} ${FIELD_TEXT} min-w-0 flex-1 px-2 text-base font-bold outline-none focus:border-[var(--color-accent)] ${
                     error ? "border-[var(--color-danger)]" : ""
                   }`}
                 />
