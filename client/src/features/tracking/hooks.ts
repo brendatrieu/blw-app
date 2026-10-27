@@ -222,8 +222,9 @@ export interface MealCelebrationContext {
  * the plan's one-tap Serve).
  *
  * "Any meals" is never read off a list the cache doesn't hold (a cold /plan
- * has none, VERIFY-p4-c1 #1): only a loaded first page (no `before` cursor)
- * can say "none", and with no such page one meal is asked for. When that ask
+ * has none, VERIFY-p4-c1 #1): a loaded first page (no `before` cursor) with
+ * meals says "yes"; otherwise one meal is asked for, since an empty cached
+ * page may be stale (VERIFY-p44-c1). When that ask
  * fails the answer is "had meals": a missed "First food logged!" beats a
  * wrong one.
  */
@@ -236,9 +237,9 @@ export async function snapshotMealCelebrationContext(
   const firstPages = queryClient
     .getQueriesData<MealsResponse>({ queryKey: trackingKeys.meals(babyId) })
     .filter(([key, data]) => data !== undefined && !(key[2] as MealsQuery | undefined)?.before);
-  if (firstPages.length > 0) {
-    return { previousProgress, hadAnyMeals: firstPages.some(([, data]) => data!.items.length > 0) };
-  }
+  // A cached first page WITH meals settles it. An empty one may be stale (a
+  // meal logged on another device while it sat on disk), so it is re-asked.
+  if (firstPages.some(([, data]) => data!.items.length > 0)) return { previousProgress, hadAnyMeals: true };
   const hadAnyMeals = await fetchMeals(babyId, { limit: 1 }).then(
     ({ items }) => items.length > 0,
     () => true,

@@ -42,14 +42,25 @@ describe("the first-meal answer (VERIFY-p4-c1 #1)", () => {
     expect(context?.hadAnyMeals).toBe(false);
   });
 
-  it("a loaded first page answers without a request; a cursor page alone does not", async () => {
+  it("a loaded first page WITH meals answers without a request; a cursor page alone does not", async () => {
     const client = new QueryClient();
     client.setQueryData([...trackingKeys.meals(BABY), { limit: 100, before: "2026-10-01T00:00:00.000Z" }], { items: [] });
     expect((await snapshotMealCelebrationContext(client, BABY))?.hadAnyMeals).toBe(true);
     expect(h.calls).toBe(1);
-    client.setQueryData([...trackingKeys.meals(BABY), { limit: 100 }], { items: [] });
-    expect((await snapshotMealCelebrationContext(client, BABY))?.hadAnyMeals).toBe(false);
+    client.setQueryData([...trackingKeys.meals(BABY), { limit: 100 }], { items: [{ id: "m1" }] });
+    expect((await snapshotMealCelebrationContext(client, BABY))?.hadAnyMeals).toBe(true);
     expect(h.calls).toBe(1);
+  });
+
+  // VERIFY-p44-c1: an empty first page saved to disk can be stale (a meal
+  // logged on another device since), so it is checked with the server.
+  it("an EMPTY cached first page is re-asked: a meal logged elsewhere means no celebration", async () => {
+    const client = new QueryClient();
+    client.setQueryData([...trackingKeys.meals(BABY), { limit: 100 }], { items: [] });
+    expect((await snapshotMealCelebrationContext(client, BABY))?.hadAnyMeals).toBe(true);
+    expect(h.calls).toBe(1);
+    h.serverMeals = [];
+    expect((await snapshotMealCelebrationContext(client, BABY))?.hadAnyMeals).toBe(false);
   });
 
   it("an answer it can't get is 'had meals', never a wrong celebration", async () => {
