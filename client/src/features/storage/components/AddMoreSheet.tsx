@@ -123,8 +123,9 @@ interface AddMoreSheetProps {
  * The plate's "Add more", its only way to add an item (MR2 boards, ledger
  * 789; plan SPEC §5): one search box over three tabs — "In storage"
  * (containers), "Recipes" and "Foods" made fresh, each of the last two
- * opening with this baby's recent ones, then A–Z. Typing searches all three
- * at once: "All" (grouped) or one kind, keeping the text (ledger 794). It
+ * opening with this baby's recent ones, then A–Z. Typing searches the tab
+ * the parent picked, or all three ("All", grouped) before they pick one; the
+ * row then offers All or one kind, keeping the text (ledger 794, 920). It
  * opens with the plate ticked, each in its own row (ledger 878); ticks are
  * kept across tabs and searches until "Done", pinned at the bottom, which
  * adds the new ones and takes off the unticked ones. Nothing on the plate
@@ -137,11 +138,13 @@ interface AddMoreSheetProps {
 export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClose }: AddMoreSheetProps) {
   const [tab, setTab] = useState<AddMoreTab>("storage");
   const [query, setQuery] = useState("");
-  // Which kind a search shows; every new search starts on "All".
+  // Which kind a search shows. A new search stays in the tab the parent
+  // picked (owner, 2026-11-03); before they pick one it covers "All".
   const [searchTab, setSearchTab] = useState<AddMoreTab | "all">("all");
   const [itemIds, setItemIds] = useState<string[]>(() => [...serving.itemIds]);
   const [foodIds, setFoodIds] = useState<string[]>(() => [...serving.foodIds]);
   const [recipeIds, setRecipeIds] = useState<string[]>(() => [...serving.recipeIds]);
+  const [tabPicked, setTabPicked] = useState(false);
   const storage = useStorageItems("active");
   const foods = useFoods();
   // `fresh` like Log meal's picker (item 353): a recipe written moments ago
@@ -233,7 +236,7 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
         type="search"
         value={query}
         onChange={(event) => {
-          if (!q && event.target.value.trim()) setSearchTab("all");
+          if (!q && event.target.value.trim()) setSearchTab(tabPicked ? tab : "all");
           setQuery(event.target.value);
         }}
         placeholder="Search storage, recipes, foods…"
@@ -253,7 +256,10 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
           value={q ? searchTab : tab}
           onChange={(next) => {
             if (q || next === "all") setSearchTab(next);
-            else setTab(next);
+            else {
+              setTab(next);
+              setTabPicked(true);
+            }
           }}
         />
       </div>

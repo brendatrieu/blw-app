@@ -298,10 +298,9 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     expect(titles(render())).toEqual(["Whole Milk"]);
   });
 
-  it("typing searches all three at once, grouped In storage, Recipes, Foods, under a highlighted All (ledger 794)", () => {
+  it("before a tab is picked, typing searches all three at once, grouped In storage, Recipes, Foods, under a highlighted All (ledger 794, 920)", () => {
     reset([BASE, SALMON, PEAR_FOODS]);
-    goTo("recipe");
-    expect(listKey(render())).toBe("recipe");
+    expect(listKey(render())).toBe("storage");
     type("oat");
     const tree = render();
     expect(tabRow(tree)).toEqual({ labels: ["All", "In storage", "Recipes", "Foods"], value: "all" });
@@ -325,7 +324,27 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     expect(html(render())).toContain("No matches");
 
     type("   "); // only spaces is no search: the usual tabs, on the one open before
-    expect(tabRow(render())).toEqual({ labels: ["In storage", "Recipes", "Foods"], value: "recipe" });
+    expect(tabRow(render())).toEqual({ labels: ["In storage", "Recipes", "Foods"], value: "storage" });
+  });
+
+  it("a search started on a picked tab stays in it, the default tab included; All widens it (owner 2026-11-03, ledger 920)", () => {
+    const kinds = [
+      ["food", ["Oats"]],
+      ["recipe", ["Apple Oatmeal", "Oat Pancakes"]],
+      ["storage", ["Salmon Oat Cakes"]], // tapping the tab it opened on counts as picking it
+    ] as const;
+    for (const [kind, shown] of kinds) {
+      reset([BASE, SALMON, PEAR_FOODS]);
+      goTo(kind);
+      type("oat");
+      const tree = render();
+      expect(tabRow(tree)).toEqual({ labels: ["All", "In storage", "Recipes", "Foods"], value: kind });
+      expect(titles(tree)).toEqual(shown);
+      expect(listKey(tree)).toBe(`search-${kind}`);
+    }
+    goTo("all");
+    expect(titles(render())).toEqual(["Salmon Oat Cakes", "Apple Oatmeal", "Oat Pancakes", "Oats"]);
+    expect(one(render(), Input).props.value).toBe("oat");
   });
 
   it("a kind tapped while searching narrows to it and keeps the text; All goes back to grouped (ledger 794)", () => {
@@ -361,7 +380,7 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     expect(one(render(), Input).props.value).toBe("salmon");
   });
 
-  it("clearing the search brings back the three tabs on the one open before it; the next search starts on All (ledger 794)", () => {
+  it("clearing the search brings back the three tabs on the one open before it; the next search starts on that tab (ledger 794, 920)", () => {
     reset([BASE, SALMON, PEAR_FOODS]);
     goTo("food");
     type("o");
@@ -372,10 +391,10 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     expect(titles(tree)).toEqual(["Banana", "Oats", "Pear", "Whole Milk"]);
     expect(listKey(tree)).toBe("food");
 
-    type("p");
+    type("p"); // not the Recipes narrowing from the last search
     tree = render();
-    expect(tabRow(tree).value).toBe("all");
-    expect(titles(tree)).toEqual(["Pear purée cubes", "Apple Oatmeal", "Oat Pancakes", "Pear"]);
+    expect(tabRow(tree).value).toBe("food");
+    expect(titles(tree)).toEqual(["Pear"]);
   });
 
   it("keeps picks across tabs and searches, and adds them all at once, in the order picked", () => {
@@ -395,7 +414,8 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     tick("Banana");
     goTo("recipe");
     tick("Oat Pancakes");
-    type("banana"); // the food picked on another tab shows ticked in a search
+    type("banana"); // a search stays on Recipes (920), so widen it to All:
+    goTo("all"); // the food picked on another tab shows ticked in a search
     expect(rows(render()).map((row) => [row.props.title, row.props.checked])).toEqual([["Banana", true]]);
     goTo("food"); // and when the search is narrowed to it
     expect(rows(render()).map((row) => [row.props.title, row.props.checked])).toEqual([["Banana", true]]);
@@ -446,6 +466,7 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     goTo("food");
     expect(titles(render())).toEqual(["Pear", "Banana", "Oats", "Pear", "Whole Milk"]);
     type("pancakes");
+    goTo("all"); // the search started on Foods (920)
     expect(titles(render())).toEqual(["Oat Pancakes", "Oat Pancakes"]); // the ticked container, then the recipe fresh
   });
 
@@ -482,6 +503,8 @@ describe("AddMoreSheet opens with the plate ticked (ledger 878)", () => {
     goTo("food");
     expect(ticked(render())).toEqual(["Banana", "Banana"]); // Recent and All foods
     type("a");
+    expect(ticked(render())).toEqual(["Banana"]); // the search stays on Foods (920)
+    goTo("all");
     expect(ticked(render())).toEqual(["Avocado", "Salmon Oat Cakes", "Red Lentil Dal", "Banana"]);
     expect(one(render(), Button).props.disabled).toBe(true);
   });
