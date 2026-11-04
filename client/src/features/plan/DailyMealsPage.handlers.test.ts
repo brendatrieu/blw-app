@@ -454,14 +454,17 @@ describe("Daily meals is a page (ledger 924)", () => {
       page();
       vi.setSystemTime(new Date("2026-10-19T00:01:00Z")); // Monday
       page();
+      // A third render: a latch that set the week during render (verifier c1, M930-2) shows here.
+      page();
       expect(h.planArgs).toEqual([
+        ["baby-1", "2026-10-12", "2026-10-18"],
         ["baby-1", "2026-10-12", "2026-10-18"],
         ["baby-1", "2026-10-12", "2026-10-18"],
       ]);
       // A page opened on Monday asks for Monday's week (the clock is read).
       h.store.states.length = 0;
       page();
-      expect(h.planArgs[2]).toEqual(["baby-1", "2026-10-19", "2026-10-25"]);
+      expect(h.planArgs[3]).toEqual(["baby-1", "2026-10-19", "2026-10-25"]);
     } finally {
       vi.useRealTimers();
     }

@@ -194,6 +194,109 @@ describe("MealDetailPage Edit/Delete row", () => {
   });
 });
 
+describe("MealDetailPage ratings (item 574, ledger 902)", () => {
+  const RATED: MealItem = {
+    ...MEAL,
+    reactionNote: "rash",
+    items: [
+      { kind: "food", id: "33333333-3333-4333-8333-333333333331", food: MEAL.foods[0]!, rating: 5 },
+      { kind: "food", id: "33333333-3333-4333-8333-333333333332", food: MEAL.foods[1]!, rating: null },
+    ],
+  };
+
+  it("shows one star line per item ABOVE the reaction note, with no Rating heading (CD-Meal-Page)", () => {
+    const html = renderMeal(RATED);
+    const stars = html.indexOf('aria-label="Rating for Avocado"');
+    expect(stars).toBeGreaterThan(-1);
+    expect(stars).toBeLessThan(html.indexOf("Reaction:"));
+    expect(html).not.toContain("Rating<!-- --> <span");
+    expect(html).toContain('aria-label="Rating for Avocado"');
+    expect(html).toContain('aria-label="Rating for Chicken"');
+    expect(html).toMatch(/aria-checked="true" aria-label="5 stars"/);
+  });
+
+  it("shows one line, for the recipe, on a meal of one recipe", () => {
+    const html = renderMeal({
+      ...MEAL,
+      recipeId: "r1",
+      recipeTitle: "Iron-Rich Purée",
+      recipeRating: 3,
+      items: [
+        {
+          kind: "recipe",
+          id: "33333333-3333-4333-8333-333333333333",
+          recipe: { id: "44444444-4444-4444-8444-444444444444", title: "Iron-Rich Purée" },
+          leftOut: [],
+          inferred: true,
+          rating: 3,
+        },
+      ],
+    });
+    expect(html.match(/role="radiogroup"/g)).toHaveLength(1);
+    expect(html).toContain('aria-label="Rating for Iron-Rich Purée"');
+    expect(html).toMatch(/aria-checked="true" aria-label="3 stars"/);
+  });
+});
+
+describe("MealDetailPage, several recipes (ledger 761)", () => {
+  const SEVERAL: MealItem = {
+    ...MEAL,
+    recipeId: "r1",
+    recipeTitle: "Lentil Patties",
+    recipeRating: 4,
+    recipes: [
+      { id: "r1", title: "Lentil Patties", rating: 4 },
+      { id: "r2", title: "Salmon Cakes", rating: 5 },
+    ],
+    foods: [
+      { id: "f-egg", slug: "egg", name: "Egg", category: "protein", storageItemId: null, rating: null, inRecipe: true },
+      { id: "f-brc", slug: "broccoli", name: "Broccoli", category: "veg", storageItemId: null, rating: 3, inRecipe: false },
+      { id: "f-oat", slug: "oats", name: "Oats", category: "grain", storageItemId: null, rating: 2, inRecipe: true },
+      { id: "f-ban", slug: "banana", name: "Banana", category: "fruit", storageItemId: null, rating: null, inRecipe: false },
+    ],
+  };
+
+  it("keeps the 🍳 title plate, and lists the recipes as items, not 🍳 lines", () => {
+    const html = renderMeal(SEVERAL).replace(/<!-- -->/g, "");
+    expect(/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]).toContain(">🍳</span>");
+    expect(html).not.toContain("🍳 Lentil Patties");
+  });
+
+  // Ledger 902: each item rates itself; an ingredient of a recipe has no line
+  // of its own unless it was put on the plate on its own too.
+  it("rates each item in plate order: the recipes, then the foods put on the plate on their own", () => {
+    const item = (n: number) => `55555555-5555-4555-8555-55555555555${n}`;
+    const html = renderMeal({
+      ...SEVERAL,
+      items: [
+        { kind: "recipe", id: item(1), recipe: { id: item(5), title: "Lentil Patties" }, leftOut: [], inferred: true, rating: 4 },
+        { kind: "recipe", id: item(2), recipe: { id: item(6), title: "Salmon Cakes" }, leftOut: [], inferred: true, rating: 5 },
+        { kind: "food", id: item(3), food: SEVERAL.foods[1]!, rating: 3 },
+        { kind: "food", id: item(4), food: SEVERAL.foods[3]!, rating: null },
+      ],
+    });
+    const labels = [...html.matchAll(/role="radiogroup" aria-label="Rating for ([^"]+)"/g)].map((m) => m[1]);
+    expect(labels).toEqual(["Lentil Patties", "Salmon Cakes", "Broccoli", "Banana"]);
+  });
+});
+
+describe("MealDetailPage title plate for a custom food (item 673)", () => {
+  it("uses the food's own emoji and category, not just its slug", () => {
+    const html = renderMeal(
+      {
+        ...MEAL,
+        foods: [
+          { id: "food-c", slug: "grandmas-congee-x1y2z3", name: "Grandma's congee", category: "grain", storageItemId: null, emoji: "🥘" },
+        ],
+      },
+      [],
+    );
+    expect(/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]).toMatch(
+      /^<span aria-hidden="true" class="flex shrink-0 [^"]*" style="[^"]*background:var\(--color-plate-grain\)">🥘<\/span>/,
+    );
+  });
+});
+
 // Plan SPEC §5 / CD-Meal-Page: the items on the plate ("Counted as tried" gone, ledger 928).
 describe("MealDetailPage items (CD-Meal-Page, ledger 902)", () => {
   const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;

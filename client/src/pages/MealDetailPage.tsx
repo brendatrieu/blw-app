@@ -60,9 +60,6 @@ export function MealDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
   const meals = useMeals(activeBaby?.id, { limit: 100 });
-  // Item 334 / ledger 554: each meal food carries its own allergen slugs.
-  // History must not depend on the foods LIST, which hides a deleted food —
-  // a past meal keeps that food's allergen chips.
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   // Item 574: the stars are this page's one inline edit; each tap saves that
   // one item's stars (PATCH `itemRatings`, ledger 902), and shows the tapped
