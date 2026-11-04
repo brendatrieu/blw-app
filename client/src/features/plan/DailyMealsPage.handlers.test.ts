@@ -447,6 +447,26 @@ describe("Daily meals is a page (ledger 924)", () => {
     }
   });
 
+  it("keeps the week it opened on across midnight: Sunday 23:59, then Monday 00:01, asks for the same week (ledger 930)", () => {
+    h.plan = { data: { dailyMeals: DAILY }, isError: false, isFetching: false };
+    vi.useFakeTimers({ now: new Date("2026-10-18T23:59:00Z"), toFake: ["Date"] }); // a Sunday, UTC (deviceTimeZone is mocked)
+    try {
+      page();
+      vi.setSystemTime(new Date("2026-10-19T00:01:00Z")); // Monday
+      page();
+      expect(h.planArgs).toEqual([
+        ["baby-1", "2026-10-12", "2026-10-18"],
+        ["baby-1", "2026-10-12", "2026-10-18"],
+      ]);
+      // A page opened on Monday asks for Monday's week (the clock is read).
+      h.store.states.length = 0;
+      page();
+      expect(h.planArgs[2]).toEqual(["baby-1", "2026-10-19", "2026-10-25"]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("switching the baby (header chip) waits for that baby's fresh list and starts a new form, keyed by baby (verifier c2)", () => {
     const forms = (tree: El) => findAll(tree, (el) => el.type === DailyMealsForm) as Array<El & { key: unknown }>;
     h.plan = { data: { dailyMeals: DAILY }, isError: false, isFetching: false };
