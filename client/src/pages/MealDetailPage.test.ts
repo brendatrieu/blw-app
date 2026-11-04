@@ -379,6 +379,9 @@ describe("MealDetailPage items (CD-Meal-Page, ledger 902)", () => {
     expect(out).not.toContain("Counted as tried");
     expect(out).not.toContain("meal-counted");
     expect(out).not.toContain("var(--color-allergen-soft)");
+    // Garlic is one of the meal's foods but on no plate item: only a food list could show it.
+    expect(PASTA_MEAL.foods.map((food) => food.name)).toContain("Garlic");
+    expect(out).not.toContain("Garlic");
     expect(items()).toHaveLength(4);
     expect(out).toContain("Left out: Cashews");
     // The Food log tap still opens Edit; the page's own Edit is unchanged.

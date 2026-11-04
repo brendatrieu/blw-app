@@ -213,8 +213,11 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     withTime(review, "Brunch", (sheet) => sheet.onSave!("12:00"));
     expect(names(render(review))).toEqual(["Breakfast", "Snack", "Lunch", "Brunch", "Dinner"]);
     expect(focusNext().current).toBe("dm-added-1-time");
-    // A cleared time stays where it is; the untimed meal then never moves.
+    // A cleared time stays where it is, and the focus returns to it; the untimed meal then never moves.
+    focusNext().current = null;
     withTime(review, "Brunch", (sheet) => sheet.onClear!());
+    expect(timeSheet(render(review))).toBeUndefined();
+    expect(focusNext().current).toBe("dm-added-1-time");
     withTime(review, "Lunch", (sheet) => sheet.onSave!("15:00"));
     expect(names(render(review))).toEqual(["Breakfast", "Snack", "Brunch", "Dinner", "Lunch"]);
     // A drag or arrow keys afterwards still win, and that order is saved.
@@ -299,6 +302,29 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     expect(savedTimes).toEqual([]);
     (findAll(tree, (el) => el.type === Button && text(el.props.children) === "Save")[0]!.props.onClick as () => void)();
     expect(savedTimes).toEqual(["12:05"]);
+
+    // The sheet's own controls (verifier c2): Cancel only closes, even after the
+    // wheel turned (an odd 09:39 must not become 09:40); Clear time only clears;
+    // Escape and an outside tap are the Sheet's onClose, the same as Cancel.
+    const calls: string[] = [];
+    const props = {
+      time: "09:39",
+      onSave: (time: string) => calls.push(`save ${time}`),
+      onClear: () => calls.push("clear"),
+      onClose: () => calls.push("close"),
+    };
+    h.store.states.length = 0;
+    h.store.i = 0;
+    tree = (TimeSheet as unknown as (p: unknown) => El)(props);
+    expect(tree.props.onClose).toBe(props.onClose);
+    (columns(tree)[0]!.props.onIndexChange as (i: number) => void)(11);
+    h.store.i = 0;
+    tree = (TimeSheet as unknown as (p: unknown) => El)(props);
+    const tap = (name: string) => (findAll(tree, (el) => el.type === Button && text(el.props.children) === name)[0]!.props.onClick as () => void)();
+    tap("Cancel");
+    expect(calls).toEqual(["close"]);
+    tap("Clear time");
+    expect(calls).toEqual(["close", "clear"]);
   });
 
   it("arrow keys on a handle move its meal one place, and stop at either end", () => {
