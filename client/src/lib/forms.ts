@@ -33,13 +33,17 @@ export function firstInvalidField<K extends string>(errors: FormErrors<K>, order
  * Focus the control with this id, if there is one. Deliberately a no-op with
  * no `document` (the renderToString tests run in node, with no DOM env) and
  * with an unknown/absent id, so a form whose invalid field has no focusable
- * control still shows its message rather than throwing.
+ * control still shows its message rather than throwing. A control that already
+ * has the focus is left alone.
  */
 export function focusFieldById(id: string | null | undefined): void {
   if (!id) return;
   if (typeof document === "undefined") return;
   const element = document.getElementById(id);
-  if (element && typeof element.focus === "function") element.focus();
+  // Already focused: leave it. focus() again restarts a part-typed segment of
+  // Chrome's time input (ledger 925, verifier c2: 11:45 typed became 14:05).
+  if (!element || element === document.activeElement) return;
+  if (typeof element.focus === "function") element.focus();
 }
 
 /**

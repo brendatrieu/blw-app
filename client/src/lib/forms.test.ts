@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   firstInvalidField,
   focusFieldById,
@@ -67,6 +67,23 @@ describe("focusFieldById", () => {
     expect(() => {
       focusFieldById(null);
     }).not.toThrow();
+  });
+
+  it("focuses the control, but leaves one that already has the focus alone (ledger 925, verifier c2)", () => {
+    const focused: string[] = [];
+    const field = (id: string) => ({ id, focus: () => focused.push(id) });
+    const time = field("dm-snack-time");
+    const name = field("dm-snack-name");
+    const fields: Record<string, unknown> = { [time.id]: time, [name.id]: name };
+    vi.stubGlobal("document", { activeElement: time, getElementById: (id: string) => fields[id] ?? null });
+    try {
+      focusFieldById(time.id); // a moved row's time field mid-typing
+      focusFieldById(name.id);
+      focusFieldById("missing");
+      expect(focused).toEqual([name.id]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

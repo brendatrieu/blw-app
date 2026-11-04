@@ -361,6 +361,22 @@ describe("Daily meals is a page (ledger 924)", () => {
     }
   });
 
+  it("switching the baby (header chip) waits for that baby's fresh list and starts a new form, keyed by baby (verifier c2)", () => {
+    const forms = (tree: El) => findAll(tree, (el) => el.type === DailyMealsForm) as Array<El & { key: unknown }>;
+    h.plan = { data: { dailyMeals: DAILY }, isError: false, isFetching: false };
+    expect(forms(page()).map((form) => [form.key, form.props.babyId])).toEqual([["baby-1", "baby-1"]]);
+    // Baby 2's week is cached (Home's Today's plan) and refetching: not baby 1's form, nor baby 2's stale copy.
+    const OTHER = [{ id: DEFAULT_DAILY_MEALS[1]!.id, name: "Lunch", time: null }];
+    h.baby = { activeBaby: { id: "baby-2" }, isLoading: false };
+    h.plan = { data: { dailyMeals: OTHER }, isError: false, isFetching: true };
+    expect(forms(page())).toHaveLength(0);
+    h.plan = { data: { dailyMeals: OTHER }, isError: false, isFetching: false };
+    expect(forms(page()).map((form) => [form.key, form.props.babyId, form.props.meals])).toEqual([["baby-2", "baby-2", OTHER]]);
+    // And baby 2's later refetch keeps its form, as for baby 1.
+    h.plan = { data: { dailyMeals: OTHER }, isError: false, isFetching: true };
+    expect(forms(page())).toHaveLength(1);
+  });
+
   it("Save returns to the plan the way Back does (history first, so the plan keeps its week); nothing else leaves", () => {
     h.plan = { data: { dailyMeals: DAILY }, isError: false, isFetching: false };
     const form = findAll(page(), (el) => el.type === DailyMealsForm)[0]!;

@@ -35,16 +35,18 @@ import {
  */
 export function DailyMealsPage() {
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
-  const today = localDate(new Date(), deviceTimeZone());
-  const week = weekOf(today);
-  // Today's week: the same cache entry the plan opens on.
+  // Today's week as of opening: the same cache entry the plan opens on, kept
+  // across midnight so a page left open doesn't drop to an uncached week.
+  const [week] = useState(() => weekOf(localDate(new Date(), deviceTimeZone())));
   const plan = usePlan(activeBaby?.id, week[0]!, week[6]!);
   const goBack = useBackNavigate("/plan");
-  // Shown once the list is fresh, then kept: a later refetch (back to the
-  // foreground, back online) must not reset the parent's unsaved edits.
-  const [shown, setShown] = useState(false);
+  // Shown once this baby's list is fresh, then kept: a later refetch (back to
+  // the foreground, back online) must not reset the parent's unsaved edits.
+  // Per baby: switching the header chip's baby waits for that baby's fresh
+  // list and starts a new form (keyed), never saving one baby's list to another.
+  const [shownFor, setShownFor] = useState<string | null>(null);
   const fresh = Boolean(plan.data) && !plan.isFetching;
-  if (fresh && !shown) setShown(true);
+  if (fresh && activeBaby && shownFor !== activeBaby.id) setShownFor(activeBaby.id);
 
   if (!babyLoading && !activeBaby) return <Navigate to="/plan" replace />;
   return (
@@ -52,8 +54,8 @@ export function DailyMealsPage() {
       <PageHeader title="Daily meals" leading={<BackButton fallback="/plan" />} />
       {/* Only the list as saved now: a copy restored from the offline cache
           waits for its refetch (offline the fetch pauses, so it shows). */}
-      {plan.data && activeBaby && (shown || fresh) ? (
-        <DailyMealsForm babyId={activeBaby.id} meals={plan.data.dailyMeals} onDone={goBack} />
+      {plan.data && activeBaby && (shownFor === activeBaby.id || fresh) ? (
+        <DailyMealsForm key={activeBaby.id} babyId={activeBaby.id} meals={plan.data.dailyMeals} onDone={goBack} />
       ) : plan.isError ? (
         <p className="text-sm text-[var(--color-danger)]">Couldn't load the plan.</p>
       ) : (

@@ -62,6 +62,8 @@ describe("placeByTime (ledger 925: a time places its meal by the clock)", () => 
     expect(names(placeByTime([m("Lunch"), m("Breakfast", "08:00"), m("Dinner", "17:30")], 1))).toEqual(["Lunch", "Breakfast", "Dinner"]);
     // An equal time AFTER it is out of order (equal times go after the existing one).
     expect(names(placeByTime([m("New", "17:30"), m("Dinner", "17:30")], 0))).toEqual(["Dinner", "New"]);
+    // An equal time BEFORE it is in order: it stays (verifier c2 N2).
+    expect(names(placeByTime([m("Lunch", "12:00"), m("Snack"), m("Tea", "12:00")], 2))).toEqual(["Lunch", "Snack", "Tea"]);
   });
 
   it("keeps its position when no other meal has a time; returns a new list, never the input", () => {
