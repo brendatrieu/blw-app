@@ -63,9 +63,6 @@ function headingOf(html: string): string {
 
 const MUTED_MARK = '<span class="font-normal text-[var(--color-text-muted)]">\u00a0(deleted)</span>';
 
-/** The "Counted as tried" chips (CD-Meal-Page): `meal.foods`. */
-const COUNTED = 'aria-labelledby="meal-counted"';
-
 describe("MealDetailPage title", () => {
   it("uses the recipe title when the meal has one", () => {
     expect(headingOf(renderMeal({ ...MEAL, recipeId: "r1", recipeTitle: "Iron-Rich Purée" }))).toContain(
@@ -104,13 +101,11 @@ describe("MealDetailPage title", () => {
   });
 
   // Ledger 555: the title and the food chip carry the ONE muted mark.
-  it("marks a deleted food, muted, in the title and on its chip", () => {
+  it("marks a deleted food, muted, in the title", () => {
     const meal: MealItem = { ...MEAL, foods: [{ ...MEAL.foods[0]!, deleted: true }, MEAL.foods[1]!] };
     const html = renderMeal(meal);
     expect(headingOf(html)).toContain(`Avocado${MUTED_MARK}, Chicken`);
-    const chipRow = html.slice(html.indexOf(COUNTED)).replace(/<!-- -->/g, "");
-    expect(chipRow).toContain(`Avocado${MUTED_MARK}`);
-    expect(chipRow).not.toContain(`Chicken${MUTED_MARK}`);
+    expect(headingOf(html)).not.toContain(`Chicken${MUTED_MARK}`);
   });
 });
 
@@ -124,7 +119,7 @@ describe("MealDetailPage", () => {
     expect(html).not.toContain("Avocado");
   });
 
-  it("renders the found meal's counted foods, served time and notes", () => {
+  it("renders the found meal's foods (in its title), served time and notes", () => {
     const html = renderToString(
       createElement(QueryClientProvider, { client: seededClient([MEAL]) }, renderAtMealDetailRoute(MEAL.id)),
     );
@@ -134,10 +129,6 @@ describe("MealDetailPage", () => {
     // Item 673: the title leads with the FIRST food's 40px plate, in the h1.
     const heading = /<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]!;
     expect(heading).toMatch(/^<span aria-hidden="true" class="flex shrink-0 [^"]*" style="width:40px;height:40px;font-size:20px;background:var\(--color-plate-fruit\)">🥑<\/span>/);
-    // CD-Meal-Page: the counted chips carry the name (and allergen badges), no plate.
-    const chips = html.slice(html.indexOf(COUNTED));
-    expect(chips).toMatch(/^aria-labelledby="meal-counted" class="mt-1.5 flex flex-wrap gap-1.5"><li class="[^"]*">Avocado/);
-    expect(chips).not.toContain("width:24px");
     expect(html).toContain("ate the whole thing");
     expect(html).toMatch(/2:05\s?PM/);
     // A meal with no items yet (an older cached body) links nowhere in storage.
@@ -192,176 +183,18 @@ describe("MealDetailPage", () => {
   });
 });
 
-// Item 334: the report was "salmon isn't triggering the fish badge", and the
-// person who made it had "added it to a meal" — this page (and the picker)
-// is where they would have looked. Ledger 554: the allergens ride on the
-// meal's own foods, NOT the foods list, which hides a deleted food.
-describe("MealDetailPage allergen marks (item 334, ledger 554)", () => {
-  const FISH_MEAL: MealItem = {
-    ...MEAL,
-    foods: [
-      { id: "food-1", slug: "salmon", name: "Salmon", category: "protein", storageItemId: null, allergens: ["fish"] },
-      { id: "food-2", slug: "pear", name: "Pear", category: "fruit", storageItemId: null, allergens: [] },
-    ],
-  };
-
-  it("marks the food that carries an allergen, and only that one", () => {
-    const html = renderMeal(FISH_MEAL);
-    // Scoped to the food-chip row: the page title is "Salmon, Pear" too, so
-    // a whole-document index comparison would be meaningless.
-    const chipRow = html.slice(html.indexOf(COUNTED));
-    expect(chipRow).toContain("Fish");
-    expect(chipRow.indexOf("Fish")).toBeGreaterThan(chipRow.indexOf("Salmon"));
-    expect(chipRow.indexOf("Fish")).toBeLessThan(chipRow.indexOf("Pear"));
-    // Item 636: the allergen pill is the soft plum, one per allergen, never
-    // a solid red fill.
-    expect((html.match(/bg-\[var\(--color-allergen-soft\)\]/g) ?? []).length).toBe(1);
-    expect(html).not.toContain("var(--color-danger-contrast)");
-  });
-
+describe("MealDetailPage Edit/Delete row", () => {
   it("draws Delete as the shared red-outline button, last in the Edit/Delete row (item 638)", () => {
-    const html = renderMeal(FISH_MEAL);
+    const html = renderMeal(MEAL);
     const row = html.slice(html.lastIndexOf('<div class="flex items-center gap-2">'));
     const del = /<button[^>]*>Delete<\/button>/.exec(row)?.[0] ?? "";
     expect(del).toContain("border-[var(--color-danger)]");
     expect(del).toContain("text-[var(--color-danger)]");
     expect(row.indexOf(">Edit<")).toBeLessThan(row.indexOf(">Delete<"));
   });
-
-  it("shows the meal exactly as before when an older cached body carries no allergens", () => {
-    const html = renderMeal({ ...FISH_MEAL, foods: FISH_MEAL.foods.map(({ allergens: _a, ...food }) => food) });
-    expect(html).toContain("Salmon");
-    expect(html).toContain("Pear");
-    expect(html).not.toContain("var(--color-allergen-soft)");
-    expect(html).not.toContain("Fish");
-  });
-
-  it("keeps a DELETED food's allergen chip, though the foods list no longer has it", () => {
-    const meal: MealItem = {
-      ...MEAL,
-      foods: [
-        {
-          id: "food-9",
-          slug: "nans-omelette-k3f9q1",
-          name: "Nan's omelette",
-          category: "protein",
-          storageItemId: null,
-          deleted: true,
-          allergens: ["egg"],
-        },
-      ],
-    };
-    // The cached list is what the pickers see: the deleted food is absent.
-    const html = renderMeal(meal, []);
-    const chipRow = html.slice(html.indexOf(COUNTED));
-    expect(chipRow).toContain("Egg");
-  });
 });
 
-describe("MealDetailPage ratings (item 574, ledger 902)", () => {
-  const RATED: MealItem = {
-    ...MEAL,
-    reactionNote: "rash",
-    items: [
-      { kind: "food", id: "33333333-3333-4333-8333-333333333331", food: MEAL.foods[0]!, rating: 5 },
-      { kind: "food", id: "33333333-3333-4333-8333-333333333332", food: MEAL.foods[1]!, rating: null },
-    ],
-  };
-
-  it("shows one star line per item ABOVE the reaction note, with no Rating heading (CD-Meal-Page)", () => {
-    const html = renderMeal(RATED);
-    const stars = html.indexOf('aria-label="Rating for Avocado"');
-    expect(stars).toBeGreaterThan(-1);
-    expect(stars).toBeLessThan(html.indexOf("Reaction:"));
-    expect(html).not.toContain("Rating<!-- --> <span");
-    expect(html).toContain('aria-label="Rating for Avocado"');
-    expect(html).toContain('aria-label="Rating for Chicken"');
-    expect(html).toMatch(/aria-checked="true" aria-label="5 stars"/);
-  });
-
-  it("shows one line, for the recipe, on a meal of one recipe", () => {
-    const html = renderMeal({
-      ...MEAL,
-      recipeId: "r1",
-      recipeTitle: "Iron-Rich Purée",
-      recipeRating: 3,
-      items: [
-        {
-          kind: "recipe",
-          id: "33333333-3333-4333-8333-333333333333",
-          recipe: { id: "44444444-4444-4444-8444-444444444444", title: "Iron-Rich Purée" },
-          leftOut: [],
-          inferred: true,
-          rating: 3,
-        },
-      ],
-    });
-    expect(html.match(/role="radiogroup"/g)).toHaveLength(1);
-    expect(html).toContain('aria-label="Rating for Iron-Rich Purée"');
-    expect(html).toMatch(/aria-checked="true" aria-label="3 stars"/);
-  });
-});
-
-describe("MealDetailPage, several recipes (ledger 761)", () => {
-  const SEVERAL: MealItem = {
-    ...MEAL,
-    recipeId: "r1",
-    recipeTitle: "Lentil Patties",
-    recipeRating: 4,
-    recipes: [
-      { id: "r1", title: "Lentil Patties", rating: 4 },
-      { id: "r2", title: "Salmon Cakes", rating: 5 },
-    ],
-    foods: [
-      { id: "f-egg", slug: "egg", name: "Egg", category: "protein", storageItemId: null, rating: null, inRecipe: true },
-      { id: "f-brc", slug: "broccoli", name: "Broccoli", category: "veg", storageItemId: null, rating: 3, inRecipe: false },
-      { id: "f-oat", slug: "oats", name: "Oats", category: "grain", storageItemId: null, rating: 2, inRecipe: true },
-      { id: "f-ban", slug: "banana", name: "Banana", category: "fruit", storageItemId: null, rating: null, inRecipe: false },
-    ],
-  };
-
-  it("keeps the 🍳 title plate, and lists the recipes as items, not 🍳 lines", () => {
-    const html = renderMeal(SEVERAL).replace(/<!-- -->/g, "");
-    expect(/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]).toContain(">🍳</span>");
-    expect(html).not.toContain("🍳 Lentil Patties");
-  });
-
-  // Ledger 902: each item rates itself; an ingredient of a recipe has no line
-  // of its own unless it was put on the plate on its own too.
-  it("rates each item in plate order: the recipes, then the foods put on the plate on their own", () => {
-    const item = (n: number) => `55555555-5555-4555-8555-55555555555${n}`;
-    const html = renderMeal({
-      ...SEVERAL,
-      items: [
-        { kind: "recipe", id: item(1), recipe: { id: item(5), title: "Lentil Patties" }, leftOut: [], inferred: true, rating: 4 },
-        { kind: "recipe", id: item(2), recipe: { id: item(6), title: "Salmon Cakes" }, leftOut: [], inferred: true, rating: 5 },
-        { kind: "food", id: item(3), food: SEVERAL.foods[1]!, rating: 3 },
-        { kind: "food", id: item(4), food: SEVERAL.foods[3]!, rating: null },
-      ],
-    });
-    const labels = [...html.matchAll(/role="radiogroup" aria-label="Rating for ([^"]+)"/g)].map((m) => m[1]);
-    expect(labels).toEqual(["Lentil Patties", "Salmon Cakes", "Broccoli", "Banana"]);
-  });
-});
-
-describe("MealDetailPage title plate for a custom food (item 673)", () => {
-  it("uses the food's own emoji and category, not just its slug", () => {
-    const html = renderMeal(
-      {
-        ...MEAL,
-        foods: [
-          { id: "food-c", slug: "grandmas-congee-x1y2z3", name: "Grandma's congee", category: "grain", storageItemId: null, emoji: "🥘" },
-        ],
-      },
-      [],
-    );
-    expect(/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(html)![1]).toMatch(
-      /^<span aria-hidden="true" class="flex shrink-0 [^"]*" style="[^"]*background:var\(--color-plate-grain\)">🥘<\/span>/,
-    );
-  });
-});
-
-// Plan SPEC §5 / CD-Meal-Page: the items on the plate, then "Counted as tried".
+// Plan SPEC §5 / CD-Meal-Page: the items on the plate ("Counted as tried" gone, ledger 928).
 describe("MealDetailPage items (CD-Meal-Page, ledger 902)", () => {
   const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
   const BROCCOLI = { id: uuid(1), slug: "broccoli", name: "Broccoli", category: "veg" as const };
@@ -401,13 +234,12 @@ describe("MealDetailPage items (CD-Meal-Page, ledger 902)", () => {
     ],
   };
   const html = () => renderMeal(PASTA_MEAL).replace(/<!-- -->/g, "");
-  const plate = () => /<ul aria-label="On the plate"[^>]*>([\s\S]*?)<\/ul><span id="meal-counted"/.exec(html())![1]!;
+  const plate = () => /<ul aria-label="On the plate"[^>]*>([\s\S]*)<\/ul><span class="mt-2.5 text-xs text-\[var\(--color-text-muted\)\]">ate the whole thing/.exec(html())![1]!;
   const items = () => plate().split(/<li class="@container/).slice(1);
 
-  it("lists every item in plate order, each its own card, before Counted as tried", () => {
+  it("lists every item in plate order, each its own card", () => {
     const titles = items().map((item) => /<p class="font-semibold[^"]*">([^<]*)<\/p>/.exec(item)![1]!.replace(/&amp;/g, "&"));
     expect(titles).toEqual(["Creamy Cashew & Broccoli Pasta", "Broccoli, Carrot", "Broccoli Cheese Egg Muffins", "Salmon Oat Patties"]);
-    expect(html().indexOf('aria-label="On the plate"')).toBeLessThan(html().indexOf(">Counted as tried<"));
     // A recipe wears the pot, as on the plate.
     expect(items()[0]).toContain("background:var(--color-plate-neutral)\">🍲</span>");
   });
@@ -439,20 +271,14 @@ describe("MealDetailPage items (CD-Meal-Page, ledger 902)", () => {
     expect(plate()).not.toContain("Ingredients");
   });
 
-  it("Counted as tried is the meal's foods: a left-out food is not there", () => {
-    const counted = html().slice(html().indexOf(COUNTED));
-    expect([...counted.split("</ul>")[0]!.matchAll(/<li [^>]*>([^<]+)/g)].map((m) => m[1])).toEqual(["Broccoli", "Carrot", "Garlic"]);
-    expect(counted.split("</ul>")[0]).not.toContain("Cashews");
-  });
-
-  it("Counted as tried leaves out an info food (whole milk), as foods tried does (VERIFY-p2-c1 #4)", () => {
-    const milk = { id: uuid(5), slug: "milk", name: "Whole Milk", category: "dairy" as const, storageItemId: null };
-    const butter = { id: uuid(6), slug: "unsalted_butter", name: "Unsalted Butter", category: "dairy" as const, storageItemId: null };
-    const out = renderMeal({
-      ...PASTA_MEAL,
-      foods: [{ ...butter, kind: "ingredient" }, { ...milk, kind: "info" }, { ...BROCCOLI, storageItemId: null }],
-    }).replace(/<!-- -->/g, "");
-    const counted = out.slice(out.indexOf(COUNTED)).split("</ul>")[0]!;
-    expect([...counted.matchAll(/<li [^>]*>([^<]+)/g)].map((m) => m[1])).toEqual(["Unsalted Butter", "Broccoli"]);
+  it("has no Counted as tried (ledger 928): no heading, no food chips, no allergen chips; the plate's items still render", () => {
+    const out = html();
+    expect(out).not.toContain("Counted as tried");
+    expect(out).not.toContain("meal-counted");
+    expect(out).not.toContain("var(--color-allergen-soft)");
+    expect(items()).toHaveLength(4);
+    expect(out).toContain("Left out: Cashews");
+    // The Food log tap still opens Edit; the page's own Edit is unchanged.
+    expect(out).toContain(`href="/log-meal?edit=${PASTA_MEAL.id}"`);
   });
 });

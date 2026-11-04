@@ -8,8 +8,7 @@ import { SavedItemRow } from "../features/plate/PlateItemRow.js";
 import { mealRecipes, recipesTitle } from "../features/tracking/mealRecipes.js";
 import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
-import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
-import { DeletedMark, FoodNames } from "../features/catalog/components/DeletedMark.js";
+import { FoodNames } from "../features/catalog/components/DeletedMark.js";
 import { foodPlate } from "../features/catalog/foodEmoji.js";
 import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
 import { BackButton, useBackNavigate } from "../components/ui/BackButton.js";
@@ -51,11 +50,9 @@ function servedAtLabel(iso: string): string {
  * page.
  *
  * The body is CD-Meal-Page (plan SPEC §5): what was on the plate, one item
- * card each with its stars (a tap saves that item), then "Counted as tried"
- * (`meal.foods`, the foods this meal counts toward, so a parent can see a
- * left-out food was not counted; an `info` food such as whole milk is never
- * a food tried, so it is left out here too), the reaction note and the
- * notes. Offline the stars and Delete wait, like every plate write (SPEC §4.4). A
+ * card each with its stars (a tap saves that item), the reaction note and
+ * the notes ("Counted as tried" is gone, ledger 928). Offline the stars and
+ * Delete wait, like every plate write (SPEC §4.4). A
  * container links back to the storage batch it was served from, so the
  * storage ⇄ meal traceback stays navigable in both directions.
  */
@@ -139,24 +136,6 @@ export function MealDetailPage() {
             Couldn't save that rating — try again.
           </p>
         )}
-
-        <span id="meal-counted" className="mt-3 text-sm font-semibold text-[var(--color-text)]">
-          Counted as tried
-        </span>
-        <ul aria-labelledby="meal-counted" className="mt-1.5 flex flex-wrap gap-1.5">
-          {meal.foods
-            .filter((food) => food.kind !== "info")
-            .map((food) => (
-            <li
-              key={food.id}
-              className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-bg-inset)] px-[9px] py-[3px] text-[13px] text-[var(--color-text)]"
-            >
-              {food.name}
-              <DeletedMark deleted={food.deleted} />
-              <AllergenChips allergens={food.allergens ?? []} />
-            </li>
-            ))}
-        </ul>
 
         {meal.reactionNote && (
           <span className="mt-2.5 text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</span>
