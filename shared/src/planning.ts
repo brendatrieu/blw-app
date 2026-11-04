@@ -351,7 +351,8 @@ const minutes = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.sl
  * Which of today's meals Today's plan opens on (SPEC §4.3): the first
  * unserved meal in the parent's order, skipping a TIMED meal once more than
  * NEXT_MEAL_GRACE_MIN minutes have passed since its time, as long as a later
- * unserved meal exists. Times never reorder meals. `nowLocal` is the local
+ * unserved meal exists. It reads the list order as it is (a time places a
+ * meal when it is set, `placeByTime`, ledger 925). `nowLocal` is the local
  * wall-clock time, `HH:MM`. Null when everything is served.
  */
 export function nextPlannedMeal<T extends { position: number; time: string | null; served: unknown }>(
@@ -364,6 +365,36 @@ export function nextPlannedMeal<T extends { position: number; time: string | nul
     open.find((meal, index) => meal.time === null || now - minutes(meal.time) <= NEXT_MEAL_GRACE_MIN || index === open.length - 1) ??
     null
   );
+}
+
+/**
+ * Ledger 925 (owner, 2026-11-04): a time places its meal by the clock. Called
+ * for the ONE meal (at `index`) whose time was just set or changed: it moves
+ * to just before the first OTHER timed meal, in list order, whose time is
+ * later than its own (equal times stay ahead of it), else just after the
+ * last other timed meal. A meal with no time, with no other timed meal
+ * around it, or already in clock order among the timed meals around it
+ * (every timed one before it no later, every one after it later) stays
+ * where it is, so a time never hops it over untimed meals for nothing.
+ * Untimed meals never move. Nothing is sorted: a day already out of order
+ * stays so, and Move up / Move down or a drag afterwards still win. Times
+ * compare as zero-padded strings ("HH:MM", or the database's "HH:MM:SS"
+ * throughout). Returns a new list.
+ */
+export function placeByTime<T extends { time: string | null }>(meals: readonly T[], index: number): T[] {
+  const meal = meals[index];
+  const time = meal?.time;
+  if (!meal || !time) return [...meals];
+  const fits =
+    meals.slice(0, index).every((other) => other.time === null || other.time <= time) &&
+    meals.slice(index + 1).every((other) => other.time === null || other.time > time);
+  if (fits) return [...meals];
+  const others = meals.filter((_, at) => at !== index);
+  const later = others.findIndex((other) => other.time !== null && other.time > time);
+  const lastTimed = others.reduce((last, other, at) => (other.time !== null ? at : last), -1);
+  if (later === -1 && lastTimed === -1) return [...meals];
+  others.splice(later === -1 ? lastTimed + 1 : later, 0, meal);
+  return others;
 }
 
 // ---------------------------------------------------------------------------

@@ -333,6 +333,7 @@ describe("planning (ledger 903, step 3.1)", () => {
 
       const renamed = await put(DAY, LUNCH, { name: "Picnic", time: "12:15" });
       expect(renamed.statusCode, renamed.body).toBe(200);
+      // Already before Supper 19:45, so its new time keeps it there (925).
       expect(meal(planDaySchema.parse(renamed.json()), "Picnic")).toMatchObject({ time: "12:15", position: 1 });
       const cleared = planDaySchema.parse((await put(DAY, LUNCH, { time: null })).json());
       expect(meal(cleared, "Picnic").time).toBeNull();
@@ -341,6 +342,91 @@ describe("planning (ledger 903, step 3.1)", () => {
       expect((await add(DAY, { name: "x".repeat(41) })).statusCode).toBe(400);
       expect((await add(DAY, { name: "Tea", time: "7pm" })).statusCode).toBe(400);
       expect((await put(DAY, LUNCH, {})).statusCode).toBe(400);
+    });
+
+    describe("a time places the meal by the clock (ledger 925)", () => {
+      const order = async (date = DAY) => (await day(date)).meals.map((entry) => `${entry.name}${entry.time ? ` ${entry.time}` : ""}`);
+      // The review copy's Daily meals (2026-11-03), already out of time order.
+      async function reviewCopyDailyMeals() {
+        const response = await inject("PUT", `/api/babies/${babyId}/daily-meals`, {
+          meals: [
+            { name: "Breakfast", time: "09:39" },
+            { name: "Snack", time: "08:39" },
+            { name: "Lunch", time: "11:39" },
+            { name: "Dinner", time: "14:39" },
+            { name: "Late snack", time: "21:45" },
+          ],
+        });
+        expect(response.statusCode, response.body).toBe(200);
+      }
+
+      it("+ Add a meal with a time lands before the first later meal, not last; the day keeps Daily meals' order otherwise", async () => {
+        await reviewCopyDailyMeals();
+        const added = await add(DAY, { name: "Brunch", time: "11:41" });
+        expect(added.statusCode, added.body).toBe(201);
+        const echo = planDaySchema.parse(added.json());
+        expect(echo.meals.map((entry) => [entry.name, entry.position])).toEqual([
+          ["Breakfast", 0],
+          ["Snack", 1], // materializing keeps Daily meals' order, 08:39 after 09:39
+          ["Lunch", 2],
+          ["Brunch", 3],
+          ["Dinner", 4],
+          ["Late snack", 5],
+        ]);
+        expect((await rows()).map((row) => [row.name, row.position])).toEqual(echo.meals.map((entry) => [entry.name, entry.position]));
+        // With items in the same write, too; equal times go after the existing one.
+        await add(DAY, { name: "Tea", time: "14:39", items: [{ kind: "food", foodId: fx.pear.id }] });
+        // No time: appended, as before.
+        await add(DAY, { name: "Whenever" });
+        expect(await order()).toEqual([
+          "Breakfast 09:39",
+          "Snack 08:39",
+          "Lunch 11:39",
+          "Brunch 11:41",
+          "Dinner 14:39",
+          "Tea 14:39",
+          "Late snack 21:45",
+          "Whenever",
+        ]);
+      });
+
+      it("a time set or changed on a planned meal places it; the same time again, a rename or a cleared time moves nothing", async () => {
+        await reviewCopyDailyMeals();
+        const ids = Object.fromEntries((await day()).meals.map((entry) => [entry.name, entry.slotId]));
+        // A virtual day, by the daily meal's id: it materializes, then moves.
+        expect((await put(DAY, ids["Late snack"]!, { time: "10:00" })).statusCode).toBe(200);
+        expect(await order()).toEqual(["Breakfast 09:39", "Snack 08:39", "Late snack 10:00", "Lunch 11:39", "Dinner 14:39"]);
+        // Later than every other: after the last timed meal.
+        const latest = await put(DAY, ids.Breakfast!, { time: "22:00" });
+        expect(planDaySchema.parse(latest.json()).meals.map((entry) => entry.name)).toEqual(["Snack", "Late snack", "Lunch", "Dinner", "Breakfast"]);
+
+        // Move up / Move down still win: re-sending the same time (Plan a
+        // meal always sends it) with items, a rename, or clearing it keeps them.
+        const now = await day();
+        const slot = (name: string) => now.meals.find((entry) => entry.name === name)!.slotId;
+        expect((await reorder(DAY, ["Dinner", "Snack", "Late snack", "Lunch", "Breakfast"].map(slot))).statusCode).toBe(200);
+        expect((await put(DAY, slot("Dinner"), { name: "Dinner", time: "14:39", items: [{ kind: "food", foodId: fx.egg.id }] })).statusCode).toBe(200);
+        expect((await put(DAY, slot("Lunch"), { name: "Picnic" })).statusCode).toBe(200);
+        expect((await put(DAY, slot("Snack"), { time: null })).statusCode).toBe(200);
+        expect(await order()).toEqual(["Dinner 14:39", "Snack", "Late snack 10:00", "Picnic 11:39", "Breakfast 22:00"]);
+        // Then a changed time places it again; the untimed Snack stays put.
+        expect((await put(DAY, slot("Dinner"), { time: "14:40" })).statusCode).toBe(200);
+        expect(await order()).toEqual(["Snack", "Late snack 10:00", "Picnic 11:39", "Dinner 14:40", "Breakfast 22:00"]);
+        expect((await rows()).map((row) => row.position)).toEqual([0, 1, 2, 3, 4]);
+        // Daily meals and the next day keep their own order.
+        expect(await order("2026-11-03")).toEqual(["Breakfast 09:39", "Snack 08:39", "Lunch 11:39", "Dinner 14:39", "Late snack 21:45"]);
+      });
+
+      it("with no other timed meal, or already in clock order, a time keeps its place; untimed meals never move", async () => {
+        await add(DAY, { name: "Supper", time: "06:00" }); // the default meals have no times
+        expect(await order()).toEqual(["Breakfast", "Lunch", "Dinner", "Snack", "Supper 06:00"]);
+        // Already before Supper 06:00: stays, never hopping the untimed meals.
+        expect((await put(DAY, LUNCH, { time: "05:00" })).statusCode).toBe(200);
+        expect(await order()).toEqual(["Breakfast", "Lunch 05:00", "Dinner", "Snack", "Supper 06:00"]);
+        // After it now: before Lunch, the first later one.
+        expect((await put(DAY, DINNER, { time: "04:00" })).statusCode).toBe(200);
+        expect(await order()).toEqual(["Breakfast", "Dinner 04:00", "Lunch 05:00", "Snack", "Supper 06:00"]);
+      });
     });
 
     it("+ Add a meal can bring its items in the same write; a refused item adds no meal and leaves the day virtual (4.2)", async () => {

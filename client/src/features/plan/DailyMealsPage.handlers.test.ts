@@ -176,6 +176,45 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     expect(done).toBe(1);
   });
 
+  it("a time set or changed places its meal by the clock at once; the moved row's time field keeps the focus (ledger 925)", () => {
+    // The review copy's Daily meals (2026-11-03), already out of time order.
+    const review = [
+      { id: DEFAULT_DAILY_MEALS[0]!.id, name: "Breakfast", time: "09:39" },
+      { id: DEFAULT_DAILY_MEALS[1]!.id, name: "Snack", time: "08:39" },
+      { id: DEFAULT_DAILY_MEALS[2]!.id, name: "Lunch", time: "11:39" },
+      { id: DEFAULT_DAILY_MEALS[3]!.id, name: "Dinner", time: "14:39" },
+    ];
+    const focusNext = () => h.store.refs[2]!;
+    const time = (meal: string) => findAll(render(review), (el) => el.props["aria-label"] === `Time for ${meal}`)[0]!;
+    (button(render(review), "+ Add a meal").props.onClick as () => void)();
+    type(findAll(render(review), (el) => el.props["aria-label"] === "Meal name").at(-1)!, "Brunch");
+    focusNext().current = null;
+    type(time("Brunch"), "11:41");
+    expect(names(render(review))).toEqual(["Breakfast", "Snack", "Lunch", "Brunch", "Dinner"]);
+    expect(focusNext().current).toBe("dm-added-1-time");
+    expect(time("Brunch").props.id).toBe("dm-added-1-time");
+
+    // In clock order already: stays, and the focus is left alone.
+    focusNext().current = null;
+    type(time("Brunch"), "12:00");
+    expect(names(render(review))).toEqual(["Breakfast", "Snack", "Lunch", "Brunch", "Dinner"]);
+    expect(focusNext().current).toBeNull();
+    // A cleared time stays where it is; the untimed meal then never moves.
+    type(time("Brunch"), "");
+    type(time("Lunch"), "15:00");
+    expect(names(render(review))).toEqual(["Breakfast", "Snack", "Brunch", "Dinner", "Lunch"]);
+    // A drag or arrow keys afterwards still win, and that order is saved.
+    expect(key(label(render(review), "Move Lunch"), "ArrowUp")).toBe(true);
+    submit(render(review));
+    expect((saved()[0] as { meals: { name: string; time: string | null }[] }).meals.map((meal) => [meal.name, meal.time])).toEqual([
+      ["Breakfast", "09:39"],
+      ["Snack", "08:39"],
+      ["Brunch", null],
+      ["Lunch", "15:00"],
+      ["Dinner", "14:39"],
+    ]);
+  });
+
   it("arrow keys on a handle move its meal one place, and stop at either end", () => {
     let tree = render();
     expect(key(label(tree, "Move Snack"), "ArrowUp")).toBe(true);

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent, type MouseEvent } from "react";
 import { Navigate } from "react-router-dom";
-import { PLAN_NAME_MAX, localDate, type DailyMeal } from "@blw/shared";
+import { PLAN_NAME_MAX, localDate, placeByTime, type DailyMeal } from "@blw/shared";
 import { BackButton, useBackNavigate } from "../../components/ui/BackButton.js";
 import { Button } from "../../components/ui/Button.js";
 import { CloseGlyph, ICON_BUTTON_CLASSES } from "../../components/ui/iconButton.js";
@@ -129,10 +129,19 @@ export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meal
     focusFieldById(id);
   });
 
-  const fieldId = (row: DailyMealRow, part: "name" | "move" | "error") => `${idPrefix}-${row.key}-${part}`;
+  const fieldId = (row: DailyMealRow, part: "name" | "move" | "time" | "error") => `${idPrefix}-${row.key}-${part}`;
   const errors = attempted ? dailyMealErrors(rows) : {};
   const update = (key: string, patch: Partial<DailyMealRow>) =>
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+  // Ledger 925: a time set or changed places its meal by the clock at once;
+  // if that moves the row, its time field keeps (or gets back) the focus.
+  const setTime = (row: DailyMealRow, time: string | null) => {
+    const at = rows.indexOf(row);
+    const timed = rows.map((entry) => (entry.key === row.key ? { ...entry, time } : entry));
+    const placed = placeByTime(timed, at);
+    if (placed[at] !== timed[at]) focusNext.current = fieldId(row, "time");
+    setRows(placed);
+  };
   const move = (row: DailyMealRow, to: number) => {
     const from = rows.indexOf(row);
     if (from === to || to < 0 || to >= rows.length) return;
@@ -223,7 +232,7 @@ export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meal
                   <span aria-hidden="true" className={row.time ? "" : "font-medium text-[var(--color-text-muted)]"}>
                     {row.time ? mealTimeLabel(row.time) : "Add time"}
                   </span>
-                  <input aria-label={`Time for ${row.name}`} {...nativeTimeInput(row.time, (time) => update(row.key, { time }))} />
+                  <input id={fieldId(row, "time")} aria-label={`Time for ${row.name}`} {...nativeTimeInput(row.time, (time) => setTime(row, time))} />
                 </label>
                 <button
                   type="button"

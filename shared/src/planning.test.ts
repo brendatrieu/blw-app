@@ -9,6 +9,7 @@ import {
   localDate,
   localInstant,
   nextPlannedMeal,
+  placeByTime,
   planDates,
   planFlags,
   planQuerySchema,
@@ -23,6 +24,55 @@ import { createPlateMealInputSchema } from "./tracking.js";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
+describe("placeByTime (ledger 925: a time places its meal by the clock)", () => {
+  const m = (name: string, time: string | null = null) => ({ name, time });
+  const names = (meals: { name: string }[]) => meals.map((meal) => meal.name);
+  // Today's list on the review copy (2026-11-03), already out of time order.
+  const today = [m("Breakfast", "09:39"), m("Snack", "08:39"), m("Lunch", "11:39"), m("Dinner", "14:39"), m("Snack 2", "21:45")];
+
+  it("the review copy: Brunch 11:41 added last lands right before Dinner, not last", () => {
+    expect(names(placeByTime([...today, m("Brunch", "11:41")], 5))).toEqual(["Breakfast", "Snack", "Lunch", "Brunch", "Dinner", "Snack 2"]);
+  });
+
+  it("goes before the first OTHER timed meal (list order) that is later, so nothing else is sorted", () => {
+    // Snack moved to 10:00: Breakfast 09:39 is earlier, Lunch 11:39 the first later one.
+    expect(names(placeByTime([today[0]!, m("Snack", "10:00"), ...today.slice(2)], 1))).toEqual(["Breakfast", "Snack", "Lunch", "Dinner", "Snack 2"]);
+    // Snack moved to 07:00: Breakfast 09:39 is the first later one; Snack 08:39 elsewhere would not move.
+    const early = [...today, m("Early", "07:00")];
+    expect(names(placeByTime(early, 5))).toEqual(["Early", "Breakfast", "Snack", "Lunch", "Dinner", "Snack 2"]);
+  });
+
+  it("after the last other timed meal when none is later; equal times go after the existing ones", () => {
+    expect(names(placeByTime([m("Late", "23:00"), ...today], 0))).toEqual(["Breakfast", "Snack", "Lunch", "Dinner", "Snack 2", "Late"]);
+    expect(names(placeByTime([m("Same", "11:39"), ...today], 0))).toEqual(["Breakfast", "Snack", "Lunch", "Same", "Dinner", "Snack 2"]);
+    // After the last TIMED one: untimed meals behind it stay behind the new one.
+    expect(names(placeByTime([m("A", "10:00"), m("B"), m("C", "09:00"), m("D")], 0))).toEqual(["B", "C", "A", "D"]);
+  });
+
+  it("untimed meals never move; a meal with no time (or its time removed) stays where it is", () => {
+    const list = [m("A"), m("B", "12:00"), m("C"), m("D", "08:00")];
+    expect(names(placeByTime(list, 3))).toEqual(["A", "D", "B", "C"]); // A and C keep their places among the rest
+    expect(names(placeByTime(list, 0))).toEqual(["A", "B", "C", "D"]);
+    expect(names(placeByTime(list, 2))).toEqual(["A", "B", "C", "D"]);
+  });
+
+  it("already in clock order among the timed meals around it, it stays: no hop over untimed meals", () => {
+    const list = [m("Breakfast", "08:00"), m("Lunch"), m("Dinner", "17:30"), m("Snack")];
+    expect(names(placeByTime(list, 0))).toEqual(["Breakfast", "Lunch", "Dinner", "Snack"]);
+    expect(names(placeByTime([m("Lunch"), m("Breakfast", "08:00"), m("Dinner", "17:30")], 1))).toEqual(["Lunch", "Breakfast", "Dinner"]);
+    // An equal time AFTER it is out of order (equal times go after the existing one).
+    expect(names(placeByTime([m("New", "17:30"), m("Dinner", "17:30")], 0))).toEqual(["Dinner", "New"]);
+  });
+
+  it("keeps its position when no other meal has a time; returns a new list, never the input", () => {
+    const list = [m("A"), m("B", "12:00"), m("C")];
+    const placed = placeByTime(list, 1);
+    expect(names(placed)).toEqual(["A", "B", "C"]);
+    expect(placed).not.toBe(list);
+    expect(names(placeByTime(list, 9))).toEqual(["A", "B", "C"]); // no such meal: unchanged
+  });
+});
+
 describe("nextPlannedMeal (SPEC §4.3, chair Q8)", () => {
   const meal = (position: number, time: string | null, served = false) => ({
     position,
@@ -32,7 +82,7 @@ describe("nextPlannedMeal (SPEC §4.3, chair Q8)", () => {
   const at = (meals: ReturnType<typeof meal>[], now: string) => nextPlannedMeal(meals, now)?.position ?? null;
 
   it("is the first unserved meal by position, whatever the times say", () => {
-    // Times never reorder: Snack (position 1) at 07:00 does not jump Breakfast.
+    // It reads the order as it is: Snack (position 1) at 07:00 does not jump Breakfast.
     expect(at([meal(0, "08:00"), meal(1, "07:00")], "06:00")).toBe(0);
     expect(at([meal(1, null), meal(0, null, true), meal(2, null)], "12:00")).toBe(1);
   });

@@ -32,6 +32,7 @@ import {
   planDateParamsSchema,
   planDates,
   planFlags,
+  placeByTime,
   planQuerySchema,
   planSlotParamsSchema,
   reorderPlanDayInputSchema,
@@ -124,7 +125,7 @@ async function materialize(tx: Transaction, babyId: string, date: string, dailyM
  * made from (a client still holding the virtual day). Locked FOR UPDATE. */
 async function resolveSlot(tx: Transaction, babyId: string, date: string, slotId: string) {
   const rows = await tx
-    .select({ id: plannedMeals.id, servedMealId: plannedMeals.servedMealId })
+    .select({ id: plannedMeals.id, servedMealId: plannedMeals.servedMealId, time: plannedMeals.time })
     .from(plannedMeals)
     .where(
       and(
@@ -137,6 +138,23 @@ async function resolveSlot(tx: Transaction, babyId: string, date: string, slotId
   const slot = rows.find((row) => row.id === slotId) ?? rows[0];
   if (!slot) throw planChanged();
   return slot;
+}
+
+/** Ledger 925: a meal whose time was just set or changed takes its place by
+ * the clock among the day's other timed meals (`placeByTime`); the rest keep
+ * their order. Positions are rewritten only when something moved. */
+async function placeMealByTime(tx: Transaction, babyId: string, date: string, plannedMealId: string): Promise<void> {
+  const rows = await tx
+    .select({ id: plannedMeals.id, time: plannedMeals.time, position: plannedMeals.position })
+    .from(plannedMeals)
+    .where(and(eq(plannedMeals.babyId, babyId), eq(plannedMeals.date, date)))
+    .orderBy(asc(plannedMeals.position), asc(plannedMeals.id))
+    .for("update");
+  const placed = placeByTime(rows, rows.findIndex((row) => row.id === plannedMealId));
+  if (placed.every((row, index) => row === rows[index])) return;
+  for (const [position, row] of placed.entries()) {
+    if (row.position !== position) await tx.update(plannedMeals).set({ position }).where(eq(plannedMeals.id, row.id));
+  }
 }
 
 /**
@@ -549,6 +567,7 @@ export function registerPlanRoutes(app: FastifyInstance, db: Database): void {
         .insert(plannedMeals)
         .values({ babyId, date, name: body.data.name, time: body.data.time ?? null, position: (last?.position ?? -1) + 1 })
         .returning();
+      if (added!.time) await placeMealByTime(tx, babyId, date, added!.id);
       // A refused item rolls back the new meal too (and a virtual day stays so).
       if (body.data.items?.length) await writePlannedItems(tx, userId, added!.id, body.data.items);
     });
@@ -578,6 +597,9 @@ export function registerPlanRoutes(app: FastifyInstance, db: Database): void {
       if (body.data.name !== undefined) columns.name = body.data.name;
       if (body.data.time !== undefined) columns.time = body.data.time;
       if (Object.keys(columns).length > 0) await tx.update(plannedMeals).set(columns).where(eq(plannedMeals.id, slot.id));
+      // A time set or changed places the meal (925); the same time sent again
+      // (Plan a meal always sends it) keeps a Move up / Move down.
+      if (body.data.time && body.data.time !== slot.time?.slice(0, 5)) await placeMealByTime(tx, babyId, date, slot.id);
       if (body.data.items !== undefined) await writePlannedItems(tx, userId, slot.id, body.data.items);
     });
     if (refused) return refuse(reply, refused);
