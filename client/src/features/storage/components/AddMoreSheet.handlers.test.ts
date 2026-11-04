@@ -398,8 +398,17 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
       const [button] = searchAll(tree);
       expect(button?.props.variant).toBe("quiet");
       expect(button?.props.type).toBe("button");
-      (button!.props.onClick as () => void)();
+      // Verifier c1: the button goes away, so focus moves to the search box.
+      const focused: string[] = [];
+      vi.stubGlobal("document", { getElementById: (id: string) => ({ focus: () => focused.push(id) }) });
+      try {
+        (button!.props.onClick as () => void)();
+      } finally {
+        vi.unstubAllGlobals();
+      }
       tree = render();
+      expect(focused).toEqual([one(tree, Input).props.id]);
+      expect(focused[0]).toBeTruthy();
       expect(tabRow(tree).value).toBe("all");
       expect(one(tree, Input).props.value).toBe(text);
       expect(titles(tree).length).toBeGreaterThan(0);

@@ -392,7 +392,6 @@ export function placeByTime<T extends { time: string | null }>(meals: readonly T
   const others = meals.filter((_, at) => at !== index);
   const later = others.findIndex((other) => other.time !== null && other.time > time);
   const lastTimed = others.reduce((last, other, at) => (other.time !== null ? at : last), -1);
-  if (later === -1 && lastTimed === -1) return [...meals];
   others.splice(later === -1 ? lastTimed + 1 : later, 0, meal);
   return others;
 }

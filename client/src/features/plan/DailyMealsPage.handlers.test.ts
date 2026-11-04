@@ -322,7 +322,11 @@ describe("Daily meals (CD-Daily-Meals)", () => {
 });
 
 describe("Daily meals is a page (ledger 924)", () => {
-  const page = () => (DailyMealsPage as unknown as () => El)();
+  const page = () => {
+    h.store.i = 0;
+    h.store.r = 0;
+    return (DailyMealsPage as unknown as () => El)();
+  };
   const DAILY = [{ id: DEFAULT_DAILY_MEALS[0]!.id, name: "Breakfast", time: "07:30" }];
 
   it("has the slim header's back (to the plan when there is no history), titled Daily meals; waits for the plan's list", () => {
@@ -344,6 +348,13 @@ describe("Daily meals is a page (ledger 924)", () => {
       tree = page();
       const form = findAll(tree, (el) => el.type === DailyMealsForm)[0]!;
       expect(form.props).toMatchObject({ babyId: "baby-1", meals: DAILY });
+      expect(findAll(tree, (el) => el.type === SkeletonList)).toHaveLength(0);
+
+      // Verifier c1: once shown, a later refetch (back to the foreground,
+      // back online) keeps the same form mounted, so unsaved edits survive.
+      h.plan = { data: { dailyMeals: DAILY }, isError: false, isFetching: true };
+      tree = page();
+      expect(findAll(tree, (el) => el.type === DailyMealsForm)).toHaveLength(1);
       expect(findAll(tree, (el) => el.type === SkeletonList)).toHaveLength(0);
     } finally {
       vi.useRealTimers();

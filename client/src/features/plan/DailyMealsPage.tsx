@@ -40,6 +40,11 @@ export function DailyMealsPage() {
   // Today's week: the same cache entry the plan opens on.
   const plan = usePlan(activeBaby?.id, week[0]!, week[6]!);
   const goBack = useBackNavigate("/plan");
+  // Shown once the list is fresh, then kept: a later refetch (back to the
+  // foreground, back online) must not reset the parent's unsaved edits.
+  const [shown, setShown] = useState(false);
+  const fresh = Boolean(plan.data) && !plan.isFetching;
+  if (fresh && !shown) setShown(true);
 
   if (!babyLoading && !activeBaby) return <Navigate to="/plan" replace />;
   return (
@@ -47,7 +52,7 @@ export function DailyMealsPage() {
       <PageHeader title="Daily meals" leading={<BackButton fallback="/plan" />} />
       {/* Only the list as saved now: a copy restored from the offline cache
           waits for its refetch (offline the fetch pauses, so it shows). */}
-      {plan.data && activeBaby && !plan.isFetching ? (
+      {plan.data && activeBaby && (shown || fresh) ? (
         <DailyMealsForm babyId={activeBaby.id} meals={plan.data.dailyMeals} onDone={goBack} />
       ) : plan.isError ? (
         <p className="text-sm text-[var(--color-danger)]">Couldn't load the plan.</p>

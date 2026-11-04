@@ -4,6 +4,7 @@ import { Button } from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
 import { SegmentedControl, type SegmentedControlOption } from "../../../components/ui/SegmentedControl.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
+import { focusFieldById } from "../../../lib/forms.js";
 import { FoodPlate } from "../../catalog/components/FoodPlate.js";
 import { foodPlate } from "../../catalog/foodEmoji.js";
 import { useFoods, useRecipes } from "../../catalog/hooks.js";
@@ -110,6 +111,9 @@ function PickRow({ checked, onToggle, plate, title, detail }: PickRowProps) {
     </li>
   );
 }
+
+/** One Add more sheet is open at a time. */
+const SEARCH_ID = "add-more-search";
 
 interface AddMoreSheetProps {
   babyId: string;
@@ -233,7 +237,12 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
       ) : elsewhere ? (
         <div className="flex flex-col items-start gap-2">
           <p className="text-sm text-[var(--color-text-muted)]">{`No matches in ${NARROWED_NAME[searchTab]}.`}</p>
-          <Button type="button" variant="quiet" onClick={() => setSearchTab("all")}>
+          <Button type="button" variant="quiet" onClick={() => {
+              setSearchTab("all");
+              // The button goes with the miss: keep focus on the search.
+              focusFieldById(SEARCH_ID);
+            }}
+          >
             Search all
           </Button>
         </div>
@@ -256,6 +265,7 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
   return (
     <Sheet open onClose={onClose} title="Add more" showClose fixedHeight>
       <Input
+        id={SEARCH_ID}
         type="search"
         value={query}
         onChange={(event) => {
