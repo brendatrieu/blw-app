@@ -398,7 +398,9 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
       const [button] = searchAll(tree);
       expect(button?.props.variant).toBe("quiet");
       expect(button?.props.type).toBe("button");
-      // Verifier c1: the button goes away, so focus moves to the search box.
+      // The button goes away, so focus moves to the All segment, not the
+      // search box: a phone keyboard stays down over the widened results
+      // (ledger 929; verifier c1 had it on the search box).
       const focused: string[] = [];
       vi.stubGlobal("document", { getElementById: (id: string) => ({ focus: () => focused.push(id) }) });
       try {
@@ -407,9 +409,11 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
         vi.unstubAllGlobals();
       }
       tree = render();
-      expect(focused).toEqual([one(tree, Input).props.id]);
-      expect(focused[0]).toBeTruthy();
+      expect(focused).toEqual(["add-more-all"]);
+      expect(focused).not.toContain(one(tree, Input).props.id);
       expect(tabRow(tree).value).toBe("all");
+      expect((one(tree, SegmentedControl).props.options as Array<{ value: string; id?: string }>)[0]).toMatchObject({ value: "all", id: "add-more-all" });
+      expect(html(tree)).toMatch(/<button id="add-more-all" type="button" role="radio" aria-checked="true"[^>]*>All<\/button>/);
       expect(one(tree, Input).props.value).toBe(text);
       expect(titles(tree).length).toBeGreaterThan(0);
       expect(searchAll(tree)).toEqual([]);

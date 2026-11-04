@@ -29,7 +29,7 @@ export const ADD_MORE_TABS: SegmentedControlOption<AddMoreTab>[] = [
  * "All" in front, so the highlighted tab always says what the list holds.
  */
 export const ADD_MORE_SEARCH_TABS: SegmentedControlOption<AddMoreTab | "all">[] = [
-  { value: "all", label: "All", icon: null },
+  { value: "all", label: "All", icon: null, id: "add-more-all" },
   ...ADD_MORE_TABS,
 ];
 
@@ -239,8 +239,10 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
           <p className="text-sm text-[var(--color-text-muted)]">{`No matches in ${NARROWED_NAME[searchTab]}.`}</p>
           <Button type="button" variant="quiet" onClick={() => {
               setSearchTab("all");
-              // The button goes with the miss: keep focus on the search.
-              focusFieldById(SEARCH_ID);
+              // The button goes with the miss. Focus lands on All, not the
+              // search box, so a phone keyboard stays down over the widened
+              // results (ledger 929).
+              focusFieldById("add-more-all");
             }}
           >
             Search all

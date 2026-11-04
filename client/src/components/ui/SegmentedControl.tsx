@@ -6,6 +6,8 @@ export interface SegmentedControlOption<Value extends string> {
   icon: ReactNode;
   /** Shown dimmed and can't be picked (item 702: a stage a recipe has no prep for). */
   disabled?: boolean;
+  /** The segment's id, for a caller that moves focus to it (ledger 929). */
+  id?: string;
 }
 
 interface SegmentedControlProps<Value extends string> {
@@ -43,6 +45,7 @@ export function SegmentedControl<Value extends string>({
         return (
           <button
             key={option.value}
+            id={option.id}
             type="button"
             role="radio"
             aria-checked={selected}
