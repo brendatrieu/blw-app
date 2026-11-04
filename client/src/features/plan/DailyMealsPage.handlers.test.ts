@@ -71,7 +71,10 @@ import { BackButton } from "../../components/ui/BackButton.js";
 import { Button } from "../../components/ui/Button.js";
 import { PageHeader } from "../../components/ui/PageHeader.js";
 import { SkeletonList } from "../../components/ui/Skeleton.js";
+import { HOUR_ITEMS, MERIDIEM_ITEMS, WheelColumn } from "../../components/ui/DateTimeField.js";
+import { Sheet } from "../../components/ui/Sheet.js";
 import { DailyMealsForm, DailyMealsPage } from "./DailyMealsPage.js";
+import { TimeSheet } from "./TimeSheet.js";
 
 interface El {
   type: unknown;
@@ -107,6 +110,15 @@ const key = (handle: El, value: string) => {
   (handle.props.onKeyDown as (event: unknown) => void)({ key: value, preventDefault: () => (prevented = true) });
   return prevented;
 };
+// The row's time button (926): its accessible name is "Time for <meal>: <shown>" (PP-COPY round 5).
+const timeButton = (tree: El, meal: string) =>
+  findAll(tree, (el) => el.type === "button" && text(el.props.children).startsWith(`Time for ${meal}: `))[0]!;
+const timeSheet = (tree: El) => findAll(tree, (el) => el.type === TimeSheet)[0] as El | undefined;
+/** Opens that meal's Time sheet and does `act` with the sheet's props. */
+function withTime(meals: Parameters<typeof render>[0], meal: string, act: (sheet: Record<string, (time?: string) => void>) => void) {
+  (timeButton(render(meals), meal).props.onClick as () => void)();
+  act(timeSheet(render(meals))!.props as never);
+}
 const submit = (tree: El) => (tree.props.onSubmit as (event: unknown) => void)({ preventDefault: () => {} });
 const saved = () => h.save.calls.map((call) => call.input);
 
@@ -136,13 +148,16 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     expect(names(tree)).toEqual(["Breakfast", "Morning snack"]);
     expect(label(tree, "Move Breakfast").type).toBe("button");
     expect(label(tree, "Remove Morning snack").type).toBe("button");
-    const times = findAll(tree, (el) => el.props.type === "time");
-    expect(times.map((input) => [input.props["aria-label"], input.props.value])).toEqual([
-      ["Time for Breakfast", "07:30"],
-      ["Time for Morning snack", ""],
+    // The time is a button (926) named for its meal, showing the time in the
+    // app's format, else "Add time"; it opens a dialog (the Time sheet).
+    const times = findAll(tree, (el) => el.type === "button" && String(el.props.id).endsWith("-time"));
+    expect(times.map((el) => [el.props.id, text(el.props.children).replace(/\u202f/g, " "), el.props["aria-haspopup"], el.props["aria-expanded"]])).toEqual([
+      [`dm-${DEFAULT_DAILY_MEALS[0]!.id}-time`, "Time for Breakfast: 7:30 AM", "dialog", false],
+      [`dm-${DEFAULT_DAILY_MEALS[1]!.id}-time`, "Time for Morning snack: Add time", "dialog", false],
     ]);
-    // What the field shows: the time in the app's format, else "Add time".
-    expect(rows(tree).map((row) => text(findAll(row, (el) => el.type === "label")[0]).replace(/\u202f/g, " "))).toEqual(["7:30 AM", "Add time"]);
+    expect(findAll(times[0]!, (el) => el.props.className === "sr-only").map(text)).toEqual(["Time for Breakfast: "]);
+    expect(findAll(tree, (el) => el.props.type === "time")).toEqual([]);
+    expect(timeSheet(tree)).toBeUndefined();
     expect(text(button(tree, "+ Add a meal"))).toBe("+ Add a meal");
   });
 
@@ -156,11 +171,10 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     tree = render();
     (label(tree, "Remove Dinner").props.onClick as () => void)();
     tree = render();
-    const time = (meal: string) => findAll(render(), (el) => el.props["aria-label"] === `Time for ${meal}`)[0]!;
-    type(time("Brekkie"), "07:30");
-    type(time("Bedtime snack"), "19:15:00");
-    type(time("Brekkie"), "");
-    type(time("Lunch"), "12:00");
+    withTime(undefined, "Brekkie", (sheet) => sheet.onSave!("07:30"));
+    withTime(undefined, "Bedtime snack", (sheet) => sheet.onSave!("19:15"));
+    withTime(undefined, "Brekkie", (sheet) => sheet.onClear!());
+    withTime(undefined, "Lunch", (sheet) => sheet.onSave!("12:00"));
     submit(render());
     expect(saved()).toEqual([
       {
@@ -176,7 +190,7 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     expect(done).toBe(1);
   });
 
-  it("a time set or changed places its meal by the clock at once; the moved row's time field keeps the focus (ledger 925)", () => {
+  it("a saved time places its meal by the clock; the sheet closes back onto that row's time button (ledgers 925, 926)", () => {
     // The review copy's Daily meals (2026-11-03), already out of time order.
     const review = [
       { id: DEFAULT_DAILY_MEALS[0]!.id, name: "Breakfast", time: "09:39" },
@@ -185,23 +199,23 @@ describe("Daily meals (CD-Daily-Meals)", () => {
       { id: DEFAULT_DAILY_MEALS[3]!.id, name: "Dinner", time: "14:39" },
     ];
     const focusNext = () => h.store.refs[2]!;
-    const time = (meal: string) => findAll(render(review), (el) => el.props["aria-label"] === `Time for ${meal}`)[0]!;
     (button(render(review), "+ Add a meal").props.onClick as () => void)();
     type(findAll(render(review), (el) => el.props["aria-label"] === "Meal name").at(-1)!, "Brunch");
     focusNext().current = null;
-    type(time("Brunch"), "11:41");
+    withTime(review, "Brunch", (sheet) => sheet.onSave!("11:40"));
+    expect(names(render(review))).toEqual(["Breakfast", "Snack", "Lunch", "Brunch", "Dinner"]);
+    expect(timeSheet(render(review))).toBeUndefined();
+    expect(focusNext().current).toBe("dm-added-1-time");
+    expect(timeButton(render(review), "Brunch").props.id).toBe("dm-added-1-time");
+
+    // In clock order already: stays; the focus still returns to it.
+    focusNext().current = null;
+    withTime(review, "Brunch", (sheet) => sheet.onSave!("12:00"));
     expect(names(render(review))).toEqual(["Breakfast", "Snack", "Lunch", "Brunch", "Dinner"]);
     expect(focusNext().current).toBe("dm-added-1-time");
-    expect(time("Brunch").props.id).toBe("dm-added-1-time");
-
-    // In clock order already: stays, and the focus is left alone.
-    focusNext().current = null;
-    type(time("Brunch"), "12:00");
-    expect(names(render(review))).toEqual(["Breakfast", "Snack", "Lunch", "Brunch", "Dinner"]);
-    expect(focusNext().current).toBeNull();
     // A cleared time stays where it is; the untimed meal then never moves.
-    type(time("Brunch"), "");
-    type(time("Lunch"), "15:00");
+    withTime(review, "Brunch", (sheet) => sheet.onClear!());
+    withTime(review, "Lunch", (sheet) => sheet.onSave!("15:00"));
     expect(names(render(review))).toEqual(["Breakfast", "Snack", "Brunch", "Dinner", "Lunch"]);
     // A drag or arrow keys afterwards still win, and that order is saved.
     expect(key(label(render(review), "Move Lunch"), "ArrowUp")).toBe(true);
@@ -213,6 +227,78 @@ describe("Daily meals (CD-Daily-Meals)", () => {
       ["Lunch", "15:00"],
       ["Dinner", "14:39"],
     ]);
+  });
+
+  it("the Time sheet: Cancel (or Escape, an outside tap) changes nothing, moves nothing, and returns the focus; Clear time only with a time (926)", () => {
+    const review = [
+      { id: DEFAULT_DAILY_MEALS[0]!.id, name: "Breakfast", time: "09:39" },
+      { id: DEFAULT_DAILY_MEALS[1]!.id, name: "Snack", time: "08:39" },
+      { id: DEFAULT_DAILY_MEALS[2]!.id, name: "Lunch", time: null },
+    ];
+    const focusNext = () => h.store.refs[2]!;
+    (timeButton(render(review), "Breakfast").props.onClick as () => void)();
+    let tree = render(review);
+    expect(timeButton(tree, "Breakfast").props["aria-expanded"]).toBe(true);
+    // One sheet, for that row, opening on its own time.
+    expect(findAll(tree, (el) => el.type === TimeSheet)).toHaveLength(1);
+    expect(timeSheet(tree)!.props.time).toBe("09:39");
+    // Out of clock order, yet nothing moved on opening, nor on Cancel.
+    (timeSheet(tree)!.props.onClose as () => void)();
+    tree = render(review);
+    expect(timeSheet(tree)).toBeUndefined();
+    expect(focusNext().current).toBe(`dm-${review[0]!.id}-time`);
+    submit(tree);
+    expect((saved()[0] as { meals: { name: string; time: string | null }[] }).meals.map((meal) => [meal.name, meal.time])).toEqual([
+      ["Breakfast", "09:39"],
+      ["Snack", "08:39"],
+      ["Lunch", null],
+    ]);
+    // Save places it once, by the clock.
+    withTime(review, "Breakfast", (sheet) => sheet.onSave!("09:40"));
+    expect(names(render(review))).toEqual(["Snack", "Breakfast", "Lunch"]);
+    expect(focusNext().current).toBe(`dm-${review[0]!.id}-time`);
+  });
+
+  it("the Time sheet's wheel: Hour, Minute in 5-minute steps, AM or PM; opens on the nearest step; Save hands back the wheel's time (926)", () => {
+    const sheet = (time: string | null, onSave: (time: string) => void = () => {}) => {
+      h.store.states.length = 0;
+      h.store.i = 0;
+      return (TimeSheet as unknown as (props: unknown) => El)({ time, onSave, onClear: () => {}, onClose: () => {} });
+    };
+    const again = (time: string | null, onSave: (time: string) => void) => {
+      h.store.i = 0;
+      return (TimeSheet as unknown as (props: unknown) => El)({ time, onSave, onClear: () => {}, onClose: () => {} });
+    };
+    const columns = (tree: El) => findAll(tree, (el) => el.type === WheelColumn);
+    let tree = sheet("09:39");
+    expect(tree.type).toBe(Sheet);
+    expect(tree.props).toMatchObject({ open: true, title: "Time" });
+    expect(columns(tree).map((col) => [col.props.ariaLabel, col.props.valueNow, col.props.valueMin, col.props.valueMax, col.props.loop ?? false])).toEqual([
+      ["Hour", 9, 1, 12, true],
+      ["Minute", 40, 0, 55, true],
+      ["AM or PM", 0, 0, 1, false],
+    ]);
+    expect(columns(tree)[0]!.props.items).toBe(HOUR_ITEMS);
+    expect(columns(tree)[2]!.props.items).toBe(MERIDIEM_ITEMS);
+    expect((columns(tree)[1]!.props.items as { label: string }[]).map((item) => item.label)).toEqual(
+      ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"],
+    );
+    expect(findAll(tree, (el) => el.type === Button).map((el) => text(el.props.children))).toEqual(["Save", "Cancel", "Clear time"]);
+    // 23:58 opens on 11:55 PM, never wrapping to 12:00 AM.
+    expect(columns(sheet("23:58")).map((col) => col.props.valueNow)).toEqual([11, 55, 1]);
+    // No time: no Clear time.
+    expect(findAll(sheet(null), (el) => el.type === Button).map((el) => text(el.props.children))).toEqual(["Save", "Cancel"]);
+
+    // Turned to 12:05 PM and saved; the odd 09:39 changes only on Save.
+    const savedTimes: string[] = [];
+    tree = sheet("09:39", (time) => savedTimes.push(time));
+    (columns(tree)[0]!.props.onIndexChange as (i: number) => void)(11);
+    (columns(again("09:39", (time) => savedTimes.push(time)))[1]!.props.onIndexChange as (i: number) => void)(1);
+    (columns(again("09:39", (time) => savedTimes.push(time)))[2]!.props.onIndexChange as (i: number) => void)(1);
+    tree = again("09:39", (time) => savedTimes.push(time));
+    expect(savedTimes).toEqual([]);
+    (findAll(tree, (el) => el.type === Button && text(el.props.children) === "Save")[0]!.props.onClick as () => void)();
+    expect(savedTimes).toEqual(["12:05"]);
   });
 
   it("arrow keys on a handle move its meal one place, and stop at either end", () => {
@@ -273,7 +359,7 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     }
     for (const handle of findAll(tree, (el) => String(el.props["aria-label"]).startsWith("Move "))) expect(classes(handle)).toContain("touch-none");
     const fields = findAll(tree, (el) => el.type === "input");
-    expect(fields).toHaveLength(8);
+    expect(fields).toHaveLength(4);
     for (const field of fields) expect(classes(field)).toEqual(expect.arrayContaining(["select-text", "[-webkit-touch-callout:default]"]));
   });
 

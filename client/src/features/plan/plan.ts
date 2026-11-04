@@ -82,6 +82,34 @@ export function mealTimeLabel(time: string): string {
   });
 }
 
+/** What the Time sheet's wheel shows (ledger 926): Hour 1-12, Minute in
+ * 5-minute steps, AM or PM. */
+export interface ClockParts {
+  hour12: number;
+  minute: number;
+  meridiem: "AM" | "PM";
+}
+
+/** `HH:MM` on the nearest 5-minute step (09:39 -> 09:40, 09:37 -> 09:35),
+ * never past 23:55, so it never wraps to the next day (23:58 -> 23:55). */
+export function nearestFiveMinutes(time: string): string {
+  const minutes = Math.min(Math.round((Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5))) / 5) * 5, 23 * 60 + 55);
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+/** The wheel's parts for `HH:MM`, on its nearest 5-minute step. */
+export function clockParts(time: string): ClockParts {
+  const stepped = nearestFiveMinutes(time);
+  const hour24 = Number(stepped.slice(0, 2));
+  return { hour12: hour24 % 12 || 12, minute: Number(stepped.slice(3, 5)), meridiem: hour24 < 12 ? "AM" : "PM" };
+}
+
+/** Back to `HH:MM` (12 AM is 00, 12 PM is 12). */
+export function clockTime(parts: ClockParts): string {
+  const hour24 = (parts.hour12 % 12) + (parts.meridiem === "PM" ? 12 : 0);
+  return `${String(hour24).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`;
+}
+
 /** One line of a planned meal's card (CD-Plan-Day): its plate and name. */
 export interface PlannedLine {
   key: string;

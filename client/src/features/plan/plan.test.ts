@@ -28,6 +28,9 @@ import {
   flagNotes,
   mealTimeLabel,
   moveRow,
+  clockParts,
+  clockTime,
+  nearestFiveMinutes,
   plannedLines,
   toDailyMealsInput,
   weekLabel,
@@ -424,5 +427,39 @@ describe("Today's plan on Home", () => {
   it("reads the wall clock as HH:MM", () => {
     expect(localClock(new Date(2026, 9, 14, 7, 5))).toBe("07:05");
     expect(localClock(new Date(2026, 9, 14, 23, 59))).toBe("23:59");
+  });
+});
+
+describe("the Time sheet's clock (ledger 926)", () => {
+  it("rounds to the nearest 5-minute step, never past 23:55 (whole minutes never sit on a half step)", () => {
+    const cases: Array<[string, string]> = [
+      ["09:39", "09:40"],
+      ["09:37", "09:35"],
+      ["09:38", "09:40"],
+      ["09:40", "09:40"],
+      ["00:00", "00:00"],
+      ["00:02", "00:00"],
+      ["11:58", "12:00"],
+      ["12:57", "12:55"],
+      ["23:52", "23:50"],
+      ["23:53", "23:55"],
+      ["23:58", "23:55"],
+      ["23:59", "23:55"],
+    ];
+    for (const [time, step] of cases) expect([time, nearestFiveMinutes(time)]).toEqual([time, step]);
+  });
+
+  it("splits HH:MM into Hour / Minute / AM-PM on its step and joins it back", () => {
+    expect(clockParts("09:39")).toEqual({ hour12: 9, minute: 40, meridiem: "AM" });
+    expect(clockParts("00:01")).toEqual({ hour12: 12, minute: 0, meridiem: "AM" });
+    expect(clockParts("12:30")).toEqual({ hour12: 12, minute: 30, meridiem: "PM" });
+    expect(clockParts("23:58")).toEqual({ hour12: 11, minute: 55, meridiem: "PM" });
+    expect(clockTime({ hour12: 12, minute: 0, meridiem: "AM" })).toBe("00:00");
+    expect(clockTime({ hour12: 12, minute: 5, meridiem: "PM" })).toBe("12:05");
+    expect(clockTime({ hour12: 7, minute: 30, meridiem: "PM" })).toBe("19:30");
+    for (let minutes = 0; minutes < 24 * 60; minutes += 5) {
+      const time = `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+      expect(clockTime(clockParts(time))).toBe(time);
+    }
   });
 });

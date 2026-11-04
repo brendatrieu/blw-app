@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ChangeEvent, type MouseEvent } from "react";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   PLAN_NAME_MAX,
@@ -24,7 +24,6 @@ import { buildLeftoverStorageInput } from "../storage/leftovers.js";
 import type { ContainerChoice } from "../storage/format.js";
 import { useCreateMeal, useMeal, useUpdateMeal } from "../tracking/hooks.js";
 import { containerGoneBlocked, foodDeletedBlocked } from "../plan/copy.js";
-import { nativeTimeInput } from "../plan/DailyMealsPage.js";
 import { isPlanChanged, servedMealId, usePlan, useSavePlannedMeal } from "../plan/hooks.js";
 import { NEW_PLANNED_MEAL, deviceTimeZone, mealTimeLabel, planDayLabel, validatePlanMeal, weekOf } from "../plan/plan.js";
 import { BackButton, useBackNavigate } from "../../components/ui/BackButton.js";
@@ -70,6 +69,30 @@ import {
   type PlateAction,
   type PlateEntry,
 } from "./plate.js";
+
+/**
+ * The platform's own time picker, laid invisibly over a field that shows the
+ * time in the app's format (Plan a meal; Daily meals has its Time sheet since
+ * ledger 926): tapping anywhere on the field opens it. Clearing a time is the
+ * picker's own (iOS: Reset).
+ */
+function nativeTimeInput(value: string | null, onChange: (time: string | null) => void) {
+  return {
+    type: "time",
+    value: value ?? "",
+    onChange: (event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value.slice(0, 5) || null),
+    onClick: (event: MouseEvent<HTMLInputElement>) => {
+      // Desktop browsers open the picker only from its icon.
+      try {
+        event.currentTarget.showPicker();
+      } catch {
+        // Already open, or not offered: the field still works.
+      }
+    },
+    // A field even inside a row that selects nothing (910).
+    className: "absolute inset-0 h-full w-full cursor-pointer opacity-0 select-text [-webkit-touch-callout:default]",
+  } as const;
+}
 
 /** Which page /log-meal is (plan SPEC §5): `?edit=` an Edit meal, `?storage=`
  * a container's Serve, anything else Log meal (with `?food=` / `?recipe=`).

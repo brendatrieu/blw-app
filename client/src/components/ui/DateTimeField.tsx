@@ -475,12 +475,12 @@ export function WheelColumn({
   );
 }
 
-const HOUR_ITEMS: WheelItem[] = Array.from({ length: 12 }, (_, i) => ({ key: String(i + 1), label: String(i + 1) }));
+export const HOUR_ITEMS: WheelItem[] = Array.from({ length: 12 }, (_, i) => ({ key: String(i + 1), label: String(i + 1) }));
 const MINUTE_ITEMS: WheelItem[] = Array.from({ length: 60 }, (_, i) => ({
   key: String(i),
   label: String(i).padStart(2, "0"),
 }));
-const MERIDIEM_ITEMS: WheelItem[] = [
+export const MERIDIEM_ITEMS: WheelItem[] = [
   { key: "AM", label: "AM" },
   { key: "PM", label: "PM" },
 ];

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent, type MouseEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
 import { PLAN_NAME_MAX, localDate, placeByTime, type DailyMeal } from "@blw/shared";
 import { BackButton, useBackNavigate } from "../../components/ui/BackButton.js";
@@ -23,6 +23,7 @@ import {
   weekOf,
   type DailyMealRow,
 } from "./plan.js";
+import { TimeSheet } from "./TimeSheet.js";
 
 /**
  * Daily meals (804, CD-Daily-Meals; a page since ledger 924): the meals every
@@ -78,29 +79,6 @@ function GripGlyph() {
   );
 }
 
-/**
- * The platform's own time picker, laid invisibly over a field that shows the
- * time in the app's format (Daily meals, Plan a meal): tapping anywhere on
- * the field opens it. Clearing a time is the picker's own (iOS: Reset).
- */
-export function nativeTimeInput(value: string | null, onChange: (time: string | null) => void) {
-  return {
-    type: "time",
-    value: value ?? "",
-    onChange: (event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value.slice(0, 5) || null),
-    onClick: (event: MouseEvent<HTMLInputElement>) => {
-      // Desktop browsers open the picker only from its icon.
-      try {
-        event.currentTarget.showPicker();
-      } catch {
-        // Already open, or not offered: the field still works.
-      }
-    },
-    // A field even inside a row that selects nothing (910).
-    className: "absolute inset-0 h-full w-full cursor-pointer opacity-0 select-text [-webkit-touch-callout:default]",
-  } as const;
-}
-
 /** The plate's "+ Add more" look (CD boards' dashed button). */
 const ADD_BUTTON =
   "flex min-h-12 w-full items-center justify-center rounded-[var(--radius-md)] border-[1.5px] border-dashed border-[var(--color-border)] text-[15px] font-semibold text-[var(--color-accent)] disabled:opacity-60";
@@ -120,6 +98,8 @@ export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meal
   const [rows, setRows] = useState<DailyMealRow[]>(() => dailyMealRows(meals));
   const [attempted, setAttempted] = useState(false);
   const [dragging, setDragging] = useState<string | null>(null);
+  // The row whose Time sheet is open (ledger 926).
+  const [editing, setEditing] = useState<string | null>(null);
   const added = useRef(0);
   const listRef = useRef<HTMLUListElement>(null);
   // The control to focus once React has put the rows in their new order: a
@@ -140,15 +120,21 @@ export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meal
   const errors = attempted ? dailyMealErrors(rows) : {};
   const update = (key: string, patch: Partial<DailyMealRow>) =>
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
-  // Ledger 925: a time set or changed places its meal by the clock at once;
-  // if that moves the row, its time field keeps (or gets back) the focus.
+  // Ledger 926: the Time sheet closes back onto its row's time button,
+  // wherever the row now is (iOS doesn't focus a tapped button, so the
+  // sheet's own focus return can't be relied on).
+  const closeTime = (row: DailyMealRow) => {
+    focusNext.current = fieldId(row, "time");
+    setEditing(null);
+  };
+  // Ledger 925: a saved time places its meal by the clock, once; a cleared
+  // one stays where it is.
   const setTime = (row: DailyMealRow, time: string | null) => {
     const at = rows.indexOf(row);
-    const timed = rows.map((entry) => (entry.key === row.key ? { ...entry, time } : entry));
-    const placed = placeByTime(timed, at);
-    if (placed[at] !== timed[at]) focusNext.current = fieldId(row, "time");
-    setRows(placed);
+    setRows(placeByTime(rows.map((entry) => (entry.key === row.key ? { ...entry, time } : entry)), at));
+    closeTime(row);
   };
+  const editingRow = rows.find((row) => row.key === editing);
   const move = (row: DailyMealRow, to: number) => {
     const from = rows.indexOf(row);
     if (from === to || to < 0 || to >= rows.length) return;
@@ -229,18 +215,19 @@ export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meal
                     error ? "border-[var(--color-danger)]" : ""
                   }`}
                 />
-                {/* The platform's own time picker under the board's field:
-                    tapping anywhere on it opens the picker. 88px, not the
-                    board's 104: "12:00 PM" fits, and at 320 the name keeps
-                    what it can. */}
-                <label
-                  className={`${FIELD_BOX} relative flex w-[88px] shrink-0 items-center px-2.5 text-[15px] font-semibold whitespace-nowrap has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--color-accent)]`}
+                {/* Opens the Time sheet (926). 88px, not the board's 104:
+                    "12:00 PM" fits, and at 320 the name keeps what it can. */}
+                <button
+                  type="button"
+                  id={fieldId(row, "time")}
+                  aria-haspopup="dialog"
+                  aria-expanded={editing === row.key}
+                  onClick={() => setEditing(row.key)}
+                  className={`${FIELD_BOX} flex w-[88px] shrink-0 items-center px-2.5 text-left text-[15px] font-semibold whitespace-nowrap`}
                 >
-                  <span aria-hidden="true" className={row.time ? "" : "font-medium text-[var(--color-text-muted)]"}>
-                    {row.time ? mealTimeLabel(row.time) : "Add time"}
-                  </span>
-                  <input id={fieldId(row, "time")} aria-label={`Time for ${row.name}`} {...nativeTimeInput(row.time, (time) => setTime(row, time))} />
-                </label>
+                  <span className="sr-only">Time for {row.name}: </span>
+                  <span className={row.time ? "" : "font-medium text-[var(--color-text-muted)]"}>{row.time ? mealTimeLabel(row.time) : "Add time"}</span>
+                </button>
                 <button
                   type="button"
                   aria-label={`Remove ${row.name}`}
@@ -260,6 +247,14 @@ export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meal
           );
         })}
       </ul>
+      {editingRow && (
+        <TimeSheet
+          time={editingRow.time}
+          onSave={(time) => setTime(editingRow, time)}
+          onClear={() => setTime(editingRow, null)}
+          onClose={() => closeTime(editingRow)}
+        />
+      )}
 
       <button
         type="button"
