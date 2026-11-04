@@ -1,43 +1,60 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent, type MouseEvent } from "react";
-import { PLAN_NAME_MAX, type DailyMeal } from "@blw/shared";
+import { Navigate } from "react-router-dom";
+import { PLAN_NAME_MAX, localDate, type DailyMeal } from "@blw/shared";
+import { BackButton, useBackNavigate } from "../../components/ui/BackButton.js";
 import { Button } from "../../components/ui/Button.js";
 import { CloseGlyph, ICON_BUTTON_CLASSES } from "../../components/ui/iconButton.js";
-import { Sheet } from "../../components/ui/Sheet.js";
+import { PageHeader } from "../../components/ui/PageHeader.js";
+import { SkeletonList } from "../../components/ui/Skeleton.js";
 import { focusFieldById } from "../../lib/forms.js";
 import { useIsOffline } from "../../lib/online.js";
-import { useSaveDailyMeals } from "./hooks.js";
+import { useActiveBaby } from "../babies/useActiveBaby.js";
+import { usePlan, useSaveDailyMeals } from "./hooks.js";
 import {
   canAddDailyMeal,
   canRemoveDailyMeal,
   dailyMealErrors,
   dailyMealRows,
+  deviceTimeZone,
   dragTarget,
   mealTimeLabel,
   moveRow,
   toDailyMealsInput,
+  weekOf,
   type DailyMealRow,
 } from "./plan.js";
 
-export interface DailyMealsSheetProps {
-  babyId: string;
-  /** The list as saved (the plan answer's `dailyMeals`). */
-  meals: readonly DailyMeal[];
-  open: boolean;
-  onClose: () => void;
-}
-
 /**
- * Daily meals (804, CD-Daily-Meals): the meals every new day starts with,
- * each with an optional time. Rename in place, add, remove, and reorder by
- * the handle (drag it, or arrow keys on it). Days already planned, and past
- * days, keep their own meals. Opened from the Meal plan's header; the form
- * mounts with the sheet, so each opening starts from the saved list.
+ * Daily meals (804, CD-Daily-Meals; a page since ledger 924): the meals every
+ * new day starts with, each with an optional time. Rename in place, add,
+ * remove, and reorder by the handle (drag it, or arrow keys on it). Days
+ * already planned, and past days, keep their own meals. Opened from the Meal
+ * Plan's header. Save saves and goes back to the plan (the week it was on);
+ * Back leaves without saving, no question asked, like Log meal. A plain
+ * route, so a native shell can push it like any screen.
  */
-export function DailyMealsSheet({ babyId, meals, open, onClose }: DailyMealsSheetProps) {
+export function DailyMealsPage() {
+  const { activeBaby, isLoading: babyLoading } = useActiveBaby();
+  const today = localDate(new Date(), deviceTimeZone());
+  const week = weekOf(today);
+  // Today's week: the same cache entry the plan opens on.
+  const plan = usePlan(activeBaby?.id, week[0]!, week[6]!);
+  const goBack = useBackNavigate("/plan");
+
+  if (!babyLoading && !activeBaby) return <Navigate to="/plan" replace />;
   return (
-    <Sheet open={open} onClose={onClose} title="Daily meals" showClose fixedHeight>
-      <DailyMealsForm babyId={babyId} meals={meals} onDone={onClose} />
-    </Sheet>
+    <div className="flex flex-col gap-4 p-4">
+      <PageHeader title="Daily meals" leading={<BackButton fallback="/plan" />} />
+      {/* Only the list as saved now: a copy restored from the offline cache
+          waits for its refetch (offline the fetch pauses, so it shows). */}
+      {plan.data && activeBaby && !plan.isFetching ? (
+        <DailyMealsForm babyId={activeBaby.id} meals={plan.data.dailyMeals} onDone={goBack} />
+      ) : plan.isError ? (
+        <p className="text-sm text-[var(--color-danger)]">Couldn't load the plan.</p>
+      ) : (
+        <SkeletonList count={4} />
+      )}
+    </div>
   );
 }
 

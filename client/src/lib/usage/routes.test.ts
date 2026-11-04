@@ -65,6 +65,7 @@ describe("toRoutePattern", () => {
     ["/meals", "/meals"],
     ["/meals/6f1c0b1a-0000-4000-8000-000000000001", "/meals/:id"],
     ["/plan", "/plan"],
+    ["/plan/daily-meals", "/plan/daily-meals"], // ledger 924
     // The date and the slot are the planned meal's; only the pattern travels.
     ["/plan/2026-10-14/6f1c0b1a-0000-4000-8000-000000000006", "/plan/:date/:slotId"],
     ["/storage", "/storage"],

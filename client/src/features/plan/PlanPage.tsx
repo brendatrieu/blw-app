@@ -10,7 +10,6 @@ import { Skeleton, SkeletonList } from "../../components/ui/Skeleton.js";
 import { useActiveBaby } from "../babies/useActiveBaby.js";
 import { copiedLabel } from "./copy.js";
 import { CopySheet } from "./CopySheet.js";
-import { DailyMealsSheet } from "./DailyMealsSheet.js";
 import { useOneTapServe, usePlan } from "./hooks.js";
 import { PlanMealCard } from "./PlanMealCard.js";
 import {
@@ -53,14 +52,13 @@ const ADD_MEAL =
  * The meal plan (ledger 904, CD-Plan-Day): a Monday-to-Sunday week strip
  * paged with ‹ ›, Today when another day is selected, and the selected day's
  * meals, then "+ Add a meal". The day lives in the URL (`?date=`, absent
- * for today), so Back from a meal lands on the same day. Daily meals and
- * Copy to… open their own sheets; after a Copy the plan shows the first day
+ * for today), so Back from a meal (or from Daily meals, its own page since
+ * ledger 924) lands on the same day. Copy to… opens a sheet; after a Copy the plan shows the first day
  * it copied to, with "Copied to {n} meals" until another day is picked.
  */
 export function PlanPage() {
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [dailyMealsOpen, setDailyMealsOpen] = useState(false);
   const [copying, setCopying] = useState<PlannedMeal | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
   const today = localDate(new Date(), deviceTimeZone());
@@ -83,10 +81,10 @@ export function PlanPage() {
         title="Meal Plan"
         leading={<BackButton fallback="/" />}
         action={
-          <button type="button" className={PLAN_PILL} disabled={!plan.data} onClick={() => setDailyMealsOpen(true)}>
+          <Link to="/plan/daily-meals" className={PLAN_PILL}>
             <ListGlyph />
             Daily meals
-          </button>
+          </Link>
         }
       />
 
@@ -210,15 +208,6 @@ export function PlanPage() {
                 if (date) select(date);
                 setCopied(filled);
               }}
-            />
-          )}
-
-          {plan.data && (
-            <DailyMealsSheet
-              babyId={activeBaby.id}
-              meals={plan.data.dailyMeals}
-              open={dailyMealsOpen}
-              onClose={() => setDailyMealsOpen(false)}
             />
           )}
         </>

@@ -1,5 +1,5 @@
 // The meal plan page (ledger 904, CD-Plan-Day): which week it asks for, the
-// strip, ‹ ›, Today, the selected day's meals and the Daily meals sheet;
+// strip, ‹ ›, Today, the selected day's meals and the Daily meals link;
 // step 4.2: "+ Add a meal", ⋮ Copy to… and "Copied to {n} meals".
 // Called as a plain function with its hooks mocked (node env, no DOM); the
 // day is pinned with fake timers in UTC.
@@ -9,9 +9,7 @@ import type { PlanResponse } from "@blw/shared";
 const h = vi.hoisted(() => ({
   search: new URLSearchParams(),
   setSearch: [] as Array<[unknown, unknown]>,
-  sets: [] as unknown[],
-  open: false,
-  // useState after the first (Daily meals open): Copy's meal, then the count.
+  // useState: Copy's meal, then the count.
   i: 0,
   states: [] as unknown[],
   baby: { activeBaby: { id: "baby-1" } as { id: string } | null, isLoading: false },
@@ -26,7 +24,6 @@ vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useState: (init: unknown) => {
     const i = h.i++;
-    if (i === 0) return [h.open, (value: unknown) => h.sets.push(value)];
     if (!(i in h.states)) h.states[i] = init;
     return [h.states[i], (value: unknown) => (h.states[i] = value)];
   },
@@ -53,9 +50,9 @@ import { EmptyState } from "../../components/ui/EmptyState.js";
 import { PageHeader } from "../../components/ui/PageHeader.js";
 import { SkeletonList } from "../../components/ui/Skeleton.js";
 import { CopySheet } from "./CopySheet.js";
-import { DailyMealsSheet } from "./DailyMealsSheet.js";
 import { PlanMealCard } from "./PlanMealCard.js";
-import { PlanPage } from "./PlanPage.js";
+import { PLAN_PILL, PlanPage } from "./PlanPage.js";
+import { Link } from "react-router-dom";
 
 interface El {
   type: unknown;
@@ -107,8 +104,6 @@ beforeEach(() => {
   h.search = new URLSearchParams();
   h.states = [];
   h.setSearch.length = 0;
-  h.sets.length = 0;
-  h.open = false;
   h.baby = { activeBaby: { id: "baby-1" }, isLoading: false };
   h.plan = { data: week("2026-10-12", ["2026-10-13", "2026-10-14"]), isLoading: false, isError: false };
   h.planArgs.length = 0;
@@ -241,24 +236,14 @@ describe("PlanPage (CD-Plan-Day)", () => {
     expect(findAll(render(), (el) => el.type === CopySheet)[0]!.props.meal).toBeNull();
   });
 
-  it("Daily meals waits for the plan, then opens the sheet with the saved list", () => {
+  it("Daily meals is the header's link to its own page, there before the plan loads (ledger 924)", () => {
     h.plan = { data: undefined, isLoading: true, isError: false };
-    let tree = render();
+    const tree = render();
+    expect(dailyMeals(tree).type).toBe(Link);
+    expect(dailyMeals(tree).props.to).toBe("/plan/daily-meals");
     expect(text(dailyMeals(tree).props.children)).toBe("Daily meals");
-    expect(dailyMeals(tree).props.disabled).toBe(true);
-    expect(findAll(tree, (el) => el.type === DailyMealsSheet)).toHaveLength(0);
+    expect(dailyMeals(tree).props.className).toBe(PLAN_PILL);
     expect(findAll(tree, (el) => el.type === SkeletonList)).toHaveLength(1);
-
-    h.plan = { data: week("2026-10-12", []), isLoading: false, isError: false };
-    tree = render();
-    expect(dailyMeals(tree).props.disabled).toBe(false);
-    click(dailyMeals(tree));
-    expect(h.sets).toEqual([true]);
-    h.open = true;
-    const sheet = findAll(render(), (el) => el.type === DailyMealsSheet)[0]!;
-    expect(sheet.props).toMatchObject({ babyId: "baby-1", open: true, meals: [{ id: id(1), name: "Breakfast", time: "07:30" }] });
-    (sheet.props.onClose as () => void)();
-    expect(h.sets).toEqual([true, false]);
   });
 
   it("says so when the plan can't load, and asks for a baby first when there is none", () => {

@@ -53,6 +53,8 @@ export const ROUTE_PATTERNS = [
   /** The meal plan (ledger 904) and one planned meal; the date and slot
    * never travel, only the pattern. */
   "/plan",
+  /** Daily meals, a page since ledger 924. */
+  "/plan/daily-meals",
   "/plan/:date/:slotId",
   "/storage",
   "/storage/add",

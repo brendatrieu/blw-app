@@ -10,6 +10,7 @@ import { ForgotPasswordPage } from "./pages/ForgotPasswordPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
 import { PlateScreen } from "./features/plate/PlateScreen.js";
 import { PlanPage } from "./features/plan/PlanPage.js";
+import { DailyMealsPage } from "./features/plan/DailyMealsPage.js";
 import { StoragePage } from "./pages/StoragePage.js";
 import { StorageAddPage } from "./pages/StorageAddPage.js";
 import { StorageEditPage } from "./pages/StorageEditPage.js";
@@ -128,6 +129,8 @@ export function App() {
         {/* Ledger 904: the meal plan, from Home's calendar button and More;
             a planned meal opens the plate as Plan a meal ("new" = + Add a meal). */}
         <Route path="/plan" element={<PlanPage />} />
+        {/* Ledger 924: Daily meals is a page, pushed from the plan's header. */}
+        <Route path="/plan/daily-meals" element={<DailyMealsPage />} />
         <Route path="/plan/:date/:slotId" element={<PlateScreen />} />
         <Route path="/storage" element={<StoragePage />} />
         <Route path="/storage/add" element={<StorageAddPage />} />

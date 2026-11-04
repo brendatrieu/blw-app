@@ -24,7 +24,7 @@ import { buildLeftoverStorageInput } from "../storage/leftovers.js";
 import type { ContainerChoice } from "../storage/format.js";
 import { useCreateMeal, useMeal, useUpdateMeal } from "../tracking/hooks.js";
 import { containerGoneBlocked, foodDeletedBlocked } from "../plan/copy.js";
-import { nativeTimeInput } from "../plan/DailyMealsSheet.js";
+import { nativeTimeInput } from "../plan/DailyMealsPage.js";
 import { isPlanChanged, servedMealId, usePlan, useSavePlannedMeal } from "../plan/hooks.js";
 import { NEW_PLANNED_MEAL, deviceTimeZone, mealTimeLabel, planDayLabel, validatePlanMeal, weekOf } from "../plan/plan.js";
 import { BackButton, useBackNavigate } from "../../components/ui/BackButton.js";

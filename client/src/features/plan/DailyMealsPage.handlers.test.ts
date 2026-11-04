@@ -12,6 +12,10 @@ const h = vi.hoisted(() => {
   return {
     store,
     offline: false,
+    baby: { activeBaby: { id: "baby-1" } as { id: string } | null, isLoading: false },
+    plan: { data: undefined as unknown, isError: false, isFetching: false },
+    planArgs: [] as unknown[][],
+    backs: [] as string[],
     save: { isPending: false, isError: false, calls: [] as Array<{ input: unknown; options: { onSuccess?: () => void } }> },
     useState: (init: unknown) => {
       const i = store.i++;
@@ -37,7 +41,20 @@ vi.mock("react", async (importOriginal) => ({
   useEffect: () => {},
 }));
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
+vi.mock("../babies/useActiveBaby.js", () => ({ useActiveBaby: () => h.baby }));
+vi.mock("../../components/ui/BackButton.js", () => ({
+  BackButton: () => null,
+  useBackNavigate: (fallback: string) => () => h.backs.push(fallback),
+}));
+vi.mock("./plan.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./plan.js")>()),
+  deviceTimeZone: () => "UTC",
+}));
 vi.mock("./hooks.js", () => ({
+  usePlan: (...args: unknown[]) => {
+    h.planArgs.push(args);
+    return h.plan;
+  },
   useSaveDailyMeals: () => ({
     mutate: (input: unknown, options: { onSuccess?: () => void }) => h.save.calls.push({ input, options }),
     get isPending() {
@@ -49,8 +66,12 @@ vi.mock("./hooks.js", () => ({
   }),
 }));
 
+import { Navigate } from "react-router-dom";
+import { BackButton } from "../../components/ui/BackButton.js";
 import { Button } from "../../components/ui/Button.js";
-import { DailyMealsForm } from "./DailyMealsSheet.js";
+import { PageHeader } from "../../components/ui/PageHeader.js";
+import { SkeletonList } from "../../components/ui/Skeleton.js";
+import { DailyMealsForm, DailyMealsPage } from "./DailyMealsPage.js";
 
 interface El {
   type: unknown;
@@ -93,6 +114,10 @@ beforeEach(() => {
   h.store.states.length = 0;
   h.store.refs.length = 0;
   h.offline = false;
+  h.baby = { activeBaby: { id: "baby-1" }, isLoading: false };
+  h.plan = { data: undefined, isError: false, isFetching: false };
+  h.planArgs.length = 0;
+  h.backs.length = 0;
   h.save.isPending = false;
   h.save.isError = false;
   h.save.calls.length = 0;
@@ -254,5 +279,52 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     h.save.isPending = false;
     h.save.isError = true;
     expect(findAll(render(), (el) => el.props.role === "alert").map(text)).toEqual(["Couldn't save that — try again."]);
+  });
+});
+
+describe("Daily meals is a page (ledger 924)", () => {
+  const page = () => (DailyMealsPage as unknown as () => El)();
+  const DAILY = [{ id: DEFAULT_DAILY_MEALS[0]!.id, name: "Breakfast", time: "07:30" }];
+
+  it("has the slim header's back (to the plan when there is no history), titled Daily meals; waits for the plan's list", () => {
+    vi.useFakeTimers({ now: new Date("2026-10-14T15:00:00Z"), toFake: ["Date"] });
+    try {
+      let tree = page();
+      expect(h.planArgs).toEqual([["baby-1", "2026-10-12", "2026-10-18"]]); // today's week, the plan's own cache entry
+      const header = findAll(tree, (el) => el.type === PageHeader)[0]!;
+      expect(header.props.title).toBe("Daily meals");
+      expect((header.props.leading as El).type).toBe(BackButton);
+      expect((header.props.leading as El).props.fallback).toBe("/plan");
+      expect(findAll(tree, (el) => el.type === SkeletonList)).toHaveLength(1);
+      expect(findAll(tree, (el) => el.type === DailyMealsForm)).toHaveLength(0);
+
+      // A cached copy (the offline cache restores one) waits for its refetch.
+      h.plan = { data: { dailyMeals: DAILY }, isError: false, isFetching: true };
+      expect(findAll(page(), (el) => el.type === DailyMealsForm)).toHaveLength(0);
+      h.plan = { data: { dailyMeals: DAILY }, isError: false, isFetching: false };
+      tree = page();
+      const form = findAll(tree, (el) => el.type === DailyMealsForm)[0]!;
+      expect(form.props).toMatchObject({ babyId: "baby-1", meals: DAILY });
+      expect(findAll(tree, (el) => el.type === SkeletonList)).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("Save returns to the plan the way Back does (history first, so the plan keeps its week); nothing else leaves", () => {
+    h.plan = { data: { dailyMeals: DAILY }, isError: false, isFetching: false };
+    const form = findAll(page(), (el) => el.type === DailyMealsForm)[0]!;
+    expect(h.backs).toEqual([]);
+    (form.props.onDone as () => void)();
+    expect(h.backs).toEqual(["/plan"]);
+  });
+
+  it("says so when the plan can't load; with no baby it goes to the plan, which asks for one", () => {
+    h.plan = { data: undefined, isError: true, isFetching: false };
+    expect(text(page())).toContain("Couldn't load the plan.");
+    h.baby = { activeBaby: null, isLoading: false };
+    const tree = page();
+    expect(tree.type).toBe(Navigate);
+    expect(tree.props).toMatchObject({ to: "/plan", replace: true });
   });
 });
