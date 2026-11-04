@@ -244,6 +244,7 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     expect(timeButton(tree, "Breakfast").props["aria-expanded"]).toBe(true);
     // One sheet, for that row, opening on its own time.
     expect(findAll(tree, (el) => el.type === TimeSheet)).toHaveLength(1);
+    expect(timeButton(tree, "Breakfast").props.type).toBe("button"); // a tap must not submit the form
     expect(timeSheet(tree)!.props.time).toBe("09:39");
     // Out of clock order, yet nothing moved on opening, nor on Cancel.
     (timeSheet(tree)!.props.onClose as () => void)();
@@ -289,6 +290,12 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     expect(findAll(tree, (el) => el.type === Button).map((el) => text(el.props.children))).toEqual(["Save", "Cancel", "Clear time"]);
     // 23:58 opens on 11:55 PM, never wrapping to 12:00 AM.
     expect(columns(sheet("23:58")).map((col) => col.props.valueNow)).toEqual([11, 55, 1]);
+    // Where each wheel OPENS (the index prop; a settled wheel writes it back into the draft).
+    const opens = (time: string) => columns(sheet(time)).map((col) => col.props.index);
+    expect(opens("09:39")).toEqual([8, 8, 0]);
+    expect(opens("23:58")).toEqual([10, 11, 1]);
+    expect(opens("12:00")).toEqual([11, 0, 1]);
+    expect(opens("00:05")).toEqual([11, 1, 0]);
     // No time: no Clear time.
     expect(findAll(sheet(null), (el) => el.type === Button).map((el) => text(el.props.children))).toEqual(["Save", "Cancel"]);
 
