@@ -29,7 +29,7 @@ import { useAdminFeedback, useFeedbackSummary, useUpdateFeedback } from "./hooks
 export const FEEDBACK_INBOX_TITLE = "Inbox";
 
 export const FEEDBACK_INBOX_DESCRIPTION =
-  "What parents sent from Send feedback. Their words and their address, so you can answer — the only place on this page a parent appears.";
+  "What parents sent from Send Feedback. Their words and their address, so you can answer — the only place on this page a parent appears.";
 
 /** What an empty tab says. The same three words on all three tabs. */
 export const FEEDBACK_INBOX_EMPTY = "Nothing here.";

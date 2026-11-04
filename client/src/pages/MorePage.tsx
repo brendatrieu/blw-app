@@ -36,12 +36,12 @@ const moreLinks: MoreRow[] = [
   // Item 608: the how-to guides moved here from Learn, right under it.
   {
     to: "/guides",
-    label: "How-to guides",
+    label: "How-To Guides",
     description: "Step by step: foods, recipes, meals, and storage.",
     emoji: "📖",
   },
   // Ledger 904: the meal plan's second way in, beside Home's calendar button.
-  { to: "/plan", label: "Meal plan", description: "Plan meals for the days ahead.", emoji: "🗓️" },
+  { to: "/plan", label: "Meal Plan", description: "Plan meals for the days ahead.", emoji: "🗓️" },
   { to: "/favorites", label: "Favorites", description: "Recipes you've saved.", emoji: "❤️" },
   {
     to: "/symptom-check",
@@ -61,7 +61,7 @@ const moreLinks: MoreRow[] = [
   // inbox.
   {
     to: "/feedback",
-    label: "Send feedback",
+    label: "Send Feedback",
     description: "Something could be better? Let us know.",
     emoji: "💌",
   },
@@ -70,7 +70,7 @@ const moreLinks: MoreRow[] = [
   // the content rows and ahead of Settings, which stays the end of the list.
   {
     action: "tour",
-    label: "Take the tour",
+    label: "Take the Tour",
     description: "A quick look around the app",
     emoji: "🧭",
   },

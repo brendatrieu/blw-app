@@ -136,7 +136,7 @@ function PlanLink() {
   return (
     <Link
       to="/plan"
-      aria-label="Meal plan"
+      aria-label="Meal Plan"
       className="flex min-h-11 min-w-11 items-center justify-center text-[var(--color-icon)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--color-accent)]"
     >
       <CalendarIcon />

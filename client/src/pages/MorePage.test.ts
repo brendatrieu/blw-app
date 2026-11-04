@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
@@ -99,14 +100,14 @@ describe("MorePage (item 274)", () => {
     const rows = render().split(/<(?:a|button) /).slice(1);
     const expected = [
       { tag: "a", href: "/safety", emoji: "🛟", label: "Learn" },
-      { tag: "a", href: "/guides", emoji: "📖", label: "How-to guides" },
+      { tag: "a", href: "/guides", emoji: "📖", label: "How-To Guides" },
       // Ledger 904: the meal plan's second way in (Home has the calendar).
-      { tag: "a", href: "/plan", emoji: "🗓️", label: "Meal plan" },
+      { tag: "a", href: "/plan", emoji: "🗓️", label: "Meal Plan" },
       { tag: "a", href: "/favorites", emoji: "❤️", label: "Favorites" },
       { tag: "a", href: "/symptom-check", emoji: "🩺", label: "Symptom Check" },
       { tag: "a", href: "/chat", emoji: "💬", label: "Chat" },
-      { tag: "a", href: "/feedback", emoji: "💌", label: "Send feedback" },
-      { tag: "button", href: null, emoji: "🧭", label: "Take the tour" },
+      { tag: "a", href: "/feedback", emoji: "💌", label: "Send Feedback" },
+      { tag: "button", href: null, emoji: "🧭", label: "Take the Tour" },
       { tag: "a", href: "/about", emoji: "🌱", label: "About Little Meals" },
       { tag: "a", href: "/settings", emoji: "⚙️", label: "Settings" },
     ];
@@ -123,7 +124,7 @@ describe("MorePage (item 274)", () => {
   it("offers the tour as a button row — same card as its neighbours, no route (item 311)", () => {
     const html = render();
 
-    expect(html).toContain(">Take the tour<");
+    expect(html).toContain(">Take the Tour<");
     expect(html).toContain(">A quick look around the app<");
     // The compass, exactly — not the map, not the globe.
     expect(html).toContain(">🧭</span>");
@@ -139,7 +140,7 @@ describe("MorePage (item 274)", () => {
     expect(rowClasses).toContain("p-3");
     expect(html).toMatch(/<button[^>]*type="button"/);
 
-    const tour = html.indexOf(">Take the tour<");
+    const tour = html.indexOf(">Take the Tour<");
     for (const label of ["Learn", "Favorites", "Symptom Check", "Chat"]) {
       expect(html.indexOf(`>${label}<`)).toBeLessThan(tour);
     }
@@ -172,7 +173,7 @@ describe("MorePage (item 274)", () => {
 
   it("offers ONE How-to guides row opening /guides (item 608)", () => {
     const rows = render().split(/<(?:a|button) /).slice(1);
-    const guides = rows.filter((row) => row.includes("How-to guides"));
+    const guides = rows.filter((row) => row.includes("How-To Guides"));
     expect(guides).toHaveLength(1);
     expect(guides[0]).toContain('href="/guides"');
     expect(guides[0]).toContain("Step by step: foods, recipes, meals, and storage.");
@@ -197,7 +198,7 @@ describe("MorePage feedback row (item 360)", () => {
     for (const isAdmin of [false, true]) {
       h.admin.is = isAdmin;
       const html = render();
-      expect(html, `admin=${String(isAdmin)}`).toContain(">Send feedback<");
+      expect(html, `admin=${String(isAdmin)}`).toContain(">Send Feedback<");
       expect(html, `admin=${String(isAdmin)}`).toContain('href="/feedback"');
       expect(html, `admin=${String(isAdmin)}`).toContain(">Something could be better? Let us know.<");
       expect(html, `admin=${String(isAdmin)}`).toContain(">💌</span>");
@@ -206,9 +207,9 @@ describe("MorePage feedback row (item 360)", () => {
 
   it("sits after Chat and ahead of the tour, so the content rows stay grouped", () => {
     const html = render();
-    const feedback = html.indexOf(">Send feedback<");
+    const feedback = html.indexOf(">Send Feedback<");
     expect(html.indexOf(">Chat<")).toBeLessThan(feedback);
-    expect(html.indexOf(">Take the tour<")).toBeGreaterThan(feedback);
+    expect(html.indexOf(">Take the Tour<")).toBeGreaterThan(feedback);
     expect(html.indexOf(">Settings<")).toBeGreaterThan(feedback);
   });
 });
@@ -224,7 +225,7 @@ describe("MorePage admin row (item 327)", () => {
     expect(html).toContain(">📈</span>");
 
     const metrics = html.indexOf(">Metrics<");
-    expect(html.indexOf(">Take the tour<")).toBeLessThan(metrics);
+    expect(html.indexOf(">Take the Tour<")).toBeLessThan(metrics);
     // Settings is still the end of the list for everybody, admin or not.
     expect(html.indexOf(">Settings<")).toBeGreaterThan(metrics);
   });
@@ -291,5 +292,19 @@ describe("unreadFeedbackBadge", () => {
     expect(unreadFeedbackBadge(true, 3)).toBe("3 new feedback");
     expect(unreadFeedbackBadge(true, 0)).toBeUndefined();
     expect(unreadFeedbackBadge(true, undefined)).toBeUndefined();
+  });
+});
+
+describe("More rows are Title Case, and so are the pages they open (ledger 923)", () => {
+  const read = (relative: string) => readFileSync(new URL(relative, import.meta.url), "utf8");
+  it("each multi-word row's page carries the row's own words", () => {
+    for (const [file, title] of [
+      ["./GuidesPage.tsx", "How-To Guides"],
+      ["../features/plan/PlanPage.tsx", "Meal Plan"],
+      ["./SymptomCheckPage.tsx", "Symptom Check"],
+      ["./FeedbackPage.tsx", "Send Feedback"],
+    ] as const) {
+      expect(read(file), file).toContain(`title="${title}"`);
+    }
   });
 });

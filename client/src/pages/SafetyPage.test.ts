@@ -47,7 +47,7 @@ describe("Learn lists the safety articles only (item 608)", () => {
 describe("How-to guides under More (item 608)", () => {
   it("/guides lists exactly the four guides, in order, with a way back", () => {
     const html = at("/guides");
-    expect(html).toContain("How-to guides");
+    expect(html).toContain(">How-To Guides<");
     expect(html).toContain("Step by step: foods, recipes, meals, and storage."); // item 755
     const links = hrefs(html);
     expect(links).toEqual(guideArticles.map((guide) => `/guides/${guide.slug}`));

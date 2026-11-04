@@ -32,7 +32,7 @@ function render(): string {
 describe("FeedbackPage", () => {
   it("opens with the box, named and labelled", () => {
     const html = render();
-    expect(html).toContain(">Send feedback<");
+    expect(html).toContain(">Send Feedback<");
     expect(html).toContain(">💌</span>");
     expect(html).toContain('id="feedback-message"');
     expect(html).toContain('for="feedback-message"');

@@ -280,9 +280,9 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
   it("Home only: the calendar (\"Meal plan\", to /plan) sits just before the gear, both 44px icon links (ledger 904, CD-Home-No-Plan)", () => {
     const home = header(layoutWith([remy], "/"));
     expect(home).toMatch(
-      /<div class="flex shrink-0 items-center"><a aria-label="Meal plan" class="[^"]*min-h-11 min-w-11[^"]*text-\[var\(--color-icon\)\][^"]*" href="\/plan"[^>]*><svg [^>]*>.*?<\/svg><\/a><a aria-label="Settings"/s,
+      /<div class="flex shrink-0 items-center"><a aria-label="Meal Plan" class="[^"]*min-h-11 min-w-11[^"]*text-\[var\(--color-icon\)\][^"]*" href="\/plan"[^>]*><svg [^>]*>.*?<\/svg><\/a><a aria-label="Settings"/s,
     );
-    for (const p of ["/foods", "/plan", "/more"]) expect(header(layoutWith([remy], p)), p).not.toContain('aria-label="Meal plan"');
+    for (const p of ["/foods", "/plan", "/more"]) expect(header(layoutWith([remy], p)), p).not.toContain('aria-label="Meal Plan"');
   });
 
   it("the empty back/X slot takes no space, so tab pages start with the chip (item 692)", () => {

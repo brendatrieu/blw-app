@@ -311,7 +311,7 @@ export function PlateScreen() {
           icon="🤷"
           title="That meal is gone"
           description="It may have already been deleted, or something went wrong loading it."
-          action={fromPlan ? <ButtonLink to={planBack}>Meal plan</ButtonLink> : <ButtonLink to="/">Back home</ButtonLink>}
+          action={fromPlan ? <ButtonLink to={planBack}>Meal Plan</ButtonLink> : <ButtonLink to="/">Back home</ButtonLink>}
         />
       )}
 

@@ -11,7 +11,7 @@ export function GuidesPage() {
   return (
     <div className="flex flex-col gap-4 p-4">
       <PageHeader
-        title="How-to guides"
+        title="How-To Guides"
         emoji="📖"
         description="Step by step: foods, recipes, meals, and storage."
         leading={<BackButton fallback="/more" />}

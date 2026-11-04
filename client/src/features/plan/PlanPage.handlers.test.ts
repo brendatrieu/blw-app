@@ -123,7 +123,7 @@ describe("PlanPage (CD-Plan-Day)", () => {
   it("opens on today: asks for its Monday-to-Sunday week, presses today, and lists today's meals", () => {
     const tree = render();
     expect(h.planArgs).toEqual([["baby-1", "2026-10-12", "2026-10-18"]]);
-    expect(findAll(tree, (el) => el.type === PageHeader)[0]!.props.title).toBe("Meal plan");
+    expect(findAll(tree, (el) => el.type === PageHeader)[0]!.props.title).toBe("Meal Plan");
     expect(text(findAll(tree, (el) => el.props["aria-live"] === "polite")[0])).toBe("Oct 12 – 18");
     const days = dayButtons(tree);
     expect(days.map((day) => text(day.props.children))).toEqual(["M12", "T13", "W14", "T15", "F16", "S17", "S18"]);

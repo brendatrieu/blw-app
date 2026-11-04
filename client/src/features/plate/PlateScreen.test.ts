@@ -195,7 +195,7 @@ describe("Plan a meal (/plan/:date/:slotId, CD-Plan-Meal)", () => {
     for (const url of [`/plan/2026-10-14/${id(99)}`, "/plan/someday/new"]) {
       const gone = renderPlan(url, planWeek([LUNCH]));
       expect(gone, url).toContain("That meal is gone");
-      expect(gone, url).toContain(">Meal plan</a>");
+      expect(gone, url).toContain(">Meal Plan</a>");
       expect(gone, url).not.toContain('id="plan-name"');
     }
     const served = renderPlan(`/plan/2026-10-14/${LUNCH.slotId}`, planWeek([{ ...LUNCH, served: { mealId: id(90), servedAt: "x" } }]));

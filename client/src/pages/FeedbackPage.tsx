@@ -83,7 +83,7 @@ export function FeedbackPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <PageHeader title="Send feedback" emoji="💌" leading={<BackButton fallback="/more" />} />
+      <PageHeader title="Send Feedback" emoji="💌" leading={<BackButton fallback="/more" />} />
 
       <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
         <Field label="Your message" htmlFor="feedback-message">

@@ -80,7 +80,7 @@ export function PlanPage() {
   return (
     <div className="flex flex-col gap-1.5 p-4">
       <PageHeader
-        title="Meal plan"
+        title="Meal Plan"
         leading={<BackButton fallback="/" />}
         action={
           <button type="button" className={PLAN_PILL} disabled={!plan.data} onClick={() => setDailyMealsOpen(true)}>
