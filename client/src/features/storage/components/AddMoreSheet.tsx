@@ -32,6 +32,9 @@ export const ADD_MORE_SEARCH_TABS: SegmentedControlOption<AddMoreTab | "all">[] 
   ...ADD_MORE_TABS,
 ];
 
+/** Ledger 921: "No matches in {name}." for a narrowed search. */
+const NARROWED_NAME: Record<AddMoreTab, string> = { storage: "storage", recipe: "recipes", food: "foods" };
+
 /** How many recent recipes or foods head their tab (the MR2 board shows three). */
 export const RECENT_LIMIT = 3;
 
@@ -210,13 +213,33 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
 
   let body: ReactNode;
   if (q) {
+    const hits = {
+      storage: storageRows(available.filter((item) => matches(storageItemTitle(item), q))),
+      recipe: recipeRows(allRecipes.filter((recipe) => matches(recipe.title, q))),
+      food: foodRows(allFoods.filter((food) => matches(food.name, q))),
+    };
     const shows = (kind: AddMoreTab) => searchTab === "all" || searchTab === kind;
     const found = [
-      shows("storage") && group("In storage", storageRows(available.filter((item) => matches(storageItemTitle(item), q)))),
-      shows("recipe") && group("Recipes", recipeRows(allRecipes.filter((recipe) => matches(recipe.title, q)))),
-      shows("food") && group("Foods", foodRows(allFoods.filter((food) => matches(food.name, q)))),
+      shows("storage") && group("In storage", hits.storage),
+      shows("recipe") && group("Recipes", hits.recipe),
+      shows("food") && group("Foods", hits.food),
     ].filter(Boolean);
-    body = found.length > 0 ? found : <p className="text-sm text-[var(--color-text-muted)]">No matches</p>;
+    // Ledger 921: a narrowed search that misses here but hits another kind
+    // says which kind it searched and offers to widen, keeping the text.
+    const elsewhere = searchTab !== "all" && Object.values(hits).some((list) => list.length > 0);
+    body =
+      found.length > 0 ? (
+        found
+      ) : elsewhere ? (
+        <div className="flex flex-col items-start gap-2">
+          <p className="text-sm text-[var(--color-text-muted)]">{`No matches in ${NARROWED_NAME[searchTab]}.`}</p>
+          <Button type="button" variant="quiet" onClick={() => setSearchTab("all")}>
+            Search all
+          </Button>
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--color-text-muted)]">No matches</p>
+      );
   } else if (tab === "storage") {
     body =
       available.length > 0 ? (

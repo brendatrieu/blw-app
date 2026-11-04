@@ -372,12 +372,49 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     expect(titles(render())).toEqual(["Oats"]);
     type("salmon"); // a narrowed kind with nothing matching is not a dead end
     expect(titles(render())).toEqual([]);
-    expect(html(render())).toContain("No matches");
+    expect(html(render())).toContain("No matches in foods.");
 
     goTo("all");
     expect(tabRow(render()).value).toBe("all");
     expect(titles(render())).toEqual(["Salmon Oat Cakes"]);
     expect(one(render(), Input).props.value).toBe("salmon");
+  });
+
+  it("a narrowed search that misses here but hits another kind says which kind, and Search all widens keeping the text (ledger 921)", () => {
+    const searchAll = (tree: El) => findAll(tree, (element) => element.type === Button && element.props.children === "Search all");
+    for (const [kind, text, said] of [
+      ["storage", "banana", "No matches in storage."],
+      ["recipe", "pear", "No matches in recipes."],
+      ["food", "salmon", "No matches in foods."],
+    ] as const) {
+      reset([BASE, SALMON, PEAR_FOODS]);
+      goTo(kind);
+      type(text);
+      let tree = render();
+      expect(titles(tree)).toEqual([]);
+      const out = html(tree);
+      expect(out).toContain(said);
+      expect(out).not.toContain("No matches<"); // not the bare line as well
+      const [button] = searchAll(tree);
+      expect(button?.props.variant).toBe("quiet");
+      expect(button?.props.type).toBe("button");
+      (button!.props.onClick as () => void)();
+      tree = render();
+      expect(tabRow(tree).value).toBe("all");
+      expect(one(tree, Input).props.value).toBe(text);
+      expect(titles(tree).length).toBeGreaterThan(0);
+      expect(searchAll(tree)).toEqual([]);
+    }
+
+    // Nothing anywhere: the plain line, no button, narrowed or not.
+    reset([BASE, SALMON, PEAR_FOODS]);
+    goTo("food");
+    type("zzz");
+    expect(html(render())).toContain(">No matches</p>");
+    expect(searchAll(render())).toEqual([]);
+    goTo("all");
+    expect(html(render())).toContain(">No matches</p>");
+    expect(searchAll(render())).toEqual([]);
   });
 
   it("clearing the search brings back the three tabs on the one open before it; the next search starts on that tab (ledger 794, 920)", () => {
