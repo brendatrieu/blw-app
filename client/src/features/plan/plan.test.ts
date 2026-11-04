@@ -387,17 +387,56 @@ describe("Today's plan on Home", () => {
     items: [item],
     ...over,
   });
-  const day = (meals: PlannedMeal[]): PlanDay => ({ date: "2026-10-14", planned: true, meals });
+  const day = (meals: PlannedMeal[], planned = true): PlanDay => ({ date: "2026-10-14", planned, meals });
   const served = { mealId: id(90), servedAt: "2026-10-14T11:42:00.000Z" };
 
-  it("pages through today's meals with something planned, in order; nothing planned (or no day) is no card", () => {
-    const pages = todaysPlanPages(day([meal(1), meal(2, { items: [] }), meal(3)]));
-    expect(pages.map((page) => (page === "done" ? page : page.name))).toEqual(["Meal 1", "Meal 3"]);
-    expect(todaysPlanPages(day([meal(1, { items: [] })]))).toEqual([]);
+  it("pages through today's meals with something planned, in order; a day that only follows Daily meals with nothing planned (or no day) is no card", () => {
+    const names = (pages: ReturnType<typeof todaysPlanPages>) => pages.map((page) => (page === "done" ? page : page.name));
+    expect(names(todaysPlanPages(day([meal(1), meal(2, { items: [] }), meal(3)], false)))).toEqual(["Meal 1", "Meal 3"]);
+    expect(todaysPlanPages(day([meal(1, { items: [] }), meal(2, { items: [] })], false))).toEqual([]);
     expect(todaysPlanPages(undefined)).toEqual([]);
     // Everything served: a last page says so.
     expect(todaysPlanPages(day([meal(1, { served }), meal(2, { served })])).at(-1)).toBe("done");
     expect(todaysPlanPages(day([meal(1, { served }), meal(2)]))).not.toContain("done");
+  });
+
+  it("a saved day (ledger 927) pages through every meal, empty ones too, in order; the done page waits only for the meals with food", () => {
+    const names = (pages: ReturnType<typeof todaysPlanPages>) => pages.map((page) => (page === "done" ? page : page.name));
+    expect(names(todaysPlanPages(day([meal(1), meal(2, { items: [] }), meal(3)])))).toEqual(["Meal 1", "Meal 2", "Meal 3"]);
+    expect(names(todaysPlanPages(day([meal(1, { items: [] }), meal(2, { items: [] })])))).toEqual(["Meal 1", "Meal 2"]);
+    expect(todaysPlanPages(day([]))).toEqual([]);
+    // Every meal with food served: done, though an empty one is unserved.
+    expect(names(todaysPlanPages(day([meal(1, { served }), meal(2, { items: [] }), meal(3, { served })])))).toEqual([
+      "Meal 1",
+      "Meal 2",
+      "Meal 3",
+      "done",
+    ]);
+    expect(todaysPlanPages(day([meal(1, { served }), meal(2, { items: [] }), meal(3)]))).not.toContain("done");
+    // An all-empty day has no done page.
+    expect(todaysPlanPages(day([meal(1, { items: [] })]))).not.toContain("done");
+  });
+
+  it("a saved day opens as before while any meal has food (the next one with food); only an all-empty day opens on the next of them all (ledger 927)", () => {
+    const empty = { items: [] };
+    // Mixed: the empty 07:00 Meal 1 is not "next"; the next with food is.
+    const mixed = todaysPlanPages(day([meal(1, { ...empty, time: "07:00" }), meal(2, { time: "07:30" }), meal(3, { ...empty }), meal(4, { time: "12:00" })]));
+    expect(todaysPlanIndex(mixed, null, "06:00")).toBe(1);
+    expect(todaysPlanIndex(mixed, null, "09:31")).toBe(3);
+    // Same meal as the food-only pages would open on.
+    const before = todaysPlanPages(day([meal(1, { ...empty, time: "07:00" }), meal(2, { time: "07:30" }), meal(3, { ...empty }), meal(4, { time: "12:00" })], false));
+    for (const now of ["06:00", "09:31", "23:59"]) {
+      const opened = mixed[todaysPlanIndex(mixed, null, now)];
+      expect([now, opened === "done" ? opened : opened!.slotId]).toEqual([now, (before[todaysPlanIndex(before, null, now)] as PlannedMeal).slotId]);
+    }
+    // Every meal with food served: the done page, not an empty meal.
+    const served1 = todaysPlanPages(day([meal(1, { served }), meal(2, empty)]));
+    expect(served1[todaysPlanIndex(served1, null, "08:00")]).toBe("done");
+    // All empty: nextPlannedMeal over every meal.
+    const allEmpty = todaysPlanPages(day([meal(1, { ...empty, time: "07:00" }), meal(2, { ...empty, time: "12:00" }), meal(3, empty)]));
+    expect(todaysPlanIndex(allEmpty, null, "06:00")).toBe(0);
+    expect(todaysPlanIndex(allEmpty, null, "09:01")).toBe(1);
+    expect(todaysPlanIndex(allEmpty, null, "14:01")).toBe(2);
   });
 
   it("opens on the next meal: the first unserved, a timed one skipped once 2 h past while a later one waits", () => {

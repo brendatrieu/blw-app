@@ -72,10 +72,10 @@ const BREAKFAST: PlannedMeal = {
 const LUNCH: PlannedMeal = { slotId: id(2), name: "Lunch", time: "12:00", position: 1, served: null, items: [{ kind: "storage", id: id(13), servings: 1, container: MUFFINS }] };
 const SNACK: PlannedMeal = { slotId: id(3), name: "Snack", time: null, position: 2, served: null, items: [] };
 const SERVED = { mealId: id(90), servedAt: "2026-10-14T07:42:00.000Z" };
-const plan = (meals: PlannedMeal[], date = TODAY): PlanResponse => ({
+const plan = (meals: PlannedMeal[], date = TODAY, planned = true): PlanResponse => ({
   today: TODAY,
   dailyMeals: [],
-  days: [{ date, planned: true, meals }],
+  days: [{ date, planned, meals }],
 });
 
 const html = (node: unknown) =>
@@ -101,7 +101,8 @@ afterEach(() => {
 
 describe("TodaysPlanCard (render)", () => {
   it("is not there at all without something planned today, or before the plan has answered (CD-Home-No-Plan)", () => {
-    for (const data of [undefined, plan([SNACK]), plan([BREAKFAST], "2026-10-15")]) {
+    // A day that only follows Daily meals with no food: no card (ledger 927 keeps it so).
+    for (const data of [undefined, plan([SNACK], TODAY, false), plan([{ ...SNACK, slotId: id(4), name: "Dinner" }, SNACK], TODAY, false), plan([BREAKFAST], "2026-10-15")]) {
       h.plan = { data };
       expect(card()).toBe("");
     }
@@ -124,6 +125,29 @@ describe("TodaysPlanCard (render)", () => {
     expect(out).toContain("width:36px;height:36px");
     expect(out).toMatch(/<button class="[^"]*min-h-12[^"]*w-full" type="button" aria-label="Serve Breakfast">Serve<\/button>/);
     expect(out).not.toContain("Snack");
+  });
+
+  it("a saved day's meal with no food: its name and time, Nothing planned yet, and Plan this meal to its Plan a meal; no Serve (ledger 927)", () => {
+    const EMPTY_BREAKFAST: PlannedMeal = { ...BREAKFAST, items: [] };
+    h.plan = { data: plan([EMPTY_BREAKFAST, SNACK]) };
+    let out = card();
+    // All empty: opens on the next of them all (Breakfast, 07:30, at 07:10).
+    expect(out).toContain(">Breakfast</span>");
+    expect(out).toContain(">7:30 AM</span>");
+    expect(out).toContain(">Nothing planned yet</p>");
+    expect(out).toMatch(new RegExp(`<a class="[^"]*min-h-12[^"]*w-full" href="/plan/${TODAY}/${id(1)}"[^>]*>Plan this meal</a>`));
+    expect(out).not.toContain("On the plate");
+    expect(out).not.toContain(">Serve<");
+    expect(out).not.toContain("Everything planned for today is served.");
+    expect(out).toMatch(/aria-label="Previous meal" aria-disabled="true"/);
+    expect(out).toMatch(/aria-label="Next meal"(?! aria-disabled)/);
+    // Mixed: opens on the same meal as before (Lunch, the next with food), and Serve is only there.
+    h.plan = { data: plan([EMPTY_BREAKFAST, LUNCH, SNACK]) };
+    out = card();
+    expect(out).toContain(">Lunch</span>");
+    expect(out).toMatch(/aria-label="Serve Lunch">Serve<\/button>/);
+    expect(out).not.toContain("Nothing planned yet");
+    expect(out).not.toContain("Plan this meal");
   });
 
   it("a container's row says where it is and what is left", () => {
@@ -164,6 +188,28 @@ describe("TodaysPlan (handlers)", () => {
     h.direct = true;
     return (TodaysPlan as unknown as (props: unknown) => El)({ babyId: "baby-1", today: TODAY, pages: todaysPlanPages(plan(meals).days[0]) });
   };
+
+  it("a saved day pages through its empty meals in the parent's order; Serve is only on the meals with food; done once those are served (ledger 927)", () => {
+    const pages = (meals: PlannedMeal[]) => todaysPlanPages(plan(meals).days[0]);
+    const pageOf = (meals: PlannedMeal[], slot: string | null) => {
+      h.direct = true;
+      h.picked = slot;
+      return (TodaysPlan as unknown as (props: unknown) => El)({ babyId: "baby-1", today: TODAY, pages: pages(meals) });
+    };
+    const day = [SNACK, BREAKFAST, { ...LUNCH, items: [] }];
+    expect(pages(day).map((page) => (page === "done" ? page : page.name))).toEqual(["Snack", "Breakfast", "Lunch"]);
+    for (const meal of day) {
+      const tree = pageOf(day, meal.slotId);
+      const serve = all(tree, (el) => el.props["aria-label"] === `Serve ${meal.name}`);
+      const planIt = all(tree, (el) => el.props.to === `/plan/${TODAY}/${meal.slotId}`);
+      expect([meal.name, serve.length, planIt.length]).toEqual([meal.name, meal.items.length > 0 ? 1 : 0, meal.items.length > 0 ? 0 : 1]);
+      if (planIt.length) expect(text(planIt[0])).toBe("Plan this meal");
+    }
+    // Breakfast (the one with food) served: the done page follows, and the card opens on it.
+    const served = [SNACK, { ...BREAKFAST, served: SERVED }, { ...LUNCH, items: [] }];
+    expect(pages(served).at(-1)).toBe("done");
+    expect(text(pageOf(served, null))).toContain("Everything planned for today is served.");
+  });
 
   it("› and ‹ move a meal by its slot; ‹ at the first meal does nothing", () => {
     const tree = render([BREAKFAST, LUNCH]);

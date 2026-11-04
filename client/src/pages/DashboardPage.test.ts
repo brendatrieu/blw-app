@@ -51,10 +51,10 @@ describe("DashboardPage with a meal plan", () => {
   const today = localDate(new Date(), deviceTimeZone());
   const week = weekOf(today);
   const egg = { kind: "food" as const, id: "00000000-0000-4000-8000-000000000009", food: { id: "f-egg", slug: "egg", name: "Egg", category: "dairy" as const, emoji: null } };
-  const day = (items: PlanResponse["days"][number]["meals"][number]["items"]): PlanResponse => ({
+  const day = (items: PlanResponse["days"][number]["meals"][number]["items"], planned = true): PlanResponse => ({
     today,
     dailyMeals: [],
-    days: [{ date: today, planned: true, meals: [{ slotId: "00000000-0000-4000-8000-000000000001", name: "Breakfast", time: null, position: 0, served: null, items }] }],
+    days: [{ date: today, planned, meals: [{ slotId: "00000000-0000-4000-8000-000000000001", name: "Breakfast", time: null, position: 0, served: null, items }] }],
   });
   function home(plan: PlanResponse | undefined): string {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -79,10 +79,17 @@ describe("DashboardPage with a meal plan", () => {
     expect(html.indexOf("Today&#x27;s plan")).toBeLessThan(html.indexOf(">Log meal<"));
   });
 
-  it("is exactly the Home it was when nothing is planned today, or the plan isn't in yet", () => {
+  it("is exactly the Home it was when nothing is planned today (a day that only follows Daily meals), or the plan isn't in yet", () => {
     const before = home(undefined);
     expect(before).not.toContain("Today&#x27;s plan");
-    expect(home(day([]))).toBe(before);
+    expect(home(day([], false))).toBe(before);
+  });
+
+  it("a saved day with nothing on it yet shows Today's plan with Plan this meal (ledger 927)", () => {
+    const html = home(day([]));
+    expect(html).toContain(">Today&#x27;s plan</h2>");
+    expect(html).toContain(">Plan this meal</a>");
+    expect(html).not.toContain('aria-label="Serve Breakfast"');
   });
 });
 

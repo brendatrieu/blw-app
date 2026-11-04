@@ -407,28 +407,32 @@ export function copyWarningNotes(warnings: readonly CopyWarning[], source: Pick<
 /** One page of the card: a meal, or the "everything is served" page. */
 export type TodayPage = PlannedMeal | "done";
 
-/** The card's pages: today's meals with something planned, in the parent's
- * order, then, once every one is served, the done page. None: no card at
- * all, so Home looks as it always has (CD-Home-No-Plan). */
+/** The card's pages, in the parent's order: today's meals with something
+ * planned; on a saved day (`planned`), every meal, an empty one offering
+ * Plan this meal (ledger 927). Then, once every meal with food is served,
+ * the done page. None: no card at all, so Home looks as it always has
+ * (CD-Home-No-Plan), as on a day that only follows Daily meals. */
 export function todaysPlanPages(day: PlanDay | undefined): TodayPage[] {
-  const meals = (day?.meals ?? []).filter((meal) => meal.items.length > 0);
-  return meals.length > 0 && meals.every((meal) => meal.served) ? [...meals, "done"] : meals;
+  const all = day?.meals ?? [];
+  const food = all.filter((meal) => meal.items.length > 0);
+  const meals = day?.planned ? all : food;
+  return food.length > 0 && food.every((meal) => meal.served) ? [...meals, "done"] : meals;
 }
 
 const pageKey = (page: TodayPage): string => (page === "done" ? "done" : page.slotId);
 
 /**
  * Which page shows: the one the parent paged to (or just served) while it is
- * still there; else the next meal (`nextPlannedMeal`, chair §4.3); else, all
+ * still there; else the next meal with food (`nextPlannedMeal`, chair §4.3),
+ * or, when no meal has food, the next of them all (ledger 927); else, all
  * served, the done page. `nowLocal` is the wall clock, `HH:MM`.
  */
 export function todaysPlanIndex(pages: readonly TodayPage[], picked: string | null, nowLocal: string): number {
   const at = picked === null ? -1 : pages.findIndex((page) => pageKey(page) === picked);
   if (at >= 0) return at;
-  const next = nextPlannedMeal(
-    pages.filter((page): page is PlannedMeal => page !== "done"),
-    nowLocal,
-  );
+  const meals = pages.filter((page): page is PlannedMeal => page !== "done");
+  const food = meals.filter((meal) => meal.items.length > 0);
+  const next = nextPlannedMeal(food.length > 0 ? food : meals, nowLocal);
   return next ? pages.indexOf(next) : pages.length - 1;
 }
 
