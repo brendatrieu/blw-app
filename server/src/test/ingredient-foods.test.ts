@@ -407,7 +407,7 @@ describe("ingredient foods and ladder counting (ledger 836, 838)", () => {
       expect(detailResponse.json()).toMatchObject({ kind: "info" });
     });
 
-    it("tells the client each meal food's kind, so the meal page leaves whole milk out of Counted as tried (VERIFY-p2-c1 #4)", async () => {
+    it("tells the client each meal food's kind (API field kept; no screen reads it since ledger 928/933; VERIFY-p2-c1 #4)", async () => {
       const logged = await meal({
         recipeIds: [fx.eggBake.id],
         foodIds: [id("egg"), id("milk"), id("unsalted_butter")],

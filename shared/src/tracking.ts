@@ -291,9 +291,10 @@ export const mealFoodSchema = z.object({
   /** True when the parent has since deleted this custom food; the meal keeps
    * it and says "(deleted)". Optional so an older cached body still parses. */
   deleted: z.boolean().optional(),
-  /** This food's allergen slugs, carried on the meal itself so a past meal
-   * keeps its allergen chips even after the food is deleted (and so hidden
-   * from the foods list). Optional so an older cached body still parses. */
+  /** This food's allergen slugs, carried on the meal itself (they survive
+   * the food's deletion). No screen shows them now: the meal page dropped its
+   * allergen chips (ledger 928/933, owner 2026-11-05); kept so the API
+   * contract is unchanged. Optional so an older cached body still parses. */
   allergens: z.array(z.string()).optional(),
   /** This food's own rating; null when unrated and for a food rated as part
    * of its recipe. Optional so an older cached body still parses. */
@@ -304,8 +305,10 @@ export const mealFoodSchema = z.object({
    * still parses. */
   inRecipe: z.boolean().optional(),
   /** See `foodKindSchema`: an `info` food (whole milk) is on the meal but
-   * never counted as tried. Optional so an older cached body still parses;
-   * absent reads as `food`. */
+   * never counted as tried. No screen reads it now (the meal page's "Counted
+   * as tried" list is gone, ledger 928/933); kept so the API contract is
+   * unchanged. Optional so an older cached body still parses; absent reads
+   * as `food`. */
   kind: foodKindSchema.optional(),
 });
 export type MealFood = z.infer<typeof mealFoodSchema>;

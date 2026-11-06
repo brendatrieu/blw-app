@@ -51,7 +51,8 @@ function servedAtLabel(iso: string): string {
  *
  * The body is CD-Meal-Page (plan SPEC §5): what was on the plate, one item
  * card each with its stars (a tap saves that item), the reaction note and
- * the notes ("Counted as tried" is gone, ledger 928). Offline the stars and
+ * the notes. No allergen marks and no "Counted as tried" list (ledger
+ * 928/933: the plate shows just the food that was on it). Offline the stars and
  * Delete wait, like every plate write (SPEC §4.4). A
  * container links back to the storage batch it was served from, so the
  * storage ⇄ meal traceback stays navigable in both directions.
