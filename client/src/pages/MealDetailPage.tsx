@@ -3,18 +3,17 @@ import { Navigate, useParams } from "react-router-dom";
 import { awaitingDetail } from "../lib/detailQuery.js";
 import { useIsOffline } from "../lib/online.js";
 import type { MealItem } from "@blw/shared";
-import { useMeals, useUpdateMeal } from "../features/tracking/hooks.js";
-import { SavedItemRow } from "../features/plate/PlateItemRow.js";
+import { useMeals } from "../features/tracking/hooks.js";
 import { mealRecipes, recipesTitle } from "../features/tracking/mealRecipes.js";
-import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
+import { MealCard, MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
+import { MealActionsMenu } from "../features/tracking/components/MealActionsMenu.js";
+import { RatedMealLines } from "../features/tracking/components/RatedMealLines.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { FoodNames } from "../features/catalog/components/DeletedMark.js";
 import { foodPlate } from "../features/catalog/foodEmoji.js";
 import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
 import { BackButton, useBackNavigate } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
-import { Button, ButtonLink } from "../components/ui/Button.js";
-import { Card } from "../components/ui/Card.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 /** Header title for a meal: its recipes when logged from any ("A",
@@ -30,16 +29,6 @@ function MealTitle({ meal }: { meal: MealItem }) {
   );
 }
 
-/** Full weekday/date plus time, e.g. "Wednesday, August 26 · 2:05 PM" — more
- * complete than the day-grouped list's own "Today"/short-date labels, since
- * this page stands alone with no surrounding day heading for context. */
-function servedAtLabel(iso: string): string {
-  const date = new Date(iso);
-  const day = date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
-  const time = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  return `${day} · ${time}`;
-}
-
 /**
  * Full-screen detail view for a single meal, reached by tapping a `MealCard`
  * on Home's food log or a `MealsFromBatch` row (see each component's
@@ -49,24 +38,20 @@ function servedAtLabel(iso: string): string {
  * uses. An id not found there redirects home instead of rendering a dead
  * page.
  *
- * The body is CD-Meal-Page (plan SPEC §5): what was on the plate, one item
- * card each with its stars (a tap saves that item), the reaction note and
- * the notes. No allergen marks and no "Counted as tried" list (ledger
- * 928/933: the plate shows just the food that was on it). Offline the stars and
- * Delete wait, like every plate write (SPEC §4.4). A
- * container links back to the storage batch it was served from, so the
- * storage ⇄ meal traceback stays navigable in both directions.
+ * The body is the Food log's meal card (ledger 939), its ⋮ Edit / Delete in
+ * place of the page's own buttons, with each item's stars on its lines (a
+ * tap saves that item, `RatedMealLines`), then the notes and reaction note.
+ * No allergen marks and no "Counted as tried" list (ledger 928/933: the
+ * plate shows just the food that was on it). Offline the stars and Delete
+ * wait, like every plate write (SPEC §4.4). A container links back to the
+ * storage batch it was served from, so the storage ⇄ meal traceback stays
+ * navigable in both directions. After Delete the page goes back.
  */
 export function MealDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
   const meals = useMeals(activeBaby?.id, { limit: 100 });
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  // Item 574: the stars are this page's one inline edit; each tap saves that
-  // one item's stars (PATCH `itemRatings`, ledger 902), and shows the tapped
-  // value while it does. A 409 `meal_changed` (an item another write
-  // replaced) refetches the meal like any settled edit.
-  const updateMeal = useUpdateMeal(activeBaby?.id);
   const offline = useIsOffline();
   const goBack = useBackNavigate("/");
 
@@ -74,9 +59,6 @@ export function MealDetailPage() {
   // No baby at all leaves the meals query disabled (pending for good), so
   // only a real baby's meals are waited on; with none, the meal is missing.
   const isLoading = babyLoading || (activeBaby !== null && awaitingDetail(meals, Boolean(meal)));
-
-  // While a tap is saving, show what was tapped rather than the old value.
-  const pending = updateMeal.isPending && updateMeal.variables?.id === id ? updateMeal.variables.input : undefined;
 
   if (isLoading) {
     return (
@@ -93,6 +75,7 @@ export function MealDetailPage() {
   }
 
   const recipes = mealRecipes(meal);
+  const askDelete = () => setConfirmingDelete(true);
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -107,64 +90,27 @@ export function MealDetailPage() {
         leading={<BackButton fallback="/" />}
       />
 
-      <Card padding="sm" className="flex flex-col">
-        <span className="mb-2 text-xs text-[var(--color-text-muted)]">{servedAtLabel(meal.servedAt)}</span>
-
-        {meal.items && meal.items.length > 0 && (
-          <ul aria-label="On the plate" className="flex flex-col gap-2">
-            {meal.items.map((item) => (
-              <SavedItemRow
-                key={item.kind === "storage" ? item.storageItemId : item.id}
-                item={item}
-                pending={pending?.itemRatings}
-                disabled={offline}
-                // One item per tap, merged server-side.
-                onRate={(itemId, value) => updateMeal.mutate({ id: meal.id, input: { itemRatings: { [itemId]: value } } })}
-              />
-            ))}
-          </ul>
-        )}
-        {offline && (
-          <p id="meal-offline" className="mt-2 text-xs text-[var(--color-text-muted)]">
-            You're offline.
-          </p>
-        )}
-        {updateMeal.isError && !offline && (
-          <p role="alert" className="mt-2 text-xs text-[var(--color-danger)]">
-            Couldn't save that rating — try again.
-          </p>
-        )}
-
-        {meal.reactionNote && (
-          <span className="mt-2.5 text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</span>
-        )}
-
-        {meal.notes && <span className="mt-2.5 text-xs text-[var(--color-text-muted)]">{meal.notes}</span>}
-      </Card>
-
-      <div className="flex items-center gap-2">
-        {/* CD-Meal-Page: 44px targets, as every control on the boards. */}
-        <ButtonLink to={`/log-meal?edit=${meal.id}`} variant="secondary">
-          Edit
-        </ButtonLink>
-        {/* A delete is a plate write: it waits while offline (SPEC §4.4). */}
-        <Button
-          type="button"
-          variant="danger-quiet"
-          disabled={offline}
-          aria-describedby={offline ? "meal-offline" : undefined}
-          onClick={() => setConfirmingDelete(true)}
-        >
-          Delete
-        </Button>
-        <MealDeleteDialog
+      {/* Ledger 939: the Food log's own card (its date line, From storage
+          badge, ⋮ Edit / Delete and notes), with stars on its lines. It
+          does not link to itself. */}
+      <ul className="flex flex-col">
+        <MealCard
           meal={meal}
-          babyId={meal.babyId}
-          open={confirmingDelete}
-          onClose={() => setConfirmingDelete(false)}
-          onDeleted={goBack}
+          linkable={false}
+          onRequestDelete={askDelete}
+          // A delete is a plate write: it waits while offline (SPEC §4.4);
+          // the lines say "You're offline."
+          actions={<MealActionsMenu mealId={meal.id} onRequestDelete={askDelete} deleteDisabled={offline} />}
+          lines={<RatedMealLines meal={meal} />}
         />
-      </div>
+      </ul>
+      <MealDeleteDialog
+        meal={meal}
+        babyId={meal.babyId}
+        open={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        onDeleted={goBack}
+      />
     </div>
   );
 }

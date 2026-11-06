@@ -1,6 +1,7 @@
 // Item 574: the meal page's stars are its one inline edit — each tap is a
 // PATCH through `useUpdateMeal` (one item's `itemRatings`, ledger 902), and
-// the tapped value shows while it saves.
+// the tapped value shows while it saves. Ledger 939: the page is the Food
+// log's card, its stars on the lines (`RatedMealLines`), ⋮ Edit / Delete.
 // Called as a plain function with the hooks mocked (no DOM).
 import { describe, expect, it, vi } from "vitest";
 import type { MealItem } from "@blw/shared";
@@ -37,10 +38,10 @@ vi.mock("../features/tracking/hooks.js", () => ({
 }));
 
 import { MealDetailPage } from "./MealDetailPage.js";
-import { MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
-import { Button } from "../components/ui/Button.js";
+import { MealCard, MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
+import { MealActionsMenu } from "../features/tracking/components/MealActionsMenu.js";
+import { RatedMealLines } from "../features/tracking/components/RatedMealLines.js";
 import { StarRating } from "../components/ui/StarRating.js";
-import { SavedItemRow } from "../features/plate/PlateItemRow.js";
 
 interface El {
   type: unknown;
@@ -101,11 +102,15 @@ function render(meal: MealItem, pending?: unknown): El {
   h.mutations.length = 0;
   return (MealDetailPage as unknown as () => El)();
 }
-/** Every star line, through each item card (a plain function: no hooks). */
-const stars = (tree: El) =>
-  findAll(tree, SavedItemRow).flatMap((row) =>
-    findAll((SavedItemRow as unknown as (props: unknown) => El)(row.props), StarRating),
-  );
+/** The Food log card the page renders, and its lines rendered (hooks mocked). */
+const card = (tree: El) => find(tree, MealCard)!;
+const rated = (tree: El) => {
+  const lines = card(tree).props.lines as El;
+  expect(lines.type).toBe(RatedMealLines);
+  return (RatedMealLines as unknown as (props: unknown) => El)(lines.props);
+};
+/** Every star line, in order. */
+const stars = (tree: El) => findAll(rated(tree), StarRating);
 const lines = (tree: El) => stars(tree).map((star) => [star.props.label, star.props.value]);
 const tap = (tree: El, label: string, value: number | null) =>
   (stars(tree).find((star) => star.props.label === `Rating for ${label}`)!.props.onChange as (value: number | null) => void)(value);
@@ -149,13 +154,14 @@ describe("MealDetailPage stars (item 574, ledger 902)", () => {
   });
 
   it("offline, every star waits, and the page says why (SPEC §4.4, VERIFY-p2-c1 #7)", () => {
-    h.offline = true;
+    // The lines read the connection themselves (RatedMealLines).
     const tree = render(MEAL);
-    h.offline = false;
+    h.offline = true;
     expect(stars(tree).map((star) => star.props.disabled)).toEqual([true, true, true, true]);
-    expect(JSON.stringify(tree)).toContain("You're offline.");
+    expect(JSON.stringify(rated(tree))).toContain("You're offline.");
+    h.offline = false;
     expect(stars(render(MEAL)).map((star) => star.props.disabled)).toEqual([false, false, false, false]);
-    expect(JSON.stringify(render(MEAL))).not.toContain("You're offline.");
+    expect(JSON.stringify(rated(render(MEAL)))).not.toContain("You're offline.");
   });
 
   it("an older cached body without items shows no stars until the list refreshes", () => {
@@ -163,49 +169,35 @@ describe("MealDetailPage stars (item 574, ledger 902)", () => {
   });
 });
 
-describe("MealDetailPage delete (item 599)", () => {
-  it("Delete opens the question sheet instead of deleting", () => {
-    h.meal = MEAL;
+describe("MealDetailPage is the Food log card (ledger 939)", () => {
+  it("renders the Food log's MealCard, not linking to itself, with the stars as its lines", () => {
+    const tree = render(MEAL);
+    expect(card(tree).props.meal).toBe(MEAL);
+    expect(card(tree).props.linkable).toBe(false);
+    expect((card(tree).props.lines as El).props.meal).toBe(MEAL);
+  });
+});
+
+describe("MealDetailPage delete (item 599, ledger 939: ⋮ Delete)", () => {
+  it("⋮ Delete opens the question instead of deleting; the dialog leaves the page once deleted", () => {
     h.sets.length = 0;
-    const tree = (MealDetailPage as unknown as () => El)();
+    const tree = render(MEAL);
     const sheet = find(tree, MealDeleteDialog)!;
     expect(sheet.props.open).toBe(false);
     expect(sheet.props.meal).toBe(MEAL);
-
-    const buttons: El[] = [];
-    const walk = (node: unknown): void => {
-      if (Array.isArray(node)) return node.forEach(walk);
-      if (!node || typeof node !== "object" || !("props" in node)) return;
-      const el = node as El;
-      if (el.type === Button && el.props.children === "Delete") buttons.push(el);
-      walk(el.props.children);
-    };
-    walk(tree);
-    expect(buttons).toHaveLength(1);
-    // Item 638: the shared red-outline Delete, not a muted text link.
-    expect(buttons[0]!.props.variant).toBe("danger-quiet");
-    (buttons[0]!.props.onClick as () => void)();
+    expect(typeof sheet.props.onDeleted).toBe("function");
+    const menu = card(tree).props.actions as El;
+    expect(menu.type).toBe(MealActionsMenu);
+    expect(menu.props.mealId).toBe(MEAL.id);
+    expect(menu.props.deleteDisabled).toBe(false);
+    (menu.props.onRequestDelete as () => void)();
     expect(h.sets).toEqual([true]);
-    expect(buttons[0]!.props.disabled).toBe(false);
   });
 
-  it("offline, Delete waits like every plate write, and points at the page's offline line (VERIFY-p3-c1)", () => {
-    h.meal = MEAL;
+  it("offline, ⋮ Delete waits like every plate write (VERIFY-p3-c1)", () => {
     h.offline = true;
-    const tree = (MealDetailPage as unknown as () => El)();
+    const tree = render(MEAL);
     h.offline = false;
-    const found: El[] = [];
-    const walk = (node: unknown): void => {
-      if (Array.isArray(node)) return node.forEach(walk);
-      if (!node || typeof node !== "object" || !("props" in node)) return;
-      const el = node as El;
-      if ((el.type === Button && el.props.children === "Delete") || el.props.id === "meal-offline") found.push(el);
-      Object.values(el.props).forEach(walk);
-    };
-    walk(tree);
-    const [line, del] = [found.find((el) => el.props.id === "meal-offline"), found.find((el) => el.type === Button)];
-    expect(line?.props.children).toBe("You're offline.");
-    expect(del?.props.disabled).toBe(true);
-    expect(del?.props["aria-describedby"]).toBe("meal-offline");
+    expect((card(tree).props.actions as El).props.deleteDisabled).toBe(true);
   });
 });

@@ -119,6 +119,9 @@ export interface MealCardProps {
    * no border or fill (the list's card has them), an inset divider, and a
    * kebab named after the meal. */
   grouped?: boolean;
+  /** Replaces the plain item lines: the meal page passes its lines with
+   * stars (`RatedMealLines`, ledger 939), so the page is this same card. */
+  lines?: ReactNode;
 }
 
 /**
@@ -134,6 +137,7 @@ export function MealCard({
   linkable = true,
   actions,
   grouped = false,
+  lines: customLines,
 }: MealCardProps) {
   // `undefined` (the prop omitted) means "the standard kebab"; an explicit
   // `null` means "no actions" — hence the default lives here, not in the
@@ -149,7 +153,7 @@ export function MealCard({
       actions
     );
 
-  const lines = (
+  const lines = customLines ?? (
     <ul aria-label="On the plate" className="flex flex-col">
       {mealLines(meal).map((line) => (
         <li key={line.key} className="flex items-center gap-2 py-[3px]">

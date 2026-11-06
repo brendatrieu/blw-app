@@ -7,6 +7,8 @@ export interface MealActionsMenuProps {
   onRequestDelete: () => void;
   /** The kebab's accessible name; defaults to "Actions". */
   label?: string;
+  /** Delete waits (the meal page offline: a delete is a plate write, SPEC §4.4). */
+  deleteDisabled?: boolean;
 }
 
 /**
@@ -17,7 +19,7 @@ export interface MealActionsMenuProps {
  * through `MealCard` to the list, which owns the delete question and its
  * mutation (`MealDeleteDialog`).
  */
-export function MealActionsMenu({ mealId, onRequestDelete, label = "Actions" }: MealActionsMenuProps) {
+export function MealActionsMenu({ mealId, onRequestDelete, label = "Actions", deleteDisabled }: MealActionsMenuProps) {
   return (
     <Menu label={label}>
       {(close) => (
@@ -26,6 +28,7 @@ export function MealActionsMenu({ mealId, onRequestDelete, label = "Actions" }: 
             Edit
           </MenuLinkItem>
           <MenuItem
+            disabled={deleteDisabled}
             onSelect={() => {
               onRequestDelete();
               close();

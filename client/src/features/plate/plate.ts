@@ -336,6 +336,14 @@ export function containerTitle(item: { label: string | null; parts: readonly Par
   });
 }
 
+/** What one star line rates: a meal item, or a food or recipe a container held. */
+export interface MealLineRating {
+  /** The meal item's id, the key of a PATCH's `itemRatings`. */
+  id: string;
+  label: string;
+  rating: number | null;
+}
+
 /** One line of a saved meal in the Food log (CD-Food-Log). */
 export interface MealLine {
   key: string;
@@ -343,6 +351,14 @@ export interface MealLine {
   /** A fresh food its owner has since deleted. */
   deleted?: boolean | undefined;
   plates: Plate[];
+  /** Its star lines (ledger 939/944): one for a food or recipe, one per part
+   * of a container. None on a cached body from before items. */
+  ratings: MealLineRating[];
+  /** A recipe's left-out ingredients; none when it was rebuilt from a meal
+   * logged before the plate (`inferred`, chair §10.1: it cannot know). */
+  leftOut: readonly { name: string; deleted?: boolean | undefined }[];
+  /** A container's batch, for the storage ⇄ meal traceback (item 162). */
+  storageItemId?: string;
 }
 
 /**
@@ -352,14 +368,36 @@ export interface MealLine {
  */
 export function mealLines(meal: Pick<MealItem, "items" | "foods">): MealLine[] {
   if (!meal.items) {
-    return meal.foods.map((food) => ({ key: food.id, name: food.name, deleted: food.deleted, plates: [foodPlate(food)] }));
+    return meal.foods.map((food) => ({
+      key: food.id,
+      name: food.name,
+      deleted: food.deleted,
+      plates: [foodPlate(food)],
+      ratings: [],
+      leftOut: [],
+    }));
   }
   return meal.items.map((item): MealLine => {
     if (item.kind === "food") {
-      return { key: item.id, name: item.food.name, deleted: item.food.deleted, plates: [foodPlate(item.food)] };
+      const ratings = [{ id: item.id, label: item.food.name, rating: item.rating }];
+      return { key: item.id, name: item.food.name, deleted: item.food.deleted, plates: [foodPlate(item.food)], ratings, leftOut: [] };
     }
-    if (item.kind === "recipe") return { key: item.id, name: item.recipe.title, plates: [RECIPE_PLATE] };
-    return { key: item.storageItemId, name: containerTitle(item), plates: partPlates(item.parts) };
+    if (item.kind === "recipe") {
+      const ratings = [{ id: item.id, label: item.recipe.title, rating: item.rating }];
+      return { key: item.id, name: item.recipe.title, plates: [RECIPE_PLATE], ratings, leftOut: item.inferred ? [] : item.leftOut };
+    }
+    return {
+      key: item.storageItemId,
+      name: containerTitle(item),
+      plates: partPlates(item.parts),
+      ratings: item.parts.map((part) => ({
+        id: part.id,
+        label: part.kind === "food" ? part.food.name : part.recipe.title,
+        rating: part.rating,
+      })),
+      leftOut: [],
+      storageItemId: item.storageItemId,
+    };
   });
 }
 

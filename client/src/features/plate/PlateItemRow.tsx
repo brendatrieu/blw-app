@@ -1,6 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
-import type { PlateItem } from "@blw/shared";
 import { Button } from "../../components/ui/Button.js";
 import { CloseGlyph, ICON_BUTTON_CLASSES } from "../../components/ui/iconButton.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";
@@ -12,7 +10,6 @@ import { useRecipe } from "../catalog/hooks.js";
 import { LOCATION_LABEL, servePartHint } from "../storage/format.js";
 import {
   RECIPE_PLATE,
-  containerTitle,
   entryKey,
   goneLine,
   partId,
@@ -450,103 +447,6 @@ export function ContainerItemRow({ entry, dispatch, disabled, planning, onAddToS
                 </p>
                 <div className="-mt-0.5 -ml-[9px]">{stars(part)}</div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </li>
-  );
-}
-
-interface SavedItemRowProps {
-  item: PlateItem;
-  /** A tap's value while it saves, by meal item id. */
-  pending?: Readonly<Record<string, number | null>> | undefined;
-  /** A star tap: the meal item's id (a container's part is an item of its own) and the value. */
-  onRate: (id: string, value: number | null) => void;
-  /** Offline: every plate write waits (SPEC §4.4), stars included. */
-  disabled?: boolean;
-}
-
-/** Where a saved item's stars drop below its plate: with no × beside the
- * name, five 44px stars (less the -9px glyph inset) need 263px of item. */
-const SAVED_PLATE = "row-span-2 @max-[262px]:row-span-1";
-const SAVED_STARS = "col-start-2 -ml-[9px] @max-[262px]:col-span-2 @max-[262px]:col-start-1";
-
-/**
- * One item of a saved meal on its page (CD-Meal-Page): the plate's item card
- * with its stars, which save on tap; no ×, stepper or Ingredients. A recipe
- * says what was left out, unless it was rebuilt from a meal logged before the
- * plate (`inferred`, chair §10.1: it cannot know). A container says it came
- * from storage, linking to its batch (the storage ⇄ meal traceback, item
- * 162), and rates each food or recipe it held, as on the plate.
- */
-export function SavedItemRow({ item, pending = {}, onRate, disabled }: SavedItemRowProps) {
-  const stars = (id: string, label: string, rating: number | null) => (
-    <StarRating
-      label={`Rating for ${label}`}
-      value={id in pending ? pending[id]! : rating}
-      onChange={(value) => onRate(id, value)}
-      disabled={disabled}
-    />
-  );
-
-  if (item.kind !== "storage") {
-    const label = item.kind === "food" ? item.food.name : item.recipe.title;
-    const leftOut = item.kind === "recipe" && !item.inferred ? item.leftOut : [];
-    return (
-      <li className={ITEM}>
-        <div className="grid grid-cols-[40px_minmax(0,1fr)] items-start gap-x-3">
-          <FoodPlate {...(item.kind === "food" ? foodPlate(item.food) : RECIPE_PLATE)} size={40} className={SAVED_PLATE} />
-          <div className="min-w-0 pt-0.5">
-            <p className={TITLE}>{item.kind === "food" ? <Name food={item.food} /> : label}</p>
-            {leftOut.length > 0 && (
-              <p className={DETAIL}>
-                <span className="font-semibold text-[var(--color-apricot-text)]">
-                  Left out: <FoodNames foods={leftOut} />
-                </span>
-              </p>
-            )}
-          </div>
-          <div className={SAVED_STARS}>{stars(item.id, label, item.rating)}</div>
-        </div>
-      </li>
-    );
-  }
-
-  const title = containerTitle(item);
-  const [only, ...rest] = item.parts;
-  return (
-    <li className={ITEM}>
-      <div className="flex items-center gap-3">
-        <ItemPlate plates={partPlates(item.parts)} size={40} />
-        <div className="min-w-0 flex-1">
-          <p className={TITLE}>{title}</p>
-          <p className={DETAIL}>
-            {/* The 44px box reaches over the title above (plain text) and is
-                painted under the star lines below, so it never takes their taps. */}
-            <Link
-              to={`/storage/${item.storageItemId}`}
-              className={`-mt-3.5 -mb-2.5 inline-flex min-h-11 items-center rounded-[var(--radius-sm)] underline underline-offset-2 ${FOCUS_RING}`}
-            >
-              From storage
-            </Link>
-          </p>
-        </div>
-      </div>
-      {only && rest.length === 0 ? (
-        <div className="mt-0.5 ml-[43px] @max-[262px]:-ml-[9px]">{stars(only.id, partLabel(only), only.rating)}</div>
-      ) : (
-        <div className="mt-0.5">
-          {item.parts.map((part) => (
-            <div key={part.id} className="mt-1 grid grid-cols-[40px_minmax(0,1fr)] items-start gap-x-3">
-              <span className={`flex justify-center ${SAVED_PLATE}`}>
-                <FoodPlate {...(part.kind === "food" ? foodPlate(part.food) : RECIPE_PLATE)} size={24} />
-              </span>
-              <p className="min-w-0 text-sm leading-6 font-semibold break-words text-[var(--color-text)]">
-                {part.kind === "food" ? <Name food={part.food} /> : part.recipe.title}
-              </p>
-              <div className={`-mt-0.5 ${SAVED_STARS}`}>{stars(part.id, partLabel(part), part.rating)}</div>
             </div>
           ))}
         </div>

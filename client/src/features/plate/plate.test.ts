@@ -322,8 +322,21 @@ describe("fromMeal", () => {
 describe("mealLines (CD-Food-Log)", () => {
   it("one line per item in plate order: a container under its own name, its first foods' plates", () => {
     expect(mealLines({ items: ITEMS, foods: [] })).toEqual([
-      { key: id(100), name: PASTA.title, plates: [RECIPE_PLATE] },
-      { key: id(101), name: "Egg", deleted: undefined, plates: [{ emoji: "🥚", tint: "dairy" }] },
+      {
+        key: id(100),
+        name: PASTA.title,
+        plates: [RECIPE_PLATE],
+        ratings: [{ id: id(100), label: PASTA.title, rating: 5 }],
+        leftOut: [CASHEW],
+      },
+      {
+        key: id(101),
+        name: "Egg",
+        deleted: undefined,
+        plates: [{ emoji: "🥚", tint: "dairy" }],
+        ratings: [{ id: id(101), label: "Egg", rating: null }],
+        leftOut: [],
+      },
       {
         key: CONTAINER.id,
         name: "Broccoli, Carrot",
@@ -331,11 +344,30 @@ describe("mealLines (CD-Food-Log)", () => {
           { emoji: "🥦", tint: "veg" },
           { emoji: "🥕", tint: "veg" },
         ],
+        // Ledger 939/944: a container rates each thing it held, by its own item id.
+        ratings: [
+          { id: id(102), label: "Broccoli", rating: 4 },
+          { id: id(103), label: "Carrot", rating: null },
+        ],
+        leftOut: [],
+        storageItemId: CONTAINER.id,
       },
-      { key: id(104), name: PATTIES.title, plates: [RECIPE_PLATE] },
+      { key: id(104), name: PATTIES.title, plates: [RECIPE_PLATE], ratings: [{ id: id(104), label: PATTIES.title, rating: null }], leftOut: [] },
       // A recipe container wears the pot; its label names it.
-      { key: MUFFIN_TUB.id, name: "Muffins (old batch)", plates: [RECIPE_PLATE] },
+      {
+        key: MUFFIN_TUB.id,
+        name: "Muffins (old batch)",
+        plates: [RECIPE_PLATE],
+        ratings: [{ id: id(105), label: MUFFINS.title, rating: 3 }],
+        leftOut: [],
+        storageItemId: MUFFIN_TUB.id,
+      },
     ]);
+  });
+
+  it("a recipe rebuilt from a meal logged before the plate says nothing left out (chair §10.1)", () => {
+    const inferred = { ...ITEMS[0]!, inferred: true } as PlateItem;
+    expect(mealLines({ items: [inferred], foods: [] })[0]!.leftOut).toEqual([]);
   });
 
   it("marks a deleted food; a cached body from before items lists its foods", () => {
@@ -345,6 +377,8 @@ describe("mealLines (CD-Food-Log)", () => {
       [BROCCOLI.id, "Broccoli", undefined],
       [EGG.id, "Egg", true],
     ]);
+    // No item ids to rate before items.
+    expect(mealLines({ foods: [{ ...BROCCOLI, storageItemId: null }] })[0]!.ratings).toEqual([]);
   });
 });
 

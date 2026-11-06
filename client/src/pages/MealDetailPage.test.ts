@@ -174,23 +174,23 @@ describe("MealDetailPage", () => {
     expect(html).not.toContain(`href="/meals/${MEAL.id}"`);
   });
 
-  it("offers Edit (to /log-meal?edit=:id) and Delete actions", () => {
-    const html = renderToString(
-      createElement(QueryClientProvider, { client: seededClient([MEAL]) }, renderAtMealDetailRoute(MEAL.id)),
-    );
-    expect(html).toContain(`href="/log-meal?edit=${MEAL.id}"`);
-    expect(html).toMatch(/<button[^>]*type="button"[^>]*>Delete<\/button>/);
+  // Ledger 939: Edit and Delete are the Food log card's ⋮, not buttons of the page.
+  it("offers Edit and Delete in the card's ⋮ (Actions) menu, with no bottom buttons", () => {
+    const html = renderMeal(MEAL).replace(/<!-- -->/g, "");
+    expect(html).toMatch(/<button[^>]*aria-label="Actions"[^>]*aria-haspopup="menu"|<button[^>]*aria-haspopup="menu"[^>]*aria-label="Actions"/);
+    expect(html).not.toMatch(/<button[^>]*>Delete<\/button>/);
+    expect(html).not.toMatch(/<a[^>]*>Edit<\/a>/);
   });
 });
 
-describe("MealDetailPage Edit/Delete row", () => {
-  it("draws Delete as the shared red-outline button, last in the Edit/Delete row (item 638)", () => {
-    const html = renderMeal(MEAL);
-    const row = html.slice(html.lastIndexOf('<div class="flex items-center gap-2">'));
-    const del = /<button[^>]*>Delete<\/button>/.exec(row)?.[0] ?? "";
-    expect(del).toContain("border-[var(--color-danger)]");
-    expect(del).toContain("text-[var(--color-danger)]");
-    expect(row.indexOf(">Edit<")).toBeLessThan(row.indexOf(">Delete<"));
+describe("MealDetailPage is the Food log card (ledger 939)", () => {
+  it("one bordered card: the date line first, then the lines, then the notes", () => {
+    const html = renderMeal(MEAL).replace(/<!-- -->/g, "");
+    const card = /<li class="relative flex flex-col rounded-\[var\(--radius-lg\)\] border [^"]*">([\s\S]*)<\/li><\/ul>/.exec(html)![1]!;
+    expect(card).toMatch(/^<div class="flex flex-wrap items-center justify-between gap-x-2"><span class="text-xs text-\[var\(--color-text-muted\)\]">[^<]*2:05\s?PM<\/span>/);
+    expect(card.indexOf('aria-label="On the plate"')).toBeLessThan(card.indexOf("ate the whole thing"));
+    // An item with a container shows the Food log's badge.
+    expect(card).toContain("📦 From storage");
   });
 });
 
@@ -337,13 +337,14 @@ describe("MealDetailPage items (CD-Meal-Page, ledger 902)", () => {
     ],
   };
   const html = () => renderMeal(PASTA_MEAL).replace(/<!-- -->/g, "");
-  const plate = () => /<ul aria-label="On the plate"[^>]*>([\s\S]*)<\/ul><span class="mt-2.5 text-xs text-\[var\(--color-text-muted\)\]">ate the whole thing/.exec(html())![1]!;
-  const items = () => plate().split(/<li class="@container/).slice(1);
+  const plate = () => /<ul aria-label="On the plate"[^>]*>([\s\S]*)<\/ul><\/div><p class="mt-1 text-xs text-\[var\(--color-text-muted\)\]">ate the whole thing/.exec(html())![1]!;
+  const items = () => plate().split(/<li class="py-\[3px\]/).slice(1);
 
-  it("lists every item in plate order, each its own card", () => {
-    const titles = items().map((item) => /<p class="font-semibold[^"]*">([^<]*)<\/p>/.exec(item)![1]!.replace(/&amp;/g, "&"));
+  it("lists every item in plate order, a Food log line each (ledger 939)", () => {
+    const titles = items().map((item) => /<p class="text-sm leading-\[1.3\] font-medium[^"]*">([^<]*)<\/p>/.exec(item)![1]!.replace(/&amp;/g, "&"));
     expect(titles).toEqual(["Creamy Cashew & Broccoli Pasta", "Broccoli, Carrot", "Broccoli Cheese Egg Muffins", "Salmon Oat Patties"]);
-    // A recipe wears the pot, as on the plate.
+    // A recipe wears the pot, as on the plate, at the Food log's 28px.
+    expect(items()[0]).toContain("width:28px;height:28px");
     expect(items()[0]).toContain("background:var(--color-plate-neutral)\">🍲</span>");
   });
 
@@ -361,11 +362,13 @@ describe("MealDetailPage items (CD-Meal-Page, ledger 902)", () => {
       "Broccoli",
       "Carrot",
     ]);
-    // One thing in it: its stars sit right under the title, no part line.
+    // Several things: each named over its stars. One thing: just its stars, under the name.
+    expect(container).toContain('<p class="mt-1 ml-[9px] text-[13px] leading-[1.35] text-[var(--color-text-muted)]">Broccoli</p>');
     expect([...oldServe!.matchAll(/role="radiogroup" aria-label="([^"]+)"/g)].map((m) => m[1])).toEqual([
       "Rating for Broccoli Cheese Egg Muffins",
     ]);
-    expect(oldServe).toContain('class="mt-0.5 ml-[43px] @max-[262px]:-ml-[9px]"');
+    expect(oldServe).not.toContain('class="mt-1 ml-[9px]');
+    expect(oldServe).toContain('class="relative z-10 ml-[27px] @max-[246px]:-ml-[9px]"');
   });
 
   it("no ×, stepper or Ingredients: the page edits only the stars", () => {
@@ -384,7 +387,7 @@ describe("MealDetailPage items (CD-Meal-Page, ledger 902)", () => {
     expect(out).not.toContain("Garlic");
     expect(items()).toHaveLength(4);
     expect(out).toContain("Left out: Cashews");
-    // The Food log tap still opens Edit; the page's own Edit is unchanged.
-    expect(out).toContain(`href="/log-meal?edit=${PASTA_MEAL.id}"`);
+    // Edit is the card's ⋮ (ledger 939), closed until tapped.
+    expect(out).toContain('aria-label="Actions"');
   });
 });
