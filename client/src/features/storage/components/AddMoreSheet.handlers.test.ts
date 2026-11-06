@@ -395,6 +395,8 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
       const out = html(tree);
       expect(out).toContain(said);
       expect(out).not.toContain("No matches<"); // not the bare line as well
+      // Centered, with room around the line and the button (ledger 935).
+      expect(out).toMatch(new RegExp(`<div class="flex flex-col items-center gap-4 py-8 text-center"><p class="text-sm text-\\[var\\(--color-text-muted\\)\\]">${said.replace(".", "\\.")}</p><button `));
       const [button] = searchAll(tree);
       expect(button?.props.variant).toBe("quiet");
       expect(button?.props.type).toBe("button");
@@ -426,7 +428,7 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     expect(html(render())).toContain(">No matches</p>");
     expect(searchAll(render())).toEqual([]);
     goTo("all");
-    expect(html(render())).toContain(">No matches</p>");
+    expect(html(render())).toContain('<p class="py-8 text-center text-sm text-[var(--color-text-muted)]">No matches</p>');
     expect(searchAll(render())).toEqual([]);
   });
 

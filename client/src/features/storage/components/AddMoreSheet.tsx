@@ -235,7 +235,8 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
       found.length > 0 ? (
         found
       ) : elsewhere ? (
-        <div className="flex flex-col items-start gap-2">
+        // Centered with room around the line and the button (ledger 935).
+        <div className="flex flex-col items-center gap-4 py-8 text-center">
           <p className="text-sm text-[var(--color-text-muted)]">{`No matches in ${NARROWED_NAME[searchTab]}.`}</p>
           <Button type="button" variant="quiet" onClick={() => {
               setSearchTab("all");
@@ -249,7 +250,7 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
           </Button>
         </div>
       ) : (
-        <p className="text-sm text-[var(--color-text-muted)]">No matches</p>
+        <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">No matches</p>
       );
   } else if (tab === "storage") {
     body =
