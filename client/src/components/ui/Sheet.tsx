@@ -16,6 +16,9 @@ interface SheetProps {
    * way out besides the overlay tap.
    */
   showClose?: boolean;
+  /** Ledger 941: one small action at the RIGHT end of the header row, after
+   * the title (the Time sheet's "Clear time"). Optional; most sheets have none. */
+  headerAction?: ReactNode;
   /**
    * Ledger 789: the panel is a fixed 85svh from the start, hung from the top
    * rather than the bottom, so it never changes height with its content and
@@ -53,7 +56,7 @@ const FIXED_HEIGHT_CLASSES =
  * or an overlay click, and traps Tab focus inside the panel while open — the
  * same `useModal` mechanics as `Dialog`.
  */
-export function Sheet({ open, onClose, title, showClose = false, fixedHeight = false, children }: SheetProps) {
+export function Sheet({ open, onClose, title, showClose = false, headerAction, fixedHeight = false, children }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   useModal(open, panelRef, onClose, true);
 
@@ -66,7 +69,7 @@ export function Sheet({ open, onClose, title, showClose = false, fixedHeight = f
         aria-hidden="true"
         onClick={onClose}
       />
-      <SheetPanel panelRef={panelRef} title={title} showClose={showClose} fixedHeight={fixedHeight} onClose={onClose}>
+      <SheetPanel panelRef={panelRef} title={title} showClose={showClose} headerAction={headerAction} fixedHeight={fixedHeight} onClose={onClose}>
         {children}
       </SheetPanel>
     </div>,
@@ -77,6 +80,7 @@ export function Sheet({ open, onClose, title, showClose = false, fixedHeight = f
 interface SheetPanelProps {
   title?: ReactNode;
   showClose?: boolean;
+  headerAction?: ReactNode;
   fixedHeight?: boolean;
   onClose: () => void;
   children: ReactNode;
@@ -89,7 +93,7 @@ interface SheetPanelProps {
  * the grab handle, the header row, the left-hand X — without a DOM env for
  * `createPortal` to mount into.
  */
-export function SheetPanel({ title, showClose = false, fixedHeight = false, onClose, children, panelRef }: SheetPanelProps) {
+export function SheetPanel({ title, showClose = false, headerAction, fixedHeight = false, onClose, children, panelRef }: SheetPanelProps) {
   return (
     <div
       ref={panelRef}
@@ -118,7 +122,7 @@ export function SheetPanel({ title, showClose = false, fixedHeight = false, onCl
         <div className="mx-auto h-1.5 w-10 shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-border)]" aria-hidden="true" />
         {/* The close X sits at the LEFT of the header row, before the title —
             the same slot and footprint pages give `CloseButton` (item 258). */}
-        {title || showClose ? (
+        {title || showClose || headerAction ? (
           <div className="flex items-center gap-1">
             {showClose ? (
               <button
@@ -131,6 +135,7 @@ export function SheetPanel({ title, showClose = false, fixedHeight = false, onCl
               </button>
             ) : null}
             {title ? <h2 className="font-h2 min-w-0 text-[var(--color-text)]">{title}</h2> : null}
+            {headerAction ? <div className="-mr-2 ml-auto shrink-0">{headerAction}</div> : null}
           </div>
         ) : null}
       </div>

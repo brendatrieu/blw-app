@@ -62,3 +62,22 @@ describe("SheetPanel pinned header (item 737)", () => {
     expect(plain).not.toContain("min-h-[85svh]");
   });
 });
+
+describe("SheetPanel header action (ledger 941)", () => {
+  it("puts the optional action at the right end of the header row, after the X and the title; none by default", () => {
+    const html = renderToString(
+      createElement(SheetPanel, {
+        title: "Time",
+        showClose: true,
+        onClose: () => {},
+        headerAction: createElement("button", { type: "button" }, "Clear time"),
+        children: createElement("p", null, "body"),
+      }),
+    );
+    // Reading (and screen-reader) order: X, title, action; then the body.
+    expect(html).toMatch(
+      /<div data-sheet-header=""[^>]*>[\s\S]*?aria-label="Close"[\s\S]*?<h2 [^>]*>Time<\/h2><div class="-mr-2 ml-auto shrink-0"><button type="button">Clear time<\/button><\/div><\/div><\/div><p>body<\/p>/,
+    );
+    expect(render({ title: "Time", showClose: true })).not.toContain("ml-auto");
+  });
+});

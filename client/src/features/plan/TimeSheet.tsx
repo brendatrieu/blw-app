@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Button } from "../../components/ui/Button.js";
-import { HOUR_ITEMS, MERIDIEM_ITEMS, WheelColumn, WheelFrame, type WheelItem } from "../../components/ui/DateTimeField.js";
+import { HOUR_ITEMS, MERIDIEM_ITEMS, PickerSheetFooter, WheelColumn, WheelFrame, type WheelItem } from "../../components/ui/DateTimeField.js";
 import { Sheet } from "../../components/ui/Sheet.js";
 import { clockParts, clockTime, localClock, type ClockParts } from "./plan.js";
 
@@ -10,8 +9,10 @@ const MINUTE_ITEMS: WheelItem[] = Array.from({ length: 12 }, (_, i) => ({ key: S
  * A meal's time on the app's own wheel (ledger 926; Daily meals only for
  * now): Hour, Minute in 5-minute steps, AM or PM. Mounted open; opens on the
  * meal's time (an odd one on its nearest step) or, with none, on the clock
- * now. Save hands back the wheel's time, Clear time (only when there is one)
- * removes it, Cancel / Escape / an outside tap change nothing.
+ * now. Laid out like Log meal's time picker (ledger 941): title "Time" with
+ * the X, one full-width Done that hands back the wheel's time, and a small
+ * "Clear time" in the header (only when there is one) that removes it. The
+ * X, Escape and an outside tap change nothing.
  */
 export function TimeSheet({
   time,
@@ -27,7 +28,23 @@ export function TimeSheet({
   const [draft, setDraft] = useState<ClockParts>(() => clockParts(time ?? localClock()));
   const meridiemIndex = draft.meridiem === "AM" ? 0 : 1;
   return (
-    <Sheet open onClose={onClose} title="Time">
+    <Sheet
+      open
+      onClose={onClose}
+      title="Time"
+      showClose
+      headerAction={
+        time ? (
+          <button
+            type="button"
+            onClick={onClear}
+            className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-[var(--color-accent)]"
+          >
+            Clear time
+          </button>
+        ) : undefined
+      }
+    >
       <WheelFrame>
         <WheelColumn
           ariaLabel="Hour"
@@ -63,19 +80,7 @@ export function TimeSheet({
           className="flex-1"
         />
       </WheelFrame>
-      <div className="flex flex-col gap-2">
-        <Button type="button" onClick={() => onSave(clockTime(draft))} className="w-full">
-          Save
-        </Button>
-        <Button type="button" variant="secondary" onClick={onClose} className="w-full">
-          Cancel
-        </Button>
-        {time && (
-          <Button type="button" variant="quiet" onClick={onClear} className="w-full">
-            Clear time
-          </Button>
-        )}
-      </div>
+      <PickerSheetFooter onSave={() => onSave(clockTime(draft))} />
     </Sheet>
   );
 }

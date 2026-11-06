@@ -71,7 +71,7 @@ import { BackButton } from "../../components/ui/BackButton.js";
 import { Button } from "../../components/ui/Button.js";
 import { PageHeader } from "../../components/ui/PageHeader.js";
 import { SkeletonList } from "../../components/ui/Skeleton.js";
-import { HOUR_ITEMS, MERIDIEM_ITEMS, WheelColumn } from "../../components/ui/DateTimeField.js";
+import { HOUR_ITEMS, MERIDIEM_ITEMS, PickerSheetFooter, WheelColumn } from "../../components/ui/DateTimeField.js";
 import { Sheet } from "../../components/ui/Sheet.js";
 import { DailyMealsForm, DailyMealsPage } from "./DailyMealsPage.js";
 import { TimeSheet } from "./TimeSheet.js";
@@ -232,7 +232,7 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     ]);
   });
 
-  it("the Time sheet: Cancel (or Escape, an outside tap) changes nothing, moves nothing, and returns the focus; Clear time only with a time (926)", () => {
+  it("the Time sheet: the X (or Escape, an outside tap) changes nothing, moves nothing, and returns the focus; Clear time only with a time (926)", () => {
     const review = [
       { id: DEFAULT_DAILY_MEALS[0]!.id, name: "Breakfast", time: "09:39" },
       { id: DEFAULT_DAILY_MEALS[1]!.id, name: "Snack", time: "08:39" },
@@ -263,7 +263,7 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     expect(focusNext().current).toBe(`dm-${review[0]!.id}-time`);
   });
 
-  it("the Time sheet's wheel: Hour, Minute in 5-minute steps, AM or PM; opens on the nearest step; Save hands back the wheel's time (926)", () => {
+  it("the Time sheet's wheel: Hour, Minute in 5-minute steps, AM or PM; opens on the nearest step; Done hands back the wheel's time (926, 941)", () => {
     const sheet = (time: string | null, onSave: (time: string) => void = () => {}) => {
       h.store.states.length = 0;
       h.store.i = 0;
@@ -276,7 +276,17 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     const columns = (tree: El) => findAll(tree, (el) => el.type === WheelColumn);
     let tree = sheet("09:39");
     expect(tree.type).toBe(Sheet);
-    expect(tree.props).toMatchObject({ open: true, title: "Time" });
+    // Like Log meal's time picker (941): title "Time" with the X, ONE Done
+    // (the shared PickerSheetFooter), Clear time in the header, no Buttons.
+    expect(tree.props).toMatchObject({ open: true, title: "Time", showClose: true });
+    expect(findAll(tree, (el) => el.type === PickerSheetFooter)).toHaveLength(1);
+    expect(findAll(tree, (el) => el.type === Button)).toEqual([]);
+    const clear = tree.props.headerAction as El;
+    expect(clear.type).toBe("button");
+    expect(clear.props.type).toBe("button");
+    expect(text(clear.props.children)).toBe("Clear time");
+    // Small and quiet, yet a 44px target.
+    expect(clear.props.className).toBe("inline-flex min-h-11 items-center px-2 text-sm font-medium text-[var(--color-accent)]");
     expect(columns(tree).map((col) => [col.props.ariaLabel, col.props.valueNow, col.props.valueMin, col.props.valueMax, col.props.loop ?? false])).toEqual([
       ["Hour", 9, 1, 12, true],
       ["Minute", 40, 0, 55, true],
@@ -287,7 +297,6 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     expect((columns(tree)[1]!.props.items as { label: string }[]).map((item) => item.label)).toEqual(
       ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"],
     );
-    expect(findAll(tree, (el) => el.type === Button).map((el) => text(el.props.children))).toEqual(["Save", "Cancel", "Clear time"]);
     // 23:58 opens on 11:55 PM, never wrapping to 12:00 AM.
     expect(columns(sheet("23:58")).map((col) => col.props.valueNow)).toEqual([11, 55, 1]);
     // Where each wheel OPENS (the index prop; a settled wheel writes it back into the draft).
@@ -296,10 +305,12 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     expect(opens("23:58")).toEqual([10, 11, 1]);
     expect(opens("12:00")).toEqual([11, 0, 1]);
     expect(opens("00:05")).toEqual([11, 1, 0]);
-    // No time: no Clear time.
-    expect(findAll(sheet(null), (el) => el.type === Button).map((el) => text(el.props.children))).toEqual(["Save", "Cancel"]);
+    // No time: no Clear time; still the X and Done.
+    expect(sheet(null).props.headerAction).toBeUndefined();
+    expect(sheet(null).props.showClose).toBe(true);
+    expect(findAll(sheet(null), (el) => el.type === PickerSheetFooter)).toHaveLength(1);
 
-    // Turned to 12:05 PM and saved; the odd 09:39 changes only on Save.
+    // Turned to 12:05 PM and Done; the odd 09:39 changes only on Done.
     const savedTimes: string[] = [];
     tree = sheet("09:39", (time) => savedTimes.push(time));
     (columns(tree)[0]!.props.onIndexChange as (i: number) => void)(11);
@@ -307,12 +318,12 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     (columns(again("09:39", (time) => savedTimes.push(time)))[2]!.props.onIndexChange as (i: number) => void)(1);
     tree = again("09:39", (time) => savedTimes.push(time));
     expect(savedTimes).toEqual([]);
-    (findAll(tree, (el) => el.type === Button && text(el.props.children) === "Save")[0]!.props.onClick as () => void)();
+    (findAll(tree, (el) => el.type === PickerSheetFooter)[0]!.props.onSave as () => void)();
     expect(savedTimes).toEqual(["12:05"]);
 
-    // The sheet's own controls (verifier c2): Cancel only closes, even after the
-    // wheel turned (an odd 09:39 must not become 09:40); Clear time only clears;
-    // Escape and an outside tap are the Sheet's onClose, the same as Cancel.
+    // The sheet's own controls (verifier c2, 941): the X only closes, even after
+    // the wheel turned (an odd 09:39 must not become 09:40); Clear time only
+    // clears; the X, Escape and an outside tap are all the Sheet's onClose.
     const calls: string[] = [];
     const props = {
       time: "09:39",
@@ -327,10 +338,9 @@ describe("Daily meals (CD-Daily-Meals)", () => {
     (columns(tree)[0]!.props.onIndexChange as (i: number) => void)(11);
     h.store.i = 0;
     tree = (TimeSheet as unknown as (p: unknown) => El)(props);
-    const tap = (name: string) => (findAll(tree, (el) => el.type === Button && text(el.props.children) === name)[0]!.props.onClick as () => void)();
-    tap("Cancel");
+    (tree.props.onClose as () => void)(); // the X / Escape / outside tap
     expect(calls).toEqual(["close"]);
-    tap("Clear time");
+    ((tree.props.headerAction as El).props.onClick as () => void)();
     expect(calls).toEqual(["close", "clear"]);
   });
 
