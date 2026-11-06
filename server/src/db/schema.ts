@@ -718,8 +718,9 @@ export const plannedMeals = pgTable(
 // What is planned for one meal, in the plate's item shapes (SPEC §4.3): a
 // fresh food, a fresh recipe with the ingredients to leave out (intent; what
 // counts is decided at Serve), or a container with the servings to take.
-// Every reference cascades: a deleted custom recipe leaves the plan silently
-// (chair §10.5); a custom food is only soft-deleted (the plan shows it
+// Every reference cascades: a deleted custom recipe leaves the plan (chair
+// §10.5; its delete question counts the planned meals first, ledger 937); a
+// custom food is only soft-deleted (the plan shows it
 // "(deleted)") or re-pointed by Replace; containers go only with the account.
 export const plannedItems = pgTable(
   "planned_items",

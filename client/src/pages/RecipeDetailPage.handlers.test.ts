@@ -14,6 +14,9 @@ const h = vi.hoisted(() => {
       calls: [] as { id: unknown; options: { onSuccess?: () => void } }[],
     },
     navigations: [] as unknown[],
+    // Ledger 937: what the plan-count read answers, and the calls it got.
+    planCount: { data: undefined as { plannedMealCount: number } | undefined },
+    planCountCalls: [] as [string, boolean][],
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states)) store.states[i] = init;
@@ -32,6 +35,10 @@ vi.mock("react-router-dom", async (importOriginal) => {
 });
 vi.mock("../features/catalog/hooks.js", () => ({
   useRecipe: () => ({}),
+  useRecipePlanCount: (id: string, enabled: boolean) => {
+    h.planCountCalls.push([id, enabled]);
+    return h.planCount;
+  },
   useDeleteCustomRecipe: () => ({
     ...h.mutation,
     mutate: (id: unknown, options: { onSuccess?: () => void }) => h.mutation.calls.push({ id, options }),
@@ -69,6 +76,8 @@ const dialogOf = (tree: El) => find(tree, (el) => el.type === ConfirmDialog)!;
 beforeEach(() => {
   h.store.states = [];
   h.navigations = [];
+  h.planCount.data = undefined;
+  h.planCountCalls = [];
   Object.assign(h.mutation, { isPending: false, isError: false, error: null, calls: [] });
 });
 
@@ -80,9 +89,7 @@ describe("CustomRecipeActions delete question (item 599)", () => {
     const dialog = dialogOf(render());
     expect(dialog.props.open).toBe(true);
     expect(dialog.props.title).toBe("Delete Lentil mash?");
-    expect(dialog.props.children).toMatchObject({
-      props: { children: "This can't be undone." },
-    });
+    expect(dialog.props.children).toMatchObject([null, { props: { children: "This can't be undone." } }]);
     expect(dialog.props.confirmLabel).toBe("Delete");
     expect(h.mutation.calls).toEqual([]);
   });
@@ -113,5 +120,40 @@ describe("CustomRecipeActions delete question (item 599)", () => {
     expect(dialogOf(render()).props.error).toBe("Used in 2 meals — remove those first.");
     h.mutation.error = new Error("offline");
     expect(dialogOf(render()).props.error).toBe("Couldn't delete that — try again.");
+  });
+});
+
+describe("CustomRecipeActions delete question names the plans it leaves (ledger 937)", () => {
+  const paragraphs = (tree: El) =>
+    (dialogOf(tree).props.children as unknown[]).filter(Boolean).map((p) => (p as El).props.children);
+
+  it("reads the count only while the question is open", () => {
+    render();
+    expect(h.planCountCalls).toEqual([["recipe-9", false]]);
+    const del = find(render(), (el) => el.type === Button && el.props.children === "Delete")!;
+    (del.props.onClick as () => void)();
+    h.planCountCalls = [];
+    render();
+    expect(h.planCountCalls).toEqual([["recipe-9", true]]);
+  });
+
+  it("adds the plan line before 'can't be undone', singular and plural", () => {
+    h.planCount.data = { plannedMealCount: 1 };
+    expect(paragraphs(render())).toEqual([
+      "It's planned for 1 meal. Deleting it takes it off those plans.",
+      "This can't be undone.",
+    ]);
+    h.planCount.data = { plannedMealCount: 3 };
+    expect(paragraphs(render())[0]).toBe("It's planned for 3 meals. Deleting it takes it off those plans.");
+  });
+
+  it("says nothing about plans when none hold it, or the read failed or is offline", () => {
+    h.planCount.data = { plannedMealCount: 0 };
+    expect(paragraphs(render())).toEqual(["This can't be undone."]);
+    h.planCount.data = undefined;
+    expect(paragraphs(render())).toEqual(["This can't be undone."]);
+    // The question still deletes without the line.
+    (dialogOf(render()).props.onConfirm as () => void)();
+    expect(h.mutation.calls.map((call) => call.id)).toEqual(["recipe-9"]);
   });
 });

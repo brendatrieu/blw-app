@@ -631,3 +631,14 @@ export const customRecipeConflictSchema = z.object({
   storageCount: z.number().int(),
 });
 export type CustomRecipeConflict = z.infer<typeof customRecipeConflictSchema>;
+
+/**
+ * GET /api/recipes/:id/plan-count (ledger 937): how many planned meals, on
+ * any day of any of the owner's babies, hold the owner's custom recipe. The
+ * delete question names it, because deleting the recipe takes it off those
+ * plans (plans cascade; logged meals and storage block instead, above).
+ */
+export const recipePlanCountSchema = z.object({
+  plannedMealCount: z.number().int(),
+});
+export type RecipePlanCount = z.infer<typeof recipePlanCountSchema>;

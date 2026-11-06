@@ -30,6 +30,7 @@ import {
   type RecipeIngredient,
   type RecipeListItem,
   type RecipeVariant,
+  type RecipePlanCount,
   type RecipesResponse,
 } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
@@ -52,6 +53,7 @@ import {
   foodAllergens,
   foods,
   mealRecipes,
+  plannedItems,
   storageItemRecipes,
   storageItems,
   recipeIngredients,
@@ -563,6 +565,29 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
   });
 
   // ---------------------------------------------------------------------
+  // GET /api/recipes/:id/plan-count (ledger 937)
+  //
+  // What the delete question says the delete takes off plans: every planned
+  // meal holding the owner's recipe, any day (past ones too) and any of their
+  // babies, since the delete below cascades through all of them. A meal
+  // holding it twice counts once. Only the owner can plan their own recipe,
+  // so the recipe id alone finds every row. Anyone else gets a 404.
+  // ---------------------------------------------------------------------
+  app.get("/api/recipes/:id/plan-count", { preHandler: app.requireAuth }, async (request, reply) => {
+    const params = recipeIdParamSchema.safeParse(request.params);
+    if (!params.success) return notFound(reply);
+
+    const existing = await loadOwnedRecipe(db, params.data.id, currentUserId(request));
+    if (!existing) return notFound(reply);
+
+    const [row] = await db
+      .select({ count: sql<number>`count(distinct ${plannedItems.plannedMealId})::int` })
+      .from(plannedItems)
+      .where(eq(plannedItems.recipeId, existing.id));
+    return { plannedMealCount: row?.count ?? 0 } satisfies RecipePlanCount;
+  });
+
+  // ---------------------------------------------------------------------
   // DELETE /api/recipes/:id
   // ---------------------------------------------------------------------
   app.delete("/api/recipes/:id", { preHandler: app.requireAuth }, async (request, reply) => {
@@ -579,7 +604,8 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     // UI needs to say what is in the way. Favorites are NOT in this list:
     // un-favoriting is not a decision worth blocking a delete on, so the
     // caller's own row is simply removed below. Nor are plans: a planned use
-    // cascades away silently (ledger 903, chair §10.5).
+    // cascades away (ledger 903, chair §10.5); the delete question names how
+    // many planned meals that is, from GET .../plan-count above (ledger 937).
     //
     // Ledger 754 (DESIGN-B §6): the counts run INSIDE the delete transaction,
     // behind a lock on the recipe row. A meal or container written meanwhile

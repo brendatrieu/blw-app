@@ -22,6 +22,7 @@ import {
   fetchFood,
   fetchFoods,
   fetchRecipe,
+  fetchRecipePlanCount,
   fetchRecipes,
   replaceCustomFood,
   restoreCustomFood,
@@ -416,6 +417,22 @@ export function useUpdateCustomRecipe() {
  * only touched on success. The server drops the caller's favorite row along
  * with the recipe, hence the favorites invalidation.
  */
+/**
+ * The planned-meal count the recipe delete question names (ledger 937), read
+ * fresh each time the question opens (`enabled`). No retry and nothing kept:
+ * offline or failed, the question simply goes without the line.
+ */
+export function useRecipePlanCount(recipeId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["recipe-plan-count", recipeId] as const,
+    queryFn: () => fetchRecipePlanCount(recipeId),
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
+}
+
 export function useDeleteCustomRecipe() {
   const queryClient = useQueryClient();
   return useMutation({

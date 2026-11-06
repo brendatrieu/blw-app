@@ -7,6 +7,7 @@ import {
   type FoodsQuery,
   type FoodsResponse,
   type RecipeDetail,
+  type RecipePlanCount,
   type RecipeScope,
   type RecipesResponse,
   type ReplaceCustomFoodResponse,
@@ -137,6 +138,11 @@ export function updateCustomRecipe(id: string, input: UpdateCustomRecipeInput): 
 
 export function deleteCustomRecipe(id: string): Promise<void> {
   return apiDelete<void>(`/api/recipes/${encodeURIComponent(id)}`);
+}
+
+/** How many planned meals hold the parent's custom recipe (ledger 937). */
+export function fetchRecipePlanCount(id: string): Promise<RecipePlanCount> {
+  return apiGet<RecipePlanCount>(`/api/recipes/${encodeURIComponent(id)}/plan-count`);
 }
 
 /**

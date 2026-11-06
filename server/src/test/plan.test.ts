@@ -713,6 +713,30 @@ describe("planning (ledger 903, step 3.1)", () => {
       expect(meal(await day(), "Lunch").items.map((item) => item.kind)).toEqual(["food", "storage"]);
     });
 
+    it("the delete question's count: every planned meal holding the recipe, any day, any of the owner's babies (ledger 937)", async () => {
+      const countOf = async (id: string, user: TestUser | null = parent) => inject("GET", `/api/recipes/${id}/plan-count`, undefined, user);
+      const { custom } = await planEverything();
+      // A meal is counted, not items; a past day and a sibling's plan count.
+      await planned(DAY, DINNER, [{ kind: "recipe", recipeId: custom.id }, { kind: "food", foodId: fx.pear.id }]);
+      await planned("2026-10-20", BREAKFAST, [{ kind: "recipe", recipeId: custom.id }]);
+      const sibling = await newBaby(parent, "Sam");
+      expect((await put(DAY, SNACK, { items: [{ kind: "recipe", recipeId: custom.id }] }, sibling)).statusCode).toBe(200);
+      const response = await countOf(custom.id);
+      expect(response.statusCode, response.body).toBe(200);
+      expect(response.json()).toEqual({ plannedMealCount: 4 });
+
+      // Not planned anywhere: 0. Someone else's, a catalog recipe, or no session: no count.
+      const unplanned = await fx.recipe("mine-unplanned", "Spare", [fx.egg.id], parentId);
+      expect((await countOf(unplanned.id)).json()).toEqual({ plannedMealCount: 0 });
+      expect((await countOf(custom.id, await signUpUser(app))).statusCode).toBe(404);
+      expect((await countOf(fx.muffins.id)).statusCode).toBe(404);
+      expect((await countOf(custom.id, null)).statusCode).toBe(401);
+
+      // The delete takes it off all four, as the question says.
+      expect((await inject("DELETE", `/api/recipes/${custom.id}`)).statusCode).toBe(204);
+      expect(await db.select().from(schema.plannedItems).where(eq(schema.plannedItems.recipeId, custom.id))).toEqual([]);
+    });
+
     it("deleting a baby takes its plan and daily meals, and leaves a sibling's alone", async () => {
       const sibling = await newBaby(parent, "Sam");
       await planEverything();

@@ -155,6 +155,16 @@ export function customRecipeConflictMessage(conflict: { mealCount: number; stora
   return `${usedInPhrase(conflict) ?? "Still in use"} — remove those first.`;
 }
 
+/**
+ * The recipe delete question's plan line (ledger 937): "It's planned for 3
+ * meals. Deleting it takes it off those plans." Null when no planned meal
+ * holds it (or the count is unknown), so the question says nothing.
+ */
+export function plannedMealsDeleteLine(plannedMealCount: number | undefined): string | null {
+  if (!plannedMealCount || plannedMealCount < 1) return null;
+  return `It's planned for ${countPhrase(plannedMealCount, "meal")}. Deleting it takes it off those plans.`;
+}
+
 /** Appended to a food name wherever history shows one its owner deleted. */
 export const DELETED_FOOD_MARK = "(deleted)";
 
