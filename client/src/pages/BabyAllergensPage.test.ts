@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ALLERGEN_MAINTENANCE_DAYS, type AllergenProgressItem } from "@blw/shared";
 import { trackingKeys } from "../features/tracking/hooks.js";
 import { BabyAllergensPage } from "./BabyAllergensPage.js";
@@ -327,7 +327,15 @@ describe("BabyAllergensPage sections", () => {
     }));
   }
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("groups rows by what to do next, in ladder order within each section", () => {
+    // A fixed local noon, weeks from any DST change: agoIso() steps back in
+    // calendar days but dueFrom() adds raw 7×24h, so near a clock change at
+    // night "Milk, due tomorrow" would come due early (verifier c1, batch 1105).
+    vi.useFakeTimers({ now: new Date(2026, 5, 15, 12), toFake: ["Date"] });
     // Every field a sort could use (dates, counts, names) differs between the
     // rows of each section, so a section's order can only come from the input.
     const started = (exposures: number, days: number, firstDays: number): AllergenProgressItem =>
