@@ -14,7 +14,8 @@ interface AllergenChipsProps {
  * Extracted from the identical loops the food detail page's `FoodBadges` and
  * the recipe header carried, because it now has to appear in five more
  * places — the log-meal picker rows and chips, storage's picker, custom
- * recipe ingredients, recipe ingredient rows and the meal detail page. A
+ * recipe ingredients, recipe ingredient rows and (until ledger 933 took them
+ * off) the meal detail page. A
  * parent who saw "Fish" on the salmon page and nothing on the meal they put
  * salmon into reasonably read that as the app not knowing.
  *

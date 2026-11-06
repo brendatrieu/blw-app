@@ -371,6 +371,29 @@ describe("MealDetailPage items (CD-Meal-Page, ledger 902)", () => {
     expect(oldServe).toContain('class="relative z-10 ml-[27px] @max-[246px]:-ml-[9px]"');
   });
 
+  it("a container's part line marks a deleted custom food, muted (ledger 543, verifier c2)", () => {
+    const papaya = { id: uuid(5), slug: "v2-papaya-x1", name: "V2 Papaya", category: "fruit" as const, deleted: true };
+    const meal: MealItem = {
+      ...PASTA_MEAL,
+      items: [
+        {
+          kind: "storage",
+          storageItemId: uuid(30),
+          label: "Mix",
+          location: "fridge",
+          servings: 1,
+          parts: [
+            { kind: "food", id: uuid(11), food: papaya, rating: null },
+            { kind: "food", id: uuid(12), food: CARROT, rating: null },
+          ],
+        },
+      ],
+    };
+    const out = renderMeal(meal).replace(/<!-- -->/g, "");
+    expect(out).toContain(`<p class="mt-1 ml-[9px] text-[13px] leading-[1.35] text-[var(--color-text-muted)]">V2 Papaya${MUTED_MARK}</p>`);
+    expect(out).toContain('<p class="mt-1 ml-[9px] text-[13px] leading-[1.35] text-[var(--color-text-muted)]">Carrot</p>');
+  });
+
   it("no ×, stepper or Ingredients: the page edits only the stars", () => {
     expect(plate()).not.toContain('aria-label="Remove');
     expect(plate()).not.toContain("servings");

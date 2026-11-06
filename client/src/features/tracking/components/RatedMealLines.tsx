@@ -108,7 +108,12 @@ export function RatedMealLines({ meal, look = "log" }: RatedMealLinesProps) {
             {line.ratings.map((rating) => (
               <div key={rating.id} className={`relative z-10 ${style.stars}`}>
                 {/* A container of several things names each one over its stars. */}
-                {line.ratings.length > 1 && <p className={`mt-1 ml-[9px] ${DETAIL}`}>{rating.label}</p>}
+                {line.ratings.length > 1 && (
+                  <p className={`mt-1 ml-[9px] ${DETAIL}`}>
+                    {rating.label}
+                    <DeletedMark deleted={rating.deleted} />
+                  </p>
+                )}
                 <div className="-my-1">
                   <StarRating
                     label={`Rating for ${rating.label}`}

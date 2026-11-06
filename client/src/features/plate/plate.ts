@@ -341,6 +341,8 @@ export interface MealLineRating {
   /** The meal item's id, the key of a PATCH's `itemRatings`. */
   id: string;
   label: string;
+  /** A container's food part its owner has since deleted (ledger 543). */
+  deleted?: boolean | undefined;
   rating: number | null;
 }
 
@@ -393,6 +395,7 @@ export function mealLines(meal: Pick<MealItem, "items" | "foods">): MealLine[] {
       ratings: item.parts.map((part) => ({
         id: part.id,
         label: part.kind === "food" ? part.food.name : part.recipe.title,
+        deleted: part.kind === "food" ? part.food.deleted : undefined,
         rating: part.rating,
       })),
       leftOut: [],
