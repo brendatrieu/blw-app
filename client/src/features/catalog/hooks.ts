@@ -412,12 +412,6 @@ export function useUpdateCustomRecipe() {
 }
 
 /**
- * Deleting a custom recipe can legitimately fail with a 409 (meals or storage
- * items still point at it — see `asCustomRecipeConflict`), so the cache is
- * only touched on success. The server drops the caller's favorite row along
- * with the recipe, hence the favorites invalidation.
- */
-/**
  * The planned-meal count the recipe delete question names (ledger 937), read
  * fresh each time the question opens (`enabled`). No retry and nothing kept:
  * offline or failed, the question simply goes without the line.
@@ -433,6 +427,12 @@ export function useRecipePlanCount(recipeId: string, enabled: boolean) {
   });
 }
 
+/**
+ * Deleting a custom recipe can legitimately fail with a 409 (meals or storage
+ * items still point at it — see `asCustomRecipeConflict`), so the cache is
+ * only touched on success. The server drops the caller's favorite row along
+ * with the recipe, hence the favorites invalidation.
+ */
 export function useDeleteCustomRecipe() {
   const queryClient = useQueryClient();
   return useMutation({
