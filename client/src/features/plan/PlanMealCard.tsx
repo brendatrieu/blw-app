@@ -92,12 +92,17 @@ export function PlanMealCard({ babyId, date, today, meal, onServe, serving = fal
   );
 
   const actions = (
-    // The 44px buttons overhang the row, so they don't make it taller.
-    <div className="relative z-10 -my-[9px] -mr-2.5 flex shrink-0 items-center gap-1">
+    // The 44px ⋮ overhangs the row, so it doesn't make it taller. With Serve
+    // the row is the small Serve's 36px, so Serve sits inside the card's own
+    // padding instead of overhanging its border (ledger 934).
+    <div className={`relative z-10 ${serves ? "-my-1" : "-my-[9px]"} -mr-2.5 flex shrink-0 items-center gap-1`}>
       {serves && (
         // Every write waits offline (SPEC §4.4), the plate's Serve pattern.
+        // Small (36px) to look; the ::after strip keeps a 44px tap target.
         <Button
           type="button"
+          size="sm"
+          className="relative after:absolute after:inset-x-0 after:-inset-y-1"
           aria-label={`Serve ${meal.name}`}
           aria-describedby={offline ? offlineId : undefined}
           disabled={serving || offline}

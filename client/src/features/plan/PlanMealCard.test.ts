@@ -142,6 +142,22 @@ describe("PlanMealCard (CD-Plan-Day)", () => {
     expect(canServe("2026-10-15", TODAY, meal())).toBe(false);
   });
 
+  it("Serve is the small button inside the card, with a 44px tap strip; ⋮ keeps its place (ledger 934)", () => {
+    const html = render({ meal: meal(), onServe: () => {} });
+    const serve = /<button class="([^"]*)" type="button" aria-label="Serve Lunch"/.exec(html)?.[1] ?? "";
+    // Button's `sm` (36px, px-3 py-1.5), not the 44px `md`.
+    expect(serve).toContain("min-h-9 px-3 py-1.5");
+    expect(serve).not.toContain("min-h-11");
+    // The invisible strip: 4px above and below the 36px button = 44px.
+    expect(serve).toMatch(/(^| )relative after:absolute after:inset-x-0 after:-inset-y-1( |$)/);
+    // With Serve the row is 36px (the wrapper trims the 44px ⋮ by 4px each
+    // side), so Serve no longer overhangs the card's border; ⋮ stays -mr-2.5.
+    expect(html).toContain('<div class="relative z-10 -my-1 -mr-2.5 flex shrink-0 items-center gap-1">');
+    expect(html).not.toContain("-my-[9px]");
+    // Without Serve the ⋮-only row keeps its old overhang (row height unchanged).
+    expect(render({ meal: meal() })).toContain('<div class="relative z-10 -my-[9px] -mr-2.5 flex shrink-0 items-center gap-1">');
+  });
+
   it("Serve in flight reads Serving… and waits; a failed one says try again; offline it waits and says why", () => {
     const onServe = () => {};
     const pending = render({ meal: meal(), onServe, serving: true });
