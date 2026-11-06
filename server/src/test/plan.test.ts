@@ -559,7 +559,9 @@ describe("planning (ledger 903, step 3.1)", () => {
 
   describe("planned items", () => {
     it("holds foods, recipes with leave-outs and containers, hydrated like the plate", async () => {
-      const box = await container({ foodIds: [fx.pear.id, fx.oats.id], servingsTotal: 3, bestBy: "2026-11-04" });
+      // Prepared on a fixed day: this test runs on the real clock, and a Best by
+      // before the prepared day is refused (it started failing on 2026-11-05).
+      const box = await container({ foodIds: [fx.pear.id, fx.oats.id], servingsTotal: 3, bestBy: "2026-11-04", preparedAt: "2026-11-01T12:00:00.000Z" });
       const after = await planned(DAY, LUNCH, [
         { kind: "recipe", recipeId: fx.muffins.id, leftOutFoodIds: [fx.banana.id, fx.banana.id] },
         { kind: "food", foodId: fx.egg.id },
