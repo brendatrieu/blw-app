@@ -258,11 +258,13 @@ describe("planning: flags, Copy, Serve, export (ledger 903, step 3.2)", () => {
       expect((await day("2026-11-02")).planned).toBe(false);
     });
 
-    it("refuses a past target, the source as a target and a stale meal, writing nothing (one transaction)", async () => {
+    it("refuses a target more than 7 days back, the source as a target and a stale meal, writing nothing (one transaction)", async () => {
       const { source, body } = await setUpWeek();
       const before = await db.select().from(schema.plannedItems);
-      const yesterday = await copy({ ...body, targets: [{ date: "2026-10-30", slotId: LUNCH, onClash: "keep" }] });
-      expect(yesterday.statusCode).toBe(400);
+      // Ledger 936: today-8 is out of reach (today-7 is in, see below).
+      const eightBack = await copy({ ...body, dryRun: true, targets: [{ date: "2026-10-23", slotId: LUNCH, onClash: "keep" }] });
+      expect(eightBack.statusCode).toBe(400);
+      expect(eightBack.json()).toMatchObject({ details: { targets: "Copy to the past 7 days, today or a later day" } });
       // The source by its daily meal's id is the source.
       const itself = await copy({ ...body, targets: [{ date: "2026-11-02", slotId: LUNCH, onClash: "keep" }, { date: "2026-11-01", slotId: LUNCH, onClash: "replace" }] });
       expect(itself.statusCode).toBe(400);
@@ -282,6 +284,52 @@ describe("planning: flags, Copy, Serve, export (ledger 903, step 3.2)", () => {
       const stranger = await signUpUser(app, "Stranger");
       expect((await copy(body, babyId, stranger)).statusCode).toBe(404);
       expect(source.items).toHaveLength(2);
+    });
+
+    it("also copies to the past 7 days, in the baby's zone, keeping or replacing as asked, with no storage warnings for those days (ledger 936)", async () => {
+      // Containers that would warn on a day from today on: one serving (planned
+      // more than once), a Best by of 1 November, one finished.
+      const two = await container({ recipeId: fx.porridge.id, servingsTotal: 1, location: "freezer" });
+      const pear = await container({ foodIds: [fx.pear.id], bestBy: "2026-11-01" });
+      const gone = await container({ foodIds: [fx.egg.id], servingsTotal: 1, location: "freezer" });
+      const source = slotOf(
+        await planned("2026-11-01", LUNCH, [two, pear, gone].map((id) => ({ kind: "storage", storageItemId: id, servings: 1 }))),
+        "Lunch",
+      );
+      expect((await inject("PATCH", `/api/storage/${gone}`, { status: "finished" })).statusCode).toBe(200);
+      await planned("2026-10-30", BREAKFAST, [{ kind: "food", foodId: fx.oats.id }]);
+      await planned("2026-10-29", BREAKFAST, [{ kind: "food", foodId: fx.oats.id }]);
+      const past = [
+        { date: "2026-10-24", slotId: LUNCH, onClash: "keep" }, // today-7 in Los Angeles
+        { date: "2026-10-30", slotId: BREAKFAST, onClash: "keep" },
+        { date: "2026-10-29", slotId: BREAKFAST, onClash: "replace" },
+      ];
+      const from = { date: "2026-11-01", slotId: source.slotId };
+      const dry = await copy({ source: from, targets: past, dryRun: true });
+      expect(dry.statusCode, dry.body).toBe(200);
+      expect(copyPlanResponseSchema.parse(dry.json())).toMatchObject({ filled: 2, skipped: [{ date: "2026-10-30", reason: "kept" }], warnings: [] });
+      const real = copyPlanResponseSchema.parse((await copy({ source: from, targets: past })).json());
+      expect(real).toMatchObject({ filled: 2, warnings: [] });
+      const boxes = (d: PlanDay, name: string) => slotOf(d, name).items.map((item) => (item.kind === "storage" ? item.container.id : item.kind));
+      expect(boxes(await day("2026-10-24"), "Lunch")).toEqual([two, pear, gone]);
+      expect(boxes(await day("2026-10-30"), "Breakfast")).toEqual(["food"]);
+      expect(boxes(await day("2026-10-29"), "Breakfast")).toEqual([two, pear, gone]);
+      expect(flagsOf(await day("2026-10-24"), "Lunch")).toEqual([[], [], []]);
+      // A copy to a past day AND a later one warns for the later one only.
+      const mixed = copyPlanResponseSchema.parse(
+        (await copy({ source: from, targets: [{ date: "2026-10-28", slotId: DINNER, onClash: "keep" }, { date: "2026-11-02", slotId: DINNER, onClash: "keep" }], dryRun: true })).json(),
+      );
+      expect(mixed.warnings.map((warning) => [warning.kind, "date" in warning ? warning.date : null])).toEqual([
+        ["may_run_out", "2026-11-02"], // the 1 Nov source uses the one serving; the 2 Nov copy runs out
+        ["past_best_by", "2026-11-02"],
+        ["container_gone", null],
+      ]);
+      // The window is the baby's day in the caller's zone: in Kiritimati it is
+      // already 1 November, so 24 October is 8 days back there.
+      const far = await copy({ source: from, targets: [{ date: "2026-10-24", slotId: DINNER, onClash: "keep" }], tz: "Pacific/Kiritimati", dryRun: true });
+      expect(far.statusCode).toBe(400);
+      const near = await copy({ source: from, targets: [{ date: "2026-10-25", slotId: DINNER, onClash: "keep" }], tz: "Pacific/Kiritimati", dryRun: true });
+      expect(near.statusCode, near.body).toBe(200);
     });
 
     it("warns about running out, Best by, use within at each target's time, and a container that is gone", async () => {

@@ -153,7 +153,7 @@ beforeEach(() => {
 });
 
 describe("Copy to… (CD-Copy-Per-Day)", () => {
-  it("shows the meal's plate, then the source's week: past days off, ‹ off on this week, nothing selected or asked yet", () => {
+  it("shows the meal's plate, then the source's week: days more than 7 back off (936), nothing selected or asked yet", () => {
     const tree = render();
     expect(findAll(tree, (el) => el.type === "li").map((li) => text(li.props.children))).toEqual([
       "Broccoli Cheese Egg MuffinsFridge · 2 of 6 left",
@@ -161,10 +161,11 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
     ]);
     expect(h.weeks).toEqual([["2026-10-12"]]);
     expect(text(findAll(tree, (el) => el.props["aria-live"] === "polite")[0])).toBe("Oct 12 – 18");
-    expect(byLabel(tree, "Previous week")!.props.disabled).toBe(true);
+    // Ledger 936: the past 7 days take a copy too, so ‹ reaches last week.
+    expect(byLabel(tree, "Previous week")!.props.disabled).toBe(false);
     expect(dayButtons(tree).map((button) => [button.props["aria-label"], button.props.disabled, button.props["aria-pressed"]])).toEqual([
-      ["Monday, October 12", true, false],
-      ["Tuesday, October 13", true, false],
+      ["Monday, October 12", true, false], // no plan loaded for it here
+      ["Tuesday, October 13", false, false],
       ["Wednesday, October 14", false, false],
       ["Thursday, October 15", false, false],
       ["Friday, October 16", false, false],
@@ -329,6 +330,41 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
     h.check.isError = false;
     click(dayButtons(again())[3]);
     expect(findAll(again(), (el) => el.props.role === "note")).toHaveLength(0);
+  });
+
+  it("offers the past 7 days, no further back; a past day keeps or replaces like any other (ledger 936)", () => {
+    h.days["2026-10-06"] = day("2026-10-06", [meal(30, "Lunch")]);
+    h.days["2026-10-07"] = day("2026-10-07", [meal(31, "Lunch")]);
+    h.days["2026-10-13"] = day("2026-10-13", [meal(40, "Lunch", { items: [food(7, "Pear")] })]);
+    render();
+    click(byLabel(again(), "Previous week")!);
+    let tree = again();
+    expect(text(findAll(tree, (el) => el.props["aria-live"] === "polite")[0])).toBe("Oct 5 – 11");
+    // 7 October is today-7: the earliest. ‹ stops here.
+    expect(byLabel(tree, "Previous week")!.props.disabled).toBe(true);
+    expect(dayButtons(tree).slice(0, 3).map((button) => [button.props["aria-label"], button.props.disabled])).toEqual([
+      ["Monday, October 5", true],
+      ["Tuesday, October 6", true],
+      ["Wednesday, October 7", false],
+    ]);
+    click(dayButtons(tree)[2]); // Wed 7: its Lunch starts ticked, like any day
+    click(byLabel(again(), "Next week")!);
+    click(dayButtons(again())[1]); // Tue 13: its Lunch has something planned
+    tree = again();
+    expect(text(tree)).toContain("Meals");
+    // The past day's clash asks Keep it / Replace it as any other day does.
+    const radios = findAll(tree, (el) => el.props.role === "radio");
+    expect(radios.map((el) => [text(el.props.children), el.props["aria-checked"]])).toEqual([
+      ["Keep it", true],
+      ["Replace it", false],
+    ]);
+    click(radios[1]);
+    again();
+    expect((h.checks.at(-1) as { targets: unknown[] }).targets).toEqual([
+      { date: "2026-10-07", slotId: id(31), onClash: "keep" },
+      { date: "2026-10-13", slotId: id(40), onClash: "replace" },
+    ]);
+    expect(copyButton(again()).props.disabled).toBe(false);
   });
 
   it("keeps days selected in another week as rows, and asks for their weeks too", () => {

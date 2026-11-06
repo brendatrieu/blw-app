@@ -402,13 +402,25 @@ export function placeByTime<T extends { time: string | null }>(meals: readonly T
 
 export const COPY_TARGETS_MAX = 50;
 
+/** Ledger 936: Copy to… also reaches this many days before today; further
+ * back stays Log meal. */
+export const COPY_PAST_DAYS = 7;
+
+/** The earliest day a copy may go to: `COPY_PAST_DAYS` before `today`
+ * (both `YYYY-MM-DD`, the baby's day in the caller's zone). */
+export function earliestCopyDate(today: string): string {
+  return new Date(Date.parse(`${today}T00:00:00Z`) - COPY_PAST_DAYS * DAY_MS).toISOString().slice(0, 10);
+}
+
 const slotRefSchema = z.object({ date: planDateSchema, slotId: uuid });
 
 /**
  * POST /api/babies/:babyId/plan/copy. The source meal's items go to each
  * target in turn, in ONE transaction; a target that already has items keeps
  * them or has them replaced, as the parent chose per meal, and a served
- * target is never touched. Targets are today or later in `tz`. `dryRun`
+ * target is never touched. Targets are `earliestCopyDate(today)` or later
+ * in `tz` (the past 7 days, ledger 936); past days carry no storage
+ * warnings, since flags only count from today on. `dryRun`
  * writes nothing and answers what the copy would do, with its warnings.
  */
 export const copyPlanInputSchema = z

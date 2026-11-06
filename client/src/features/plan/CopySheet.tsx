@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { PlannedMeal } from "@blw/shared";
+import { earliestCopyDate, type PlannedMeal } from "@blw/shared";
 import { Button } from "../../components/ui/Button.js";
 import { ChevronLeftGlyph, ChevronRightGlyph, ICON_BUTTON_CLASSES } from "../../components/ui/iconButton.js";
 import { Sheet } from "../../components/ui/Sheet.js";
@@ -38,7 +38,7 @@ export interface CopySheetProps {
   babyId: string;
   /** The day of the meal being copied. */
   date: string;
-  /** The caller's today: earlier days can't take a copy. */
+  /** The caller's today: only the 7 days before it, or later, take a copy (936). */
   today: string;
   /** The meal being copied (it has something planned); null = closed. */
   meal: PlannedMeal | null;
@@ -54,7 +54,9 @@ export interface CopySheetProps {
  * asks Keep it / Replace it (Keep it first); with two or more, the pinned
  * footer answers them all at once. A calm box says what may run out, pass
  * its Best by or not keep, from the server's dry run; nothing in it blocks
- * Copy. Served meals and the meal itself can't take the copy. The form
+ * Copy (a past day has none: flags count from today on). The past 7 days
+ * take a copy too (ledger 936); further back is Log meal's. Served meals
+ * and the meal itself can't take the copy. The form
  * mounts with the sheet, so every opening starts empty.
  */
 export function CopySheet({ meal, onClose, ...rest }: CopySheetProps) {
@@ -103,6 +105,7 @@ function keepOrReplace(value: "keep" | "replace" | null, onChange: (value: "keep
 
 export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheetProps, "meal" | "onClose"> & { meal: PlannedMeal }) {
   const source: CopySource = { date, slotId: meal.slotId, name: meal.name };
+  const earliest = earliestCopyDate(today);
   const [monday, setMonday] = useState(() => weekOf(date > today ? date : today)[0]!);
   const [selection, setSelection] = useState<CopySelection>({});
   const [choices, setChoices] = useState<CopyChoices>({});
@@ -147,8 +150,8 @@ export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheet
             <button
               type="button"
               aria-label="Previous week"
-              // Every day before this week is past.
-              disabled={addDays(monday, -1) < today}
+              // Every day before this week is out of reach (936: 7 days back).
+              disabled={addDays(monday, -1) < earliest}
               onClick={() => setMonday(addDays(monday, -7))}
               className={`${ICON_BUTTON_CLASSES} text-[var(--color-icon)] disabled:opacity-35`}
             >
@@ -177,7 +180,7 @@ export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheet
                 type="button"
                 aria-pressed={pressed}
                 aria-label={dayName(day)}
-                disabled={day < today || !plan}
+                disabled={day < earliest || !plan}
                 onClick={() => plan && setSelection(toggleCopyDay(selection, plan, source))}
                 className={`flex min-w-0 flex-1 flex-col items-center gap-px rounded-[var(--radius-md)] pt-1.5 pb-1 disabled:opacity-45 ${
                   pressed

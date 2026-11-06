@@ -11,8 +11,8 @@
 // day's primary key is what guarantees one set of rows on its own.
 //
 // Past days are editable like any other (chair §12.3); only Copy targets
-// must be today or later. Flags (SPEC §3.4) are computed on every read that
-// knows the caller's day (`tz`), never stored. Serve is one tap on TODAY
+// must be at most 7 days back (ledger 936). Flags (SPEC §3.4) are computed
+// on every read that knows the caller's day (`tz`), never stored. Serve is one tap on TODAY
 // only (§3.5); a past day serves through the plate (routes/meals.ts).
 import { randomUUID } from "node:crypto";
 import { TransactionRollbackError, and, asc, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
@@ -28,6 +28,7 @@ import {
   copyPlanInputSchema,
   copyWarnings,
   dailyMealsInputSchema,
+  earliestCopyDate,
   localDate,
   planDateParamsSchema,
   planDates,
@@ -669,7 +670,11 @@ export function registerPlanRoutes(app: FastifyInstance, db: Database): void {
     const { source, targets, dryRun = false, tz } = body.data;
     const userId = currentUserId(request);
     const today = localDate(new Date(), tz);
-    if (targets.some((target) => target.date < today)) return badRequest(reply, { targets: "Copy to today or a later day" });
+    // Ledger 936: the past 7 days too. Their copies get no storage warnings:
+    // loadFlags (and so copyWarnings) only counts uses from today on.
+    if (targets.some((target) => target.date < earliestCopyDate(today))) {
+      return badRequest(reply, { targets: "Copy to the past 7 days, today or a later day" });
+    }
 
     let answer: CopyPlanResponse | null = null;
     const refused = await planWrite(async (tx) => {
