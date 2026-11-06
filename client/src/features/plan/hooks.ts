@@ -236,7 +236,7 @@ export function useServePlannedMeal(babyId: string | undefined) {
 }
 
 /**
- * Serve on a planned meal's card (the plan and Home's Today's plan):
+ * Serve on a planned meal's card (the plan and Home's Up next card):
  * - today, one tap; when something can't be served as planned, the plate
  *   opens with it flagged; a meal already served elsewhere opens that meal;
  *   a page left open past midnight just refetches (`not_today`), and the

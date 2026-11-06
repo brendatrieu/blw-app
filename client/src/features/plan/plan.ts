@@ -407,7 +407,7 @@ export function copyWarningNotes(warnings: readonly CopyWarning[], source: Pick<
 }
 
 // ---------------------------------------------------------------------------
-// Today's plan on Home (CD-Home-Today, CD-After-Serve, CD-Home-Today-Done)
+// Up next (the plan card) on Home (CD-Home-Today, CD-After-Serve, CD-Home-Today-Done)
 // ---------------------------------------------------------------------------
 
 /** One page of the card: a meal, or the "everything is served" page. */

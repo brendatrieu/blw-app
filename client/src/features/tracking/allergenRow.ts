@@ -224,7 +224,7 @@ export function dueAllergens<
 }
 
 /**
- * Home's Up next line under "<Name> is due for a serve" (item 660): the same
+ * Home's Reminders line under "<Name> is due for a serve" (item 660): the same
  * fact as `lastExposureLabel` — a newer mark says "Marked", never "Last
  * served" — spelled out as a sentence ("Last served 9 days ago").
  */

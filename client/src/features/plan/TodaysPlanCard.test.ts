@@ -1,4 +1,4 @@
-// Home's Today's plan (ledger 904, SPEC §5): CD-Home-Today, CD-After-Serve,
+// Home's Up next (the plan card) (ledger 904, SPEC §5): CD-Home-Today, CD-After-Serve,
 // CD-Home-Today-Done, and no card at all for a day with nothing planned
 // (CD-Home-No-Plan). Markup through renderToString; ‹ › and Serve by calling
 // the card as a plain function with its hooks mocked (node env, no DOM).
@@ -113,9 +113,9 @@ describe("TodaysPlanCard (render)", () => {
 
   it("opens on the next meal: its name and time, one row per item (36px plates), and a full-width one-tap Serve (CD-Home-Today)", () => {
     const out = card();
-    expect(out).toMatch(/^<section [^>]*aria-labelledby="todays-plan"/);
-    expect(out).toContain('<h2 id="todays-plan" class="text-[11px] leading-[normal] font-bold uppercase');
-    expect(out).toContain(">Today&#x27;s plan</h2>");
+    expect(out).toMatch(/^<section [^>]*aria-labelledby="up-next"/);
+    expect(out).toContain('<h2 id="up-next" class="text-[11px] leading-[normal] font-bold uppercase');
+    expect(out).toContain(">Up next</h2>");
     expect(out).toMatch(/aria-label="Previous meal" aria-disabled="true"/);
     expect(out).toMatch(/aria-label="Next meal"(?! aria-disabled)/);
     expect(out).toContain(">Breakfast</span>");
@@ -246,7 +246,7 @@ describe("TodaysPlan (handlers)", () => {
     h.offline = true;
     const offline = render([BREAKFAST]);
     serve = byLabel(offline, "Serve Breakfast");
-    expect(serve.props).toMatchObject({ disabled: true, "aria-describedby": "todays-plan-offline", children: "Serve" });
-    expect(text(all(offline, (el) => el.props.id === "todays-plan-offline")[0])).toBe("You're offline.");
+    expect(serve.props).toMatchObject({ disabled: true, "aria-describedby": "up-next-offline", children: "Serve" });
+    expect(text(all(offline, (el) => el.props.id === "up-next-offline")[0])).toBe("You're offline.");
   });
 });

@@ -58,7 +58,7 @@ vi.mock("../features/tracking/hooks.js", async (importOriginal) => ({
 
 import { StoragePage } from "./StoragePage.js";
 import { StorageDetailPage } from "./StorageDetailPage.js";
-import { DashboardPage, StorageSection, UpNextCard } from "./DashboardPage.js";
+import { DashboardPage, StorageSection, RemindersCard } from "./DashboardPage.js";
 import { StorageStatusBanner } from "../features/storage/components/StorageStatusBanner.js";
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
 import { MenuLinkItem } from "../components/ui/Menu.js";
@@ -116,7 +116,7 @@ describe("Undo after Remove only (ledger 785)", () => {
   it.each([
     ["the Storage tab", () => call(StoragePage)],
     ["a container's page", () => call(StorageDetailPage)],
-    ["Home's Up next", () => call(UpNextCard, { babyId: "baby-1" })],
+    ["Home's Reminders", () => call(RemindersCard, { babyId: "baby-1" })],
     ["Home's Storage", () => call(StorageSection, { babyId: "baby-1" })],
   ])("%s hands nothing to a serve: no kebab carries onServed", (_name, page) => {
     const menus = findAll(page(), StorageItemActionsMenu);

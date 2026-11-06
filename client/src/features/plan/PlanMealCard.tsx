@@ -42,7 +42,7 @@ export function canServe(date: string, today: string, meal: Pick<PlannedMeal, "s
   return meal.served === null && meal.items.length > 0 && date <= today;
 }
 
-/** "Served {time}" beside a served meal's name (here and on Today's plan). */
+/** "Served {time}" beside a served meal's name (here and on Home's Up next). */
 export function ServedChip({ servedAt }: { servedAt: string }) {
   return (
     <span className="inline-flex h-[22px] items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-success-soft)] px-2 text-xs font-bold whitespace-nowrap text-[var(--color-success-soft-text)]">

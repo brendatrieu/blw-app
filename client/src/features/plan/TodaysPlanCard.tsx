@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { localDate } from "@blw/shared";
 import { Button, ButtonLink } from "../../components/ui/Button.js";
-import { Card, UP_NEXT_LABEL_CLASS } from "../../components/ui/Card.js";
+import { Card, HOME_CARD_LABEL_CLASS } from "../../components/ui/Card.js";
 import { ChevronLeftGlyph, ChevronRightGlyph } from "../../components/ui/iconButton.js";
 import { PAGER_BUTTON } from "../../components/ui/Pager.js";
 import { useIsOffline } from "../../lib/online.js";
@@ -32,7 +32,8 @@ function CheckGlyph({ size }: { size: number }) {
 }
 
 /**
- * "Today's plan" on Home (SPEC §5, CD-Home-Today): only when something is
+ * "Up next" on Home (SPEC §5, CD-Home-Today; titled "Today's plan" until
+ * ledger 945, when Home's old Up next became Reminders): only when something is
  * planned today, or today is a saved plan day, so Home for a non-planner is
  * unchanged (CD-Home-No-Plan). It opens on the next meal (`nextPlannedMeal`);
  * ‹ › page through today's meals. On a saved day an empty meal says "Nothing
@@ -83,12 +84,12 @@ export function TodaysPlan({ babyId, today, pages }: { babyId: string; today: st
   };
 
   return (
-    <Card as="section" padding="none" aria-labelledby="todays-plan" className="px-4 pt-4 pb-3.5">
+    <Card as="section" padding="none" aria-labelledby="up-next" className="px-4 pt-4 pb-3.5">
       <div className="flex items-center justify-between">
-        <h2 id="todays-plan" className={UP_NEXT_LABEL_CLASS}>
-          Today's plan
+        <h2 id="up-next" className={HOME_CARD_LABEL_CLASS}>
+          Up next
         </h2>
-        {/* 44px targets that take only the label's height in the row (Up next's pager). */}
+        {/* 44px targets that take only the label's height in the row (Reminders' pager). */}
         <div className="-my-3.5 -mr-2 flex items-center">
           {/* aria-disabled, not disabled: the Pager's reason (focus stays put at an end). */}
           <button type="button" className={PAGER_BUTTON} aria-label="Previous meal" aria-disabled={index === 0 || undefined} onClick={() => step(-1)}>
@@ -155,7 +156,7 @@ export function TodaysPlan({ babyId, today, pages }: { babyId: string; today: st
                 type="button"
                 size="lg"
                 aria-label={`Serve ${page.name}`}
-                aria-describedby={offline ? "todays-plan-offline" : undefined}
+                aria-describedby={offline ? "up-next-offline" : undefined}
                 disabled={oneTap.pendingSlot === page.slotId || offline}
                 onClick={() => {
                   // The card stays on this meal once it is served (CD-After-Serve).
@@ -167,7 +168,7 @@ export function TodaysPlan({ babyId, today, pages }: { babyId: string; today: st
                 {oneTap.pendingSlot === page.slotId ? "Serving…" : "Serve"}
               </Button>
               {offline && (
-                <p id="todays-plan-offline" className="mt-1.5 text-center text-xs text-[var(--color-text-muted)]">
+                <p id="up-next-offline" className="mt-1.5 text-center text-xs text-[var(--color-text-muted)]">
                   You're offline.
                 </p>
               )}

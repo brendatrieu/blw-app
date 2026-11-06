@@ -22,10 +22,10 @@ interface CardProps extends HTMLAttributes<HTMLElement> {
   as?: ElementType;
 }
 
-/** A Home card's title (Up next, Today's plan): the greeting's small
- * uppercase apricot label (AppLayout), not a section heading (item 660).
- * CSS uppercases it, so the copy stays "Up next". */
-export const UP_NEXT_LABEL_CLASS =
+/** A Home card's title (Up next, the plan card; Reminders, ledger 945): the
+ * greeting's small uppercase apricot label (AppLayout), not a section
+ * heading (item 660). CSS uppercases it, so the copy stays "Up next". */
+export const HOME_CARD_LABEL_CLASS =
   "text-[11px] leading-[normal] font-bold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]";
 
 /** A thin inset line above every row but the first, for a `Card` that holds

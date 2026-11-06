@@ -374,9 +374,9 @@ describe("Copy to… (814, CD-Copy-Per-Day)", () => {
   });
 });
 
-// SPEC §5 + chair §4.3: Home's Today's plan (CD-Home-Today, CD-After-Serve,
+// SPEC §5 + chair §4.3: Home's Up next card (CD-Home-Today, CD-After-Serve,
 // CD-Home-Today-Done, CD-Home-No-Plan).
-describe("Today's plan on Home", () => {
+describe("Up next (the plan card) on Home", () => {
   const item = { kind: "food" as const, id: id(9), food: { id: id(3), slug: "egg", name: "Egg", category: "protein" as const, emoji: null } };
   const meal = (n: number, over: Partial<PlannedMeal> = {}): PlannedMeal => ({
     slotId: id(n),

@@ -4,7 +4,7 @@ import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
 import { dueAllergens, dueSinceLabel } from "../features/tracking/allergenRow.js";
 import { allergenEmoji, allergenTint } from "../features/tracking/allergenEmoji.js";
-import { AllergenUpNextMenu } from "../features/tracking/components/AllergenUpNextMenu.js";
+import { AllergenReminderMenu } from "../features/tracking/components/AllergenReminderMenu.js";
 import { HOME_MEAL_LIMIT, ServeLogList } from "../features/tracking/components/ServeLogList.js";
 import { useStorageItems } from "../features/storage/hooks.js";
 import { storageItemTitle } from "../features/storage/format.js";
@@ -20,7 +20,7 @@ import { StorageItemActionsMenu } from "../features/storage/components/StorageIt
 import { FoodPlates } from "../features/catalog/components/FoodPlate.js";
 import { TodaysPlanCard } from "../features/plan/TodaysPlanCard.js";
 import { ButtonLink } from "../components/ui/Button.js";
-import { Card, CARD_ROW_DIVIDER, CardLink, UP_NEXT_LABEL_CLASS } from "../components/ui/Card.js";
+import { Card, CARD_ROW_DIVIDER, CardLink, HOME_CARD_LABEL_CLASS } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { ProgressRing } from "../components/ui/ProgressRing.js";
 import { HEADING_CONTROL_INSET, SectionLink } from "../components/ui/SectionLink.js";
@@ -29,23 +29,23 @@ import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 const ALLERGEN_TOTAL = 9;
 
-/** Up next's page size; swipe or ‹ › for the rest (items 712, 775, as Storage and Food log). */
-export const UP_NEXT_LIMIT = 3;
+/** Reminders' page size; swipe or ‹ › for the rest (items 712, 775, as Storage and Food log). */
+export const REMINDERS_LIMIT = 3;
 
-export type UpNextRow = { kind: "storage"; item: StorageItem } | { kind: "allergen"; item: AllergenProgressItem };
+export type ReminderRow = { kind: "storage"; item: StorageItem } | { kind: "allergen"; item: AllergenProgressItem };
 
 /**
- * What Up next lists (item 660): storage items to use soon, in the freshness
+ * What Reminders lists (item 660): storage items to use soon, in the freshness
  * order the list already has, then allergens due for a serve, in ladder
- * order. The card pages them `UP_NEXT_LIMIT` at a time (item 712), with no
+ * order. The card pages them `REMINDERS_LIMIT` at a time (item 712), with no
  * See all: the rows mix storage and allergens, so no one page lists them all
  * (item 722). Expired items are left to Storage, which says Expired.
  */
-export function upNextRows(
+export function reminderRows(
   storage: readonly StorageItem[],
   allergens: AllergenProgressItem[],
   now: Date = new Date(),
-): UpNextRow[] {
+): ReminderRow[] {
   return [
     ...storage
       .filter((item) => resolveFreshness(item, now).state === "use_soon")
@@ -54,12 +54,12 @@ export function upNextRows(
   ];
 }
 
-/** One Up next row: a stretched link to the thing, its kebab above it. The
+/** One Reminders row: a stretched link to the thing, its kebab above it. The
  * same row box as Storage's (`StorageItemRow`), so `CARD_ROW_DIVIDER` starts
  * the line under the plate's left edge and ends it as far in from the right
  * (item 709; it used to start at the text). */
 
-function UpNextRowShell({
+function ReminderRowShell({
   to,
   plates,
   title,
@@ -92,22 +92,22 @@ function UpNextRowShell({
 /** A short last page's closing line (item 781): the row divider's geometry
  * under its last row, so the blank space the card keeps for its tallest page
  * (item 778) reads as the end of the list. */
-export const UP_NEXT_END_DIVIDER =
+export const REMINDERS_END_DIVIDER =
   "*:last:after:absolute *:last:after:inset-x-3.5 *:last:after:bottom-0 *:last:after:h-px *:last:after:bg-[var(--color-divider)]";
 
 /**
- * "Up next" (item 660, A-Home): what needs doing soon, each row with its own
+ * "Reminders" (item 660, A-Home): what needs doing soon, each row with its own
  * kebab — no single big button. Hidden while either list is loading and when
  * nothing is due, so it never flashes in empty. Paged like Storage and Food
  * log (item 712); keyed by baby on Home, so a switch starts on page one.
  */
-export function UpNextCard({ babyId }: { babyId: string }) {
+export function RemindersCard({ babyId }: { babyId: string }) {
   const storage = useStorageItems("active");
   const progress = useAllergenProgress(babyId);
   const loading = storage.isLoading || progress.isLoading;
-  const all = loading ? [] : upNextRows(storage.data?.items ?? [], progress.data?.items ?? []);
+  const all = loading ? [] : reminderRows(storage.data?.items ?? [], progress.data?.items ?? []);
   // Above the early return, so the hooks keep their order (item 775).
-  const track = usePagedTrack(all.length, UP_NEXT_LIMIT);
+  const track = usePagedTrack(all.length, REMINDERS_LIMIT);
   if (all.length === 0) return null;
   const pages = track.pages;
   const ladderPath = `/babies/${babyId}/allergens`;
@@ -119,13 +119,13 @@ export function UpNextCard({ babyId }: { babyId: string }) {
     // the last one up to 12. Sides (item 709): px-0.5 + the row's pl-3.5 keep
     // the plates and label 16px in, and the kebab 6px in (pr-1), while the
     // rows span the card like Storage's so their dividers match.
-    <Card as="section" padding="none" aria-labelledby="up-next" className="flex flex-col px-0.5 pt-4 pb-0.5">
+    <Card as="section" padding="none" aria-labelledby="reminders" className="flex flex-col px-0.5 pt-4 pb-0.5">
       {/* Food log's header row (item 712): flex-wrap would drop the pager
           under the label if it ever stopped fitting beside it; at 320px it
           still fits (item 722). */}
       <div className="flex flex-wrap items-center justify-between gap-x-2 px-3.5">
-        <h2 id="up-next" className={UP_NEXT_LABEL_CLASS}>
-          Up next
+        <h2 id="reminders" className={HOME_CARD_LABEL_CLASS}>
+          Reminders
         </h2>
         {/* The pager alone (item 722; Food log's, item 712): 44px targets that
             take only the 13px label's height in the row, -(44 - 13) / 2; z-10
@@ -134,7 +134,7 @@ export function UpNextCard({ babyId }: { babyId: string }) {
             sits). */}
         {pages.last > 0 && (
           <div className="relative z-10 -my-[15.5px] ml-auto flex shrink-0 items-center">
-            <Pager label="Up next items" pages={pages} onPage={track.goTo} />
+            <Pager label="reminders" pages={pages} onPage={track.goTo} />
           </div>
         )}
       </div>
@@ -145,10 +145,10 @@ export function UpNextCard({ babyId }: { babyId: string }) {
         items={all}
         renderSlide={(rows) => (
           // Only when paged: a lone short page has no blank space under it.
-          <ul className={pages.last > 0 && rows.length < UP_NEXT_LIMIT ? `flex flex-col ${UP_NEXT_END_DIVIDER}` : "flex flex-col"}>
+          <ul className={pages.last > 0 && rows.length < REMINDERS_LIMIT ? `flex flex-col ${REMINDERS_END_DIVIDER}` : "flex flex-col"}>
             {rows.map((row) =>
               row.kind === "storage" ? (
-                <UpNextRowShell
+                <ReminderRowShell
                   key={`storage-${row.item.id}`}
                   to={`/storage/${row.item.id}`}
                   plates={<FoodPlates {...storageItemCluster(row.item)} />}
@@ -166,12 +166,12 @@ export function UpNextCard({ babyId }: { babyId: string }) {
                     <StorageItemActionsMenu
                       item={row.item}
                       babyId={babyId}
-                      label={`Up next: ${storageItemTitle(row.item)} actions`}
+                      label={`Reminders: ${storageItemTitle(row.item)} actions`}
                     />
                   }
                 />
               ) : (
-                <UpNextRowShell
+                <ReminderRowShell
                   key={`allergen-${row.item.allergenSlug}`}
                   to={`${ladderPath}/${row.item.allergenSlug}`}
                   plates={
@@ -183,7 +183,7 @@ export function UpNextCard({ babyId }: { babyId: string }) {
                   title={`${row.item.allergenName} is due for a serve`}
                   detail={<span className="text-sm text-[var(--color-text-muted)]">{dueSinceLabel(row.item)}</span>}
                   actions={
-                    <AllergenUpNextMenu babyId={babyId} item={row.item} label={`${row.item.allergenName} actions`} />
+                    <AllergenReminderMenu babyId={babyId} item={row.item} label={`${row.item.allergenName} actions`} />
                   }
                 />
               ),
@@ -205,7 +205,7 @@ function AllergenProgressSummary({ babyId }: { babyId: string }) {
   const established = data.items.filter((item) => item.status === "established").length;
   const started = data.items.filter((item) => item.status === "started").length;
   const notStarted = data.items.length - established - started;
-  // Up next's rule (item 747): only established rows have a due date, and a
+  // Reminders' rule (item 747): only established rows have a due date, and a
   // row paused for a reaction is not due.
   const due = dueAllergens(data.items).length;
   // One segment per allergen (items 663, 747): established and not due,
@@ -349,7 +349,7 @@ export function DashboardPage() {
       <TodaysPlanCard key={`plan-${activeBaby.id}`} babyId={activeBaby.id} />
       {/* Keyed per baby so a switch starts on page one; prefixed, like
           ServeLogList below, so the two sibling keys never match (item 712). */}
-      <UpNextCard key={`up-next-${activeBaby.id}`} babyId={activeBaby.id} />
+      <RemindersCard key={`reminders-${activeBaby.id}`} babyId={activeBaby.id} />
       {/* Emoji-free per A-Home; sky and mint as before (item 661). */}
       <div className="flex gap-2.5">
         <ButtonLink to="/log-meal" size="lg" className="flex-1">

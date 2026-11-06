@@ -456,7 +456,7 @@ describe("dueAllergens leaves a reaction-paused row out of Home's count", () => 
   });
 });
 
-describe("dueSinceLabel — Up next's sentence (item 660)", () => {
+describe("dueSinceLabel — Reminders' sentence (item 660)", () => {
   it("says 'Last served N days ago' when the meal log is the latest exposure", () => {
     expect(dueSinceLabel(servedAt(daysAgo(9)), NOW)).toBe("Last served 9 days ago");
   });

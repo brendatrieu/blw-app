@@ -8,7 +8,7 @@ import { babyKeys } from "../features/babies/api.js";
 import { storageKeys } from "../features/storage/hooks.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
 import { CARD_ROW_DIVIDER } from "../components/ui/Card.js";
-import { DashboardPage, HOME_STORAGE_LIMIT, UP_NEXT_END_DIVIDER, UP_NEXT_LIMIT, upNextRows } from "./DashboardPage.js";
+import { DashboardPage, HOME_STORAGE_LIMIT, REMINDERS_END_DIVIDER, REMINDERS_LIMIT, reminderRows } from "./DashboardPage.js";
 import { localDate, type MealItem, type PlanResponse } from "@blw/shared";
 import { CelebrationProvider } from "../components/ui/Celebration.js";
 import { planKeys } from "../features/plan/hooks.js";
@@ -36,7 +36,7 @@ function shown(html: string): string {
   return out;
 }
 
-// SPEC §5 (ledger 904): Today's plan sits first on Home only when something
+// SPEC §5 (ledger 904): the plan card (Up next since ledger 945, was Today's plan) sits first on Home only when something
 // is planned today; otherwise Home is exactly what it was (CD-Home-No-Plan).
 describe("DashboardPage with a meal plan", () => {
   const baby: Baby = {
@@ -72,22 +72,24 @@ describe("DashboardPage with a meal plan", () => {
     );
   }
 
-  it("puts Today's plan first, above Log meal / Add to storage, when today has something planned", () => {
+  it("puts the plan card, titled Up next (ledger 945), first, above Log meal / Add to storage, when today has something planned", () => {
     const html = home(day([egg]));
-    expect(html).toContain(">Today&#x27;s plan</h2>");
+    expect(html).toContain('<section class="rounded-[var(--radius-lg)]');
+    expect(html).toMatch(/aria-labelledby="up-next"[^>]*><div class="flex items-center justify-between"><h2 id="up-next" class="[^"]*">Up next<\/h2>/);
+    expect(html).not.toContain("Today&#x27;s plan");
     expect(html).toContain('aria-label="Serve Breakfast"');
-    expect(html.indexOf("Today&#x27;s plan")).toBeLessThan(html.indexOf(">Log meal<"));
+    expect(html.indexOf('id="up-next"')).toBeLessThan(html.indexOf(">Log meal<"));
   });
 
   it("is exactly the Home it was when nothing is planned today (a day that only follows Daily meals), or the plan isn't in yet", () => {
     const before = home(undefined);
-    expect(before).not.toContain("Today&#x27;s plan");
+    expect(before).not.toContain('id="up-next"');
     expect(home(day([], false))).toBe(before);
   });
 
-  it("a saved day with nothing on it yet shows Today's plan with Plan this meal (ledger 927)", () => {
+  it("a saved day with nothing on it yet shows the Up next plan card with Plan this meal (ledger 927)", () => {
     const html = home(day([]));
-    expect(html).toContain(">Today&#x27;s plan</h2>");
+    expect(html).toContain(">Up next</h2>");
     expect(html).toContain(">Plan this meal</a>");
     expect(html).not.toContain('aria-label="Serve Breakfast"');
   });
@@ -460,46 +462,46 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     return offScreen ? html : shown(html);
   }
 
-  /** The Up next card's own markup, or null when it is not rendered. */
-  function upNext(html: string): string | null {
-    const start = html.indexOf('aria-labelledby="up-next"');
+  /** The Reminders card's own markup, or null when it is not rendered. */
+  function remindersCard(html: string): string | null {
+    const start = html.indexOf('aria-labelledby="reminders"');
     if (start === -1) return null;
     return html.slice(start, html.indexOf("</section>", start));
   }
 
-  describe("Up next (item 660)", () => {
+  describe("Reminders (item 660)", () => {
     it("is hidden when nothing is due — no card, no old 'N allergens due' line", () => {
       const html = render({ storage: [stored("fresh")], allergens: [allergen("peanut", 1), allergen("egg", 3, "started")] });
-      expect(upNext(html)).toBeNull();
-      expect(html).not.toContain("Up next");
+      expect(remindersCard(html)).toBeNull();
+      expect(html).not.toContain("Reminders");
       expect(html).not.toContain("due for a serve");
     });
 
     it("is hidden while either list is still loading", () => {
-      expect(upNext(render({ storage: [useSoon("a")], allergens: null }))).toBeNull();
-      expect(upNext(render({ storage: null, allergens: [due("peanut")] }))).toBeNull();
+      expect(remindersCard(render({ storage: [useSoon("a")], allergens: null }))).toBeNull();
+      expect(remindersCard(render({ storage: null, allergens: [due("peanut")] }))).toBeNull();
     });
 
-    it("comes first, under an apricot uppercase 'Up next' label, above the two buttons", () => {
+    it("comes first, under an apricot uppercase 'Reminders' label, above the two buttons", () => {
       const html = render({ storage: [useSoon("a")] });
-      const card = upNext(html)!;
+      const card = remindersCard(html)!;
       expect(card).toContain(
-        '<h2 id="up-next" class="text-[11px] leading-[normal] font-bold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]">Up next</h2>',
+        '<h2 id="reminders" class="text-[11px] leading-[normal] font-bold uppercase tracking-[0.14em] text-[var(--color-apricot-text)]">Reminders</h2>',
       );
-      expect(html.indexOf("up-next")).toBeLessThan(html.indexOf('href="/log-meal"'));
+      expect(html.indexOf("reminders")).toBeLessThan(html.indexOf('href="/log-meal"'));
       expect(html.indexOf('href="/log-meal"')).toBeLessThan(html.indexOf(">Storage<"));
     });
 
     it("spaces like A-Home: label 16px down, 10px to each plate, 12px under the last (item 681)", () => {
       const html = render({ storage: [useSoon("a"), useSoon("b"), useSoon("c"), useSoon("d")] });
-      const card = upNext(html)!;
+      const card = remindersCard(html)!;
       // Item 709: px-0.5 on the card + pl-3.5/px-3.5 inside keep the label and
       // plates 16px in (2 + 14) and the kebab 6px in (2 + pr-1).
-      expect(html).toMatch(/<section class="[^"]*flex flex-col px-0\.5 pt-4 pb-0\.5" aria-labelledby="up-next"|aria-labelledby="up-next" class="[^"]*flex flex-col px-0\.5 pt-4 pb-0\.5"/);
+      expect(html).toMatch(/<section class="[^"]*flex flex-col px-0\.5 pt-4 pb-0\.5" aria-labelledby="reminders"|aria-labelledby="reminders" class="[^"]*flex flex-col px-0\.5 pt-4 pb-0\.5"/);
       // Food log's header row (item 712) minus See all (item 722): [label][pager],
       // on one line even at 320px. No min-height: the pager keeps 44px
       // but takes only the 13px label's height in the row, -(44 - 13) / 2.
-      expect(card).toContain('<div class="flex flex-wrap items-center justify-between gap-x-2 px-3.5"><h2 id="up-next"');
+      expect(card).toContain('<div class="flex flex-wrap items-center justify-between gap-x-2 px-3.5"><h2 id="reminders"');
       // relative z-10: the first row's stretched link (positioned li) would
       // otherwise paint over the controls' lower half and steal those taps.
       expect(card).toMatch(
@@ -510,7 +512,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     });
 
     it("has no big action button: one kebab and one link per row, dividers under the plates like Storage (item 709)", () => {
-      const card = upNext(render({ storage: [useSoon("a"), useSoon("b")], allergens: [due("peanut")] }))!;
+      const card = remindersCard(render({ storage: [useSoon("a"), useSoon("b")], allergens: [due("peanut")] }))!;
       const rows = card.match(/<li /g)?.length ?? 0;
       expect(rows).toBe(3);
       expect(card.match(/<button /g)?.length).toBe(rows);
@@ -520,27 +522,27 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     });
 
     it("a storage row: plates, name, the Use soon chip and 'N servings left' (wrapping under the chip when narrow, item 783), its own kebab", () => {
-      const card = upNext(render({ storage: [useSoon("a", { servingsTotal: 4, servingsLeft: 3 })] }))!;
+      const card = remindersCard(render({ storage: [useSoon("a", { servingsTotal: 4, servingsLeft: 3 })] }))!;
       expect(card).toContain("Food a");
       expect(card).toMatch(
         /<span class="flex flex-wrap items-center gap-x-1\.5 gap-y-\[3px\] text-sm whitespace-nowrap text-\[var\(--color-text-muted\)\]"><span class="[^"]*">(?:(?!<\/span>).)*<\/svg>Use soon<\/span><span>3 servings<!-- --> left<\/span><\/span>/s,
       );
       expect(card).toContain('href="/storage/a"');
-      expect(card).toContain('aria-label="Up next: Food a actions"');
+      expect(card).toContain('aria-label="Reminders: Food a actions"');
       expect(card).toContain('aria-hidden="true" class="relative block h-[44px] w-[48px] shrink-0"');
       // Item 720: the row title is 17px/700 (A-Home's 800, one step lighter in Jakarta).
       expect(card).toContain('<span class="text-[17px] font-bold text-[var(--color-text)]">Food a</span>');
     });
 
     it("leaves the servings out when they are not tracked, and says 1 serving in the singular", () => {
-      expect(upNext(render({ storage: [useSoon("a")] }))!).not.toContain("serving");
-      expect(upNext(render({ storage: [useSoon("a", { servingsTotal: 2, servingsLeft: 1 })] }))!).toContain(
+      expect(remindersCard(render({ storage: [useSoon("a")] }))!).not.toContain("serving");
+      expect(remindersCard(render({ storage: [useSoon("a", { servingsTotal: 2, servingsLeft: 1 })] }))!).toContain(
         "1 serving<!-- --> left",
       );
     });
 
     it("an allergen row: '<Name> is due for a serve', when it was last served, a Log meal / Open kebab", () => {
-      const card = upNext(render({ allergens: [due("peanut")] }))!;
+      const card = remindersCard(render({ allergens: [due("peanut")] }))!;
       expect(card).toContain('<span class="text-[17px] font-bold text-[var(--color-text)]">Peanut is due for a serve</span>');
       expect(card).toContain(`Last served ${ALLERGEN_MAINTENANCE_DAYS + 2} days ago`);
       expect(card).toContain('href="/babies/baby-1/allergens/peanut"');
@@ -553,15 +555,15 @@ describe("DashboardPage Today layout (items 660-664)", () => {
         storage: [useSoon("a"), useSoon("b"), useSoon("c"), useSoon("d")],
         allergens: [due("peanut")],
       });
-      const card = upNext(html)!;
-      expect((card.match(/<li /g) ?? []).length).toBe(UP_NEXT_LIMIT);
+      const card = remindersCard(html)!;
+      expect((card.match(/<li /g) ?? []).length).toBe(REMINDERS_LIMIT);
       expect(card).not.toContain("Food d");
       expect(card).not.toContain("Peanut");
       expect(card).not.toContain("See all");
       // Storage and Food log's pager: the range (announced, item 775), ‹ dimmed on page one, › live.
       expect(card).toContain(">1–3 of 5<");
-      expect(card).toMatch(/<button [^>]*aria-label="Previous Up next items" aria-disabled="true">/);
-      expect(card).toMatch(/<button [^>]*aria-label="Next Up next items">/);
+      expect(card).toMatch(/<button [^>]*aria-label="Previous reminders" aria-disabled="true">/);
+      expect(card).toMatch(/<button [^>]*aria-label="Next reminders">/);
       expect(card).toMatch(/<span aria-live="polite"[^>]*>1–3 of 5</);
       // One slide per page inside the card, no bleed past its edge (item 775).
       expect(card).toContain('<div class="w-full shrink-0 snap-start snap-always"><ul class="flex flex-col">');
@@ -569,21 +571,21 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     });
 
     it("has no See all even when only allergens spill, and no pager when everything fits (item 722)", () => {
-      const spill = upNext(render({ storage: [useSoon("a")], allergens: [due("peanut"), due("egg"), due("milk")] }))!;
+      const spill = remindersCard(render({ storage: [useSoon("a")], allergens: [due("peanut"), due("egg"), due("milk")] }))!;
       expect(spill.indexOf("Food a")).toBeLessThan(spill.indexOf("Peanut is due"));
       expect(spill).toContain("Egg is due");
       expect(spill).not.toContain("Milk is due");
       expect(spill).not.toContain("See all");
       expect(spill).toContain(">1–3 of 4<");
-      const fits = upNext(render({ storage: [useSoon("a")], allergens: [due("peanut")] }))!;
+      const fits = remindersCard(render({ storage: [useSoon("a")], allergens: [due("peanut")] }))!;
       expect(fits).not.toContain("See all");
-      expect(fits).not.toContain("Up next items");
+      expect(fits).not.toContain('aria-label="Previous reminders"');
     });
 
     it("closes a short last page with a divider under its last row; full and lone pages get none (item 781)", () => {
       const lists = (card: string) => [...card.matchAll(/<ul class="([^"]*)"/g)].map((m) => m[1]!);
       // Same line as the row divider, moved to the last row's bottom edge.
-      expect(UP_NEXT_END_DIVIDER).toBe(
+      expect(REMINDERS_END_DIVIDER).toBe(
         CARD_ROW_DIVIDER.replaceAll("not-first:before:", "*:last:after:").replace("top-0", "bottom-0"),
       );
       for (const [extra, closed] of [
@@ -591,16 +593,16 @@ describe("DashboardPage Today layout (items 660-664)", () => {
         [2, true],
         [3, false],
       ] as const) {
-        const storage = Array.from({ length: UP_NEXT_LIMIT + extra }, (_, i) => useSoon(`s${i}`));
-        const [first, last, more] = lists(upNext(render({ storage, offScreen: true }))!);
+        const storage = Array.from({ length: REMINDERS_LIMIT + extra }, (_, i) => useSoon(`s${i}`));
+        const [first, last, more] = lists(remindersCard(render({ storage, offScreen: true }))!);
         expect(more).toBeUndefined();
         expect(first).toBe("flex flex-col");
-        expect(last).toBe(closed ? `flex flex-col ${UP_NEXT_END_DIVIDER}` : "flex flex-col");
+        expect(last).toBe(closed ? `flex flex-col ${REMINDERS_END_DIVIDER}` : "flex flex-col");
       }
       // One page of 1-2 rows: the card ends right under them, so no line.
       for (const n of [1, 2]) {
         const storage = Array.from({ length: n }, (_, i) => useSoon(`s${i}`));
-        expect(lists(upNext(render({ storage, offScreen: true }))!)).toEqual(["flex flex-col"]);
+        expect(lists(remindersCard(render({ storage, offScreen: true }))!)).toEqual(["flex flex-col"]);
       }
     });
 
@@ -624,7 +626,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       const inset = /not-first:before:inset-x-([\d.]+) /.exec(CARD_ROW_DIVIDER)?.[1];
       expect(inset).toBe("3.5");
       const rows = [...html.matchAll(/<li class="([^"]*)"/g)].map((m) => m[1]!).filter((c) => c.includes(CARD_ROW_DIVIDER));
-      // Up next 2, Storage 3, Food log 2.
+      // Reminders 2, Storage 3, Food log 2.
       expect(rows).toHaveLength(7);
       for (const row of rows) expect(row.split(" ")).toContain(`pl-${inset}`);
       // ...and the plate is the first thing in each row, so the line starts under it.
@@ -632,7 +634,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       const firstInRow = [...html.matchAll(/<li class="[^"]*not-first:before:inset-x-3\.5[^"]*">(?:<div[^>]*>)?<a [^>]*>(.{0,80})/g)].map(
         (m) => m[1]!,
       );
-      // Up next 2, Storage 3.
+      // Reminders 2, Storage 3.
       expect(firstInRow).toHaveLength(5);
       for (const start of firstInRow) expect(start.startsWith(PLATE)).toBe(true);
       // Food log 2 (CD-Food-Log): under the date line, each item line starts
@@ -644,7 +646,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     });
 
     it("leaves expired items to Storage", () => {
-      expect(upNext(render({ storage: [stored("x", { expired: true, useSoon: true, expiresAt: hoursOut(-5) })] }))).toBeNull();
+      expect(remindersCard(render({ storage: [stored("x", { expired: true, useSoon: true, expiresAt: hoursOut(-5) })] }))).toBeNull();
     });
 
     it("nests no link or button inside a link", () => {
@@ -653,12 +655,12 @@ describe("DashboardPage Today layout (items 660-664)", () => {
     });
   });
 
-  describe("upNextRows", () => {
+  describe("reminderRows", () => {
     const now = new Date();
     it("orders use-soon storage before due allergens, skipping fresh items", () => {
-      expect(upNextRows([stored("fresh"), useSoon("a")], [due("peanut")], now).map((row) => row.kind)).toEqual(["storage", "allergen"]);
+      expect(reminderRows([stored("fresh"), useSoon("a")], [due("peanut")], now).map((row) => row.kind)).toEqual(["storage", "allergen"]);
       // Item 712: every row comes back; the card pages them.
-      expect(upNextRows([useSoon("a"), useSoon("b"), useSoon("c"), useSoon("d")], [], now)).toHaveLength(4);
+      expect(reminderRows([useSoon("a"), useSoon("b"), useSoon("c"), useSoon("d")], [], now)).toHaveLength(4);
     });
   });
 
@@ -840,7 +842,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
         expect(html).toContain('aria-label="3 of 9 allergens established, 2 started"');
       });
 
-      it("does not count a row paused for a reaction as due (Up next's rule)", () => {
+      it("does not count a row paused for a reaction as due (Reminders' rule)", () => {
         const paused = { ...due("egg"), reactionNotedAt: agoIso(ALLERGEN_MAINTENANCE_DAYS + 2) };
         const html = render({ allergens: [paused, due("milk"), allergen("peanut", 1)] });
         expect(html).toContain(dueLine(1));

@@ -63,9 +63,9 @@ import { PageTrack, Pager, type PageWindow, type PagedTrack } from "../component
 import { MealCard, ServeLogList } from "../features/tracking/components/ServeLogList.js";
 import { StorageItemRow } from "../features/storage/components/StorageItemCard.js";
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
-import { AllergenUpNextMenu } from "../features/tracking/components/AllergenUpNextMenu.js";
+import { AllergenReminderMenu } from "../features/tracking/components/AllergenReminderMenu.js";
 import { SectionLink } from "../components/ui/SectionLink.js";
-import { DashboardPage, StorageSection, UP_NEXT_LIMIT, UpNextCard } from "./DashboardPage.js";
+import { DashboardPage, StorageSection, REMINDERS_LIMIT, RemindersCard } from "./DashboardPage.js";
 
 interface El {
   type: unknown;
@@ -245,7 +245,7 @@ describe("Storage paging", () => {
   });
 });
 
-describe("Up next paging (item 712)", () => {
+describe("Reminders paging (item 712)", () => {
   const HOUR = 60 * 60 * 1000;
   const useSoon = (i: number) => ({
     id: `soon-${i}`,
@@ -269,9 +269,9 @@ describe("Up next paging (item 712)", () => {
     lastServedAt: null,
     lastExposureAt: null,
   });
-  const upNext = () => {
+  const reminders = () => {
     h.store.i = h.store.r = 0;
-    const tree = (UpNextCard as unknown as (p: unknown) => unknown)({ babyId: "b" });
+    const tree = (RemindersCard as unknown as (p: unknown) => unknown)({ babyId: "b" });
     const pager = find(tree, Pager);
     const rows = (shownSlide(tree)?.props.children ?? []) as (El & { key: string })[];
     const track = find(tree, PageTrack)?.props.track as PagedTrack | undefined;
@@ -297,43 +297,43 @@ describe("Up next paging (item 712)", () => {
   });
 
   it("pages three at a time, as Storage and Food log do", () => {
-    expect(UP_NEXT_LIMIT).toBe(3);
-    const first = upNext();
-    expect(first.label).toBe("Up next items");
+    expect(REMINDERS_LIMIT).toBe(3);
+    const first = reminders();
+    expect(first.label).toBe("reminders");
     expect(first.keys).toEqual(["storage-soon-0", "storage-soon-1", "storage-soon-2"]);
     expect(first.pages).toMatchObject({ page: 0, last: 2, total: 7 });
     first.next();
-    expect(upNext().keys).toEqual(["storage-soon-3", "allergen-peanut", "allergen-egg"]);
-    upNext().next();
-    const last = upNext();
+    expect(reminders().keys).toEqual(["storage-soon-3", "allergen-peanut", "allergen-egg"]);
+    reminders().next();
+    const last = reminders();
     expect(last.keys).toEqual(["allergen-milk"]);
     expect(last.pages).toMatchObject({ page: 2, start: 6, end: 7 });
   });
 
   it("swipes too (item 775): the scroll position sets the page", () => {
-    const el = scroller(upNext().track!);
+    const el = scroller(reminders().track!);
     el.scrollLeft = 2 * TRACK_WIDTH;
-    upNext().track!.onScroll({ currentTarget: el } as never);
-    expect(upNext().keys).toEqual(["allergen-milk"]);
+    reminders().track!.onScroll({ currentTarget: el } as never);
+    expect(reminders().keys).toEqual(["allergen-milk"]);
   });
 
   it("has no See all on any page, whatever spills: the rows mix storage and allergens (item 722)", () => {
-    expect(upNext().pages).toBeDefined();
-    expect(upNext().seeAll).toBeUndefined();
-    upNext().next();
-    upNext().next();
-    expect(upNext().seeAll).toBeUndefined();
+    expect(reminders().pages).toBeDefined();
+    expect(reminders().seeAll).toBeUndefined();
+    reminders().next();
+    reminders().next();
+    expect(reminders().seeAll).toBeUndefined();
     h.storage = [useSoon(0)];
-    expect(upNext().pages).toBeDefined();
-    expect(upNext().seeAll).toBeUndefined();
+    expect(reminders().pages).toBeDefined();
+    expect(reminders().seeAll).toBeUndefined();
   });
 
   it("clamps to the new last page when rows go away (an allergen served, an item used up)", () => {
-    upNext().next();
-    upNext().next();
-    expect(upNext().keys).toEqual(["allergen-milk"]);
+    reminders().next();
+    reminders().next();
+    expect(reminders().keys).toEqual(["allergen-milk"]);
     h.allergens = [due("peanut"), due("egg")];
-    const v = upNext();
+    const v = reminders();
     expect(v.keys).toEqual(["storage-soon-3", "allergen-peanut", "allergen-egg"]);
     expect(v.pages?.page).toBe(1);
   });
@@ -341,18 +341,18 @@ describe("Up next paging (item 712)", () => {
   it("drops the pager once three or fewer are due", () => {
     h.storage = [useSoon(0)];
     h.allergens = [due("peanut"), due("egg")];
-    const v = upNext();
+    const v = reminders();
     expect(v.keys).toHaveLength(3);
     expect(v.pages).toBeUndefined();
     expect(v.seeAll).toBeUndefined();
   });
 
   it("keeps each paged row's own kebab, for that row's item", () => {
-    upNext().next();
-    const [storageMenu, peanutMenu] = upNext().actions;
+    reminders().next();
+    const [storageMenu, peanutMenu] = reminders().actions;
     expect(storageMenu!.type).toBe(StorageItemActionsMenu);
     expect((storageMenu!.props.item as { id: string }).id).toBe("soon-3");
-    expect(peanutMenu!.type).toBe(AllergenUpNextMenu);
+    expect(peanutMenu!.type).toBe(AllergenReminderMenu);
     expect((peanutMenu!.props.item as { allergenSlug: string }).allergenSlug).toBe("peanut");
   });
 });
@@ -498,8 +498,8 @@ describe("Swipe paging (item 775)", () => {
   });
 });
 
-// Item 712 B1: UpNextCard and ServeLogList once shared key={activeBaby.id} in
-// the same <div>, so each baby switch left a dead Up next card behind. This
+// Item 712 B1: RemindersCard and ServeLogList once shared key={activeBaby.id} in
+// the same <div>, so each baby switch left a dead Reminders card behind. This
 // walks Home's real element tree, so it fails on any sibling key collision.
 describe("Home's per-baby lists reset on a baby switch", () => {
   function homeTree(babyId: string) {
@@ -530,10 +530,10 @@ describe("Home's per-baby lists reset on a baby switch", () => {
     expect(siblingKeyClashes(homeTree("baby-a"))).toEqual([]);
   });
 
-  it("keys Up next and Food log by the active baby, so switching starts both at page one", () => {
+  it("keys Reminders and Food log by the active baby, so switching starts both at page one", () => {
     const a = homeTree("baby-a");
     const b = homeTree("baby-b");
-    for (const type of [UpNextCard, ServeLogList]) {
+    for (const type of [RemindersCard, ServeLogList]) {
       expect(keyOf(a, type)).toContain("baby-a");
       expect(keyOf(b, type)).toContain("baby-b");
     }

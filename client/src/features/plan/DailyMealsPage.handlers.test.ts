@@ -527,7 +527,7 @@ describe("Daily meals is a page (ledger 924)", () => {
     const forms = (tree: El) => findAll(tree, (el) => el.type === DailyMealsForm) as Array<El & { key: unknown }>;
     h.plan = { data: { dailyMeals: DAILY }, isError: false, isFetching: false };
     expect(forms(page()).map((form) => [form.key, form.props.babyId])).toEqual([["baby-1", "baby-1"]]);
-    // Baby 2's week is cached (Home's Today's plan) and refetching: not baby 1's form, nor baby 2's stale copy.
+    // Baby 2's week is cached (Home's Up next card) and refetching: not baby 1's form, nor baby 2's stale copy.
     const OTHER = [{ id: DEFAULT_DAILY_MEALS[1]!.id, name: "Lunch", time: null }];
     h.baby = { activeBaby: { id: "baby-2" }, isLoading: false };
     h.plan = { data: { dailyMeals: OTHER }, isError: false, isFetching: true };

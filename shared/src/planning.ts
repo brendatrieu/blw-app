@@ -338,7 +338,7 @@ export const planResponseSchema = z.object({
 export type PlanResponse = z.infer<typeof planResponseSchema>;
 
 // ---------------------------------------------------------------------------
-// Today's plan
+// Home's Up next card (titled "Today's plan" until ledger 945)
 // ---------------------------------------------------------------------------
 
 /** ponytail: calibration knob, not a rule of nature. How long after its time a
@@ -348,7 +348,7 @@ export const NEXT_MEAL_GRACE_MIN = 120;
 const minutes = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
 
 /**
- * Which of today's meals Today's plan opens on (SPEC §4.3): the first
+ * Which of today's meals Home's Up next card opens on (SPEC §4.3): the first
  * unserved meal in the parent's order, skipping a TIMED meal once more than
  * NEXT_MEAL_GRACE_MIN minutes have passed since its time, as long as a later
  * unserved meal exists. It reads the list order as it is (a time places a

@@ -1,4 +1,4 @@
-// The Up next allergen kebab's rows (item 660), driven without a DOM: Menu
+// The Reminders allergen kebab's rows (item 660), driven without a DOM: Menu
 // renders its panel straight away, so renderToString shows what the open
 // menu offers.
 import { createElement, type ReactNode } from "react";
@@ -15,14 +15,14 @@ vi.mock("../../../components/ui/Menu.js", async (importOriginal) => {
   };
 });
 
-import { AllergenUpNextMenu } from "./AllergenUpNextMenu.js";
+import { AllergenReminderMenu } from "./AllergenReminderMenu.js";
 
 function render(): string {
   return renderToString(
     createElement(
       MemoryRouter,
       null,
-      createElement(AllergenUpNextMenu, {
+      createElement(AllergenReminderMenu, {
         babyId: "baby-1",
         item: { allergenSlug: "peanut", allergenName: "Peanut" },
         label: "Peanut actions",
@@ -31,7 +31,7 @@ function render(): string {
   );
 }
 
-describe("AllergenUpNextMenu (item 660)", () => {
+describe("AllergenReminderMenu (item 660)", () => {
   it("names the kebab as given", () => {
     expect(render()).toContain('data-label="Peanut actions"');
   });
