@@ -2,6 +2,7 @@ import { createElement, type ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { holdLeaveGuard } from "../../lib/leaveGuard.js";
 import { BackButton } from "./BackButton.js";
 
 describe("BackButton (item 258 — chevron only)", () => {
@@ -75,5 +76,27 @@ describe("BackButton history-aware navigation", () => {
   it("navigates to the fallback when history.state is undefined", () => {
     clickWithHistoryState(undefined, "/safety");
     expect(navigateMock).toHaveBeenCalledWith("/safety");
+  });
+});
+
+describe("BackButton asks a page with unsaved changes first (ledger 940)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("hands the back to the guard's question, and goes only when the page says Leave", () => {
+    let asked: (() => void) | null = null;
+    const release = holdLeaveGuard((leave) => (asked = leave));
+    try {
+      clickWithHistoryState({ idx: 2 }, "/plan");
+      expect(navigateMock).not.toHaveBeenCalled();
+      asked!();
+      expect(navigateMock).toHaveBeenCalledWith(-1);
+    } finally {
+      release();
+    }
+    // Released: back goes straight away again.
+    clickWithHistoryState({ idx: 2 }, "/plan");
+    expect(navigateMock).toHaveBeenCalledWith(-1);
   });
 });

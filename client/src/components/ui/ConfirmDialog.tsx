@@ -17,6 +17,9 @@ interface ConfirmDialogProps {
   onConfirm?: () => void;
   /** Why the last attempt failed; announced as an alert. */
   error?: ReactNode;
+  /** The back-out button's label; "Cancel" unless the question needs its
+   * own words (Daily meals' "Keep editing", ledger 940). */
+  cancelLabel?: string;
 }
 
 /**
@@ -38,6 +41,7 @@ export function ConfirmDialog({
   pending,
   onConfirm,
   error,
+  cancelLabel = "Cancel",
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onClose={onClose} ariaLabel={title}>
@@ -52,7 +56,7 @@ export function ConfirmDialog({
       ) : null}
       <div className="mt-4 flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onClose}>
-          Cancel
+          {cancelLabel}
         </Button>
         {onConfirm ? (
           <Button type="button" variant="danger-quiet" disabled={pending} onClick={onConfirm}>

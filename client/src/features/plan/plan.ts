@@ -210,6 +210,12 @@ export function toDailyMealsInput(rows: readonly DailyMealRow[]): DailyMealsInpu
   };
 }
 
+/** Ledger 940: whether the Daily meals form differs from the list it opened
+ * with, as Save would send it (a name typed and typed back is no change). */
+export function dailyMealsChanged(loaded: readonly DailyMeal[], rows: readonly DailyMealRow[]): boolean {
+  return JSON.stringify(toDailyMealsInput(rows)) !== JSON.stringify(toDailyMealsInput(dailyMealRows(loaded)));
+}
+
 // ---------------------------------------------------------------------------
 // Plan a meal (CD-Plan-Meal)
 // ---------------------------------------------------------------------------

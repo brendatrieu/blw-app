@@ -3,10 +3,12 @@ import { Navigate } from "react-router-dom";
 import { PLAN_NAME_MAX, localDate, placeByTime, type DailyMeal } from "@blw/shared";
 import { BackButton, useBackNavigate } from "../../components/ui/BackButton.js";
 import { Button } from "../../components/ui/Button.js";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
 import { CloseGlyph, ICON_BUTTON_CLASSES } from "../../components/ui/iconButton.js";
 import { PageHeader } from "../../components/ui/PageHeader.js";
 import { SkeletonList } from "../../components/ui/Skeleton.js";
 import { focusFieldById } from "../../lib/forms.js";
+import { useLeaveGuard } from "../../lib/leaveGuard.js";
 import { useIsOffline } from "../../lib/online.js";
 import { useActiveBaby } from "../babies/useActiveBaby.js";
 import { usePlan, useSaveDailyMeals } from "./hooks.js";
@@ -15,6 +17,7 @@ import {
   canRemoveDailyMeal,
   dailyMealErrors,
   dailyMealRows,
+  dailyMealsChanged,
   deviceTimeZone,
   dragTarget,
   mealTimeLabel,
@@ -30,9 +33,10 @@ import { TimeSheet } from "./TimeSheet.js";
  * new day starts with, each with an optional time. Rename in place, add,
  * remove, and reorder by the handle (drag it, or arrow keys on it). Days
  * already planned, and past days, keep their own meals. Opened from the Meal
- * Plan's header. Save saves and goes back to the plan (the week it was on);
- * Back leaves without saving, no question asked, like Log meal. A plain
- * route, so a native shell can push it like any screen.
+ * Plan's header. Save saves and goes back to the plan (the week it was on).
+ * Leaving with unsaved changes (Back, a bottom tab, any in-app link) asks
+ * "Leave without saving?" first (ledger 940; lib/leaveGuard.ts says what it
+ * can't catch). A plain route, so a native shell can push it like any screen.
  */
 export function DailyMealsPage() {
   const { activeBaby, isLoading: babyLoading } = useActiveBaby();
@@ -108,6 +112,10 @@ export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meal
   const idPrefix = useId();
   const save = useSaveDailyMeals(babyId);
   const offline = useIsOffline();
+  // Ledger 940: only a list that differs from the one it opened with asks.
+  // Save's own way back (onDone) is not a guarded way out, so it never asks.
+  const [loaded] = useState(meals);
+  const leaving = useLeaveGuard(dailyMealsChanged(loaded, rows));
 
   useEffect(() => {
     const id = focusNext.current;
@@ -294,6 +302,16 @@ export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meal
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={leaving.open}
+        onClose={leaving.keep}
+        title="Leave without saving?"
+        cancelLabel="Keep editing"
+        confirmLabel="Leave"
+        pendingLabel="Leave"
+        pending={false}
+        onConfirm={leaving.leave}
+      />
     </form>
   );
 }

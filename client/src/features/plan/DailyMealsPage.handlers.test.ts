@@ -15,6 +15,8 @@ const h = vi.hoisted(() => {
     baby: { activeBaby: { id: "baby-1" } as { id: string } | null, isLoading: false },
     plan: { data: undefined as unknown, isError: false, isFetching: false },
     planArgs: [] as unknown[][],
+    // Ledger 940: what the form told the leave guard, and the guard's answer.
+    guard: { dirty: [] as boolean[], open: false, events: [] as string[] },
     backs: [] as string[],
     save: { isPending: false, isError: false, calls: [] as Array<{ input: unknown; options: { onSuccess?: () => void } }> },
     useState: (init: unknown) => {
@@ -41,6 +43,12 @@ vi.mock("react", async (importOriginal) => ({
   useEffect: () => {},
 }));
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
+vi.mock("../../lib/leaveGuard.js", () => ({
+  useLeaveGuard: (dirty: boolean) => {
+    h.guard.dirty.push(dirty);
+    return { open: h.guard.open, keep: () => h.guard.events.push("keep"), leave: () => h.guard.events.push("leave") };
+  },
+}));
 vi.mock("../babies/useActiveBaby.js", () => ({ useActiveBaby: () => h.baby }));
 vi.mock("../../components/ui/BackButton.js", () => ({
   BackButton: () => null,
@@ -69,6 +77,7 @@ vi.mock("./hooks.js", () => ({
 import { Navigate } from "react-router-dom";
 import { BackButton } from "../../components/ui/BackButton.js";
 import { Button } from "../../components/ui/Button.js";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
 import { PageHeader } from "../../components/ui/PageHeader.js";
 import { SkeletonList } from "../../components/ui/Skeleton.js";
 import { HOUR_ITEMS, MERIDIEM_ITEMS, PickerSheetFooter, WheelColumn } from "../../components/ui/DateTimeField.js";
@@ -133,6 +142,7 @@ beforeEach(() => {
   h.save.isPending = false;
   h.save.isError = false;
   h.save.calls.length = 0;
+  h.guard = { dirty: [], open: false, events: [] };
   done = 0;
 });
 
@@ -527,6 +537,59 @@ describe("Daily meals is a page (ledger 924)", () => {
     // And baby 2's later refetch keeps its form, as for baby 1.
     h.plan = { data: { dailyMeals: OTHER }, isError: false, isFetching: true };
     expect(forms(page())).toHaveLength(1);
+  });
+
+  it("leaving with unsaved changes asks Leave without saving? (ledger 940): only after a change; Keep editing keeps the edits; Save never asks", () => {
+    const lastDirty = () => h.guard.dirty[h.guard.dirty.length - 1];
+    const dialog = (tree: El) => findAll(tree, (el) => el.type === ConfirmDialog)[0]!;
+    let tree = render();
+    // No change: nothing to ask.
+    expect(lastDirty()).toBe(false);
+    expect(dialog(tree).props).toMatchObject({
+      open: false,
+      title: "Leave without saving?",
+      cancelLabel: "Keep editing",
+      confirmLabel: "Leave",
+      pending: false,
+    });
+    // "Loaded" is the list the form opened with: a later refetch with another
+    // list (another device saved) is not the parent's change.
+    render(DEFAULT_DAILY_MEALS.slice(0, 2));
+    expect(lastDirty()).toBe(false);
+    tree = render();
+    // A change asks; typing it back is no change again.
+    type(findAll(tree, (el) => el.props["aria-label"] === "Meal name")[0]!, "Brekkie");
+    tree = render();
+    expect(lastDirty()).toBe(true);
+    type(findAll(tree, (el) => el.props["aria-label"] === "Meal name")[0]!, "Breakfast");
+    tree = render();
+    expect(lastDirty()).toBe(false);
+    // Reordering, adding, removing or a time are changes too.
+    key(label(tree, "Move Snack"), "ArrowUp");
+    render();
+    expect(lastDirty()).toBe(true);
+    key(label(render(), "Move Snack"), "ArrowDown");
+    render();
+    expect(lastDirty()).toBe(false);
+    withTime(undefined, "Lunch", (sheet) => sheet.onSave!("12:00"));
+    tree = render();
+    expect(lastDirty()).toBe(true);
+    // The question up: Keep editing (or Escape / an outside tap) is the
+    // guard's keep, the edits stay; Leave is the guard's leave.
+    h.guard.open = true;
+    tree = render();
+    expect(dialog(tree).props.open).toBe(true);
+    (dialog(tree).props.onClose as () => void)();
+    (dialog(tree).props.onConfirm as () => void)();
+    expect(h.guard.events).toEqual(["keep", "leave"]);
+    expect(names(render())).toEqual(DEFAULT_DAILY_MEALS.map((meal) => meal.name));
+    expect(text(timeButton(render(), "Lunch").props.children)).toBe("Time for Lunch: 12:00 PM");
+    // Save never asks: its way back is onDone straight away, not the guard.
+    h.guard.open = false;
+    submit(render());
+    h.save.calls[0]!.options.onSuccess!();
+    expect(done).toBe(1);
+    expect(h.guard.events).toEqual(["keep", "leave"]);
   });
 
   it("Save returns to the plan the way Back does (history first, so the plan keeps its week); nothing else leaves", () => {

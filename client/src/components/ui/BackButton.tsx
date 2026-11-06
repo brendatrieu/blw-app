@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
+import { guardedLeave } from "../../lib/leaveGuard.js";
 import { useHeaderSlot } from "./headerSlot.js";
 import { ChevronLeftGlyph, ICON_BUTTON_CLASSES, ICON_BUTTON_EDGE_INSET } from "./iconButton.js";
 
@@ -51,7 +52,8 @@ export function BackButton({ fallback, className = "" }: BackButtonProps) {
   const slot = useHeaderSlot();
 
   const button = (
-    <button type="button" onClick={handleClick} className={`${ICON_BUTTON_CLASSES} ${ICON_BUTTON_EDGE_INSET} ${className}`}>
+    // A page with unsaved changes may ask first (ledger 940).
+    <button type="button" onClick={() => guardedLeave(handleClick)} className={`${ICON_BUTTON_CLASSES} ${ICON_BUTTON_EDGE_INSET} ${className}`}>
       <ChevronLeftGlyph />
       <span className="sr-only">Back</span>
     </button>

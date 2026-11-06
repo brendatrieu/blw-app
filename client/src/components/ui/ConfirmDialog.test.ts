@@ -89,6 +89,14 @@ describe("ConfirmDialog (items 599, 610)", () => {
     expect(html).toMatch(/role="alert"[^>]*>Couldn(?:&#x27;|')t delete that — try again\.</);
   });
 
+  it("names the back-out button when asked (Daily meals' Keep editing, ledger 940); Cancel by default", () => {
+    const { html, buttons, events } = question({ title: "Leave without saving?", children: undefined, cancelLabel: "Keep editing", confirmLabel: "Leave", pendingLabel: "Leave" });
+    expect(html).toMatch(/<button [^>]*>Keep editing<\/button><button [^>]*>Leave<\/button>/);
+    expect(html).not.toContain(">Cancel<");
+    buttons[0]!.props.onClick!();
+    expect(events).toEqual(["closed"]);
+  });
+
   it("offers only Cancel until there is an answer (no onConfirm)", () => {
     const { html } = question({ onConfirm: undefined as never });
     expect(html).not.toContain(">Delete</button>");
