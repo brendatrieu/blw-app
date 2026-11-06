@@ -15,8 +15,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   tonal:
     "border border-transparent bg-[var(--color-success)] text-[var(--color-success-contrast)] hover:bg-[color-mix(in_srgb,var(--color-success),#000000_8%)]",
   ghost: "border border-transparent bg-transparent text-[var(--color-text)] hover:bg-[var(--color-bg-inset)]",
-  // A card's follow-up once its main job is done (Today's plan: Rate or
-  // change, Plan tomorrow; CD-After-Serve): body text on the inset fill.
+  // A card's follow-up once its main job is done (Today's plan: Add more,
+  // ledger 944; Plan tomorrow): body text on the inset fill.
   quiet: "border border-transparent bg-[var(--color-bg-inset)] text-[var(--color-text)]",
   danger: "border border-transparent bg-[var(--color-danger)] text-[var(--color-danger-contrast)] shadow-[var(--shadow-sm)]",
   // The delete question's commit (item 607): red text + border on the sheet's

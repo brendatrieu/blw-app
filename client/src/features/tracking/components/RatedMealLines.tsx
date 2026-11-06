@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { MealItem } from "@blw/shared";
 import { StarRating } from "../../../components/ui/StarRating.js";
@@ -5,7 +6,7 @@ import { useIsOffline } from "../../../lib/online.js";
 import { DeletedMark, FoodNames } from "../../catalog/components/DeletedMark.js";
 import { mealLines } from "../../plate/plate.js";
 import { ItemPlate } from "../../plate/PlateItemRow.js";
-import { useUpdateMeal } from "../hooks.js";
+import { useMeals, useUpdateMeal } from "../hooks.js";
 
 const FOCUS_RING =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]";
@@ -133,4 +134,31 @@ export function RatedMealLines({ meal, look = "log" }: RatedMealLinesProps) {
       )}
     </>
   );
+}
+
+/** Where a served planned meal's Add more goes (ledger 944): the logged
+ * meal's Edit screen with Add more already open (`add=1`, read once). */
+export function addMoreHref(mealId: string): string {
+  return `/log-meal?edit=${encodeURIComponent(mealId)}&add=1`;
+}
+
+export interface ServedMealLinesProps {
+  babyId: string;
+  /** The logged meal a planned meal was served as. */
+  mealId: string;
+  look: "home" | "plan";
+  /** Shown until the logged meal is in the recent meals (or if it never is). */
+  fallback: ReactNode;
+}
+
+/**
+ * A served planned meal's lines with stars (ledger 944): the LOGGED meal's
+ * items, found in the recent meals the meal page and the Food log read
+ * (`useMeals`, last 100), so a tap rates what was served. Mounted only for
+ * a served meal, so an unserved plan reads no meals.
+ */
+export function ServedMealLines({ babyId, mealId, look, fallback }: ServedMealLinesProps) {
+  const meals = useMeals(babyId, { limit: 100 });
+  const meal = meals.data?.items.find((candidate) => candidate.id === mealId);
+  return meal ? <RatedMealLines meal={meal} look={look} /> : <>{fallback}</>;
 }

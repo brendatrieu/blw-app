@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { PlannedMeal } from "@blw/shared";
-import { Button } from "../../components/ui/Button.js";
+import { Button, ButtonLink } from "../../components/ui/Button.js";
 import { Card } from "../../components/ui/Card.js";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
 import { Menu, MenuItem } from "../../components/ui/Menu.js";
@@ -9,6 +9,7 @@ import { useIsOffline } from "../../lib/online.js";
 import { DeletedMark } from "../catalog/components/DeletedMark.js";
 import { ItemPlate, WarningGlyph } from "../plate/PlateItemRow.js";
 import { timeLabel } from "../tracking/components/ServeLogList.js";
+import { ServedMealLines, addMoreHref } from "../tracking/components/RatedMealLines.js";
 import { useRemovePlannedMeal, useReorderPlanDay } from "./hooks.js";
 import { flagNotes, mealTimeLabel, moveRow, plannedLines } from "./plan.js";
 
@@ -31,6 +32,11 @@ export interface PlanMealCardProps {
   daySlotIds?: readonly string[];
 }
 
+/** Serve's and Add more's 44px tap strip on the small (36px) button: the
+ * ::after sits on the padding box, inside the 1px border, so 34 + 2 x 5 = 44
+ * (ledger 934; 944 found -inset-y-1 gave 42). */
+const SMALL_BUTTON_TAP = "relative after:absolute after:inset-x-0 after:-inset-y-[5px]";
+
 /** Whether a meal offers Serve: unserved, something on it, not in the future. */
 export function canServe(date: string, today: string, meal: Pick<PlannedMeal, "served" | "items">): boolean {
   return meal.served === null && meal.items.length > 0 && date <= today;
@@ -52,7 +58,9 @@ export function ServedChip({ servedAt }: { servedAt: string }) {
  * One meal of a plan day (CD-Plan-Day, CD-Plan-After-Copy): its name, its
  * optional time and "Served {time}", one line per planned item, a flag box
  * per flagged container, and ⋮ (Copy to… once something is planned, Move
- * up / Move down within the day, Remove).
+ * up / Move down within the day, Remove). Once served it shows what was
+ * served, each item with its stars (a tap rates it on the logged meal), and
+ * Add more in Serve's place (ledger 944).
  * Tapping the card opens the meal (`/plan/:date/:slotId`). A card with at
  * most one line and no flags keeps its buttons beside the whole card, as
  * the board's Morning snack does; a longer one keeps them on its name's row.
@@ -72,7 +80,9 @@ export function PlanMealCard({ babyId, date, today, meal, onServe, serving = fal
   const offlineId = `serve-offline-${meal.slotId}`;
   const lines = plannedLines(meal);
   const notes = flagNotes(meal);
-  const compact = lines.length <= 1 && notes.length === 0;
+  // Ledger 944: a served meal shows what was served, with stars, and Add more.
+  const served = meal.served;
+  const compact = !served && lines.length <= 1 && notes.length === 0;
 
   const title = (
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -95,14 +105,14 @@ export function PlanMealCard({ babyId, date, today, meal, onServe, serving = fal
     // The 44px ⋮ overhangs the row, so it doesn't make it taller. With Serve
     // the row is the small Serve's 36px, so Serve sits inside the card's own
     // padding instead of overhanging its border (ledger 934).
-    <div className={`relative z-10 ${serves ? "-my-1" : "-my-[9px]"} -mr-2.5 flex shrink-0 items-center gap-1`}>
+    <div className={`relative z-10 ${serves || served ? "-my-1" : "-my-[9px]"} -mr-2.5 flex shrink-0 items-center gap-1`}>
       {serves && (
         // Every write waits offline (SPEC §4.4), the plate's Serve pattern.
         // Small (36px) to look; the ::after strip keeps a 44px tap target.
         <Button
           type="button"
           size="sm"
-          className="relative after:absolute after:inset-x-0 after:-inset-y-1"
+          className={SMALL_BUTTON_TAP}
           aria-label={`Serve ${meal.name}`}
           aria-describedby={offline ? offlineId : undefined}
           disabled={serving || offline}
@@ -110,6 +120,18 @@ export function PlanMealCard({ babyId, date, today, meal, onServe, serving = fal
         >
           {serving ? "Serving…" : "Serve"}
         </Button>
+      )}
+      {served && (
+        // Ledger 944: in Serve's slot, the same small size and 44px strip.
+        <ButtonLink
+          to={addMoreHref(served.mealId)}
+          variant="quiet"
+          size="sm"
+          className={SMALL_BUTTON_TAP}
+          aria-label={`Add more to ${meal.name}`}
+        >
+          Add more
+        </ButtonLink>
       )}
       <Menu label={`More for ${meal.name}`}>
         {(close) => (
@@ -151,20 +173,28 @@ export function PlanMealCard({ babyId, date, today, meal, onServe, serving = fal
     </div>
   );
 
+  const plannedList = (
+    <ul aria-label="On the plate" className={`flex flex-col gap-1 ${compact ? "mt-1" : "mt-1.5"}`}>
+      {lines.map((line) => (
+        <li key={line.key} className="flex items-center gap-1.5">
+          <ItemPlate plates={line.plates} size={24} />
+          <span className="min-w-0 text-[13px] leading-[1.3] break-words text-[var(--color-text-muted)]">
+            {line.name}
+            <DeletedMark deleted={line.deleted} />
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+
   const body = (
     <>
-      {lines.length > 0 ? (
-        <ul aria-label="On the plate" className={`flex flex-col gap-1 ${compact ? "mt-1" : "mt-1.5"}`}>
-          {lines.map((line) => (
-            <li key={line.key} className="flex items-center gap-1.5">
-              <ItemPlate plates={line.plates} size={24} />
-              <span className="min-w-0 text-[13px] leading-[1.3] break-words text-[var(--color-text-muted)]">
-                {line.name}
-                <DeletedMark deleted={line.deleted} />
-              </span>
-            </li>
-          ))}
-        </ul>
+      {served ? (
+        <div className="mt-1.5">
+          <ServedMealLines babyId={babyId} mealId={served.mealId} look="plan" fallback={plannedList} />
+        </div>
+      ) : lines.length > 0 ? (
+        plannedList
       ) : (
         <p className="mt-1 text-[13px] leading-[1.3] text-[var(--color-text-muted)]">Nothing planned yet</p>
       )}

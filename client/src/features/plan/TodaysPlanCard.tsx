@@ -7,6 +7,7 @@ import { PAGER_BUTTON } from "../../components/ui/Pager.js";
 import { useIsOffline } from "../../lib/online.js";
 import { DeletedMark } from "../catalog/components/DeletedMark.js";
 import { ItemPlate } from "../plate/PlateItemRow.js";
+import { ServedMealLines, addMoreHref } from "../tracking/components/RatedMealLines.js";
 import { useOneTapServe, usePlan } from "./hooks.js";
 import { ServedChip } from "./PlanMealCard.js";
 import {
@@ -36,7 +37,9 @@ function CheckGlyph({ size }: { size: number }) {
  * unchanged (CD-Home-No-Plan). It opens on the next meal (`nextPlannedMeal`);
  * ‹ › page through today's meals. On a saved day an empty meal says "Nothing
  * planned yet" with Plan this meal, its Plan a meal screen (ledger 927). Serve is the one tap; once served, the card stays on that
- * meal with "Served {time}" and Rate or change (CD-After-Serve). With
+ * meal with "Served {time}", each served item with its stars (a tap rates
+ * it), and Add more, the logged meal's Edit with Add more open (ledger 944,
+ * replacing CD-After-Serve's Rate or change). With
  * everything served, the last page says so, with Plan tomorrow
  * (CD-Home-Today-Done). It reads the week the meal plan shows, so the two
  * share one cached answer.
@@ -58,6 +61,22 @@ export function TodaysPlan({ babyId, today, pages }: { babyId: string; today: st
   const [picked, setPicked] = useState<string | null>(null);
   const index = todaysPlanIndex(pages, picked, localClock());
   const page = pages[index]!;
+  const planned = page !== "done" && page.items.length > 0 && (
+    <ul aria-label="On the plate" className="mt-1 flex flex-col">
+      {plannedLines(page).map((line, at) => (
+        <li key={line.key} className={`flex items-center gap-2.5 py-[7px] ${at > 0 ? "border-t border-[var(--color-divider)]" : ""}`}>
+          <ItemPlate plates={line.plates} size={36} />
+          <div className="min-w-0">
+            <p className="text-[15px] leading-[1.3] font-semibold break-words text-[var(--color-text)]">
+              {line.name}
+              <DeletedMark deleted={line.deleted} />
+            </p>
+            {line.detail && <p className="text-[13px] leading-[1.35] text-[var(--color-text-muted)]">{line.detail}</p>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
   const step = (by: -1 | 1) => {
     const to = todaysPlanStep(pages, index, by);
     if (to !== null) setPicked(to);
@@ -109,27 +128,21 @@ export function TodaysPlan({ babyId, today, pages }: { babyId: string; today: st
             {page.time && <span className="text-sm font-semibold whitespace-nowrap text-[var(--color-text-muted)]">{mealTimeLabel(page.time)}</span>}
             {page.served && <ServedChip servedAt={page.served.servedAt} />}
           </div>
-          {page.items.length > 0 ? (
-            <ul aria-label="On the plate" className="mt-1 flex flex-col">
-              {plannedLines(page).map((line, at) => (
-                <li key={line.key} className={`flex items-center gap-2.5 py-[7px] ${at > 0 ? "border-t border-[var(--color-divider)]" : ""}`}>
-                  <ItemPlate plates={line.plates} size={36} />
-                  <div className="min-w-0">
-                    <p className="text-[15px] leading-[1.3] font-semibold break-words text-[var(--color-text)]">
-                      {line.name}
-                      <DeletedMark deleted={line.deleted} />
-                    </p>
-                    {line.detail && <p className="text-[13px] leading-[1.35] text-[var(--color-text-muted)]">{line.detail}</p>}
-                  </div>
-                </li>
-              ))}
-            </ul>
+          {page.served ? (
+            // Ledger 944: what was served, each item with its stars (a tap
+            // rates it on the logged meal); the plan's lines until it loads.
+            <div className="mt-1">
+              <ServedMealLines babyId={babyId} mealId={page.served.mealId} look="home" fallback={planned} />
+            </div>
+          ) : page.items.length > 0 ? (
+            planned
           ) : (
-            !page.served && <p className="mt-1 text-[15px] leading-[1.3] text-[var(--color-text-muted)]">Nothing planned yet</p>
+            <p className="mt-1 text-[15px] leading-[1.3] text-[var(--color-text-muted)]">Nothing planned yet</p>
           )}
           {page.served ? (
-            <ButtonLink to={`/meals/${page.served.mealId}`} variant="quiet" size="lg" className="mt-2.5 w-full">
-              Rate or change
+            // Ledger 944: the logged meal's Edit, with Add more already open.
+            <ButtonLink to={addMoreHref(page.served.mealId)} variant="quiet" size="lg" className="mt-2.5 w-full">
+              Add more
             </ButtonLink>
           ) : page.items.length === 0 ? (
             // Ledger 927: the meal's Plan a meal, as on the Meal Plan.

@@ -235,6 +235,21 @@ beforeEach(() => {
   mealChanged.length = 0;
 });
 
+describe("Edit opened from a served meal's Add more (ledger 944)", () => {
+  it("starts with Add more open; closing it leaves the parent on the plate, nothing saved", () => {
+    render("edit", [], { openAddMore: true });
+    const sheet = one(again(), byType(AddMoreSheet));
+    expect(sheet.props.requireContainer).toBe(false);
+    (sheet.props.onClose as () => void)();
+    expect(findAll(again(), byType(AddMoreSheet))).toHaveLength(0);
+    expect(doneCalls).toEqual([]);
+    expect(h.updates).toEqual([]);
+    // Without the flag Edit opens as before.
+    render("edit");
+    expect(findAll(again(), byType(AddMoreSheet))).toHaveLength(0);
+  });
+});
+
 describe("Log meal: Add more is the only adder (ledger 902)", () => {
   it("opens Add more with the plate ticked, needing no container; Done puts the picks on, × and stars go through the reducer", () => {
     render("log");

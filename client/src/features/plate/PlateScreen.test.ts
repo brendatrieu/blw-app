@@ -12,6 +12,8 @@ import type { Baby, FoodListItem, MealItem, PlannedMeal, PlanResponse, StorageIt
 
 const h = vi.hoisted(() => ({ meal: { data: undefined as unknown, isError: false }, offline: false }));
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
+// The sheet portals to body, which the server renderer can't: a marker instead (ledger 944).
+vi.mock("../storage/components/AddMoreSheet.js", () => ({ AddMoreSheet: () => "[Add more sheet]" }));
 vi.mock("../tracking/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useMeal: () => ({ ...h.meal, refetch: async () => ({}) }),
@@ -306,6 +308,15 @@ describe("PlateScreen (render)", () => {
     const gone = renderAt(`/log-meal?edit=${MEAL.id}`);
     expect(gone).toContain("That meal is gone");
     expect(gone).not.toContain('id="plate-when"');
+    h.meal = { data: undefined, isError: false };
+  });
+
+  it("Edit meal with add=1 (a served meal's Add more, ledger 944) opens with Add more open; plain Edit doesn't", () => {
+    h.meal = { data: MEAL, isError: false };
+    expect(renderAt(`/log-meal?edit=${MEAL.id}&add=1`)).toContain("[Add more sheet]");
+    expect(renderAt(`/log-meal?edit=${MEAL.id}`)).not.toContain("[Add more sheet]");
+    // Only Edit reads it.
+    expect(renderAt(`/log-meal?add=1`)).not.toContain("[Add more sheet]");
     h.meal = { data: undefined, isError: false };
   });
 

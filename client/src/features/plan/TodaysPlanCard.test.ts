@@ -42,6 +42,7 @@ vi.mock("./plan.js", async (importOriginal) => ({
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
 
 import { TodaysPlan, TodaysPlanCard } from "./TodaysPlanCard.js";
+import { ServedMealLines } from "../tracking/components/RatedMealLines.js";
 import { todaysPlanPages } from "./plan.js";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -224,8 +225,13 @@ describe("TodaysPlan (handlers)", () => {
     expect(h.setPicked).toEqual([id(1)]);
     h.picked = id(1);
     const served = render([{ ...BREAKFAST, served: SERVED }, LUNCH]);
-    expect(all(served, (el) => el.props.to === `/meals/${id(90)}`)).toHaveLength(1);
-    expect(text(all(served, (el) => el.props.to === `/meals/${id(90)}`)[0])).toBe("Rate or change");
+    // Ledger 944: Add more (the logged meal's Edit with Add more open)
+    // replaces Rate or change, and the served items carry their stars.
+    expect(all(served, (el) => el.props.to === `/meals/${id(90)}`)).toHaveLength(0);
+    const add = all(served, (el) => el.props.to === `/log-meal?edit=${id(90)}&add=1`);
+    expect(add).toHaveLength(1);
+    expect(text(add[0])).toBe("Add more");
+    expect(all(served, (el) => el.type === ServedMealLines).map((el) => [el.props.mealId, el.props.look])).toEqual([[id(90), "home"]]);
     expect(all(served, (el) => el.props["aria-label"] === "Serve Breakfast")).toHaveLength(0);
   });
 

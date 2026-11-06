@@ -338,7 +338,7 @@ export function PlateScreen() {
         />
       )}
 
-      {/* What was served lives on the logged meal (CD-After-Serve's "Rate or change"). */}
+      {/* What was served lives on the logged meal: a served planned meal opens its meal page. */}
       {!babyLoading && activeBaby && start.status === "ready" && plannedMeal?.served && (
         <Navigate to={`/meals/${plannedMeal.served.mealId}`} replace />
       )}
@@ -369,6 +369,9 @@ export function PlateScreen() {
             void mealQuery.refetch().then(() => setReloads((count) => count + 1));
           }}
           onPlanGone={(mealId) => (mealId ? navigate(`/meals/${mealId}`, { replace: true }) : setPlanGone(true))}
+          // Ledger 944: `add=1` (a served meal's Add more) opens Add more on
+          // the first plate only; a 409 reload starts the plate without it.
+          openAddMore={mode === "edit" && searchParams.get("add") === "1" && reloads === 0}
         />
       )}
     </div>
@@ -400,6 +403,9 @@ export interface PlateFormProps {
   /** Plan a meal or its Serve: the save found the meal served (its logged
    * meal's id) or gone from its day (null). */
   onPlanGone?: (servedMealId: string | null) => void;
+  /** Edit: open with Add more already open (ledger 944, a served planned
+   * meal's Add more). Read once, when the plate mounts. */
+  openAddMore?: boolean;
 }
 
 /** When a planned meal's Serve starts (SPEC §3.5): a past day at the time it
@@ -427,6 +433,7 @@ export function PlateForm({
   reloaded,
   plan,
   onPlanGone,
+  openAddMore = false,
 }: PlateFormProps) {
   const [entries, setEntries] = useState<PlateEntry[]>(initialPlate);
   const plate = attachContainers(entries, containers);
@@ -437,7 +444,7 @@ export function PlateForm({
   );
   const [reactionNote, setReactionNote] = useState(() => meal?.reactionNote ?? "");
   const [notes, setNotes] = useState(() => meal?.notes ?? "");
-  const [addingMore, setAddingMore] = useState(false);
+  const [addingMore, setAddingMore] = useState(openAddMore);
   // CD-Ran-Out-Add: the run-out container a new batch is being added for.
   const [restocking, setRestocking] = useState<ContainerEntry | null>(null);
   // Plan a meal's Name and Time (CD-Plan-Meal).

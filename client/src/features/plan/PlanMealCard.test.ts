@@ -14,6 +14,13 @@ const h = vi.hoisted(() => ({
   closed: 0,
   remove: { isPending: false, isError: false, calls: [] as Array<{ input: unknown; options: { onSuccess?: () => void } }> },
   reorder: { busy: false, isError: false, babyIds: [] as string[], calls: [] as unknown[] },
+  // Ledger 944: the recent meals a served card finds its logged meal in.
+  meals: [] as unknown[],
+  rated: [] as unknown[],
+}));
+vi.mock("../tracking/hooks.js", () => ({
+  useMeals: () => ({ data: { items: h.meals } }),
+  useUpdateMeal: () => ({ mutate: (variables: unknown) => h.rated.push(variables), isPending: false, isError: false }),
 }));
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
 vi.mock("../../components/ui/Menu.js", async () => {
@@ -92,6 +99,8 @@ beforeEach(() => {
   h.reorder.isError = false;
   h.reorder.babyIds.length = 0;
   h.reorder.calls.length = 0;
+  h.meals = [];
+  h.rated.length = 0;
 });
 
 describe("PlanMealCard (CD-Plan-Day)", () => {
@@ -130,6 +139,41 @@ describe("PlanMealCard (CD-Plan-Day)", () => {
     expect(html).toMatch(new RegExp(`<span class="[^"]*bg-\\[var\\(--color-success-soft\\)\\][^"]*text-\\[var\\(--color-success-soft-text\\)\\]"><svg [^>]*>.*?</svg>Served (<!-- -->)?${time}</span>`));
   });
 
+  it("a served meal shows what was served with stars, and Add more in Serve's slot (ledger 944)", () => {
+    const SERVED = { mealId: id(90), servedAt: "2026-10-14T11:42:00.000Z" };
+    // Until the logged meal is in the recent meals: the plan's own lines, no stars.
+    const before = render({ meal: meal({ served: SERVED }), onServe: () => {} });
+    expect(before).toContain("Broccoli Cheese Egg Muffins");
+    expect(before).not.toContain('role="radiogroup"');
+    h.meals = [
+      {
+        id: id(90),
+        babyId: "baby-1",
+        servedAt: SERVED.servedAt,
+        reactionNote: null,
+        notes: null,
+        recipeId: null,
+        recipeTitle: null,
+        foods: [],
+        items: [{ kind: "food", id: id(91), food: EGG, rating: 4 }],
+      },
+    ];
+    const html = render({ meal: meal({ served: SERVED }), onServe: () => {} }).replace(/<!-- -->/g, "");
+    // What was served (the logged meal), not what was planned.
+    expect(html).not.toContain("Broccoli Cheese Egg Muffins");
+    expect(html).toMatch(/<div class="relative z-10 ml-\[21px\] @max-\[240px\]:-ml-\[9px\]"><div class="-my-1"><div class="flex flex-wrap items-center"><div role="radiogroup" aria-label="Rating for Egg"/);
+    expect(html).toMatch(/aria-checked="true" aria-label="4 stars"/);
+    // Add more: the logged meal's Edit with Add more open, Serve's small size and 44px strip.
+    const add = /<a [^>]*>Add more<\/a>/.exec(html)![0];
+    expect(add).toContain(`href="/log-meal?edit=${id(90)}&amp;add=1"`);
+    expect(add).toContain('aria-label="Add more to Lunch"');
+    expect(add).toContain("relative after:absolute after:inset-x-0 after:-inset-y-[5px]");
+    expect(add).toContain("h-9");
+    expect(html).not.toContain(">Serve<");
+    // On the name's row, inside the card's padding, as Serve.
+    expect(html).toMatch(/<div class="relative z-10 -my-1 -mr-2\.5 flex shrink-0 items-center gap-1"><a /);
+  });
+
   it("Serve shows only once it is wired (step 4.3), and then only today or before, unserved, with something planned", () => {
     expect(render({ meal: meal() })).not.toContain(">Serve<");
     const onServe = () => {};
@@ -148,8 +192,8 @@ describe("PlanMealCard (CD-Plan-Day)", () => {
     // Button's `sm` (36px, px-3 py-1.5), not the 44px `md`.
     expect(serve).toContain("min-h-9 px-3 py-1.5");
     expect(serve).not.toContain("min-h-11");
-    // The invisible strip: 4px above and below the 36px button = 44px.
-    expect(serve).toMatch(/(^| )relative after:absolute after:inset-x-0 after:-inset-y-1( |$)/);
+    // The invisible strip: 5px past the padding box, inside the 1px border: 34 + 10 = 44px (944 measured 42 with -inset-y-1).
+    expect(serve).toMatch(/(^| )relative after:absolute after:inset-x-0 after:-inset-y-\[5px\]( |$)/);
     // With Serve the row is 36px (the wrapper trims the 44px ⋮ by 4px each
     // side), so Serve no longer overhangs the card's border; ⋮ stays -mr-2.5.
     expect(html).toContain('<div class="relative z-10 -my-1 -mr-2.5 flex shrink-0 items-center gap-1">');
