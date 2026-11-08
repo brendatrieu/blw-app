@@ -142,7 +142,9 @@ export type PlateStart =
  * - **Serve:** the container, from Storage's active or history list (a
  *   finished one opens flagged, CD-Serve-Ran-Out); in neither is `missing`.
  * - **Log meal:** the food or recipe a food or recipe page passed. One that
- *   doesn't resolve is simply left off: the page is still Log meal.
+ *   doesn't resolve is simply left off: the page is still Log meal. So is a
+ *   recipe its owner deleted (ledger 957): its detail still loads, for
+ *   history, but nothing new may name it (foods' list already drops one).
  * - **Plan a meal:** the planned meal's items, or an empty plate for one
  *   "+ Add a meal" makes. A day that isn't a date, a meal not on its day
  *   (removed elsewhere), or a save the server says is no longer there is
@@ -160,7 +162,11 @@ export function resolvePlateStart(input: {
   containers: readonly StorageItem[];
   storageQueries: readonly { isPending: boolean; isFetching: boolean }[];
   /** Log meal: what `?food=` / `?recipe=` name, and whether it is still loading. */
-  prefill: { loading: boolean; food: FoodListItem | undefined; recipe: { id: string; title: string } | undefined };
+  prefill: {
+    loading: boolean;
+    food: FoodListItem | undefined;
+    recipe: { id: string; title: string; deletedAt?: string | null } | undefined;
+  };
   /** Plan a meal: its day (null when not a date), whether it is new, the
    * meal as the plan holds it, and the plan query's state. */
   plan?: { date: string | null; isNew: boolean; meal: PlannedMeal | undefined; settled: boolean; gone: boolean };
@@ -188,7 +194,8 @@ export function resolvePlateStart(input: {
     if (item) return { status: "ready", plate: [containerEntry(item)] };
     return input.storageQueries.some((query) => awaitingDetail(query, false)) ? { status: "loading" } : { status: "missing" };
   }
-  const { loading, food, recipe } = input.prefill;
+  const { loading, food } = input.prefill;
+  const recipe = input.prefill.recipe?.deletedAt ? undefined : input.prefill.recipe;
   if (loading) return { status: "loading" };
   const plate = plateReducer([], {
     type: "addMore",

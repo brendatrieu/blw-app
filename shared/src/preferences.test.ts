@@ -74,8 +74,28 @@ describe("account export v16", () => {
     expect(shape.customFoods.safeParse([food]).success).toBe(false);
   });
 
+  // v21 (ledger 957): a custom recipe carries when its owner deleted it, the
+  // same way. A v20 row, without the key, is not a v21 row.
+  it("carries a custom recipe's deletedAt, null or a time, and requires the key", () => {
+    const recipe = {
+      id: "33333333-3333-4333-8333-333333333333",
+      slug: "lentil-patties-a1b2c3",
+      title: "Lentil patties",
+      minAgeMonths: 6,
+      prepMinutes: 20,
+      notes: null,
+      ingredients: [],
+      extraIngredients: [],
+      steps: [],
+    };
+    const shape = accountExportSchema.shape;
+    expect(shape.customRecipes.safeParse([{ ...recipe, deletedAt: null }]).success).toBe(true);
+    expect(shape.customRecipes.safeParse([{ ...recipe, deletedAt: "2026-11-07T10:00:00.000Z" }]).success).toBe(true);
+    expect(shape.customRecipes.safeParse([recipe]).success).toBe(false);
+  });
+
   it("bumped its version and carries usage events alongside the preferences", () => {
-    expect(ACCOUNT_EXPORT_VERSION).toBe(20);
+    expect(ACCOUNT_EXPORT_VERSION).toBe(21);
 
     const shape = accountExportSchema.shape;
     expect(shape.preferences.safeParse(null).success).toBe(true);

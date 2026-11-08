@@ -457,7 +457,8 @@ export const mealFoods = pgTable(
 // (position, recipe_id), so "the first recipe" (meal title, legacy mirror,
 // old-app view) is deterministic. `meals.recipe_id` / `recipe_rating` mirror
 // the first row. The recipe FK cascades only for account delete: the recipe
-// delete route refuses a recipe any meal still uses.
+// delete route soft-deletes (recipes.deleted_at, ledger 957) a recipe any
+// meal still uses, so the row stays and this one never cascades from it.
 export const mealRecipes = pgTable(
   "meal_recipes",
   {
@@ -652,8 +653,8 @@ export const storageItemFoods = pgTable(
 // one-recipe container is just `storage_items.recipe_id`, which on a
 // several-recipe container mirrors the first row so every older reader (and
 // the shipped app) still sees a recipe container. `recipe_id` cascades only
-// for account delete: the recipe-delete route refuses a recipe any container
-// still names.
+// for account delete: the recipe-delete route soft-deletes (ledger 957) a
+// recipe any container still names, so the row stays.
 export const storageItemRecipes = pgTable(
   "storage_item_recipes",
   {

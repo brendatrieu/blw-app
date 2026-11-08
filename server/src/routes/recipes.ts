@@ -655,9 +655,12 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     // Ledger 754 (DESIGN-B §6): the counts run INSIDE the delete transaction,
     // behind a lock on the recipe row. A meal, container or plan written
     // meanwhile takes FOR KEY SHARE on this row (through its foreign key, or
-    // `validateRecipeIds`), so it either lands first (and is counted, or
-    // cleared from the plan) or waits, and then finds the recipe deleted —
-    // never a silent cascade of `meal_recipes` / `storage_item_recipes`.
+    // `validateRecipeIds` inside its write transaction), so it either lands
+    // first (and is counted, or cleared from the plan) or waits, and then
+    // finds the recipe deleted — never a silent cascade of `meal_recipes` /
+    // `storage_item_recipes`. The legacy meal create and the storage create
+    // check before their transaction, so a racing one can still name a
+    // soft-deleted recipe (it shows "(deleted)"; nothing is lost).
     await db.transaction(async (tx) => {
       await tx.select({ id: recipes.id }).from(recipes).where(eq(recipes.id, existing.id)).for("update");
       const { mealCount, storageCount } = await loadRecipeUsage(tx, existing.id);

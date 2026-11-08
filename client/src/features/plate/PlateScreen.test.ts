@@ -422,6 +422,16 @@ describe("resolvePlateStart", () => {
     const ready = resolvePlateStart({ ...base, mode: "log", prefill: { loading: false, food: AVOCADO, recipe: RECIPE } });
     expect(ready.status === "ready" && ready.plate.map((entry) => entry.kind)).toEqual(["recipe", "food"]);
   });
+
+  it("Log meal: a deleted recipe is left off, like a deleted food (957, verifier B c1)", () => {
+    const deleted = { ...RECIPE, deletedAt: "2026-11-07T10:00:00.000Z" };
+    expect(resolvePlateStart({ ...base, mode: "log", prefill: { loading: false, food: undefined, recipe: deleted } })).toEqual({
+      status: "ready",
+      plate: [],
+    });
+    const live = resolvePlateStart({ ...base, mode: "log", prefill: { loading: false, food: undefined, recipe: { ...RECIPE, deletedAt: null } } });
+    expect(live.status === "ready" && live.plate.map((entry) => entry.kind)).toEqual(["recipe"]);
+  });
 });
 
 describe("isMealChanged", () => {

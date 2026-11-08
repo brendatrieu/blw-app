@@ -177,7 +177,10 @@ export async function validateFoodIds(
  * FOR KEY SHARE (the lock a foreign-key check takes anyway): a recipe delete
  * holds its row FOR UPDATE, so a write racing it waits here, then re-reads
  * the row and finds it deleted, instead of adding it to a plan or meal just
- * after the delete cleared them.
+ * after the delete cleared them. The lock lasts only as long as the caller's
+ * transaction: the legacy meal create and the storage create pass `db`
+ * (outside their write transaction), so for them it ends with this SELECT and
+ * one racing a soft delete can still name the recipe, shown "(deleted)".
  */
 export async function validateRecipeIds(
   db: Queryable,
