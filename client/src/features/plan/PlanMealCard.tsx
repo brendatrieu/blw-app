@@ -61,7 +61,8 @@ export function ServedChip({ servedAt }: { servedAt: string }) {
  * is planned, Move up / Move down within the day, Remove). Once served it shows what was
  * served, each item with its stars (a tap rates it on the logged meal), and
  * Add more in Serve's place (ledger 944).
- * Tapping the card opens the meal (`/plan/:date/:slotId`). A card with at
+ * Tapping the card opens the meal (`planMealEditHref`, as ⋮ Edit does): Plan
+ * a meal, or once served the logged meal's Edit (ledger 968). A card with at
  * most one line and no flags keeps its buttons beside the whole card, as
  * the board's Morning snack does; a longer one keeps them on its name's row.
  */
@@ -87,9 +88,10 @@ export function PlanMealCard({ babyId, date, today, meal, onServe, serving = fal
   const title = (
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5">
       {/* Stretched link: tapping anywhere on the card opens the meal. The
-          buttons sit above it (relative z-10), never inside it. */}
+          buttons and a served meal's stars sit above it (relative z-10),
+          never inside it. */}
       <Link
-        to={`/plan/${date}/${meal.slotId}`}
+        to={planMealEditHref(date, meal)}
         className="min-w-0 rounded-[var(--radius-sm)] text-[17px] leading-[1.3] font-extrabold break-words text-[var(--color-text)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
       >
         {meal.name}

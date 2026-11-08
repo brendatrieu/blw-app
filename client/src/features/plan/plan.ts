@@ -223,9 +223,9 @@ export function dailyMealsChanged(loaded: readonly DailyMeal[], rows: readonly D
 /** The slot id of Plan a meal opened from "+ Add a meal": a meal not made yet. */
 export const NEW_PLANNED_MEAL = "new";
 
-/** A plan card's ⋮ Edit (ledger 954): an unserved meal opens Plan a meal,
- * where tapping the card goes; a served one opens the logged meal's Edit
- * (the Food log's ⋮ Edit, Add more closed). */
+/** A plan card's ⋮ Edit (ledger 954) and its tap (968): an unserved meal
+ * opens Plan a meal; a served one opens the logged meal's Edit (the Food
+ * log's ⋮ Edit, Add more closed). */
 export function planMealEditHref(date: string, meal: Pick<PlannedMeal, "slotId" | "served">): string {
   return meal.served ? mealEditHref(meal.served.mealId) : `/plan/${date}/${meal.slotId}`;
 }

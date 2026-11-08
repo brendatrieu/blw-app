@@ -262,6 +262,19 @@ describe("⋮ Edit first (ledger 954): Plan a meal, or the logged meal's Edit on
     expect(h.items.map((item) => item.label)).toEqual(["Edit", "Copy to…", "Remove"]);
     expect(h.items[0]!.to).toBe(`/log-meal?edit=${id(90)}`);
   });
+
+  it("a tap on a served card opens the logged meal's Edit too, the ⋮ Edit target, without Add more (ledger 968)", () => {
+    const html = render({ meal: meal({ served: { mealId: id(90), servedAt: "2026-10-14T11:42:00.000Z" } }) }).replace(/<!-- -->/g, "");
+    // The name is still the card's one stretched link (its ::after covers the card), now to Edit.
+    const link = new RegExp(`<a class="([^"]*)" [^>]*href="/log-meal\\?edit=${id(90)}"[^>]*>Lunch</a>`).exec(html);
+    expect(link, html).not.toBeNull();
+    expect(link![1]).toContain("after:absolute after:inset-0");
+    expect(html).not.toContain(`href="/plan/${TODAY}/${id(50)}"`);
+    expect(html).not.toMatch(/href="\/log-meal\?edit=[^"]*&amp;add=1"[^>]*>Lunch</);
+    // The Served chip is plain (under the link's overlay): a tap on it opens Edit.
+    expect(html).toMatch(/<\/a><span class="text-\[13px\][^"]*">12:00 PM<\/span><span class="inline-flex h-\[22px\]/);
+    expect(h.items[0]!.to).toBe(`/log-meal?edit=${id(90)}`);
+  });
 });
 
 describe("⋮ Move up / Move down (909): that day's order, one place at a time", () => {
