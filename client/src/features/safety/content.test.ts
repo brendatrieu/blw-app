@@ -118,7 +118,7 @@ describe("how-to guides (item 601)", () => {
       "\n\nWhen complete, your item is listed on the **Storage** page with the servings left and when to use it by. To change it later, including which foods are in it, choose **Edit** from its **⋮** menu.\n\n",
     );
     expect(getGuide("how-to-add-to-storage")?.body).toContain("Use within 90d");
-    const stars = steps("how-to-log-a-meal").find((s) => s.startsWith("3. ")) ?? "";
+    const stars = steps("how-to-log-a-meal").find((s) => s.startsWith("2. ")) ?? "";
     // Ledger 902 put it between "Each item…" and the second-tap clear.
     expect(stars).toContain(" Tap one to five stars, five for a big hit. ");
   });
@@ -127,20 +127,26 @@ describe("how-to guides (item 601)", () => {
   it("log-a-meal and serve-from-storage read exactly as approved", () => {
     const steps = (slug: string) => (getGuide(slug)?.body ?? "").split(/^## /m).slice(1);
     const meal = steps("how-to-log-a-meal");
-    // Ledger 902 (plan step 2.3): the one plate page. Drafted for the owner's review.
+    // Ledger 962 (owner-approved 2026-11-08): the one plate page, steps in page
+    // order (stars before When). 964: "its own rating", not "its own stars".
     expect(meal[0]).toContain(
-      "\n\nTap **+ Add more** and type to search, or look under **In storage**, **Recipes**, and **Foods**. Tick everything your baby had, then tap **Done**. Each one goes on the plate as its own item. Left something out of a recipe? Tap **Ingredients** under it and untick that food, so it isn't counted as tried.\n\n",
+      "\n\nTap **+ Add more** and type to search, or look under **In storage**, **Recipes**, and **Foods**. Tick everything your baby had, then tap **Done**. Left something out of a recipe? Tap **Ingredients** under it and untick that food.\n\n",
     );
-    expect(meal[2]).toContain(
-      "\n\nEach item on the plate has its own stars. Tap one to five stars, five for a big hit. Tap the same star again to clear it.\n\n",
+    expect(meal[0]).toContain(
+      '![Add more with "avo" typed in the search and Foods picked, and Avocado ticked.](/guides/meal-1-foods.webp)',
     );
     expect(meal[1]).toMatch(
-      /^2\. Set the time\n\n\*\*When\*\* defaults to the current time\. If the meal was earlier, tap it, scroll to the day and time, and tap \*\*Done\*\*\.\n\n!\[/,
+      /^2\. Rate it with stars \(optional\)\n\nEach item on the plate has its own rating\. Tap one to five stars, five for a big hit\. Tap the same star again to clear it\.\n\n!\[/,
+    );
+    expect(meal[2]).toMatch(
+      /^3\. Set the time\n\n\*\*When\*\* defaults to the current time\. If the meal was earlier, tap it, scroll to the day and time, and tap \*\*Done\*\*\.\n\n!\[/,
     );
     expect(meal[3]).toMatch(/^4\. Add a reaction or a note \(optional\)\n/);
-    // Item 743: the stars shot lists Banana (three) above Avocado (five); the alt follows it.
-    expect(meal[2]).toContain(
-      "![Under Rating (optional), Banana has three stars and Avocado has five, each with a Clear link.](/guides/meal-3-stars.webp)",
+    expect(meal[2]).toContain("](/guides/meal-3-when.webp)");
+    // Ledger 962: the plate lists items in tick order, Avocado first; the alt follows it.
+    expect(meal[1]).toContain("![On the plate, Avocado has five stars and Banana has three.](/guides/meal-2-stars.webp)");
+    expect(meal[4]).toContain(
+      "![Home's Food log shows the new meal, today at 11:56 AM, with Avocado and Banana on their own lines and its note below.](/guides/meal-5-saved.webp)",
     );
     // Item 782: the step-3 alt stays "Sweet Potato and Lentils"; the shots were retaken in that pick order.
     expect(steps("how-to-custom-recipe")[2]).toContain(
@@ -151,18 +157,21 @@ describe("how-to guides (item 601)", () => {
       "\n\nUse **−** and **+** to set how many servings your baby had. **When** defaults to the current time. If you served earlier, tap it, scroll to the day and time, and tap **Done**.\n\n",
     );
     expect(serve[0]).toContain(
-      "![The Serve sheet with Sweet Potato Lentil Patties under Serving, servings set to 1, and When showing today at 11:59 AM.](/guides/serve-1-servings.webp)",
+      "![On the plate, Sweet Potato Lentil Patties from the Freezer, 8 of 8 left, has servings set to 1, and When below shows today at 11:59 AM.](/guides/serve-1-servings.webp)",
     );
     // Item 763: several items per serve (ledger 760) get their own step 2.
     expect(serve[1]).toBe(
-      "2. Serve more than one item (optional)\n\nTap **+ Add more** to serve something else with it: another item from storage, or a fresh food or recipe that isn't in storage.\n\n![Under Serving, Sweet Potato Lentil Patties and a Broccoli, Carrot container each have their own servings, and a fresh Banana is added.](/guides/serve-2-more.webp)\n\n",
+      "2. Serve more than one item (optional)\n\nTap **+ Add more** to serve something else with it: another item from storage, or a fresh food or recipe that isn't in storage.\n\n![On the plate, Sweet Potato Lentil Patties and a Broccoli, Carrot container each have their own servings, and a fresh Banana is added.](/guides/serve-2-more.webp)\n\n",
     );
     expect(serve[2]).toMatch(
-      /^3\. Rate it with stars \(optional\)\n\nEach item on the plate has its own stars, and a container holding several foods gets a row for each\. Tap one to five stars, five for a big hit\. Tap the same star again to clear it\.\n\n!\[/,
+      /^3\. Rate it with stars \(optional\)\n\nEach item on the plate has its own rating, and each item within a container has its own rating\. Tap one to five stars, five for a big hit\. Tap the same star again to clear it\.\n\n!\[/,
     );
-    expect(serve[3]).toMatch(/^4\. Add a reaction or a note \(optional\)\n/);
-    // The plate page's one label (PP-COPY round 1).
-    expect(serve[3]).toContain("Everything else goes in **Notes**.");
+    expect(serve[2]).toContain(
+      "![Sweet Potato Lentil Patties has four stars, and the Broccoli, Carrot container has a row of stars for each food.](/guides/serve-3-stars.webp)",
+    );
+    expect(serve[3]).toBe(
+      '4. Add a reaction or a note (optional)\n\nUse **Reaction** only for signs like hives, vomiting, or a rash. Everything else goes in **Notes**.\n\n![Reaction (optional) is left empty, and Notes reads "Ate half, then played with the rest."](/guides/serve-4-notes.webp)\n\n',
+    );
     // Item 786: serve Undo removed (785); deleting the meal reverses a serve; pre-780 shot and alt.
     // Ledger 902: Edit meal changes a kept container's servings (chair decision, SPEC §1.4.5).
     expect(serve[4]).toBe(
@@ -333,17 +342,16 @@ describe("dark guide screenshots", () => {
     }
   });
 
-  // Item 738: the three shots whose UI changed in 736 were retaken at the
-  // committed crop (located against the old light image), so their framing,
-  // and so their size, is what it was. meal-2-when shows the log-meal page's
-  // Rating label behind the Time sheet's overlay, so it was retaken too.
-  it("keeps the retaken 736 shots at their original crop size", () => {
+  // Ledger 962: the plate-page shots were retaken on new crops (light and dark
+  // the same size); recipe-5-saved kept its crop, located against the old
+  // light image, for 953's calendar button.
+  it("keeps the 962 retakes at their shot size", () => {
     const expected: Record<string, number[]> = {
-      "meal-2-when": [780, 1002],
-      "meal-3-stars": [780, 328],
-      // Renumbered by 763 (a new step 2), bytes unchanged.
-      "serve-3-stars": [780, 220],
-      "serve-4-notes": [780, 444],
+      "meal-2-stars": [780, 478],
+      "meal-3-when": [780, 1074],
+      "serve-3-stars": [780, 696],
+      "serve-4-notes": [780, 470],
+      "recipe-5-saved": [780, 1416],
     };
     for (const [name, dims] of Object.entries(expected)) {
       for (const file of [`${name}.webp`, `${name}-dark.webp`]) {

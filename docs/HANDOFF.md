@@ -14,7 +14,7 @@ Personal and server-access details are deliberately NOT here (this repo is publi
 
 What a parent can do today:
 
-- **Log meals** for a baby: a plate of foods, recipes and container servings, each with its own stars, a time (backdating allowed, future refused), a reaction field, and notes. Meals can save leftovers straight to Storage.
+- **Log meals** for a baby: a plate of foods, recipes and container servings, each with its own rating, a time (backdating allowed, future refused), a reaction field, and notes. Meals can save leftovers straight to Storage.
 - **Storage**: containers of prepped food with a location (Fridge / Freezer / Counter), freshness window, optional best-by date that overrides the window, optional servings tracking, and a Serve action that logs a meal from the container. One container can hold a whole multi-food meal, or the parent can split it into separate containers.
 - **Foods** catalog (92 foods incl. a Spices & herbs category and five ingredient foods; ledger 835 added Brussels sprouts, pumpkin, kale, beets, cranberries; ledger 841 added kidney, pinto, white and butter beans and edamame) with iron / vitamin C / fiber levels, choking risk, allergens, and filters; parents can add custom foods.
 - **Recipes** (catalog + per-user custom), with nutrition derived from ingredients, timed and temperatured steps, and at least three recipes per food.
