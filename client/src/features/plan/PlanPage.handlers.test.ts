@@ -18,10 +18,13 @@ const h = vi.hoisted(() => ({
   // useOneTapServe: what the cards asked to serve, and its state.
   serves: [] as unknown[][],
   oneTap: { pendingSlot: null as string | null, failedSlot: null as string | null },
+  effects: [] as Array<[() => void, unknown[]]>,
 }));
 
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
+  // Effects are kept, to run by hand (only the 951 "Copied" reveal uses one).
+  useEffect: (effect: () => void, deps: unknown[]) => h.effects.push([effect, deps]),
   useState: (init: unknown) => {
     const i = h.i++;
     if (!(i in h.states)) h.states[i] = init;
@@ -51,7 +54,7 @@ import { PageHeader } from "../../components/ui/PageHeader.js";
 import { SkeletonList } from "../../components/ui/Skeleton.js";
 import { CopySheet } from "./CopySheet.js";
 import { PlanMealCard } from "./PlanMealCard.js";
-import { PLAN_PILL, PlanPage } from "./PlanPage.js";
+import { DAY_STRIP_ID, PLAN_PILL, PlanPage, revealBelowStrip } from "./PlanPage.js";
 import { Link } from "react-router-dom";
 
 interface El {
@@ -96,6 +99,7 @@ const week = (from: string, planned: string[]): PlanResponse => ({
 
 function render(): El {
   h.i = 0;
+  h.effects.length = 0;
   return (PlanPage as unknown as () => El)();
 }
 
@@ -112,6 +116,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe("PlanPage (CD-Plan-Day)", () => {
@@ -172,6 +177,50 @@ describe("PlanPage (CD-Plan-Day)", () => {
       [{ date: "2026-10-21" }, { replace: true }],
       [{ date: "2026-10-16" }, { replace: true }],
     ]);
+  });
+
+  it("keeps the day strip pinned under the app header: sticky in flow, page colour behind it, between cards and header (ledger 951)", () => {
+    const strip = findAll(render(), (el) => el.props.id === DAY_STRIP_ID)[0]!;
+    const classes = String(strip.props.className).split(" ");
+    expect(classes).toEqual(expect.arrayContaining(["sticky", "z-[15]", "bg-[var(--color-bg)]", "-mx-4", "px-4", "pb-1.5", "-mb-1.5"]));
+    expect(classes).not.toContain("fixed");
+    expect(strip.props.style).toEqual({ top: "var(--header-height)" });
+    // It holds the Days group itself; the week row (‹ ›) stays outside and scrolls away.
+    const group = strip.props.children as El;
+    expect([group.props.role, group.props["aria-label"]]).toEqual(["group", "Days"]);
+    expect(findAll(strip, (el) => el.props["aria-label"] === "Previous week")).toEqual([]);
+  });
+
+  it("a day picked while the strip is pinned scrolls back to show what was under it (ledger 951)", () => {
+    const box = (top: number, bottom: number) => ({ getBoundingClientRect: () => ({ top, bottom }) });
+    const scrolls: number[] = [];
+    vi.stubGlobal("window", { scrollBy: (_x: number, y: number) => scrolls.push(y) });
+    // Under it by 140px: back by 140. Just below it, or no strip: no scroll.
+    revealBelowStrip({ ...box(52, 128), nextElementSibling: box(-12, 0) } as unknown as Element);
+    revealBelowStrip({ ...box(52, 128), nextElementSibling: box(128, 160) } as unknown as Element);
+    revealBelowStrip({ ...box(52, 128), nextElementSibling: null } as unknown as Element);
+    revealBelowStrip(null);
+    expect(scrolls).toEqual([-140]);
+    // The page asks for its strip on every pick (day, ‹ ›, Today, a Copy's day).
+    const asked: string[] = [];
+    vi.stubGlobal("document", { getElementById: (id: string) => (asked.push(id), { ...box(52, 128), nextElementSibling: box(100, 120) }) });
+    const tree = render();
+    click(dayButtons(tree)[4]);
+    click(byLabel(tree, "Next week"));
+    expect(asked).toEqual([DAY_STRIP_ID, DAY_STRIP_ID]);
+    expect(scrolls).toEqual([-140, -28, -28]);
+    // Nothing copied: the effect does nothing (so a page opened scrolled, as on Back, stays put).
+    h.effects.forEach(([effect]) => effect());
+    expect(asked).toHaveLength(2);
+    // After a Copy (the sheet closed in the same render), the effect reveals "Copied".
+    (findAll(render(), (el) => el.type === CopySheet)[0]!.props.onCopied as (filled: number, date: string) => void)(1, "2026-10-16");
+    asked.length = 0;
+    render();
+    const [effect, deps] = h.effects[0]!;
+    expect(deps).toEqual([1]);
+    effect();
+    expect(asked).toEqual([DAY_STRIP_ID]);
+    expect(scrolls.at(-1)).toBe(-28);
   });
 
   it("another day: asks for that week, shows Today, and Today goes back with no ?date=", () => {

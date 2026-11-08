@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { localDate, planDateSchema, type PlannedMeal } from "@blw/shared";
 import { BackButton } from "../../components/ui/BackButton.js";
@@ -44,6 +44,21 @@ function dateParam(value: string | null | undefined): string | null {
   return value && planDateSchema.safeParse(value).success ? value : null;
 }
 
+/** The day strip's sticky box (ledger 951). */
+export const DAY_STRIP_ID = "plan-day-strip";
+
+/**
+ * Ledger 951: a day picked while the strip is pinned starts at its top. If
+ * what follows the strip (the "Copied" line, then the first meal) has
+ * scrolled under it, scroll back just enough to show it; otherwise nothing.
+ */
+export function revealBelowStrip(strip: Element | null): void {
+  const next = strip?.nextElementSibling;
+  if (!strip || !next) return;
+  const hidden = strip.getBoundingClientRect().bottom - next.getBoundingClientRect().top;
+  if (hidden > 0) window.scrollBy(0, -hidden);
+}
+
 /** The plate-style dashed button ("+ Add a meal", CD-Plan-After-Copy). */
 const ADD_MEAL =
   "flex min-h-12 items-center justify-center rounded-[var(--radius-md)] border-[1.5px] border-dashed border-[var(--color-border)] text-[15px] font-semibold text-[var(--color-accent)]";
@@ -72,8 +87,15 @@ export function PlanPage() {
   // Today needs no `?date=`, so a page left open shows the new today.
   const select = (date: string) => {
     setCopied(null);
+    if (typeof document !== "undefined") revealBelowStrip(document.getElementById(DAY_STRIP_ID));
     setSearchParams(date === today ? {} : { date }, { replace: true });
   };
+  // After a Copy the same for "Copied", but only once the sheet has let go
+  // of the page's scroll (its unlock runs before this effect); while it
+  // holds it, select's own scroll does not move the page (measured).
+  useEffect(() => {
+    if (copied !== null && typeof document !== "undefined") revealBelowStrip(document.getElementById(DAY_STRIP_ID));
+  }, [copied]);
 
   return (
     <div className="flex flex-col gap-1.5 p-4">
@@ -121,39 +143,49 @@ export function PlanPage() {
             )}
           </div>
 
-          <div
-            role="group"
-            aria-label="Days"
-            className="flex gap-0.5 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-1 shadow-[var(--shadow-sm)]"
-          >
-            {week.map((date, index) => {
-              const pressed = date === selected;
-              const dot = dayHasPlan(days.find((entry) => entry.date === date));
-              return (
-                <button
-                  key={date}
-                  type="button"
-                  aria-pressed={pressed}
-                  aria-label={dayName(date)}
-                  aria-current={date === today ? "date" : undefined}
-                  onClick={() => select(date)}
-                  className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-[var(--radius-md)] pt-1.5 pb-[5px] ${
-                    pressed ? "bg-[var(--color-apricot)] text-[var(--color-apricot-ink)]" : "text-[var(--color-text)]"
-                  }`}
-                >
-                  <span aria-hidden="true" className={`text-xs font-semibold ${pressed ? "" : "text-[var(--color-text-muted)]"}`}>
-                    {WEEKDAY_INITIALS[index]}
-                  </span>
-                  <span aria-hidden="true" className="text-base leading-normal font-extrabold">
-                    {dayOfMonth(date)}
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className={`size-[5px] rounded-full ${dot ? (pressed ? "bg-[var(--color-apricot-ink)]" : "bg-[var(--color-accent)]") : ""}`}
-                  />
-                </button>
-              );
-            })}
+          {/* Ledger 951: the strip stays under the app header while the day
+              scrolls; the week row above scrolls away. Sticky in flow, never
+              fixed (CLAUDE.md iOS rule), at the slim header's own height
+              (--header-height: its row plus the safe area). The page colour
+              behind it, out to the page's edges and 6px below (given back by
+              -mb-1.5, so the layout is unchanged), hides cards passing under.
+              z-15: above card action rows (z-10), below the header (z-20);
+              Menu, Sheet and Dialog portal to body above both. */}
+          <div id={DAY_STRIP_ID} className="sticky z-[15] -mx-4 -mb-1.5 bg-[var(--color-bg)] px-4 pb-1.5" style={{ top: "var(--header-height)" }}>
+            <div
+              role="group"
+              aria-label="Days"
+              className="flex gap-0.5 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-1 shadow-[var(--shadow-sm)]"
+            >
+              {week.map((date, index) => {
+                const pressed = date === selected;
+                const dot = dayHasPlan(days.find((entry) => entry.date === date));
+                return (
+                  <button
+                    key={date}
+                    type="button"
+                    aria-pressed={pressed}
+                    aria-label={dayName(date)}
+                    aria-current={date === today ? "date" : undefined}
+                    onClick={() => select(date)}
+                    className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-[var(--radius-md)] pt-1.5 pb-[5px] ${
+                      pressed ? "bg-[var(--color-apricot)] text-[var(--color-apricot-ink)]" : "text-[var(--color-text)]"
+                    }`}
+                  >
+                    <span aria-hidden="true" className={`text-xs font-semibold ${pressed ? "" : "text-[var(--color-text-muted)]"}`}>
+                      {WEEKDAY_INITIALS[index]}
+                    </span>
+                    <span aria-hidden="true" className="text-base leading-normal font-extrabold">
+                      {dayOfMonth(date)}
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className={`size-[5px] rounded-full ${dot ? (pressed ? "bg-[var(--color-apricot-ink)]" : "bg-[var(--color-accent)]") : ""}`}
+                    />
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* CD-Plan-After-Copy: a light confirmation, no Undo (round 2). The

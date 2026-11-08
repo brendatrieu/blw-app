@@ -15,6 +15,8 @@ const h = vi.hoisted(() => ({
 
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
+  // The page's one effect (ledger 951's "Copied" reveal) is not this pin's concern.
+  useEffect: () => {},
   useState: (init: unknown) => {
     const i = h.i++;
     if (!(i in h.states)) h.states[i] = init;
