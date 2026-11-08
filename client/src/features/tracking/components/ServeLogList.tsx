@@ -95,6 +95,10 @@ export function MealDeleteDialog({ meal, babyId, open, onClose }: MealDeleteDial
   );
 }
 
+/** Ledger 966: a line's stars at its end, held off the card's right edge
+ * about as far as its text is from the left (the kebab's padding is less). */
+const STARS_AT_END = "ml-auto mr-2";
+
 export interface MealCardProps {
   meal: MealItem;
   /** Asks to delete this meal — the list owns the one `MealDeleteDialog`. */
@@ -129,7 +133,7 @@ export function MealCard({ meal, onRequestDelete, grouped = false }: MealCardPro
               {line.name}
               <DeletedMark deleted={line.deleted} />
             </span>
-            {own !== null && <StarRatingShown value={own} className="ml-auto" />}
+            {own !== null && <StarRatingShown value={own} className={STARS_AT_END} />}
           </>
         );
         return parts.length === 0 ? (
@@ -146,7 +150,7 @@ export function MealCard({ meal, onRequestDelete, grouped = false }: MealCardPro
                   {part.label}
                   <DeletedMark deleted={part.deleted} />
                 </span>
-                <StarRatingShown value={part.rating!} className="ml-auto" />
+                <StarRatingShown value={part.rating!} className={STARS_AT_END} />
               </div>
             ))}
           </li>

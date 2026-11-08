@@ -293,7 +293,7 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
     const [recipe, container, egg] = lisOf(html);
     // The recipe (5): one image at the end of its row, five small filled stars.
     expect(recipe!.attrs).toBe('class="flex items-center gap-2 py-[3px]"');
-    const stars = /<span role="img" aria-label="Rated 5 stars" class="flex shrink-0 ml-auto">([\s\S]*?)<\/span><\/li>$/.exec(`<li ${recipe!.attrs}>${recipe!.inner}</li>`);
+    const stars = /<span role="img" aria-label="Rated 5 stars" class="flex shrink-0 ml-auto mr-2">([\s\S]*?)<\/span><\/li>$/.exec(`<li ${recipe!.attrs}>${recipe!.inner}</li>`);
     expect(stars).not.toBeNull();
     expect(stars![1]!.match(/<svg aria-hidden="true" width="14" height="14"/g)).toHaveLength(5);
     expect(stars![1]!.match(/fill-current/g)).toHaveLength(5);
@@ -304,7 +304,7 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
     // The container of two: no stars on its own row; its rated Broccoli (4)
     // gets a line of its own under the name, its unrated Carrot none.
     expect(rowOf(container!.inner)).not.toContain('role="img"');
-    const parts = [...container!.inner.matchAll(/<div class="flex items-center gap-2 pl-9 text-xs text-\[var\(--color-text-muted\)\]"><span class="min-w-0 break-words">([^<]*)<\/span><span role="img" aria-label="([^"]*)" class="flex shrink-0 ml-auto">([\s\S]*?)<\/span><\/div>/g)];
+    const parts = [...container!.inner.matchAll(/<div class="flex items-center gap-2 pl-9 text-xs text-\[var\(--color-text-muted\)\]"><span class="min-w-0 break-words">([^<]*)<\/span><span role="img" aria-label="([^"]*)" class="flex shrink-0 ml-auto mr-2">([\s\S]*?)<\/span><\/div>/g)];
     expect(parts.map((m) => [m[1], m[2], m[3]!.match(/fill-current/g)?.length])).toEqual([["Broccoli", "Rated 4 stars", 4]]);
     // Nothing to tap: no star buttons, and all of it inside the card's Edit link.
     expect(html).not.toContain('role="radio"');
@@ -329,7 +329,7 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
     };
     const [line] = lisOf(renderMealCard(meal).replace(/<!-- -->/g, ""));
     expect(line!.attrs).toBe('class="flex items-center gap-2 py-[3px]"');
-    expect(line!.inner).toMatch(/>Broccoli<\/span><span role="img" aria-label="Rated 1 star" class="flex shrink-0 ml-auto">/);
+    expect(line!.inner).toMatch(/>Broccoli<\/span><span role="img" aria-label="Rated 1 star" class="flex shrink-0 ml-auto mr-2">/);
     expect(line!.inner.match(/fill-current/g)).toHaveLength(1);
     // No ratings at all (a cached body from before items): no stars.
     expect(renderMealCard(baseMeal)).not.toContain('role="img"');
