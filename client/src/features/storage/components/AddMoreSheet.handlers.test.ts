@@ -16,6 +16,9 @@ const h = vi.hoisted(() => {
     storageLoading: false,
     meals: [] as unknown[],
     mealsBaby: "" as string | undefined,
+    effects: [] as Array<[() => void, unknown[]]>,
+    /** A custom food saved from Add more: the create hook writes it into the foods cache (ledger 961). */
+    madeFoods: [] as unknown[],
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states)) store.states[i] = typeof init === "function" ? (init as () => unknown)() : init;
@@ -30,7 +33,12 @@ const h = vi.hoisted(() => {
 
 vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, useState: h.useState, useMemo: (fn: () => unknown) => fn() };
+  return {
+    ...actual,
+    useState: h.useState,
+    useMemo: (fn: () => unknown) => fn(),
+    useEffect: (fn: () => void, deps: unknown[]) => h.effects.push([fn, deps]),
+  };
 });
 vi.mock("../hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -55,6 +63,7 @@ vi.mock("../../catalog/hooks.js", async (importOriginal) => ({
         { id: "food-banana", slug: "banana", name: "Banana", category: "fruit", emoji: null, allergens: [] },
         // Ledger 855: an info food (whole milk) is offered like any food.
         { id: "food-milk", slug: "milk", name: "Whole Milk", category: "dairy", kind: "info", emoji: null, allergens: ["milk"] },
+        ...h.madeFoods,
       ],
     },
     isLoading: false,
@@ -76,6 +85,7 @@ vi.mock("../../catalog/hooks.js", async (importOriginal) => ({
 import { ADD_MORE_SEARCH_TABS, ADD_MORE_TABS, AddMoreSheet, RECENT_LIMIT, addMoreStorageItems, recentIds } from "./AddMoreSheet.js";
 import type { AddMoreIds } from "../addMoreSelection.js";
 import { Button } from "../../../components/ui/Button.js";
+import { CustomFoodSheet } from "../../catalog/components/FoodPicker.js";
 import { Input } from "../../../components/ui/Input.js";
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.js";
 
@@ -148,6 +158,7 @@ let serving: AddMoreIds = { ...NONE, itemIds: [BASE.id] };
 let requireContainer = true;
 function render(): El {
   h.store.i = 0;
+  h.effects.length = 0;
   return (AddMoreSheet as unknown as (props: unknown) => El)({
     babyId: "baby-1",
     serving,
@@ -163,6 +174,7 @@ function reset(storage: StorageItem[], meals: MealItem[] = [], listed: Partial<A
   h.storage = storage;
   h.storageLoading = false;
   h.meals = meals;
+  h.madeFoods = [];
   done.length = 0;
 }
 /** The tickable rows, as elements (title, checked, onToggle). */
@@ -421,13 +433,16 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
       expect(searchAll(tree)).toEqual([]);
     }
 
-    // Nothing anywhere: the plain line, no button, narrowed or not.
+    // Nothing anywhere: no Search all, narrowed or not (961 adds its own button in All and Foods, below).
     reset([BASE, SALMON, PEAR_FOODS]);
     goTo("food");
     type("zzz");
     expect(html(render())).toContain(">No matches</p>");
     expect(searchAll(render())).toEqual([]);
     goTo("all");
+    expect(html(render())).toContain(">No matches</p>");
+    expect(searchAll(render())).toEqual([]);
+    goTo("recipe");
     expect(html(render())).toContain('<p class="p-5 text-center text-sm text-[var(--color-text-muted)]">No matches</p>');
     expect(searchAll(render())).toEqual([]);
   });
@@ -652,5 +667,101 @@ describe("AddMoreSheet opens with the plate ticked (ledger 878)", () => {
     expect(render().props.onClose).toBeTypeOf("function");
     (render().props.onClose as () => void)();
     expect(done).toEqual([]);
+  });
+});
+
+// Ledger 961 (owner-approved description, doc .60247): a search for a food
+// that isn't there offers to add it as a custom food, over Add more.
+describe("AddMoreSheet's custom-food shortcut (ledger 961)", () => {
+  const LABEL = "Add 'papaya' as a custom food";
+  const addCustom = (tree: El) =>
+    findAll(tree, (element) => element.type === Button && String(element.props.children).endsWith("as a custom food"));
+  const sheet = (tree: El) => one(tree, CustomFoodSheet);
+  const PAPAYA = { id: "food-papaya", slug: "papaya-x1", name: "Papaya", category: "fruit", emoji: null, allergens: [] };
+
+  it("under All's 'No matches': one more quiet button, in the box's 20px spacing (952), the query as typed, trimmed", () => {
+    reset([BASE], [], {}, false);
+    type("  papaya ");
+    const tree = render();
+    const [button] = addCustom(tree);
+    expect(button?.props).toMatchObject({ type: "button", variant: "quiet", children: LABEL });
+    expect(html(tree)).toMatch(
+      /<div class="flex flex-col items-center gap-5 p-5 text-center"><p class="text-sm text-\[var\(--color-text-muted\)\]">No matches<\/p><button [^>]*>Add &#x27;papaya&#x27; as a custom food<\/button><\/div>/,
+    );
+    // Nothing is open until it is tapped.
+    expect(sheet(tree).props.name).toBeNull();
+  });
+
+  it("on Foods: under 'No matches in foods.' when another kind matched, below Search all; under 'No matches' when nothing did", () => {
+    reset([BASE, SALMON], [], {}, false);
+    goTo("food");
+    type("salmon");
+    const out = html(render());
+    expect(out).toMatch(/>No matches in foods\.<\/p><button [^>]*>Search all<\/button><button [^>]*>Add &#x27;salmon&#x27; as a custom food<\/button><\/div>/);
+    type("papaya");
+    expect(addCustom(render()).map((b) => b.props.children)).toEqual([LABEL]);
+    // A food that matched: no offer.
+    type("pear");
+    expect(addCustom(render())).toEqual([]);
+  });
+
+  it("Recipes and In storage never offer it, whether something else matched or not", () => {
+    for (const [kind, text] of [
+      ["recipe", "pear"],
+      ["recipe", "papaya"],
+      ["storage", "banana"],
+      ["storage", "papaya"],
+    ] as const) {
+      reset([BASE, SALMON], [], {}, false);
+      goTo(kind);
+      type(text);
+      expect(addCustom(render()), `${kind} ${text}`).toEqual([]);
+    }
+    // All with a hit somewhere (a recipe): found, so no offer either.
+    reset([BASE, SALMON], [], {}, false);
+    type("dal");
+    expect(addCustom(render())).toEqual([]);
+  });
+
+  it("tap: 'Add a custom food' opens over Add more with the name filled in; X changes nothing", () => {
+    reset([BASE], [], {}, false);
+    type("papaya ");
+    (addCustom(render())[0]!.props.onClick as () => void)();
+    let tree = render();
+    expect(sheet(tree).props).toMatchObject({ name: "papaya", idPrefix: "add-more-custom" });
+    // It is a child of the Add more sheet (it portals over it), and Add more stays as it was.
+    expect(findAll(tree.props.children, (element) => element.type === CustomFoodSheet)).toHaveLength(1);
+    expect(one(tree, Input).props.value).toBe("papaya ");
+    (sheet(tree).props.onClose as () => void)();
+    tree = render();
+    expect(sheet(tree).props.name).toBeNull();
+    expect(rows(tree).filter((row) => row.props.checked)).toEqual([]);
+    (one(tree, Button).props.onClick as (() => void) | undefined)?.();
+    expect(done).toEqual([]);
+  });
+
+  it("Save: back in Add more with that food ticked (not on the plate until Done), focus on Done; Done adds it", () => {
+    reset([BASE], [], {}, false);
+    type("papaya");
+    (addCustom(render())[0]!.props.onClick as () => void)();
+    // The create hook has written the new food into the foods list (useCreateCustomFood).
+    h.madeFoods = [PAPAYA];
+    (sheet(render()).props.onSaved as (food: unknown) => void)({ ...PAPAYA, isCustom: true });
+    const tree = render();
+    expect(sheet(tree).props.name).toBeNull();
+    expect(rows(tree).map((row) => [row.props.title, row.props.checked])).toEqual([["Papaya", true]]);
+    expect(done).toEqual([]);
+    // The opening button is gone with the miss: focus goes on to Done.
+    const focused: string[] = [];
+    vi.stubGlobal("document", { getElementById: (id: string) => ({ focus: () => focused.push(id) }) });
+    try {
+      for (const [effect] of h.effects) effect();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(focused).toEqual(["add-more-done"]);
+    const doneButton = findAll(tree, (element) => element.type === Button && element.props.id === "add-more-done")[0]!;
+    (doneButton.props.onClick as () => void)();
+    expect(done).toEqual([{ removed: { itemIds: [], recipeIds: [], foodIds: [] }, items: [], foods: [PAPAYA], recipes: [] }]);
   });
 });

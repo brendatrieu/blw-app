@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { FoodCategory, FoodListItem } from "@blw/shared";
+import type { FoodCategory, FoodDetail, FoodListItem } from "@blw/shared";
 import { addCustomFoodLabel, allergenLabel, withDeletedMark } from "../constants.js";
 import { getFoodEmoji } from "../foodEmoji.js";
 import { useFoods } from "../hooks.js";
@@ -110,27 +110,53 @@ export function FoodPicker({ id, value, onChange, keptFoods, placeholder, chipsF
         createLabel={addCustomFoodLabel}
         chipsFirst={chipsFirst}
       />
-      <Sheet open={createQuery !== null} onClose={() => setCreateQuery(null)} title="Add a custom food" showClose>
-        {/* Item 726: first in the sheet, like the Serve sheet's link — and
-            spaced like it too (item 733: pb-[5px] → 19/14.5). */}
-        <HowToLink slug="how-to-add-custom-food" className="pb-[5px]" />
-        <CustomFoodForm
-          idPrefix={`${id}-custom`}
-          initialName={createQuery ?? ""}
-          // The form's "add it as a recipe instead" link (item 352) is the one
-          // exit from this sheet that DOES navigate, so the sheet has to close
-          // itself: left open it would sit over /recipes/new, and over this
-          // page again on Back, still holding a half-typed food.
-          onNavigateAway={() => setCreateQuery(null)}
-          onSaved={(food) => {
-            setCreateQuery(null);
-            // Additive, and guarded: a re-save of an already-selected food
-            // must not put its id in the list twice.
-            onChange(value.includes(food.id) ? value : [...value, food.id]);
-          }}
-        />
-      </Sheet>
+      <CustomFoodSheet
+        idPrefix={`${id}-custom`}
+        name={createQuery}
+        onClose={() => setCreateQuery(null)}
+        onSaved={(food) => {
+          setCreateQuery(null);
+          // Additive, and guarded: a re-save of an already-selected food
+          // must not put its id in the list twice.
+          onChange(value.includes(food.id) ? value : [...value, food.id]);
+        }}
+      />
     </>
+  );
+}
+
+interface CustomFoodSheetProps {
+  /** Distinguishes the form's control ids from any other on the page. */
+  idPrefix: string;
+  /** null = closed; a string (possibly "") = open with that name prefilled. */
+  name: string | null;
+  onClose: () => void;
+  /** The saved food, already in the foods cache (`useCreateCustomFood`). */
+  onSaved: (food: FoodDetail) => void;
+}
+
+/**
+ * "Add a custom food" in a sheet over the page that asked (the food picker's
+ * create row; Add more's, ledger 961): the same form as Foods → Add food,
+ * so nothing half-filled underneath is lost.
+ */
+export function CustomFoodSheet({ idPrefix, name, onClose, onSaved }: CustomFoodSheetProps) {
+  return (
+    <Sheet open={name !== null} onClose={onClose} title="Add a custom food" showClose>
+      {/* Item 726: first in the sheet, like the Serve sheet's link — and
+          spaced like it too (item 733: pb-[5px] → 19/14.5). */}
+      <HowToLink slug="how-to-add-custom-food" className="pb-[5px]" />
+      <CustomFoodForm
+        idPrefix={idPrefix}
+        initialName={name ?? ""}
+        // The form's "add it as a recipe instead" link (item 352) is the one
+        // exit from this sheet that DOES navigate, so the sheet has to close
+        // itself: left open it would sit over /recipes/new, and over this
+        // page again on Back, still holding a half-typed food.
+        onNavigateAway={onClose}
+        onSaved={onSaved}
+      />
+    </Sheet>
   );
 }
 

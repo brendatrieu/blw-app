@@ -56,7 +56,7 @@ vi.mock("../hooks.js", async (importOriginal) => {
 import { Link } from "react-router-dom";
 import { CustomFoodForm } from "./CustomFoodForm.js";
 import { EmojiChooser } from "./EmojiChooser.js";
-import { FoodPicker } from "./FoodPicker.js";
+import { CustomFoodSheet, FoodPicker } from "./FoodPicker.js";
 import { MultiCombobox } from "../../../components/ui/MultiCombobox.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
 import { Field } from "../../../components/ui/Field.js";
@@ -138,10 +138,14 @@ function renderPicker(): Rendered {
   });
 }
 
+/** The picker's create sheet: its `CustomFoodSheet` (shared with Add more,
+ * ledger 961), called through to the `Sheet` it renders. */
 function sheet(tree: Rendered): Rendered {
-  const found = find(tree, Sheet);
+  const found = find(tree, CustomFoodSheet);
   if (!found) throw new Error("the picker should always mount its create sheet");
-  return found;
+  const rendered = (CustomFoodSheet as unknown as (props: unknown) => Rendered)(found.props);
+  if (rendered.type !== Sheet) throw new Error("the create sheet should be a Sheet");
+  return rendered;
 }
 
 describe("FoodPicker hands the sheet's own closer to the form (item 352)", () => {
@@ -161,6 +165,27 @@ describe("FoodPicker hands the sheet's own closer to the form (item 352)", () =>
     (form.props.onNavigateAway as () => void)();
 
     expect(sheet(renderPicker()).props.open).toBe(false);
+  });
+});
+
+// Ledger 961: Add more opens the very same sheet (shared with the picker).
+describe("CustomFoodSheet, the one 'Add a custom food' sheet (ledger 961)", () => {
+  it("is titled Add a custom food with an X, holds Foods → Add food's form prefilled, and hands it the closer and the save", () => {
+    const closed: string[] = [];
+    const saved: unknown[] = [];
+    const props = { idPrefix: "add-more-custom", name: "papaya", onClose: () => closed.push("x"), onSaved: (food: unknown) => saved.push(food) };
+    const open = (CustomFoodSheet as unknown as (p: unknown) => Rendered)(props);
+    expect(open.type).toBe(Sheet);
+    expect(open.props).toMatchObject({ open: true, title: "Add a custom food", showClose: true });
+    const form = find(open.props.children, CustomFoodForm)!;
+    expect(form.props).toMatchObject({ idPrefix: "add-more-custom", initialName: "papaya" });
+    (form.props.onNavigateAway as () => void)();
+    (open.props.onClose as () => void)();
+    expect(closed).toEqual(["x", "x"]);
+    (form.props.onSaved as (food: unknown) => void)({ id: "f-1" });
+    expect(saved).toEqual([{ id: "f-1" }]);
+    // null = closed.
+    expect((CustomFoodSheet as unknown as (p: unknown) => Rendered)({ ...props, name: null }).props.open).toBe(false);
   });
 });
 

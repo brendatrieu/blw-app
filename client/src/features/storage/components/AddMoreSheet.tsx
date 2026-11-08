@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { FoodListItem, MealItem, RecipeListItem, StorageItem } from "@blw/shared";
 import { Button } from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
@@ -6,6 +6,8 @@ import { SegmentedControl, type SegmentedControlOption } from "../../../componen
 import { Sheet } from "../../../components/ui/Sheet.js";
 import { focusFieldById } from "../../../lib/forms.js";
 import { FoodPlate } from "../../catalog/components/FoodPlate.js";
+import { CustomFoodSheet } from "../../catalog/components/FoodPicker.js";
+import { addCustomFoodLabel } from "../../catalog/constants.js";
 import { foodPlate } from "../../catalog/foodEmoji.js";
 import { useFoods, useRecipes } from "../../catalog/hooks.js";
 import { useMeals } from "../../tracking/hooks.js";
@@ -114,6 +116,7 @@ function PickRow({ checked, onToggle, plate, title, detail }: PickRowProps) {
 
 /** One Add more sheet is open at a time. */
 const SEARCH_ID = "add-more-search";
+const DONE_ID = "add-more-done";
 
 interface AddMoreSheetProps {
   babyId: string;
@@ -140,7 +143,9 @@ interface AddMoreSheetProps {
  * of it. The sheet is a fixed height from the start, so nothing moves while
  * typing, switching tabs or as the results change. Rendered only while
  * open, so every opening starts from the plate; closing without Done
- * changes nothing.
+ * changes nothing. A search for a food that isn't there offers to add it
+ * as a custom food in a sheet over this one (ledger 961); saved, it comes
+ * back ticked.
  */
 export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClose }: AddMoreSheetProps) {
   const [tab, setTab] = useState<AddMoreTab>("storage");
@@ -152,6 +157,14 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
   const [foodIds, setFoodIds] = useState<string[]>(() => [...serving.foodIds]);
   const [recipeIds, setRecipeIds] = useState<string[]>(() => [...serving.recipeIds]);
   const [tabPicked, setTabPicked] = useState(false);
+  // Ledger 961: "Add a custom food" over this sheet, open with that name.
+  const [customName, setCustomName] = useState<string | null>(null);
+  // The button that opened it is gone once its food is found, so focus
+  // goes on to Done, the next step, rather than out of the sheet.
+  const [customSaved, setCustomSaved] = useState(0);
+  useEffect(() => {
+    if (customSaved > 0) focusFieldById(DONE_ID);
+  }, [customSaved]);
   const storage = useStorageItems("active");
   const foods = useFoods();
   // `fresh` like Log meal's picker (item 353): a recipe written moments ago
@@ -231,6 +244,14 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
     // Ledger 921: a narrowed search that misses here but hits another kind
     // says which kind it searched and offers to widen, keeping the text.
     const elsewhere = searchTab !== "all" && Object.values(hits).some((list) => list.length > 0);
+    // Ledger 961: a miss in All or Foods offers to make it a food (never in
+    // Recipes or In storage), in Log meal's own words.
+    const addCustom =
+      searchTab === "all" || searchTab === "food" ? (
+        <Button type="button" variant="quiet" className="max-w-full [overflow-wrap:anywhere]" onClick={() => setCustomName(query.trim())}>
+          {addCustomFoodLabel(query)}
+        </Button>
+      ) : null;
     body =
       found.length > 0 ? (
         found
@@ -248,6 +269,12 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
           >
             Search all
           </Button>
+          {addCustom}
+        </div>
+      ) : addCustom ? (
+        <div className="flex flex-col items-center gap-5 p-5 text-center">
+          <p className="text-sm text-[var(--color-text-muted)]">No matches</p>
+          {addCustom}
         </div>
       ) : (
         <p className="p-5 text-center text-sm text-[var(--color-text-muted)]">No matches</p>
@@ -317,6 +344,7 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
           ) : null}
         </div>
         <Button
+          id={DONE_ID}
           type="button"
           className="w-full"
           disabled={!addMoreCanApply(serving, ticks, requireContainer)}
@@ -334,6 +362,17 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
           Done
         </Button>
       </div>
+      {/* Portals over this sheet. Saved: ticked here, on the plate at Done. */}
+      <CustomFoodSheet
+        idPrefix="add-more-custom"
+        name={customName}
+        onClose={() => setCustomName(null)}
+        onSaved={(food) => {
+          setCustomName(null);
+          setFoodIds((current) => (current.includes(food.id) ? current : [...current, food.id]));
+          setCustomSaved((count) => count + 1);
+        }}
+      />
     </Sheet>
   );
 }
