@@ -52,7 +52,7 @@ Migrations worth knowing: 0009/0010 renamed Pantry → Fridge → **Storage** (f
 
 - Push to `main` → GitHub Actions runs **CI** and **Deploy** (`.github/workflows/`). Deploy builds an arm64 image to GHCR and the VM pulls it; it is gated by the `DEPLOY_ENABLED` repo variable. The Docker build runs typecheck, so a red typecheck fails the deploy and production keeps the previous release. The container runs migrations and idempotent seeds on start.
 - Host: one Oracle Cloud ARM VM behind Caddy; the domain is at Namecheap. The **Caddyfile on the server is a manual copy** — deploys only replace the app image. Server env lives in a `.env` on the VM, including `ADMIN_EMAILS` (comma-separated) which bootstraps dashboard admins.
-- This development laptop **cannot SSH to the VM**; the owner does server-side steps from another machine.
+- This development laptop can SSH to the VM since 2026-11-02 (key added from the owner's other machine). Server steps that show secrets (`.env`, backup keys) are typed by the owner, never run through Claude's shell.
 - Verify a deploy: `gh run list --limit 3`, then load the site. To confirm a change is really live, download the served bundle and grep it (`curl -s https://littlemeals.org/ | grep -o 'src="/assets/[^"]*"'`).
 - **PWA updates are the recurring gotcha.** `registerType: "autoUpdate"` updates the service worker in the background, but an already-open app keeps running old JavaScript until it is fully quit and relaunched — and nothing in the UI says so. On iOS the installed app has its own storage separate from Safari; deleting and re-adding the icon does not clear it (Settings → Safari → Advanced → Website Data does). An in-app "update available" prompt is the top suggested follow-up (section 6).
 
