@@ -107,6 +107,9 @@ describe("TodaysPlanCard (render)", () => {
       h.plan = state;
       expect(card()).toBe("");
     }
+    // A 200 without days (verifier 1107 c1 N2): still no card, not the error page.
+    h.plan = { data: { today: TODAY } };
+    expect(card()).toBe("");
     // It reads the week the meal plan shows, so they share one answer.
     expect(h.planArgs[0]).toEqual(["baby-1", "2026-10-12", "2026-10-18"]);
   });

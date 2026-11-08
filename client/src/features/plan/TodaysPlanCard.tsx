@@ -51,9 +51,9 @@ export function TodaysPlanCard({ babyId }: { babyId: string }) {
   const today = localDate(new Date(), deviceTimeZone());
   const week = weekOf(today);
   const plan = usePlan(babyId, week[0]!, week[6]!);
-  const pages = todaysPlanPages(plan.data?.days.find((day) => day.date === today));
-  // Not loaded, failed, or an older server without days: no card (no flash
-  // of the empty page).
+  const pages = todaysPlanPages(plan.data?.days?.find((day) => day.date === today));
+  // Not loaded, failed (an older server 404s the plan route), or an answer
+  // without days: no card (no flash of the empty page), never the error page.
   return pages.length === 0 ? null : <TodaysPlan babyId={babyId} today={today} pages={pages} />;
 }
 
