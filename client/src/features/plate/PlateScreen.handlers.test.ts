@@ -26,6 +26,9 @@ const h = vi.hoisted(() => {
     storage: { isPending: false },
     usage: [] as unknown[],
     taps: { guarded: 0 },
+    // PlateScreen's own reads (ledger 944 B2): the URL and the meal being edited.
+    search: "",
+    refetches: 0,
     useState: (init: unknown) => {
       const i = store.i++;
       if (!(i in store.states)) store.states[i] = typeof init === "function" ? (init as () => unknown)() : init;
@@ -67,10 +70,31 @@ vi.mock("../tracking/hooks.js", async (importOriginal) => ({
     return recorder(h.creates);
   },
   useUpdateMeal: () => recorder(h.updates),
+  useMeal: (mealId: string | undefined) => ({
+    data: mealId ? MEAL : undefined,
+    isError: false,
+    refetch: async () => {
+      h.refetches++;
+      return {};
+    },
+  }),
+}));
+vi.mock("react-router-dom", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useSearchParams: () => [new URLSearchParams(h.search)],
+  useParams: () => ({}),
+  useNavigate: () => () => {},
+}));
+vi.mock("../babies/useActiveBaby.js", () => ({ useActiveBaby: () => ({ activeBaby: { id: "baby-1" }, isLoading: false }) }));
+vi.mock("../catalog/hooks.js", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useFoods: () => ({ data: undefined, isLoading: false }),
+  useRecipe: () => ({ data: undefined, isLoading: false }),
 }));
 vi.mock("../plan/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useSavePlannedMeal: () => recorder(h.planSaves),
+  usePlan: () => ({ data: undefined, isError: false }),
 }));
 vi.mock("../storage/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -80,6 +104,7 @@ vi.mock("../storage/hooks.js", async (importOriginal) => ({
       return h.storage.isPending;
     },
   }),
+  useStorageItems: () => ({ data: { items: [] }, isPending: false, isFetching: false }),
 }));
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.network.offline }));
 vi.mock("../../lib/tapGuard.js", () => ({ ignoreTapsBriefly: () => h.taps.guarded++ }));
@@ -95,7 +120,7 @@ import { AddMoreSheet } from "../storage/components/AddMoreSheet.js";
 import { AddStorageItemForm } from "../storage/components/AddStorageItemForm.js";
 import { LeftoversFields } from "../storage/components/LeftoversFields.js";
 import { PlateItemRow } from "./PlateItemRow.js";
-import { PlateForm, planServeStart, type PlateMode } from "./PlateScreen.js";
+import { PlateForm, PlateScreen, planServeStart, type PlateMode } from "./PlateScreen.js";
 import { containerEntry, fromMeal, fromPlanned, type PlateAction, type PlateEntry } from "./plate.js";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -231,6 +256,8 @@ beforeEach(() => {
   h.network.offline = false;
   h.storage.isPending = false;
   h.taps.guarded = 0;
+  h.search = "";
+  h.refetches = 0;
   doneCalls.length = 0;
   mealChanged.length = 0;
 });
@@ -247,6 +274,27 @@ describe("Edit opened from a served meal's Add more (ledger 944)", () => {
     // Without the flag Edit opens as before.
     render("edit");
     expect(findAll(again(), byType(AddMoreSheet))).toHaveLength(0);
+  });
+
+  it("a 409 reload starts the plate again WITHOUT Add more open (verifier c3 B2)", async () => {
+    h.search = `edit=${MEAL.id}&add=1`;
+    h.store.states = [];
+    h.store.refs = [];
+    const screen = () => {
+      h.store.i = 0;
+      h.store.r = 0;
+      return one((PlateScreen as unknown as () => El)(), byType(PlateForm));
+    };
+    const first = screen();
+    expect(first.props.openAddMore).toBe(true);
+    expect(first.props.reloaded).toBe(false);
+    // The save was refused as meal_changed: the meal is refetched, then the plate remounts.
+    (first.props.onMealChanged as () => void)();
+    await vi.waitFor(() => expect(screen().props.reloaded).toBe(true));
+    expect(h.refetches).toBe(1);
+    const reloaded = screen() as El & { key?: unknown };
+    expect(reloaded.key).not.toBe((first as El & { key?: unknown }).key);
+    expect(reloaded.props.openAddMore).toBe(false);
   });
 });
 

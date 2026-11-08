@@ -7,17 +7,17 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MealItem } from "@blw/shared";
 
-const h = vi.hoisted(() => ({ offline: false, isError: false, babyIds: [] as unknown[] }));
+const h = vi.hoisted(() => ({ offline: false, isError: false, babyIds: [] as unknown[], meals: [] as unknown[] }));
 vi.mock("../../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
 vi.mock("../hooks.js", () => ({
-  useMeals: () => ({ data: { items: [] } }),
+  useMeals: () => ({ data: { items: h.meals } }),
   useUpdateMeal: (babyId: unknown) => {
     h.babyIds.push(babyId);
     return { mutate: () => {}, isPending: false, isError: h.isError };
   },
 }));
 
-import { RatedMealLines, addMoreHref } from "./RatedMealLines.js";
+import { RatedMealLines, ServedMealLines, addMoreHref } from "./RatedMealLines.js";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const MEAL: MealItem = {
@@ -41,6 +41,7 @@ beforeEach(() => {
   h.offline = false;
   h.isError = false;
   h.babyIds.length = 0;
+  h.meals = [];
 });
 
 describe("RatedMealLines (ledger 939/944)", () => {
@@ -70,6 +71,26 @@ describe("RatedMealLines (ledger 939/944)", () => {
     expect(offline).not.toContain('role="alert"');
     expect(offline).toContain(`<p id="rate-offline-${id(90)}" class="mt-1 text-xs text-[var(--color-text-muted)]">You&#x27;re offline.</p>`);
     expect(offline.match(/<button type="button" role="radio"[^>]*disabled=""/g)).toHaveLength(10);
+  });
+
+  it("a served card shows and rates the SERVED meal, not the newest one (verifier c3 B1)", () => {
+    // A newer meal of the same baby, with other foods, comes first in the recent meals.
+    const newer: MealItem = {
+      ...MEAL,
+      id: id(95),
+      servedAt: "2026-10-14T17:00:00.000Z",
+      items: [{ kind: "food", id: id(5), food: { id: id(6), slug: "broccoli", name: "Broccoli", category: "veg" }, rating: null }],
+    };
+    h.meals = [newer, MEAL];
+    for (const look of ["home", "plan"] as const) {
+      const html = renderToString(
+        createElement(MemoryRouter, null, createElement(ServedMealLines, { babyId: "baby-7", mealId: id(90), look, fallback: "FALLBACK" })),
+      ).replace(/<!-- -->/g, "");
+      expect(html).toContain('aria-label="Rating for Egg"');
+      expect(html).toContain('aria-label="Rating for Pear"');
+      expect(html).not.toContain("Broccoli");
+      expect(html).not.toContain("FALLBACK");
+    }
   });
 
   it("Add more opens the logged meal's Edit with Add more open", () => {

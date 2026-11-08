@@ -45,7 +45,9 @@ function MealTitle({ meal }: { meal: MealItem }) {
  * plate shows just the food that was on it). Offline the stars and Delete
  * wait, like every plate write (SPEC §4.4). A container links back to the
  * storage batch it was served from, so the storage ⇄ meal traceback stays
- * navigable in both directions. After Delete the page goes back.
+ * navigable in both directions. After Delete the page lands on Home ("/"):
+ * the optimistic delete takes the meal out of the recent meals, so the
+ * not-found redirect below runs.
  */
 export function MealDetailPage() {
   const { id } = useParams<{ id: string }>();
