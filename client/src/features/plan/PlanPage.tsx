@@ -83,7 +83,7 @@ const ADD_MEAL =
   "flex min-h-12 items-center justify-center rounded-[var(--radius-md)] border-[1.5px] border-dashed border-[var(--color-border)] text-[15px] font-semibold text-[var(--color-accent)]";
 
 /**
- * The meal plan (ledger 904, CD-Plan-Day): a Monday-to-Sunday week strip
+ * The meal plan (ledger 904, CD-Plan-Day): a Sunday-to-Saturday week strip (969)
  * paged with ‹ ›, Today when another day is selected, and the selected day's
  * meals, then "+ Add a meal". The day lives in the URL (`?date=`, absent
  * for today), so Back from a meal (or from Daily meals, its own page since

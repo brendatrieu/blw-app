@@ -33,8 +33,8 @@ const h = vi.hoisted(() => {
 vi.mock("react", async (importOriginal) => ({ ...(await importOriginal<Record<string, unknown>>()), useState: h.useState }));
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
 vi.mock("./hooks.js", () => ({
-  usePlanWeeks: (_babyId: string, mondays: string[]) => {
-    h.weeks.push(mondays);
+  usePlanWeeks: (_babyId: string, weekStarts: string[]) => {
+    h.weeks.push(weekStarts);
     return (date: string) => h.days[date];
   },
   useCopyCheck: (_babyId: string, input: unknown) => {
@@ -160,18 +160,18 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
       "Broccoli Cheese Egg MuffinsFridge · 2 of 6 left",
       "Banana",
     ]);
-    expect(h.weeks).toEqual([["2026-10-12"]]);
-    expect(text(findAll(tree, (el) => el.props["aria-live"] === "polite")[0])).toBe("Oct 12 – 18");
+    expect(h.weeks).toEqual([["2026-10-11"]]);
+    expect(text(findAll(tree, (el) => el.props["aria-live"] === "polite")[0])).toBe("Oct 11 – 17");
     // Ledger 936: the past 7 days take a copy too, so ‹ reaches last week.
     expect(byLabel(tree, "Previous week")!.props.disabled).toBe(false);
     expect(dayButtons(tree).map((button) => [button.props["aria-label"], button.props.disabled, button.props["aria-pressed"]])).toEqual([
-      ["Monday, October 12", true, false], // no plan loaded for it here
+      ["Sunday, October 11", true, false], // no plan loaded for it here
+      ["Monday, October 12", true, false], // nor for this one
       ["Tuesday, October 13", false, false],
       ["Wednesday, October 14", false, false],
       ["Thursday, October 15", false, false],
       ["Friday, October 16", false, false],
       ["Saturday, October 17", false, false],
-      ["Sunday, October 18", false, false],
     ]);
     expect(text(tree)).not.toContain("Meals");
     expect(h.checks).toEqual([null]);
@@ -184,16 +184,16 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
   it("a past source opens on today's week; a later one on its own", () => {
     render({ date: "2026-10-07" });
     render({ date: "2026-10-21" });
-    expect(h.weeks).toEqual([["2026-10-12"], ["2026-10-19"]]);
+    expect(h.weeks).toEqual([["2026-10-11"], ["2026-10-18"]]);
   });
 
   it("a selected day starts with its own Lunch ticked; the meal itself and a served one can't take it", () => {
     let tree = render();
-    click(dayButtons(tree)[2]); // Wed 14, the source's day
-    click(dayButtons(again())[3]); // Thu 15
-    click(dayButtons(again())[4]); // Fri 16
+    click(dayButtons(tree)[3]); // Wed 14, the source's day
+    click(dayButtons(again())[4]); // Thu 15
+    click(dayButtons(again())[5]); // Fri 16
     tree = again();
-    expect(dayButtons(tree).map((button) => button.props["aria-pressed"])).toEqual([false, false, true, true, true, false, false]);
+    expect(dayButtons(tree).map((button) => button.props["aria-pressed"])).toEqual([false, false, false, true, true, true, false]);
     expect(findAll(tree, (el) => typeof el.props.id === "string" && el.props.id.startsWith("copy-day-")).map((el) => text(el.props.children))).toEqual([
       "Wed 14",
       "Thu 15",
@@ -223,7 +223,7 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
 
   it("a ticked meal with something planned asks Keep it / Replace it in its row, Keep it first", () => {
     render();
-    click(dayButtons(again())[3]);
+    click(dayButtons(again())[4]);
     click(chip(again(), "2026-10-15", "Dinner"));
     let tree = again();
     const [clash] = radioGroups(tree);
@@ -252,7 +252,7 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
 
   it("Copy is off while no ticked meal would be filled: every clash on Keep it and nothing empty (VERIFY-p4-c1 #4)", () => {
     render();
-    click(dayButtons(again())[3]); // Thu 15: Lunch (empty) starts ticked
+    click(dayButtons(again())[4]); // Thu 15: Lunch (empty) starts ticked
     click(chip(again(), "2026-10-15", "Dinner"));
     click(chip(again(), "2026-10-15", "Lunch"));
     let tree = again();
@@ -268,11 +268,11 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
 
   it("two or more clashes add the pinned count and the All row, which answers them all; mixed answers light neither", () => {
     render();
-    click(dayButtons(again())[3]);
-    click(chip(again(), "2026-10-15", "Dinner"));
     click(dayButtons(again())[4]);
-    click(chip(again(), "2026-10-16", "Breakfast"));
+    click(chip(again(), "2026-10-15", "Dinner"));
     click(dayButtons(again())[5]);
+    click(chip(again(), "2026-10-16", "Breakfast"));
+    click(dayButtons(again())[6]);
     click(chip(again(), "2026-10-17", "Breakfast"));
     let tree = again();
     // Each clash sits in its own day's row.
@@ -300,7 +300,7 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
     ]);
     // Two clashes on one day: the All row counts meals.
     render();
-    click(dayButtons(again())[3]);
+    click(dayButtons(again())[4]);
     click(chip(again(), "2026-10-15", "Dinner"));
     h.days["2026-10-15"]!.meals[1]!.items = [food(7, "Pear")];
     expect(radioGroups(again()).map((group) => group.props["aria-label"])).toEqual(["Thu 15 Lunch", "Thu 15 Dinner", "All 2 meals"]);
@@ -308,7 +308,7 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
 
   it("the dry run's warnings sit in one calm box at the end; nothing blocks Copy", () => {
     render();
-    click(dayButtons(again())[3]);
+    click(dayButtons(again())[4]);
     h.check = {
       data: {
         filled: 1,
@@ -332,7 +332,7 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
     h.check.isError = true;
     expect(findAll(again(), (el) => el.props.role === "note")).toHaveLength(0);
     h.check.isError = false;
-    click(dayButtons(again())[3]);
+    click(dayButtons(again())[4]);
     expect(findAll(again(), (el) => el.props.role === "note")).toHaveLength(0);
   });
 
@@ -343,10 +343,11 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
     render();
     click(byLabel(again(), "Previous week")!);
     let tree = again();
-    expect(text(findAll(tree, (el) => el.props["aria-live"] === "polite")[0])).toBe("Oct 5 – 11");
+    expect(text(findAll(tree, (el) => el.props["aria-live"] === "polite")[0])).toBe("Oct 4 – 10");
     // 7 October is today-7: the earliest. ‹ stops here.
     expect(byLabel(tree, "Previous week")!.props.disabled).toBe(true);
-    expect(dayButtons(tree).slice(0, 3).map((button) => [button.props["aria-label"], button.props.disabled])).toEqual([
+    expect(dayButtons(tree).slice(0, 4).map((button) => [button.props["aria-label"], button.props.disabled])).toEqual([
+      ["Sunday, October 4", true],
       ["Monday, October 5", true],
       ["Tuesday, October 6", true],
       ["Wednesday, October 7", false],
@@ -355,9 +356,9 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
     // and the day picker points at it.
     expect(pastLimit(tree).map((el) => [el.props.id, text(el.props.children)])).toEqual([["copy-past-limit", "You can copy up to 7 days back."]]);
     expect(findAll(tree, (el) => el.props["aria-labelledby"] === "copy-days")[0]!.props["aria-describedby"]).toBe("copy-past-limit");
-    click(dayButtons(tree)[2]); // Wed 7: its Lunch starts ticked, like any day
+    click(dayButtons(tree)[3]); // Wed 7: its Lunch starts ticked, like any day
     click(byLabel(again(), "Next week")!);
-    click(dayButtons(again())[1]); // Tue 13: its Lunch has something planned
+    click(dayButtons(again())[2]); // Tue 13: its Lunch has something planned
     tree = again();
     expect(text(tree)).toContain("Meals");
     // The past day's clash asks Keep it / Replace it as any other day does.
@@ -378,10 +379,11 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
   });
 
   it("shows the limit line on the week where the 7 days start, also when that is a whole week (ledger 956)", () => {
-    // Today Monday 19 October: today-7 is Monday 12, so last week has no day off,
+    // Today Sunday 18 October: today-7 is Sunday 11, so last week has no day off,
     // but ‹ stops there; the line says why.
+    h.days["2026-10-11"] = day("2026-10-11", [meal(38, "Lunch")]);
     h.days["2026-10-12"] = day("2026-10-12", [meal(39, "Lunch")]);
-    let tree = render({ date: "2026-10-19", today: "2026-10-19" });
+    let tree = render({ date: "2026-10-18", today: "2026-10-18" });
     expect(pastLimit(tree)).toEqual([]);
     click(byLabel(tree, "Previous week")!);
     tree = again();
@@ -392,14 +394,14 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
 
   it("keeps days selected in another week as rows, and asks for their weeks too", () => {
     render();
-    click(dayButtons(again())[3]); // Thu 15
+    click(dayButtons(again())[4]); // Thu 15
     click(byLabel(again(), "Next week")!);
     const tree = again();
-    expect(text(findAll(tree, (el) => el.props["aria-live"] === "polite")[0])).toBe("Oct 19 – 25");
+    expect(text(findAll(tree, (el) => el.props["aria-live"] === "polite")[0])).toBe("Oct 18 – 24");
     expect(byLabel(tree, "Previous week")!.props.disabled).toBe(false);
-    click(dayButtons(tree)[2]); // Wed 21
+    click(dayButtons(tree)[3]); // Wed 21
     again();
-    expect(h.weeks.at(-1)).toEqual(["2026-10-19", "2026-10-12", "2026-10-19"]);
+    expect(h.weeks.at(-1)).toEqual(["2026-10-18", "2026-10-11", "2026-10-18"]);
     expect((h.checks.at(-1) as { targets: unknown[] }).targets).toEqual([
       { date: "2026-10-15", slotId: id(61), onClash: "keep" },
       { date: "2026-10-21", slotId: id(91), onClash: "keep" },
@@ -408,8 +410,8 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
 
   it("Copy sends the source and targets, then reports how many got it and the first day that did", () => {
     render();
-    click(dayButtons(again())[3]);
-    click(dayButtons(again())[5]);
+    click(dayButtons(again())[4]);
+    click(dayButtons(again())[6]);
     click(chip(again(), "2026-10-17", "Breakfast"));
     click(copyButton(again()));
     expect(h.copies.map((call) => call.input)).toEqual([
@@ -429,7 +431,7 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
   it("offline: no dry run, Copy off with You're offline. under it; in flight it reads Copying…; a failure says so", () => {
     h.offline = true;
     render();
-    click(dayButtons(again())[3]);
+    click(dayButtons(again())[4]);
     let tree = again();
     expect(h.checks.every((input) => input === null)).toBe(true);
     expect(copyButton(tree).props).toMatchObject({ disabled: true, "aria-describedby": "copy-offline" });

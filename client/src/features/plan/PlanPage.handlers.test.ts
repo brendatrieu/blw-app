@@ -109,7 +109,7 @@ beforeEach(() => {
   h.states = [];
   h.setSearch.length = 0;
   h.baby = { activeBaby: { id: "baby-1" }, isLoading: false };
-  h.plan = { data: week("2026-10-12", ["2026-10-13", "2026-10-14"]), isLoading: false, isError: false };
+  h.plan = { data: week("2026-10-11", ["2026-10-13", "2026-10-14"]), isLoading: false, isError: false };
   h.planArgs.length = 0;
   h.serves.length = 0;
   h.oneTap = { pendingSlot: null, failedSlot: null };
@@ -120,16 +120,17 @@ afterEach(() => {
 });
 
 describe("PlanPage (CD-Plan-Day)", () => {
-  it("opens on today: asks for its Monday-to-Sunday week, presses today, and lists today's meals", () => {
+  it("opens on today: asks for its Sunday-to-Saturday week (969), presses today, and lists today's meals", () => {
     const tree = render();
-    expect(h.planArgs).toEqual([["baby-1", "2026-10-12", "2026-10-18"]]);
+    expect(h.planArgs).toEqual([["baby-1", "2026-10-11", "2026-10-17"]]);
     expect(findAll(tree, (el) => el.type === PageHeader)[0]!.props.title).toBe("Meal Plan");
-    expect(text(findAll(tree, (el) => el.props["aria-live"] === "polite")[0])).toBe("Oct 12 – 18");
+    expect(text(findAll(tree, (el) => el.props["aria-live"] === "polite")[0])).toBe("Oct 11 – 17");
     const days = dayButtons(tree);
-    expect(days.map((day) => text(day.props.children))).toEqual(["M12", "T13", "W14", "T15", "F16", "S17", "S18"]);
-    expect(days.map((day) => day.props["aria-pressed"])).toEqual([false, false, true, false, false, false, false]);
-    expect(days.map((day) => day.props["aria-current"])).toEqual([undefined, undefined, "date", undefined, undefined, undefined, undefined]);
-    expect(days[2]!.props["aria-label"]).toBe("Wednesday, October 14");
+    expect(days.map((day) => text(day.props.children))).toEqual(["S11", "M12", "T13", "W14", "T15", "F16", "S17"]);
+    expect(days.map((day) => day.props["aria-pressed"])).toEqual([false, false, false, true, false, false, false]);
+    expect(days.map((day) => day.props["aria-current"])).toEqual([undefined, undefined, undefined, "date", undefined, undefined, undefined]);
+    expect(days[0]!.props["aria-label"]).toBe("Sunday, October 11");
+    expect(days[3]!.props["aria-label"]).toBe("Wednesday, October 14");
     // Today is showing, so no Today button.
     expect(byText(tree, "Today")).toBeUndefined();
     const cards = findAll(tree, (el) => el.type === PlanMealCard);
@@ -158,9 +159,9 @@ describe("PlanPage (CD-Plan-Day)", () => {
     const dots = dayButtons(render()).map((day) => String(findAll(day, (el) => el.type === "span").at(-1)!.props.className));
     expect(dots.map((dot) => (dot.includes("apricot-ink") ? "ink" : dot.includes("color-accent") ? "dot" : "none"))).toEqual([
       "none",
+      "none",
       "dot",
       "ink",
-      "none",
       "none",
       "none",
       "none",
@@ -175,7 +176,7 @@ describe("PlanPage (CD-Plan-Day)", () => {
     expect(h.setSearch).toEqual([
       [{ date: "2026-10-07" }, { replace: true }],
       [{ date: "2026-10-21" }, { replace: true }],
-      [{ date: "2026-10-16" }, { replace: true }],
+      [{ date: "2026-10-15" }, { replace: true }],
     ]);
   });
 
@@ -274,10 +275,10 @@ describe("PlanPage (CD-Plan-Day)", () => {
 
   it("another day: asks for that week, shows Today, and Today goes back with no ?date=", () => {
     h.search = new URLSearchParams({ date: "2026-10-21" });
-    h.plan = { data: week("2026-10-19", []), isLoading: false, isError: false };
+    h.plan = { data: week("2026-10-18", []), isLoading: false, isError: false };
     const tree = render();
-    expect(h.planArgs).toEqual([["baby-1", "2026-10-19", "2026-10-25"]]);
-    expect(dayButtons(tree).map((day) => day.props["aria-pressed"])).toEqual([false, false, true, false, false, false, false]);
+    expect(h.planArgs).toEqual([["baby-1", "2026-10-18", "2026-10-24"]]);
+    expect(dayButtons(tree).map((day) => day.props["aria-pressed"])).toEqual([false, false, false, true, false, false, false]);
     expect(dayButtons(tree).some((day) => day.props["aria-current"])).toBe(false);
     click(byText(tree, "Today"));
     click(byLabel(tree, "Previous week"));
@@ -287,10 +288,26 @@ describe("PlanPage (CD-Plan-Day)", () => {
     ]);
   });
 
-  it("a week across months is labelled with both", () => {
-    h.search = new URLSearchParams({ date: "2026-10-28" });
+  it("a week across months, or years, is labelled with both", () => {
     h.plan = { data: undefined, isLoading: true, isError: false };
-    expect(text(findAll(render(), (el) => el.props["aria-live"] === "polite")[0])).toBe("Oct 26 – Nov 1");
+    h.search = new URLSearchParams({ date: "2026-09-30" });
+    expect(text(findAll(render(), (el) => el.props["aria-live"] === "polite")[0])).toBe("Sep 27 – Oct 3");
+    h.search = new URLSearchParams({ date: "2026-12-31" });
+    expect(text(findAll(render(), (el) => el.props["aria-live"] === "polite")[0])).toBe("Dec 27 – Jan 2");
+  });
+
+  it("a Sunday opens its week and a Saturday closes it (969)", () => {
+    h.plan = { data: undefined, isLoading: true, isError: false };
+    for (const [date, from, to, at] of [
+      ["2026-10-18", "2026-10-18", "2026-10-24", 0],
+      ["2026-10-17", "2026-10-11", "2026-10-17", 6],
+    ] as const) {
+      h.search = new URLSearchParams({ date });
+      h.planArgs.length = 0;
+      const pressed = dayButtons(render()).map((day) => day.props["aria-pressed"]);
+      expect(h.planArgs, date).toEqual([["baby-1", from, to]]);
+      expect(pressed.indexOf(true), date).toBe(at);
+    }
   });
 
   it("a ?date= that is no real day falls back to today", () => {
@@ -298,7 +315,7 @@ describe("PlanPage (CD-Plan-Day)", () => {
       h.search = new URLSearchParams({ date: bad });
       h.planArgs.length = 0;
       render();
-      expect(h.planArgs, bad).toEqual([["baby-1", "2026-10-12", "2026-10-18"]]);
+      expect(h.planArgs, bad).toEqual([["baby-1", "2026-10-11", "2026-10-17"]]);
     }
   });
 

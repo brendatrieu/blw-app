@@ -138,7 +138,7 @@ describe("Plan a meal (/plan/:date/:slotId, CD-Plan-Meal)", () => {
     queryClient.setQueryData(babyKeys.list(false), [BABY]);
     queryClient.setQueryData(storageKeys.list("active"), { items: active });
     queryClient.setQueryData(storageKeys.list("history"), { items: [] });
-    if (plan) queryClient.setQueryData(planKeys.range(BABY.id, "2026-10-12", "2026-10-18"), plan);
+    if (plan) queryClient.setQueryData(planKeys.range(BABY.id, "2026-10-11", "2026-10-17"), plan);
     return renderToString(
       createElement(
         QueryClientProvider,

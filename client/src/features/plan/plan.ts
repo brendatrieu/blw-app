@@ -42,10 +42,10 @@ export function addDays(date: string, n: number): string {
   return new Date(Date.parse(`${date}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);
 }
 
-/** The Monday-to-Sunday week holding `date` (the boards' M T W T F S S). */
+/** The Sunday-to-Saturday week holding `date` (ledger 969: S M T W T F S). */
 export function weekOf(date: string): string[] {
-  const monday = addDays(date, -((new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7));
-  return Array.from({ length: 7 }, (_, index) => addDays(monday, index));
+  const start = addDays(date, -new Date(`${date}T00:00:00Z`).getUTCDay());
+  return Array.from({ length: 7 }, (_, index) => addDays(start, index));
 }
 
 const utc = (date: string) => new Date(`${date}T00:00:00Z`);
@@ -61,8 +61,8 @@ export function weekLabel(week: readonly string[]): string {
   return `${month(first)} ${dayOfMonth(first)} – ${end}`;
 }
 
-/** The strip's weekday initials, Monday first. */
-export const WEEKDAY_INITIALS = ["M", "T", "W", "T", "F", "S", "S"] as const;
+/** The strip's weekday initials, Sunday first (ledger 969). */
+export const WEEKDAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"] as const;
 
 /** A day button's accessible name: the whole date ("Wednesday, October 14"). */
 export function dayName(date: string): string {

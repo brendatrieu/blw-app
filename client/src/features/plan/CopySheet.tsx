@@ -107,14 +107,14 @@ function keepOrReplace(value: "keep" | "replace" | null, onChange: (value: "keep
 export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheetProps, "meal" | "onClose"> & { meal: PlannedMeal }) {
   const source: CopySource = { date, slotId: meal.slotId, name: meal.name };
   const earliest = earliestCopyDate(today);
-  const [monday, setMonday] = useState(() => weekOf(date > today ? date : today)[0]!);
+  const [weekStart, setWeekStart] = useState(() => weekOf(date > today ? date : today)[0]!);
   const [selection, setSelection] = useState<CopySelection>({});
   const [choices, setChoices] = useState<CopyChoices>({});
   const offline = useIsOffline();
-  const week = weekOf(monday);
+  const week = weekOf(weekStart);
   // The week holding today-7 (936): ‹ stops here and its earlier days are off.
-  const firstWeek = addDays(monday, -1) < earliest;
-  const dayOf = usePlanWeeks(babyId, [monday, ...Object.keys(selection).map((day) => weekOf(day)[0]!)]);
+  const firstWeek = addDays(weekStart, -1) < earliest;
+  const dayOf = usePlanWeeks(babyId, [weekStart, ...Object.keys(selection).map((day) => weekOf(day)[0]!)]);
   const rows = copyRows(selection, dayOf);
   const targets = copyTargets(selection, dayOf, source, choices);
   const clashes = copyClashes(selection, dayOf, source);
@@ -155,7 +155,7 @@ export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheet
               aria-label="Previous week"
               // Every day before this week is out of reach (936: 7 days back).
               disabled={firstWeek}
-              onClick={() => setMonday(addDays(monday, -7))}
+              onClick={() => setWeekStart(addDays(weekStart, -7))}
               className={`${ICON_BUTTON_CLASSES} text-[var(--color-icon)] disabled:opacity-35`}
             >
               <ChevronLeftGlyph />
@@ -166,7 +166,7 @@ export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheet
             <button
               type="button"
               aria-label="Next week"
-              onClick={() => setMonday(addDays(monday, 7))}
+              onClick={() => setWeekStart(addDays(weekStart, 7))}
               className={`${ICON_BUTTON_CLASSES} text-[var(--color-icon)]`}
             >
               <ChevronRightGlyph />

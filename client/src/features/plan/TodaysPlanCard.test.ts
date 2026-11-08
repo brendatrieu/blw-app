@@ -111,7 +111,7 @@ describe("TodaysPlanCard (render)", () => {
     h.plan = { data: { today: TODAY } };
     expect(card()).toBe("");
     // It reads the week the meal plan shows, so they share one answer.
-    expect(h.planArgs[0]).toEqual(["baby-1", "2026-10-12", "2026-10-18"]);
+    expect(h.planArgs[0]).toEqual(["baby-1", "2026-10-11", "2026-10-17"]); // Sunday to Saturday (969)
   });
 
   it("nothing planned today: Up next with Nothing planned for today. and Plan today to the Meal Plan on today, like the done page (ledger 948)", () => {

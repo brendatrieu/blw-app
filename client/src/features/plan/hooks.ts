@@ -30,11 +30,11 @@ export function usePlan(babyId: string | undefined, from: string, to: string) {
   return useQuery(planQuery(babyId, from, to));
 }
 
-/** Several Monday-to-Sunday weeks at once (the Copy sheet's selected days
+/** Several weeks at once, each named by its first day (the Copy sheet's selected days
  * may sit in weeks the strip isn't showing), as one lookup by date. The
  * same cache entries the Meal plan reads. */
-export function usePlanWeeks(babyId: string | undefined, mondays: readonly string[]): (date: string) => PlanDay | undefined {
-  const weeks = useQueries({ queries: [...new Set(mondays)].map((monday) => planQuery(babyId, monday, addDays(monday, 6))) });
+export function usePlanWeeks(babyId: string | undefined, weekStarts: readonly string[]): (date: string) => PlanDay | undefined {
+  const weeks = useQueries({ queries: [...new Set(weekStarts)].map((start) => planQuery(babyId, start, addDays(start, 6))) });
   return (date) => {
     for (const week of weeks) {
       const day = week.data?.days.find((entry) => entry.date === date);

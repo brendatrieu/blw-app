@@ -472,7 +472,7 @@ describe("Daily meals is a page (ledger 924)", () => {
     vi.useFakeTimers({ now: new Date("2026-10-14T15:00:00Z"), toFake: ["Date"] });
     try {
       let tree = page();
-      expect(h.planArgs).toEqual([["baby-1", "2026-10-12", "2026-10-18"]]); // today's week, the plan's own cache entry
+      expect(h.planArgs).toEqual([["baby-1", "2026-10-11", "2026-10-17"]]); // today's week, the plan's own cache entry
       const header = findAll(tree, (el) => el.type === PageHeader)[0]!;
       expect(header.props.title).toBe("Daily meals");
       expect((header.props.leading as El).type).toBe(BackButton);
@@ -500,24 +500,24 @@ describe("Daily meals is a page (ledger 924)", () => {
     }
   });
 
-  it("keeps the week it opened on across midnight: Sunday 23:59, then Monday 00:01, asks for the same week (ledger 930)", () => {
+  it("keeps the week it opened on across midnight: Saturday 23:59, then Sunday 00:01, asks for the same week (ledger 930, 969)", () => {
     h.plan = { data: { dailyMeals: DAILY }, isError: false, isFetching: false };
-    vi.useFakeTimers({ now: new Date("2026-10-18T23:59:00Z"), toFake: ["Date"] }); // a Sunday, UTC (deviceTimeZone is mocked)
+    vi.useFakeTimers({ now: new Date("2026-10-17T23:59:00Z"), toFake: ["Date"] }); // a Saturday, UTC (deviceTimeZone is mocked)
     try {
       page();
-      vi.setSystemTime(new Date("2026-10-19T00:01:00Z")); // Monday
+      vi.setSystemTime(new Date("2026-10-18T00:01:00Z")); // Sunday, a new week
       page();
       // A third render: a latch that set the week during render (verifier c1, M930-2) shows here.
       page();
       expect(h.planArgs).toEqual([
-        ["baby-1", "2026-10-12", "2026-10-18"],
-        ["baby-1", "2026-10-12", "2026-10-18"],
-        ["baby-1", "2026-10-12", "2026-10-18"],
+        ["baby-1", "2026-10-11", "2026-10-17"],
+        ["baby-1", "2026-10-11", "2026-10-17"],
+        ["baby-1", "2026-10-11", "2026-10-17"],
       ]);
-      // A page opened on Monday asks for Monday's week (the clock is read).
+      // A page opened on Sunday asks for Sunday's week (the clock is read).
       h.store.states.length = 0;
       page();
-      expect(h.planArgs[3]).toEqual(["baby-1", "2026-10-19", "2026-10-25"]);
+      expect(h.planArgs[3]).toEqual(["baby-1", "2026-10-18", "2026-10-24"]);
     } finally {
       vi.useRealTimers();
     }

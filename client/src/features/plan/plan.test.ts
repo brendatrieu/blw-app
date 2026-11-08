@@ -35,6 +35,7 @@ import {
   toDailyMealsInput,
   weekLabel,
   weekOf,
+  WEEKDAY_INITIALS,
   localClock,
   todaysPlanIndex,
   todaysPlanPages,
@@ -47,7 +48,7 @@ const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")
 /** Node's ICU puts a narrow no-break space before AM/PM. */
 const plain = (text: string) => text.replace(/\u202f/g, " ");
 
-describe("plan weeks (CD-Plan-Day: Monday first, ‹ › a week at a time)", () => {
+describe("plan weeks (ledger 969: Sunday first, ‹ › a week at a time)", () => {
   it("adds days across months, years and a DST change without drifting", () => {
     expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
     expect(addDays("2026-03-08", 1)).toBe("2026-03-09"); // US spring forward
@@ -56,17 +57,33 @@ describe("plan weeks (CD-Plan-Day: Monday first, ‹ › a week at a time)", () 
     expect(addDays("2026-10-21", -7)).toBe("2026-10-14");
   });
 
-  it("finds the Monday-to-Sunday week of any day", () => {
-    const week = ["2026-10-12", "2026-10-13", "2026-10-14", "2026-10-15", "2026-10-16", "2026-10-17", "2026-10-18"];
+  it("finds the Sunday-to-Saturday week of any day, a Sunday and a Saturday included", () => {
+    const week = ["2026-11-08", "2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13", "2026-11-14"];
     for (const day of week) expect(weekOf(day), day).toEqual(week);
-    expect(weekOf("2026-10-26")[0]).toBe("2026-10-26");
-    expect(weekOf("2027-01-01")).toEqual(["2026-12-28", "2026-12-29", "2026-12-30", "2026-12-31", "2027-01-01", "2027-01-02", "2027-01-03"]);
+    expect(weekOf("2026-11-08")[0]).toBe("2026-11-08"); // a Sunday opens its own week
+    expect(weekOf("2026-11-07")[6]).toBe("2026-11-07"); // a Saturday closes its own
+    expect(weekOf("2026-11-07")[0]).toBe("2026-11-01"); // across the US fall back
+    expect(weekOf("2026-10-01")).toEqual(["2026-09-27", "2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03"]);
+    expect(weekOf("2027-01-01")).toEqual(["2026-12-27", "2026-12-28", "2026-12-29", "2026-12-30", "2026-12-31", "2027-01-01", "2027-01-02"]);
+  });
+
+  it("heads the strip S M T W T F S, one letter a day, Sunday first", () => {
+    expect(WEEKDAY_INITIALS).toEqual(["S", "M", "T", "W", "T", "F", "S"]);
+    expect(weekOf("2026-11-11").map((day) => dayName(day).split(",")[0])).toEqual([
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ]);
   });
 
   it("labels a week as the boards do, naming the second month only when it changes", () => {
-    expect(weekLabel(weekOf("2026-10-14"))).toBe("Oct 12 – 18");
-    expect(weekLabel(weekOf("2026-10-28"))).toBe("Oct 26 – Nov 1");
-    expect(weekLabel(weekOf("2027-01-01"))).toBe("Dec 28 – Jan 3");
+    expect(weekLabel(weekOf("2026-11-11"))).toBe("Nov 8 – 14");
+    expect(weekLabel(weekOf("2026-09-30"))).toBe("Sep 27 – Oct 3");
+    expect(weekLabel(weekOf("2027-01-01"))).toBe("Dec 27 – Jan 2");
   });
 
   it("names a day button by its whole date, whatever the device's zone", () => {
