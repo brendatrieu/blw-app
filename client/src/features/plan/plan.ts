@@ -410,33 +410,37 @@ export function copyWarningNotes(warnings: readonly CopyWarning[], source: Pick<
 // Up next (the plan card) on Home (CD-Home-Today, CD-After-Serve, CD-Home-Today-Done)
 // ---------------------------------------------------------------------------
 
-/** One page of the card: a meal, or the "everything is served" page. */
-export type TodayPage = PlannedMeal | "done";
+/** One page of the card: a meal, the "everything is served" page, or the
+ * "nothing planned for today" page (ledger 948). */
+export type TodayPage = PlannedMeal | "done" | "empty";
 
 /** The card's pages, in the parent's order: today's meals with something
  * planned; on a saved day (`planned`), every meal, an empty one offering
  * Plan this meal (ledger 927). Then, once every meal with food is served,
- * the done page. None: no card at all, so Home looks as it always has
- * (CD-Home-No-Plan), as on a day that only follows Daily meals. */
+ * the done page. A loaded day with none of those (it only follows Daily
+ * meals, or is saved with no meals at all) is the one empty page, Plan
+ * today (ledger 948). No day (the plan not loaded, failed, or an older
+ * server without days): no pages, so no card. */
 export function todaysPlanPages(day: PlanDay | undefined): TodayPage[] {
-  const all = day?.meals ?? [];
-  const food = all.filter((meal) => meal.items.length > 0);
-  const meals = day?.planned ? all : food;
+  if (!day) return [];
+  const food = day.meals.filter((meal) => meal.items.length > 0);
+  const meals = day.planned ? day.meals : food;
+  if (meals.length === 0) return ["empty"];
   return food.length > 0 && food.every((meal) => meal.served) ? [...meals, "done"] : meals;
 }
 
-const pageKey = (page: TodayPage): string => (page === "done" ? "done" : page.slotId);
+const pageKey = (page: TodayPage): string => (typeof page === "string" ? page : page.slotId);
 
 /**
  * Which page shows: the one the parent paged to (or just served) while it is
  * still there; else the next meal with food (`nextPlannedMeal`, chair §4.3),
  * or, when no meal has food, the next of them all (ledger 927); else, all
- * served, the done page. `nowLocal` is the wall clock, `HH:MM`.
+ * served, the done page (or the empty page, then the only one). `nowLocal` is the wall clock, `HH:MM`.
  */
 export function todaysPlanIndex(pages: readonly TodayPage[], picked: string | null, nowLocal: string): number {
   const at = picked === null ? -1 : pages.findIndex((page) => pageKey(page) === picked);
   if (at >= 0) return at;
-  const meals = pages.filter((page): page is PlannedMeal => page !== "done");
+  const meals = pages.filter((page): page is PlannedMeal => typeof page !== "string");
   const food = meals.filter((meal) => meal.items.length > 0);
   const next = nextPlannedMeal(food.length > 0 ? food : meals, nowLocal);
   return next ? pages.indexOf(next) : pages.length - 1;

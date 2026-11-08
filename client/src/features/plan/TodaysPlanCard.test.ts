@@ -1,6 +1,6 @@
 // Home's Up next (the plan card) (ledger 904, SPEC §5): CD-Home-Today, CD-After-Serve,
-// CD-Home-Today-Done, and no card at all for a day with nothing planned
-// (CD-Home-No-Plan). Markup through renderToString; ‹ › and Serve by calling
+// CD-Home-Today-Done, the one "Nothing planned for today." page (ledger 948;
+// it replaced CD-Home-No-Plan's no card), and no card before the plan loads. Markup through renderToString; ‹ › and Serve by calling
 // the card as a plain function with its hooks mocked (node env, no DOM).
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlanResponse, PlannedMeal, StorageItem } from "@blw/shared";
 
 const h = vi.hoisted(() => ({
-  plan: { data: undefined as unknown },
+  plan: { data: undefined as unknown } as { data: unknown; isError?: boolean },
   planArgs: [] as unknown[][],
   oneTap: { pendingSlot: null as string | null, failedSlot: null as string | null },
   serves: [] as unknown[][],
@@ -101,14 +101,33 @@ afterEach(() => {
 });
 
 describe("TodaysPlanCard (render)", () => {
-  it("is not there at all without something planned today, or before the plan has answered (CD-Home-No-Plan)", () => {
-    // A day that only follows Daily meals with no food: no card (ledger 927 keeps it so).
-    for (const data of [undefined, plan([SNACK], TODAY, false), plan([{ ...SNACK, slotId: id(4), name: "Dinner" }, SNACK], TODAY, false), plan([BREAKFAST], "2026-10-15")]) {
-      h.plan = { data };
+  it("is not there at all before the plan has answered, after it failed, or without today's day (an older server)", () => {
+    // Loading, failed (an older server has no plan route): no data. A week without today: no day.
+    for (const state of [{ data: undefined }, { data: undefined, isError: true }, { data: plan([BREAKFAST], "2026-10-15") }]) {
+      h.plan = state;
       expect(card()).toBe("");
     }
     // It reads the week the meal plan shows, so they share one answer.
     expect(h.planArgs[0]).toEqual(["baby-1", "2026-10-12", "2026-10-18"]);
+  });
+
+  it("nothing planned today: Up next with Nothing planned for today. and Plan today to the Meal Plan on today, like the done page (ledger 948)", () => {
+    // A day that only follows Daily meals with no food, and a saved day with no meals.
+    for (const data of [plan([SNACK], TODAY, false), plan([{ ...SNACK, slotId: id(4), name: "Dinner" }, SNACK], TODAY, false), plan([])]) {
+      h.plan = { data };
+      const out = card();
+      expect(out).toMatch(/^<section [^>]*aria-labelledby="up-next"/);
+      expect(out).toContain(">Up next</h2>");
+      expect(out).toContain('<p class="mt-2 text-[17px] leading-[1.3] font-bold text-[var(--color-text)]">Nothing planned for today.</p>');
+      expect(out).toMatch(new RegExp(`<a class="[^"]*bg-\\[var\\(--color-bg-inset\\)\\][^"]*mt-3 w-full" href="/plan\\?date=${TODAY}"[^>]*>Plan today</a>`));
+      // One page: both chevrons at an end.
+      expect(out).toMatch(/aria-label="Previous meal" aria-disabled="true"/);
+      expect(out).toMatch(/aria-label="Next meal" aria-disabled="true"/);
+      expect(out).not.toContain("Snack");
+      expect(out).not.toContain("Nothing planned yet");
+      expect(out).not.toContain("Serve");
+      expect(out).not.toContain("Plan tomorrow");
+    }
   });
 
   it("opens on the next meal: its name and time, one row per item (36px plates), and a full-width one-tap Serve (CD-Home-Today)", () => {
@@ -198,7 +217,7 @@ describe("TodaysPlan (handlers)", () => {
       return (TodaysPlan as unknown as (props: unknown) => El)({ babyId: "baby-1", today: TODAY, pages: pages(meals) });
     };
     const day = [SNACK, BREAKFAST, { ...LUNCH, items: [] }];
-    expect(pages(day).map((page) => (page === "done" ? page : page.name))).toEqual(["Snack", "Breakfast", "Lunch"]);
+    expect(pages(day).map((page) => (typeof page === "string" ? page : page.name))).toEqual(["Snack", "Breakfast", "Lunch"]);
     for (const meal of day) {
       const tree = pageOf(day, meal.slotId);
       const serve = all(tree, (el) => el.props["aria-label"] === `Serve ${meal.name}`);

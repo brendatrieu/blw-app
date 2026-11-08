@@ -36,8 +36,8 @@ function shown(html: string): string {
   return out;
 }
 
-// SPEC §5 (ledger 904): the plan card (Up next since ledger 945, was Today's plan) sits first on Home only when something
-// is planned today; otherwise Home is exactly what it was (CD-Home-No-Plan).
+// SPEC §5 (ledger 904): the plan card (Up next since ledger 945, was Today's plan) sits first on Home once today's
+// plan has loaded; with nothing planned it offers Plan today (ledger 948). Until then Home is what it was.
 describe("DashboardPage with a meal plan", () => {
   const baby: Baby = {
     id: "baby-1",
@@ -81,10 +81,17 @@ describe("DashboardPage with a meal plan", () => {
     expect(html.indexOf('id="up-next"')).toBeLessThan(html.indexOf(">Log meal<"));
   });
 
-  it("is exactly the Home it was when nothing is planned today (a day that only follows Daily meals), or the plan isn't in yet", () => {
+  it("is exactly the Home it was while the plan isn't in yet; nothing planned today (a day that only follows Daily meals) is Up next with Plan today, first (ledger 948)", () => {
     const before = home(undefined);
     expect(before).not.toContain('id="up-next"');
-    expect(home(day([], false))).toBe(before);
+    const html = home(day([], false));
+    expect(html).toContain(">Up next</h2>");
+    expect(html).toContain(">Nothing planned for today.</p>");
+    expect(html).toMatch(new RegExp(`href="/plan\\?date=${today}"[^>]*>Plan today</a>`));
+    expect(html.indexOf('id="up-next"')).toBeLessThan(html.indexOf(">Log meal<"));
+    // Everything else on Home is as it was.
+    const card = html.slice(html.indexOf('<section class="rounded-[var(--radius-lg)]'), html.indexOf("</section>") + "</section>".length);
+    expect(html.replace(card, "")).toBe(before);
   });
 
   it("a saved day with nothing on it yet shows the Up next plan card with Plan this meal (ledger 927)", () => {

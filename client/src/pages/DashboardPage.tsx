@@ -345,7 +345,7 @@ export function DashboardPage() {
       {/* The visible greeting lives in the shared AppLayout header; this keeps
           the document outline rooted for screen readers. */}
       <h1 className="sr-only">Home</h1>
-      {/* Only when something is planned today (SPEC §5): renders nothing otherwise. */}
+      {/* Today's plan once it has loaded; with nothing planned, Plan today (ledger 948). */}
       <TodaysPlanCard key={`plan-${activeBaby.id}`} babyId={activeBaby.id} />
       {/* Keyed per baby so a switch starts on page one; prefixed, like
           ServeLogList below, so the two sibling keys never match (item 712). */}

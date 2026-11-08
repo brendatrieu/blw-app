@@ -33,9 +33,11 @@ function CheckGlyph({ size }: { size: number }) {
 
 /**
  * "Up next" on Home (SPEC §5, CD-Home-Today; titled "Today's plan" until
- * ledger 945, when Home's old Up next became Reminders): only when something is
- * planned today, or today is a saved plan day, so Home for a non-planner is
- * unchanged (CD-Home-No-Plan). It opens on the next meal (`nextPlannedMeal`);
+ * ledger 945, when Home's old Up next became Reminders), once today's plan
+ * has loaded. With nothing planned today (a day that only follows Daily
+ * meals, or a saved day with no meals) it is one page: "Nothing planned for
+ * today." and Plan today, the Meal Plan on today (ledger 948, for every
+ * family for now; an opt-in is parked, 949). It opens on the next meal (`nextPlannedMeal`);
  * ‹ › page through today's meals. On a saved day an empty meal says "Nothing
  * planned yet" with Plan this meal, its Plan a meal screen (ledger 927). Serve is the one tap; once served, the card stays on that
  * meal with "Served {time}", each served item with its stars (a tap rates
@@ -50,7 +52,8 @@ export function TodaysPlanCard({ babyId }: { babyId: string }) {
   const week = weekOf(today);
   const plan = usePlan(babyId, week[0]!, week[6]!);
   const pages = todaysPlanPages(plan.data?.days.find((day) => day.date === today));
-  // Nothing planned today (or not loaded, or an older server): no card.
+  // Not loaded, failed, or an older server without days: no card (no flash
+  // of the empty page).
   return pages.length === 0 ? null : <TodaysPlan babyId={babyId} today={today} pages={pages} />;
 }
 
@@ -62,7 +65,7 @@ export function TodaysPlan({ babyId, today, pages }: { babyId: string; today: st
   const [picked, setPicked] = useState<string | null>(null);
   const index = todaysPlanIndex(pages, picked, localClock());
   const page = pages[index]!;
-  const planned = page !== "done" && page.items.length > 0 && (
+  const planned = typeof page !== "string" && page.items.length > 0 && (
     <ul aria-label="On the plate" className="mt-1 flex flex-col">
       {plannedLines(page).map((line, at) => (
         <li key={line.key} className={`flex items-center gap-2.5 py-[7px] ${at > 0 ? "border-t border-[var(--color-divider)]" : ""}`}>
@@ -107,7 +110,15 @@ export function TodaysPlan({ babyId, today, pages }: { babyId: string; today: st
         </div>
       </div>
 
-      {page === "done" ? (
+      {page === "empty" ? (
+        // Ledger 948: nothing planned today; styled like the done page.
+        <>
+          <p className="mt-2 text-[17px] leading-[1.3] font-bold text-[var(--color-text)]">Nothing planned for today.</p>
+          <ButtonLink to={`/plan?date=${today}`} variant="quiet" size="lg" className="mt-3 w-full">
+            Plan today
+          </ButtonLink>
+        </>
+      ) : page === "done" ? (
         <>
           <div role="status" className="mt-2 flex items-center gap-2.5">
             <span
