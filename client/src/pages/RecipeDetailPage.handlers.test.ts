@@ -89,7 +89,7 @@ describe("CustomRecipeActions delete question (item 599)", () => {
     const dialog = dialogOf(render());
     expect(dialog.props.open).toBe(true);
     expect(dialog.props.title).toBe("Delete Lentil mash?");
-    expect(dialog.props.children).toMatchObject([null, { props: { children: "This can't be undone." } }]);
+    expect(dialog.props.children).toMatchObject([null, { props: { children: "This cannot be undone." } }]);
     expect(dialog.props.confirmLabel).toBe("Delete");
     expect(h.mutation.calls).toEqual([]);
   });
@@ -137,11 +137,11 @@ describe("CustomRecipeActions delete question names the plans it leaves (ledger 
     expect(h.planCountCalls).toEqual([["recipe-9", true]]);
   });
 
-  it("adds the plan line before 'can't be undone', singular and plural", () => {
+  it("adds the plan line before 'cannot be undone', singular and plural", () => {
     h.planCount.data = { plannedMealCount: 1 };
     expect(paragraphs(render())).toEqual([
       "It's planned for 1 meal. Deleting it takes it off those plans.",
-      "This can't be undone.",
+      "This cannot be undone.",
     ]);
     h.planCount.data = { plannedMealCount: 3 };
     expect(paragraphs(render())[0]).toBe("It's planned for 3 meals. Deleting it takes it off those plans.");
@@ -149,9 +149,9 @@ describe("CustomRecipeActions delete question names the plans it leaves (ledger 
 
   it("says nothing about plans when none hold it, or the read failed or is offline", () => {
     h.planCount.data = { plannedMealCount: 0 };
-    expect(paragraphs(render())).toEqual(["This can't be undone."]);
+    expect(paragraphs(render())).toEqual(["This cannot be undone."]);
     h.planCount.data = undefined;
-    expect(paragraphs(render())).toEqual(["This can't be undone."]);
+    expect(paragraphs(render())).toEqual(["This cannot be undone."]);
     // The question still deletes without the line.
     (dialogOf(render()).props.onConfirm as () => void)();
     expect(h.mutation.calls.map((call) => call.id)).toEqual(["recipe-9"]);

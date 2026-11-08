@@ -97,7 +97,7 @@ export function MealDeleteDialog({ meal, babyId, open, onClose, onDeleted }: Mea
       }
       error={deleteMeal.isError ? "Couldn't delete that — try again." : undefined}
     >
-      <p>This can't be undone.</p>
+      <p>This cannot be undone.</p>
     </ConfirmDialog>
   );
 }

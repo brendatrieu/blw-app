@@ -17,6 +17,9 @@ import { SkeletonList, Skeleton } from "../components/ui/Skeleton.js";
 
 const MAX_MESSAGE_LENGTH = 2000;
 
+/** The thread list's delete question (window.confirm). Exported for its pin. */
+export const DELETE_CHAT_CONFIRM = "Delete this chat? This cannot be undone.";
+
 const KIND_LABEL: Record<ChatKind, string> = { recipe: "Recipe helper", blw: "BLW questions" };
 const KIND_DESCRIPTION: Record<ChatKind, string> = {
   recipe: "Find and adapt recipes using your storage and your baby's profile.",
@@ -71,7 +74,7 @@ function ThreadList() {
   }
 
   function handleDelete(id: string) {
-    if (!window.confirm("Delete this chat? This can't be undone.")) return;
+    if (!window.confirm(DELETE_CHAT_CONFIRM)) return;
     deleteThread.mutate(id);
   }
 

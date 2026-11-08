@@ -137,7 +137,7 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
         }
       >
         {planLine ? <p>{planLine}</p> : null}
-        <p>This can't be undone.</p>
+        <p>This cannot be undone.</p>
       </ConfirmDialog>
     </div>
   );

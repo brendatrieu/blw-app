@@ -17,7 +17,7 @@ function question(overrides: Partial<Props> = {}) {
     open: true,
     onClose: () => events.push("closed"),
     title: "Delete this meal?",
-    children: "This can't be undone.",
+    children: "This cannot be undone.",
     confirmLabel: "Delete",
     pendingLabel: "Deleting…",
     pending: false,
@@ -47,7 +47,7 @@ describe("ConfirmDialog (items 599, 610)", () => {
     expect(html).toContain('aria-label="Delete this meal?"');
     expect(html).toMatch(/<h2[^>]*>Delete this meal\?<\/h2>/);
     // ~30% of the sheet's 22.7px gap (item 610): 6px.
-    expect(html).toMatch(/class="mt-1\.5 [^"]*text-\[var\(--color-text-muted\)\]">This can(?:&#x27;|')t be undone\.</);
+    expect(html).toMatch(/class="mt-1\.5 [^"]*text-\[var\(--color-text-muted\)\]">This cannot be undone\.</);
     const cancel = html.match(/<button [^>]*>Cancel<\/button>/)![0];
     const commit = html.match(/<button [^>]*>Delete<\/button>/)![0];
     expect(html.indexOf(cancel)).toBeLessThan(html.indexOf(commit));

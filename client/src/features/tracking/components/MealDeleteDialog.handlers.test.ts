@@ -99,14 +99,14 @@ describe("MealDeleteDialog", () => {
     const dialog = question(MEAL);
     expect(dialog.type).toBe(ConfirmDialog);
     expect(dialog.props.title).toBe("Delete this meal?");
-    expect(text(dialog.props.children)).toBe("This can't be undone.");
+    expect(text(dialog.props.children)).toBe("This cannot be undone.");
     expect(dialog.props.confirmLabel).toBe("Delete");
     expect(h.mutation.calls).toEqual([]);
   });
 
   it("keeps the same one line for a meal from storage — no storage explanation", () => {
     const fromStorage = { ...MEAL, foods: [{ ...MEAL.foods[0]!, storageItemId: "s-1" }] };
-    expect(text(question(fromStorage).props.children)).toBe("This can't be undone.");
+    expect(text(question(fromStorage).props.children)).toBe("This cannot be undone.");
   });
 
   it("backs out (Cancel, overlay, Escape) through onClose, deleting nothing (item 610)", () => {
