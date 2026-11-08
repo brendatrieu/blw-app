@@ -15,7 +15,6 @@ import {
   RECIPES_TAB_PATH,
   allergenLabel,
   plannedMealsDeleteLine,
-  recipeUsesDeleteLine,
 } from "../features/catalog/constants.js";
 import { foodPlate, getExtraIngredientEmoji } from "../features/catalog/foodEmoji.js";
 import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
@@ -89,12 +88,12 @@ interface CustomRecipeActionsProps {
  * (item 599): a `ConfirmDialog` says what goes, and nothing is deleted until
  * its red button is tapped.
  *
- * Nothing blocks the delete (ledger 957), so the question names everything
- * up front, read fresh while it is open: the logged meals and storage items
- * that keep the recipe, marked "(deleted)", then the planned meals that lose
- * it (ledger 937), then "This cannot be undone." Favorites go with it
- * without a word. Offline or failed, only the last line shows, and Delete
- * still works.
+ * Nothing blocks the delete (ledger 957). The question is short (ledger
+ * 967): the planned meals that lose the recipe (ledger 937, read fresh
+ * while it is open, only when there are some), then "This cannot be
+ * undone." The logged meals and storage items that keep it, marked
+ * "(deleted)", go unsaid, and favorites go with it without a word. Offline
+ * or failed, only the last line shows, and Delete still works.
  *
  * Exported so a handler test can drive it as a plain function.
  */
@@ -103,7 +102,6 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
   const navigate = useNavigate();
   const deleteRecipe = useDeleteCustomRecipe();
   const counts = useRecipePlanCount(recipe.id, asking).data;
-  const usesLine = recipeUsesDeleteLine(counts);
   const planLine = plannedMealsDeleteLine(counts?.plannedMealCount);
 
   return (
@@ -128,7 +126,6 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
         }
         error={deleteRecipe.isError ? "Couldn't delete that — try again." : undefined}
       >
-        {usesLine ? <p>{usesLine}</p> : null}
         {planLine ? <p>{planLine}</p> : null}
         <p>This cannot be undone.</p>
       </ConfirmDialog>

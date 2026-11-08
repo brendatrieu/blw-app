@@ -90,7 +90,7 @@ describe("CustomRecipeActions delete question (item 599)", () => {
     const dialog = dialogOf(render());
     expect(dialog.props.open).toBe(true);
     expect(dialog.props.title).toBe("Delete Lentil mash?");
-    expect(dialog.props.children).toMatchObject([null, null, { props: { children: "This cannot be undone." } }]);
+    expect(dialog.props.children).toMatchObject([null, { props: { children: "This cannot be undone." } }]);
     expect(dialog.props.confirmLabel).toBe("Delete");
     expect(h.mutation.calls).toEqual([]);
   });
@@ -160,29 +160,19 @@ describe("CustomRecipeActions delete question names the plans it leaves (ledger 
   });
 });
 
-describe("CustomRecipeActions delete question names the meals and storage that keep it (ledger 957)", () => {
+describe("CustomRecipeActions delete question: just the plans and 'cannot be undone' (ledger 967)", () => {
   const paragraphs = (tree: El) =>
     (dialogOf(tree).props.children as unknown[]).filter(Boolean).map((p) => (p as El).props.children);
 
-  it("names every use up front, in order: kept uses, then plans, then 'cannot be undone'", () => {
+  it("never names the logged meals or storage items that keep it, nor how they show it", () => {
     h.planCount.data = { plannedMealCount: 2, mealCount: 1, storageCount: 1 };
-    expect(paragraphs(render())).toEqual([
-      "Used in 1 meal and 1 storage item. Those keep showing it, marked (deleted).",
-      "It's planned for 2 meals. Deleting it takes it off those plans.",
-      "This cannot be undone.",
-    ]);
+    expect(paragraphs(render())).toEqual(["It's planned for 2 meals. Deleting it takes it off those plans.", "This cannot be undone."]);
+    h.planCount.data = { plannedMealCount: 0, mealCount: 3, storageCount: 2 };
+    expect(paragraphs(render())).toEqual(["This cannot be undone."]);
+    expect(JSON.stringify(paragraphs(render()))).not.toMatch(/Used in|deleted/);
   });
 
-  it("leaves out a zero count, and the whole line when nothing logged or stored holds it", () => {
-    h.planCount.data = { plannedMealCount: 0, mealCount: 3, storageCount: 0 };
-    expect(paragraphs(render())).toEqual(["Used in 3 meals. Those keep showing it, marked (deleted).", "This cannot be undone."]);
-    h.planCount.data = { plannedMealCount: 0, mealCount: 0, storageCount: 2 };
-    expect(paragraphs(render())[0]).toBe("Used in 2 storage items. Those keep showing it, marked (deleted).");
-    h.planCount.data = { plannedMealCount: 1, mealCount: 0, storageCount: 0 };
-    expect(paragraphs(render())).toEqual(["It's planned for 1 meal. Deleting it takes it off those plans.", "This cannot be undone."]);
-  });
-
-  it("still deletes, on the plain Delete, with the uses named (it never blocks)", () => {
+  it("still deletes, on the plain Delete, whatever keeps it (it never blocks)", () => {
     h.planCount.data = { plannedMealCount: 0, mealCount: 1, storageCount: 0 };
     const dialog = dialogOf(render());
     expect(dialog.props.confirmLabel).toBe("Delete");

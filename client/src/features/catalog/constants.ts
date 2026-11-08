@@ -147,17 +147,6 @@ export function usedInPhrase(counts: UsageCounts): string | null {
 }
 
 /**
- * The recipe delete question's first line (ledger 957): "Used in 2 meals and
- * 1 storage item. Those keep showing it, marked (deleted)." Null when no
- * meal or storage item holds it (or the count is unknown), so the question
- * says nothing. Favorites never appear: they go with the recipe.
- */
-export function recipeUsesDeleteLine(counts: { mealCount: number; storageCount: number } | undefined): string | null {
-  const usedIn = counts ? usedInPhrase(counts) : null;
-  return usedIn ? `${usedIn}. Those keep showing it, marked ${DELETED_FOOD_MARK}.` : null;
-}
-
-/**
  * The recipe delete question's plan line (ledger 937): "It's planned for 3
  * meals. Deleting it takes it off those plans." Null when no planned meal
  * holds it (or the count is unknown), so the question says nothing.
