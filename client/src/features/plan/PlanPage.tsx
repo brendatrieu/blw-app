@@ -59,6 +59,25 @@ export function revealBelowStrip(strip: Element | null): void {
   if (hidden > 0) window.scrollBy(0, -hidden);
 }
 
+/**
+ * A-N3 (WCAG 2.4.11): while the strip is on the page, the page's scroll
+ * padding covers the header and the strip, so a control that Tab or
+ * Shift+Tab focuses is scrolled out from under them. The strip is measured
+ * (and re-measured if its size changes, e.g. larger text); the header keeps
+ * its own --header-height, safe area included. Returns the undo, run when
+ * the page goes, so no other page keeps the padding.
+ */
+export function padScrollForStrip(strip: HTMLElement | null): () => void {
+  if (!strip || typeof ResizeObserver === "undefined") return () => {};
+  const root = document.documentElement.style;
+  const observer = new ResizeObserver(() => root.setProperty("scroll-padding-top", `calc(var(--header-height) + ${strip.offsetHeight}px)`));
+  observer.observe(strip);
+  return () => {
+    observer.disconnect();
+    root.removeProperty("scroll-padding-top");
+  };
+}
+
 /** The plate-style dashed button ("+ Add a meal", CD-Plan-After-Copy). */
 const ADD_MEAL =
   "flex min-h-12 items-center justify-center rounded-[var(--radius-md)] border-[1.5px] border-dashed border-[var(--color-border)] text-[15px] font-semibold text-[var(--color-accent)]";
@@ -96,6 +115,9 @@ export function PlanPage() {
   useEffect(() => {
     if (copied !== null && typeof document !== "undefined") revealBelowStrip(document.getElementById(DAY_STRIP_ID));
   }, [copied]);
+  // A-N3: the strip is there whenever a baby is.
+  const hasStrip = Boolean(activeBaby);
+  useEffect(() => (hasStrip && typeof document !== "undefined" ? padScrollForStrip(document.getElementById(DAY_STRIP_ID)) : undefined), [hasStrip]);
 
   return (
     <div className="flex flex-col gap-1.5 p-4">

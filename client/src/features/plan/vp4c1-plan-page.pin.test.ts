@@ -15,7 +15,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  // The page's one effect (ledger 951's "Copied" reveal) is not this pin's concern.
+  // The page's effects (951's "Copied" reveal, A-N3's scroll padding) are not this pin's concern.
   useEffect: () => {},
   useState: (init: unknown) => {
     const i = h.i++;

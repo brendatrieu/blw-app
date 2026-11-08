@@ -23,7 +23,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  // Effects are kept, to run by hand (only the 951 "Copied" reveal uses one).
+  // Effects are kept, to run by hand: [0] the 951 "Copied" reveal, [1] A-N3's scroll padding.
   useEffect: (effect: () => void, deps: unknown[]) => h.effects.push([effect, deps]),
   useState: (init: unknown) => {
     const i = h.i++;
@@ -54,7 +54,7 @@ import { PageHeader } from "../../components/ui/PageHeader.js";
 import { SkeletonList } from "../../components/ui/Skeleton.js";
 import { CopySheet } from "./CopySheet.js";
 import { PlanMealCard } from "./PlanMealCard.js";
-import { DAY_STRIP_ID, PLAN_PILL, PlanPage, revealBelowStrip } from "./PlanPage.js";
+import { DAY_STRIP_ID, PLAN_PILL, PlanPage, padScrollForStrip, revealBelowStrip } from "./PlanPage.js";
 import { Link } from "react-router-dom";
 
 interface El {
@@ -210,7 +210,7 @@ describe("PlanPage (CD-Plan-Day)", () => {
     expect(asked).toEqual([DAY_STRIP_ID, DAY_STRIP_ID]);
     expect(scrolls).toEqual([-140, -28, -28]);
     // Nothing copied: the effect does nothing (so a page opened scrolled, as on Back, stays put).
-    h.effects.forEach(([effect]) => effect());
+    h.effects[0]![0]();
     expect(asked).toHaveLength(2);
     // After a Copy (the sheet closed in the same render), the effect reveals "Copied".
     (findAll(render(), (el) => el.type === CopySheet)[0]!.props.onCopied as (filled: number, date: string) => void)(1, "2026-10-16");
@@ -221,6 +221,55 @@ describe("PlanPage (CD-Plan-Day)", () => {
     effect();
     expect(asked).toEqual([DAY_STRIP_ID]);
     expect(scrolls.at(-1)).toBe(-28);
+  });
+
+  it("while the strip is shown, scroll padding covers header + strip, so focus is never hidden under them; gone when the page goes (A-N3)", () => {
+    const props = new Map<string, string>();
+    const observers: Array<{ observed: unknown[]; disconnected: boolean; fire: () => void }> = [];
+    vi.stubGlobal("document", {
+      documentElement: { style: { setProperty: (k: string, v: string) => props.set(k, v), removeProperty: (k: string) => props.delete(k) } },
+      getElementById: (id: string) => (id === DAY_STRIP_ID ? strip : null),
+    });
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        o = { observed: [] as unknown[], disconnected: false, fire: () => {} };
+        constructor(callback: () => void) {
+          this.o.fire = callback;
+          observers.push(this.o);
+        }
+        observe(el: unknown) {
+          this.o.observed.push(el);
+          this.o.fire();
+        }
+        disconnect() {
+          this.o.disconnected = true;
+        }
+      },
+    );
+    const strip = { offsetHeight: 76 };
+    // The page wires it to its strip, keyed on whether the strip is there.
+    render();
+    const [effect, deps] = h.effects[1]!;
+    expect(deps).toEqual([true]);
+    const undo = (effect as () => () => void)();
+    expect(observers[0]!.observed).toEqual([strip]);
+    expect(props.get("scroll-padding-top")).toBe("calc(var(--header-height) + 76px)");
+    // Larger text, a taller strip: re-measured.
+    strip.offsetHeight = 92;
+    observers[0]!.fire();
+    expect(props.get("scroll-padding-top")).toBe("calc(var(--header-height) + 92px)");
+    // Leaving the page takes it away.
+    undo();
+    expect(observers[0]!.disconnected).toBe(true);
+    expect(props.has("scroll-padding-top")).toBe(false);
+    // No baby, no strip: nothing set.
+    h.baby = { activeBaby: null, isLoading: false };
+    render();
+    expect(h.effects[1]![1]).toEqual([false]);
+    expect(h.effects[1]![0]()).toBeUndefined();
+    expect(padScrollForStrip(null)()).toBeUndefined();
+    expect(props.size).toBe(0);
   });
 
   it("another day: asks for that week, shows Today, and Today goes back with no ?date=", () => {
