@@ -183,6 +183,13 @@
       "when": 1793031270815,
       "tag": "0025_planning",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794115183987,
+      "tag": "0026_recipe_deleted_at",
+      "breakpoints": true
     }
   ]
 }

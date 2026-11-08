@@ -412,9 +412,10 @@ export function useUpdateCustomRecipe() {
 }
 
 /**
- * The planned-meal count the recipe delete question names (ledger 937), read
- * fresh each time the question opens (`enabled`). No retry and nothing kept:
- * offline or failed, the question simply goes without the line.
+ * The counts the recipe delete question names (ledgers 937, 957: meals and
+ * storage items that keep it, planned meals that lose it), read fresh each
+ * time the question opens (`enabled`). No retry and nothing kept: offline or
+ * failed, the question simply goes without those lines.
  */
 export function useRecipePlanCount(recipeId: string, enabled: boolean) {
   return useQuery({
@@ -428,16 +429,18 @@ export function useRecipePlanCount(recipeId: string, enabled: boolean) {
 }
 
 /**
- * Deleting a custom recipe can legitimately fail with a 409 (meals or storage
- * items still point at it — see `asCustomRecipeConflict`), so the cache is
- * only touched on success. The server drops the caller's favorite row along
- * with the recipe, hence the favorites invalidation.
+ * Deleting a custom recipe always works now (ledger 957): it leaves every
+ * list and picker, the meals and storage items that name it show it marked
+ * "(deleted)", and the plans holding it lose it (the server drops its
+ * favorite too). So besides the recipe lists, everything that renders history
+ * or a plan refetches. The cache is only touched on success.
  */
 export function useDeleteCustomRecipe() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (recipeId: string) => deleteCustomRecipe(recipeId),
     onSuccess: (_result, recipeId) => removeCustomRecipeFromCache(queryClient, recipeId),
-    onSettled: () => void invalidateAfterCatalogWrite(queryClient, [catalogKeys.recipes, trackingKeys.favorites]),
+    onSettled: () =>
+      void invalidateAfterCatalogWrite(queryClient, [catalogKeys.recipes, trackingKeys.favorites, ...FOOD_HISTORY_KEYS, ["plan"]]),
   });
 }

@@ -246,6 +246,29 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
     expect(names(renderMealCard(baseMeal))).toEqual(["Avocado", "Chicken"]);
   });
 
+  // Ledger 957: a recipe deleted since the meal was logged stays on it, with
+  // the same muted mark; a container named by a deleted recipe says so too.
+  it("marks a deleted recipe, and a container named by one, with the muted mark", () => {
+    const meal: MealItem = {
+      ...baseMeal,
+      items: [
+        { kind: "recipe", id: uuid(10), recipe: { id: uuid(20), title: "Lentil mash", deleted: true }, leftOut: [], inferred: false, rating: 5 },
+        {
+          kind: "storage",
+          storageItemId: uuid(30),
+          label: null,
+          location: "fridge",
+          servings: 1,
+          parts: [{ kind: "recipe", id: uuid(11), recipe: { id: uuid(21), title: "Pear bake", deleted: true }, rating: null }],
+        },
+      ],
+    };
+    expect(names(renderMealCard(meal))).toEqual(["Lentil mash\u00a0(deleted)", "Pear bake\u00a0(deleted)"]);
+    const [recipe] = linesOf(renderMealCard(meal));
+    expect(recipe).toContain('Lentil mash<span class="font-normal text-[var(--color-text-muted)]">\u00a0<!-- -->(deleted)</span>');
+    expect(names(renderMealCard(PLATE_MEAL))[0]).toBe("Creamy Cashew & Broccoli Pasta");
+  });
+
   it("keeps every line inside the edit link, the date line, badge and kebab above them", () => {
     const html = renderMealCard(PLATE_MEAL);
     const link = /<a [^>]*href="\/log-meal\?edit=meal-1"[^>]*>([\s\S]*?)<\/a>/.exec(html)![1]!;

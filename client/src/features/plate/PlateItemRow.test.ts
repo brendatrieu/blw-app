@@ -245,6 +245,30 @@ describe("a fresh recipe (CD-Leave-Out)", () => {
   });
 });
 
+// Ledger 957: editing a past meal that holds a recipe deleted since shows it
+// marked, and it can still be taken off (× / the plate's own remove).
+describe("a recipe deleted since the meal was logged", () => {
+  const MARK = '<span class="font-normal text-[var(--color-text-muted)]">\u00a0<!-- -->(deleted)</span>';
+
+  it("keeps its row, marked, with its stars and × (labels stay the plain title)", () => {
+    const out = html({ ...RECIPE, id: id(90), recipe: { ...PASTA, deleted: true } });
+    expect(out).toContain(`${PASTA.title.replace(/&/g, "&amp;")}${MARK}</p>`);
+    expect(out).toContain(`aria-label="Remove ${PASTA.title.replace(/&/g, "&amp;")}"`);
+    expect(out).toContain(`aria-label="Rating for ${PASTA.title.replace(/&/g, "&amp;")}"`);
+    expect(html(RECIPE)).not.toContain("(deleted)");
+  });
+
+  it("marks it as a container's part too", () => {
+    const item: StorageItem = {
+      ...MUFFINS,
+      foods: [{ id: id(1), slug: "broccoli", name: "Broccoli", emoji: null }],
+      recipes: [{ id: id(11), title: "Broccoli Cheese Egg Muffins", deleted: true }],
+    };
+    const out = html(containerEntry(item));
+    expect(out).toContain(`Broccoli Cheese Egg Muffins${MARK}</p>`);
+  });
+});
+
 describe("a container", () => {
   it("holding one thing: its stars right under the title, a stepper, no × on a new one (CD-Serve-From-Storage)", () => {
     const out = html(containerEntry(MUFFINS));

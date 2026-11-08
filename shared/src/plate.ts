@@ -131,7 +131,9 @@ export const plateFoodSchema = z.object({
 });
 export type PlateFood = z.infer<typeof plateFoodSchema>;
 
-const plateRecipeRefSchema = z.object({ id: uuid, title: z.string() });
+/** `deleted` (ledger 957): the parent has since deleted this custom recipe;
+ * the meal keeps it and says "(deleted)". Only ever sent as true. */
+const plateRecipeRefSchema = z.object({ id: uuid, title: z.string(), deleted: z.boolean().optional() });
 
 /** One rating target inside a container: a food it holds or a recipe. */
 export const platePartSchema = z.discriminatedUnion("kind", [

@@ -33,11 +33,16 @@ export const LOCATIONS: { value: StorageLocation; label: string }[] = [
  * empty title for a recipe/label-less row.
  */
 export function storageItemTitle(
-  item: ContainerFoods & { label: string | null; recipeTitle: string | null },
+  item: ContainerFoods & {
+    label: string | null;
+    recipeTitle: string | null;
+    /** `recipeTitle`'s recipe is `recipes[0]`; deleted, it is marked (ledger 957). */
+    recipes?: readonly { deleted?: boolean | undefined }[] | undefined;
+  },
 ): string {
   return (
     item.label ??
-    item.recipeTitle ??
+    (item.recipeTitle !== null ? withDeletedMark(item.recipeTitle, item.recipes?.[0]?.deleted) : null) ??
     (item.foods.map((food) => withDeletedMark(food.name, food.deleted)).join(", ") || "Prepared food")
   );
 }

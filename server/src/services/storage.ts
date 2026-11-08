@@ -90,6 +90,8 @@ export interface ContainerRecipe {
   title: string;
   fridgeHoursOverride: number | null;
   freezerDaysOverride: number | null;
+  /** Its owner has since deleted it; the container keeps it, marked (ledger 957). */
+  deleted?: boolean;
 }
 
 /** The columns of a container row (joined to its `recipe_id` recipe) that
@@ -111,7 +113,7 @@ export interface ContainerRow {
 export async function loadContainerRecipes(
   db: Database | Transaction,
   rows: readonly (Pick<ContainerRow, "id" | "recipeId" | "recipeTitle"> &
-    Partial<Pick<ContainerRow, "recipeFridgeHoursOverride" | "recipeFreezerOverride">>)[],
+    Partial<Pick<ContainerRow, "recipeFridgeHoursOverride" | "recipeFreezerOverride">> & { recipeDeleted?: boolean })[],
 ): Promise<Map<string, ContainerRecipe[]>> {
   const several = new Map<string, ContainerRecipe[]>();
   if (rows.length > 0) {
@@ -122,6 +124,7 @@ export async function loadContainerRecipes(
         title: recipes.title,
         fridgeHoursOverride: recipes.fridgeHoursOverride,
         freezerDaysOverride: recipes.freezerDaysOverride,
+        deleted: sql<boolean>`${recipes.deletedAt} is not null`,
       })
       .from(storageItemRecipes)
       .innerJoin(recipes, eq(storageItemRecipes.recipeId, recipes.id))
@@ -149,6 +152,7 @@ export async function loadContainerRecipes(
                 title: row.recipeTitle ?? "",
                 fridgeHoursOverride: row.recipeFridgeHoursOverride ?? null,
                 freezerDaysOverride: row.recipeFreezerOverride ?? null,
+                deleted: row.recipeDeleted ?? false,
               },
             ]
           : []),
@@ -431,6 +435,7 @@ export const STORAGE_SELECTION = {
   label: storageItems.label,
   recipeId: storageItems.recipeId,
   recipeTitle: recipes.title,
+  recipeDeleted: sql<boolean>`${recipes.deletedAt} is not null`,
   recipeFridgeHoursOverride: recipes.fridgeHoursOverride,
   recipeFreezerOverride: recipes.freezerDaysOverride,
   preparedAt: storageItems.preparedAt,
@@ -449,6 +454,7 @@ export type StorageRow = {
   label: string | null;
   recipeId: string | null;
   recipeTitle: string | null;
+  recipeDeleted: boolean;
   recipeFridgeHoursOverride: number | null;
   recipeFreezerOverride: number | null;
   preparedAt: Date;
@@ -505,7 +511,12 @@ export async function hydrateStorageItems(db: Database | Transaction, rows: Stor
       recipeTitle: row.recipeTitle,
       // Ledger 753: every recipe, in order (one container can hold the
       // leftovers of several); `recipeId`/`recipeTitle` stay the first.
-      recipes: (recipesByItemId.get(row.id) ?? []).map((recipe) => ({ id: recipe.id, title: recipe.title })),
+      // A deleted recipe stays named, marked (ledger 957).
+      recipes: (recipesByItemId.get(row.id) ?? []).map((recipe) => ({
+        id: recipe.id,
+        title: recipe.title,
+        ...(recipe.deleted && { deleted: true }),
+      })),
       preparedAt: row.preparedAt.toISOString(),
       location: row.location,
       status: row.status,

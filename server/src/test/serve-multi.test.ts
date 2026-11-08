@@ -823,16 +823,16 @@ describe("multi-part serve and servings back (ledger 753 + 751)", () => {
       expect(items).toEqual([expect.objectContaining({ name: "Porridge + Quick Eggs", expired: true })]);
     });
 
-    it("blocks deleting a recipe a container names past its first, and exports every recipe", async () => {
+    it("keeps a recipe a container names past its first when it is deleted (soft, ledger 957), and exports every recipe", async () => {
       const [mine] = await db
         .insert(schema.recipes)
         .values({ slug: "mine", title: "My Mash", minAgeMonths: 6, prepMinutes: 5, ownerId: await parentId() })
         .returning();
       const [both] = await stored({ recipeIds: [fx.porridge.id, mine!.id] });
 
-      const blocked = await app.inject({ method: "DELETE", url: `/api/recipes/${mine!.id}`, headers: { cookie: parent.cookie } });
-      expect(blocked.statusCode).toBe(409);
-      expect(blocked.json()).toMatchObject({ storageCount: 1 });
+      const deleted = await app.inject({ method: "DELETE", url: `/api/recipes/${mine!.id}`, headers: { cookie: parent.cookie } });
+      expect(deleted.statusCode).toBe(204);
+      expect(await db.select().from(schema.storageItemRecipes).where(eq(schema.storageItemRecipes.storageItemId, both!.id))).toHaveLength(2);
 
       const exported = accountExportSchema.parse(
         (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: parent.cookie } })).json(),

@@ -4,7 +4,7 @@ import { awaitingDetail } from "../lib/detailQuery.js";
 import { useIsOffline } from "../lib/online.js";
 import type { MealItem } from "@blw/shared";
 import { useMeals } from "../features/tracking/hooks.js";
-import { mealRecipes, recipesTitle } from "../features/tracking/mealRecipes.js";
+import { mealRecipes, recipeTitleParts } from "../features/tracking/mealRecipes.js";
 import { MealCard, MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
 import { MealActionsMenu } from "../features/tracking/components/MealActionsMenu.js";
 import { RatedMealLines, rateOfflineId } from "../features/tracking/components/RatedMealLines.js";
@@ -18,13 +18,15 @@ import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
 
 /** Header title for a meal: its recipes when logged from any ("A",
  * "A + B", "A + {n} more", ledger 761), otherwise a comma-joined summary of
- * the foods served (a deleted one marked, muted) — the same "best available
- * name" idiom `storageItemTitle` uses for a storage item. Clamped to two
- * lines with "…"; the whole text stays in the heading for screen readers. */
-function MealTitle({ meal }: { meal: MealItem }) {
+ * the foods served — a deleted food or recipe marked, muted (ledgers 543,
+ * 957) — the same "best available name" idiom `storageItemTitle` uses for a
+ * storage item. Clamped to two lines with "…"; the whole text stays in the
+ * heading for screen readers. */
+export function MealTitle({ meal }: { meal: MealItem }) {
+  const recipes = recipeTitleParts(mealRecipes(meal));
   return (
     <span className="line-clamp-2 min-w-0 break-words">
-      {recipesTitle(mealRecipes(meal)) ?? <FoodNames foods={meal.foods} />}
+      {recipes.length > 0 ? <FoodNames foods={recipes} separator=" + " /> : <FoodNames foods={meal.foods} />}
     </span>
   );
 }

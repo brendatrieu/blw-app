@@ -569,7 +569,7 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(20);
+    expect(bundle.exportVersion).toBe(21);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -720,7 +720,7 @@ describe("account export", () => {
     const bundle = accountExportSchema.parse(
       (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: user.cookie } })).json(),
     );
-    expect(bundle.exportVersion).toBe(20);
+    expect(bundle.exportVersion).toBe(21);
     expect(bundle.customFoods).toHaveLength(1);
     expect(bundle.customFoods[0]).toMatchObject({ id: food.id, name: "Satay sauce" });
     expect(Date.parse(bundle.customFoods[0]!.deletedAt!)).not.toBeNaN();
@@ -762,11 +762,31 @@ describe("account export", () => {
         "slug",
         "steps",
         "title",
+        "deletedAt",
       ].sort(),
     );
+    expect(recipe.deletedAt).toBeNull();
 
     // Seeded catalog recipes are nobody's export.
     expect(bundle.customRecipes.map((r) => r.title)).not.toContain("Sweet Potato Strips");
+  });
+
+  // v21 (ledger 957): a deleted custom recipe that a container (or meal)
+  // still names is the parent's data too, so it is exported with when.
+  it("keeps a deleted custom recipe that storage still names in the export, with when it was deleted", async () => {
+    await db
+      .insert(schema.storageItems)
+      .values({ userId: seeded.userId, recipeId: seeded.customRecipeId, preparedAt: new Date(), location: "freezer" });
+    const deleted = await app.inject({ method: "DELETE", url: `/api/recipes/${seeded.customRecipeId}`, headers: { cookie: user.cookie } });
+    expect(deleted.statusCode).toBe(204);
+
+    const bundle = accountExportSchema.parse(
+      (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: user.cookie } })).json(),
+    );
+    expect(bundle.exportVersion).toBe(21);
+    expect(bundle.customRecipes).toHaveLength(1);
+    expect(bundle.customRecipes[0]).toMatchObject({ id: seeded.customRecipeId, title: "Satay noodles" });
+    expect(Date.parse(bundle.customRecipes[0]!.deletedAt!)).not.toBeNaN();
   });
 
   // v19 (ledger 901): each meal's plate, one entry per thing with its own

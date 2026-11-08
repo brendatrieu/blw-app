@@ -35,12 +35,16 @@ export function storageItemCluster(item: StorageItem): EmojiCluster {
 }
 
 /** `storageItemTitle` as a node: when the title IS the food list, each
- * deleted food carries the muted "(deleted)" mark. The card and the detail
+ * deleted food carries the muted "(deleted)" mark, and so does a deleted
+ * recipe when the title is the recipe (ledger 957). The card and the detail
  * page's header render this; the string stays for the serve sheet's title
  * (its dialog aria-label) and the undo banner. */
 export function StorageItemTitle({ item }: { item: StorageItem }) {
   if (item.label === null && item.recipeTitle === null && item.foods.length > 0) {
     return <FoodNames foods={item.foods} />;
+  }
+  if (item.label === null && item.recipeTitle !== null && item.recipes?.[0]?.deleted) {
+    return <FoodNames foods={[{ name: item.recipeTitle, deleted: true }]} />;
   }
   return storageItemTitle(item);
 }

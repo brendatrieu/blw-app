@@ -318,6 +318,9 @@ export const mealRecipeSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
   rating: starRatingSchema.nullable(),
+  /** Ledger 957: the parent has since deleted this custom recipe; the meal
+   * keeps it and says "(deleted)". Only ever sent as true. */
+  deleted: z.boolean().optional(),
 });
 export type MealRecipe = z.infer<typeof mealRecipeSchema>;
 

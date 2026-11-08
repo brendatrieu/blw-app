@@ -592,7 +592,7 @@ describe("planning: flags, Copy, Serve, export (ledger 903, step 3.2)", () => {
     const served = (await serve(TODAY, lunch.slotId)).json<{ meal: MealItem }>().meal;
 
     const bundle = accountExportSchema.parse((await inject("GET", "/api/account/export")).json());
-    expect(bundle.exportVersion).toBe(20);
+    expect(bundle.exportVersion).toBe(21);
     expect(bundle.babies[0]!.dailyMeals).toEqual([
       { id: expect.any(String), name: "Brekkie", time: "07:30" },
       { id: expect.any(String), name: "Tea", time: null },

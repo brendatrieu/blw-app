@@ -1,12 +1,12 @@
 // Recipe favorites: toggle + list. Favoriting isn't a per-baby resource —
 // it's keyed on (user_id, recipe_id) — so there is no baby-ownership check
 // here, only the usual requireAuth session.
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { favoriteRecipeIdParamSchema, type FavoriteItem, type FavoritesResponse } from "@blw/shared";
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
-import { visibleRecipesCondition } from "../services/recipes.js";
+import { choosableRecipesCondition } from "../services/recipes.js";
 import { deriveIronFocus, loadRecipeNutrition, nutritionFor } from "../services/recipeNutrition.js";
 import { allergens, foodAllergens, favorites, recipeIngredients, recipes } from "../db/schema.js";
 
@@ -27,12 +27,13 @@ export function registerFavoriteRoutes(app: FastifyInstance, db: Database): void
     const params = favoriteRecipeIdParamSchema.safeParse(request.params);
     if (!params.success) return notFound(reply);
 
-    // Scoped to what this caller can see: the catalog plus their own custom
-    // recipes. Another account's recipe is a 404, not a favoritable id.
+    // Scoped to what this caller can choose: the catalog plus their own
+    // custom recipes, not deleted ones (ledger 957). Another account's recipe
+    // is a 404, not a favoritable id.
     const [recipe] = await db
       .select({ id: recipes.id })
       .from(recipes)
-      .where(and(eq(recipes.id, params.data.id), visibleRecipesCondition(currentUserId(request))))
+      .where(and(eq(recipes.id, params.data.id), choosableRecipesCondition(currentUserId(request))))
       .limit(1);
     if (!recipe) return notFound(reply);
 
@@ -77,7 +78,9 @@ export function registerFavoriteRoutes(app: FastifyInstance, db: Database): void
       })
       .from(favorites)
       .innerJoin(recipes, eq(favorites.recipeId, recipes.id))
-      .where(eq(favorites.userId, currentUserId(request)))
+      // A delete removes the recipe's favorites; this also hides one a
+      // favorite racing that delete left behind (ledger 957).
+      .where(and(eq(favorites.userId, currentUserId(request)), isNull(recipes.deletedAt)))
       .orderBy(desc(favorites.createdAt));
 
     // Allergens are derived (not stored) the same way the recipe-detail

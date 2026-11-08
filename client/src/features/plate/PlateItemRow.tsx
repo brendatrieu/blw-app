@@ -41,7 +41,7 @@ const REMOVE_BUTTON = `${ICON_BUTTON_CLASSES} text-[var(--color-text-muted)]`;
 const RUN_OUT_LINE =
   "mt-2 ml-[52px] flex gap-2 rounded-[10px] bg-[var(--color-caution-soft)] px-2 py-1.5 text-[13px] leading-[1.35] text-[var(--color-caution-soft-text)]";
 
-const Name = ({ food }: { food: PlateFoodRef }) => (
+const Name = ({ food }: { food: Pick<PlateFoodRef, "name" | "deleted"> }) => (
   <>
     {food.name}
     <DeletedMark deleted={food.deleted} />
@@ -169,7 +169,8 @@ export function RecipeItemRow({ entry, dispatch, disabled, planning }: RowProps<
   return (
     <FreshItem
       plate={RECIPE_PLATE}
-      name={title}
+      // A recipe deleted since this meal was logged stays, marked (ledger 957).
+      name={<Name food={{ name: title, deleted: entry.recipe.deleted }} />}
       label={title}
       rating={entry.rating}
       onRate={planning ? undefined : (rating) => dispatch({ type: "rate", key, rating })}
@@ -443,7 +444,7 @@ export function ContainerItemRow({ entry, dispatch, disabled, planning, onAddToS
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm leading-6 font-semibold break-words text-[var(--color-text)]">
-                  {part.kind === "food" ? <Name food={part.food} /> : part.recipe.title}
+                  <Name food={part.kind === "food" ? part.food : { name: part.recipe.title, deleted: part.recipe.deleted }} />
                 </p>
                 <div className="-mt-0.5 -ml-[9px]">{stars(part)}</div>
               </div>

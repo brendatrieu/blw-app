@@ -723,11 +723,11 @@ describe("planning (ledger 903, step 3.1)", () => {
       expect((await put(DAY, SNACK, { items: [{ kind: "recipe", recipeId: custom.id }] }, sibling)).statusCode).toBe(200);
       const response = await countOf(custom.id);
       expect(response.statusCode, response.body).toBe(200);
-      expect(response.json()).toEqual({ plannedMealCount: 4 });
+      expect(response.json()).toEqual({ plannedMealCount: 4, mealCount: 0, storageCount: 0 });
 
       // Not planned anywhere: 0. Someone else's, a catalog recipe, or no session: no count.
       const unplanned = await fx.recipe("mine-unplanned", "Spare", [fx.egg.id], parentId);
-      expect((await countOf(unplanned.id)).json()).toEqual({ plannedMealCount: 0 });
+      expect((await countOf(unplanned.id)).json()).toEqual({ plannedMealCount: 0, mealCount: 0, storageCount: 0 });
       expect((await countOf(custom.id, await signUpUser(app))).statusCode).toBe(404);
       expect((await countOf(fx.muffins.id)).statusCode).toBe(404);
       expect((await countOf(custom.id, null)).statusCode).toBe(401);

@@ -380,6 +380,37 @@ describe("mealLines (CD-Food-Log)", () => {
     // No item ids to rate before items.
     expect(mealLines({ foods: [{ ...BROCCOLI, storageItemId: null }] })[0]!.ratings).toEqual([]);
   });
+
+  // Ledger 957: a recipe deleted since stays on the meal, marked, fresh or
+  // as a container's part (its star label too).
+  it("marks a deleted recipe, fresh or in a container", () => {
+    const gone = { id: id(102), title: "Lentil mash", deleted: true };
+    const lines = mealLines({
+      items: [
+        { kind: "recipe", id: id(103), recipe: gone, leftOut: [], inferred: false, rating: 4 },
+        {
+          kind: "storage",
+          storageItemId: id(104),
+          label: null,
+          location: "fridge",
+          servings: 1,
+          parts: [
+            { kind: "recipe", id: id(105), recipe: gone, rating: null },
+            { kind: "food", id: id(106), food: EGG, rating: null },
+          ],
+        },
+      ],
+      foods: [],
+    });
+    expect(lines.map((line) => [line.name, line.deleted])).toEqual([
+      ["Lentil mash", true],
+      ["Lentil mash\u00a0(deleted)", undefined],
+    ]);
+    expect(lines[1]!.ratings.map((rating) => [rating.label, rating.deleted])).toEqual([
+      ["Lentil mash", true],
+      ["Egg", undefined],
+    ]);
+  });
 });
 
 describe("toMealInput", () => {

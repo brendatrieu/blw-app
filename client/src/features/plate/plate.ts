@@ -34,6 +34,8 @@ export type PlateFoodRef = Pick<PlateFood, "id" | "slug" | "name" | "emoji" | "d
 export interface PlateRecipeRef {
   id: string;
   title: string;
+  /** The parent has since deleted this custom recipe; history keeps it (ledger 957). */
+  deleted?: boolean | undefined;
 }
 
 /** A fresh food. `id` is the saved item's, absent on one this edit adds. */
@@ -332,6 +334,7 @@ export function containerTitle(item: { label: string | null; parts: readonly Par
   return storageItemTitle({
     label: item.label,
     recipeTitle: recipe?.kind === "recipe" ? recipe.recipe.title : null,
+    recipes: recipe?.kind === "recipe" ? [recipe.recipe] : [],
     foods: item.parts.flatMap((part) => (part.kind === "food" ? [part.food] : [])),
   });
 }
@@ -341,7 +344,7 @@ export interface MealLineRating {
   /** The meal item's id, the key of a PATCH's `itemRatings`. */
   id: string;
   label: string;
-  /** A container's food part its owner has since deleted (ledger 543). */
+  /** A container's food or recipe part its owner has since deleted (ledgers 543, 957). */
   deleted?: boolean | undefined;
   rating: number | null;
 }
@@ -350,7 +353,7 @@ export interface MealLineRating {
 export interface MealLine {
   key: string;
   name: string;
-  /** A fresh food its owner has since deleted. */
+  /** A fresh food or recipe its owner has since deleted (ledgers 543, 957). */
   deleted?: boolean | undefined;
   plates: Plate[];
   /** Its star lines (ledger 939/944): one for a food or recipe, one per part
@@ -386,7 +389,14 @@ export function mealLines(meal: Pick<MealItem, "items" | "foods">): MealLine[] {
     }
     if (item.kind === "recipe") {
       const ratings = [{ id: item.id, label: item.recipe.title, rating: item.rating }];
-      return { key: item.id, name: item.recipe.title, plates: [RECIPE_PLATE], ratings, leftOut: item.inferred ? [] : item.leftOut };
+      return {
+        key: item.id,
+        name: item.recipe.title,
+        deleted: item.recipe.deleted,
+        plates: [RECIPE_PLATE],
+        ratings,
+        leftOut: item.inferred ? [] : item.leftOut,
+      };
     }
     return {
       key: item.storageItemId,
@@ -395,7 +405,7 @@ export function mealLines(meal: Pick<MealItem, "items" | "foods">): MealLine[] {
       ratings: item.parts.map((part) => ({
         id: part.id,
         label: part.kind === "food" ? part.food.name : part.recipe.title,
-        deleted: part.kind === "food" ? part.food.deleted : undefined,
+        deleted: part.kind === "food" ? part.food.deleted : part.recipe.deleted,
         rating: part.rating,
       })),
       leftOut: [],

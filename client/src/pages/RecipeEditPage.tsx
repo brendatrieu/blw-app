@@ -15,7 +15,8 @@ import { Skeleton } from "../components/ui/Skeleton.js";
  * page: an id that doesn't resolve (deleted, mistyped, or another parent's
  * recipe — the server 404s those identically), and a CATALOG recipe, which
  * nobody owns and whose PATCH the server would 404. Neither gets a form
- * whose Save can only fail.
+ * whose Save can only fail. Nor does a recipe the parent deleted that
+ * history still names (ledger 957): it goes back to its read-only page.
  */
 export function RecipeEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -35,7 +36,8 @@ export function RecipeEditPage() {
   if (isError || !recipe) {
     return <Navigate to={RECIPES_TAB_PATH} replace />;
   }
-  if (!recipe.isCustom) {
+  // A deleted recipe's page is read-only (ledger 957); its PATCH would 409.
+  if (!recipe.isCustom || recipe.deletedAt) {
     return <Navigate to={`/recipes/${recipe.id}`} replace />;
   }
 

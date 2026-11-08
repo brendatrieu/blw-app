@@ -380,6 +380,11 @@ export const recipeDetailSchema = z.object({
   isCustom: z.boolean(),
   /** The parent's own note on a custom recipe. Catalog rows are null. */
   notes: z.string().nullable(),
+  /** ISO time the owner deleted this custom recipe, else null (ledger 957).
+   * A deleted recipe still loads here, because logged meals and storage
+   * containers keep naming it; its page is read-only. Optional so an older
+   * cached body still parses. */
+  deletedAt: z.string().nullable().optional(),
 });
 export type RecipeDetail = z.infer<typeof recipeDetailSchema>;
 
@@ -621,24 +626,17 @@ export const updateCustomRecipeSchema = z
 export type UpdateCustomRecipeInput = z.input<typeof updateCustomRecipeSchema>;
 
 /**
- * DELETE /api/recipes/:id when the recipe is still referenced by logged meals
- * or storage items. Favorites are NOT a block — the caller's own favorite row
- * is simply removed with the recipe.
- */
-export const customRecipeConflictSchema = z.object({
-  error: z.literal("conflict"),
-  mealCount: z.number().int(),
-  storageCount: z.number().int(),
-});
-export type CustomRecipeConflict = z.infer<typeof customRecipeConflictSchema>;
-
-/**
- * GET /api/recipes/:id/plan-count (ledger 937): how many planned meals, on
- * any day of any of the owner's babies, hold the owner's custom recipe. The
- * delete question names it, because deleting the recipe takes it off those
- * plans (plans cascade; logged meals and storage block instead, above).
+ * GET /api/recipes/:id/plan-count (ledgers 937, 957): what deleting the
+ * owner's custom recipe touches, for the delete question to name before the
+ * parent taps Delete. Delete always works: logged meals and storage
+ * containers keep the recipe, marked "(deleted)" (`mealCount`,
+ * `storageCount`: meals holding it at any position, containers made from it
+ * in any status), while every planned meal holding it, on any day of any of
+ * the owner's babies, loses it (`plannedMealCount`).
  */
 export const recipePlanCountSchema = z.object({
   plannedMealCount: z.number().int(),
+  mealCount: z.number().int(),
+  storageCount: z.number().int(),
 });
 export type RecipePlanCount = z.infer<typeof recipePlanCountSchema>;

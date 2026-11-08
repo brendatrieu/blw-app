@@ -42,7 +42,7 @@ import {
   recipes,
   storageItems,
 } from "../db/schema.js";
-import { visibleRecipesCondition } from "./recipes.js";
+import { choosableRecipesCondition } from "./recipes.js";
 
 /**
  * The transaction handle `db.transaction()` hands its callback. Named here so
@@ -167,10 +167,17 @@ export async function validateFoodIds(
 
 /**
  * Recipe ids are attribution, but each still has to name a recipe this user
- * can see: the catalog plus their own. Another account's custom recipe reads
- * as an unknown id, exactly as its foods do in `validateFoodIds`. One query
- * for the whole list. `field` names the key the 400 is about, so an older
- * app's single `recipeId` still gets `{recipeId: "unknown recipe"}`.
+ * can choose: the catalog plus their own, not one they deleted (ledger 957).
+ * Another account's custom recipe, or a deleted one, reads as an unknown id,
+ * exactly as such foods do in `validateFoodIds`. Callers pass only the
+ * recipes a write ADDS: a deleted recipe stays on the meal it was eaten in.
+ * One query for the whole list. `field` names the key the 400 is about, so
+ * an older app's single `recipeId` still gets `{recipeId: "unknown recipe"}`.
+ *
+ * FOR KEY SHARE (the lock a foreign-key check takes anyway): a recipe delete
+ * holds its row FOR UPDATE, so a write racing it waits here, then re-reads
+ * the row and finds it deleted, instead of adding it to a plan or meal just
+ * after the delete cleared them.
  */
 export async function validateRecipeIds(
   db: Queryable,
@@ -182,7 +189,8 @@ export async function validateRecipeIds(
   const rows = await db
     .select({ id: recipes.id })
     .from(recipes)
-    .where(and(inArray(recipes.id, [...recipeIds]), visibleRecipesCondition(userId)));
+    .where(and(inArray(recipes.id, [...recipeIds]), choosableRecipesCondition(userId)))
+    .for("key share");
   const known = new Set(rows.map((row) => row.id));
   const unknownRecipeIds = recipeIds.filter((id) => !known.has(id));
   if (unknownRecipeIds.length === 0) return { ok: true, value: null };
@@ -363,6 +371,24 @@ export async function loadMeals(
   if (options.items) {
     const plates = await loadPlateItems(db, mealIds);
     for (const [mealId, meal] of byMealId) meal.items = plates.get(mealId) ?? [];
+    // Ledger 957: a recipe deleted since stays on the meal, marked. Read here,
+    // beside the plate, so `items: false` (the parity recorder, which the
+    // prod-backup dry run points at a database from before 0026) never names
+    // `recipes.deleted_at`.
+    const recipeIds = [...new Set(recipeRows.map((row) => row.recipeId))];
+    const deleted = new Set(
+      recipeIds.length === 0
+        ? []
+        : (
+            await db
+              .select({ id: recipes.id })
+              .from(recipes)
+              .where(and(inArray(recipes.id, recipeIds), isNotNull(recipes.deletedAt)))
+          ).map((row) => row.id),
+    );
+    for (const list of recipesByMealId.values()) {
+      for (const [index, recipe] of list.entries()) if (deleted.has(recipe.id)) list[index] = { ...recipe, deleted: true };
+    }
   }
 
   return byMealId;
@@ -411,6 +437,7 @@ async function loadPlateItems(db: Database, mealIds: string[]): Promise<Map<stri
       foodId: mealItems.foodId,
       recipeId: mealItems.recipeId,
       recipeTitle: recipes.title,
+      recipeDeleted: sql<boolean>`${recipes.deletedAt} is not null`,
       storageItemId: mealItems.storageItemId,
       countedFoodIds: mealItems.countedFoodIds,
       rating: mealItems.rating,
@@ -453,7 +480,10 @@ async function loadPlateItems(db: Database, mealIds: string[]): Promise<Map<stri
   for (const row of rows) {
     const plate = byMealId.get(row.mealId) ?? [];
     byMealId.set(row.mealId, plate);
-    const recipe = row.recipeId ? { id: row.recipeId, title: row.recipeTitle ?? "" } : null;
+    // A deleted recipe stays on the plate it was eaten from, marked (ledger 957).
+    const recipe = row.recipeId
+      ? { id: row.recipeId, title: row.recipeTitle ?? "", ...(row.recipeDeleted && { deleted: true }) }
+      : null;
     if (row.storageItemId) {
       const part: PlatePart = recipe
         ? { kind: "recipe", id: row.id, recipe, rating: row.rating }

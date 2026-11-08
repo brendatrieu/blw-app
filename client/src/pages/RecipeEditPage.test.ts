@@ -99,4 +99,10 @@ describe("RecipeEditPage", () => {
     expect(html).not.toContain('value="Lentil mash"');
     expect(html).toBe("");
   });
+
+  // Ledger 957: a deleted recipe's page is read-only; its PATCH would 409.
+  it("redirects a recipe the parent deleted away too", () => {
+    expect(render(recipe({ deletedAt: "2026-11-08T10:00:00.000Z" }))).toBe("");
+    expect(render(recipe({ deletedAt: null }))).toContain('id="recipe-edit-title"');
+  });
 });

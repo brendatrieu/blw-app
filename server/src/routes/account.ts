@@ -439,6 +439,9 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         prepMinutes: recipes.prepMinutes,
         notes: recipes.notes,
         extraIngredients: recipes.extraIngredients,
+        // v21 (ledger 957): a deleted recipe the meals and storage still
+        // name is exported too, saying when it was deleted.
+        deletedAt: recipes.deletedAt,
       })
       .from(recipes)
       .where(eq(recipes.ownerId, userId))
@@ -678,6 +681,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         ingredients: ingredientsByRecipeId.get(row.id) ?? [],
         extraIngredients: row.extraIngredients ?? [],
         steps: stepsByRecipeId.get(row.id) ?? [],
+        deletedAt: row.deletedAt?.toISOString() ?? null,
       })),
       symptomChecks: symptomCheckRows.map((row) => ({
         id: row.id,

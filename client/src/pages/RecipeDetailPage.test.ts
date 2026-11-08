@@ -7,7 +7,6 @@ import type { Baby, RatingHistoryResponse, RecipeDetail } from "@blw/shared";
 import { catalogKeys } from "../features/catalog/hooks.js";
 import { babyKeys } from "../features/babies/api.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
-import { customRecipeConflictMessage } from "../features/catalog/constants.js";
 import { CustomRecipeActions, RecipeDetailPage } from "./RecipeDetailPage.js";
 
 function catalogRecipe(overrides: Partial<RecipeDetail> = {}): RecipeDetail {
@@ -381,25 +380,31 @@ describe("RecipeDetailPage — deleted ingredient", () => {
   });
 });
 
-describe("customRecipeConflictMessage", () => {
-  it("names both places the recipe is still referenced (the 409 body's counts)", () => {
-    expect(customRecipeConflictMessage({ mealCount: 3, storageCount: 2 })).toBe(
-      "Used in 3 meals and 2 storage items — remove those first.",
-    );
+// Ledger 957: a deleted recipe's page (reached from an old link; the meals
+// and storage items that name it stay) is read-only, like a deleted food's.
+describe("RecipeDetailPage — a deleted recipe", () => {
+  const DELETED = { ...CUSTOM_RECIPE, deletedAt: "2026-11-08T10:00:00.000Z" };
+
+  it("says so in place of Log meal / Add to storage, with no Favorite, Edit or Delete", () => {
+    const html = renderRecipe(DELETED);
+    expect(html).toContain(">You deleted this recipe.</p>");
+    for (const gone of [`href="/log-meal?recipe=`, `href="/storage/add?recipe=`, `/edit"`, ">Delete<", "Add to favorites", ">Favorite<"]) {
+      expect(html, gone).not.toContain(gone);
+    }
+    // The recipe itself still reads: title, ingredients, steps, notes.
+    expect(html).toContain("Lentil mash");
+    expect(html).toContain("Grandma&#x27;s loaf");
+    expect(html).toContain("Cook the lentils");
+    expect(html).toContain("Freezes well in ice-cube trays");
   });
 
-  it("uses the singular at exactly one", () => {
-    expect(customRecipeConflictMessage({ mealCount: 1, storageCount: 1 })).toBe(
-      "Used in 1 meal and 1 storage item — remove those first.",
-    );
-  });
-
-  // Ledger 542: "0 meals" is never said — a zero count drops its clause.
-  it("leaves a zero count out of the sentence", () => {
-    expect(customRecipeConflictMessage({ mealCount: 0, storageCount: 4 })).toBe(
-      "Used in 4 storage items — remove those first.",
-    );
-    expect(customRecipeConflictMessage({ mealCount: 2, storageCount: 0 })).toBe("Used in 2 meals — remove those first.");
+  it("is the live page for a recipe that is not deleted", () => {
+    const html = renderRecipe(CUSTOM_RECIPE);
+    expect(html).not.toContain("You deleted this recipe.");
+    expect(html).toContain(`href="/recipes/${CUSTOM_RECIPE.id}/edit"`);
+    expect(html).toContain(">Delete<");
+    expect(html).toContain("Add to favorites");
+    expect(renderRecipe({ ...CUSTOM_RECIPE, deletedAt: null })).not.toContain("You deleted this recipe.");
   });
 });
 

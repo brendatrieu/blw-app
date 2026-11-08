@@ -46,6 +46,16 @@ describe("storageItemTitle", () => {
     expect(storageItemTitle({ label: null, foods, recipeTitle: null })).toBe("Banana bread\u00a0(deleted), Avocado");
   });
 
+  // Ledger 957: the serve sheet's title, a plan line and a meal's container
+  // line read this string for a container named by a deleted recipe.
+  it("marks the recipe its owner deleted when the title is the recipe", () => {
+    const base = { label: null, foods: [], recipeTitle: "Lentil mash" };
+    expect(storageItemTitle({ ...base, recipes: [{ deleted: true }] })).toBe("Lentil mash\u00a0(deleted)");
+    expect(storageItemTitle({ ...base, recipes: [{}] })).toBe("Lentil mash");
+    expect(storageItemTitle(base)).toBe("Lentil mash");
+    expect(storageItemTitle({ ...base, label: "Soup", recipes: [{ deleted: true }] })).toBe("Soup");
+  });
+
   // Kills the `??` mutant: an empty foods list joins to "", which is a value,
   // not a missing one, so `??` would render a blank title.
   it("never renders an empty title when there are no foods and no recipe or label", () => {

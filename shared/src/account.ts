@@ -20,7 +20,7 @@ import { userPreferencesSchema } from "./preferences.js";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 20;
+export const ACCOUNT_EXPORT_VERSION = 21;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -253,6 +253,10 @@ export const exportCustomRecipeSchema = z.object({
    * no quantity was given. A v8 file carried plain strings here. */
   extraIngredients: z.array(extraIngredientSchema),
   steps: z.array(z.string()),
+  /** v21 (ledger 957). When the parent deleted it, else null. A deleted
+   * recipe is kept so the meals and storage items that name it still
+   * resolve; one nothing named was removed for good and is not here. */
+  deletedAt: z.string().nullable(),
 });
 
 export const exportSymptomCheckSchema = z.object({

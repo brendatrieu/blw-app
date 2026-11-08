@@ -3,15 +3,19 @@ import { eq, sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { PGlite } from "@electric-sql/pglite";
 import type { FastifyInstance } from "fastify";
-import type {
-  AllergenProgressResponse,
-  Baby,
-  CreateStorageItemResponse,
-  FavoritesResponse,
-  FoodDetail,
-  MealItem,
-  RecipeDetail,
-  RecipesResponse,
+import {
+  DEFAULT_DAILY_MEALS,
+  planResponseSchema,
+  plateInputFromItems,
+  type AllergenProgressResponse,
+  type Baby,
+  type CreateStorageItemResponse,
+  type FavoritesResponse,
+  type FoodDetail,
+  type MealItem,
+  type RecipeDetail,
+  type RecipesResponse,
+  type StorageItem,
 } from "@blw/shared";
 import { createTestApp, signUpUser, type TestUser } from "./helpers.js";
 import type { Database } from "../db/index.js";
@@ -1320,7 +1324,10 @@ describe("custom recipes", () => {
       expect(favorites.json<FavoritesResponse>().items).toEqual([]);
     });
 
-    it("409s with the reference counts while a meal or storage item still uses it", async () => {
+    // Ledger 957 (owner 2026-11-07): the delete used to 409 here ("Used in 1
+    // meal — remove those first."). Now it always works: a recipe a meal or
+    // container names is soft-deleted and history keeps it, marked.
+    it("soft-deletes a recipe a meal or storage item still uses: 204, the row and its ingredients kept, marked deleted (ledger 957)", async () => {
       const recipe = await createRecipe(owner, recipePayload());
       const babyId = await createBaby(owner);
 
@@ -1340,19 +1347,31 @@ describe("custom recipes", () => {
       });
       expect(storage.statusCode).toBe(201);
 
-      const blocked = await app.inject({
+      const deleted = await app.inject({
         method: "DELETE",
         url: `/api/recipes/${recipe.id}`,
         headers: { cookie: owner.cookie },
       });
-      expect(blocked.statusCode).toBe(409);
-      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 1, storageCount: 1 });
+      expect(deleted.statusCode).toBe(204);
+      expect(deleted.body).toBe("");
 
-      // Still there — a refused delete changes nothing.
-      expect(await db.select().from(schema.recipes).where(eq(schema.recipes.id, recipe.id))).toHaveLength(1);
+      const [row] = await db.select().from(schema.recipes).where(eq(schema.recipes.id, recipe.id));
+      expect(row?.deletedAt).toBeInstanceOf(Date);
+      // A single-recipe container names it, marked.
+      const box = (await app.inject({ method: "GET", url: "/api/storage", headers: { cookie: owner.cookie } }))
+        .json<{ items: StorageItem[] }>()
+        .items.find((item) => item.recipeId === recipe.id)!;
+      expect(box.recipes).toEqual([{ id: recipe.id, title: "Banana oat fingers", deleted: true }]);
+      expect(box.recipeTitle).toBe("Banana oat fingers");
+      expect(
+        await db.select().from(schema.recipeIngredients).where(eq(schema.recipeIngredients.recipeId, recipe.id)),
+      ).toHaveLength(1);
+      expect(
+        await db.select().from(schema.recipeVariants).where(eq(schema.recipeVariants.recipeId, recipe.id)),
+      ).toHaveLength(1);
     });
 
-    it("409s while the recipe is a meal's SECOND recipe, and deletes it once an edit takes it off (ledger 754)", async () => {
+    it("soft-deletes a recipe that is a meal's SECOND recipe, keeping both on the meal (ledgers 754, 957)", async () => {
       const recipe = await createRecipe(owner, recipePayload());
       const babyId = await createBaby(owner);
 
@@ -1369,14 +1388,17 @@ describe("custom recipes", () => {
       expect(favorite.statusCode).toBe(204);
 
       const del = () => app.inject({ method: "DELETE", url: `/api/recipes/${recipe.id}`, headers: { cookie: owner.cookie } });
-      const blocked = await del();
-      expect(blocked.statusCode).toBe(409);
-      expect(blocked.json()).toEqual({ error: "conflict", mealCount: 1, storageCount: 0 });
-      // Nothing cascaded: the meal still has both recipes. And the refusal
-      // wrote nothing, not even the un-favorite that a delete would do.
+      expect((await del()).statusCode).toBe(204);
+      // Nothing cascaded: the meal still has both recipes; the favorite went.
       expect(await db.select().from(schema.mealRecipes).where(eq(schema.mealRecipes.mealId, mealId))).toHaveLength(2);
-      expect(await db.select().from(schema.favorites).where(eq(schema.favorites.recipeId, recipe.id))).toHaveLength(1);
+      expect(await db.select().from(schema.favorites).where(eq(schema.favorites.recipeId, recipe.id))).toEqual([]);
+      const read = await app.inject({ method: "GET", url: `/api/meals/${mealId}`, headers: { cookie: owner.cookie } });
+      expect(read.json<MealItem>().recipes).toEqual([
+        { id: fixtures.catalogRecipe.id, title: "Banana Porridge", rating: null },
+        { id: recipe.id, title: "Banana oat fingers", rating: null, deleted: true },
+      ]);
 
+      // An edit can still take it off (it is not re-added after that).
       const edit = await app.inject({
         method: "PATCH",
         url: `/api/meals/${mealId}`,
@@ -1384,8 +1406,14 @@ describe("custom recipes", () => {
         payload: { recipeIds: [fixtures.catalogRecipe.id] },
       });
       expect(edit.statusCode).toBe(200);
-      expect((await del()).statusCode).toBe(204);
-      expect(await db.select().from(schema.recipes).where(eq(schema.recipes.id, recipe.id))).toEqual([]);
+      const readd = await app.inject({
+        method: "PATCH",
+        url: `/api/meals/${mealId}`,
+        headers: { cookie: owner.cookie },
+        payload: { recipeIds: [fixtures.catalogRecipe.id, recipe.id] },
+      });
+      expect(readd.statusCode).toBe(400);
+      expect(readd.json()).toMatchObject({ details: { recipeIds: "unknown recipe", unknownRecipeIds: [recipe.id] } });
     });
 
     // Ledger 754: on Postgres a meal saved between the count and the DELETE
@@ -1394,7 +1422,7 @@ describe("custom recipes", () => {
     // FOR KEY SHARE a foreign-key check takes; FOR SHARE would not) and
     // counting inside the same transaction. PGlite cannot run the race, so
     // the statement order is pinned; the race itself is in the dry run.
-    it("locks the recipe row FOR UPDATE, then counts, inside one transaction (ledger 754)", async () => {
+    it("locks the recipe row FOR UPDATE, then counts, then soft-deletes, inside one transaction (ledgers 754, 957)", async () => {
       const recipe = await createRecipe(owner, recipePayload());
       const babyId = await createBaby(owner);
       const meal = await app.inject({
@@ -1429,7 +1457,7 @@ describe("custom recipes", () => {
         sqlSpy.mockRestore();
         txSpy.mockRestore();
       }
-      expect(status).toBe(409);
+      expect(status).toBe(204);
       const trace = events.join("\n");
       const lock = events.findIndex((text) => /^select .* from "recipes" where .* for update$/.test(text));
       const begin = events.lastIndexOf("<begin>", lock);
@@ -1442,6 +1470,11 @@ describe("custom recipes", () => {
       expect(mealCount, trace).toBeGreaterThan(lock);
       expect(storageCount, trace).toBeGreaterThan(lock);
       expect(end, trace).toBeGreaterThan(Math.max(mealCount, storageCount));
+      // Used, so the soft delete (ledger 957) runs after the counts, inside.
+      const soft = events.findIndex((text) => /^update "recipes" set "deleted_at"/.test(text));
+      expect(soft, trace).toBeGreaterThan(Math.max(mealCount, storageCount));
+      expect(end, trace).toBeGreaterThan(soft);
+      expect(events.some((text) => text.startsWith('delete from "recipes"')), trace).toBe(false);
     });
 
     // Ledger 758 (DRYRUN-PG R4): when the delete commits first, the losing
@@ -1494,6 +1527,249 @@ describe("custom recipes", () => {
 
     // Item 240, the edit half: a parent can take every step back off a
     // recipe they already saved, and put them back later.
+
+    // Ledger 957: everything that already happened reads exactly as before
+    // the delete, plus `deleted: true` on the recipe wherever it is named.
+    describe("a soft-deleted recipe (ledger 957)", () => {
+      const LUNCH = DEFAULT_DAILY_MEALS[1]!.id;
+      const DINNER = DEFAULT_DAILY_MEALS[2]!.id;
+      const PLAN_DAY = "2026-11-02";
+      const send = (method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", url: string, payload?: unknown, user = owner) =>
+        app.inject({ method, url, headers: { cookie: user.cookie }, ...(payload === undefined ? {} : { payload: payload as object }) });
+      const ok = async (method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", url: string, payload?: unknown) => {
+        const response = await send(method, url, payload);
+        if (response.statusCode >= 300) throw new Error(`${method} ${url} -> ${response.statusCode}: ${response.body}`);
+        return response.statusCode === 204 ? null : response.json<unknown>();
+      };
+      /** The body with every `deleted: true` taken out, to compare with before. */
+      const withoutDeleted = (value: unknown): unknown =>
+        JSON.parse(JSON.stringify(value, (key, entry: unknown) => (key === "deleted" && entry === true ? undefined : entry)));
+
+      /** A recipe with a peanut ingredient, logged (fresh and rated, and from a
+       * several-recipe container), stored, planned on two meals and favorited. */
+      async function useEverywhere() {
+        const satay = await createFood(owner, { name: "Satay sauce", category: "protein", allergenSlugs: ["peanut"] });
+        const recipe = await createRecipe(
+          owner,
+          recipePayload({
+            title: "Satay noodles",
+            ingredients: [
+              { foodId: satay.id, quantityNote: "1 tbsp" },
+              { foodId: fixtures.oats.id, quantityNote: "" },
+            ],
+          }),
+        );
+        const babyId = await createBaby(owner);
+        const fresh = (await ok("POST", `/api/babies/${babyId}/meals`, {
+          servedAt: "2026-11-01T12:00:00.000Z",
+          items: [
+            { kind: "recipe", recipeId: recipe.id, rating: 4, leftOutFoodIds: [fixtures.oats.id] },
+            { kind: "food", foodId: fixtures.pear.id },
+          ],
+        })) as MealItem;
+        const box = (await ok("POST", "/api/storage", {
+          recipeIds: [fixtures.catalogRecipe.id, recipe.id],
+          location: "fridge",
+          servingsTotal: 3,
+        })) as CreateStorageItemResponse;
+        const boxId = box.items[0]!.id;
+        const served = (await ok("POST", `/api/babies/${babyId}/meals`, {
+          servedAt: "2026-11-01T18:00:00.000Z",
+          items: [{ kind: "storage", storageItemId: boxId, servings: 1, ratings: { [recipe.id]: 5 } }],
+        })) as MealItem;
+        await ok("PUT", `/api/babies/${babyId}/plan/${PLAN_DAY}/meals/${LUNCH}`, {
+          items: [
+            { kind: "recipe", recipeId: recipe.id },
+            { kind: "food", foodId: fixtures.banana.id },
+          ],
+        });
+        await ok("PUT", `/api/babies/${babyId}/plan/${PLAN_DAY}/meals/${DINNER}`, { items: [{ kind: "recipe", recipeId: recipe.id }] });
+        await ok("PUT", `/api/recipes/${recipe.id}/favorite`);
+        return { recipe, satay, babyId, freshId: fresh.id, servedId: served.id, boxId };
+      }
+
+      /** Every history read that names the recipe or counts its foods. */
+      async function history({ recipe, babyId, freshId, servedId }: Awaited<ReturnType<typeof useEverywhere>>) {
+        return {
+          foodLog: await ok("GET", `/api/babies/${babyId}/meals`),
+          fresh: await ok("GET", `/api/meals/${freshId}`),
+          served: await ok("GET", `/api/meals/${servedId}`),
+          storage: await ok("GET", "/api/storage"),
+          ratings: await ok("GET", `/api/babies/${babyId}/ratings`),
+          ratingHistory: await ok("GET", `/api/babies/${babyId}/ratings/history?recipeId=${recipe.id}`),
+          allergens: await ok("GET", `/api/babies/${babyId}/allergen-progress`),
+          peanut: await ok("GET", `/api/babies/${babyId}/allergen-progress/peanut`),
+          legacy: await db.select().from(schema.meals).orderBy(schema.meals.servedAt),
+          mealRecipes: await db.select().from(schema.mealRecipes).orderBy(schema.mealRecipes.mealId, schema.mealRecipes.position),
+          mealItems: await db.select().from(schema.mealItems).orderBy(schema.mealItems.id),
+          mealFoods: await db.select().from(schema.mealFoods).orderBy(schema.mealFoods.id),
+          containerRecipes: await db.select().from(schema.storageItemRecipes).orderBy(schema.storageItemRecipes.position),
+        };
+      }
+
+      it("keeps every history read as it was, marked deleted; plans and favorites lose it", async () => {
+        const used = await useEverywhere();
+        const planCount = await ok("GET", `/api/recipes/${used.recipe.id}/plan-count`);
+        expect(planCount).toEqual({ plannedMealCount: 2, mealCount: 2, storageCount: 1 });
+        const before = await history(used);
+
+        expect((await send("DELETE", `/api/recipes/${used.recipe.id}`)).statusCode).toBe(204);
+        const after = await history(used);
+
+        // Parity: nothing changed but the mark.
+        expect(withoutDeleted(after)).toEqual(withoutDeleted(before));
+        expect(JSON.stringify(before)).not.toContain('"deleted":true');
+        // The mark, wherever history names the recipe.
+        const fresh = after.fresh as MealItem;
+        expect(fresh.recipes).toEqual([{ id: used.recipe.id, title: "Satay noodles", rating: 4, deleted: true }]);
+        expect(fresh.recipeId).toBe(used.recipe.id);
+        expect(fresh.recipeTitle).toBe("Satay noodles");
+        expect(fresh.items![0]).toMatchObject({ kind: "recipe", recipe: { id: used.recipe.id, title: "Satay noodles", deleted: true } });
+        const served = after.served as MealItem;
+        const container = served.items![0]!;
+        expect(container).toMatchObject({
+          kind: "storage",
+          parts: [
+            { kind: "recipe", recipe: { id: fixtures.catalogRecipe.id, title: "Banana Porridge" } },
+            { kind: "recipe", recipe: { id: used.recipe.id, title: "Satay noodles", deleted: true } },
+          ],
+        });
+        expect(container.kind === "storage" && container.parts[0]!.kind === "recipe" && "deleted" in container.parts[0]!.recipe).toBe(false);
+        const box = (after.storage as { items: StorageItem[] }).items.find((item) => item.id === used.boxId)!;
+        expect(box.recipes).toEqual([
+          { id: fixtures.catalogRecipe.id, title: "Banana Porridge" },
+          { id: used.recipe.id, title: "Satay noodles", deleted: true },
+        ]);
+
+        // Plans lose it (the rest of the meal stays); so do favorites.
+        const plan = planResponseSchema.parse(
+          await ok("GET", `/api/babies/${used.babyId}/plan?from=${PLAN_DAY}&to=${PLAN_DAY}&tz=Europe%2FLondon`),
+        );
+        const meals = plan.days[0]!.meals;
+        expect(meals.find((meal) => meal.name === "Lunch")!.items.map((item) => item.kind)).toEqual(["food"]);
+        expect(meals.find((meal) => meal.name === "Dinner")!.items).toEqual([]);
+        expect(await db.select().from(schema.plannedItems).where(eq(schema.plannedItems.recipeId, used.recipe.id))).toEqual([]);
+        expect(await db.select().from(schema.favorites).where(eq(schema.favorites.recipeId, used.recipe.id))).toEqual([]);
+        expect(await ok("GET", `/api/recipes/${used.recipe.id}/plan-count`)).toEqual({ plannedMealCount: 0, mealCount: 2, storageCount: 1 });
+      });
+
+      it("leaves every choosing read, and cannot be added anywhere new; its own page still loads, read-only", async () => {
+        const used = await useEverywhere();
+        expect((await send("DELETE", `/api/recipes/${used.recipe.id}`)).statusCode).toBe(204);
+        const id = used.recipe.id;
+
+        // Browse, search, scopes, ingredient-of, favorites, a food's recipes, the AI.
+        for (const query of ["", "?scope=custom", "?scope=favorites", "?q=satay", `?ingredientFoodId=${used.satay.id}`, "?allergen=peanut"]) {
+          expect((await listRecipes(owner, query)).recipes.map((r) => r.id), query).not.toContain(id);
+        }
+        expect(((await ok("GET", "/api/favorites")) as FavoritesResponse).items).toEqual([]);
+        // Even a favorite that raced the delete (written after it) stays hidden.
+        await db.insert(schema.favorites).values({ userId: await userId(owner), recipeId: id });
+        expect(((await ok("GET", "/api/favorites")) as FavoritesResponse).items).toEqual([]);
+        expect(((await ok("GET", `/api/foods/${used.satay.slug}`)) as FoodDetail).recipes).toEqual([]);
+        const tools = buildChatTools(db, await userId(owner), null);
+        expect(String(await tools.search_recipes.run({ ageMonths: 12, query: "satay" }))).not.toContain(id);
+
+        // Its page: still there, saying when; edits refused like a deleted food's.
+        const detail = (await ok("GET", `/api/recipes/${id}`)) as RecipeDetail;
+        expect(detail.deletedAt).toEqual(expect.any(String));
+        expect(detail.title).toBe("Satay noodles");
+        expect((await send("PATCH", `/api/recipes/${id}`, { title: "Renamed" })).json()).toEqual({ error: "deleted" });
+        expect((await db.select().from(schema.recipes).where(eq(schema.recipes.id, id)))[0]!.title).toBe("Satay noodles");
+
+        // Nothing new may hold it: a favorite, a meal, a container, a plan.
+        expect((await send("PUT", `/api/recipes/${id}/favorite`)).statusCode).toBe(404);
+        const meal = await send("POST", `/api/babies/${used.babyId}/meals`, { items: [{ kind: "recipe", recipeId: id }] });
+        expect(meal.statusCode).toBe(400);
+        expect(meal.json()).toMatchObject({ details: { recipeIds: "unknown recipe" } });
+        const legacyMeal = await send("POST", `/api/babies/${used.babyId}/meals`, { foodIds: [fixtures.banana.id], recipeId: id });
+        expect(legacyMeal.statusCode).toBe(400);
+        expect((await send("POST", "/api/storage", { recipeId: id, location: "fridge" })).statusCode).toBe(400);
+        const plan = await send("PUT", `/api/babies/${used.babyId}/plan/${PLAN_DAY}/meals/${LUNCH}`, {
+          items: [{ kind: "recipe", recipeId: id }],
+        });
+        expect(plan.statusCode).toBe(400);
+        expect(await db.select().from(schema.plannedItems).where(eq(schema.plannedItems.recipeId, id))).toEqual([]);
+
+        // A past meal that holds it: an edit keeps it (shown deleted) and can
+        // remove it, but cannot put it back.
+        const fresh = (await ok("GET", `/api/meals/${used.freshId}`)) as MealItem;
+        const kept = await send("PATCH", `/api/meals/${used.freshId}`, { items: plateInputFromItems(fresh.items!), notes: "Loved it" });
+        expect(kept.statusCode, kept.body).toBe(200);
+        expect(kept.json<MealItem>().items![0]).toMatchObject({ kind: "recipe", recipe: { id, deleted: true }, rating: 4 });
+        const pear = fresh.items!.find((item) => item.kind === "food")!;
+        const removed = await send("PATCH", `/api/meals/${used.freshId}`, { items: plateInputFromItems([pear]) });
+        expect(removed.statusCode, removed.body).toBe(200);
+        expect(removed.json<MealItem>().recipes).toEqual([]);
+        const readded = await send("PATCH", `/api/meals/${used.freshId}`, {
+          items: [...plateInputFromItems(removed.json<MealItem>().items!), { kind: "recipe", recipeId: id }],
+        });
+        expect(readded.statusCode).toBe(400);
+
+        // Its container still serves, as a deleted food's does: the meal names
+        // the recipe, marked.
+        const again = await send("POST", `/api/babies/${used.babyId}/meals`, {
+          items: [{ kind: "storage", storageItemId: used.boxId, servings: 1 }],
+        });
+        expect(again.statusCode, again.body).toBe(201);
+        expect(again.json<MealItem>().recipes).toEqual([
+          { id: fixtures.catalogRecipe.id, title: "Banana Porridge", rating: null },
+          { id, title: "Satay noodles", rating: null, deleted: true },
+        ]);
+      });
+
+      // A write racing the delete must wait on its FOR UPDATE and then see
+      // the recipe deleted: the add check locks FOR KEY SHARE. PGlite cannot
+      // interleave two requests, so the statement is pinned.
+      it("checks a recipe a write adds FOR KEY SHARE", async () => {
+        const recipe = await createRecipe(owner, recipePayload());
+        const babyId = await createBaby(owner);
+        const seen: string[] = [];
+        const original = PgDialect.prototype.sqlToQuery;
+        const spy = vi.spyOn(PgDialect.prototype, "sqlToQuery").mockImplementation(function (this: PgDialect, ...args) {
+          const query = original.apply(this, args);
+          seen.push(query.sql.toLowerCase());
+          return query;
+        });
+        try {
+          expect((await send("POST", `/api/babies/${babyId}/meals`, { items: [{ kind: "recipe", recipeId: recipe.id }] })).statusCode).toBe(201);
+        } finally {
+          spy.mockRestore();
+        }
+        expect(seen.filter((text) => /^select "id" from "recipes" where .*"deleted_at" is null.* for key share$/.test(text))).toHaveLength(1);
+      });
+
+      it("repeats as a no-op that keeps the first time; another parent's recipe is 404 and untouched", async () => {
+        const used = await useEverywhere();
+        expect((await send("DELETE", `/api/recipes/${used.recipe.id}`)).statusCode).toBe(204);
+        const first = (await db.select().from(schema.recipes).where(eq(schema.recipes.id, used.recipe.id)))[0]!.deletedAt;
+        expect(first).toBeInstanceOf(Date);
+        expect((await send("DELETE", `/api/recipes/${used.recipe.id}`)).statusCode).toBe(204);
+        expect((await db.select().from(schema.recipes).where(eq(schema.recipes.id, used.recipe.id)))[0]!.deletedAt).toEqual(first);
+
+        const theirs = await createRecipe(intruder, recipePayload({ title: "Zucchini sticks" }));
+        expect((await send("DELETE", `/api/recipes/${theirs.id}`)).statusCode).toBe(404);
+        expect((await send("DELETE", `/api/recipes/${used.recipe.id}`, undefined, intruder)).statusCode).toBe(404);
+        expect((await send("GET", `/api/recipes/${used.recipe.id}/plan-count`, undefined, intruder)).statusCode).toBe(404);
+        expect((await send("GET", `/api/recipes/${used.recipe.id}`, undefined, intruder)).statusCode).toBe(404);
+        expect((await db.select().from(schema.recipes).where(eq(schema.recipes.id, theirs.id)))[0]!.deletedAt).toBeNull();
+      });
+
+      it("deletes for good one nothing logged or stored, plans and favorites with it; a repeat is 404", async () => {
+        const recipe = await createRecipe(owner, recipePayload({ title: "Spare" }));
+        const babyId = await createBaby(owner);
+        await ok("PUT", `/api/babies/${babyId}/plan/${PLAN_DAY}/meals/${LUNCH}`, { items: [{ kind: "recipe", recipeId: recipe.id }] });
+        await ok("PUT", `/api/recipes/${recipe.id}/favorite`);
+        expect(await ok("GET", `/api/recipes/${recipe.id}/plan-count`)).toEqual({ plannedMealCount: 1, mealCount: 0, storageCount: 0 });
+
+        expect((await send("DELETE", `/api/recipes/${recipe.id}`)).statusCode).toBe(204);
+        expect(await db.select().from(schema.recipes).where(eq(schema.recipes.id, recipe.id))).toEqual([]);
+        expect(await db.select().from(schema.plannedItems)).toEqual([]);
+        expect(await db.select().from(schema.favorites)).toEqual([]);
+        expect((await send("DELETE", `/api/recipes/${recipe.id}`)).statusCode).toBe(404);
+        expect((await send("GET", `/api/recipes/${recipe.id}`)).statusCode).toBe(404);
+      });
+    });
 
     it("404s another user's recipe, a catalog recipe and an unknown id", async () => {
       const theirs = await createRecipe(intruder, recipePayload({ title: "Zucchini sticks" }));

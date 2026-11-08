@@ -11,14 +11,19 @@ export function mealRecipes(meal: Pick<MealItem, "recipes" | "recipeId" | "recip
 }
 
 /**
- * Ledger 761: the meal page title for its recipes, null when it has none.
+ * Ledger 761: the meal page title for its recipes, as the pieces joined by
+ * " + " (the joiner storage titles already use); empty when it has none.
  * Two read "A + B"; three or more "A + {n} more" (the first, then a count of
- * the rest), the " + " joiner storage titles already use.
+ * the rest). A recipe the parent deleted keeps `deleted`, so the title marks
+ * it (ledger 957).
  */
-export function recipesTitle(recipes: readonly { title: string }[]): string | null {
+export function recipeTitleParts(
+  recipes: readonly { title: string; deleted?: boolean | undefined }[],
+): { name: string; deleted?: boolean | undefined }[] {
   const [first, ...rest] = recipes;
-  if (!first) return null;
-  if (rest.length === 0) return first.title;
-  if (rest.length === 1) return `${first.title} + ${rest[0]!.title}`;
-  return `${first.title} + ${rest.length} more`;
+  if (!first) return [];
+  const part = (recipe: typeof first) => ({ name: recipe.title, deleted: recipe.deleted });
+  if (rest.length === 0) return [part(first)];
+  if (rest.length === 1) return [part(first), part(rest[0]!)];
+  return [part(first), { name: `${rest.length} more` }];
 }

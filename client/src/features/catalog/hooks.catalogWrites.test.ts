@@ -144,4 +144,12 @@ describe("every catalog write empties the SW catalog cache before it invalidates
     expect(h.log[0]).toBe("deleteCatalogCache");
     expect(h.log).toContain(`invalidate:${listKey}`);
   });
+  // Ledger 957: the meals and storage that name a deleted recipe show it
+  // marked "(deleted)", and plans lose it, so all of those refetch.
+  it("useDeleteCustomRecipe refetches history and plans too", async () => {
+    const { onSettled } = useDeleteCustomRecipe() as unknown as { onSettled: () => void };
+    onSettled();
+    await flush();
+    for (const key of ['["meals"]', '["storage"]', '["plan"]', '["favorites"]']) expect(h.log).toContain(`invalidate:${key}`);
+  });
 });

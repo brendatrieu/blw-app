@@ -312,7 +312,17 @@ export const storageItemSchema = z.object({
    * above are the first. Empty for a food or label-only container. Optional
    * so an older cached body still parses.
    */
-  recipes: z.array(z.object({ id: z.string().uuid(), title: z.string() })).optional(),
+  recipes: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        title: z.string(),
+        /** Ledger 957: the parent has since deleted this custom recipe; the
+         * container keeps it and says "(deleted)". Only ever sent as true. */
+        deleted: z.boolean().optional(),
+      }),
+    )
+    .optional(),
   preparedAt: z.string(),
   location: storageLocationSchema,
   status: storageStatusSchema,

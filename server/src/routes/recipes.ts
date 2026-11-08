@@ -5,9 +5,11 @@
 // seeded content (everybody's) and set for a parent's own, and EVERY read
 // here goes through `visibleRecipesCondition` — another account's recipe is
 // absent from the list and 404 on detail, exactly like a row that does not
-// exist. The write routes only ever touch custom recipes: a catalog row has
-// no owner, so it can never match the ownership filter and is reported as not
-// found like anybody else's.
+// exist. The list goes through `choosableRecipesCondition` too: a recipe its
+// owner deleted (ledger 957, `deleted_at`) leaves it, while its detail still
+// loads for the history that names it. The write routes only ever touch
+// custom recipes: a catalog row has no owner, so it can never match the
+// ownership filter and is reported as not found like anybody else's.
 //
 // What a custom recipe does NOT get: an image, storage overrides, a CURATED
 // iron-focus claim, or the catalog's three age variants. (It can still read
@@ -16,7 +18,7 @@
 // exactly ONE `recipe_variants` row, filed at the stage its "suitable from"
 // age falls in, and `isCustom` tells the client to render them as a single
 // "Steps" section instead of age tabs.
-import { and, asc, eq, ilike, inArray, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   ageStageForMonths,
@@ -36,7 +38,7 @@ import {
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
 import { visibleFoodsCondition } from "../services/foods.js";
-import { visibleRecipesCondition } from "../services/recipes.js";
+import { choosableRecipesCondition, visibleRecipesCondition } from "../services/recipes.js";
 import {
   deriveIronFocus,
   ironFocusFilter,
@@ -257,13 +259,53 @@ async function loadRecipeDetail(db: Database, recipe: RecipeRow): Promise<Recipe
     variants,
     isCustom: recipe.ownerId !== null,
     notes: recipe.notes,
+    deletedAt: recipe.deletedAt?.toISOString() ?? null,
   };
 
   return recipeDetailSchema.parse(detail);
 }
 
+/**
+ * Where the owner's recipe is used (ledgers 754, 937, 957): logged meals at
+ * any position (`meal_recipes`, not the legacy first-recipe mirror), storage
+ * containers in any status (a several-recipe container names a recipe past
+ * its first only in `storage_item_recipes`), and planned meals. A meal or
+ * plan holding it twice counts once.
+ */
+async function loadRecipeUsage(db: Database | Transaction, recipeId: string): Promise<RecipePlanCount> {
+  const [mealRow] = await db
+    .select({ count: sql<number>`count(distinct ${mealRecipes.mealId})::int` })
+    .from(mealRecipes)
+    .where(eq(mealRecipes.recipeId, recipeId));
+  const [storageRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(storageItems)
+    .where(
+      or(
+        eq(storageItems.recipeId, recipeId),
+        inArray(
+          storageItems.id,
+          db
+            .select({ id: storageItemRecipes.storageItemId })
+            .from(storageItemRecipes)
+            .where(eq(storageItemRecipes.recipeId, recipeId)),
+        ),
+      ),
+    );
+  const [planRow] = await db
+    .select({ count: sql<number>`count(distinct ${plannedItems.plannedMealId})::int` })
+    .from(plannedItems)
+    .where(eq(plannedItems.recipeId, recipeId));
+  return {
+    plannedMealCount: planRow?.count ?? 0,
+    mealCount: mealRow?.count ?? 0,
+    storageCount: storageRow?.count ?? 0,
+  };
+}
+
 /** This user's own recipe by id, or undefined — a catalog row (no owner) can
- * never match, which is what makes editing one a 404 rather than a 403. */
+ * never match, which is what makes editing one a 404 rather than a 403.
+ * Deleted recipes DO match: a repeat delete and the delete question need them. */
 async function loadOwnedRecipe(db: Database, id: string, userId: string): Promise<RecipeRow | undefined> {
   const [row] = await db
     .select()
@@ -290,7 +332,9 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     const { q, scope, maxAgeMonths, allergen, ironFocus, vitaminCHigh, fiberHigh, ingredientFoodId } = parsed.data;
 
     // Unconditional, and first: every other filter narrows what this allows.
-    const conditions = [visibleRecipesCondition(userId)];
+    // Choosable: this list feeds browsing, search, favorites and every
+    // picker, so a recipe its owner deleted is not in it (ledger 957).
+    const conditions = [choosableRecipesCondition(userId)];
     if (scope === "custom") conditions.push(eq(recipes.ownerId, userId));
     if (scope === "favorites") {
       const favoritedIds = db
@@ -427,7 +471,8 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
   //
   // Still open to anonymous callers — the seeded catalog is public content —
   // but scoped: a signed-in parent also sees their own, and nobody sees
-  // anybody else's.
+  // anybody else's. A recipe its owner deleted still loads (with
+  // `deletedAt`), for the meals and containers that name it (ledger 957).
   // ---------------------------------------------------------------------
   app.get("/api/recipes/:id", { preHandler: app.resolveOptionalUser }, async (request, reply) => {
     const params = recipeIdParamSchema.safeParse(request.params);
@@ -503,6 +548,8 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     const userId = currentUserId(request);
     const existing = await loadOwnedRecipe(db, params.data.id, userId);
     if (!existing) return notFound(reply);
+    // A deleted recipe's page is read-only (ledger 957), as a deleted food's is.
+    if (existing.deletedAt) return reply.code(409).send({ error: "deleted" });
 
     const kept = body.data.ingredients
       ? new Set(
@@ -565,13 +612,13 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
   });
 
   // ---------------------------------------------------------------------
-  // GET /api/recipes/:id/plan-count (ledger 937)
+  // GET /api/recipes/:id/plan-count (ledgers 937, 957)
   //
-  // What the delete question says the delete takes off plans: every planned
-  // meal holding the owner's recipe, any day (past ones too) and any of their
-  // babies, since the delete below cascades through all of them. A meal
-  // holding it twice counts once. Only the owner can plan their own recipe,
-  // so the recipe id alone finds every row. Anyone else gets a 404.
+  // What the delete question names before the parent taps Delete: the
+  // logged meals and storage containers that keep the recipe, marked
+  // "(deleted)", and the planned meals that lose it. Only the owner can
+  // log, store or plan their own recipe, so the recipe id alone finds every
+  // row. Anyone else gets a 404.
   // ---------------------------------------------------------------------
   app.get("/api/recipes/:id/plan-count", { preHandler: app.requireAuth }, async (request, reply) => {
     const params = recipeIdParamSchema.safeParse(request.params);
@@ -580,15 +627,22 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     const existing = await loadOwnedRecipe(db, params.data.id, currentUserId(request));
     if (!existing) return notFound(reply);
 
-    const [row] = await db
-      .select({ count: sql<number>`count(distinct ${plannedItems.plannedMealId})::int` })
-      .from(plannedItems)
-      .where(eq(plannedItems.recipeId, existing.id));
-    return { plannedMealCount: row?.count ?? 0 } satisfies RecipePlanCount;
+    return (await loadRecipeUsage(db, existing.id)) satisfies RecipePlanCount;
   });
 
   // ---------------------------------------------------------------------
   // DELETE /api/recipes/:id
+  //
+  // Always works (ledger 957; it used to 409 while a meal or container named
+  // the recipe). Mirrors a custom food's delete: a recipe that a logged meal
+  // or storage container names is SOFT-deleted (`deleted_at`) — those rows
+  // reference it without a cascade on purpose (eaten history must not
+  // disappear, a container must not forget what it was made from), so the
+  // row stays and history marks it "(deleted)". A recipe nothing logged or
+  // stored is deleted for good, its ingredients and steps cascading: there
+  // is no restore, so nothing would ever read it again. Either way it comes
+  // off every plan and out of favorites in the same transaction (a soft
+  // delete fires no cascade). Repeating the delete keeps the first time.
   // ---------------------------------------------------------------------
   app.delete("/api/recipes/:id", { preHandler: app.requireAuth }, async (request, reply) => {
     const params = recipeIdParamSchema.safeParse(request.params);
@@ -598,56 +652,28 @@ export function registerRecipeRoutes(app: FastifyInstance, db: Database): void {
     const existing = await loadOwnedRecipe(db, params.data.id, userId);
     if (!existing) return notFound(reply);
 
-    // A logged meal keeps its recipe attribution and a storage container keeps
-    // knowing what it was made from, so neither reference cascades — a
-    // referenced recipe is a 409 the parent can act on, with the counts the
-    // UI needs to say what is in the way. Favorites are NOT in this list:
-    // un-favoriting is not a decision worth blocking a delete on, so the
-    // caller's own row is simply removed below. Nor are plans: a planned use
-    // cascades away (ledger 903, chair §10.5); the delete question names how
-    // many planned meals that is, from GET .../plan-count above (ledger 937).
-    //
     // Ledger 754 (DESIGN-B §6): the counts run INSIDE the delete transaction,
-    // behind a lock on the recipe row. A meal or container written meanwhile
-    // takes FOR KEY SHARE on this row through its foreign key, so it either
-    // lands first (and is counted: 409) or waits and then fails its FK check
-    // — never a silent cascade of `meal_recipes` / `storage_item_recipes`.
-    const conflict = await db.transaction(async (tx) => {
+    // behind a lock on the recipe row. A meal, container or plan written
+    // meanwhile takes FOR KEY SHARE on this row (through its foreign key, or
+    // `validateRecipeIds`), so it either lands first (and is counted, or
+    // cleared from the plan) or waits, and then finds the recipe deleted —
+    // never a silent cascade of `meal_recipes` / `storage_item_recipes`.
+    await db.transaction(async (tx) => {
       await tx.select({ id: recipes.id }).from(recipes).where(eq(recipes.id, existing.id)).for("update");
-      // Every meal the recipe is on, at any position (several recipes per
-      // meal, ledger 752): `meal_recipes`, not the legacy first-recipe mirror.
-      const [mealRow] = await tx
-        .select({ count: sql<number>`count(distinct ${mealRecipes.mealId})::int` })
-        .from(mealRecipes)
-        .where(eq(mealRecipes.recipeId, existing.id));
-      const [storageRow] = await tx
-        .select({ count: sql<number>`count(*)::int` })
-        .from(storageItems)
-        // A several-recipe container (ledger 753) names a recipe past its first
-        // only in `storage_item_recipes`, which would otherwise cascade away.
-        .where(
-          or(
-            eq(storageItems.recipeId, existing.id),
-            inArray(
-              storageItems.id,
-              tx
-                .select({ id: storageItemRecipes.storageItemId })
-                .from(storageItemRecipes)
-                .where(eq(storageItemRecipes.recipeId, existing.id)),
-            ),
-          ),
-        );
+      const { mealCount, storageCount } = await loadRecipeUsage(tx, existing.id);
 
-      const mealCount = mealRow?.count ?? 0;
-      const storageCount = storageRow?.count ?? 0;
-      if (mealCount > 0 || storageCount > 0) return { mealCount, storageCount };
-
+      await tx.delete(plannedItems).where(eq(plannedItems.recipeId, existing.id));
       await tx.delete(favorites).where(and(eq(favorites.userId, userId), eq(favorites.recipeId, existing.id)));
-      // `recipe_ingredients` and `recipe_variants` cascade from here.
-      await tx.delete(recipes).where(and(eq(recipes.id, existing.id), eq(recipes.ownerId, userId)));
-      return null;
+      if (mealCount > 0 || storageCount > 0) {
+        await tx
+          .update(recipes)
+          .set({ deletedAt: new Date() })
+          .where(and(eq(recipes.id, existing.id), eq(recipes.ownerId, userId), isNull(recipes.deletedAt)));
+      } else {
+        // `recipe_ingredients` and `recipe_variants` cascade from here.
+        await tx.delete(recipes).where(and(eq(recipes.id, existing.id), eq(recipes.ownerId, userId)));
+      }
     });
-    if (conflict) return reply.code(409).send({ error: "conflict", ...conflict });
 
     return reply.code(204).send();
   });

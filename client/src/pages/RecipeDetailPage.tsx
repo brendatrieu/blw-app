@@ -6,7 +6,6 @@ import { ageInMonths, formatExtraIngredient } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { RatingHistory, RatingSummaryRow } from "../features/tracking/components/RatingHistory.js";
 import { useDeleteCustomRecipe, useRecipe, useRecipePlanCount } from "../features/catalog/hooks.js";
-import { asCustomRecipeConflict } from "../features/catalog/api.js";
 import { AGE_STAGE_OPTIONS, clampStageToAvailable, stageForAge } from "../features/catalog/stage.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../features/catalog/basicRecipe.js";
 import { Badge } from "../features/catalog/components/Badge.js";
@@ -15,8 +14,8 @@ import { DeletedMark } from "../features/catalog/components/DeletedMark.js";
 import {
   RECIPES_TAB_PATH,
   allergenLabel,
-  customRecipeConflictMessage,
   plannedMealsDeleteLine,
+  recipeUsesDeleteLine,
 } from "../features/catalog/constants.js";
 import { foodPlate, getExtraIngredientEmoji } from "../features/catalog/foodEmoji.js";
 import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
@@ -90,14 +89,12 @@ interface CustomRecipeActionsProps {
  * (item 599): a `ConfirmDialog` says what goes, and nothing is deleted until
  * its red button is tapped.
  *
- * The 409 is the case worth spelling out: a recipe still referenced by
- * logged meals or storage items can't be deleted (those rows would be left
- * pointing at nothing), and the server sends both counts so this can name
- * exactly where to go clean up. Favorites never block — the server drops
- * the caller's own favorite row along with the recipe. Plans don't block
- * either, they lose the recipe; so while the question is open it reads how
- * many planned meals hold it and says so (ledger 937). Offline or failed,
- * that line is simply absent.
+ * Nothing blocks the delete (ledger 957), so the question names everything
+ * up front, read fresh while it is open: the logged meals and storage items
+ * that keep the recipe, marked "(deleted)", then the planned meals that lose
+ * it (ledger 937), then "This cannot be undone." Favorites go with it
+ * without a word. Offline or failed, only the last line shows, and Delete
+ * still works.
  *
  * Exported so a handler test can drive it as a plain function.
  */
@@ -105,8 +102,9 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
   const [asking, setAsking] = useState(false);
   const navigate = useNavigate();
   const deleteRecipe = useDeleteCustomRecipe();
-  const conflict = asCustomRecipeConflict(deleteRecipe.error);
-  const planLine = plannedMealsDeleteLine(useRecipePlanCount(recipe.id, asking).data?.plannedMealCount);
+  const counts = useRecipePlanCount(recipe.id, asking).data;
+  const usesLine = recipeUsesDeleteLine(counts);
+  const planLine = plannedMealsDeleteLine(counts?.plannedMealCount);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -128,18 +126,28 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
             onSuccess: () => navigate(RECIPES_TAB_PATH, { replace: true }),
           })
         }
-        error={
-          deleteRecipe.isError
-            ? conflict
-              ? customRecipeConflictMessage(conflict)
-              : "Couldn't delete that — try again."
-            : undefined
-        }
+        error={deleteRecipe.isError ? "Couldn't delete that — try again." : undefined}
       >
+        {usesLine ? <p>{usesLine}</p> : null}
         {planLine ? <p>{planLine}</p> : null}
         <p>This cannot be undone.</p>
       </ConfirmDialog>
     </div>
+  );
+}
+
+/**
+ * What a deleted recipe's page shows instead of Log meal / Add to storage
+ * (ledger 957, as a deleted food's page does, ledger 543): the page is
+ * read-only — no Favorite, Edit or Delete either. It is reached only from
+ * an old link: the meals and storage items that name it stay. There is no
+ * Restore (chair: YAGNI), so the notice is just the one line.
+ */
+export function DeletedRecipeNotice() {
+  return (
+    <p className="rounded-[var(--radius-lg)] bg-[var(--color-bg-inset)] p-4 text-sm text-[var(--color-text)]">
+      You deleted this recipe.
+    </p>
   );
 }
 
@@ -204,15 +212,18 @@ export function RecipeDetailPage() {
             <BackButton fallback={RECIPES_TAB_PATH} />
             <h1 className="font-display min-w-0 text-[var(--color-text)]">{recipe.title}</h1>
           </div>
-          <FavoriteHeart
-            recipeId={recipe.id}
-            title={recipe.title}
-            minAgeMonths={recipe.minAgeMonths}
-            ironFocus={recipe.ironFocus}
-            vitaminCHigh={recipe.vitaminCHigh}
-            fiberHigh={recipe.fiberHigh}
-            allergens={recipe.allergens}
-          />
+          {/* A deleted recipe can't be favorited (ledger 957). */}
+          {!recipe.deletedAt && (
+            <FavoriteHeart
+              recipeId={recipe.id}
+              title={recipe.title}
+              minAgeMonths={recipe.minAgeMonths}
+              ironFocus={recipe.ironFocus}
+              vitaminCHigh={recipe.vitaminCHigh}
+              fiberHigh={recipe.fiberHigh}
+              allergens={recipe.allergens}
+            />
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {/* 0 minutes isn't "instant", it's "the parent didn't say" — the
@@ -236,14 +247,18 @@ export function RecipeDetailPage() {
           are the two things you do from a recipe, and neither is a
           sub-action of the other. Both are plain links carrying the recipe
           id — the full forms live at the other end. */}
-      <div className="flex items-center gap-2">
-        <ButtonLink to={`/log-meal?recipe=${recipe.id}`} size="lg" className="flex-1">
-          Log meal
-        </ButtonLink>
-        <ButtonLink to={`/storage/add?recipe=${recipe.id}`} variant="tonal" size="lg" className="flex-1">
-          Add to storage
-        </ButtonLink>
-      </div>
+      {recipe.deletedAt ? (
+        <DeletedRecipeNotice />
+      ) : (
+        <div className="flex items-center gap-2">
+          <ButtonLink to={`/log-meal?recipe=${recipe.id}`} size="lg" className="flex-1">
+            Log meal
+          </ButtonLink>
+          <ButtonLink to={`/storage/add?recipe=${recipe.id}`} variant="tonal" size="lg" className="flex-1">
+            Add to storage
+          </ButtonLink>
+        </div>
+      )}
 
       <section className="flex flex-col gap-2.5">
         <h2 className="font-h2 text-[var(--color-text)]">Ingredients</h2>
@@ -385,7 +400,7 @@ export function RecipeDetailPage() {
 
       <RatingHistory target={{ recipeId: recipe.id }} name={recipe.title} />
 
-      {recipe.isCustom && <CustomRecipeActions recipe={recipe} />}
+      {recipe.isCustom && !recipe.deletedAt && <CustomRecipeActions recipe={recipe} />}
     </div>
   );
 }

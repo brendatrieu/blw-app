@@ -1,5 +1,6 @@
 // Items 599, 610: a custom recipe is deleted only from the "Delete <title>?"
-// pop-up's red button. Called as a plain function with the hooks mocked (idiom from
+// pop-up's red button. Ledger 957: nothing blocks it, so the question names
+// the meals and storage items that keep it before the red button. Called as a plain function with the hooks mocked (idiom from
 // FoodDetailPage.handlers).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,8 +15,8 @@ const h = vi.hoisted(() => {
       calls: [] as { id: unknown; options: { onSuccess?: () => void } }[],
     },
     navigations: [] as unknown[],
-    // Ledger 937: what the plan-count read answers, and the calls it got.
-    planCount: { data: undefined as { plannedMealCount: number } | undefined },
+    // Ledgers 937, 957: what the plan-count read answers, and the calls it got.
+    planCount: { data: undefined as { plannedMealCount: number; mealCount: number; storageCount: number } | undefined },
     planCountCalls: [] as [string, boolean][],
     useState: (init: unknown) => {
       const i = store.i++;
@@ -89,7 +90,7 @@ describe("CustomRecipeActions delete question (item 599)", () => {
     const dialog = dialogOf(render());
     expect(dialog.props.open).toBe(true);
     expect(dialog.props.title).toBe("Delete Lentil mash?");
-    expect(dialog.props.children).toMatchObject([null, { props: { children: "This cannot be undone." } }]);
+    expect(dialog.props.children).toMatchObject([null, null, { props: { children: "This cannot be undone." } }]);
     expect(dialog.props.confirmLabel).toBe("Delete");
     expect(h.mutation.calls).toEqual([]);
   });
@@ -109,15 +110,16 @@ describe("CustomRecipeActions delete question (item 599)", () => {
     expect(h.navigations).toEqual(["/recipes"]);
   });
 
-  it("shows pending, and says what is in the way on a 409", () => {
+  it("shows pending, and one plain retry line for any failure (no 409 any more, ledger 957)", () => {
     h.mutation.isPending = true;
     expect(dialogOf(render()).props.pending).toBe(true);
     Object.assign(h.mutation, {
       isPending: false,
       isError: true,
+      // What an older server still answers while a meal names the recipe.
       error: new ApiError(409, "conflict", { error: "conflict", mealCount: 2, storageCount: 0 }),
     });
-    expect(dialogOf(render()).props.error).toBe("Used in 2 meals — remove those first.");
+    expect(dialogOf(render()).props.error).toBe("Couldn't delete that — try again.");
     h.mutation.error = new Error("offline");
     expect(dialogOf(render()).props.error).toBe("Couldn't delete that — try again.");
   });
@@ -138,22 +140,53 @@ describe("CustomRecipeActions delete question names the plans it leaves (ledger 
   });
 
   it("adds the plan line before 'cannot be undone', singular and plural", () => {
-    h.planCount.data = { plannedMealCount: 1 };
+    h.planCount.data = { plannedMealCount: 1, mealCount: 0, storageCount: 0 };
     expect(paragraphs(render())).toEqual([
       "It's planned for 1 meal. Deleting it takes it off those plans.",
       "This cannot be undone.",
     ]);
-    h.planCount.data = { plannedMealCount: 3 };
+    h.planCount.data = { plannedMealCount: 3, mealCount: 0, storageCount: 0 };
     expect(paragraphs(render())[0]).toBe("It's planned for 3 meals. Deleting it takes it off those plans.");
   });
 
   it("says nothing about plans when none hold it, or the read failed or is offline", () => {
-    h.planCount.data = { plannedMealCount: 0 };
+    h.planCount.data = { plannedMealCount: 0, mealCount: 0, storageCount: 0 };
     expect(paragraphs(render())).toEqual(["This cannot be undone."]);
     h.planCount.data = undefined;
     expect(paragraphs(render())).toEqual(["This cannot be undone."]);
     // The question still deletes without the line.
     (dialogOf(render()).props.onConfirm as () => void)();
+    expect(h.mutation.calls.map((call) => call.id)).toEqual(["recipe-9"]);
+  });
+});
+
+describe("CustomRecipeActions delete question names the meals and storage that keep it (ledger 957)", () => {
+  const paragraphs = (tree: El) =>
+    (dialogOf(tree).props.children as unknown[]).filter(Boolean).map((p) => (p as El).props.children);
+
+  it("names every use up front, in order: kept uses, then plans, then 'cannot be undone'", () => {
+    h.planCount.data = { plannedMealCount: 2, mealCount: 1, storageCount: 1 };
+    expect(paragraphs(render())).toEqual([
+      "Used in 1 meal and 1 storage item. Those keep showing it, marked (deleted).",
+      "It's planned for 2 meals. Deleting it takes it off those plans.",
+      "This cannot be undone.",
+    ]);
+  });
+
+  it("leaves out a zero count, and the whole line when nothing logged or stored holds it", () => {
+    h.planCount.data = { plannedMealCount: 0, mealCount: 3, storageCount: 0 };
+    expect(paragraphs(render())).toEqual(["Used in 3 meals. Those keep showing it, marked (deleted).", "This cannot be undone."]);
+    h.planCount.data = { plannedMealCount: 0, mealCount: 0, storageCount: 2 };
+    expect(paragraphs(render())[0]).toBe("Used in 2 storage items. Those keep showing it, marked (deleted).");
+    h.planCount.data = { plannedMealCount: 1, mealCount: 0, storageCount: 0 };
+    expect(paragraphs(render())).toEqual(["It's planned for 1 meal. Deleting it takes it off those plans.", "This cannot be undone."]);
+  });
+
+  it("still deletes, on the plain Delete, with the uses named (it never blocks)", () => {
+    h.planCount.data = { plannedMealCount: 0, mealCount: 1, storageCount: 0 };
+    const dialog = dialogOf(render());
+    expect(dialog.props.confirmLabel).toBe("Delete");
+    (dialog.props.onConfirm as () => void)();
     expect(h.mutation.calls.map((call) => call.id)).toEqual(["recipe-9"]);
   });
 });

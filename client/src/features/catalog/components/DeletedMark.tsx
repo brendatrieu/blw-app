@@ -19,15 +19,22 @@ export function DeletedMark({ deleted }: { deleted: boolean | undefined }) {
 
 /** "A, B (deleted), C": food names comma-joined, each deleted one carrying
  * the muted mark — for every title or line that lists a meal's, container's
- * or recipe's foods. The names between marks stay ONE text node, so a list
- * with nothing deleted renders exactly the plain "A, B" it always did. With
- * a mark, the pieces are wrapped in ONE span: a flex parent (PageHeader's h1)
- * would otherwise lay each piece out as its own column. */
-export function FoodNames({ foods }: { foods: readonly { name: string; deleted?: boolean | undefined }[] }) {
+ * or recipe's foods (and, joined by " + ", a meal page's recipe title, ledger
+ * 957). The names between marks stay ONE text node, so a list with nothing
+ * deleted renders exactly the plain "A, B" it always did. With a mark, the
+ * pieces are wrapped in ONE span: a flex parent (PageHeader's h1) would
+ * otherwise lay each piece out as its own column. */
+export function FoodNames({
+  foods,
+  separator = ", ",
+}: {
+  foods: readonly { name: string; deleted?: boolean | undefined }[];
+  separator?: string;
+}) {
   const parts: ReactNode[] = [];
   let text = "";
   foods.forEach((food, index) => {
-    text += `${index > 0 ? ", " : ""}${food.name}`;
+    text += `${index > 0 ? separator : ""}${food.name}`;
     if (food.deleted) {
       parts.push(text, <DeletedMark key={index} deleted />);
       text = "";

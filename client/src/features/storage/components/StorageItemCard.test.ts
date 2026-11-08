@@ -364,6 +364,19 @@ describe("StorageItemCard food cluster (item 347)", () => {
     );
   });
 
+  // Ledger 957: a container made from a recipe its owner deleted keeps it.
+  it("marks a deleted recipe in the title with the same muted mark; a live one has none", () => {
+    const fromRecipe = { ...BASE_ITEM, foods: [], recipeId: "r1", recipeTitle: "Lentil mash" };
+    expect(renderCard({ ...fromRecipe, recipes: [{ id: "r1", title: "Lentil mash", deleted: true }] })).toContain(
+      'Lentil mash<span class="font-normal text-[var(--color-text-muted)]">\u00a0<!-- -->(deleted)</span>',
+    );
+    expect(renderCard({ ...fromRecipe, recipes: [{ id: "r1", title: "Lentil mash" }] })).not.toContain("(deleted)");
+    // A label still wins over the recipe, as before.
+    expect(renderCard({ ...fromRecipe, label: "Soup", recipes: [{ id: "r1", title: "Lentil mash", deleted: true }] })).not.toContain(
+      "(deleted)",
+    );
+  });
+
   it("renders one plate per food, tinted by slug, with no overflow count at three", () => {
     const html = renderCard({ ...BASE_ITEM, foods: threeFoods });
     expect(storageItemCluster({ ...BASE_ITEM, foods: threeFoods })).toEqual({

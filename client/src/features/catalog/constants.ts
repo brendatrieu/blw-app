@@ -133,7 +133,7 @@ export function addCustomFoodLabel(query: string): string {
 export const CUSTOM_FOOD_SOFT_NOTE =
   "Added by you — there's no curated prep or choking guidance for this food. Check serving safety with your pediatrician.";
 
-/** A custom recipe's 409 has no `recipeCount`; a food's usage does. */
+/** A custom recipe's usage has no `recipeCount`; a food's does. */
 type UsageCounts = { mealCount: number; storageCount: number; recipeCount?: number };
 
 /**
@@ -147,12 +147,14 @@ export function usedInPhrase(counts: UsageCounts): string | null {
 }
 
 /**
- * Why a custom recipe couldn't be deleted, from the server's 409 counts
- * (item 212). Favorites never appear here: they're removed with the recipe
- * rather than blocking it.
+ * The recipe delete question's first line (ledger 957): "Used in 2 meals and
+ * 1 storage item. Those keep showing it, marked (deleted)." Null when no
+ * meal or storage item holds it (or the count is unknown), so the question
+ * says nothing. Favorites never appear: they go with the recipe.
  */
-export function customRecipeConflictMessage(conflict: { mealCount: number; storageCount: number }): string {
-  return `${usedInPhrase(conflict) ?? "Still in use"} — remove those first.`;
+export function recipeUsesDeleteLine(counts: { mealCount: number; storageCount: number } | undefined): string | null {
+  const usedIn = counts ? usedInPhrase(counts) : null;
+  return usedIn ? `${usedIn}. Those keep showing it, marked ${DELETED_FOOD_MARK}.` : null;
 }
 
 /**

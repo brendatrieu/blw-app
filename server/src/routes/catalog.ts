@@ -35,7 +35,7 @@ import {
 import { notFound } from "../plugins/auth.js";
 import type { Database } from "../db/index.js";
 import { choosableFoodsCondition, visibleFoodsCondition } from "../services/foods.js";
-import { visibleRecipesCondition } from "../services/recipes.js";
+import { choosableRecipesCondition } from "../services/recipes.js";
 import { buildCandidateSlug, isUniqueViolation, SLUG_ATTEMPTS } from "../services/slugs.js";
 import { type Transaction } from "../services/meals.js";
 import { syncLegacy } from "../services/plate.js";
@@ -237,7 +237,8 @@ async function loadFoodDetail(db: Database, food: FoodRow, userId: string | null
     })
     .from(recipeIngredients)
     .innerJoin(recipes, eq(recipeIngredients.recipeId, recipes.id))
-    .where(and(eq(recipeIngredients.foodId, food.id), visibleRecipesCondition(userId)))
+    // Choosable (ledger 957): a recipe its owner deleted leaves this list.
+    .where(and(eq(recipeIngredients.foodId, food.id), choosableRecipesCondition(userId)))
     .orderBy(asc(recipes.title));
 
   const detail: FoodDetail = {

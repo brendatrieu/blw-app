@@ -23,7 +23,7 @@ import { babies, foods, mealFoods, meals, storageItems, recipes } from "../db/sc
 import { loadAllergenProgress } from "../services/allergens.js";
 import type { MealReads } from "../services/meals.js";
 import { choosableFoodsCondition } from "../services/foods.js";
-import { visibleRecipesCondition } from "../services/recipes.js";
+import { choosableRecipesCondition } from "../services/recipes.js";
 import { deriveIronFocus, loadRecipeNutrition, nutritionFor } from "../services/recipeNutrition.js";
 import {
   containerWindowHours,
@@ -220,8 +220,9 @@ function buildSearchRecipesTool(db: Database, userId: string) {
     inputSchema: SEARCH_RECIPES_INPUT_SCHEMA,
     run: async ({ ageMonths, query }) => {
       // Scoped like every other recipe read: the seeded catalog plus this
-      // parent's own recipes, never another account's.
-      const conditions = [visibleRecipesCondition(userId), lte(recipes.minAgeMonths, ageMonths)];
+      // parent's own recipes, never another account's, nor one they
+      // deleted (ledger 957).
+      const conditions = [choosableRecipesCondition(userId), lte(recipes.minAgeMonths, ageMonths)];
       const trimmedQuery = query?.trim();
       if (trimmedQuery) conditions.push(ilike(recipes.title, `%${trimmedQuery}%`));
 

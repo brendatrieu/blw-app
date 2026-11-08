@@ -297,6 +297,12 @@ export const recipes = pgTable(
     // Free-text note on a custom recipe ("Robin likes it with yoghurt").
     // Catalog rows leave it null.
     notes: text("notes"),
+    // Ledger 957 (migration 0026): set when a parent deletes their own
+    // recipe that a logged meal or storage container still names. The row
+    // stays so that history keeps resolving (and says "(deleted)");
+    // choosing/browsing reads filter it out. A recipe nothing logged or
+    // stored is deleted for good instead. Only ever set on a custom recipe.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [index("recipes_owner_id_idx").on(t.ownerId)],
 );

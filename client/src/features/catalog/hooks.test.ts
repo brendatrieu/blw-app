@@ -8,8 +8,7 @@ import type {
   RecipeListItem,
   RecipesResponse,
 } from "@blw/shared";
-import { ApiError } from "../../lib/api.js";
-import { asCustomRecipeConflict, buildRecipesQueryString } from "./api.js";
+import { buildRecipesQueryString } from "./api.js";
 import {
   catalogKeys,
   isUnfilteredRecipeVariant,
@@ -447,15 +446,3 @@ describe("buildRecipesQueryString", () => {
   });
 });
 
-describe("asCustomRecipeConflict", () => {
-  it("reads the counts out of a 409 body", () => {
-    const error = new ApiError(409, "conflict", { error: "conflict", mealCount: 2, storageCount: 0 });
-    expect(asCustomRecipeConflict(error)).toEqual({ error: "conflict", mealCount: 2, storageCount: 0 });
-  });
-
-  it("is null for every other failure", () => {
-    expect(asCustomRecipeConflict(new ApiError(404, "not_found", { error: "not_found" }))).toBeNull();
-    expect(asCustomRecipeConflict(new ApiError(409, "conflict", { error: "conflict" }))).toBeNull();
-    expect(asCustomRecipeConflict(new Error("offline"))).toBeNull();
-  });
-});

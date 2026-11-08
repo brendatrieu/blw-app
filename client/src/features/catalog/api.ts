@@ -1,8 +1,7 @@
 import {
-  customRecipeConflictSchema,
+  recipePlanCountSchema,
   type CreateCustomFoodInput,
   type CreateCustomRecipeInput,
-  type CustomRecipeConflict,
   type FoodDetail,
   type FoodsQuery,
   type FoodsResponse,
@@ -14,7 +13,7 @@ import {
   type UpdateCustomFoodInput,
   type UpdateCustomRecipeInput,
 } from "@blw/shared";
-import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from "../../lib/api.js";
+import { apiDelete, apiGet, apiPatch, apiPost } from "../../lib/api.js";
 
 /**
  * Every FoodsQuery key becomes a query param — this is an allow-list, so a
@@ -140,22 +139,10 @@ export function deleteCustomRecipe(id: string): Promise<void> {
   return apiDelete<void>(`/api/recipes/${encodeURIComponent(id)}`);
 }
 
-/** How many planned meals hold the parent's custom recipe (ledger 937). */
-export function fetchRecipePlanCount(id: string): Promise<RecipePlanCount> {
-  return apiGet<RecipePlanCount>(`/api/recipes/${encodeURIComponent(id)}/plan-count`);
-}
-
-/**
- * The `{ error: "conflict", mealCount, storageCount }` body behind a 409 from
- * `deleteCustomRecipe`, or null for any other failure. Pure and exported so
- * the recipe page's inline "used in N meals…" message is unit-testable: it
- * takes the thrown value as `unknown` (a mutation's `error` type) and narrows
- * it here, so no caller has to hand-check `instanceof ApiError` plus the shape.
- * Favorites are never a block: the server just deletes the caller's own
- * favorite row along with the recipe.
- */
-export function asCustomRecipeConflict(error: unknown): CustomRecipeConflict | null {
-  if (!(error instanceof ApiError) || error.status !== 409) return null;
-  const parsed = customRecipeConflictSchema.safeParse(error.body);
-  return parsed.success ? parsed.data : null;
+/** What deleting the parent's custom recipe touches (ledgers 937, 957):
+ * the meals and storage items that keep it, and the planned meals that lose
+ * it. Parsed with the shared schema, so a malformed answer reads as failed
+ * (the question then says only "This cannot be undone."). */
+export async function fetchRecipePlanCount(id: string): Promise<RecipePlanCount> {
+  return recipePlanCountSchema.parse(await apiGet<unknown>(`/api/recipes/${encodeURIComponent(id)}/plan-count`));
 }

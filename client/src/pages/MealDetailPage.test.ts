@@ -107,6 +107,19 @@ describe("MealDetailPage title", () => {
     expect(headingOf(html)).toContain(`Avocado${MUTED_MARK}, Chicken`);
     expect(headingOf(html)).not.toContain(`Chicken${MUTED_MARK}`);
   });
+
+  // Ledger 957: a recipe deleted since the meal was logged, likewise.
+  it("marks a deleted recipe, muted, in the title, as one element in the flex heading", () => {
+    const recipes = [
+      { id: "r0", title: "Lentil Patties", rating: null, deleted: true },
+      { id: "r1", title: "Salmon Cakes", rating: null },
+    ];
+    const html = renderMeal({ ...MEAL, recipeId: "r0", recipeTitle: "Lentil Patties", recipes });
+    expect(headingOf(html)).toContain(`<span class="line-clamp-2 min-w-0 break-words"><span>Lentil Patties${MUTED_MARK} + Salmon Cakes</span>`);
+    expect(headingOf(renderMeal({ ...MEAL, recipeId: "r0", recipeTitle: "Lentil Patties", recipes: [recipes[1]!, recipes[0]!] }))).toContain(
+      `Salmon Cakes + Lentil Patties${MUTED_MARK}`,
+    );
+  });
 });
 
 describe("MealDetailPage", () => {
