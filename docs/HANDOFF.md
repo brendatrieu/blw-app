@@ -14,10 +14,11 @@ Personal and server-access details are deliberately NOT here (this repo is publi
 
 What a parent can do today:
 
-- **Log meals** for a baby: one or more foods, optional recipe, a time (backdating allowed, future refused), a reaction field, and notes. Meals can save leftovers straight to Storage.
+- **Log meals** for a baby: a plate of foods, recipes and container servings, each with its own stars, a time (backdating allowed, future refused), a reaction field, and notes. Meals can save leftovers straight to Storage.
 - **Storage**: containers of prepped food with a location (Fridge / Freezer / Counter), freshness window, optional best-by date that overrides the window, optional servings tracking, and a Serve action that logs a meal from the container. One container can hold a whole multi-food meal, or the parent can split it into separate containers.
 - **Foods** catalog (92 foods incl. a Spices & herbs category and five ingredient foods; ledger 835 added Brussels sprouts, pumpkin, kale, beets, cranberries; ledger 841 added kidney, pinto, white and butter beans and edamame) with iron / vitamin C / fiber levels, choking risk, allergens, and filters; parents can add custom foods.
 - **Recipes** (catalog + per-user custom), with nutrition derived from ingredients, timed and temperatured steps, and at least three recipes per food.
+- **Meal Plan** (`/plan`, from the header's calendar or More): per baby, a week of meals from the baby's daily meals; plan foods, recipes and containers, Copy to… other days, one-tap Serve today, and Home shows what is up next.
 - **Allergen ladder** per baby: nine allergens; "Established after 3 servings without a reaction" with visible "N of 3" progress; a reaction note pauses auto-establishment; parents can mark established by hand with an optional past date; established allergens count down 7 days to "Serve again soon", and Home nudges when any are due.
 - **Learn** (safety library, 9 MDX articles, readable offline), **symptom check**, **AI chat / recipe chat** on the user's own Anthropic API key, favorites, a first-run **tour**, settings with data export and a privacy switch.
 - **Send feedback** (More tab) → an admin **Inbox** on `/admin/metrics`, which also carries the analytics dashboard.
@@ -29,13 +30,13 @@ pnpm workspace, Node 24.
 ```
 shared/    zod schemas + types used by both sides (built to shared/dist)
 server/    Fastify 5 API; Drizzle ORM; Postgres 17 in prod, PGlite locally; better-auth
-  src/routes/     account admin ai-keys babies catalog chat favorites feedback meals preferences recipes storage symptom usage
-  src/services/   allergens foods meals recipeNutrition recipes slugs storage
+  src/routes/     account admin ai-keys babies catalog chat favorites feedback meals plan preferences recipes storage symptom usage
+  src/services/   allergens foods meals plate recipeNutrition recipes slugs storage
   src/metrics/    the admin dashboard's queries, collector, and markdown export
-  drizzle/        migrations 0000–0025
+  drizzle/        migrations 0000–0026
   db/seeds/       catalog + recipe seed data (outside tsc; exercised by tests)
 client/    Vite + React 18 + TypeScript, react-router 7, TanStack Query, Tailwind v4, vite-plugin-pwa
-  src/features/   account admin ai babies catalog chat feedback safety storage symptom tour tracking
+  src/features/   account admin ai babies catalog chat feedback plan plate safety storage symptom tour tracking
   src/components/ui/      the design system (Button, Card, Sheet, Dialog, Menu, MultiCombobox, DateTimeField, …)
   src/components/charts/  hand-rolled inline-SVG charts (no chart library: CSP)
   src/styles/index.css    every design token; theme "Seaside"
@@ -121,6 +122,8 @@ Newest first. Commit hashes are on `main`.
 - Earlier in September: domain move to littlemeals.org, first-party analytics + `/admin/metrics` + collaborator roles, first-run tour, login copy, app icon, the "Seaside" theme, the Pantry → Storage rename.
 
 ## 6. Open items
+
+**Ready to ship (owner approved 2026-11-08):** the plate model and the meal planner (migrations 0024–0026, export v21) are built and verified and go live together with the next push to `main`, after the owner's fresh prod backup and the plate dry run on it (`docs/deploy-oracle.md`: 0 mismatches, drift 0). Rollback limits from that push on: `CLAUDE.md`.
 
 Suggested next, in rough priority:
 
