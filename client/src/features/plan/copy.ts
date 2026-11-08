@@ -3,7 +3,7 @@
 // the owner reviews in the doc). Plain TS so the plan screens (Phase 4) and a
 // native shell say the same thing. A gone container shows ONLY its gone line:
 // `planFlags` gives it no other flag, so neither does a Copy warning.
-import type { PlanFlag, StorageStatus } from "@blw/shared";
+import { COPY_PAST_DAYS, type PlanFlag, type StorageStatus } from "@blw/shared";
 
 type Gone = Exclude<StorageStatus, "active">;
 
@@ -89,6 +89,10 @@ export const mayRunOutCopyWarning = (item: string, day: string): string => `${it
 export const pastBestByCopyWarning = (item: string, day: string): string =>
   `${item} will be past the Best by date on ${day}. You can still copy.`;
 export const pastUseWithinCopyWarning = (item: string, day: string): string => `${item} may not keep until ${day}. You can still copy.`;
+
+/** Copy to…'s muted line on the week where the past-days window starts
+ * (ledger 956, owner's words; nothing about Log meal). */
+export const COPY_PAST_LIMIT = `You can copy up to ${COPY_PAST_DAYS} days back.`;
 
 /** A real Copy that failed (the app's "Couldn't … — try again." shape). */
 export const COPY_FAILED = "Couldn't copy that — try again.";

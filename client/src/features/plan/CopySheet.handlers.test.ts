@@ -88,6 +88,7 @@ const chips = (tree: El, date: string) => findAll(row(tree, date), (el) => el.ty
 const chip = (tree: El, date: string, name: string) => chips(tree, date).find((el) => text(el.props.children) === name);
 const radioGroups = (tree: El) => findAll(tree, (el) => el.props.role === "radiogroup");
 const radio = (group: El, label: string) => findAll(group, (el) => el.props.role === "radio" && text(el.props.children) === label)[0]!;
+const pastLimit = (tree: El) => findAll(tree, (el) => el.props.id === "copy-past-limit");
 const copyButton = (tree: El) => findAll(tree, (el) => el.type === Button)[0]!;
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -175,6 +176,9 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
     expect(text(tree)).not.toContain("Meals");
     expect(h.checks).toEqual([null]);
     expect(copyButton(tree).props.disabled).toBe(true);
+    // Ledger 956: this week has no days out of reach, so no limit line.
+    expect(pastLimit(tree)).toEqual([]);
+    expect(findAll(tree, (el) => el.props["aria-labelledby"] === "copy-days")[0]!.props["aria-describedby"]).toBeUndefined();
   });
 
   it("a past source opens on today's week; a later one on its own", () => {
@@ -347,6 +351,10 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
       ["Tuesday, October 6", true],
       ["Wednesday, October 7", false],
     ]);
+    // Ledger 956: the week with days out of reach says how far back a copy goes,
+    // and the day picker points at it.
+    expect(pastLimit(tree).map((el) => [el.props.id, text(el.props.children)])).toEqual([["copy-past-limit", "You can copy up to 7 days back."]]);
+    expect(findAll(tree, (el) => el.props["aria-labelledby"] === "copy-days")[0]!.props["aria-describedby"]).toBe("copy-past-limit");
     click(dayButtons(tree)[2]); // Wed 7: its Lunch starts ticked, like any day
     click(byLabel(again(), "Next week")!);
     click(dayButtons(again())[1]); // Tue 13: its Lunch has something planned
@@ -365,6 +373,21 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
       { date: "2026-10-13", slotId: id(40), onClash: "replace" },
     ]);
     expect(copyButton(again()).props.disabled).toBe(false);
+    // Back on today's week the line is gone again.
+    expect(pastLimit(again())).toEqual([]);
+  });
+
+  it("shows the limit line on the week where the 7 days start, also when that is a whole week (ledger 956)", () => {
+    // Today Monday 19 October: today-7 is Monday 12, so last week has no day off,
+    // but ‹ stops there; the line says why.
+    h.days["2026-10-12"] = day("2026-10-12", [meal(39, "Lunch")]);
+    let tree = render({ date: "2026-10-19", today: "2026-10-19" });
+    expect(pastLimit(tree)).toEqual([]);
+    click(byLabel(tree, "Previous week")!);
+    tree = again();
+    expect(byLabel(tree, "Previous week")!.props.disabled).toBe(true);
+    expect(dayButtons(tree).map((button) => button.props.disabled)).toEqual([false, false, false, false, false, false, false]);
+    expect(pastLimit(tree).map((el) => text(el.props.children))).toEqual(["You can copy up to 7 days back."]);
   });
 
   it("keeps days selected in another week as rows, and asks for their weeks too", () => {

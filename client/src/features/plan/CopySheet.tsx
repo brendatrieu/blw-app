@@ -6,7 +6,7 @@ import { Sheet } from "../../components/ui/Sheet.js";
 import { useIsOffline } from "../../lib/online.js";
 import { DeletedMark } from "../catalog/components/DeletedMark.js";
 import { ItemPlate, WarningGlyph } from "../plate/PlateItemRow.js";
-import { COPY_FAILED, allClashesLabel, clashCountLine, clashLine } from "./copy.js";
+import { COPY_FAILED, COPY_PAST_LIMIT, allClashesLabel, clashCountLine, clashLine } from "./copy.js";
 import { useCopyCheck, useCopyPlan, usePlanWeeks } from "./hooks.js";
 import {
   WEEKDAY_INITIALS,
@@ -55,7 +55,8 @@ export interface CopySheetProps {
  * footer answers them all at once. A calm box says what may run out, pass
  * its Best by or not keep, from the server's dry run; nothing in it blocks
  * Copy (a past day has none: flags count from today on). The past 7 days
- * take a copy too (ledger 936); further back is Log meal's. Served meals
+ * take a copy too (ledger 936; the week where they start says "You can copy
+ * up to 7 days back.", 956); further back is Log meal's. Served meals
  * and the meal itself can't take the copy. The form
  * mounts with the sheet, so every opening starts empty.
  */
@@ -111,6 +112,8 @@ export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheet
   const [choices, setChoices] = useState<CopyChoices>({});
   const offline = useIsOffline();
   const week = weekOf(monday);
+  // The week holding today-7 (936): ‹ stops here and its earlier days are off.
+  const firstWeek = addDays(monday, -1) < earliest;
   const dayOf = usePlanWeeks(babyId, [monday, ...Object.keys(selection).map((day) => weekOf(day)[0]!)]);
   const rows = copyRows(selection, dayOf);
   const targets = copyTargets(selection, dayOf, source, choices);
@@ -151,7 +154,7 @@ export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheet
               type="button"
               aria-label="Previous week"
               // Every day before this week is out of reach (936: 7 days back).
-              disabled={addDays(monday, -1) < earliest}
+              disabled={firstWeek}
               onClick={() => setMonday(addDays(monday, -7))}
               className={`${ICON_BUTTON_CLASSES} text-[var(--color-icon)] disabled:opacity-35`}
             >
@@ -170,7 +173,12 @@ export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheet
             </button>
           </div>
         </div>
-        <div role="group" aria-labelledby="copy-days" className="mt-0.5 flex gap-1">
+        <div
+          role="group"
+          aria-labelledby="copy-days"
+          aria-describedby={firstWeek ? "copy-past-limit" : undefined}
+          className="mt-0.5 flex gap-1"
+        >
           {week.map((day, index) => {
             const pressed = day in selection;
             const plan = dayOf(day);
@@ -199,6 +207,11 @@ export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheet
             );
           })}
         </div>
+        {firstWeek && (
+          <p id="copy-past-limit" className="mt-1 text-[13px] leading-[1.3] text-[var(--color-text-muted)]">
+            {COPY_PAST_LIMIT}
+          </p>
+        )}
 
         {rows.length > 0 && <p className={`${LABEL} mt-2 mb-1`}>Meals</p>}
         {rows.map(({ date: day, day: plan, ticked }) => (
