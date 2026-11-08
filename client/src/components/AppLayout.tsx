@@ -131,7 +131,8 @@ function CalendarIcon() {
   );
 }
 
-/** Ledger 904 (CD-Home-No-Plan): the meal plan, beside the gear on Home only. */
+/** Ledger 904 (CD-Home-No-Plan): the meal plan, beside the gear. Ledger 953:
+ * on every page, except inside the planner itself. */
 function PlanLink() {
   return (
     <Link
@@ -156,6 +157,12 @@ function SettingsLink() {
       <GearIcon />
     </Link>
   );
+}
+
+/** Whether the header offers the calendar (ledger 953): everywhere but the
+ * Meal Plan and its own pages (Plan a meal, Daily meals). */
+export function showsPlanLink(pathname: string): boolean {
+  return pathname !== "/plan" && !pathname.startsWith("/plan/");
 }
 
 /** A top padding of `base` plus the iOS safe area: 0 under today's opaque
@@ -250,7 +257,7 @@ export function AppLayout() {
               </>
             ) : (
               <>
-                {/* Item 692: [back/X][chip] on the left, the gear alone on the
+                {/* Item 692: [back/X][chip] on the left, the gear on the
                     right. The slot is `contents`, so with no button in it (tab
                     pages) it takes no space and the chip starts at 16px; the
                     44px gear keeps the row 52px tall. */}
@@ -258,7 +265,11 @@ export function AppLayout() {
                   <div ref={setHeaderSlot} className="contents" />
                   <BabyChip />
                 </div>
-                <SettingsLink />
+                {/* Ledger 953: [calendar][gear] as on Home; the chip gives way. */}
+                <div className="flex shrink-0 items-center">
+                  {showsPlanLink(location.pathname) && <PlanLink />}
+                  <SettingsLink />
+                </div>
               </>
             )}
             <UpdateCard />

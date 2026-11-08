@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { ageInMonths, type Baby } from "@blw/shared";
 import { babyKeys } from "../features/babies/api.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
-import { AppLayout, shouldScrollToTop } from "./AppLayout.js";
+import { AppLayout, shouldScrollToTop, showsPlanLink } from "./AppLayout.js";
 
 function renderLayout(queryClient: QueryClient, pathname = "/", restoring = false) {
   return renderToString(
@@ -273,16 +273,30 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
       expect(inner, `${babies.length} babies`).toMatch(
         /^<header [^>]*><div class="flex min-w-0 items-center gap-0\.5"><div class="contents"><\/div>(?:<span |<label |<a )/,
       );
-      expect(inner, `${babies.length} babies`).toMatch(/<\/(?:span|label|a)><\/div><a [^>]*aria-label="Settings"[^>]*>.*?<\/a><div role="status" class="absolute inset-x-3"[^>]*><\/div>$/s);
+      // Ledger 953: then [calendar][gear] in one group, as on Home.
+      expect(inner, `${babies.length} babies`).toMatch(
+        /<\/(?:span|label|a)><\/div><div class="flex shrink-0 items-center"><a aria-label="Meal Plan"[^>]*>.*?<\/a><a [^>]*aria-label="Settings"[^>]*>.*?<\/a><\/div><div role="status" class="absolute inset-x-3"[^>]*><\/div>$/s,
+      );
     }
   });
 
-  it("Home only: the calendar (\"Meal plan\", to /plan) sits just before the gear, both 44px icon links (ledger 904, CD-Home-No-Plan)", () => {
-    const home = header(layoutWith([remy], "/"));
-    expect(home).toMatch(
-      /<div class="flex shrink-0 items-center"><a aria-label="Meal Plan" class="[^"]*min-h-11 min-w-11[^"]*text-\[var\(--color-icon\)\][^"]*" href="\/plan"[^>]*><svg [^>]*>.*?<\/svg><\/a><a aria-label="Settings"/s,
-    );
-    for (const p of ["/foods", "/plan", "/more"]) expect(header(layoutWith([remy], p)), p).not.toContain('aria-label="Meal Plan"');
+  it("the calendar (\"Meal Plan\", to /plan) sits just before the gear on every page, both 44px icon links (ledger 904, 953)", () => {
+    const CALENDAR_THEN_GEAR =
+      /<div class="flex shrink-0 items-center"><a aria-label="Meal Plan" class="[^"]*min-h-11 min-w-11[^"]*text-\[var\(--color-icon\)\][^"]*" href="\/plan"[^>]*><svg [^>]*>.*?<\/svg><\/a><a aria-label="Settings"[^>]*>.*?<\/a><\/div>/s;
+    for (const p of ["/", "/foods", "/more", "/log-meal", "/meals/m-1", "/settings", "/planner", "/plans"]) {
+      expect(header(layoutWith([remy], p)), p).toMatch(CALENDAR_THEN_GEAR);
+    }
+    // Two babies: the chip's picker, then the same pair.
+    expect(header(layoutWith([remy, ada], "/foods"))).toMatch(CALENDAR_THEN_GEAR);
+  });
+
+  it("hides the calendar inside the planner: the Meal Plan, Plan a meal and Daily meals; the gear stays (ledger 953)", () => {
+    for (const p of ["/plan", "/plan/daily-meals", "/plan/2026-10-14/new", "/plan/2026-10-14/slot-1"]) {
+      const html = header(layoutWith([remy], p));
+      expect(html, p).not.toContain('aria-label="Meal Plan"');
+      expect(html, p).toMatch(/<div class="flex shrink-0 items-center"><a [^>]*aria-label="Settings"[^>]*>.*?<\/a><\/div>/s);
+    }
+    expect([showsPlanLink("/"), showsPlanLink("/plan"), showsPlanLink("/plan/x"), showsPlanLink("/planner")]).toEqual([true, false, false, true]);
   });
 
   it("the empty back/X slot takes no space, so tab pages start with the chip (item 692)", () => {
