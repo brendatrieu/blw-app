@@ -127,4 +127,13 @@ describe("MealActionsMenu (item 194)", () => {
     const editOf = openPanelItems({ deleteDisabled: true }).find((item) => item.type === MenuLinkItem) as ReactElement<MenuLinkItemProps>;
     expect(editOf.props.to).toBe("/log-meal?edit=meal-1");
   });
+
+  it("a waiting Delete points at the line that says why (verifier c3 N3); without one it has no description", () => {
+    const rows = (deleteDescribedBy?: string) => {
+      const menu = MealActionsMenu({ mealId: "meal-1", onRequestDelete: () => {}, deleteDisabled: true, deleteDescribedBy }) as ReactElement<MenuProps>;
+      return renderToString(createElement(MemoryRouter, null, createElement(MenuPanel, null, menu.props.children(() => {}))));
+    };
+    expect(rows("rate-offline-meal-1")).toMatch(/<button type="button" role="menuitem" tabindex="-1" disabled="" aria-describedby="rate-offline-meal-1"[^>]*>Delete<\/button>/);
+    expect(rows()).not.toContain("aria-describedby");
+  });
 });

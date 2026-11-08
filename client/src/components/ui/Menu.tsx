@@ -323,13 +323,23 @@ const MENU_ITEM_CLASSES =
 export interface MenuItemProps {
   onSelect: () => void;
   disabled?: boolean;
+  /** The id of a visible line that says why the row waits (`aria-describedby`). */
+  describedBy?: string;
   children: ReactNode;
 }
 
 /** A plain action row inside a `Menu`. */
-export function MenuItem({ onSelect, disabled, children }: MenuItemProps) {
+export function MenuItem({ onSelect, disabled, describedBy, children }: MenuItemProps) {
   return (
-    <button type="button" role="menuitem" tabIndex={-1} disabled={disabled} onClick={onSelect} className={MENU_ITEM_CLASSES}>
+    <button
+      type="button"
+      role="menuitem"
+      tabIndex={-1}
+      disabled={disabled}
+      aria-describedby={describedBy}
+      onClick={onSelect}
+      className={MENU_ITEM_CLASSES}
+    >
       {children}
     </button>
   );

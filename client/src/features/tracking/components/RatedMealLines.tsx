@@ -53,6 +53,9 @@ export interface RatedMealLinesProps {
   look?: keyof typeof LOOK;
 }
 
+/** The id of a meal's "You're offline." line, for whatever else waits on it. */
+export const rateOfflineId = (mealId: string) => `rate-offline-${mealId}`;
+
 /**
  * A logged meal's items, each with its stars (ledger 939: the meal page; 944:
  * a served meal's card on Home and on the Meal Plan). One tap saves that
@@ -67,7 +70,7 @@ export function RatedMealLines({ meal, look = "log" }: RatedMealLinesProps) {
   const updateMeal = useUpdateMeal(meal.babyId);
   const offline = useIsOffline();
   const style = LOOK[look];
-  const offlineId = `rate-offline-${meal.id}`;
+  const offlineId = rateOfflineId(meal.id);
   // While a tap is saving, show what was tapped rather than the old value.
   const pending =
     updateMeal.isPending && updateMeal.variables?.id === meal.id ? (updateMeal.variables.input.itemRatings ?? {}) : {};

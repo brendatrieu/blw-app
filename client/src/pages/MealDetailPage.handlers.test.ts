@@ -197,7 +197,13 @@ describe("MealDetailPage delete (item 599, ledger 939: ⋮ Delete)", () => {
   it("offline, ⋮ Delete waits like every plate write (VERIFY-p3-c1)", () => {
     h.offline = true;
     const tree = render(MEAL);
-    h.offline = false;
     expect((card(tree).props.actions as El).props.deleteDisabled).toBe(true);
+    // ...and points at the page's visible "You're offline." line (verifier c3 N3).
+    const describedBy = (card(tree).props.actions as El).props.deleteDescribedBy;
+    expect(describedBy).toBe(`rate-offline-${MEAL.id}`);
+    const offlineLine = findAll(rated(tree), "p").find((line) => line.props.children === "You're offline.");
+    expect(offlineLine?.props.id).toBe(describedBy);
+    h.offline = false;
+    expect((card(render(MEAL)).props.actions as El).props.deleteDescribedBy).toBeUndefined();
   });
 });

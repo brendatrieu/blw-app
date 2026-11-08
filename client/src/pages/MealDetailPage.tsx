@@ -7,7 +7,7 @@ import { useMeals } from "../features/tracking/hooks.js";
 import { mealRecipes, recipesTitle } from "../features/tracking/mealRecipes.js";
 import { MealCard, MealDeleteDialog } from "../features/tracking/components/ServeLogList.js";
 import { MealActionsMenu } from "../features/tracking/components/MealActionsMenu.js";
-import { RatedMealLines } from "../features/tracking/components/RatedMealLines.js";
+import { RatedMealLines, rateOfflineId } from "../features/tracking/components/RatedMealLines.js";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { FoodNames } from "../features/catalog/components/DeletedMark.js";
 import { foodPlate } from "../features/catalog/foodEmoji.js";
@@ -101,8 +101,15 @@ export function MealDetailPage() {
           linkable={false}
           onRequestDelete={askDelete}
           // A delete is a plate write: it waits while offline (SPEC §4.4);
-          // the lines say "You're offline."
-          actions={<MealActionsMenu mealId={meal.id} onRequestDelete={askDelete} deleteDisabled={offline} />}
+          // the lines say "You're offline.", and Delete points at that line.
+          actions={
+            <MealActionsMenu
+              mealId={meal.id}
+              onRequestDelete={askDelete}
+              deleteDisabled={offline}
+              deleteDescribedBy={offline ? rateOfflineId(meal.id) : undefined}
+            />
+          }
           lines={<RatedMealLines meal={meal} />}
         />
       </ul>
