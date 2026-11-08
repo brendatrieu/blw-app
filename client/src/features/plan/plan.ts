@@ -223,6 +223,13 @@ export function dailyMealsChanged(loaded: readonly DailyMeal[], rows: readonly D
 /** The slot id of Plan a meal opened from "+ Add a meal": a meal not made yet. */
 export const NEW_PLANNED_MEAL = "new";
 
+/** A plan card's ⋮ Edit (ledger 954): an unserved meal opens Plan a meal,
+ * where tapping the card goes; a served one opens the logged meal's Edit
+ * (the Food log's ⋮ Edit, Add more closed). */
+export function planMealEditHref(date: string, meal: Pick<PlannedMeal, "slotId" | "served">): string {
+  return meal.served ? `/log-meal?edit=${encodeURIComponent(meal.served.mealId)}` : `/plan/${date}/${meal.slotId}`;
+}
+
 /** The read-only Day field (Q7): "Today", "Yesterday", else "Thu, Oct 15". */
 export function planDayLabel(date: string, today: string): string {
   if (date === today) return "Today";

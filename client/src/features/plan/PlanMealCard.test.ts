@@ -10,7 +10,7 @@ import type { PlannedMeal, StorageItem } from "@blw/shared";
 const h = vi.hoisted(() => ({
   offline: false,
   // The ⋮ menu's items, rendered inline with their handlers kept.
-  items: [] as Array<{ label: string; onSelect: () => void; disabled?: boolean }>,
+  items: [] as Array<{ label: string; onSelect: () => void; disabled?: boolean; to?: string }>,
   closed: 0,
   remove: { isPending: false, isError: false, calls: [] as Array<{ input: unknown; options: { onSuccess?: () => void } }> },
   reorder: { busy: false, isError: false, babyIds: [] as string[], calls: [] as unknown[] },
@@ -32,6 +32,10 @@ vi.mock("../../components/ui/Menu.js", async () => {
     MenuItem: ({ onSelect, disabled, children }: { onSelect: () => void; disabled?: boolean; children: never }) => {
       h.items.push({ label: renderToStaticMarkup(createElement("span", null, children)).replace(/<[^>]+>/g, ""), onSelect, disabled });
       return createElement("button", { role: "menuitem" }, children);
+    },
+    MenuLinkItem: ({ onSelect, to, children }: { onSelect: () => void; to: string; children: never }) => {
+      h.items.push({ label: renderToStaticMarkup(createElement("span", null, children)).replace(/<[^>]+>/g, ""), onSelect, to });
+      return createElement("a", { role: "menuitem", href: to }, children);
     },
   };
 });
@@ -223,8 +227,8 @@ describe("⋮ (CD-Plan-Day): Copy to… once something is planned, then Remove",
   it("offers Copy to… above Remove on a meal with something on it, and starts the copy from it", () => {
     let copies = 0;
     render({ meal: meal(), onCopy: () => copies++ });
-    expect(h.items.map((item) => item.label)).toEqual(["Copy to…", "Remove"]);
-    h.items[0]!.onSelect();
+    expect(h.items.map((item) => item.label)).toEqual(["Edit", "Copy to…", "Remove"]);
+    h.items[1]!.onSelect();
     expect(copies).toBe(1);
     expect(h.closed).toBe(1);
   });
@@ -232,7 +236,31 @@ describe("⋮ (CD-Plan-Day): Copy to… once something is planned, then Remove",
   it("an empty meal has nothing to copy: Remove only (and so does a card nobody wired Copy for)", () => {
     render({ meal: meal({ items: [] }), onCopy: () => {} });
     render({ meal: meal() });
-    expect(h.items.map((item) => item.label)).toEqual(["Remove", "Remove"]);
+    expect(h.items.map((item) => item.label)).toEqual(["Edit", "Remove", "Edit", "Remove"]);
+  });
+});
+
+describe("⋮ Edit first (ledger 954): Plan a meal, or the logged meal's Edit once served", () => {
+  it("an unserved meal's Edit opens Plan a meal, where a tap on the card goes", () => {
+    const html = render({ meal: meal(), onCopy: () => {} });
+    const edit = h.items[0]!;
+    expect([edit.label, edit.to]).toEqual(["Edit", `/plan/${TODAY}/${id(50)}`]);
+    expect(html).toMatch(new RegExp(`<a [^>]*href="/plan/${TODAY}/${id(50)}"[^>]*>Lunch</a>`));
+    edit.onSelect();
+    expect(h.closed).toBe(1);
+    // An empty meal offers it too.
+    h.items.length = 0;
+    render({ meal: meal({ items: [] }) });
+    expect(h.items.map((item) => [item.label, item.to])).toEqual([
+      ["Edit", `/plan/${TODAY}/${id(50)}`],
+      ["Remove", undefined],
+    ]);
+  });
+
+  it("a served meal's Edit opens the logged meal's Edit, without Add more", () => {
+    render({ meal: meal({ served: { mealId: id(90), servedAt: "2026-10-14T11:42:00.000Z" } }), onCopy: () => {} });
+    expect(h.items.map((item) => item.label)).toEqual(["Edit", "Copy to…", "Remove"]);
+    expect(h.items[0]!.to).toBe(`/log-meal?edit=${id(90)}`);
   });
 });
 
@@ -242,17 +270,17 @@ describe("⋮ Move up / Move down (909): that day's order, one place at a time",
 
   it("sits between Copy to… and Remove; the first meal has no Move up, the last no Move down, a lone meal neither", () => {
     render({ meal: meal(), onCopy: () => {}, daySlotIds: DAY });
-    expect(labels()).toEqual(["Copy to…", "Move up", "Move down", "Remove"]);
+    expect(labels()).toEqual(["Edit", "Copy to…", "Move up", "Move down", "Remove"]);
     h.items.length = 0;
     render({ meal: meal({ slotId: id(40) }), daySlotIds: DAY });
-    expect(labels()).toEqual(["Move down", "Remove"]);
+    expect(labels()).toEqual(["Edit", "Move down", "Remove"]);
     h.items.length = 0;
     render({ meal: meal({ slotId: id(60) }), daySlotIds: DAY });
-    expect(labels()).toEqual(["Move up", "Remove"]);
+    expect(labels()).toEqual(["Edit", "Move up", "Remove"]);
     h.items.length = 0;
     render({ meal: meal(), daySlotIds: [id(50)] });
     render({ meal: meal() });
-    expect(labels()).toEqual(["Remove", "Remove"]);
+    expect(labels()).toEqual(["Edit", "Remove", "Edit", "Remove"]);
   });
 
   it("sends the whole day in its new order, for this card's baby and day, and closes the menu", () => {
@@ -271,7 +299,7 @@ describe("⋮ Move up / Move down (909): that day's order, one place at a time",
 
   it("a served meal moves too", () => {
     render({ meal: meal({ served: { mealId: id(90), servedAt: "2026-10-14T11:42:00.000Z" } }), daySlotIds: DAY });
-    expect(labels()).toEqual(["Move up", "Move down", "Remove"]);
+    expect(labels()).toEqual(["Edit", "Move up", "Move down", "Remove"]);
   });
 
   it("waits offline and while a move is still landing; a failed one says try again", () => {

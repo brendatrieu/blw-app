@@ -4,14 +4,14 @@ import type { PlannedMeal } from "@blw/shared";
 import { Button, ButtonLink } from "../../components/ui/Button.js";
 import { Card } from "../../components/ui/Card.js";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
-import { Menu, MenuItem } from "../../components/ui/Menu.js";
+import { Menu, MenuItem, MenuLinkItem } from "../../components/ui/Menu.js";
 import { useIsOffline } from "../../lib/online.js";
 import { DeletedMark } from "../catalog/components/DeletedMark.js";
 import { ItemPlate, WarningGlyph } from "../plate/PlateItemRow.js";
 import { timeLabel } from "../tracking/components/ServeLogList.js";
 import { ServedMealLines, addMoreHref } from "../tracking/components/RatedMealLines.js";
 import { useRemovePlannedMeal, useReorderPlanDay } from "./hooks.js";
-import { flagNotes, mealTimeLabel, moveRow, plannedLines } from "./plan.js";
+import { flagNotes, mealTimeLabel, moveRow, planMealEditHref, plannedLines } from "./plan.js";
 
 export interface PlanMealCardProps {
   babyId: string;
@@ -57,8 +57,8 @@ export function ServedChip({ servedAt }: { servedAt: string }) {
 /**
  * One meal of a plan day (CD-Plan-Day, CD-Plan-After-Copy): its name, its
  * optional time and "Served {time}", one line per planned item, a flag box
- * per flagged container, and ⋮ (Copy to… once something is planned, Move
- * up / Move down within the day, Remove). Once served it shows what was
+ * per flagged container, and ⋮ (Edit, ledger 954; Copy to… once something
+ * is planned, Move up / Move down within the day, Remove). Once served it shows what was
  * served, each item with its stars (a tap rates it on the logged meal), and
  * Add more in Serve's place (ledger 944).
  * Tapping the card opens the meal (`/plan/:date/:slotId`). A card with at
@@ -136,6 +136,10 @@ export function PlanMealCard({ babyId, date, today, meal, onServe, serving = fal
       <Menu label={`More for ${meal.name}`}>
         {(close) => (
           <>
+            {/* Ledger 954: Edit first, as on the Food log's ⋮. */}
+            <MenuLinkItem to={planMealEditHref(date, meal)} onSelect={close}>
+              Edit
+            </MenuLinkItem>
             {onCopy && meal.items.length > 0 && (
               <MenuItem
                 onSelect={() => {

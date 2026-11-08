@@ -39,6 +39,7 @@ import {
   todaysPlanIndex,
   todaysPlanPages,
   todaysPlanStep,
+  planMealEditHref,
 } from "./plan.js";
 import { planFlagLine } from "./copy.js";
 
@@ -517,5 +518,14 @@ describe("the Time sheet's clock (ledger 926)", () => {
       const time = `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
       expect(clockTime(clockParts(time))).toBe(time);
     }
+  });
+});
+
+describe("planMealEditHref (ledger 954)", () => {
+  it("an unserved meal edits on Plan a meal; a served one on the logged meal's Edit, Add more closed", () => {
+    expect(planMealEditHref("2026-10-14", { slotId: "slot-1", served: null })).toBe("/plan/2026-10-14/slot-1");
+    expect(planMealEditHref("2026-10-14", { slotId: "slot-1", served: { mealId: "meal-9", servedAt: "2026-10-14T11:42:00.000Z" } })).toBe(
+      "/log-meal?edit=meal-9",
+    );
   });
 });
