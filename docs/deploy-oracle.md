@@ -325,8 +325,9 @@ endpoints would 404). Take the backup before each of those deploys.
 ### Plate migration dry run (0024)
 
 The 0024 push waits for this run on a restored production backup: 0 mismatches
-and drift 0. It runs on the machine that already holds the backups; the backup
-never leaves it, and the script prints only counts and pass/fail.
+and drift 0. It runs on a machine the owner controls (the server, or the owner's
+own laptop with the backup kept outside the repo); the script prints only counts
+and pass/fail.
 
 1. Bring the commit over as a `git bundle` (never a push to `main`). Needs
    Docker, Node 24 and pnpm; in the checkout, `pnpm install` and
@@ -336,14 +337,14 @@ never leaves it, and the script prints only counts and pass/fail.
    ports), and check it is one migration behind:
 
    ```bash
-   docker run -d --name blw-dry -e POSTGRES_USER=blw -e POSTGRES_DB=blw -e POSTGRES_PASSWORD=dry -p 55432:5432 postgres:17-alpine
+   docker run -d --name blw-dry -e POSTGRES_USER=blw -e POSTGRES_DB=blw -e POSTGRES_PASSWORD=dry -p 127.0.0.1:55432:5432 postgres:17-alpine
    until docker exec blw-dry pg_isready -h 127.0.0.1 -U blw; do sleep 1; done   # TCP: up only after init
    gunzip -c blw-<STAMP>.sql.gz | docker exec -i blw-dry psql -v ON_ERROR_STOP=1 -U blw blw
    docker exec blw-dry psql -U blw blw -tc 'SELECT count(*) FROM drizzle.__drizzle_migrations'   # 24 = at 0023
    docker exec blw-dry psql -U blw blw -c 'ANALYZE'   # what autovacuum would do a minute later
    ```
-3. From `server/`, with `DATABASE_URL=postgres://blw:dry@localhost:55432/blw`
-   (the script refuses any host but localhost):
+3. From `server/`, with `DATABASE_URL=postgres://blw:dry@127.0.0.1:55432/blw`
+   (the script refuses any host but this machine):
 
    ```bash
    pnpm exec tsx scripts/plate-dry-run.ts record before.json
@@ -351,9 +352,11 @@ never leaves it, and the script prints only counts and pass/fail.
    pnpm exec tsx scripts/plate-dry-run.ts migrate     # boot 2, timed
    pnpm exec tsx scripts/plate-dry-run.ts record after.json
    pnpm exec tsx scripts/plate-dry-run.ts compare before.json after.json
+   pnpm exec tsx db/seeds/index.ts                    # the container seeds on start too
    ```
 4. Paste the printed lines (they hold no names, foods or ids) to whoever runs
-   the deploy, then `docker rm -f blw-dry` and delete `before.json` and
+   the deploy, then `docker rm -f -v blw-dry` (`-v` also drops the data
+   volume, so no copy of the data stays in Docker) and delete `before.json` and
    `after.json`, which do hold them.
 
 ## Uptime monitoring
