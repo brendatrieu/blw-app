@@ -728,7 +728,8 @@ describe("AddMoreSheet's custom-food shortcut (ledger 961)", () => {
     type("papaya ");
     (addCustom(render())[0]!.props.onClick as () => void)();
     let tree = render();
-    expect(sheet(tree).props).toMatchObject({ name: "papaya", idPrefix: "add-more-custom" });
+    // recipeLink false: the form's /recipes/new link would leave the page and lose the plate.
+    expect(sheet(tree).props).toMatchObject({ name: "papaya", idPrefix: "add-more-custom", recipeLink: false });
     // It is a child of the Add more sheet (it portals over it), and Add more stays as it was.
     expect(findAll(tree.props.children, (element) => element.type === CustomFoodSheet)).toHaveLength(1);
     expect(one(tree, Input).props.value).toBe("papaya ");

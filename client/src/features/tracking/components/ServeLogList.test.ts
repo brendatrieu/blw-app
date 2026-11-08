@@ -215,7 +215,7 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
     ],
   };
   const lisOf = (html: string) => {
-    const list = /<ul aria-label="On the plate"[^>]*>([\s\S]*?)<\/ul>/.exec(html)![1]!;
+    const list = /<a [^>]*><ul[^>]*>([\s\S]*?)<\/ul>/.exec(html)![1]!;
     return [...list.matchAll(/<li ([^>]*)>([\s\S]*?)<\/li>/g)].map((m) => ({ attrs: m[1]!, inner: m[2]! }));
   };
   // A line's own row, without its stars (ledger 966): a container's rated
@@ -269,10 +269,23 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
     expect(names(renderMealCard(PLATE_MEAL))[0]).toBe("Creamy Cashew & Broccoli Pasta");
   });
 
+  // Ledger 966b: the link is named by its content, so the foods and each
+  // "Rated N stars" image are read. Any aria-label inside it (or on it)
+  // would replace them: "On the plate" did, on every card.
+  it("names the edit link by its lines: foods and their ratings, no label inside it", () => {
+    const html = renderMealCard(PLATE_MEAL).replace(/<!-- -->/g, "");
+    const [open, inner] = /(<a [^>]*href="\/log-meal\?edit=meal-1"[^>]*>)([\s\S]*?)<\/a>/.exec(html)!.slice(1) as [string, string];
+    expect(open).not.toMatch(/aria-label|aria-labelledby/);
+    // The only labels inside are the rating images', which join the name.
+    const labels = [...inner.matchAll(/<(\w+)([^>]*?) aria-label="([^"]*)"/g)].map((m) => `${m[1]}${m[2]!.includes('role="img"') ? " img" : ""}: ${m[3]}`);
+    expect(labels).toEqual(["span img: Rated 5 stars", "span img: Rated 4 stars"]);
+    expect(inner).toContain("Creamy Cashew &amp; Broccoli Pasta");
+  });
+
   it("keeps every line inside the edit link, the date line, badge and kebab above them", () => {
     const html = renderMealCard(PLATE_MEAL);
     const link = /<a [^>]*href="\/log-meal\?edit=meal-1"[^>]*>([\s\S]*?)<\/a>/.exec(html)![1]!;
-    expect(link).toContain('<ul aria-label="On the plate"');
+    expect(link).toContain('<ul class="flex flex-col">');
     expect(link).toContain("Broccoli, Carrot");
     expect(html.indexOf(servedLine(baseMeal.servedAt))).toBeLessThan(html.indexOf("<a "));
     expect(html.indexOf("From storage")).toBeLessThan(html.indexOf("<a "));
@@ -483,8 +496,8 @@ describe("Home paging (item 694)", () => {
     );
   }
 
-  /** The log's own list, not a card's "On the plate" lines. */
-  const LIST_UL = /<ul\b(?! aria-label="On the plate")/g;
+  /** The log's own list, not a card's lines (the ul inside its link). */
+  const LIST_UL = /(?<!<a [^>]*>)<ul\b/g;
 
   // Item 775: every page is a slide on the swipe track; off-screen slides are
   // inert, so the one without `inert` is the page on show.

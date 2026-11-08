@@ -54,11 +54,47 @@ describe("RatedMealLines (ledger 939/944)", () => {
     const home = render("home");
     expect(home).toContain("width:36px;height:36px");
     expect(home).toContain('class="text-[15px] leading-[1.3] font-semibold break-words text-[var(--color-text)]">Egg</p>');
-    expect(home).toContain('class="relative z-10 ml-[37px] @max-[256px]:-ml-[9px]"');
+    expect(home).toContain('class="pointer-events-none relative z-10 [&amp;_button]:pointer-events-auto ml-[37px] @max-[256px]:-ml-[9px]"');
     // Home's divided rows: a divider above every line but the first.
     expect(home.match(/border-t border-\[var\(--color-divider\)\]/g)).toHaveLength(1);
     expect(render("plan")).toContain("width:24px;height:24px");
-    expect(render("plan")).toContain('class="relative z-10 ml-[21px] @max-[240px]:-ml-[9px]"');
+    expect(render("plan")).toContain('class="pointer-events-none relative z-10 [&amp;_button]:pointer-events-auto ml-[21px] @max-[240px]:-ml-[9px]"');
+  });
+
+  // Ledger 968: a served card's tap opens Edit through its stretched link, so
+  // a star row lifts only its buttons over it. The row's width beside the
+  // stars and a container's part labels must let the tap through.
+  it("a star row above the stretched link takes taps on its buttons only", () => {
+    const rows = render("plan").match(/<div class="[^"]*z-10[^"]*">(?=<div class="-my-1">|<p )/g) ?? [];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row).toContain("pointer-events-none");
+      expect(row).toContain("[&amp;_button]:pointer-events-auto");
+    }
+  });
+
+  // A container of two foods draws a positioned two-plate icon, which paints
+  // over the stretched link unless it lets the tap through (968).
+  it("a line's plate never takes a tap, even a container's two-plate one", () => {
+    const CONTAINER = {
+      ...MEAL,
+      items: [
+        {
+          kind: "storage",
+          storageItemId: id(30),
+          label: null,
+          location: "fridge",
+          servings: 1,
+          parts: [
+            { kind: "food", id: id(31), food: { id: id(32), slug: "broccoli", name: "Broccoli", category: "veg" }, rating: 4 },
+            { kind: "food", id: id(33), food: { id: id(34), slug: "carrot", name: "Carrot", category: "veg" }, rating: null },
+          ],
+        },
+      ],
+    } as unknown as typeof MEAL;
+    const html = renderToString(createElement(MemoryRouter, null, createElement(RatedMealLines, { meal: CONTAINER, look: "plan" })));
+    const plate = /<span aria-hidden="true" class="relative block shrink-0 [^"]*"/.exec(html)?.[0];
+    expect(plate).toContain("pointer-events-none");
   });
 
   it("a failed save says so; offline it says You're offline. instead, and every star waits", () => {

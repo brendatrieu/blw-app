@@ -131,6 +131,8 @@ interface CustomFoodSheetProps {
   /** null = closed; a string (possibly "") = open with that name prefilled. */
   name: string | null;
   onClose: () => void;
+  /** false = the form's recipe link is hidden (Add more, ledger 961). */
+  recipeLink?: boolean;
   /** The saved food, already in the foods cache (`useCreateCustomFood`). */
   onSaved: (food: FoodDetail) => void;
 }
@@ -140,7 +142,7 @@ interface CustomFoodSheetProps {
  * create row; Add more's, ledger 961): the same form as Foods → Add food,
  * so nothing half-filled underneath is lost.
  */
-export function CustomFoodSheet({ idPrefix, name, onClose, onSaved }: CustomFoodSheetProps) {
+export function CustomFoodSheet({ idPrefix, name, onClose, recipeLink, onSaved }: CustomFoodSheetProps) {
   return (
     <Sheet open={name !== null} onClose={onClose} title="Add a custom food" showClose>
       {/* Item 726: first in the sheet, like the Serve sheet's link — and
@@ -154,6 +156,7 @@ export function CustomFoodSheet({ idPrefix, name, onClose, onSaved }: CustomFood
         // itself: left open it would sit over /recipes/new, and over this
         // page again on Back, still holding a half-typed food.
         onNavigateAway={onClose}
+        recipeLink={recipeLink}
         onSaved={onSaved}
       />
     </Sheet>

@@ -238,6 +238,13 @@ describe("CustomFoodForm (render)", () => {
     );
   });
 
+  it("recipeLink={false} (Add more, ledger 961): just the first sentence, no link to leave the page by", () => {
+    const html = render(createElement(CustomFoodForm, { onSaved: () => {}, recipeLink: false }));
+    expect(textOf(html)).toContain("One ingredient, like papaya or cottage cheese.");
+    expect(textOf(html)).not.toContain("Cooking something");
+    expect(html).not.toContain("/recipes/new");
+  });
+
   it("makes the last sentence a link to the custom-recipe form", () => {
     const html = render(createElement(CustomFoodForm, { onSaved: () => {} }));
     expect(html).toMatch(/<a[^>]*href="\/recipes\/new"[^>]*>Add it as a recipe instead<\/a>/);

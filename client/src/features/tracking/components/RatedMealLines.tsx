@@ -53,7 +53,7 @@ export interface RatedMealLinesProps {
  * failed save says so. A recipe says what was left out, and a container
  * links to its batch (the storage ⇄ meal traceback, item 162) and rates
  * each food or recipe it held. Everything tappable sits above a card's
- * stretched link (relative z-10), never inside it.
+ * stretched link (relative z-10), never inside it, and nothing else does.
  */
 export function RatedMealLines({ meal, look }: RatedMealLinesProps) {
   const updateMeal = useUpdateMeal(meal.babyId);
@@ -70,7 +70,9 @@ export function RatedMealLines({ meal, look }: RatedMealLinesProps) {
         {mealLines(meal).map((line, at) => (
           <li key={line.key} className={`${style.li} ${at > 0 ? style.divider : ""}`}>
             <div className={`flex items-center ${style.row}`}>
-              <ItemPlate plates={line.plates} size={style.plate} />
+              {/* A two-plate item is positioned, so it paints over the stretched
+                  link: let the tap through to the card (968). */}
+              <ItemPlate plates={line.plates} size={style.plate} className="pointer-events-none" />
               <div className="min-w-0">
                 <p className={`${style.name} break-words text-[var(--color-text)]`}>
                   {line.name}
@@ -98,7 +100,10 @@ export function RatedMealLines({ meal, look }: RatedMealLinesProps) {
               </div>
             </div>
             {line.ratings.map((rating) => (
-              <div key={rating.id} className={`relative z-10 ${style.stars}`}>
+              // Above the stretched link, but only the star buttons take a tap:
+              // the row's width beside them and the part labels fall through
+              // to the card (ledger 968: a served card's tap opens Edit).
+              <div key={rating.id} className={`pointer-events-none relative z-10 [&_button]:pointer-events-auto ${style.stars}`}>
                 {/* A container of several things names each one over its stars. */}
                 {line.ratings.length > 1 && (
                   <p className={`mt-1 ml-[9px] ${DETAIL}`}>

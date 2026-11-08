@@ -165,7 +165,7 @@ describe("PlanMealCard (CD-Plan-Day)", () => {
     const html = render({ meal: meal({ served: SERVED }), onServe: () => {} }).replace(/<!-- -->/g, "");
     // What was served (the logged meal), not what was planned.
     expect(html).not.toContain("Broccoli Cheese Egg Muffins");
-    expect(html).toMatch(/<div class="relative z-10 ml-\[21px\] @max-\[240px\]:-ml-\[9px\]"><div class="-my-1"><div class="flex flex-wrap items-center"><div role="radiogroup" aria-label="Rating for Egg"/);
+    expect(html).toMatch(/<div class="pointer-events-none relative z-10 \[&amp;_button\]:pointer-events-auto ml-\[21px\] @max-\[240px\]:-ml-\[9px\]"><div class="-my-1"><div class="flex flex-wrap items-center"><div role="radiogroup" aria-label="Rating for Egg"/);
     expect(html).toMatch(/aria-checked="true" aria-label="4 stars"/);
     // Add more: the logged meal's Edit with Add more open, Serve's small size and 44px strip.
     const add = /<a [^>]*>Add more<\/a>/.exec(html)![0];
@@ -175,7 +175,7 @@ describe("PlanMealCard (CD-Plan-Day)", () => {
     expect(add).toContain("h-9");
     expect(html).not.toContain(">Serve<");
     // On the name's row, inside the card's padding, as Serve.
-    expect(html).toMatch(/<div class="relative z-10 -my-1 -mr-2\.5 flex shrink-0 items-center gap-1"><a /);
+    expect(html).toMatch(/<div class="pointer-events-none relative z-10 \[&amp;_a\]:pointer-events-auto \[&amp;_button\]:pointer-events-auto -my-1 -mr-2\.5 flex shrink-0 items-center gap-1"><a /);
   });
 
   it("Serve shows only once it is wired (step 4.3), and then only today or before, unserved, with something planned", () => {
@@ -200,10 +200,10 @@ describe("PlanMealCard (CD-Plan-Day)", () => {
     expect(serve).toMatch(/(^| )relative after:absolute after:inset-x-0 after:-inset-y-\[5px\]( |$)/);
     // With Serve the row is 36px (the wrapper trims the 44px ⋮ by 4px each
     // side), so Serve no longer overhangs the card's border; ⋮ stays -mr-2.5.
-    expect(html).toContain('<div class="relative z-10 -my-1 -mr-2.5 flex shrink-0 items-center gap-1">');
+    expect(html).toContain('<div class="pointer-events-none relative z-10 [&amp;_a]:pointer-events-auto [&amp;_button]:pointer-events-auto -my-1 -mr-2.5 flex shrink-0 items-center gap-1">');
     expect(html).not.toContain("-my-[9px]");
     // Without Serve the ⋮-only row keeps its old overhang (row height unchanged).
-    expect(render({ meal: meal() })).toContain('<div class="relative z-10 -my-[9px] -mr-2.5 flex shrink-0 items-center gap-1">');
+    expect(render({ meal: meal() })).toContain('<div class="pointer-events-none relative z-10 [&amp;_a]:pointer-events-auto [&amp;_button]:pointer-events-auto -my-[9px] -mr-2.5 flex shrink-0 items-center gap-1">');
   });
 
   it("Serve in flight reads Serving… and waits; a failed one says try again; offline it waits and says why", () => {

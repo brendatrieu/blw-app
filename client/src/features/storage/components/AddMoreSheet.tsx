@@ -362,11 +362,13 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
           Done
         </Button>
       </div>
-      {/* Portals over this sheet. Saved: ticked here, on the plate at Done. */}
+      {/* Portals over this sheet. Saved: ticked here, on the plate at Done.
+          No recipe link: it would leave the page and lose the plate (961). */}
       <CustomFoodSheet
         idPrefix="add-more-custom"
         name={customName}
         onClose={() => setCustomName(null)}
+        recipeLink={false}
         onSaved={(food) => {
           setCustomName(null);
           setFoodIds((current) => (current.includes(food.id) ? current : [...current, food.id]));

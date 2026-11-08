@@ -107,7 +107,9 @@ export function PlanMealCard({ babyId, date, today, meal, onServe, serving = fal
     // The 44px ⋮ overhangs the row, so it doesn't make it taller. With Serve
     // the row is the small Serve's 36px, so Serve sits inside the card's own
     // padding instead of overhanging its border (ledger 934).
-    <div className={`relative z-10 ${serves || served ? "-my-1" : "-my-[9px]"} -mr-2.5 flex shrink-0 items-center gap-1`}>
+    // Only its controls take a tap: the gap between them and the ⋮'s box
+    // fall through to the card's link (ledger 968).
+    <div className={`pointer-events-none relative z-10 [&_a]:pointer-events-auto [&_button]:pointer-events-auto ${serves || served ? "-my-1" : "-my-[9px]"} -mr-2.5 flex shrink-0 items-center gap-1`}>
       {serves && (
         // Every write waits offline (SPEC §4.4), the plate's Serve pattern.
         // Small (36px) to look; the ::after strip keeps a 44px tap target.

@@ -127,6 +127,12 @@ describe("CustomFoodForm's recipe pointer (item 352)", () => {
     expect(link.props.onClick).toBeUndefined();
     expect(link.props.to).toBe("/recipes/new");
   });
+
+  // Ledger 961: inside Add more the link would leave the page and lose the plate.
+  it("recipeLink={false}: no Link at all", () => {
+    h.reset();
+    expect(find(renderForm({ recipeLink: false }), Link)).toBeNull();
+  });
 });
 
 function renderPicker(): Rendered {
@@ -179,6 +185,10 @@ describe("CustomFoodSheet, the one 'Add a custom food' sheet (ledger 961)", () =
     expect(open.props).toMatchObject({ open: true, title: "Add a custom food", showClose: true });
     const form = find(open.props.children, CustomFoodForm)!;
     expect(form.props).toMatchObject({ idPrefix: "add-more-custom", initialName: "papaya" });
+    // The picker keeps the recipe link (undefined = the form's default, on); Add more turns it off.
+    expect(form.props.recipeLink).toBeUndefined();
+    const noLink = (CustomFoodSheet as unknown as (p: unknown) => Rendered)({ ...props, recipeLink: false });
+    expect(find(noLink.props.children, CustomFoodForm)!.props.recipeLink).toBe(false);
     (form.props.onNavigateAway as () => void)();
     (open.props.onClose as () => void)();
     expect(closed).toEqual(["x", "x"]);

@@ -118,8 +118,10 @@ export interface MealCardProps {
  * standalone-renderable per the app's convention for card-shaped list items.
  */
 export function MealCard({ meal, onRequestDelete, grouped = false }: MealCardProps) {
+  // No aria-label: the list sits inside the edit link, and a label there
+  // would BE the link's name, hiding the foods and "Rated N stars" (966).
   const lines = (
-    <ul aria-label="On the plate" className="flex flex-col">
+    <ul className="flex flex-col">
       {mealLines(meal).map((line) => {
         // Ledger 966: a rated item's stars sit at the end of its line,
         // read-only; a container of several things puts each rated one on a

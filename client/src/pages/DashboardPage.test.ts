@@ -647,7 +647,7 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       // Food log 2 (CD-Food-Log): under the date line, each item line starts
       // with its plate at the row's own padding, where the line starts.
       const logLines = html.match(
-        /<a [^>]*><ul aria-label="On the plate" class="flex flex-col"><li class="flex items-center gap-2 py-\[3px\]"><span aria-hidden="true" class="flex shrink-0 /g,
+        /<a [^>]*><ul class="flex flex-col"><li class="flex items-center gap-2 py-\[3px\]"><span aria-hidden="true" class="flex shrink-0 /g,
       );
       expect(logLines).toHaveLength(2);
     });

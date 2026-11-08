@@ -141,6 +141,11 @@ export interface CustomFoodFormProps {
    * first. The full-screen page has nothing to tidy and passes nothing.
    */
   onNavigateAway?: () => void;
+  /**
+   * false = no "Add it as a recipe instead" link (ledger 961: Add more's
+   * sheet never leaves the page, or the plate underneath would be lost).
+   */
+  recipeLink?: boolean;
   onSaved: (food: FoodDetail) => void;
 }
 
@@ -159,6 +164,7 @@ export function CustomFoodForm({
   initialName = "",
   idPrefix = "custom-food",
   onNavigateAway,
+  recipeLink = true,
   onSaved,
 }: CustomFoodFormProps) {
   const [values, setValues] = useState<CustomFoodValues>(() => initialCustomFoodValues(food, initialName));
@@ -219,6 +225,7 @@ export function CustomFoodForm({
         htmlFor={`${idPrefix}-name`}
         error={shownErrors.name}
         hint={
+          recipeLink ? (
           <>
             {"One ingredient, like papaya or cottage cheese. Cooking something with several ingredients? "}
             <Link
@@ -230,6 +237,9 @@ export function CustomFoodForm({
             </Link>
             .
           </>
+          ) : (
+            "One ingredient, like papaya or cottage cheese."
+          )
         }
       >
         <Input
