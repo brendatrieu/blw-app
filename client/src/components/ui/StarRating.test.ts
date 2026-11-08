@@ -4,7 +4,7 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { RatingSummaryText, StarRating, formatRatingSummary, starForKey } from "./StarRating.js";
+import { RatingSummaryText, StarRating, StarRatingShown, formatRatingSummary, starForKey } from "./StarRating.js";
 
 interface El {
   type: unknown;
@@ -135,6 +135,25 @@ describe("StarRating behaviour", () => {
     ["Tab", 2, null],
   ] as const)("%s from %s -> %s", (key, from, to) => {
     expect(starForKey(key, from)).toBe(to);
+  });
+});
+
+// Ledger 966b: a rating at a glance on a Food log card, read-only.
+describe("StarRatingShown", () => {
+  const render = (value: number) => renderToString(createElement(StarRatingShown, { value, className: "ml-auto" }));
+
+  it("is one image read as its rating, never a button: five small stars, the rated ones filled", () => {
+    const html = render(3);
+    expect(html).toMatch(/^<span role="img" aria-label="Rated 3 stars" class="flex shrink-0 ml-auto">/);
+    expect(html).not.toContain("<button");
+    expect(html).not.toContain("tabindex");
+    const svgs = html.match(/<svg [^>]*>[\s\S]*?<\/svg>/g)!;
+    expect(svgs).toHaveLength(5);
+    expect(svgs.every((svg) => svg.includes('aria-hidden="true" width="14" height="14"'))).toBe(true);
+    // StarRating's own colors: filled apricot, empty a soft apricot fill with an apricot-text outline.
+    expect(svgs.map((svg) => (svg.includes("fill-current") && svg.includes("apricot-graphic") ? "on" : svg.includes("fill-[var(--color-apricot-soft)]") && svg.includes("apricot-text") ? "off" : "?"))).toEqual(["on", "on", "on", "off", "off"]);
+    expect(render(1)).toContain('aria-label="Rated 1 star"');
+    expect(render(5).match(/fill-current/g)).toHaveLength(5);
   });
 });
 

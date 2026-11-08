@@ -315,7 +315,13 @@ export function validatePlate(values: {
   return errors;
 }
 
-/** A recipe's mark on the plate, the meal page and the Food log (CD boards). */
+/** A logged meal's Edit, the plate at `/log-meal?edit=:id`: where a Food log
+ * card, a served plan card and the old `/meals/:id` links go (ledger 966). */
+export function mealEditHref(mealId: string): string {
+  return `/log-meal?edit=${encodeURIComponent(mealId)}`;
+}
+
+/** A recipe's mark on the plate and the Food log (CD boards). */
 export const RECIPE_PLATE: Plate = { emoji: "🍲", tint: "neutral" };
 
 type PartRef = { kind: "food"; food: PlateFoodRef } | { kind: "recipe"; recipe: PlateRecipeRef };

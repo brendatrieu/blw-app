@@ -28,10 +28,10 @@ function renderMenu() {
  * invoke the `Menu` element's own `children(close)` to get the exact rows the
  * component composes — no hand-typed copy of them. */
 function openPanelRows(
-  options: { mealId?: string; onRequestDelete?: () => void; close?: () => void; deleteDisabled?: boolean } = {},
+  options: { mealId?: string; onRequestDelete?: () => void; close?: () => void } = {},
 ) {
-  const { mealId = "meal-1", onRequestDelete = () => {}, close = () => {}, deleteDisabled } = options;
-  const menu = MealActionsMenu({ mealId, onRequestDelete, deleteDisabled }) as ReactElement<MenuProps>;
+  const { mealId = "meal-1", onRequestDelete = () => {}, close = () => {} } = options;
+  const menu = MealActionsMenu({ mealId, onRequestDelete }) as ReactElement<MenuProps>;
   return menu.props.children(close);
 }
 
@@ -43,7 +43,7 @@ function renderOpenPanel(mealId = "meal-1") {
 
 /** The rows come back as a fragment; flatten it so individual items can be
  * inspected (and their `onSelect` invoked) directly. */
-function openPanelItems(options: { onRequestDelete?: () => void; close?: () => void; deleteDisabled?: boolean } = {}) {
+function openPanelItems(options: { onRequestDelete?: () => void; close?: () => void } = {}) {
   const rows = openPanelRows(options) as ReactElement<{ children?: ReactNode }>;
   return Children.toArray(rows.props.children).filter((child): child is ReactElement => isValidElement(child));
 }
@@ -115,25 +115,5 @@ describe("MealActionsMenu (item 194)", () => {
     const editItem = items.find((item) => item.type === MenuLinkItem) as ReactElement<MenuLinkItemProps>;
     editItem.props.onSelect?.();
     expect(closes).toBe(1);
-  });
-
-  it("disables Delete when asked (the meal page offline: Delete waits, SPEC §4.4), and only then (ledger 939, verifier c1)", () => {
-    const deleteOf = (deleteDisabled?: boolean) =>
-      openPanelItems({ deleteDisabled }).find((item) => item.type === MenuItem) as ReactElement<MenuItemProps>;
-    expect(deleteOf(true).props.disabled).toBe(true);
-    expect(deleteOf().props.disabled).toBeFalsy();
-    expect(deleteOf(false).props.disabled).toBeFalsy();
-    // Edit stays available either way.
-    const editOf = openPanelItems({ deleteDisabled: true }).find((item) => item.type === MenuLinkItem) as ReactElement<MenuLinkItemProps>;
-    expect(editOf.props.to).toBe("/log-meal?edit=meal-1");
-  });
-
-  it("a waiting Delete points at the line that says why (verifier c3 N3); without one it has no description", () => {
-    const rows = (deleteDescribedBy?: string) => {
-      const menu = MealActionsMenu({ mealId: "meal-1", onRequestDelete: () => {}, deleteDisabled: true, deleteDescribedBy }) as ReactElement<MenuProps>;
-      return renderToString(createElement(MemoryRouter, null, createElement(MenuPanel, null, menu.props.children(() => {}))));
-    };
-    expect(rows("rate-offline-meal-1")).toMatch(/<button type="button" role="menuitem" tabindex="-1" disabled="" aria-describedby="rate-offline-meal-1"[^>]*>Delete<\/button>/);
-    expect(rows()).not.toContain("aria-describedby");
   });
 });

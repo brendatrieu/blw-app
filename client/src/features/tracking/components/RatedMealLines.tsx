@@ -4,7 +4,7 @@ import type { MealItem } from "@blw/shared";
 import { StarRating } from "../../../components/ui/StarRating.js";
 import { useIsOffline } from "../../../lib/online.js";
 import { DeletedMark, FoodNames } from "../../catalog/components/DeletedMark.js";
-import { mealLines } from "../../plate/plate.js";
+import { mealEditHref, mealLines } from "../../plate/plate.js";
 import { ItemPlate } from "../../plate/PlateItemRow.js";
 import { useMeals, useUpdateMeal } from "../hooks.js";
 
@@ -19,15 +19,6 @@ const DETAIL = "text-[13px] leading-[1.35] text-[var(--color-text-muted)]";
  * is a size container, as the plate's item card is).
  */
 const LOOK = {
-  // The Food log card (the meal page, ledger 939).
-  log: {
-    plate: 28,
-    row: "gap-2",
-    li: "py-[3px]",
-    divider: "",
-    name: "text-sm leading-[1.3] font-medium",
-    stars: "ml-[27px] @max-[246px]:-ml-[9px]",
-  },
   // Home's Up next card (ledger 944).
   home: {
     plate: 36,
@@ -50,15 +41,13 @@ const LOOK = {
 
 export interface RatedMealLinesProps {
   meal: MealItem;
-  look?: keyof typeof LOOK;
+  look: keyof typeof LOOK;
 }
 
-/** The id of a meal's "You're offline." line, for whatever else waits on it. */
-export const rateOfflineId = (mealId: string) => `rate-offline-${mealId}`;
-
 /**
- * A logged meal's items, each with its stars (ledger 939: the meal page; 944:
- * a served meal's card on Home and on the Meal Plan). One tap saves that
+ * A logged meal's items, each with its stars (ledger 944: a served meal's
+ * card on Home and on the Meal Plan; the meal page that had them first,
+ * 939, is retired, 966). One tap saves that
  * one item's stars (PATCH `itemRatings`, ledger 902) and shows the tapped
  * value while it does; offline every star waits (SPEC §4.4) and says so; a
  * failed save says so. A recipe says what was left out, and a container
@@ -66,11 +55,11 @@ export const rateOfflineId = (mealId: string) => `rate-offline-${mealId}`;
  * each food or recipe it held. Everything tappable sits above a card's
  * stretched link (relative z-10), never inside it.
  */
-export function RatedMealLines({ meal, look = "log" }: RatedMealLinesProps) {
+export function RatedMealLines({ meal, look }: RatedMealLinesProps) {
   const updateMeal = useUpdateMeal(meal.babyId);
   const offline = useIsOffline();
   const style = LOOK[look];
-  const offlineId = rateOfflineId(meal.id);
+  const offlineId = `rate-offline-${meal.id}`;
   // While a tap is saving, show what was tapped rather than the old value.
   const pending =
     updateMeal.isPending && updateMeal.variables?.id === meal.id ? (updateMeal.variables.input.itemRatings ?? {}) : {};
@@ -147,7 +136,7 @@ export function RatedMealLines({ meal, look = "log" }: RatedMealLinesProps) {
 /** Where a served planned meal's Add more goes (ledger 944): the logged
  * meal's Edit screen with Add more already open (`add=1`, read once). */
 export function addMoreHref(mealId: string): string {
-  return `/log-meal?edit=${encodeURIComponent(mealId)}&add=1`;
+  return `${mealEditHref(mealId)}&add=1`;
 }
 
 export interface ServedMealLinesProps {
@@ -161,7 +150,7 @@ export interface ServedMealLinesProps {
 
 /**
  * A served planned meal's lines with stars (ledger 944): the LOGGED meal's
- * items, found in the recent meals the meal page and the Food log read
+ * items, found in the recent meals the Food log reads
  * (`useMeals`, last 100), so a tap rates what was served. Mounted only for
  * a served meal, so an unserved plan reads no meals.
  */

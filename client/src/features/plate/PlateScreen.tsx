@@ -54,6 +54,7 @@ import {
   fromMeal,
   fromPlanned,
   hasLeftovers,
+  mealEditHref,
   nothingCounts,
   plateAddMoreServing,
   plateLeftoverSource,
@@ -345,9 +346,9 @@ export function PlateScreen() {
         />
       )}
 
-      {/* What was served lives on the logged meal: a served planned meal opens its meal page. */}
+      {/* What was served lives on the logged meal: a served planned meal opens its Edit (ledger 966). */}
       {!babyLoading && activeBaby && start.status === "ready" && plannedMeal?.served && (
-        <Navigate to={`/meals/${plannedMeal.served.mealId}`} replace />
+        <Navigate to={mealEditHref(plannedMeal.served.mealId)} replace />
       )}
 
       {!babyLoading && activeBaby && start.status === "ready" && !plannedMeal?.served && (
@@ -375,7 +376,7 @@ export function PlateScreen() {
           onMealChanged={() => {
             void mealQuery.refetch().then(() => setReloads((count) => count + 1));
           }}
-          onPlanGone={(mealId) => (mealId ? navigate(`/meals/${mealId}`, { replace: true }) : setPlanGone(true))}
+          onPlanGone={(mealId) => (mealId ? navigate(mealEditHref(mealId), { replace: true }) : setPlanGone(true))}
           // Ledger 944: `add=1` (a served meal's Add more) opens Add more on
           // the first plate only; a 409 reload starts the plate without it.
           openAddMore={mode === "edit" && searchParams.get("add") === "1" && reloads === 0}

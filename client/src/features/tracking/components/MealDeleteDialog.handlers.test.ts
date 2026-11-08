@@ -81,7 +81,6 @@ function question(meal: MealItem, events: string[] = []): El {
     babyId: "baby-1",
     open: true,
     onClose: () => events.push("closed"),
-    onDeleted: () => events.push("deleted"),
   });
 }
 
@@ -116,13 +115,13 @@ describe("MealDeleteDialog", () => {
     expect(h.mutation.calls).toEqual([]);
   });
 
-  it("deletes on the red button, then closes and hands off to onDeleted", () => {
+  it("deletes on the red button, then closes, leaving the parent where they are (ledger 966)", () => {
     const events: string[] = [];
     (question(MEAL, events).props.onConfirm as () => void)();
     expect(h.mutation.calls.map((call) => call.id)).toEqual([MEAL.id]);
     expect(events).toEqual([]);
     h.mutation.calls[0]!.options.onSuccess!();
-    expect(events).toEqual(["closed", "deleted"]);
+    expect(events).toEqual(["closed"]);
   });
 
   it("shows pending, and keeps the pop-up open with the reason when the delete fails", () => {

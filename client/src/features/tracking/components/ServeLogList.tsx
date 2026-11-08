@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { MealFood, MealItem } from "@blw/shared";
 import { useDeleteMeal, useMeals } from "../hooks.js";
@@ -8,6 +8,7 @@ import { ItemPlate } from "../../plate/PlateItemRow.js";
 import { MealActionsMenu } from "./MealActionsMenu.js";
 import { Badge } from "../../catalog/components/Badge.js";
 import { ButtonLink } from "../../../components/ui/Button.js";
+import { StarRatingShown } from "../../../components/ui/StarRating.js";
 import { Card, CARD_ROW_DIVIDER } from "../../../components/ui/Card.js";
 import { HEADING_CONTROL_INSET, SectionLink } from "../../../components/ui/SectionLink.js";
 import { PageTrack, Pager, usePagedTrack } from "../../../components/ui/Pager.js";
@@ -64,19 +65,16 @@ export interface MealDeleteDialogProps {
   babyId: string;
   open: boolean;
   onClose: () => void;
-  /** Fired on a successful delete, after the pop-up closes — `MealDetailPage`
-   * uses this to navigate away; the list leaves it unset since the row just
-   * disappears. */
-  onDeleted?: () => void;
 }
 
 /**
- * The meal delete question (item 599), shared by the food log list (one per
- * list, for the meal whose kebab asked) and `MealDetailPage`'s Delete button.
- * Nothing is deleted until the red button is tapped. A failed delete keeps the
- * pop-up open with the reason, so the parent can try again.
+ * The meal delete question (item 599), one per list (the Food log, a
+ * container's meals, ledger 966), for the meal whose kebab asked.
+ * Nothing is deleted until the red button is tapped; then the card just goes
+ * and the parent stays where they are. A failed delete keeps the pop-up open
+ * with the reason, so the parent can try again.
  */
-export function MealDeleteDialog({ meal, babyId, open, onClose, onDeleted }: MealDeleteDialogProps) {
+export function MealDeleteDialog({ meal, babyId, open, onClose }: MealDeleteDialogProps) {
   const deleteMeal = useDeleteMeal(babyId);
 
   return (
@@ -88,12 +86,7 @@ export function MealDeleteDialog({ meal, babyId, open, onClose, onDeleted }: Mea
       pendingLabel="Deleting…"
       pending={deleteMeal.isPending}
       onConfirm={() =>
-        deleteMeal.mutate(meal.id, {
-          onSuccess: () => {
-            onClose();
-            onDeleted?.();
-          },
-        })
+        deleteMeal.mutate(meal.id, { onSuccess: onClose })
       }
       error={deleteMeal.isError ? "Couldn't delete that — try again." : undefined}
     >
@@ -106,64 +99,59 @@ export interface MealCardProps {
   meal: MealItem;
   /** Asks to delete this meal — the list owns the one `MealDeleteDialog`. */
   onRequestDelete: (meal: MealItem) => void;
-  /** False renders the info block as plain content instead of a Link to
-   * `/log-meal?edit=:id` — for a page that must not link to itself.
-   * Defaults to true (the food log taps through). Mirrors
-   * `StorageItemCard`'s `linkable` prop precisely. */
-  linkable?: boolean;
-  /** Controls rendered next to the "From storage" badge. Defaults to the
-   * kebab `MealActionsMenu` (Edit / Delete); pass `null` for a read-only
-   * card with no actions at all. Mirrors `StorageItemCard`'s `actions` slot. */
-  actions?: ReactNode;
   /** A row of a grouped list (Home, item 664) instead of a card of its own:
    * no border or fill (the list's card has them), an inset divider, and a
    * kebab named after the meal. */
   grouped?: boolean;
-  /** Replaces the plain item lines: the meal page passes its lines with
-   * stars (`RatedMealLines`, ledger 939), so the page is this same card. */
-  lines?: ReactNode;
 }
 
 /**
  * One meal in the food log (CD-Food-Log, PP-NOTES round 5 decision 8): the
  * muted "Today · 2:05 PM" line with the "From storage" badge and the kebab
- * at the top, then one line per item on the plate (its plate and name), then
- * the notes. Exported standalone-renderable per the app's convention for
- * card-shaped list items.
+ * at the top, then one line per item on the plate (its plate and name, and
+ * its stars at a glance once rated, ledger 966), then the notes. On Home, on
+ * /meals and on a container's page (its meals). Exported
+ * standalone-renderable per the app's convention for card-shaped list items.
  */
-export function MealCard({
-  meal,
-  onRequestDelete,
-  linkable = true,
-  actions,
-  grouped = false,
-  lines: customLines,
-}: MealCardProps) {
-  // `undefined` (the prop omitted) means "the standard kebab"; an explicit
-  // `null` means "no actions" — hence the default lives here, not in the
-  // destructuring above.
-  const actionsSlot =
-    actions === undefined ? (
-      <MealActionsMenu
-        mealId={meal.id}
-        onRequestDelete={() => onRequestDelete(meal)}
-        {...(grouped && { label: `${meal.foods.map((food) => food.name).join(", ")} actions` })}
-      />
-    ) : (
-      actions
-    );
-
-  const lines = customLines ?? (
+export function MealCard({ meal, onRequestDelete, grouped = false }: MealCardProps) {
+  const lines = (
     <ul aria-label="On the plate" className="flex flex-col">
-      {mealLines(meal).map((line) => (
-        <li key={line.key} className="flex items-center gap-2 py-[3px]">
-          <ItemPlate plates={line.plates} size={28} />
-          <span className="min-w-0 text-sm leading-[1.3] font-medium break-words text-[var(--color-text)]">
-            {line.name}
-            <DeletedMark deleted={line.deleted} />
-          </span>
-        </li>
-      ))}
+      {mealLines(meal).map((line) => {
+        // Ledger 966: a rated item's stars sit at the end of its line,
+        // read-only; a container of several things puts each rated one on a
+        // line of its own under it. Unrated lines are just the name.
+        const own = line.ratings.length === 1 ? line.ratings[0]!.rating : null;
+        const parts = line.ratings.length > 1 ? line.ratings.filter((part) => part.rating !== null) : [];
+        const row = (
+          <>
+            <ItemPlate plates={line.plates} size={28} />
+            <span className="min-w-0 text-sm leading-[1.3] font-medium break-words text-[var(--color-text)]">
+              {line.name}
+              <DeletedMark deleted={line.deleted} />
+            </span>
+            {own !== null && <StarRatingShown value={own} className="ml-auto" />}
+          </>
+        );
+        return parts.length === 0 ? (
+          <li key={line.key} className="flex items-center gap-2 py-[3px]">
+            {row}
+          </li>
+        ) : (
+          <li key={line.key} className="py-[3px]">
+            <div className="flex items-center gap-2">{row}</div>
+            {parts.map((part) => (
+              // Under the name: past the 28px plate and the 8px gap.
+              <div key={part.id} className="flex items-center gap-2 pl-9 text-xs text-[var(--color-text-muted)]">
+                <span className="min-w-0 break-words">
+                  {part.label}
+                  <DeletedMark deleted={part.deleted} />
+                </span>
+                <StarRatingShown value={part.rating!} className="ml-auto" />
+              </div>
+            ))}
+          </li>
+        );
+      })}
     </ul>
   );
 
@@ -185,23 +173,23 @@ export function MealCard({
             `StorageItemCard` follows too). */}
         <div className="relative z-10 flex shrink-0 items-center gap-0.5 ml-auto">
           {fromStorage(meal) && <Badge tone="neutral">📦 From storage</Badge>}
-          {actionsSlot}
+          <MealActionsMenu
+            mealId={meal.id}
+            onRequestDelete={() => onRequestDelete(meal)}
+            {...(grouped && { label: `${meal.foods.map((food) => food.name).join(", ")} actions` })}
+          />
         </div>
       </div>
 
       {/* Stretched link: the anchor's ::after overlay covers the whole card,
           so tapping anywhere opens the meal for editing (which is why there
           is no separate Edit link). */}
-      {linkable ? (
-        <Link
-          to={`/log-meal?edit=${meal.id}`}
-          className="-mt-1 block rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-        >
-          {lines}
-        </Link>
-      ) : (
-        <div className="-mt-1">{lines}</div>
-      )}
+      <Link
+        to={`/log-meal?edit=${meal.id}`}
+        className="-mt-1 block rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+      >
+        {lines}
+      </Link>
 
       {meal.notes && <p className="mt-1 text-xs text-[var(--color-text-muted)]">{meal.notes}</p>}
 

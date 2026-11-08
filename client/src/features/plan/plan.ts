@@ -17,7 +17,7 @@ import {
 import { foodPlate, type Plate } from "../catalog/foodEmoji.js";
 import { storageItemCluster } from "../storage/components/StorageItemCard.js";
 import { bestByLabel, countdownLabel, servePartHint, storageItemTitle } from "../storage/format.js";
-import { NOTHING_COUNTS_MESSAGE, RECIPE_PLATE } from "../plate/plate.js";
+import { NOTHING_COUNTS_MESSAGE, RECIPE_PLATE, mealEditHref } from "../plate/plate.js";
 import type { FormErrors } from "../../lib/forms.js";
 import {
   containerGoneCopyWarning,
@@ -227,7 +227,7 @@ export const NEW_PLANNED_MEAL = "new";
  * where tapping the card goes; a served one opens the logged meal's Edit
  * (the Food log's ⋮ Edit, Add more closed). */
 export function planMealEditHref(date: string, meal: Pick<PlannedMeal, "slotId" | "served">): string {
-  return meal.served ? `/log-meal?edit=${encodeURIComponent(meal.served.mealId)}` : `/plan/${date}/${meal.slotId}`;
+  return meal.served ? mealEditHref(meal.served.mealId) : `/plan/${date}/${meal.slotId}`;
 }
 
 /** The read-only Day field (Q7): "Today", "Yesterday", else "Thu, Oct 15". */

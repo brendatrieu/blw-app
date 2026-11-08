@@ -157,7 +157,7 @@ describe("useServePlannedMeal (today's one tap)", () => {
 });
 
 describe("useOneTapServe (a card's Serve)", () => {
-  it("today: one tap; a blocked answer opens the plate flagged, already served opens that meal, not_today just refetches", () => {
+  it("today: one tap; a blocked answer opens the plate flagged, already served opens that meal's Edit (966), not_today just refetches", () => {
     const oneTap = useOneTapServe(BABY);
     oneTap.serve("2026-10-14", "2026-10-14", LUNCH);
     expect(h.mutates.map((call) => call.variables)).toEqual([{ date: "2026-10-14", meal: LUNCH }]);
@@ -166,7 +166,7 @@ describe("useOneTapServe (a card's Serve)", () => {
     onError(served);
     onError(notToday);
     onError(new ApiError(500, "boom"));
-    expect(h.navigated).toEqual([`/plan/2026-10-14/${id(51)}?serve=1`, `/meals/${id(90)}`]);
+    expect(h.navigated).toEqual([`/plan/2026-10-14/${id(51)}?serve=1`, `/log-meal?edit=${id(90)}`]);
   });
 
   it("an earlier day opens the plate, with no one tap; a later day is never asked (no Serve there)", () => {

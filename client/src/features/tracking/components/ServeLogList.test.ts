@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from "react";
+import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -46,11 +46,7 @@ function food(overrides: Partial<MealFood> = {}): MealFood {
   };
 }
 
-function renderMealCard(
-  meal: MealItem,
-  linkable?: boolean,
-  actions?: ReactNode,
-) {
+function renderMealCard(meal: MealItem) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return renderToString(
     createElement(
@@ -64,8 +60,6 @@ function renderMealCard(
             key: meal.id,
             meal,
             onRequestDelete: () => {},
-            ...(linkable === undefined ? {} : { linkable }),
-            ...(actions === undefined ? {} : { actions }),
           }),
         ]),
       ),
@@ -220,10 +214,16 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
       { kind: "food", id: uuid(13), food: { ...EGG, deleted: true }, rating: null },
     ],
   };
-  const linesOf = (html: string) => {
+  const lisOf = (html: string) => {
     const list = /<ul aria-label="On the plate"[^>]*>([\s\S]*?)<\/ul>/.exec(html)![1]!;
-    return [...list.matchAll(/<li [^>]*>([\s\S]*?)<\/li>/g)].map((m) => m[1]!);
+    return [...list.matchAll(/<li ([^>]*)>([\s\S]*?)<\/li>/g)].map((m) => ({ attrs: m[1]!, inner: m[2]! }));
   };
+  // A line's own row, without its stars (ledger 966): a container's rated
+  // parts sit on lines of their own under it, in a row div of its own.
+  const ROW = '<div class="flex items-center gap-2">';
+  const rowOf = (inner: string) => (inner.startsWith(ROW) ? inner.slice(ROW.length, inner.indexOf("</div>")) : inner);
+  const STARS = /<span role="img"[^>]*>(?:<svg[\s\S]*?<\/svg>)*<\/span>/g;
+  const linesOf = (html: string) => lisOf(html).map(({ inner }) => rowOf(inner).replace(STARS, ""));
   const names = (html: string) =>
     linesOf(html).map((line) => /<span class="min-w-0[^"]*">([\s\S]*)<\/span>$/.exec(line)![1]!.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&"));
 
@@ -287,6 +287,53 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
     expect(fromStorage(baseMeal)).toBe(false);
     expect(renderMealCard(PLATE_MEAL)).toMatch(/📦 (?:<!-- -->)?From storage/);
   });
+  // Ledger 966b: ratings at a glance, read-only.
+  it("puts a rated item's stars, read-only, at the end of its line; an unrated line is exactly as before", () => {
+    const html = renderMealCard(PLATE_MEAL).replace(/<!-- -->/g, "");
+    const [recipe, container, egg] = lisOf(html);
+    // The recipe (5): one image at the end of its row, five small filled stars.
+    expect(recipe!.attrs).toBe('class="flex items-center gap-2 py-[3px]"');
+    const stars = /<span role="img" aria-label="Rated 5 stars" class="flex shrink-0 ml-auto">([\s\S]*?)<\/span><\/li>$/.exec(`<li ${recipe!.attrs}>${recipe!.inner}</li>`);
+    expect(stars).not.toBeNull();
+    expect(stars![1]!.match(/<svg aria-hidden="true" width="14" height="14"/g)).toHaveLength(5);
+    expect(stars![1]!.match(/fill-current/g)).toHaveLength(5);
+    // The unrated egg: the plate and the name, nothing else, same classes.
+    expect(egg!.attrs).toBe('class="flex items-center gap-2 py-[3px]"');
+    expect(egg!.inner).not.toContain('role="img"');
+    expect(egg!.inner).toMatch(/^<span aria-hidden="true"[\s\S]*<\/span><span class="min-w-0 text-sm leading-\[1\.3\] font-medium break-words text-\[var\(--color-text\)\]">Egg<span class="font-normal[^"]*">\u00a0\(deleted\)<\/span><\/span>$/);
+    // The container of two: no stars on its own row; its rated Broccoli (4)
+    // gets a line of its own under the name, its unrated Carrot none.
+    expect(rowOf(container!.inner)).not.toContain('role="img"');
+    const parts = [...container!.inner.matchAll(/<div class="flex items-center gap-2 pl-9 text-xs text-\[var\(--color-text-muted\)\]"><span class="min-w-0 break-words">([^<]*)<\/span><span role="img" aria-label="([^"]*)" class="flex shrink-0 ml-auto">([\s\S]*?)<\/span><\/div>/g)];
+    expect(parts.map((m) => [m[1], m[2], m[3]!.match(/fill-current/g)?.length])).toEqual([["Broccoli", "Rated 4 stars", 4]]);
+    // Nothing to tap: no star buttons, and all of it inside the card's Edit link.
+    expect(html).not.toContain('role="radio"');
+    const link = /<a [^>]*href="\/log-meal\?edit=meal-1"[^>]*>([\s\S]*?)<\/a>/.exec(html)![1]!;
+    expect(link).not.toContain("<button");
+    expect(link.match(/role="img"/g)).toHaveLength(2);
+  });
+
+  it("a container of one thing carries its stars at the end of its own line; one star reads 'Rated 1 star'", () => {
+    const meal: MealItem = {
+      ...baseMeal,
+      items: [
+        {
+          kind: "storage",
+          storageItemId: uuid(30),
+          label: null,
+          location: "fridge",
+          servings: 1,
+          parts: [{ kind: "food", id: uuid(11), food: BROCCOLI, rating: 1 }],
+        },
+      ],
+    };
+    const [line] = lisOf(renderMealCard(meal).replace(/<!-- -->/g, ""));
+    expect(line!.attrs).toBe('class="flex items-center gap-2 py-[3px]"');
+    expect(line!.inner).toMatch(/>Broccoli<\/span><span role="img" aria-label="Rated 1 star" class="flex shrink-0 ml-auto">/);
+    expect(line!.inner.match(/fill-current/g)).toHaveLength(1);
+    // No ratings at all (a cached body from before items): no stars.
+    expect(renderMealCard(baseMeal)).not.toContain('role="img"');
+  });
 });
 
 describe("MealCard (render, storage-card styling — item 192)", () => {
@@ -306,7 +353,7 @@ describe("MealCard (render, storage-card styling — item 192)", () => {
   });
 
   it("wraps the badge + kebab under the date line instead of overflowing at 320px (ledger 776)", () => {
-    for (const html of [renderMealCard(baseMeal), renderMealCard(baseMeal, false)]) {
+    for (const html of [renderMealCard(baseMeal)]) {
       expect(html).toMatch(/<div class="flex flex-wrap items-center justify-between gap-x-2"><span class="text-xs text-\[var\(--color-text-muted\)\]">/);
       expect(html).toContain('<div class="relative z-10 flex shrink-0 items-center gap-0.5 ml-auto">');
     }
@@ -369,21 +416,6 @@ describe("MealCard actions slot (item 194)", () => {
     expect(html).toMatch(/<div class="relative z-10 [^"]*">(?:(?!<\/div>).)*aria-label="Actions"/s);
   });
 
-  it("renders nothing in the slot when actions is explicitly null (read-only card)", () => {
-    const html = renderMealCard(baseMeal, undefined, null);
-    expect(html).not.toContain('aria-label="Actions"');
-  });
-
-  it("renders a caller-supplied actions slot instead of the kebab", () => {
-    const html = renderMealCard(
-      baseMeal,
-      undefined,
-      createElement("button", { type: "button" }, "Actions slot marker"),
-    );
-    expect(html).toContain("Actions slot marker");
-    expect(html).not.toContain('aria-label="Actions"');
-  });
-
   it("never shows a confirm of its own — its kebab's Delete asks the list, with the meal (item 599)", () => {
     const asked: MealItem[] = [];
     const card = (MealCard as unknown as (props: unknown) => unknown)({
@@ -403,13 +435,6 @@ describe("MealCard tap-through link (item 195)", () => {
     expect(html).toContain(`href="/log-meal?edit=${baseMeal.id}"`);
     expect(html).toMatch(/<a [^>]*class="[^"]*after:absolute after:inset-0[^"]*"[^>]*href="\/log-meal\?edit=meal-1"/);
     expect(html).toMatch(/<li [^>]*class="[^"]*\brelative\b/);
-  });
-
-  it("renders the info block as plain content when linkable is false (no anchor at all)", () => {
-    const editHref = new RegExp(`href="/log-meal\\?edit=${baseMeal.id}"`, "g");
-    expect((renderMealCard(baseMeal).match(editHref) ?? []).length).toBe(1);
-    // linkable=false still leaves the closed kebab, which holds no href until opened.
-    expect((renderMealCard(baseMeal, false).match(editHref) ?? []).length).toBe(0);
   });
 
   it("keeps the kebab outside the info anchor (no nested-interactive markup)", () => {

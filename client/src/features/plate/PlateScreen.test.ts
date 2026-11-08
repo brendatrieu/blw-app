@@ -14,6 +14,12 @@ const h = vi.hoisted(() => ({ meal: { data: undefined as unknown, isError: false
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
 // The sheet portals to body, which the server renderer can't: a marker instead (ledger 944).
 vi.mock("../storage/components/AddMoreSheet.js", () => ({ AddMoreSheet: () => "[Add more sheet]" }));
+// `<Navigate>` moves only on an effect, which a server render never runs: a
+// marker that prints where it would go instead (ledger 966).
+vi.mock("react-router-dom", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  Navigate: ({ to, replace }: { to: string; replace?: boolean }) => `[Navigate ${to}${replace ? " replace" : ""}]`,
+}));
 vi.mock("../tracking/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useMeal: () => ({ ...h.meal, refetch: async () => ({}) }),
@@ -203,9 +209,12 @@ describe("Plan a meal (/plan/:date/:slotId, CD-Plan-Meal)", () => {
     const served = renderPlan(`/plan/2026-10-14/${LUNCH.slotId}`, planWeek([{ ...LUNCH, served: { mealId: id(90), servedAt: "x" } }]));
     expect(served).not.toContain('id="plan-name"');
     expect(served).not.toContain("That meal is gone");
+    // Its logged meal's Edit (ledger 966: the meal page is retired).
+    expect(served).toContain(`[Navigate /log-meal?edit=${id(90)} replace]`);
     // Serving one already served goes to its logged meal too.
     const again = renderPlan(`/plan/2026-10-14/${LUNCH.slotId}?serve=1`, planWeek([{ ...LUNCH, served: { mealId: id(90), servedAt: "x" } }]));
     expect(again).not.toContain(">Serve</button>");
+    expect(again).toContain(`[Navigate /log-meal?edit=${id(90)} replace]`);
   });
 
   // SPEC §3.5: today after a blocked one tap, or an earlier day.

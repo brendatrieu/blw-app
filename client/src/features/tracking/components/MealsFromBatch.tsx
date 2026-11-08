@@ -1,20 +1,14 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import type { MealItem } from "@blw/shared";
 import { useMeals } from "../hooks.js";
 import { mealsFromStorageItem } from "../mealsFromBatch.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
 import { SkeletonList } from "../../../components/ui/Skeleton.js";
-import { FoodNames } from "../../catalog/components/DeletedMark.js";
+import { MealCard, MealDeleteDialog } from "./ServeLogList.js";
 
 interface MealsFromBatchProps {
   babyId: string | undefined;
   storageItemId: string;
-}
-
-function mealTimingLabel(servedAt: string): string {
-  const date = new Date(servedAt);
-  const day = date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  const time = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  return `${day} · ${time}`;
 }
 
 /**
@@ -24,10 +18,18 @@ function mealTimingLabel(servedAt: string): string {
  * window `FoodDetailPage`'s "times served" count uses (the 100-row page-size
  * ceiling, not an exact lifetime total). The heading carries no "(recent
  * meals)" qualifier (item 704, owner's pick).
+ *
+ * Each meal is the Food log's own card (ledger 966): a tap opens its Edit,
+ * ⋮ has Edit and Delete. A delete keeps the parent on this page; the card
+ * goes, and the container above gets its servings back (the delete
+ * refreshes Storage).
  */
 export function MealsFromBatch({ babyId, storageItemId }: MealsFromBatchProps) {
   const { data, isLoading } = useMeals(babyId, { limit: 100 });
   const meals = mealsFromStorageItem(data?.items ?? [], storageItemId);
+  // The meal itself, not its id: the delete removes the card optimistically,
+  // and the question has to outlive it to show a failure (as on the Food log).
+  const [pendingDelete, setPendingDelete] = useState<MealItem | null>(null);
 
   return (
     <section className="flex flex-col gap-2.5">
@@ -38,28 +40,14 @@ export function MealsFromBatch({ babyId, storageItemId }: MealsFromBatchProps) {
       {!isLoading && meals.length === 0 && <EmptyState icon="🍽️" title="No meals logged from this batch yet" />}
 
       {!isLoading && meals.length > 0 && (
-        <ul className="flex flex-col gap-1.5">
+        <ul className="flex flex-col gap-2">
           {meals.map((meal) => (
-            <li key={meal.id} className="rounded-[var(--radius-md)] bg-[var(--color-bg-inset)]">
-              {/* The whole row is the link target — no other interactive
-                  control lives in this row, so (unlike StorageItemCard/
-                  MealCard) nothing needs to stay outside it. */}
-              <Link
-                to={`/meals/${meal.id}`}
-                className="flex flex-col gap-0.5 rounded-[var(--radius-md)] px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-              >
-                <span className="text-sm font-medium text-[var(--color-text)]">{mealTimingLabel(meal.servedAt)}</span>
-                <span className="text-xs text-[var(--color-text-muted)]">
-                  <FoodNames foods={meal.foods} />
-                </span>
-                {meal.notes && <span className="text-xs text-[var(--color-text-muted)]">{meal.notes}</span>}
-                {meal.reactionNote && (
-                  <span className="text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</span>
-                )}
-              </Link>
-            </li>
+            <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} />
           ))}
         </ul>
+      )}
+      {pendingDelete && (
+        <MealDeleteDialog meal={pendingDelete} babyId={pendingDelete.babyId} open onClose={() => setPendingDelete(null)} />
       )}
     </section>
   );

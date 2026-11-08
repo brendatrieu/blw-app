@@ -65,10 +65,33 @@ describe("MealsFromBatch reactionNote (item 148)", () => {
   });
 });
 
-describe("MealsFromBatch tap-through link (item 164)", () => {
-  it("links each row to /meals/:id", () => {
+describe("MealsFromBatch cards (ledger 966): the Food log's own card", () => {
+  it("each meal is a Food log card: the whole card opens its Edit, ⋮ Actions above it, never the old meal page", () => {
     const html = renderWithMeals([meal({ id: "meal-7" })]);
-    expect(html).toContain('href="/meals/meal-7"');
+    expect(html).toContain('href="/log-meal?edit=meal-7"');
+    expect(html).not.toContain('href="/meals/meal-7"');
+    expect(html).toContain('aria-label="Actions"');
+    expect(html).toMatch(/<li class="relative flex flex-col rounded-\[var\(--radius-lg\)\] border/);
+    expect(html).toMatch(/📦 (?:<!-- -->)?From storage/);
+  });
+
+  it("shows each rated item's stars, read-only, as the Food log does", () => {
+    const html = renderWithMeals([
+      meal({
+        items: [
+          {
+            kind: "storage",
+            storageItemId: STORAGE_ITEM_ID,
+            label: null,
+            location: "fridge",
+            servings: 1,
+            parts: [{ kind: "food", id: "item-1", food: { id: "food-1", slug: "avocado", name: "Avocado", category: "fruit" }, rating: 4 }],
+          },
+        ],
+      }),
+    ]);
+    expect(html).toContain('role="img" aria-label="Rated 4 stars"');
+    expect(html).not.toContain('role="radio"');
   });
 });
 
@@ -82,7 +105,8 @@ describe("MealsFromBatch deleted food (ledger 543/555)", () => {
         ],
       }),
     ]).replace(/<!-- -->/g, "");
-    expect(html).toContain('Banana bread<span class="font-normal text-[var(--color-text-muted)]">\u00a0(deleted)</span>, Avocado');
+    expect(html).toContain('Banana bread<span class="font-normal text-[var(--color-text-muted)]">\u00a0(deleted)</span></span>');
+    expect(html).toContain(">Avocado</span>");
     expect(html.match(/\(deleted\)/g)).toHaveLength(1);
   });
 });

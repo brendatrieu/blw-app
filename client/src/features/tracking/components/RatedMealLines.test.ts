@@ -1,6 +1,6 @@
-// Ledger 939/944: a logged meal's lines with stars, on the meal page (log),
-// Home's Up next card (home) and a Meal Plan card (plan). Markup through
-// renderToString with the save hook mocked (node env, no DOM).
+// Ledger 944: a logged meal's lines with stars, on Home's Up next card
+// (home) and a Meal Plan card (plan); the meal page's look went with it
+// (966). Markup through renderToString with the save hook mocked (node env, no DOM).
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
@@ -34,8 +34,8 @@ const MEAL: MealItem = {
     { kind: "food", id: id(3), food: { id: id(4), slug: "pear", name: "Pear", category: "fruit" }, rating: 2 },
   ],
 };
-const render = (look?: "log" | "home" | "plan") =>
-  renderToString(createElement(MemoryRouter, null, createElement(RatedMealLines, { meal: MEAL, ...(look && { look }) }))).replace(/<!-- -->/g, "");
+const render = (look: "home" | "plan" = "plan") =>
+  renderToString(createElement(MemoryRouter, null, createElement(RatedMealLines, { meal: MEAL, look }))).replace(/<!-- -->/g, "");
 
 beforeEach(() => {
   h.offline = false;
@@ -51,7 +51,6 @@ describe("RatedMealLines (ledger 939/944)", () => {
   });
 
   it("each look keeps its card's plate and name, the stars lined up under the name and above a stretched link", () => {
-    expect(render()).toContain('class="relative z-10 ml-[27px] @max-[246px]:-ml-[9px]"');
     const home = render("home");
     expect(home).toContain("width:36px;height:36px");
     expect(home).toContain('class="text-[15px] leading-[1.3] font-semibold break-words text-[var(--color-text)]">Egg</p>');

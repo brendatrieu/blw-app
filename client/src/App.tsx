@@ -1,4 +1,4 @@
-import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { AI_FEATURES_ENABLED } from "@blw/shared";
 import { AppLayout, useScrollToTopOnPathChange } from "./components/AppLayout.js";
 import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
@@ -9,13 +9,13 @@ import { ResetPasswordPage } from "./pages/ResetPasswordPage.js";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
 import { PlateScreen } from "./features/plate/PlateScreen.js";
+import { mealEditHref } from "./features/plate/plate.js";
 import { PlanPage } from "./features/plan/PlanPage.js";
 import { DailyMealsPage } from "./features/plan/DailyMealsPage.js";
 import { StoragePage } from "./pages/StoragePage.js";
 import { StorageAddPage } from "./pages/StorageAddPage.js";
 import { StorageEditPage } from "./pages/StorageEditPage.js";
 import { StorageDetailPage } from "./pages/StorageDetailPage.js";
-import { MealDetailPage } from "./pages/MealDetailPage.js";
 import { MealsPage } from "./pages/MealsPage.js";
 import { FoodsRoute } from "./pages/FoodsPage.js";
 import { FoodDetailPage } from "./pages/FoodDetailPage.js";
@@ -56,6 +56,13 @@ export function legacyStoragePath(location: { pathname: string; search: string; 
 
 function LegacyStorageRedirect() {
   return <Navigate to={legacyStoragePath(useLocation())} replace />;
+}
+
+/** Ledger 966: the meal page is retired; an old `/meals/:id` link (a
+ * bookmark, a back-button entry) opens that meal's Edit instead. */
+export function MealPageRedirect() {
+  const { id = "" } = useParams<{ id: string }>();
+  return <Navigate to={mealEditHref(id)} replace />;
 }
 
 /**
@@ -125,7 +132,7 @@ export function App() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/log-meal" element={<PlateScreen />} />
         <Route path="/meals" element={<MealsPage />} />
-        <Route path="/meals/:id" element={<MealDetailPage />} />
+        <Route path="/meals/:id" element={<MealPageRedirect />} />
         {/* Ledger 904: the meal plan, from the header's calendar button (953) and More;
             a planned meal opens the plate as Plan a meal ("new" = + Add a meal). */}
         <Route path="/plan" element={<PlanPage />} />

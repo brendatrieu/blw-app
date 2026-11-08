@@ -275,7 +275,7 @@ const ITEM_PLATE = {
 } as const;
 
 /** An item's mark: one plate, or a container's first two foods overlapped
- * as on the boards (40px on the plate and the meal page, 36px on Home's
+ * as on the boards (40px on the plate, 36px on Home's
  * Up next, 32px in Copy to…, 28px in the Food log, 24px on the meal plan). */
 export function ItemPlate({ plates, size, className = "" }: { plates: readonly Plate[]; size: keyof typeof ITEM_PLATE; className?: string }) {
   const [first = RECIPE_PLATE, second] = plates;

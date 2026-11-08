@@ -42,6 +42,24 @@ export function starForKey(key: string, value: number | null): number | null {
 /** The star outline (24 box), as the ratings A boards draw it. */
 const STAR_PATH = "M12 2.8l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.7l-5.4 2.9 1.1-6.1-4.5-4.3 6.1-.8z";
 
+/** One star, filled or empty; its stroke is the surrounding text color. */
+function StarGlyph({ filled, size, className }: { filled: boolean; size: number; className?: string }) {
+  return (
+    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" className={className}>
+      <path
+        d={STAR_PATH}
+        stroke="currentColor"
+        strokeWidth={filled ? 1.4 : 1.3}
+        strokeLinejoin="round"
+        className={filled ? "fill-current" : "fill-[var(--color-apricot-soft)]"}
+      />
+    </svg>
+  );
+}
+
+const FILLED = "text-[var(--color-apricot-graphic)]";
+const EMPTY = "text-[var(--color-apricot-text)]";
+
 /**
  * Item 574, ratings option A (ledger 807): five tappable stars. Tapping star
  * N sets N (the right-most is 5, the middle one 3), and tapping the lit one
@@ -82,19 +100,9 @@ export function StarRating({ value, onChange, label, disabled = false }: StarRat
               disabled={disabled}
               onClick={() => onChange(value === star ? null : star)}
               onKeyDown={handleKeyDown}
-              className={`flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] ${FOCUS_RING} ${
-                filled ? "text-[var(--color-apricot-graphic)]" : "text-[var(--color-apricot-text)]"
-              }`}
+              className={`flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] ${FOCUS_RING} ${filled ? FILLED : EMPTY}`}
             >
-              <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24">
-                <path
-                  d={STAR_PATH}
-                  stroke="currentColor"
-                  strokeWidth={filled ? 1.4 : 1.3}
-                  strokeLinejoin="round"
-                  className={filled ? "fill-current" : "fill-[var(--color-apricot-soft)]"}
-                />
-              </svg>
+              <StarGlyph filled={filled} size={26} />
             </button>
           );
         })}
@@ -116,6 +124,22 @@ export function StarRating({ value, onChange, label, disabled = false }: StarRat
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * Ledger 966: a rating at a glance, at the end of a Food log card's line —
+ * the same stars, small and read-only. No buttons (scrolling past a card can
+ * never change a rating), read as one image, "Rated 4 stars"; the rating
+ * itself changes on the plate, in Edit.
+ */
+export function StarRatingShown({ value, className = "" }: { value: number; className?: string }) {
+  return (
+    <span role="img" aria-label={value === 1 ? "Rated 1 star" : `Rated ${value} stars`} className={`flex shrink-0 ${className}`}>
+      {STARS.map((star) => (
+        <StarGlyph key={star} filled={star <= value} size={14} className={star <= value ? FILLED : EMPTY} />
+      ))}
+    </span>
   );
 }
 

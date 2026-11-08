@@ -19,6 +19,7 @@ const h = vi.hoisted(() => ({
   active: { data: undefined as unknown, isPending: false, isFetching: false },
   history: { data: undefined as unknown, isPending: false, isFetching: false },
   plan: { data: undefined as PlanResponse | undefined, isError: false },
+  navigated: [] as unknown[][],
 }));
 
 vi.mock("react", async (importOriginal) => ({
@@ -38,7 +39,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useSearchParams: () => [new URLSearchParams(h.search)],
   useParams: () => h.params,
-  useNavigate: () => () => undefined,
+  useNavigate: () => (...args: unknown[]) => h.navigated.push(args),
 }));
 vi.mock("../../components/ui/BackButton.js", () => ({ BackButton: () => null, useBackNavigate: () => () => undefined }));
 vi.mock("../babies/useActiveBaby.js", () => ({ useActiveBaby: () => ({ activeBaby: { id: "baby-1" }, isLoading: false }) }));
@@ -124,6 +125,7 @@ beforeEach(() => {
   h.active = { data: { items: [] }, isPending: false, isFetching: false };
   h.history = { data: { items: [TUB] }, isPending: false, isFetching: false };
   h.plan = { data: week([LUNCH]), isError: false };
+  h.navigated = [];
 });
 afterEach(() => vi.useRealTimers());
 
@@ -154,5 +156,18 @@ describe("verifier p4-c1 pins: PlateScreen keeps the plate it opened", () => {
     const after = render();
     expect(has(after, PlateForm)).toBe(true);
     expect(has(after, EmptyState)).toBe(false);
+  });
+});
+
+describe("a plan meal served meanwhile opens that meal's Edit (ledger 966: the meal page is retired)", () => {
+  it("onPlanGone with the served meal replaces the page with /log-meal?edit=:id; without one, the meal is gone", () => {
+    h.search = "";
+    h.params = { date: "2026-10-14", slotId: LUNCH.slotId };
+    const form = findAll(render(), (el) => el.type === PlateForm)[0]!;
+    const gone = form.props.onPlanGone as (mealId: string | null) => void;
+    gone(id(90));
+    expect(h.navigated).toEqual([[`/log-meal?edit=${id(90)}`, { replace: true }]]);
+    gone(null);
+    expect(h.navigated).toHaveLength(1);
   });
 });

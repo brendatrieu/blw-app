@@ -7,7 +7,7 @@ import { useCelebration } from "../../components/ui/Celebration.js";
 import { ApiError } from "../../lib/api.js";
 import { track } from "../../lib/usage/track.js";
 import { failureKind, foodCountBucket, isOffline, mealRecipeKindProps } from "../../lib/usage/properties.js";
-import { containersEmptiedBy } from "../plate/plate.js";
+import { containersEmptiedBy, mealEditHref } from "../plate/plate.js";
 import {
   afterNewMeal,
   invalidateAfterNewMeal,
@@ -238,7 +238,8 @@ export function useServePlannedMeal(babyId: string | undefined) {
 /**
  * Serve on a planned meal's card (the plan and Home's Up next card):
  * - today, one tap; when something can't be served as planned, the plate
- *   opens with it flagged; a meal already served elsewhere opens that meal;
+ *   opens with it flagged; a meal already served elsewhere opens that
+ *   meal's Edit (ledger 966);
  *   a page left open past midnight just refetches (`not_today`), and the
  *   day then offers the past-day Serve;
  * - an earlier day, the plate prefilled from the plan (When = its time);
@@ -264,7 +265,7 @@ export function useOneTapServe(babyId: string | undefined) {
           onError: (failure) => {
             if (cannotServeAsPlanned(failure)) navigate(planServePath(date, meal.slotId));
             const served = servedMealId(failure);
-            if (served) navigate(`/meals/${served}`);
+            if (served) navigate(mealEditHref(served));
           },
         },
       );
