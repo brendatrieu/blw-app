@@ -5,6 +5,7 @@
 import {
   PLATE_NOT_AN_INGREDIENT,
   PLATE_SERVINGS_MAX,
+  planFlags,
   plateKey,
   type CreatePlateMealInput,
   type MealItem,
@@ -16,7 +17,7 @@ import {
   type StorageLocation,
 } from "@blw/shared";
 import { foodPlate, type Plate } from "../catalog/foodEmoji.js";
-import { CONTAINER_GONE_FLAG } from "../plan/copy.js";
+import { CONTAINER_GONE_FLAG, planFlagLine } from "../plan/copy.js";
 import { containerRecipes, type AddMoreChange, type AddMoreIds } from "../storage/addMoreSelection.js";
 import { clampServings, hasNoServingsLeft, storageItemTitle } from "../storage/format.js";
 import { isBestByBeforePrepared, BEST_BY_BEFORE_PREPARED_MESSAGE } from "../storage/freshness.js";
@@ -183,6 +184,44 @@ export function goneLine(entry: ContainerEntry, planning: boolean): string | nul
   if (!container || container.status === "active") return null;
   if (!planning && (!ranOut(entry) || hasNoServingsLeft(container))) return null;
   return CONTAINER_GONE_FLAG[container.status];
+}
+
+/** Plan a meal's day and time as the form has them, and the caller's today
+ * and time zone: what the plan card's flags are counted for. */
+export interface PlanWhen {
+  date: string;
+  time: string | null;
+  today: string;
+  timeZone: string;
+}
+
+/**
+ * Ledger 971: the line under a container on Plan a meal, the Meal Plan
+ * card's own (`planFlagLine`), so it shows before Save and on reopening:
+ * the gone line (`goneLine`), else Best by or use within from `planFlags`
+ * for the meal's day and time as the form has them. "May run out" needs the
+ * other days' plans, so it stays the saved card's. A past day gets no
+ * freshness line (`planFlags` counts from today). A warning only: it never
+ * holds the save (parents decide).
+ */
+export function planningFlagLine(entry: ContainerEntry, when: PlanWhen | undefined): string | null {
+  const gone = goneLine(entry, true);
+  const { container } = entry;
+  if (gone || !container || !when) return gone;
+  const use = {
+    id: container.id,
+    date: when.date,
+    time: when.time,
+    mealPosition: 0,
+    position: 0,
+    served: false,
+    storageItemId: container.id,
+    servings: entry.servings ?? 1,
+  };
+  const flag = planFlags([use], new Map([[container.id, container]]), when.today, when.timeZone)
+    .get(container.id)
+    ?.find((candidate) => candidate.kind === "past_best_by" || candidate.kind === "past_use_within");
+  return flag ? planFlagLine(flag) : null;
 }
 
 /** The first container on the plate that has run out, if any. */

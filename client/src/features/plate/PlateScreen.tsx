@@ -654,6 +654,7 @@ export function PlateForm({
                   dispatch={dispatch}
                   disabled={busy}
                   planning={planning}
+                  planWhen={planning && plan ? { date: plan.date, time: planTime, today: plan.today, timeZone: deviceTimeZone() } : undefined}
                   onAddToStorage={setRestocking}
                   offline={offline}
                 />

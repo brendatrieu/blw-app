@@ -421,4 +421,14 @@ describe("planning (Plan a meal, CD-Plan-Meal)", () => {
     expect(html(containerEntry({ ...MUFFINS, status: "discarded" }), true)).toContain("</svg>Marked discarded in Storage.</p>");
     expect(html(containerEntry(MUFFINS), true)).not.toContain("in Storage.");
   });
+
+  it("a container past its Best by on the meal's day says the card's line under it, in the same caution box (ledger 971)", () => {
+    const when = { date: "2026-11-20", time: null, today: "2026-11-12", timeZone: "UTC" };
+    const late = html(containerEntry({ ...MUFFINS, bestBy: "2026-11-19" }), true, { planWhen: when });
+    expect(late).toContain(">Fridge · 6 of 6 left</p>");
+    expect(late).toMatch(/<p class="mt-2 ml-\[52px\] flex gap-2 rounded-\[10px\] bg-\[var\(--color-caution-soft\)\][^"]*"><svg[^]*?<\/svg>Past the Best by date on this day\.<\/p>/);
+    expect(html(containerEntry({ ...MUFFINS, bestBy: "2026-11-20" }), true, { planWhen: when })).not.toContain("Past the Best by");
+    // Only Plan a meal: the same container being served says nothing of it.
+    expect(html(containerEntry({ ...MUFFINS, bestBy: "2026-11-19" }), false, { planWhen: when })).not.toContain("Past the Best by");
+  });
 });

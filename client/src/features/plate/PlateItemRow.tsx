@@ -14,6 +14,7 @@ import {
   goneLine,
   partId,
   partPlates,
+  planningFlagLine,
   ranOut,
   shortOf,
   type ContainerEntry,
@@ -22,6 +23,7 @@ import {
   type PlateAction,
   type PlateEntry,
   type PlateFoodRef,
+  type PlanWhen,
   type RecipeEntry,
 } from "./plate.js";
 
@@ -55,6 +57,8 @@ interface RowProps<E extends PlateEntry> {
   /** Plan a meal (CD-Plan-Meal): no stars until it is served, and a
    * container is only planned, so nothing has "run out" of it yet. */
   planning?: boolean;
+  /** Plan a meal's day and time, for a container's flag line (ledger 971). */
+  planWhen?: PlanWhen | undefined;
   /** CD-Ran-Out-Add: a run-out container's "Add to storage" (a new batch
    * takes its place). Absent, the row offers only ×. */
   onAddToStorage?: ((entry: ContainerEntry) => void) | undefined;
@@ -328,10 +332,11 @@ export function WarningGlyph() {
  * Where the title would get too narrow, the controls wrap below it, at the
  * right.
  */
-export function ContainerItemRow({ entry, dispatch, disabled, planning, onAddToStorage, offline }: RowProps<ContainerEntry>) {
+export function ContainerItemRow({ entry, dispatch, disabled, planning, planWhen, onAddToStorage, offline }: RowProps<ContainerEntry>) {
   const key = entryKey(entry);
   const out = !planning && ranOut(entry);
   const gone = goneLine(entry, Boolean(planning));
+  const planLine = planning ? planningFlagLine(entry, planWhen) : null;
   const short = planning ? null : shortOf(entry);
   const removable = entry.savedServings !== undefined || out;
   const servings = out ? null : entry.servings;
@@ -407,10 +412,10 @@ export function ContainerItemRow({ entry, dispatch, disabled, planning, onAddToS
         </p>
       )}
       {planning ? (
-        gone && (
+        planLine && (
           <p className={RUN_OUT_LINE}>
             <WarningGlyph />
-            {gone}
+            {planLine}
           </p>
         )
       ) : out ? (

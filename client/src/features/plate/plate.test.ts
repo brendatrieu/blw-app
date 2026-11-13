@@ -30,6 +30,7 @@ import {
   plateAddMoreServing,
   plateLeftoverSource,
   plateReducer,
+  planningFlagLine,
   ranOut,
   ranOutEntry,
   restockPrefill,
@@ -720,5 +721,37 @@ describe("a planned meal served through the plate", () => {
     expect(deletedFoodEntry(fromPlanned([{ kind: "food", id: id(74), food: gone }]))).toMatchObject({ food: gone });
     expect(deletedFoodEntry([{ kind: "food", id: id(75), food: gone, rating: null }])).toBeUndefined();
     expect(deletedFoodEntry(fromPlanned([{ kind: "food", id: id(74), food: EGG }]))).toBeUndefined();
+  });
+});
+
+describe("Plan a meal's flag line under a container (ledger 971)", () => {
+  // CONTAINER keeps until 2026-11-14 10:00 UTC; New York is UTC-5 then.
+  const when = (date: string, time: string | null = null, today = "2026-11-12") => ({ date, time, today, timeZone: "America/New_York" });
+  const tub = containerEntry(CONTAINER);
+  const bestBy = containerEntry({ ...CONTAINER, bestBy: "2026-11-15" });
+
+  it("says the card's own line for the meal's day: Best by after its date, else use within at the meal's time", () => {
+    expect(planningFlagLine(bestBy, when("2026-11-15"))).toBeNull();
+    expect(planningFlagLine(bestBy, when("2026-11-16"))).toBe("Past the Best by date on this day.");
+    expect(planningFlagLine(tub, when("2026-11-13"))).toBeNull();
+    expect(planningFlagLine(tub, when("2026-11-15"))).toBe("May not keep until this day.");
+    // The window ends at 05:00 New York time on the 14th: the time decides.
+    expect(planningFlagLine(tub, when("2026-11-14", "04:59"))).toBeNull();
+    expect(planningFlagLine(tub, when("2026-11-14", "05:00"))).toBe("May not keep until this day.");
+  });
+
+  it("a gone container says only its gone line, on any day; a past day gets no freshness line", () => {
+    const gone = containerEntry({ ...CONTAINER, bestBy: "2026-11-01", status: "discarded" });
+    expect(planningFlagLine(gone, when("2026-11-20"))).toBe("Marked discarded in Storage.");
+    expect(planningFlagLine(gone, when("2026-11-02"))).toBe("Marked discarded in Storage.");
+    expect(planningFlagLine(containerEntry({ ...CONTAINER, bestBy: "2026-11-01" }), when("2026-11-05"))).toBeNull();
+  });
+
+  it("never says may run out (it needs the other days' plans), and nothing without a day or a container", () => {
+    const short = { ...containerEntry({ ...CONTAINER, servingsLeft: 1 }), servings: 3 };
+    expect(planningFlagLine(short, when("2026-11-13"))).toBeNull();
+    expect(planningFlagLine(bestBy, undefined)).toBeNull();
+    const { container: _container, ...unloaded } = bestBy;
+    expect(planningFlagLine(unloaded, when("2026-11-20"))).toBeNull();
   });
 });

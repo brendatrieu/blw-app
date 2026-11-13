@@ -884,6 +884,16 @@ describe("Plan a meal (/plan/:date/:slotId, CD-Plan-Meal)", () => {
     expect(h.updates).toEqual([]);
   });
 
+  it("gives each row the meal's day and the form's time for its flag line, live; a flagged container never holds Save (ledger 971)", () => {
+    renderPlan({}, fromPlanned([{ kind: "storage", id: id(61), servings: 1, container: { ...MUFFINS, bestBy: "2026-10-15" } }]));
+    expect(rows(again())[0]!.props.planWhen).toMatchObject({ date: "2026-10-16", time: "12:00", today: "2026-10-14" });
+    type("plan-time", "18:15:00");
+    expect(rows(again())[0]!.props.planWhen).toMatchObject({ date: "2026-10-16", time: "18:15" });
+    expect(findAll(again(), (element) => element.props?.id === "plate-ran-out")).toHaveLength(0);
+    submit();
+    expect(h.planSaves).toHaveLength(1);
+  });
+
   it("a time can be cleared; nothing planned is fine; an untouched meal leaves without a write", () => {
     renderPlan();
     submit();
