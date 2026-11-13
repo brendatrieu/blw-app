@@ -112,8 +112,9 @@ export interface MealCardProps {
 /**
  * One meal in the food log (CD-Food-Log, PP-NOTES round 5 decision 8): the
  * muted "Today · 2:05 PM" line with the "From storage" badge and the kebab
- * at the top, then one line per item on the plate (its plate and name, and
- * its stars at a glance once rated, ledger 966), then the notes. On Home, on
+ * at the top, then one line per food or recipe on the plate, a container's
+ * each on its own in its place (ledger 973; its plate and name, and its
+ * stars at a glance once rated, ledger 966), then the notes. On Home, on
  * /meals and on a container's page (its meals). Exported
  * standalone-renderable per the app's convention for card-shaped list items.
  */
@@ -122,39 +123,19 @@ export function MealCard({ meal, onRequestDelete, grouped = false }: MealCardPro
   // would BE the link's name, hiding the foods and "Rated N stars" (966).
   const lines = (
     <ul className="flex flex-col">
-      {mealLines(meal).map((line) => {
+      {mealLines(meal, { flattenContainers: true }).map((line) => {
         // Ledger 966: a rated item's stars sit at the end of its line,
-        // read-only; a container of several things puts each rated one on a
-        // line of its own under it. Unrated lines are just the name.
-        const own = line.ratings.length === 1 ? line.ratings[0]!.rating : null;
-        const parts = line.ratings.length > 1 ? line.ratings.filter((part) => part.rating !== null) : [];
-        const row = (
-          <>
+        // read-only; unrated lines are just the name. Ledger 973: a
+        // container's foods and recipes are lines of their own, like these.
+        const own = line.ratings[0]?.rating ?? null;
+        return (
+          <li key={line.key} className="flex items-center gap-2 py-[3px]">
             <ItemPlate plates={line.plates} size={28} />
             <span className="min-w-0 text-sm leading-[1.3] font-medium break-words text-[var(--color-text)]">
               {line.name}
               <DeletedMark deleted={line.deleted} />
             </span>
             {own !== null && <StarRatingShown value={own} className={STARS_AT_END} />}
-          </>
-        );
-        return parts.length === 0 ? (
-          <li key={line.key} className="flex items-center gap-2 py-[3px]">
-            {row}
-          </li>
-        ) : (
-          <li key={line.key} className="py-[3px]">
-            <div className="flex items-center gap-2">{row}</div>
-            {parts.map((part) => (
-              // Under the name: past the 28px plate and the 8px gap.
-              <div key={part.id} className="flex items-center gap-2 pl-9 text-xs text-[var(--color-text-muted)]">
-                <span className="min-w-0 break-words">
-                  {part.label}
-                  <DeletedMark deleted={part.deleted} />
-                </span>
-                <StarRatingShown value={part.rating!} className={STARS_AT_END} />
-              </div>
-            ))}
           </li>
         );
       })}

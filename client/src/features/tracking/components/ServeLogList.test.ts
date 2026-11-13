@@ -227,16 +227,42 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
   const names = (html: string) =>
     linesOf(html).map((line) => /<span class="min-w-0[^"]*">([\s\S]*)<\/span>$/.exec(line)![1]!.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&"));
 
-  it("one line per item in plate order: the recipe, the container under its name, the food", () => {
-    expect(names(renderMealCard(PLATE_MEAL))).toEqual(["Creamy Cashew & Broccoli Pasta", "Broccoli, Carrot", "Egg\u00a0(deleted)"]);
+  // Ledger 973: a container gets no line of its own; each thing it held is
+  // a line like a fresh one, in its place.
+  it("one line per item in plate order: the recipe, each of the container's foods in its place, the food", () => {
+    expect(names(renderMealCard(PLATE_MEAL))).toEqual(["Creamy Cashew & Broccoli Pasta", "Broccoli", "Carrot", "Egg\u00a0(deleted)"]);
   });
 
-  it("each line leads with a 28px plate: the pot for a recipe, a container's first two foods overlapped at 20px", () => {
-    const [recipe, container, egg] = linesOf(renderMealCard(PLATE_MEAL));
+  it("a one-part container reads as that part, never its label; a recipe part wears the pot (ledger 973)", () => {
+    const meal: MealItem = {
+      ...baseMeal,
+      items: [
+        {
+          kind: "storage",
+          storageItemId: uuid(30),
+          label: "Muffins (old batch)",
+          location: "fridge",
+          servings: 1,
+          parts: [{ kind: "recipe", id: uuid(11), recipe: { id: uuid(21), title: "Egg Muffins" }, rating: null }],
+        },
+      ],
+    };
+    const html = renderMealCard(meal);
+    expect(names(html)).toEqual(["Egg Muffins"]);
+    expect(html).not.toContain("Muffins (old batch)");
+    expect(linesOf(html)[0]).toContain('style="width:28px;height:28px;font-size:14px;background:var(--color-plate-neutral)">🍲</span>');
+    expect(html).toMatch(/📦 (?:<!-- -->)?From storage/);
+  });
+
+  it("each line leads with its own 28px plate: the pot for a recipe, each container food its own (ledger 973)", () => {
+    const html = renderMealCard(PLATE_MEAL);
+    const [recipe, broccoli, carrot, egg] = linesOf(html);
     expect(recipe).toContain('style="width:28px;height:28px;font-size:14px;background:var(--color-plate-neutral)">🍲</span>');
-    expect(container).toMatch(/^<span aria-hidden="true" class="relative block shrink-0 size-7 ">/);
-    expect(container!.match(/width:20px;height:20px/g)).toHaveLength(2);
-    expect(container).toContain("ring-2 ring-[var(--color-bg-elevated)]");
+    expect(broccoli).toMatch(/^<span aria-hidden="true"[^>]*style="width:28px;height:28px[^"]*">🥦<\/span>/);
+    expect(carrot).toMatch(/^<span aria-hidden="true"[^>]*style="width:28px;height:28px[^"]*">🥕<\/span>/);
+    // No overlapped pair any more.
+    expect(html).not.toContain("relative block shrink-0 size-7");
+    expect(html).not.toContain("width:20px;height:20px");
     expect(egg).toContain("width:28px;height:28px");
     // The deleted mark is the one muted mark (ledger 543/555).
     expect(egg).toContain('<span class="font-normal text-[var(--color-text-muted)]">\u00a0<!-- -->(deleted)</span>');
@@ -286,7 +312,9 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
     const html = renderMealCard(PLATE_MEAL);
     const link = /<a [^>]*href="\/log-meal\?edit=meal-1"[^>]*>([\s\S]*?)<\/a>/.exec(html)![1]!;
     expect(link).toContain('<ul class="flex flex-col">');
-    expect(link).toContain("Broccoli, Carrot");
+    expect(link).toContain(">Broccoli<");
+    expect(link).toContain(">Carrot<");
+    expect(link).not.toContain("Broccoli, Carrot");
     expect(html.indexOf(servedLine(baseMeal.servedAt))).toBeLessThan(html.indexOf("<a "));
     expect(html.indexOf("From storage")).toBeLessThan(html.indexOf("<a "));
     expect(html.indexOf('aria-label="Actions"')).toBeLessThan(html.indexOf("<a "));
@@ -303,7 +331,7 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
   // Ledger 966b: ratings at a glance, read-only.
   it("puts a rated item's stars, read-only, at the end of its line; an unrated line is exactly as before", () => {
     const html = renderMealCard(PLATE_MEAL).replace(/<!-- -->/g, "");
-    const [recipe, container, egg] = lisOf(html);
+    const [recipe, broccoli, carrot, egg] = lisOf(html);
     // The recipe (5): one image at the end of its row, five small filled stars.
     expect(recipe!.attrs).toBe('class="flex items-center gap-2 py-[3px]"');
     const stars = /<span role="img" aria-label="Rated 5 stars" class="flex shrink-0 ml-auto mr-2">([\s\S]*?)<\/span><\/li>$/.exec(`<li ${recipe!.attrs}>${recipe!.inner}</li>`);
@@ -314,11 +342,16 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
     expect(egg!.attrs).toBe('class="flex items-center gap-2 py-[3px]"');
     expect(egg!.inner).not.toContain('role="img"');
     expect(egg!.inner).toMatch(/^<span aria-hidden="true"[\s\S]*<\/span><span class="min-w-0 text-sm leading-\[1\.3\] font-medium break-words text-\[var\(--color-text\)\]">Egg<span class="font-normal[^"]*">\u00a0\(deleted\)<\/span><\/span>$/);
-    // The container of two: no stars on its own row; its rated Broccoli (4)
-    // gets a line of its own under the name, its unrated Carrot none.
-    expect(rowOf(container!.inner)).not.toContain('role="img"');
-    const parts = [...container!.inner.matchAll(/<div class="flex items-center gap-2 pl-9 text-xs text-\[var\(--color-text-muted\)\]"><span class="min-w-0 break-words">([^<]*)<\/span><span role="img" aria-label="([^"]*)" class="flex shrink-0 ml-auto mr-2">([\s\S]*?)<\/span><\/div>/g)];
-    expect(parts.map((m) => [m[1], m[2], m[3]!.match(/fill-current/g)?.length])).toEqual([["Broccoli", "Rated 4 stars", 4]]);
+    // Ledger 973: the container's rated Broccoli (4) is a plain line with its
+    // stars at the end, its unrated Carrot just the plate and name; no
+    // container line and no grey sub-lines.
+    for (const part of [broccoli, carrot]) expect(part!.attrs).toBe('class="flex items-center gap-2 py-[3px]"');
+    expect(broccoli!.inner).toMatch(/>Broccoli<\/span><span role="img" aria-label="Rated 4 stars" class="flex shrink-0 ml-auto mr-2">/);
+    expect(broccoli!.inner.match(/fill-current/g)).toHaveLength(4);
+    expect(carrot!.inner).not.toContain('role="img"');
+    expect(carrot!.inner).toMatch(/<span class="min-w-0 text-sm leading-\[1\.3\] font-medium break-words text-\[var\(--color-text\)\]">Carrot<\/span>$/);
+    expect(html).not.toContain("pl-9");
+    expect(html).not.toContain("text-xs text-[var(--color-text-muted)]\"><span");
     // Nothing to tap: no star buttons, and all of it inside the card's Edit link.
     expect(html).not.toContain('role="radio"');
     const link = /<a [^>]*href="\/log-meal\?edit=meal-1"[^>]*>([\s\S]*?)<\/a>/.exec(html)![1]!;

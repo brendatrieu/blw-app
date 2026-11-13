@@ -366,6 +366,37 @@ describe("mealLines (CD-Food-Log)", () => {
     ]);
   });
 
+  it("flattenContainers: each thing a container held is a line like a fresh one, in its place (ledger 973)", () => {
+    const lines = mealLines({ items: ITEMS, foods: [] }, { flattenContainers: true });
+    expect(lines.map((line) => [line.key, line.name, line.ratings])).toEqual([
+      [id(100), PASTA.title, [{ id: id(100), label: PASTA.title, rating: 5 }]],
+      [id(101), "Egg", [{ id: id(101), label: "Egg", rating: null }]],
+      [id(102), "Broccoli", [{ id: id(102), label: "Broccoli", rating: 4 }]],
+      [id(103), "Carrot", [{ id: id(103), label: "Carrot", rating: null }]],
+      [id(104), PATTIES.title, [{ id: id(104), label: PATTIES.title, rating: null }]],
+      // A one-part container reads as its part, not its label.
+      [id(105), MUFFINS.title, [{ id: id(105), label: MUFFINS.title, rating: 3 }]],
+    ]);
+    expect(lines.map((line) => line.plates)).toEqual([
+      [RECIPE_PLATE],
+      [{ emoji: "🥚", tint: "dairy" }],
+      [{ emoji: "🥦", tint: "veg" }],
+      [{ emoji: "🥕", tint: "veg" }],
+      [RECIPE_PLATE],
+      [RECIPE_PLATE],
+    ]);
+    expect(lines[5]).toMatchObject({ leftOut: [] });
+    expect(lines.some((line) => line.storageItemId)).toBe(false);
+    // A deleted part keeps its mark.
+    const gone = mealLines(
+      { items: [{ kind: "storage", storageItemId: id(30), label: null, location: "fridge", servings: 1, parts: [{ kind: "recipe", id: id(31), recipe: { id: id(32), title: "Pear bake", deleted: true }, rating: null }] }], foods: [] },
+      { flattenContainers: true },
+    );
+    expect(gone[0]).toMatchObject({ name: "Pear bake", deleted: true });
+    // Off by default: the container's own line stays (RatedMealLines).
+    expect(mealLines({ items: ITEMS, foods: [] })[2]).toMatchObject({ name: "Broccoli, Carrot", storageItemId: CONTAINER.id });
+  });
+
   it("a recipe rebuilt from a meal logged before the plate says nothing left out (chair §10.1)", () => {
     const inferred = { ...ITEMS[0]!, inferred: true } as PlateItem;
     expect(mealLines({ items: [inferred], foods: [] })[0]!.leftOut).toEqual([]);
