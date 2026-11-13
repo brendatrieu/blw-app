@@ -146,7 +146,7 @@ describe("how-to guides (item 601)", () => {
     // Ledger 962: the plate lists items in tick order, Avocado first; the alt follows it.
     expect(meal[1]).toContain("![On the plate, Avocado has five stars and Banana has three.](/guides/meal-2-stars.webp)");
     expect(meal[4]).toContain(
-      "![Home's Food log shows the new meal, today at 11:56 AM, with Avocado and Banana on their own lines and its note below.](/guides/meal-5-saved.webp)",
+      "![Home's Food log shows the new meal, today at 11:56 AM: Avocado rated 5 stars and Banana rated 3, each on its own line, with its note below.](/guides/meal-5-saved.webp)",
     );
     // Item 782: the step-3 alt stays "Sweet Potato and Lentils"; the shots were retaken in that pick order.
     expect(steps("how-to-custom-recipe")[2]).toContain(
