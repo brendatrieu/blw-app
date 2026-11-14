@@ -41,7 +41,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
   useParams: () => h.params,
   useNavigate: () => (...args: unknown[]) => h.navigated.push(args),
 }));
-vi.mock("../../components/ui/BackButton.js", () => ({ BackButton: () => null, useBackNavigate: () => () => undefined }));
+vi.mock("../../components/ui/BackButton.js", () => ({ BackButton: () => null, useBackNavigate: () => () => undefined, useBackNavigateTo: () => () => undefined }));
 vi.mock("../babies/useActiveBaby.js", () => ({ useActiveBaby: () => ({ activeBaby: { id: "baby-1" }, isLoading: false }) }));
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => false }));
 vi.mock("../tracking/hooks.js", async (importOriginal) => ({

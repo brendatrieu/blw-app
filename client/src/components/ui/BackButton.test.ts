@@ -3,7 +3,7 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { holdLeaveGuard } from "../../lib/leaveGuard.js";
-import { BackButton } from "./BackButton.js";
+import { BackButton, useBackNavigateTo } from "./BackButton.js";
 
 describe("BackButton (item 258 — chevron only)", () => {
   function render() {
@@ -98,5 +98,52 @@ describe("BackButton asks a page with unsaved changes first (ledger 940)", () =>
     // Released: back goes straight away again.
     clickWithHistoryState({ idx: 2 }, "/plan");
     expect(navigateMock).toHaveBeenCalledWith(-1);
+  });
+});
+
+describe("useBackNavigateTo (ledger 975)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+  /** A window whose Back lands on `poppedTo`. */
+  function stub(idx: number | undefined, poppedTo: string) {
+    const listeners: Array<() => void> = [];
+    const win = {
+      history: { state: idx === undefined ? null : { idx } },
+      location: { href: "http://app.test/plan/2026-10-16/new", pathname: "/plan/2026-10-16/new" },
+      addEventListener: (type: string, listener: () => void, options: unknown) => {
+        expect([type, options]).toEqual(["popstate", { once: true }]);
+        listeners.push(listener);
+      },
+    };
+    vi.stubGlobal("window", win);
+    navigateMock.mockReset();
+    navigateMock.mockImplementation((to: unknown) => {
+      if (to === -1) {
+        win.location = { href: `http://app.test${poppedTo}`, pathname: new URL(poppedTo, "http://app.test").pathname };
+        listeners.splice(0).forEach((listener) => listener());
+      }
+    });
+  }
+
+  it("pops, then replaces the popped-to entry when it is the same page: no second copy of the day", () => {
+    stub(3, "/plan?date=2026-10-16");
+    useBackNavigateTo()("/plan?date=2026-10-16&copy=slot-1");
+    expect(navigateMock.mock.calls).toEqual([[-1], ["/plan?date=2026-10-16&copy=slot-1", { replace: true }]]);
+  });
+
+  it("pops, then pushes over another page (Home stays under the plan)", () => {
+    stub(1, "/");
+    useBackNavigateTo()("/plan?copy=slot-1");
+    expect(navigateMock.mock.calls).toEqual([[-1], ["/plan?copy=slot-1", { replace: false }]]);
+  });
+
+  it("with no history (a deep link) goes straight to the page", () => {
+    stub(0, "/");
+    useBackNavigateTo()("/plan?copy=slot-1");
+    expect(navigateMock.mock.calls).toEqual([["/plan?copy=slot-1"]]);
+    stub(undefined, "/");
+    useBackNavigateTo()("/plan?copy=slot-1");
+    expect(navigateMock.mock.calls).toEqual([["/plan?copy=slot-1"]]);
   });
 });

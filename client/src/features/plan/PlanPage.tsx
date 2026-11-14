@@ -14,6 +14,7 @@ import { useOneTapServe, usePlan } from "./hooks.js";
 import { PlanMealCard } from "./PlanMealCard.js";
 import {
   NEW_PLANNED_MEAL,
+  PLAN_COPY_PARAM,
   WEEKDAY_INITIALS,
   addDays,
   dayHasPlan,
@@ -118,6 +119,18 @@ export function PlanPage() {
   // A-N3: the strip is there whenever a baby is.
   const hasStrip = Boolean(activeBaby);
   useEffect(() => (hasStrip && typeof document !== "undefined" ? padScrollForStrip(document.getElementById(DAY_STRIP_ID)) : undefined), [hasStrip]);
+  // Ledger 975: Plan a meal's "Save & copy to…" lands with `?copy=` naming
+  // the meal it saved. Read once the day is fresh (the save refetches the
+  // plan), then dropped from the URL, so a reload or Back never reopens it.
+  // A meal not found, or with nothing planned (⋮ Copy to…'s own rule), just
+  // shows the day.
+  const copyParam = searchParams.get(PLAN_COPY_PARAM);
+  useEffect(() => {
+    if (!copyParam || !day || plan.isFetching) return;
+    const meal = day.meals.find((entry) => entry.slotId === copyParam && entry.items.length > 0);
+    if (meal) setCopying(meal);
+    setSearchParams(selected === today ? {} : { date: selected }, { replace: true });
+  }, [copyParam, day, plan.isFetching, selected, today, setSearchParams]);
 
   return (
     <div className="flex flex-col gap-1.5 p-4">

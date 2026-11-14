@@ -12,12 +12,13 @@ import {
   type DailyMealsInput,
   type PlanDay,
   type PlannedItem,
+  type PlannedItemInput,
   type PlannedMeal,
 } from "@blw/shared";
 import { foodPlate, type Plate } from "../catalog/foodEmoji.js";
 import { storageItemCluster } from "../storage/components/StorageItemCard.js";
 import { bestByLabel, countdownLabel, servePartHint, storageItemTitle } from "../storage/format.js";
-import { NOTHING_COUNTS_MESSAGE, RECIPE_PLATE, mealEditHref } from "../plate/plate.js";
+import { NOTHING_COUNTS_MESSAGE, RECIPE_PLATE, fromPlanned, mealEditHref, toPlanInput } from "../plate/plate.js";
 import type { FormErrors } from "../../lib/forms.js";
 import {
   containerGoneCopyWarning,
@@ -228,6 +229,31 @@ export const NEW_PLANNED_MEAL = "new";
  * log's ⋮ Edit, Add more closed). */
 export function planMealEditHref(date: string, meal: Pick<PlannedMeal, "slotId" | "served">): string {
   return meal.served ? mealEditHref(meal.served.mealId) : `/plan/${date}/${meal.slotId}`;
+}
+
+/** Ledger 975: the plan page's read-once `?copy=` (Plan a meal's "Save &
+ * copy to…"): the day with Copy to… open for the meal just saved. */
+export const PLAN_COPY_PARAM = "copy";
+export function planCopyHref(date: string, today: string, slotId: string): string {
+  return `/plan?${new URLSearchParams(date === today ? { [PLAN_COPY_PARAM]: slotId } : { date, [PLAN_COPY_PARAM]: slotId })}`;
+}
+
+/** Ledger 975: which meal of the day a Plan a meal save answered with is
+ * the one it saved. Its own slot when the day already had rows; else (a
+ * "+ Add a meal", or a virtual day's first write giving its meals row ids)
+ * the meal holding exactly the name, time and plate sent.
+ * ponytail: twins (same name, time and plate) pick the last; a copy of
+ * either is the same copy. */
+export function savedPlanSlot(
+  day: Pick<PlanDay, "meals">,
+  slotId: string | null,
+  sent: { name: string; time: string | null; items: PlannedItemInput[] },
+): string | undefined {
+  if (slotId && day.meals.some((meal) => meal.slotId === slotId)) return slotId;
+  const items = JSON.stringify(sent.items);
+  return day.meals
+    .filter((meal) => meal.name === sent.name && meal.time === sent.time && JSON.stringify(toPlanInput(fromPlanned(meal.items))) === items)
+    .at(-1)?.slotId;
 }
 
 /** The read-only Day field (Q7): "Today", "Yesterday", else "Thu, Oct 15". */

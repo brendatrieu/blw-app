@@ -34,6 +34,28 @@ export function useBackNavigate(fallback: string): () => void {
 }
 
 /**
+ * Ledger 975: leave like `useBackNavigate`, but land on `to` (a page with a
+ * read-once param). With history it pops first; on the popped-to entry it
+ * then replaces it when it is `to`'s own page (no second copy of that page
+ * under it), else pushes `to` over it (Home stays under the plan). Without
+ * history it goes to `to`, as the fallback would.
+ */
+export function useBackNavigateTo(): (to: string) => void {
+  const navigate = useNavigate();
+
+  return (to) => {
+    const historyIndex = (window.history.state as { idx?: number } | null)?.idx;
+    if (typeof historyIndex !== "number" || historyIndex <= 0) {
+      navigate(to);
+      return;
+    }
+    const landOnTo = () => navigate(to, { replace: window.location.pathname === new URL(to, window.location.href).pathname });
+    window.addEventListener("popstate", landOnTo, { once: true });
+    navigate(-1);
+  };
+}
+
+/**
  * Back navigation for detail pages — the installed PWA has no browser chrome,
  * so every page that's reached by drilling in needs its own way out.
  *

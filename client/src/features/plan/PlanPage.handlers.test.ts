@@ -13,7 +13,7 @@ const h = vi.hoisted(() => ({
   i: 0,
   states: [] as unknown[],
   baby: { activeBaby: { id: "baby-1" } as { id: string } | null, isLoading: false },
-  plan: { data: undefined as PlanResponse | undefined, isLoading: false, isError: false },
+  plan: { data: undefined as PlanResponse | undefined, isLoading: false, isError: false, isFetching: false },
   planArgs: [] as unknown[][],
   // useOneTapServe: what the cards asked to serve, and its state.
   serves: [] as unknown[][],
@@ -109,7 +109,7 @@ beforeEach(() => {
   h.states = [];
   h.setSearch.length = 0;
   h.baby = { activeBaby: { id: "baby-1" }, isLoading: false };
-  h.plan = { data: week("2026-10-11", ["2026-10-13", "2026-10-14"]), isLoading: false, isError: false };
+  h.plan = { data: week("2026-10-11", ["2026-10-13", "2026-10-14"]), isLoading: false, isError: false, isFetching: false };
   h.planArgs.length = 0;
   h.serves.length = 0;
   h.oneTap = { pendingSlot: null, failedSlot: null };
@@ -275,7 +275,7 @@ describe("PlanPage (CD-Plan-Day)", () => {
 
   it("another day: asks for that week, shows Today, and Today goes back with no ?date=", () => {
     h.search = new URLSearchParams({ date: "2026-10-21" });
-    h.plan = { data: week("2026-10-18", []), isLoading: false, isError: false };
+    h.plan = { data: week("2026-10-18", []), isLoading: false, isError: false, isFetching: false };
     const tree = render();
     expect(h.planArgs).toEqual([["baby-1", "2026-10-18", "2026-10-24"]]);
     expect(dayButtons(tree).map((day) => day.props["aria-pressed"])).toEqual([false, false, false, true, false, false, false]);
@@ -289,7 +289,7 @@ describe("PlanPage (CD-Plan-Day)", () => {
   });
 
   it("a week across months, or years, is labelled with both", () => {
-    h.plan = { data: undefined, isLoading: true, isError: false };
+    h.plan = { data: undefined, isLoading: true, isError: false, isFetching: true };
     h.search = new URLSearchParams({ date: "2026-09-30" });
     expect(text(findAll(render(), (el) => el.props["aria-live"] === "polite")[0])).toBe("Sep 27 – Oct 3");
     h.search = new URLSearchParams({ date: "2026-12-31" });
@@ -297,7 +297,7 @@ describe("PlanPage (CD-Plan-Day)", () => {
   });
 
   it("a Sunday opens its week and a Saturday closes it (969)", () => {
-    h.plan = { data: undefined, isLoading: true, isError: false };
+    h.plan = { data: undefined, isLoading: true, isError: false, isFetching: true };
     for (const [date, from, to, at] of [
       ["2026-10-18", "2026-10-18", "2026-10-24", 0],
       ["2026-10-17", "2026-10-11", "2026-10-17", 6],
@@ -352,7 +352,7 @@ describe("PlanPage (CD-Plan-Day)", () => {
   });
 
   it("Daily meals is the header's link to its own page, there before the plan loads (ledger 924)", () => {
-    h.plan = { data: undefined, isLoading: true, isError: false };
+    h.plan = { data: undefined, isLoading: true, isError: false, isFetching: true };
     const tree = render();
     expect(dailyMeals(tree).type).toBe(Link);
     expect(dailyMeals(tree).props.to).toBe("/plan/daily-meals");
@@ -362,11 +362,61 @@ describe("PlanPage (CD-Plan-Day)", () => {
   });
 
   it("says so when the plan can't load, and asks for a baby first when there is none", () => {
-    h.plan = { data: undefined, isLoading: false, isError: true };
+    h.plan = { data: undefined, isLoading: false, isError: true, isFetching: false };
     expect(text(render())).toContain("Couldn't load the plan.");
     h.baby = { activeBaby: null, isLoading: false };
     const tree = render();
     expect(findAll(tree, (el) => el.type === EmptyState)[0]!.props.title).toBe("Add a baby first");
     expect(dayButtons(tree)).toHaveLength(0);
+  });
+});
+
+describe('the read-once ?copy= from Plan a meal\'s "Save & copy to…" (ledger 975)', () => {
+  /** Effect [2]: the copy param's read (after 951's reveal and A-N3's padding). */
+  const readCopy = () => h.effects[2]![0]();
+  const sheetMeal = () => findAll(render(), (el) => el.type === CopySheet)[0]!.props.meal as { slotId: string; name: string } | null;
+
+  it("opens the Copy sheet on the saved meal once the day is fresh, and drops the param from the URL", () => {
+    h.search = new URLSearchParams({ date: "2026-10-13", copy: id(1) });
+    // The save refetches the plan: nothing happens while it loads.
+    h.plan = { ...h.plan, isFetching: true };
+    render();
+    readCopy();
+    expect(h.setSearch).toEqual([]);
+    expect(sheetMeal()).toBeNull();
+
+    h.plan = { ...h.plan, isFetching: false };
+    render();
+    readCopy();
+    expect(sheetMeal()).toMatchObject({ slotId: id(1), name: "Breakfast" });
+    // Same day, param gone (replace): a reload or Back shows just the day.
+    expect(h.setSearch).toEqual([[{ date: "2026-10-13" }, { replace: true }]]);
+    const sheet = findAll(render(), (el) => el.type === CopySheet)[0]!;
+    expect(sheet.props).toMatchObject({ date: "2026-10-13", today: "2026-10-14" });
+    // Closing it leaves the day as after Save.
+    (sheet.props.onClose as () => void)();
+    expect(sheetMeal()).toBeNull();
+  });
+
+  it("today's URL drops to no params; a meal not found, or with nothing planned, just shows the day", () => {
+    h.search = new URLSearchParams({ copy: id(99) });
+    render();
+    readCopy();
+    expect(sheetMeal()).toBeNull();
+    expect(h.setSearch).toEqual([[{}, { replace: true }]]);
+
+    h.setSearch.length = 0;
+    h.search = new URLSearchParams({ date: "2026-10-16", copy: id(1) });
+    render();
+    readCopy();
+    expect(sheetMeal()).toBeNull();
+    expect(h.setSearch).toEqual([[{ date: "2026-10-16" }, { replace: true }]]);
+  });
+
+  it("without the param nothing opens and the URL is left alone", () => {
+    render();
+    readCopy();
+    expect(sheetMeal()).toBeNull();
+    expect(h.setSearch).toEqual([]);
   });
 });

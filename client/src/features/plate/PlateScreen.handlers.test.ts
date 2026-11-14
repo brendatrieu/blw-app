@@ -990,3 +990,117 @@ describe("Plan a meal (/plan/:date/:slotId, CD-Plan-Meal)", () => {
     expect(field(tree, "plan-time").props.disabled).toBe(true);
   });
 });
+
+describe('Plan a meal\'s "Save & copy to…" (ledger 975)', () => {
+  const PLAN = { date: "2026-10-16", today: "2026-10-14", slotId: id(51), name: "Lunch", time: "12:00" };
+  const copies: string[] = [];
+  const planned = (): PlateEntry[] => fromPlanned([{ kind: "food", id: id(60), food: { ...EGG, deleted: false } }]);
+  const renderPlan = (plan: Record<string, unknown> = {}, initialPlate = planned(), mode: PlateMode = "plan") =>
+    render(mode, initialPlate, { plan: { ...PLAN, ...plan }, onPlanGone: () => {}, onSaveCopy: (slotId: string) => copies.push(slotId) });
+  const copyButton = (tree: El) => findAll(tree, (element) => element.type === Button && element.props.children === "Save & copy to…")[0];
+  const copy = () => (copyButton(again())!.props.onClick as (event: { preventDefault: () => void }) => void)({ preventDefault: () => {} });
+  const nameField = () => one(again(), (element) => element.props?.id === "plan-name");
+  const rename = (value: string) => (nameField().props.onChange as (event: { target: { value: string } }) => void)({ target: { value } });
+  /** The day the save answers with: the meal now has a row id. */
+  const answered = (name: string) => ({
+    date: PLAN.date,
+    planned: true,
+    meals: [{ slotId: id(77), name, time: "12:00", position: 0, served: null, items: [{ kind: "food", id: id(78), food: { ...EGG, deleted: false } }] }],
+  });
+  beforeEach(() => {
+    copies.length = 0;
+  });
+
+  it("shows beside Save on Plan a meal only, Save first and still the primary", () => {
+    const tree = renderPlan();
+    const [save, second] = findAll(tree, byType(Button));
+    expect(save!.props).toMatchObject({ type: "submit", children: "Save" });
+    expect(save!.props.variant).toBeUndefined();
+    expect(second!.props).toMatchObject({ type: "button", variant: "secondary", children: "Save & copy to…" });
+    for (const mode of ["log", "edit", "serve", "planServe"] as const) {
+      expect(copyButton(renderPlan({}, planned(), mode))).toBeUndefined();
+    }
+  });
+
+  it("saves exactly as Save does, then hands the saved meal's slot on instead of leaving", () => {
+    renderPlan();
+    rename("Picnic");
+    copy();
+    expect(h.planSaves.map((call) => call.input)).toEqual([
+      { date: "2026-10-16", slotId: id(51), today: "2026-10-14", input: { name: "Picnic", time: "12:00", items: [{ kind: "food", foodId: EGG.id }] } },
+    ]);
+    h.planSaves[0]!.options.onSuccess!(answered("Picnic"));
+    // A virtual day's first write: found by what was sent, under its new row id.
+    expect(copies).toEqual([id(77)]);
+    expect(doneCalls).toEqual([]);
+    expect(h.taps.guarded).toBe(1);
+  });
+
+  it("+ Add a meal: the new meal is found in the day the POST answers with", () => {
+    renderPlan({ slotId: null, name: "", time: "12:00" });
+    rename("Tea");
+    copy();
+    h.planSaves[0]!.options.onSuccess!(answered("Tea"));
+    expect(copies).toEqual([id(77)]);
+  });
+
+  it("an untouched meal copies without a write; Save itself still just leaves", () => {
+    renderPlan();
+    copy();
+    expect(h.planSaves).toEqual([]);
+    expect(copies).toEqual([id(51)]);
+    renderPlan();
+    submit();
+    expect(doneCalls).toEqual(["plan"]);
+    rename("Picnic");
+    submit();
+    h.planSaves[0]!.options.onSuccess!(answered("Picnic"));
+    expect(copies).toEqual([id(51)]);
+    expect(doneCalls).toEqual(["plan", "plan"]);
+  });
+
+  it("is held exactly as Save is: a missing name, nothing that counts, offline; a failed save opens nothing", () => {
+    renderPlan({ slotId: null, name: "" });
+    copy();
+    expect(h.planSaves).toEqual([]);
+    expect(one(again(), (element) => element.type === Field && element.props.htmlFor === "plan-name").props.error).toBe("Name is required");
+
+    renderPlan({}, []);
+    addMore({ recipes: [PASTA] });
+    dispatch({ type: "toggleLeftOut", key: `recipe:${PASTA.id}`, food: CASHEWS, ingredientIds: [CASHEWS.id] });
+    copy();
+    expect(h.planSaves).toEqual([]);
+    expect(text(again())).toContain("Leave at least one food on the plate.");
+
+    h.network.offline = true;
+    let tree = renderPlan();
+    expect([saveButton(tree).props.disabled, copyButton(tree)!.props.disabled]).toEqual([true, true]);
+    expect(copyButton(tree)!.props["aria-describedby"]).toBe("plate-offline");
+    rename("Picnic");
+    copy();
+    expect(h.planSaves).toEqual([]);
+
+    h.network.offline = false;
+    tree = renderPlan();
+    expect([saveButton(tree).props.disabled, copyButton(tree)!.props.disabled]).toEqual([false, false]);
+    rename("Picnic");
+    copy();
+    h.planSaves[0]!.options.onError!(new ApiError(500, "boom"));
+    expect(copies).toEqual([]);
+    expect(doneCalls).toEqual([]);
+    h.mutation.isError = true;
+    h.mutation.error = new ApiError(500, "boom");
+    expect(text(again())).toContain("Couldn't save that — try again.");
+  });
+
+  it("in flight, the tapped button reads Saving… and both wait", () => {
+    renderPlan();
+    rename("Picnic");
+    copy();
+    h.mutation.isPending = true;
+    const tree = again();
+    expect(saveButton(tree).props).toMatchObject({ children: "Save", disabled: true });
+    const second = findAll(tree, (element) => element.type === Button && element.props.type === "button" && element.props.variant === "secondary")[0]!;
+    expect(second.props).toMatchObject({ children: "Saving…", disabled: true });
+  });
+});

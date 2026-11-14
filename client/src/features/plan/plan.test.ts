@@ -41,6 +41,8 @@ import {
   todaysPlanPages,
   todaysPlanStep,
   planMealEditHref,
+  planCopyHref,
+  savedPlanSlot,
 } from "./plan.js";
 import { planFlagLine } from "./copy.js";
 
@@ -544,5 +546,45 @@ describe("planMealEditHref (ledger 954)", () => {
     expect(planMealEditHref("2026-10-14", { slotId: "slot-1", served: { mealId: "meal-9", servedAt: "2026-10-14T11:42:00.000Z" } })).toBe(
       "/log-meal?edit=meal-9",
     );
+  });
+});
+
+describe("Save & copy to… (ledger 975)", () => {
+  type Food = { id: string; slug: string; name: string; category: "fruit" | "protein"; emoji: null };
+  const PEAR: Food = { id: id(70), slug: "pear", name: "Pear", category: "fruit", emoji: null };
+  const EGG: Food = { id: id(71), slug: "egg", name: "Egg", category: "protein", emoji: null };
+  const meal = (slot: number, name: string, time: string | null, foods: Food[]): PlannedMeal => ({
+    slotId: id(slot),
+    name,
+    time,
+    position: slot,
+    served: null,
+    items: foods.map((food, n) => ({ kind: "food" as const, id: id(slot * 10 + n), food })),
+  });
+  const sent = (name: string, time: string | null, foods: Food[]) => ({
+    name,
+    time,
+    items: foods.map((food) => ({ kind: "food" as const, foodId: food.id })),
+  });
+
+  it("the plan day's href carries the read-once copy param (today needs no date)", () => {
+    expect(planCopyHref("2026-10-16", "2026-10-14", id(5))).toBe(`/plan?date=2026-10-16&copy=${id(5)}`);
+    expect(planCopyHref("2026-10-14", "2026-10-14", id(5))).toBe(`/plan?copy=${id(5)}`);
+  });
+
+  it("finds the saved meal: its own slot, else the meal holding exactly what was sent (the last of twins), else none", () => {
+    const day = { meals: [meal(1, "Breakfast", "07:30", [EGG]), meal(2, "Lunch", "12:00", [PEAR]), meal(3, "Lunch", "12:00", [PEAR])] };
+    // A day with rows keeps the slot.
+    expect(savedPlanSlot(day, id(1), sent("Breakfast", "07:30", [EGG]))).toBe(id(1));
+    // A virtual day's first write gives the meal a row id: found by what was sent.
+    expect(savedPlanSlot(day, id(99), sent("Breakfast", "07:30", [EGG]))).toBe(id(1));
+    // + Add a meal (no slot yet): twins pick the last.
+    expect(savedPlanSlot(day, null, sent("Lunch", "12:00", [PEAR]))).toBe(id(3));
+    // Name, time and plate must all match.
+    expect(savedPlanSlot(day, null, sent("Lunch", null, [PEAR]))).toBeUndefined();
+    expect(savedPlanSlot(day, null, sent("Lunch", "12:00", [EGG]))).toBeUndefined();
+    expect(savedPlanSlot(day, null, sent("Tea", "12:00", [PEAR]))).toBeUndefined();
+    // A cleared meal (nothing planned) is still found.
+    expect(savedPlanSlot({ meals: [meal(4, "Tea", null, [])] }, null, sent("Tea", null, []))).toBe(id(4));
   });
 });

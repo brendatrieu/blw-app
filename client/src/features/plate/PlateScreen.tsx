@@ -25,8 +25,8 @@ import type { ContainerChoice } from "../storage/format.js";
 import { useCreateMeal, useMeal, useUpdateMeal } from "../tracking/hooks.js";
 import { containerGoneBlocked, foodDeletedBlocked } from "../plan/copy.js";
 import { isPlanChanged, servedMealId, usePlan, useSavePlannedMeal } from "../plan/hooks.js";
-import { NEW_PLANNED_MEAL, deviceTimeZone, mealTimeLabel, planDayLabel, validatePlanMeal, weekOf } from "../plan/plan.js";
-import { BackButton, useBackNavigate } from "../../components/ui/BackButton.js";
+import { NEW_PLANNED_MEAL, deviceTimeZone, mealTimeLabel, planCopyHref, planDayLabel, savedPlanSlot, validatePlanMeal, weekOf } from "../plan/plan.js";
+import { BackButton, useBackNavigate, useBackNavigateTo } from "../../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../../components/ui/Button.js";
 import { CloseButton } from "../../components/ui/CloseButton.js";
 import { DateTimeField, nowAtMinute } from "../../components/ui/DateTimeField.js";
@@ -262,6 +262,7 @@ export function PlateScreen() {
   const recipeId = mode === "log" ? searchParams.get("recipe") : null;
   const planBack = !planDate || planDate === localToday ? "/plan" : `/plan?date=${planDate}`;
   const goBack = useBackNavigate(fromPlan ? planBack : "/");
+  const backTo = useBackNavigateTo();
   const navigate = useNavigate();
   const offline = useIsOffline();
   // Bumped once a 409 meal_changed refetch lands: the plate starts over
@@ -372,6 +373,8 @@ export function PlateScreen() {
           }
           containers={containers}
           onDone={goBack}
+          // Ledger 975: "Save & copy to…" lands on the day with Copy to… open.
+          onSaveCopy={mode === "plan" && planDate ? (slotId) => backTo(planCopyHref(planDate, localToday, slotId)) : undefined}
           reloaded={reloads > 0}
           onMealChanged={() => {
             void mealQuery.refetch().then(() => setReloads((count) => count + 1));
@@ -400,6 +403,9 @@ export interface PlateFormProps {
    * line, its stepper's limit and its run-out flag. */
   containers: readonly StorageItem[];
   onDone: () => void;
+  /** Plan a meal (ledger 975): shows "Save & copy to…", which saves as Save
+   * does and then calls this with the saved meal's slot instead of onDone. */
+  onSaveCopy?: (slotId: string) => void;
   /** Edit: the save was refused as `meal_changed`; the page reloads the meal. */
   onMealChanged: () => void;
   /** Edit: this plate is the meal as reloaded after `meal_changed`. */
@@ -437,6 +443,7 @@ export function PlateForm({
   meal,
   containers,
   onDone,
+  onSaveCopy,
   onMealChanged,
   reloaded,
   plan,
@@ -461,6 +468,8 @@ export function PlateForm({
 
   // Log meal's "Save leftovers to storage" (items 152-153, 348).
   const [leftoversOpen, setLeftoversOpen] = useState(false);
+  // Ledger 975: the save in flight came from "Save & copy to…" (its label says Saving…).
+  const [copyAfter, setCopyAfter] = useState(false);
   const [leftoverLocation, setLeftoverLocation] = useState<StorageLocation>("fridge");
   const [leftoverServingsTotal, setLeftoverServingsTotal] = useState("");
   const [leftoverBestBy, setLeftoverBestBy] = useState("");
@@ -515,7 +524,9 @@ export function PlateForm({
     });
   }
 
-  function handleSubmit(event: React.FormEvent) {
+  /** `thenCopy`: Plan a meal's "Save & copy to…" (ledger 975), the same
+   * checks and save as Save, then the plan day with Copy to… open. */
+  function handleSubmit(event: React.FormEvent | MouseEvent, thenCopy = false) {
     event.preventDefault();
     const postSave = resolveSubmitAction(mealSavedRef.current, storageFailure !== null);
     if (postSave === "retry-storage") {
@@ -539,14 +550,24 @@ export function PlateForm({
         planInput.name === plan.name &&
         planInput.time === plan.time &&
         JSON.stringify(planInput.items) === JSON.stringify(toPlanInput(initialPlate));
+      // Saved: Save leaves; "Save & copy to…" lands on the day with Copy to…
+      // open for that meal (975). A failed save stays here, nothing opens.
+      const saved = (slotId: () => string | null | undefined) => {
+        const copySlot = thenCopy ? slotId() : null;
+        if (copySlot && onSaveCopy) {
+          ignoreTapsBriefly();
+          onSaveCopy(copySlot);
+        } else finish();
+      };
+      setCopyAfter(thenCopy);
       if (unchanged) {
-        finish();
+        saved(() => plan.slotId);
         return;
       }
       savePlan.mutate(
         { date: plan.date, slotId: plan.slotId, today: plan.today, input: planInput },
         {
-          onSuccess: finish,
+          onSuccess: (day) => saved(() => savedPlanSlot(day, plan.slotId, planInput)),
           onError: (error) => {
             dropStale(error);
             const served = servedMealId(error);
@@ -779,14 +800,30 @@ export function PlateForm({
         ) : (
           // No gap: the empty live region must add no space while online.
           <div className="flex flex-col">
-            <Button
-              type="submit"
-              disabled={busy || offline || Boolean(blocked)}
-              aria-describedby={offline ? "plate-offline" : blocked ? "plate-ran-out" : undefined}
-              className="w-full"
-            >
-              {busy ? (serve ? "Serving…" : "Saving…") : serve ? "Serve" : "Save"}
-            </Button>
+            {/* Ledger 975: Plan a meal's "Save & copy to…" beside Save, which
+                stays the primary; both wait exactly as Save does. */}
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                disabled={busy || offline || Boolean(blocked)}
+                aria-describedby={offline ? "plate-offline" : blocked ? "plate-ran-out" : undefined}
+                className="w-full min-w-0 flex-1"
+              >
+                {busy && !copyAfter ? (serve ? "Serving…" : "Saving…") : serve ? "Serve" : "Save"}
+              </Button>
+              {planning && onSaveCopy && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy || offline || Boolean(blocked)}
+                  aria-describedby={offline ? "plate-offline" : blocked ? "plate-ran-out" : undefined}
+                  onClick={(event) => handleSubmit(event, true)}
+                  className="shrink-0 whitespace-nowrap"
+                >
+                  {busy && copyAfter ? "Saving…" : "Save & copy to…"}
+                </Button>
+              )}
+            </div>
             <div role="status">
               {offline && (
                 <p id="plate-offline" className="mt-1.5 text-center text-xs text-[var(--color-text-muted)]">
