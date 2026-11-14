@@ -386,7 +386,9 @@ describe("mealLines (CD-Food-Log)", () => {
       [RECIPE_PLATE],
     ]);
     expect(lines[5]).toMatchObject({ leftOut: [] });
-    expect(lines.some((line) => line.storageItemId)).toBe(false);
+    // Ledger 977: each part keeps its container's batch; fresh lines have none.
+    expect(lines.map((line) => line.storageItemId)).toEqual([undefined, undefined, CONTAINER.id, CONTAINER.id, undefined, MUFFIN_TUB.id]);
+    expect("storageItemId" in lines[0]!).toBe(false);
     // A deleted part keeps its mark.
     const gone = mealLines(
       { items: [{ kind: "storage", storageItemId: id(30), label: null, location: "fridge", servings: 1, parts: [{ kind: "recipe", id: id(31), recipe: { id: id(32), title: "Pear bake", deleted: true }, rating: null }] }], foods: [] },

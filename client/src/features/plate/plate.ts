@@ -412,19 +412,24 @@ export interface MealLine {
   storageItemId?: string;
 }
 
-/** Ledger 973: a container's foods and recipes as fresh items, in its place. */
-const asFreshItems = (item: PlateItem): PlateItem[] =>
+/** Ledger 973: a container's foods and recipes as fresh items, in its place,
+ * each keeping its batch (977: the plan cards link each to it). */
+const asFreshItems = (item: PlateItem): { item: PlateItem; from?: string }[] =>
   item.kind !== "storage"
-    ? [item]
-    : item.parts.map((part): PlateItem => (part.kind === "food" ? part : { ...part, leftOut: [], inferred: false }));
+    ? [{ item }]
+    : item.parts.map((part) => ({
+        item: part.kind === "food" ? part : { ...part, leftOut: [], inferred: false },
+        from: item.storageItemId,
+      }));
 
 /**
  * A saved meal's lines (PP-NOTES round 5, decision 8): one per item in plate
  * order, a container under its own name. With `flattenContainers` (the Food
- * log card, ledger 973) a container gets no line of its own: each food or
- * recipe it held is a line exactly like a fresh one, in its place, so a
- * one-part container reads as that part. A cached body from before items
- * lists its foods.
+ * log card, ledger 973; the served plan cards, 977) a container gets no line
+ * of its own: each food or recipe it held is a line exactly like a fresh one,
+ * in its place, so a one-part container reads as that part; each keeps the
+ * container's `storageItemId`. A cached body from before items lists its
+ * foods.
  */
 export function mealLines(
   meal: Pick<MealItem, "items" | "foods">,
@@ -440,10 +445,11 @@ export function mealLines(
       leftOut: [],
     }));
   }
-  return (flattenContainers ? meal.items.flatMap(asFreshItems) : meal.items).map((item): MealLine => {
+  return (flattenContainers ? meal.items.flatMap(asFreshItems) : meal.items.map((item) => ({ item, from: undefined }))).map(({ item, from }): MealLine => {
+    const batch = from ? { storageItemId: from } : {};
     if (item.kind === "food") {
       const ratings = [{ id: item.id, label: item.food.name, rating: item.rating }];
-      return { key: item.id, name: item.food.name, deleted: item.food.deleted, plates: [foodPlate(item.food)], ratings, leftOut: [] };
+      return { key: item.id, name: item.food.name, deleted: item.food.deleted, plates: [foodPlate(item.food)], ratings, leftOut: [], ...batch };
     }
     if (item.kind === "recipe") {
       const ratings = [{ id: item.id, label: item.recipe.title, rating: item.rating }];
@@ -454,6 +460,7 @@ export function mealLines(
         plates: [RECIPE_PLATE],
         ratings,
         leftOut: item.inferred ? [] : item.leftOut,
+        ...batch,
       };
     }
     return {

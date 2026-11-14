@@ -7,13 +7,13 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MealItem } from "@blw/shared";
 
-const h = vi.hoisted(() => ({ offline: false, isError: false, babyIds: [] as unknown[], meals: [] as unknown[] }));
+const h = vi.hoisted(() => ({ offline: false, isError: false, babyIds: [] as unknown[], meals: [] as unknown[], mutations: [] as unknown[] }));
 vi.mock("../../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
 vi.mock("../hooks.js", () => ({
   useMeals: () => ({ data: { items: h.meals } }),
   useUpdateMeal: (babyId: unknown) => {
     h.babyIds.push(babyId);
-    return { mutate: () => {}, isPending: false, isError: h.isError };
+    return { mutate: (variables: unknown) => h.mutations.push(variables), isPending: false, isError: h.isError };
   },
 }));
 
@@ -42,6 +42,7 @@ beforeEach(() => {
   h.isError = false;
   h.babyIds.length = 0;
   h.meals = [];
+  h.mutations.length = 0;
 });
 
 describe("RatedMealLines (ledger 939/944)", () => {
@@ -73,28 +74,72 @@ describe("RatedMealLines (ledger 939/944)", () => {
     }
   });
 
-  // A container of two foods draws a positioned two-plate icon, which paints
-  // over the stretched link unless it lets the tap through (968).
-  it("a line's plate never takes a tap, even a container's two-plate one", () => {
-    const CONTAINER = {
-      ...MEAL,
-      items: [
-        {
-          kind: "storage",
-          storageItemId: id(30),
-          label: null,
-          location: "fridge",
-          servings: 1,
-          parts: [
-            { kind: "food", id: id(31), food: { id: id(32), slug: "broccoli", name: "Broccoli", category: "veg" }, rating: 4 },
-            { kind: "food", id: id(33), food: { id: id(34), slug: "carrot", name: "Carrot", category: "veg" }, rating: null },
-          ],
-        },
-      ],
-    } as unknown as typeof MEAL;
-    const html = renderToString(createElement(MemoryRouter, null, createElement(RatedMealLines, { meal: CONTAINER, look: "plan" })));
-    const plate = /<span aria-hidden="true" class="relative block shrink-0 [^"]*"/.exec(html)?.[0];
-    expect(plate).toContain("pointer-events-none");
+  // Ledger 977: a container has no line of its own; each food or recipe it
+  // held is its own line in its place, rated by its part id, each linking
+  // to the batch (item 162). Fresh lines are unchanged.
+  const CONTAINER = {
+    ...MEAL,
+    items: [
+      MEAL.items![0],
+      {
+        kind: "storage",
+        storageItemId: id(30),
+        label: "Veg mix",
+        location: "fridge",
+        servings: 1,
+        parts: [
+          { kind: "food", id: id(31), food: { id: id(32), slug: "broccoli", name: "Broccoli", category: "veg" }, rating: 4 },
+          { kind: "recipe", id: id(33), recipe: { id: id(34), title: "Carrot mash", deleted: true }, rating: null },
+        ],
+      },
+      MEAL.items![1],
+    ],
+  } as unknown as typeof MEAL;
+  const renderContainer = (look: "home" | "plan") =>
+    renderToString(createElement(MemoryRouter, null, createElement(RatedMealLines, { meal: CONTAINER, look }))).replace(/<!-- -->/g, "");
+
+  it("a container's parts are lines of their own, in its place, each with its stars and From storage (ledger 977)", () => {
+    for (const look of ["home", "plan"] as const) {
+      const html = renderContainer(look);
+      const lines = html.match(/<li [^>]*>.*?<\/li>/g)!;
+      expect(lines).toHaveLength(4);
+      const names = lines.map((line) => /break-words text-\[var\(--color-text\)\]">([^<]*)/.exec(line)![1]);
+      expect(names).toEqual(["Egg", "Broccoli", "Carrot mash", "Pear"]);
+      // Each line has one plate that lets the tap through to the card (968), and one star row.
+      for (const line of lines) {
+        expect(line.match(/role="radiogroup"/g)).toHaveLength(1);
+        expect(line.match(/pointer-events-none/g)!.length).toBeGreaterThanOrEqual(2);
+      }
+      expect(lines[1]).toContain('aria-label="Rating for Broccoli"');
+      expect(lines[2]).toContain('aria-label="Rating for Carrot mash"');
+      expect(lines[2]).toContain("(deleted)");
+      // From storage under each part, to the batch; none under a fresh food.
+      const link = '<a class="relative z-10 -mt-3.5 -mb-2.5 inline-flex min-h-11 items-center rounded-[var(--radius-sm)] underline';
+      expect([lines[0], lines[1], lines[2], lines[3]].map((line) => line!.includes(link))).toEqual([false, true, true, false]);
+      expect(html.match(/href="\/storage\/[^"]*"/g)).toEqual([`href="/storage/${id(30)}"`, `href="/storage/${id(30)}"`]);
+      // No container line, no label over stars, no two-plate icon.
+      expect(html).not.toContain("Veg mix");
+      expect(html).not.toContain("Broccoli, Carrot");
+      expect(html).not.toContain("mt-1 ml-[9px]");
+      expect(html).not.toContain("relative block shrink-0");
+    }
+  });
+
+  it("a part's star tap saves that part's rating, keyed by the part id (ledger 977)", () => {
+    // Called as a plain function: it has no React hooks of its own.
+    const tree = (RatedMealLines as unknown as (props: unknown) => unknown)({ meal: CONTAINER, look: "plan" });
+    const stars: { props: { label: string; onChange: (value: number) => void } }[] = [];
+    const walk = (node: unknown): void => {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (!node || typeof node !== "object" || !("props" in node)) return;
+      const el = node as { type: unknown; props: Record<string, unknown> };
+      if (typeof el.props.label === "string" && typeof el.props.onChange === "function") stars.push(el as never);
+      walk(el.props.children);
+    };
+    walk(tree);
+    expect(stars.map((star) => star.props.label)).toEqual(["Rating for Egg", "Rating for Broccoli", "Rating for Carrot mash", "Rating for Pear"]);
+    stars[2]!.props.onChange(5);
+    expect(h.mutations).toEqual([{ id: id(90), input: { itemRatings: { [id(33)]: 5 } } }]);
   });
 
   it("a failed save says so; offline it says You're offline. instead, and every star waits", () => {

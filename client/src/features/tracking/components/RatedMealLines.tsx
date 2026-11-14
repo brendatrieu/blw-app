@@ -50,10 +50,12 @@ export interface RatedMealLinesProps {
  * 939, is retired, 966). One tap saves that
  * one item's stars (PATCH `itemRatings`, ledger 902) and shows the tapped
  * value while it does; offline every star waits (SPEC §4.4) and says so; a
- * failed save says so. A recipe says what was left out, and a container
- * links to its batch (the storage ⇄ meal traceback, item 162) and rates
- * each food or recipe it held. Everything tappable sits above a card's
- * stretched link (relative z-10), never inside it, and nothing else does.
+ * failed save says so. A recipe says what was left out. A container has no
+ * line of its own (ledger 977, as the Food log since 973): each food or
+ * recipe it held is its own line in its place, with its own stars, and
+ * links to the batch (the storage ⇄ meal traceback, item 162). Everything
+ * tappable sits above a card's stretched link (relative z-10), never inside
+ * it, and nothing else does.
  */
 export function RatedMealLines({ meal, look }: RatedMealLinesProps) {
   const updateMeal = useUpdateMeal(meal.babyId);
@@ -67,7 +69,7 @@ export function RatedMealLines({ meal, look }: RatedMealLinesProps) {
   return (
     <>
       <ul aria-label="On the plate" className="@container flex flex-col">
-        {mealLines(meal).map((line, at) => (
+        {mealLines(meal, { flattenContainers: true }).map((line, at) => (
           <li key={line.key} className={`${style.li} ${at > 0 ? style.divider : ""}`}>
             <div className={`flex items-center ${style.row}`}>
               {/* A two-plate item is positioned, so it paints over the stretched
@@ -101,16 +103,9 @@ export function RatedMealLines({ meal, look }: RatedMealLinesProps) {
             </div>
             {line.ratings.map((rating) => (
               // Above the stretched link, but only the star buttons take a tap:
-              // the row's width beside them and the part labels fall through
+              // the row's width beside them falls through
               // to the card (ledger 968: a served card's tap opens Edit).
               <div key={rating.id} className={`pointer-events-none relative z-10 [&_button]:pointer-events-auto ${style.stars}`}>
-                {/* A container of several things names each one over its stars. */}
-                {line.ratings.length > 1 && (
-                  <p className={`mt-1 ml-[9px] ${DETAIL}`}>
-                    {rating.label}
-                    <DeletedMark deleted={rating.deleted} />
-                  </p>
-                )}
                 <div className="-my-1">
                   <StarRating
                     label={`Rating for ${rating.label}`}
