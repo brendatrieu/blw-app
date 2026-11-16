@@ -1017,6 +1017,11 @@ describe('Plan a meal\'s "Save & copy to…" (ledger 975)', () => {
     expect(save!.props).toMatchObject({ type: "submit", children: "Save" });
     expect(save!.props.variant).toBeUndefined();
     expect(second!.props).toMatchObject({ type: "button", variant: "secondary", children: "Save & copy to…" });
+    // Ledger 981: two equal columns, the label on one line; Log meal's lone Save keeps its flex row.
+    const row = (t: El) => findAll(t, (element) => element.type === "div" && findAll(element, byType(Button)).length > 0).at(-1)!;
+    expect(row(tree).props.className).toBe("grid grid-cols-2 gap-2");
+    expect(String(second!.props.className).split(" ")).toEqual(expect.arrayContaining(["min-w-0", "whitespace-nowrap", "px-3!"]));
+    expect(row(renderPlan({}, planned(), "log")).props.className).toBe("flex gap-2");
     for (const mode of ["log", "edit", "serve", "planServe"] as const) {
       expect(copyButton(renderPlan({}, planned(), mode))).toBeUndefined();
     }

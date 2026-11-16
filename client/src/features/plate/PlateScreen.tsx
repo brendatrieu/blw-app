@@ -801,8 +801,10 @@ export function PlateForm({
           // No gap: the empty live region must add no space while online.
           <div className="flex flex-col">
             {/* Ledger 975: Plan a meal's "Save & copy to…" beside Save, which
-                stays the primary; both wait exactly as Save does. */}
-            <div className="flex gap-2">
+                stays the primary; both wait exactly as Save does. Ledger 981:
+                two equal columns; px-3 keeps the label on one line at 320
+                wide. */}
+            <div className={planning && onSaveCopy ? "grid grid-cols-2 gap-2" : "flex gap-2"}>
               <Button
                 type="submit"
                 disabled={busy || offline || Boolean(blocked)}
@@ -818,7 +820,7 @@ export function PlateForm({
                   disabled={busy || offline || Boolean(blocked)}
                   aria-describedby={offline ? "plate-offline" : blocked ? "plate-ran-out" : undefined}
                   onClick={(event) => handleSubmit(event, true)}
-                  className="shrink-0 whitespace-nowrap"
+                  className="min-w-0 whitespace-nowrap px-3!"
                 >
                   {busy && copyAfter ? "Saving…" : "Save & copy to…"}
                 </Button>
