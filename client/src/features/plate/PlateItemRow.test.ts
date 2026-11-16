@@ -283,6 +283,26 @@ describe("a container", () => {
     expect(actions).toEqual([{ type: "remove", key: `storage:${MUFFINS.id}` }]);
   });
 
+  it("× is FreshItem's last 44px column on the first line; the stepper wraps under the name below a 7rem title (ledger 985)", () => {
+    const grid = '<div class="grid grid-cols-[40px_minmax(0,1fr)_44px] items-start gap-x-3">';
+    const name = '<div class="flex flex-wrap items-center gap-x-3"><div class="flex min-h-11 grow basis-28 flex-col justify-center"><p class="font-semibold';
+    const out = html(containerEntry(MUFFINS));
+    // Plate, then the name column (title block, then the stepper in the same wrapping row), then × as the grid's third child.
+    expect(out).toContain(grid);
+    expect(out).toContain(name);
+    expect(out).toMatch(
+      /6 left<\/p><\/div><div class="flex shrink-0 items-center gap-1\.5" role="group" aria-label="Servings: Broccoli Cheese Egg Muffins">.*aria-label="Increase servings"[^>]*>\+<\/button><\/div><\/div><button type="button" aria-label="Remove Broccoli Cheese Egg Muffins" class="[^"]*h-11 w-11[^"]*"><svg/,
+    );
+    // Same frame when ran out (no stepper), kept on a saved meal, and planned.
+    for (const entry of [containerEntry({ ...MUFFINS, servingsLeft: 0 }), { ...containerEntry(MUFFINS), savedServings: 1 }]) {
+      expect(html(entry)).toContain(grid);
+      expect(html(entry)).toMatch(/<\/p><\/div><\/div><button type="button" aria-label="Remove Broccoli Cheese Egg Muffins"|<\/button><\/div><\/div><button type="button" aria-label="Remove Broccoli Cheese Egg Muffins"/);
+    }
+    expect(html(containerEntry({ ...MUFFINS, servingsLeft: 0 }))).toMatch(/0 of 6 left<\/p><\/div><\/div><button type="button" aria-label="Remove /);
+    expect(html(containerEntry(CONTAINER), true)).toContain(grid);
+    expect(html(containerEntry(CONTAINER), true)).toContain(name);
+  });
+
   it("holding several: a line per food (24px plate, name, stars) and the two-plate mark (CD-Log-Meal)", () => {
     const out = html(containerEntry(CONTAINER));
     expect(out).toContain(">Broccoli, Carrot (deleted)</p>");
@@ -378,13 +398,6 @@ describe("a container", () => {
     expect(html(containerEntry({ ...MUFFINS, servingsLeft: 1 }))).not.toContain("Only");
     // Planning never says it.
     expect(html(short, true)).not.toContain("Only");
-  });
-
-  it("lets the controls wrap under a title that would get narrower than 8rem", () => {
-    const out = html(containerEntry(MUFFINS));
-    expect(out).toContain('<div class="flex flex-wrap items-center gap-x-3">');
-    expect(out).toContain('<div class="min-w-32 flex-1">');
-    expect(out).toContain('<div class="ml-auto flex shrink-0 items-center gap-1.5">');
   });
 });
 

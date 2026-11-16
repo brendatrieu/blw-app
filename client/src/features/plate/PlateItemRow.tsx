@@ -330,8 +330,10 @@ export function WarningGlyph() {
  * stepper and stars, and "Add to storage" for a new batch (CD-Ran-Out-Add). The stepper
  * stays between 1 and what the container can give (the reducer clamps, as
  * Serve always did); a planned one with less left than planned says so.
- * Where the title would get too narrow, the controls wrap below it, at the
- * right.
+ * Laid out on FreshItem's grid (ledger 985): × is always the last 44px
+ * column of the first line, where foods and recipes have theirs. The stepper
+ * sits beside it while the title keeps 7rem; narrower, the stepper alone
+ * drops under the name, where a food's stars go.
  */
 export function ContainerItemRow({ entry, dispatch, disabled, planning, planWhen, onAddToStorage, offline }: RowProps<ContainerEntry>) {
   const key = entryKey(entry);
@@ -353,17 +355,17 @@ export function ContainerItemRow({ entry, dispatch, disabled, planning, planWhen
 
   return (
     <li className={ITEM}>
-      <div className="flex flex-wrap items-center gap-x-3">
-        <ItemPlate plates={partPlates(entry.parts)} size={40} />
-        <div className="min-w-32 flex-1">
-          <p className={TITLE}>{title}</p>
-          <p className={DETAIL}>
-            {entry.container ? (gone ? LOCATION_LABEL[entry.container.location] : servePartHint(entry.container)) : "From storage"}
-          </p>
-        </div>
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+      <div className="grid grid-cols-[40px_minmax(0,1fr)_44px] items-start gap-x-3">
+        <ItemPlate plates={partPlates(entry.parts)} size={40} className="mt-0.5" />
+        <div className="flex flex-wrap items-center gap-x-3">
+          <div className="flex min-h-11 grow basis-28 flex-col justify-center">
+            <p className={TITLE}>{title}</p>
+            <p className={DETAIL}>
+              {entry.container ? (gone ? LOCATION_LABEL[entry.container.location] : servePartHint(entry.container)) : "From storage"}
+            </p>
+          </div>
           {servings !== null && (
-            <div className="flex items-center gap-1.5" role="group" aria-label={`Servings: ${title}`}>
+            <div className="flex shrink-0 items-center gap-1.5" role="group" aria-label={`Servings: ${title}`}>
               <button
                 type="button"
                 aria-label="Decrease servings"
@@ -390,16 +392,16 @@ export function ContainerItemRow({ entry, dispatch, disabled, planning, planWhen
               </button>
             </div>
           )}
-          <button
-            type="button"
-            aria-label={`Remove ${title}`}
-            disabled={disabled}
-            onClick={() => dispatch({ type: "remove", key })}
-            className={REMOVE_BUTTON}
-          >
-            <CloseGlyph />
-          </button>
         </div>
+        <button
+          type="button"
+          aria-label={`Remove ${title}`}
+          disabled={disabled}
+          onClick={() => dispatch({ type: "remove", key })}
+          className={REMOVE_BUTTON}
+        >
+          <CloseGlyph />
+        </button>
       </div>
       {short !== null && (
         <p className={RUN_OUT_LINE}>

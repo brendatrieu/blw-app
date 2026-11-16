@@ -345,12 +345,13 @@ describe("dark guide screenshots", () => {
   // Ledger 962: the plate-page shots were retaken on new crops (light and dark
   // the same size); recipe-5-saved kept its crop, located against the old
   // light image, for 953's calendar button. Ledger 980 retook serve-1..3
-  // (every container row now has ×, so its stepper wraps under the title).
+  // (every container row now has ×, so its stepper wraps under the title);
+  // ledger 985 again (× back on the title's line, the stepper under the name).
   it("keeps the 962 retakes at their shot size", () => {
     const expected: Record<string, number[]> = {
       "meal-2-stars": [780, 478],
       "meal-3-when": [780, 1074],
-      "serve-3-stars": [780, 824],
+      "serve-3-stars": [780, 840],
       "serve-4-notes": [780, 470],
       "recipe-5-saved": [780, 1416],
     };
