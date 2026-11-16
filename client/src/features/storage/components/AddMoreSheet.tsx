@@ -3,6 +3,7 @@ import type { FoodListItem, MealItem, RecipeListItem, StorageItem } from "@blw/s
 import { Button } from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
 import { SegmentedControl, type SegmentedControlOption } from "../../../components/ui/SegmentedControl.js";
+import { shouldShowCreateRow } from "../../../components/ui/MultiCombobox.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
 import { focusFieldById } from "../../../lib/forms.js";
 import { FoodPlate } from "../../catalog/components/FoodPlate.js";
@@ -143,9 +144,10 @@ interface AddMoreSheetProps {
  * of it. The sheet is a fixed height from the start, so nothing moves while
  * typing, switching tabs or as the results change. Rendered only while
  * open, so every opening starts from the plate; closing without Done
- * changes nothing. A search for a food that isn't there offers to add it
- * as a custom food in a sheet over this one (ledger 961); saved, it comes
- * back ticked.
+ * changes nothing. A search on All or Foods offers to add the text as a
+ * custom food in a sheet over this one (ledger 961), under the results or in
+ * place of them, unless a listed food is named exactly that (984); saved,
+ * it comes back ticked.
  */
 export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClose }: AddMoreSheetProps) {
   const [tab, setTab] = useState<AddMoreTab>("storage");
@@ -230,10 +232,11 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
 
   let body: ReactNode;
   if (q) {
+    const foodHits = allFoods.filter((food) => matches(food.name, q));
     const hits = {
       storage: storageRows(available.filter((item) => matches(storageItemTitle(item), q))),
       recipe: recipeRows(allRecipes.filter((recipe) => matches(recipe.title, q))),
-      food: foodRows(allFoods.filter((food) => matches(food.name, q))),
+      food: foodRows(foodHits),
     };
     const shows = (kind: AddMoreTab) => searchTab === "all" || searchTab === kind;
     const found = [
@@ -244,17 +247,27 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
     // Ledger 921: a narrowed search that misses here but hits another kind
     // says which kind it searched and offers to widen, keeping the text.
     const elsewhere = searchTab !== "all" && Object.values(hits).some((list) => list.length > 0);
-    // Ledger 961: a miss in All or Foods offers to make it a food (never in
-    // Recipes or In storage), in Log meal's own words.
+    // Ledger 961, 984: All or Foods offers to make the text a food (never
+    // Recipes or In storage), in Log meal's own words, unless a listed food
+    // is named exactly that: the picker's rule (shouldShowCreateRow).
     const addCustom =
-      searchTab === "all" || searchTab === "food" ? (
+      (searchTab === "all" || searchTab === "food") &&
+      shouldShowCreateRow(
+        query,
+        foodHits.map((food) => food.name),
+        true,
+      ) ? (
         <Button type="button" variant="quiet" className="max-w-full [overflow-wrap:anywhere]" onClick={() => setCustomName(query.trim())}>
           {addCustomFoodLabel(query)}
         </Button>
       ) : null;
     body =
       found.length > 0 ? (
-        found
+        <>
+          {found}
+          {/* Ledger 984: the last row under the results. */}
+          {addCustom && <div className="mt-3 border-t border-[var(--color-divider)] py-2 text-center">{addCustom}</div>}
+        </>
       ) : elsewhere ? (
         // Centered, 20px all round and between the line and the button (ledger 935, 952).
         <div className="flex flex-col items-center gap-5 p-5 text-center">

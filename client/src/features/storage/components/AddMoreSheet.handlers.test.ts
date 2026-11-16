@@ -573,7 +573,8 @@ describe("AddMoreSheet opens with the plate ticked (ledger 878)", () => {
     expect(ticked(render())).toEqual(["Banana"]); // the search stays on Foods (920)
     goTo("all");
     expect(ticked(render())).toEqual(["Avocado", "Salmon Oat Cakes", "Red Lentil Dal", "Banana"]);
-    expect(one(render(), Button).props.disabled).toBe(true);
+    // Done (the search's last row now offers 'a' as a custom food first, ledger 984).
+    expect(findAll(render(), (element) => element.props?.id === "add-more-done")[0]!.props.disabled).toBe(true);
   });
 
 
@@ -717,10 +718,73 @@ describe("AddMoreSheet's custom-food shortcut (ledger 961)", () => {
       type(text);
       expect(addCustom(render()), `${kind} ${text}`).toEqual([]);
     }
-    // All with a hit somewhere (a recipe): found, so no offer either.
+  });
+
+  // Ledger 984 (owner 2026-11-15): "'pep' would still return all items for
+  // pepper but at the bottom, it would say 'add pep as custom food'".
+  const list = (tree: El) =>
+    renderToString(
+      createElement(
+        Fragment,
+        null,
+        findAll(tree, (element) => String(element.props?.className ?? "").includes("overflow-y-auto"))[0]!.props.children as never,
+      ),
+    );
+  const LAST_ROW =
+    /<div class="mt-3 border-t border-\[var\(--color-divider\)\] py-2 text-center"><button [^>]*>Add &#x27;pe&#x27; as a custom food<\/button><\/div>$/;
+
+  it("with matches: the results, then 'Add … as a custom food' as the last row, on All and on Foods", () => {
+    reset([BASE, PEAR_FOODS], [], {}, false);
+    type("  pe ");
+    let tree = render();
+    expect(titles(tree)).toEqual(["Pear purée cubes", "Pear"]);
+    expect(addCustom(tree).map((b) => b.props.children)).toEqual(["Add 'pe' as a custom food"]);
+    expect(list(tree)).toMatch(/>Foods<\/h3>.*>Pear<\/span>.*Add &#x27;pe&#x27; as a custom food/);
+    expect(list(tree)).toMatch(LAST_ROW);
+    goTo("food");
+    tree = render();
+    expect(titles(tree)).toEqual(["Pear"]);
+    expect(list(tree)).toMatch(LAST_ROW);
+    // All with only a recipe hit offers it too.
     reset([BASE, SALMON], [], {}, false);
     type("dal");
-    expect(addCustom(render())).toEqual([]);
+    expect(titles(render())).toEqual(["Red Lentil Dal"]);
+    expect(addCustom(render()).map((b) => b.props.children)).toEqual(["Add 'dal' as a custom food"]);
+  });
+
+  it("hidden when a listed food is named exactly the text (any case, extra spaces): never a duplicate", () => {
+    for (const text of ["Pear", "pear", "  pEaR  "]) {
+      reset([BASE, PEAR_FOODS], [], {}, false);
+      type(text);
+      expect(titles(render()), text).toContain("Pear");
+      expect(addCustom(render()), text).toEqual([]);
+      goTo("food");
+      expect(addCustom(render()), `food ${text}`).toEqual([]);
+    }
+    // A container or recipe named exactly that is not a food: still offered.
+    reset([BASE, PEAR_FOODS], [], {}, false);
+    type("pear purée cubes");
+    expect(addCustom(render())).toHaveLength(1);
+  });
+
+  it("with matches on Recipes or In storage: never offered", () => {
+    for (const [kind, text] of [
+      ["recipe", "oat"],
+      ["storage", "pe"],
+    ] as const) {
+      reset([BASE, PEAR_FOODS], [], {}, false);
+      goTo(kind);
+      type(text);
+      expect(rows(render()).length, `${kind} ${text}`).toBeGreaterThan(0);
+      expect(addCustom(render()), `${kind} ${text}`).toEqual([]);
+    }
+  });
+
+  it("tap the last row: 'Add a custom food' opens with the typed name, trimmed", () => {
+    reset([BASE, PEAR_FOODS], [], {}, false);
+    type(" pe  ");
+    (addCustom(render())[0]!.props.onClick as () => void)();
+    expect(sheet(render()).props).toMatchObject({ name: "pe", idPrefix: "add-more-custom", recipeLink: false });
   });
 
   it("tap: 'Add a custom food' opens over Add more with the name filled in; X changes nothing", () => {

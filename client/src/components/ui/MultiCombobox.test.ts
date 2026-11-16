@@ -570,22 +570,31 @@ describe("MultiComboboxOptionList (render)", () => {
 // combobox behaves exactly as before unless a caller passes `onCreate`.
 // ---------------------------------------------------------------------------
 
-describe("shouldShowCreateRow", () => {
-  it("shows only when a non-blank query matched nothing AND the caller opted in", () => {
-    expect(shouldShowCreateRow("kale", 0, true)).toBe(true);
+describe("shouldShowCreateRow (ledger 984)", () => {
+  it("shows on a non-blank query with zero matches when the caller opted in", () => {
+    expect(shouldShowCreateRow("kale", [], true)).toBe(true);
   });
 
-  it("never shows while any option still matches — creating a visible food is a trap", () => {
-    expect(shouldShowCreateRow("kale", 1, true)).toBe(false);
+  it("shows under matches too: 'pep' still lists the peppers, then offers 'pep'", () => {
+    expect(shouldShowCreateRow("pep", ["Bell Pepper", "Black Pepper"], true)).toBe(true);
+  });
+
+  it("hides when a listed option is named exactly the query, case-insensitive and trimmed: no duplicate", () => {
+    expect(shouldShowCreateRow("Banana", ["Banana"], true)).toBe(false);
+    expect(shouldShowCreateRow("  bAnAnA ", ["Banana", "Banana Bread"], true)).toBe(false);
+    expect(shouldShowCreateRow("banana", [" Banana "], true)).toBe(false);
+    // A longer name that only contains it is not a duplicate.
+    expect(shouldShowCreateRow("banana", ["Banana Bread"], true)).toBe(true);
   });
 
   it("never shows on an empty or whitespace-only query (there'd be nothing to name it)", () => {
-    expect(shouldShowCreateRow("", 0, true)).toBe(false);
-    expect(shouldShowCreateRow("   ", 0, true)).toBe(false);
+    expect(shouldShowCreateRow("", [], true)).toBe(false);
+    expect(shouldShowCreateRow("   ", ["Banana"], true)).toBe(false);
   });
 
   it("never shows for a caller that didn't opt in", () => {
-    expect(shouldShowCreateRow("kale", 0, false)).toBe(false);
+    expect(shouldShowCreateRow("kale", [], false)).toBe(false);
+    expect(shouldShowCreateRow("ban", ["Banana"], false)).toBe(false);
   });
 });
 
@@ -687,7 +696,7 @@ describe("MultiComboboxOptionList (create row)", () => {
     expect(html).not.toContain(createOptionId("veg-listbox"));
   });
 
-  it("sits after every matching option when one is somehow shown alongside them", () => {
+  it("sits after every matching option, as the last row (ledger 984)", () => {
     const html = renderToString(
       createElement(MultiComboboxOptionList, {
         listboxId: "veg-listbox",
@@ -701,6 +710,8 @@ describe("MultiComboboxOptionList (create row)", () => {
       }),
     );
     expect(html.indexOf(createOptionId("veg-listbox"))).toBeGreaterThan(html.indexOf("Banana"));
+    expect((html.match(/role="option"/g) ?? []).length).toBe(3);
+    expect(html).toMatch(/Add &#x27;Kale chips&#x27; as a custom food<\/span><\/li><\/ul>$/);
   });
 });
 
@@ -869,7 +880,11 @@ describe("resolveEffectiveHighlight (the double-Enter guard)", () => {
 describe("Enter twice in a row (item 230)", () => {
   function pressEnter(state: ComboboxUiState, selected: string[]) {
     const filtered = filterOptions(OPTIONS, state.query);
-    const createVisible = shouldShowCreateRow(state.query, filtered.length, false);
+    const createVisible = shouldShowCreateRow(
+      state.query,
+      filtered.map((option) => option.label),
+      false,
+    );
     const highlight = resolveEffectiveHighlight(
       state.highlighted,
       rowCount(filtered.length, createVisible),
@@ -979,6 +994,31 @@ describe("deriveComboboxView", () => {
       rows: 1,
     });
     expect(view({ query: "zzz", open: true, highlighted: -1 })).toMatchObject({ createRowVisible: false, rows: 0 });
+  });
+
+  // Ledger 984: the create row follows the matches, last; typing still
+  // highlights the first match, and only the last row's Enter creates.
+  it("with matches, the create row is the last navigable row; Enter on it creates, Enter on a match never does", () => {
+    const typed = view({ query: "a", open: true, highlighted: -1 }, { hasCreate: true });
+    expect(typed.filtered.map((o) => o.value)).toEqual(["avocado", "banana", "carrot"]);
+    expect(typed).toMatchObject({ createRowVisible: true, rows: 4, highlighted: 0 });
+    expect(typed.enter).toEqual({ prevent: true, toggleIndex: 0, create: false });
+    // Three ArrowDowns from the first match land on the create row; ArrowUp from the top too (it wraps).
+    let ui: ComboboxUiState = { query: "a", open: true, highlighted: -1 };
+    for (let i = 0; i < 3; i++) ui = applyArrow(ui, 1, typed.rows);
+    expect(applyArrow({ query: "a", open: true, highlighted: 0 }, -1, typed.rows).highlighted).toBe(3);
+    const last = view(ui, { hasCreate: true });
+    expect(last.highlighted).toBe(3);
+    expect(last.activeDescendantId).toBe(createOptionId("veg-listbox"));
+    expect(last.enter).toEqual({ prevent: true, toggleIndex: null, create: true });
+  });
+
+  it("an exact name (any case, extra spaces) hides the create row, so Enter picks that option", () => {
+    const exact = view({ query: "  bAnAnA ", open: true, highlighted: -1 }, { hasCreate: true });
+    expect(exact).toMatchObject({ createRowVisible: false, rows: 1, highlighted: 0 });
+    expect(exact.enter).toEqual({ prevent: true, toggleIndex: 0, create: false });
+    // A part of a name still offers it, after the match.
+    expect(view({ query: "ban", open: true, highlighted: -1 }, { hasCreate: true })).toMatchObject({ createRowVisible: true, rows: 2 });
   });
 
   it("Enter after typing selects the highlighted match", () => {

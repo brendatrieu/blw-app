@@ -79,8 +79,9 @@ interface MultiComboboxProps {
   emptyMessage?: string;
   /**
    * Opt-in "create what you typed" affordance (item 180). When present, a
-   * query that matches nothing renders a trailing row instead of the plain
-   * `emptyMessage`; choosing it hands the trimmed query back. The combobox
+   * typed query gets a trailing row after its matches (or instead of the
+   * plain `emptyMessage`), unless an option is named exactly that (see
+   * `shouldShowCreateRow`); choosing it hands the trimmed query back. The combobox
    * itself neither creates nor selects anything — the owner does both.
    */
   onCreate?: (query: string) => void;
@@ -347,14 +348,17 @@ export function resolveEnterAction(
 }
 
 /**
- * Whether the trailing "create what you typed" row is showing. It replaces
- * the empty message rather than sitting alongside matches: an option row
- * offering to create a food the parent can already see would be a trap.
- * Pure so the "only on a non-blank query with zero matches" rule is pinned
- * by a test, not by reading JSX.
+ * Whether the trailing "create what you typed" row is showing (ledger 984,
+ * owner 2026-11-15): on any non-blank query, as the last row under the
+ * matches ("pep" still lists every pepper, then offers 'pep'), or in place
+ * of the empty message. Hidden only when a listed option's label IS the
+ * query (case-insensitive, trimmed), so it never offers a duplicate of a
+ * food the parent can already see. Pure, and shared with Add more's own
+ * row, so the rule is pinned by a test, not by reading JSX.
  */
-export function shouldShowCreateRow(query: string, filteredLength: number, hasCreate: boolean): boolean {
-  return hasCreate && filteredLength === 0 && query.trim().length > 0;
+export function shouldShowCreateRow(query: string, labels: readonly string[], hasCreate: boolean): boolean {
+  const q = query.trim().toLowerCase();
+  return hasCreate && q.length > 0 && !labels.some((label) => label.trim().toLowerCase() === q);
 }
 
 /** Total navigable rows in the listbox — the create row, when shown, is the
@@ -689,7 +693,11 @@ export function deriveComboboxView({
   enter: { prevent: boolean; toggleIndex: number | null; create: boolean };
 } {
   const filtered = filterOptions(options, ui.query);
-  const createRowVisible = shouldShowCreateRow(ui.query, filtered.length, hasCreate);
+  const createRowVisible = shouldShowCreateRow(
+    ui.query,
+    filtered.map((option) => option.label),
+    hasCreate,
+  );
   // The create row is navigable, so it counts as a row for highlight
   // purposes — that's the ONLY thing `rows` is for.
   const rows = rowCount(filtered.length, createRowVisible);
