@@ -322,11 +322,12 @@ export function WarningGlyph() {
  * A container (CD-Serve-From-Storage): plate, title over where it is and
  * what is left, the servings stepper, then its stars: right under the title
  * when it holds one thing, else a line per food or recipe (plate, name,
- * stars), as CD-Log-Meal draws them. A container the saved meal already had
- * also gets × (chair decision, SPEC §5), which puts its servings back; one
- * served before servings were recorded gets × only. One that has run out
- * (`ranOut`, CD-Serve-Ran-Out) gets × and its flag instead of a stepper and
- * stars, and "Add to storage" for a new batch (CD-Ran-Out-Add). The stepper
+ * stars), as CD-Log-Meal draws them. Every container gets × at the right
+ * end, as foods and recipes do (ledger 980): on a saved meal it puts the
+ * servings back (chair decision, SPEC §5); one new to the plate is simply not
+ * sent. One served before servings were recorded gets × only. One that has
+ * run out (`ranOut`, CD-Serve-Ran-Out) gets × and its flag instead of a
+ * stepper and stars, and "Add to storage" for a new batch (CD-Ran-Out-Add). The stepper
  * stays between 1 and what the container can give (the reducer clamps, as
  * Serve always did); a planned one with less left than planned says so.
  * Where the title would get too narrow, the controls wrap below it, at the
@@ -338,7 +339,6 @@ export function ContainerItemRow({ entry, dispatch, disabled, planning, planWhen
   const gone = goneLine(entry, Boolean(planning));
   const planLine = planning ? planningFlagLine(entry, planWhen) : null;
   const short = planning ? null : shortOf(entry);
-  const removable = entry.savedServings !== undefined || out;
   const servings = out ? null : entry.servings;
   const { title } = entry;
   const stars = (part: ContainerPart) => (
@@ -361,49 +361,45 @@ export function ContainerItemRow({ entry, dispatch, disabled, planning, planWhen
             {entry.container ? (gone ? LOCATION_LABEL[entry.container.location] : servePartHint(entry.container)) : "From storage"}
           </p>
         </div>
-        {(servings !== null || removable) && (
-          <div className="ml-auto flex shrink-0 items-center gap-1.5">
-            {servings !== null && (
-              <div className="flex items-center gap-1.5" role="group" aria-label={`Servings: ${title}`}>
-                <button
-                  type="button"
-                  aria-label="Decrease servings"
-                  disabled={disabled}
-                  onClick={() => dispatch({ type: "servings", key, servings: servings - 1 })}
-                  className={STEP_BUTTON}
-                >
-                  −
-                </button>
-                <span
-                  aria-live="polite"
-                  className="min-w-6 text-center text-sm font-medium tabular-nums text-[var(--color-text)]"
-                >
-                  {servings}
-                </span>
-                <button
-                  type="button"
-                  aria-label="Increase servings"
-                  disabled={disabled}
-                  onClick={() => dispatch({ type: "servings", key, servings: servings + 1 })}
-                  className={STEP_BUTTON}
-                >
-                  +
-                </button>
-              </div>
-            )}
-            {removable && (
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {servings !== null && (
+            <div className="flex items-center gap-1.5" role="group" aria-label={`Servings: ${title}`}>
               <button
                 type="button"
-                aria-label={`Remove ${title}`}
+                aria-label="Decrease servings"
                 disabled={disabled}
-                onClick={() => dispatch({ type: "remove", key })}
-                className={REMOVE_BUTTON}
+                onClick={() => dispatch({ type: "servings", key, servings: servings - 1 })}
+                className={STEP_BUTTON}
               >
-                <CloseGlyph />
+                −
               </button>
-            )}
-          </div>
-        )}
+              <span
+                aria-live="polite"
+                className="min-w-6 text-center text-sm font-medium tabular-nums text-[var(--color-text)]"
+              >
+                {servings}
+              </span>
+              <button
+                type="button"
+                aria-label="Increase servings"
+                disabled={disabled}
+                onClick={() => dispatch({ type: "servings", key, servings: servings + 1 })}
+                className={STEP_BUTTON}
+              >
+                +
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            aria-label={`Remove ${title}`}
+            disabled={disabled}
+            onClick={() => dispatch({ type: "remove", key })}
+            className={REMOVE_BUTTON}
+          >
+            <CloseGlyph />
+          </button>
+        </div>
       </div>
       {short !== null && (
         <p className={RUN_OUT_LINE}>

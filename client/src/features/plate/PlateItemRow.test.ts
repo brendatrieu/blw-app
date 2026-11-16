@@ -270,14 +270,17 @@ describe("a recipe deleted since the meal was logged", () => {
 });
 
 describe("a container", () => {
-  it("holding one thing: its stars right under the title, a stepper, no × on a new one (CD-Serve-From-Storage)", () => {
+  it("holding one thing: its stars right under the title, a stepper, and × (CD-Serve-From-Storage, ledger 980)", () => {
     const out = html(containerEntry(MUFFINS));
     expect(out).toContain(">Broccoli Cheese Egg Muffins</p>");
     expect(out).toContain('<p class="text-[13px] leading-[1.35] text-[var(--color-text-muted)]">Fridge · 6 of 6 left</p>');
     expect(out).toContain('<div class="mt-0.5 ml-[43px]"><div class="flex flex-wrap items-center"><div role="radiogroup" aria-label="Rating for Broccoli Cheese Egg Muffins"');
     expect(out).toContain('role="group" aria-label="Servings: Broccoli Cheese Egg Muffins"');
     expect(out).toContain('<span aria-live="polite" class="min-w-6 text-center text-sm font-medium tabular-nums text-[var(--color-text)]">1</span>');
-    expect(out).not.toContain("Remove");
+    // Ledger 980: a container new to the plate gets the same × as a food, after the stepper.
+    expect(out).toMatch(/aria-label="Increase servings".*<\/div><button type="button" aria-label="Remove Broccoli Cheese Egg Muffins" class="[^"]*h-11 w-11[^"]*"><svg/);
+    click(byLabel(tree(containerEntry(MUFFINS)), "Remove Broccoli Cheese Egg Muffins"));
+    expect(actions).toEqual([{ type: "remove", key: `storage:${MUFFINS.id}` }]);
   });
 
   it("holding several: a line per food (24px plate, name, stars) and the two-plate mark (CD-Log-Meal)", () => {
@@ -407,7 +410,12 @@ describe("planning (Plan a meal, CD-Plan-Meal)", () => {
     const empty = html(containerEntry({ ...MUFFINS, servingsLeft: 0 }), true);
     expect(empty).not.toContain("None left.");
     expect(empty).toContain('aria-label="Servings: Broccoli Cheese Egg Muffins"');
-    expect(empty).not.toContain('aria-label="Remove Broccoli Cheese Egg Muffins"');
+    // Ledger 980: a planned container comes off with ×, like a food.
+    expect(empty).toContain('aria-label="Remove Broccoli Cheese Egg Muffins"');
+    h.store.i = 0;
+    const t = expand(createElement(PlateItemRow, { entry: containerEntry(CONTAINER), dispatch, planning: true }));
+    click(byLabel(t, `Remove ${containerEntry(CONTAINER).title}`));
+    expect(actions).toEqual([{ type: "remove", key: `storage:${CONTAINER.id}` }]);
   });
 
   it("a container marked finished or discarded in Storage says the plan card's gone line, with no count (VERIFY-p4-c1 #5)", () => {

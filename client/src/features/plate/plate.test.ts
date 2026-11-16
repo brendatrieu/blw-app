@@ -477,6 +477,11 @@ describe("toMealInput", () => {
     expect(toMealInput(plate, FIELDS).items.map((item) => item.kind)).toEqual(["recipe", "food", "recipe", "storage"]);
   });
 
+  it("× on a container new to the plate (ledger 980): it is not sent, so nothing is taken from it", () => {
+    const plate = plateReducer(add({ items: [CONTAINER], foods: [EGG] }), { type: "remove", key: `storage:${CONTAINER.id}` });
+    expect(toMealInput(plate, FIELDS).items).toEqual([{ kind: "food", foodId: EGG.id, rating: null }]);
+  });
+
   it("a new plate: no ids; a container's servings and only its given stars; a leave-out only when there is one", () => {
     let plate = add({ items: [CONTAINER], recipes: [PASTA, PATTIES], foods: [EGG] });
     plate = plateReducer(plate, { type: "rate", key: `storage:${CONTAINER.id}`, partId: CARROT.id, rating: 2 });
@@ -679,6 +684,14 @@ describe("a planned meal as a plate (Plan a meal, SPEC §5)", () => {
       { kind: "storage", storageItemId: CONTAINER.id, servings: 2 },
     ]);
     expect(toPlanInput([])).toEqual([]);
+  });
+
+  it("× on a planned container (ledger 980): the plan is saved without it", () => {
+    const plate = plateReducer(fromPlanned(planned), { type: "remove", key: `storage:${CONTAINER.id}` });
+    expect(toPlanInput(plate)).toEqual([
+      { kind: "recipe", recipeId: PASTA.id, leftOutFoodIds: [CASHEW.id] },
+      { kind: "food", foodId: EGG.id },
+    ]);
   });
 });
 

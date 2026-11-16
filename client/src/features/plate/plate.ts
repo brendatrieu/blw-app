@@ -84,7 +84,8 @@ export interface ContainerEntry {
    * recorded (0020): it can only be removed, never resized. */
   servings: number | null;
   /** What the saved meal took (null before 0020); absent when the container
-   * is new to the plate. A kept one shows × (chair decision, SPEC §5). */
+   * is new to the plate. Taking a kept one off (×) puts its servings back
+   * (chair decision, SPEC §5); a new one is simply not sent (ledger 980). */
   savedServings?: number | null;
   /** The container as Storage has it now, when loaded: its counts and status. */
   container?: StorageItem;
