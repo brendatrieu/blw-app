@@ -32,6 +32,17 @@ import { DISCLAIMER, LANDING_SLIDES } from "./slides.js";
 
 const render = () => renderToString(createElement(MemoryRouter, { initialEntries: ["/welcome"] }, createElement(LandingPage)));
 const count = (html: string, needle: string | RegExp) => html.split(needle).length - 1;
+/** Where the element opening at `open` closes: counts nested tags of its kind. */
+const closeOf = (html: string, open: number) => {
+  const tag = html.slice(open).match(/^<(\w+)/)![1]!;
+  let depth = 0;
+  for (const m of html.slice(open).matchAll(new RegExp(`</?${tag}\\b`, "g"))) {
+    depth += m[0] === `<${tag}` ? 1 : -1;
+    if (depth === 0) return open + m.index;
+  }
+  return -1;
+};
+const trackClose = (html: string) => closeOf(html, html.lastIndexOf("<div", html.indexOf('aria-roledescription="carousel"')));
 
 beforeEach(() => {
   h.session = null;
@@ -40,16 +51,21 @@ beforeEach(() => {
   h.track = null;
 });
 
-describe("LandingPage markup (ledger 992)", () => {
-  it("shows the icon, the name and the tagline once, at the top", () => {
+describe("LandingPage markup (ledger 992, 1003)", () => {
+  it("shows the small icon and the name once, at the top, over a fade that lets taps through", () => {
     const html = render();
     expect(count(html, "<h1")).toBe(1);
     expect(html).toMatch(/<h1[^>]*>Little Meals<\/h1>/);
-    expect(count(html, "Starting solids, made simpler.")).toBe(1);
     expect(html.indexOf('src="/icons/icon-192.png"')).toBeLessThan(html.indexOf("<h1"));
+    const header = html.match(/<header class="([^"]*)" style="([^"]*)"/)!;
+    expect(header[1]!.split(" ")).toEqual(expect.arrayContaining(["pointer-events-none", "absolute", "top-0"]));
+    // It clears the iOS band and the status bar that the picture runs under.
+    expect(header[2]).toContain("padding-top:calc(env(safe-area-inset-top) + var(--top-edge-clearance) + 0.75rem)");
+    expect(header[2]).toContain("color-mix(in srgb, var(--color-bg) 85%, transparent)");
+    expect(html.indexOf("<header")).toBeLessThan(html.indexOf('aria-roledescription="carousel"'));
   });
 
-  it("renders the five slides as a carousel of groups, each with its framed light/dark shot", () => {
+  it("renders the five slides as a carousel of groups, each a full-bleed light/dark shot", () => {
     const html = render();
     expect(html).toContain('aria-roledescription="carousel"');
     expect(count(html, 'aria-roledescription="slide"')).toBe(5);
@@ -60,8 +76,34 @@ describe("LandingPage markup (ledger 992)", () => {
       expect(html).toContain(`srcSet="/landing/${slide.shot}-dark.webp" media="(prefers-color-scheme: dark)"`);
       expect(html).toContain(`alt="${slide.alt.replace("'", "&#x27;")}"`);
     }
-    // Slides 2-5 load lazily; the first does not.
-    expect(count(html, 'loading="lazy"')).toBe(4);
+    // Slides 2-5 load lazily, as does the wide-screen backdrop; the first slide does not.
+    expect(count(html, 'loading="lazy"')).toBe(5);
+    expect(count(html, 'loading="eager"')).toBe(1);
+    // Each picture fills its slide, top-aligned: no frame, rounding or shadow.
+    const shots = [...html.matchAll(/<img[^>]*alt="(?!")[^"]+"[^>]*class="([^"]*)"/g)].map((m) => m[1]);
+    expect(shots).toHaveLength(5);
+    for (const cls of shots) {
+      expect(cls!.split(" ")).toEqual(["absolute", "inset-0", "h-full", "w-full", "object-cover", "object-top"]);
+    }
+  });
+
+  it("sets each slide's words on a gradient to the page colour, clear of the panel's height", () => {
+    const html = render();
+    const captions = [...html.matchAll(/<div class="absolute inset-x-0 bottom-0 flex flex-col gap-1 px-4 pt-8 text-center" style="([^"]*)">/g)];
+    expect(captions).toHaveLength(5);
+    for (const [, style] of captions) {
+      expect(style).toBe("padding-bottom:var(--panel-h);background:linear-gradient(to bottom, transparent, var(--color-bg) 1.75rem)");
+    }
+  });
+
+  it("fills the sides of a wide screen with the current picture, blurred, dimmed and hidden from AT", () => {
+    const html = render();
+    const backdrop = html.match(/<div aria-hidden="true" class="([^"]*)">(.*?)<\/div>/)!;
+    expect(backdrop[1]!.split(" ")).toEqual(expect.arrayContaining(["absolute", "w-screen", "overflow-hidden", "hidden", "min-[33rem]:block"]));
+    expect(backdrop[2]).toContain(`srcSet="/landing/${LANDING_SLIDES[0]!.shot}-dark.webp"`);
+    const img = backdrop[2]!.match(/<img[^>]*alt=""[^>]*loading="lazy"[^>]*class="([^"]*)"/)![1]!.split(" ");
+    expect(img).toEqual(expect.arrayContaining(["object-cover", "blur-2xl", "opacity-40"]));
+    expect(html.indexOf(backdrop[0])).toBeLessThan(html.indexOf('aria-roledescription="carousel"'));
   });
 
   it("ships every shot it names, light and dark", () => {
@@ -78,33 +120,55 @@ describe("LandingPage markup (ledger 992)", () => {
     expect(html.indexOf(DISCLAIMER)).toBeGreaterThan(html.indexOf(LANDING_SLIDES[4]!.body));
   });
 
-  it("has a 44px dot per slide and an 'N of 5' count", () => {
+  it("has a 44px dot per slide, the current one wider, and no visible 'N of 5' (ledger 1003)", () => {
     const html = render();
     expect(count(html, /aria-label="Go to slide \d of 5"/)).toBe(5);
     expect(count(html, 'class="flex h-11 w-11 items-center justify-center"')).toBe(5);
-    expect(html).toMatch(/aria-live="polite"[^>]*>1<!-- --> of <!-- -->5<\/span>/);
+    expect(count(html, 'aria-current="true"')).toBe(1);
+    expect(count(html, /class="h-2 rounded-full[^"]* w-5"/)).toBe(1);
+    expect(count(html, /class="h-2 rounded-full[^"]* w-2"/)).toBe(4);
+    const text = html.replace(/<[^>]*>/g, " ");
+    expect(text).not.toMatch(/\bof\s+5\b/);
+    expect(html).not.toContain("aria-live");
   });
 
-  it("renders Create an account, Sign in and About Little Meals once each, after the track", () => {
+  it("renders Create an account, Sign in and About Little Meals once each, after the track closes", () => {
     const html = render();
     expect(count(html, /<a[^>]*href="\/signup"[^>]*>Create an account<\/a>/)).toBe(1);
     expect(count(html, /<a[^>]*href="\/login"[^>]*>Sign in<\/a>/)).toBe(1);
     expect(count(html, /<a[^>]*href="\/about"[^>]*>About Little Meals<\/a>/)).toBe(1);
     const lastSlideEnd = html.lastIndexOf("</section>");
-    for (const label of [">Create an account<", ">Sign in<", ">About Little Meals<"]) {
-      expect(html.indexOf(label), label).toBeGreaterThan(lastSlideEnd);
+    // Ledger 1001: after the track itself, not just after slide 5 inside it.
+    const close = trackClose(html);
+    expect(close).toBeGreaterThan(lastSlideEnd);
+    for (const label of [">Go to slide 1 of 5<", 'aria-label="Go to slide 1 of 5"', ">Create an account<", ">Sign in<", ">About Little Meals<"]) {
+      expect(html.indexOf(label) === -1 || html.indexOf(label) > close, `${label} after the track closes`).toBe(true);
     }
+    expect(html.indexOf(">Create an account<")).toBeGreaterThan(close);
+  });
+
+  it("pins the dots and the ways in to the bottom, in one solid panel as tall as --panel-h", () => {
+    const html = render();
+    const open = html.indexOf("<div", trackClose(html));
+    const panel = html.slice(open, closeOf(html, open));
+    expect(panel).toMatch(/^<div class="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-\[var\(--color-bg\)\] [^"]*" style="height:var\(--panel-h\)">/);
+    for (const label of ['aria-label="Go to slide 5 of 5"', ">Create an account<", ">Sign in<", ">About Little Meals<"]) {
+      expect(panel, label).toContain(label);
+    }
+    // One row of buttons at every width; a touch smaller under 360px.
+    expect(count(panel, /class="[^"]*\bflex-1 max-\[22.5rem\]:px-2.5 max-\[22.5rem\]:text-\[0.8125rem\]"/)).toBe(2);
+    expect(panel).toContain('<div class="flex w-full gap-2">');
   });
 
   it("is one app-width column with no fixed chrome (item 703, CLAUDE.md)", () => {
     const html = render();
     const root = html.match(/^<div class="([^"]*)"/)?.[1]?.split(" ") ?? [];
-    expect(root).toEqual(expect.arrayContaining(["mx-auto", "max-w-lg", "flex", "flex-col"]));
+    expect(root).toEqual(expect.arrayContaining(["relative", "mx-auto", "max-w-lg", "[--panel-h:calc(8.25rem+max(1rem,env(safe-area-inset-bottom)))]"]));
     const classes = [...html.matchAll(/class="([^"]*)"/g)].flatMap((m) => m[1]!.split(" "));
     expect(classes).not.toContain("fixed");
     expect(classes).not.toContain("sticky");
-    // Its height leaves OutsideAppLayout's top clearance, so the page never scrolls.
-    expect(html).toMatch(/^<div[^>]*style="height:calc\(100dvh - env\(safe-area-inset-top\) - var\(--top-edge-clearance\)\)"/);
+    // The screen's height, pulled up over OutsideAppLayout's top clearance, so the page never scrolls.
+    expect(html).toMatch(/^<div[^>]*style="height:100dvh;margin-top:calc\(-1 \* \(env\(safe-area-inset-top\) \+ var\(--top-edge-clearance\)\)\)"/);
   });
 
   it("never moves by itself: no timers in the source", () => {
@@ -119,6 +183,7 @@ describe("LandingPage markup (ledger 992)", () => {
     expect(html).not.toContain('href="/login"');
     expect(html).not.toContain('href="/about"');
     expect(count(html, 'aria-roledescription="slide"')).toBe(5);
+    expect(count(html, /aria-label="Go to slide \d of 5"/)).toBe(5);
   });
 
   it("forwards a signed-in visit Home, replacing the entry", () => {
@@ -131,7 +196,7 @@ describe("LandingPage markup (ledger 992)", () => {
   });
 });
 
-describe("LandingPage handlers (ledger 992)", () => {
+describe("LandingPage handlers (ledger 992, 1003)", () => {
   type Listener = (event: { key: string; altKey?: boolean; ctrlKey?: boolean; metaKey?: boolean; preventDefault: () => void }) => void;
   let listeners: Record<string, Listener>;
   const goTo = vi.fn();
@@ -177,6 +242,36 @@ describe("LandingPage handlers (ledger 992)", () => {
     expect(goTo).toHaveBeenLastCalledWith(3);
     press("ArrowLeft");
     expect(goTo).toHaveBeenLastCalledWith(1);
+  });
+
+  it("never moves past either end by key", () => {
+    mount();
+    press("ArrowLeft");
+    el.scrollLeft = 1600; // slide 5
+    press("ArrowRight");
+    expect(goTo).not.toHaveBeenCalled();
+  });
+
+  it("goes to the next slide on a tap on the picture, none after the last", () => {
+    const tree = mount();
+    let onClick: (() => void) | undefined;
+    const walk = (node: ReactNode) => {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (!isValidElement(node)) return;
+      const props = node.props as { "aria-roledescription"?: string; onClick?: () => void; children?: ReactNode };
+      if (props["aria-roledescription"] === "carousel") onClick = props.onClick;
+      walk(props.children);
+    };
+    walk(tree);
+    for (const at of [0, 1, 2, 3]) {
+      el.scrollLeft = at * 400;
+      onClick!();
+      expect(goTo).toHaveBeenLastCalledWith(at + 1);
+    }
+    goTo.mockReset();
+    el.scrollLeft = 1600;
+    onClick!();
+    expect(goTo).not.toHaveBeenCalled();
   });
 
   it("ignores other keys and modified arrows", () => {
