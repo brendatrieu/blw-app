@@ -219,13 +219,15 @@ describe("LandingPage markup (ledger 992, 1003, 1008, 1012)", () => {
   it("pins the words, the dots and the ways in to the bottom in one sheet on its own surface (ledger 1012)", () => {
     const html = render();
     const sheet = sheetOf(html);
+    // Amended: a frosted panel, square, blurred behind (both spellings), a
+    // translucent tint, no shadow; .landing-sheet carries the fallback tint.
     expect(sheet).toMatch(
-      /^<div class="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center rounded-t-\[var\(--radius-lg\)\] bg-\[var\(--color-landing-sheet\)\] [^"]*" style="box-shadow:var\(--shadow-sheet\)">/,
+      /^<div class="landing-sheet absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-\[var\(--color-landing-sheet\)\] [^"]*" style="backdrop-filter:blur\(16px\);-webkit-backdrop-filter:blur\(16px\)">/,
     );
-    // Only a short fade on the picture just above it.
-    expect(sheetOf(renderAt(1))).toMatch(/^<div[^>]*><div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-full h-6 " style="background:linear-gradient\(to bottom, transparent, color-mix\(in srgb, var\(--color-bg\) 60%, transparent\)\)"><\/div>/);
-    // None on the intro's gradient.
-    expect(sheet).toContain('class="pointer-events-none absolute inset-x-0 bottom-full h-6 hidden"');
+    const sheetTag = sheet.slice(0, sheet.indexOf(">") + 1);
+    expect(sheetTag).not.toMatch(/rounded|shadow/);
+    // Nothing drawn on the picture above it (no fade), on any slide.
+    for (let page = 0; page < LANDING_SLIDES.length; page++) expect(sheetOf(renderAt(page))).not.toContain("bottom-full");
     // Words, then dots, then the two buttons, then About.
     const order = ['class="grid w-full text-center"', `aria-label="Go to slide ${LANDING_SLIDES.length} of ${LANDING_SLIDES.length}"`, ">Create an account<", ">Sign in<", ">About Little Meals<"];
     const at = order.map((label) => sheet.indexOf(label));

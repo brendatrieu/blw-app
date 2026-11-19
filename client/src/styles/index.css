@@ -76,11 +76,13 @@
   --color-bg: #fbfaf8;
   --color-bg-elevated: #ffffff;
   --color-bg-inset: #f1efeb;
-  /* Ledger 1012: the signed-out landing's bottom sheet, its own surface (a
-     sea tint, not the screenshots' page colour) with an upward shadow and
-     a hairline on top. */
-  --color-landing-sheet: #e3edf4;
-  --shadow-sheet: 0 -1px 0 rgb(31 42 54 / 0.1), 0 -8px 24px rgb(31 42 54 / 0.14);
+  /* Ledger 1012 (amended): the signed-out landing's bottom sheet is a
+     frosted panel: square, the picture blurred behind it, and white with
+     transparency (dark: the dark elevated surface with transparency). The
+     fallback, where backdrop-filter is unsupported, is a more opaque tint
+     (the @supports rule after the dark blocks). */
+  --color-landing-sheet: rgba(255, 255, 255, 0.75);
+  --color-landing-sheet-fallback: rgba(255, 255, 255, 0.94);
   /* Ledger 1008: the landing's intro slide, a soft sea blue -> apricot. */
   --color-intro-from: #cfe4f0;
   --color-intro-to: #fde3d1;
@@ -315,8 +317,8 @@
   --_dark-color-bg: #0e1218; /* near-black blue */
   --_dark-color-bg-elevated: #171d25;
   --_dark-color-bg-inset: #232b35;
-  --_dark-landing-sheet: #222d3a;
-  --_dark-shadow-sheet: 0 -1px 0 rgb(255 255 255 / 0.1), 0 -8px 24px rgb(0 0 0 / 0.5);
+  --_dark-landing-sheet: rgba(23, 29, 37, 0.75); /* --_dark-color-bg-elevated */
+  --_dark-landing-sheet-fallback: rgba(23, 29, 37, 0.94);
   --_dark-intro-from: #173349;
   --_dark-intro-to: #43301f;
   --_dark-color-text: #eef3f7;
@@ -405,7 +407,7 @@
     --color-bg-elevated: var(--_dark-color-bg-elevated);
     --color-bg-inset: var(--_dark-color-bg-inset);
     --color-landing-sheet: var(--_dark-landing-sheet);
-    --shadow-sheet: var(--_dark-shadow-sheet);
+    --color-landing-sheet-fallback: var(--_dark-landing-sheet-fallback);
     --color-intro-from: var(--_dark-intro-from);
     --color-intro-to: var(--_dark-intro-to);
 
@@ -496,7 +498,7 @@
   --color-bg-elevated: var(--_dark-color-bg-elevated);
   --color-bg-inset: var(--_dark-color-bg-inset);
   --color-landing-sheet: var(--_dark-landing-sheet);
-  --shadow-sheet: var(--_dark-shadow-sheet);
+  --color-landing-sheet-fallback: var(--_dark-landing-sheet-fallback);
   --color-intro-from: var(--_dark-intro-from);
   --color-intro-to: var(--_dark-intro-to);
 
@@ -574,6 +576,14 @@
   --shadow-sm: var(--_dark-shadow-sm);
   --shadow-md: var(--_dark-shadow-md);
   --shadow-lg: var(--_dark-shadow-lg);
+}
+
+/* Ledger 1012: no backdrop blur here, so the landing sheet takes its more
+   opaque tint (unlayered, so it wins over the Tailwind background utility). */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .landing-sheet {
+    background-color: var(--color-landing-sheet-fallback);
+  }
 }
 
 html,

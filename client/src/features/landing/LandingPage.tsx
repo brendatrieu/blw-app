@@ -187,18 +187,14 @@ export function LandingPage() {
         ))}
       </div>
 
-      {/* The sheet: its own surface (not the screenshots' page colour), a
-          rounded top with an upward shadow and hairline, and a short fade on
-          the picture just above it (none on the intro's gradient). */}
+      {/* The sheet: a frosted panel over the picture (ledger 1012, amended):
+          square edges, the picture blurred behind a translucent tint, no
+          shadow. Without backdrop-filter, .landing-sheet takes a more opaque
+          tint (index.css). */}
       <div
-        className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center rounded-t-[var(--radius-lg)] bg-[var(--color-landing-sheet)] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
-        style={{ boxShadow: "var(--shadow-sheet)" }}
+        className="landing-sheet absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-[var(--color-landing-sheet)] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        style={{ backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
       >
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute inset-x-0 bottom-full h-6 ${current.shot ? "" : "hidden"}`}
-          style={{ background: "linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-bg) 60%, transparent))" }}
-        />
         {/* Every slide's words in one grid cell, only the active one shown:
             the sheet is as tall as the longest, so it never jumps. Hidden
             from screen readers, who hear them with each picture. */}

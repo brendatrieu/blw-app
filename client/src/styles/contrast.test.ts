@@ -494,29 +494,56 @@ describe("dark-mode block parity", () => {
 
 describe("landing sheet and intro (ledger 1012, 1008)", () => {
   // The signed-out landing's bottom sheet: the active slide's words, the
-  // dots and the three ways in, on their own surface above the screenshots.
-  const SHEET_PAIRS: Pair[] = [
-    { name: "headline on the landing sheet", fg: "color-text", bg: "color-landing-sheet" },
-    { name: "body and disclaimer on the landing sheet", fg: "color-text-muted", bg: "color-landing-sheet" },
-    { name: "About link on the landing sheet", fg: "color-accent", bg: "color-landing-sheet" },
-    { name: "current dot on the landing sheet", fg: "color-accent", bg: "color-landing-sheet", min: 3 },
-    { name: "other dots on the landing sheet", fg: "color-text-muted", bg: "color-landing-sheet", min: 3 },
+  // dots and the three ways in, on a frosted panel over the screenshots
+  // (ledger 1012, amended). Its tint is translucent, so each pairing is
+  // gated on the tint (and on the more opaque fallback tint) composited over
+  // what shows through it: the shots' page and panels, and the intro's
+  // gradient. The blurred shots themselves are measured in the headless check.
+  const SHEET_PAIRS: Omit<Pair, "bg">[] = [
+    { name: "headline on the landing sheet", fg: "color-text" },
+    { name: "body and disclaimer on the landing sheet", fg: "color-text-muted" },
+    { name: "About link on the landing sheet", fg: "color-accent" },
+    { name: "current dot on the landing sheet", fg: "color-accent", min: 3 },
+    { name: "other dots on the landing sheet", fg: "color-text-muted", min: 3 },
+  ];
+  const THROUGH = ["color-bg", "color-bg-inset", "color-intro-from", "color-intro-to"];
+  const INTRO_PAIRS: Pair[] = [
     // Ledger 1008: the intro slide's name and tagline, at both ends of its gradient.
     { name: "intro name and tagline on the gradient's top", fg: "color-text", bg: "color-intro-from" },
     { name: "intro name and tagline on the gradient's bottom", fg: "color-text", bg: "color-intro-to" },
   ];
+  const tintOf = (token: string, mode: Mode) => parseColor(resolve(token, mode));
   for (const mode of ["light", "dark"] as const) {
-    for (const pair of SHEET_PAIRS) {
+    for (const tint of ["color-landing-sheet", "color-landing-sheet-fallback"]) {
+      for (const ground of THROUGH) {
+        for (const pair of SHEET_PAIRS) {
+          it(`[${mode}] ${pair.name} (${tint} over ${ground}) >= ${pair.min ?? 4.5}:1`, () => {
+            const bg = compositeOver(tintOf(tint, mode), parseColor(resolve(ground, mode)));
+            expect(contrastRatio(parseColor(resolve(pair.fg, mode)), bg)).toBeGreaterThanOrEqual(pair.min ?? 4.5);
+          });
+        }
+      }
+    }
+    for (const pair of INTRO_PAIRS) {
       it(`[${mode}] ${pair.name} >= ${pair.min ?? 4.5}:1`, () => {
         expect(ratioOf(pair.fg, pair.bg, mode)).toBeGreaterThanOrEqual(pair.min ?? 4.5);
       });
     }
-    // Not part of the screenshot: the sheet is a different colour from the
-    // page the shots were taken on (owner: "a bit more contrast").
-    it(`[${mode}] the sheet differs from the screenshots' page colour`, () => {
-      expect(ratioOf("color-landing-sheet", "color-bg", mode)).toBeGreaterThanOrEqual(1.1);
+    // Frosted, not opaque: the tint lets the blurred picture through, and the
+    // no-blur fallback is a more opaque tint of the same colour.
+    it(`[${mode}] the sheet tint is translucent and its fallback more opaque`, () => {
+      const tint = tintOf("color-landing-sheet", mode);
+      const fallback = tintOf("color-landing-sheet-fallback", mode);
+      expect(tint.a).toBeGreaterThan(0);
+      expect(tint.a).toBeLessThan(1);
+      expect(fallback.a).toBeGreaterThan(tint.a);
+      expect([fallback.r, fallback.g, fallback.b]).toEqual([tint.r, tint.g, tint.b]);
     });
   }
+  it("the fallback tint applies only where backdrop-filter is unsupported (both spellings)", () => {
+    const rule = extractBlock(css, "@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))");
+    expect(rule).toMatch(/\.landing-sheet\s*\{\s*background-color:\s*var\(--color-landing-sheet-fallback\);\s*\}/);
+  });
 });
 
 describe("food plates (items 657, 658)", () => {
