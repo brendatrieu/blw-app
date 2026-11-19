@@ -5,6 +5,7 @@ import { useAllergenProgress } from "../features/tracking/hooks.js";
 import { dueAllergens, dueSinceLabel } from "../features/tracking/allergenRow.js";
 import { allergenEmoji, allergenTint } from "../features/tracking/allergenEmoji.js";
 import { AllergenReminderMenu } from "../features/tracking/components/AllergenReminderMenu.js";
+import { AllergenProgressCard } from "../features/tracking/components/AllergenProgressCard.js";
 import { HOME_MEAL_LIMIT, ServeLogList } from "../features/tracking/components/ServeLogList.js";
 import { useStorageItems } from "../features/storage/hooks.js";
 import { storageItemTitle } from "../features/storage/format.js";
@@ -20,14 +21,11 @@ import { StorageItemActionsMenu } from "../features/storage/components/StorageIt
 import { FoodPlates } from "../features/catalog/components/FoodPlate.js";
 import { TodaysPlanCard } from "../features/plan/TodaysPlanCard.js";
 import { ButtonLink } from "../components/ui/Button.js";
-import { Card, CARD_ROW_DIVIDER, CardLink, HOME_CARD_LABEL_CLASS } from "../components/ui/Card.js";
+import { Card, CARD_ROW_DIVIDER, HOME_CARD_LABEL_CLASS } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
-import { ProgressRing } from "../components/ui/ProgressRing.js";
 import { HEADING_CONTROL_INSET, SectionLink } from "../components/ui/SectionLink.js";
 import { PageTrack, Pager, usePagedTrack } from "../components/ui/Pager.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
-
-const ALLERGEN_TOTAL = 9;
 
 /** Reminders' page size; swipe or ‹ › for the rest (items 712, 775, as Storage and Food log). */
 export const REMINDERS_LIMIT = 3;
@@ -195,58 +193,6 @@ export function RemindersCard({ babyId }: { babyId: string }) {
   );
 }
 
-function AllergenProgressSummary({ babyId }: { babyId: string }) {
-  const { data, isLoading } = useAllergenProgress(babyId);
-
-  if (isLoading || !data) {
-    return <Skeleton className="h-[6.5rem] w-full rounded-[var(--radius-lg)]" />;
-  }
-
-  const established = data.items.filter((item) => item.status === "established").length;
-  const started = data.items.filter((item) => item.status === "started").length;
-  const notStarted = data.items.length - established - started;
-  // Reminders' rule (item 747): only established rows have a due date, and a
-  // row paused for a reaction is not due.
-  const due = dueAllergens(data.items).length;
-  // One segment per allergen (items 663, 747): established and not due,
-  // established and due, started, then the empty track, clockwise from the top.
-  const segments = Array.from({ length: ALLERGEN_TOTAL }, (_, index) =>
-    index < established - due
-      ? "var(--color-ring-established)"
-      : index < established
-        ? "var(--color-apricot-graphic)"
-        : index < established + started
-          ? "var(--color-ring-started)"
-          : "var(--color-ring-empty)",
-  );
-  const dueText = due > 0 ? `${due} due for a serve` : null;
-
-  return (
-    <CardLink to={`/babies/${babyId}/allergens`} padding="none" className="flex items-center gap-4 px-4 py-3.5">
-      <ProgressRing
-        segments={segments}
-        label={`${established} of ${ALLERGEN_TOTAL} allergens established, ${dueText ? `${dueText}, ` : ""}${started} started`}
-      >
-        <span className="text-xl font-extrabold tabular-nums text-[var(--color-text)]">
-          {established}/{ALLERGEN_TOTAL}
-        </span>
-      </ProgressRing>
-      <div className="flex flex-col gap-1 text-sm">
-        <span className="text-base font-bold text-[var(--color-text)]">{established} established</span>
-        {dueText && (
-          <span className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
-            <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-[var(--color-apricot-graphic)]" />
-            {dueText}
-          </span>
-        )}
-        <span className="text-[var(--color-text-muted)]">
-          {started} started · {notStarted} not started yet
-        </span>
-      </div>
-    </CardLink>
-  );
-}
-
 /** Home's storage page size; swipe or ‹ › for the rest (items 694, 775). */
 export const HOME_STORAGE_LIMIT = 3;
 
@@ -369,7 +315,7 @@ export function DashboardPage() {
             <SectionLink to={`/babies/${activeBaby.id}/allergens`}>Ladder</SectionLink>
           </div>
         </div>
-        <AllergenProgressSummary babyId={activeBaby.id} />
+        <AllergenProgressCard babyId={activeBaby.id} />
       </section>
 
       <ServeLogList key={`meals-${activeBaby.id}`} babyId={activeBaby.id} limit={HOME_MEAL_LIMIT} seeAllHref="/meals" grouped />

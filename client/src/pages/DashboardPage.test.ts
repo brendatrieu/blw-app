@@ -787,6 +787,11 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(html).not.toMatch(/sr-only[^>]*>[^<]*<span[^>]*>3<!-- --> established/);
     });
 
+    it("is a link to the ladder (the ladder page shows it plain, ledger 1011)", () => {
+      const html = render({ allergens: ladder });
+      expect(html).toMatch(/<a class="[^"]*flex items-center gap-4 px-4 py-3\.5" href="\/babies\/baby-1\/allergens"[^>]*><div[^>]*><svg/);
+    });
+
     /** The ring's stroke tokens, clockwise from the top. */
     const strokesOf = (html: string) => [...html.matchAll(/<circle [^>]*stroke="var\(--color-([\w-]+)\)"/g)].map((m) => m[1]);
 

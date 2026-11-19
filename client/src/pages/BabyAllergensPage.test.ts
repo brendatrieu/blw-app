@@ -434,3 +434,34 @@ describe("BabyAllergensPage sections", () => {
     expect(html).toContain('<div class="flex flex-col gap-6"><section');
   });
 });
+
+describe("BabyAllergensPage progress ring (ledger 1011)", () => {
+  const named = (allergenSlug: string, allergenName: string, row: AllergenProgressItem) => ({ ...row, allergenSlug, allergenName });
+  const ladder = [
+    named("peanut", "Peanut", servedDaysAgo(9)),
+    named("milk", "Milk", servedDaysAgo(1)),
+    named("wheat", "Wheat", item({ status: "started", exposures: 1 })),
+    named("egg", "Egg", item({ status: "not_started" })),
+  ];
+
+  it("shows Home's ring card under the header, above the sections, as a plain card", () => {
+    const html = renderWithItems(ladder);
+    expect(html).toContain('aria-label="2 of 9 allergens established, 1 due for a serve, 1 started"');
+    expect(html).toContain('<span class="text-xl font-extrabold tabular-nums text-[var(--color-text)]">2<!-- -->/<!-- -->9</span>');
+    expect(html).toContain("1<!-- --> started · <!-- -->1<!-- --> not started yet");
+    const ring = html.indexOf("allergens established");
+    expect(ring).toBeGreaterThan(html.indexOf("Allergen ladder"));
+    expect(ring).toBeLessThan(html.indexOf('<div class="flex flex-col gap-6"><section'));
+    // Not a link: the card opens on the div, and no anchor wraps the ring.
+    const cardOpen = html.lastIndexOf("<", html.lastIndexOf("flex items-center gap-4 px-4 py-3.5", ring));
+    expect(html.slice(cardOpen, cardOpen + 4)).toBe("<div");
+    expect(html.slice(0, ring)).not.toMatch(/<a [^>]*href="\/babies\/[^"]*\/allergens"[^>]*>(?:(?!<\/a>).)*$/s);
+  });
+
+  it("shows the ring's loading skeleton while progress loads", () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const html = renderToString(createElement(QueryClientProvider, { client: queryClient }, renderAtAllergensRoute(BABY_ID)));
+    expect(html).toContain("h-[6.5rem] w-full rounded-[var(--radius-lg)]");
+    expect(html).not.toContain("allergens established");
+  });
+});

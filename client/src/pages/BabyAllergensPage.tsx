@@ -19,6 +19,7 @@ import {
 import { allergenEmoji, allergenTint } from "../features/tracking/allergenEmoji.js";
 import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
 import { MarkEstablishedAction, OverriddenHint } from "../features/tracking/components/AllergenActions.js";
+import { AllergenProgressCard } from "../features/tracking/components/AllergenProgressCard.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { BackButton } from "../components/ui/BackButton.js";
@@ -142,6 +143,9 @@ export function BabyAllergensPage() {
           </>
         }
       />
+
+      {/* Home's ring card (ledger 1011), plain here: this page is where it links to. */}
+      {babyId && !isError && <AllergenProgressCard babyId={babyId} link={false} />}
 
       {isLoading && <SkeletonList count={4} />}
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't find that baby's allergen progress.</p>}
