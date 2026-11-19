@@ -1,6 +1,6 @@
 import { useRef, type InputHTMLAttributes, type MouseEvent, type RefObject } from "react";
 import { Input } from "./Input.js";
-import { CloseGlyph, ICON_BUTTON_CLASSES } from "./iconButton.js";
+import { CloseGlyph } from "./iconButton.js";
 
 interface ClearSearchButtonProps {
   /** The search text: the button is there only while it is not empty. */
@@ -13,6 +13,12 @@ interface ClearSearchButtonProps {
 
 /** Keeps focus on the field: a press on the × never moves it to the button. */
 const keepFocus = (event: MouseEvent) => event.preventDefault();
+
+/** Ledger 1016: hover and keyboard focus only change the glyph's colour
+ * (muted -> text): no hover box, no size change; the global focus ring still
+ * marks keyboard focus. 44px like ICON_BUTTON_CLASSES. */
+const CLEAR_CLASSES =
+  "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--color-text-muted)] transition-colors duration-[var(--duration-fast)] hover:text-[var(--color-text)] focus-visible:text-[var(--color-text)]";
 
 /**
  * The one "Clear search" × (ledger 999), at the right edge of every search
@@ -34,7 +40,7 @@ export function ClearSearchButton({ value, onClear, inputRef, className = "" }: 
         onClear();
         inputRef.current?.focus();
       }}
-      className={`${ICON_BUTTON_CLASSES} ${className}`}
+      className={`${CLEAR_CLASSES} ${className}`}
     >
       <CloseGlyph />
     </button>

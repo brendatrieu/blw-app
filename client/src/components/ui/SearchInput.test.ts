@@ -20,6 +20,13 @@ describe("SearchInput + ClearSearchButton (ledger 999)", () => {
     expect(button).toMatch(/\bh-11\b/);
     expect(button).toMatch(/\bw-11\b/);
     expect(button).toContain("absolute inset-y-0 right-0 my-auto");
+    // Ledger 1016: hover/focus only recolour the glyph (muted -> text); no
+    // hover box, no size change, no focus-ring opt-out.
+    expect(button).toContain("text-[var(--color-text-muted)]");
+    expect(button).toContain("hover:text-[var(--color-text)]");
+    expect(button).toContain("focus-visible:text-[var(--color-text)]");
+    expect(button).not.toMatch(/hover:(bg|scale|size|h-|w-|p-|ring|shadow)/);
+    expect(button).not.toMatch(/focus-visible:(bg|scale|outline-none)|data-no-focus-ring/);
     // The text stops where the × starts (44px of right padding), and the
     // caller's class places the wrapper, not the input.
     expect(typed).toMatch(/<div class="relative shrink-0"><input[^>]*class="[^"]*\bpr-11\b/);
