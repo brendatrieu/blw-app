@@ -125,6 +125,9 @@ export function LandingPage() {
                 height={1688}
                 loading={slideIndex === 0 ? "eager" : "lazy"}
                 className="absolute inset-0 h-full w-full object-cover object-top"
+                // Starts where the header's padding does (iOS band + status
+                // bar), so the shot's blank top stays under "Little Meals".
+                style={{ paddingTop: "calc(env(safe-area-inset-top) + var(--top-edge-clearance))" }}
               />
             </picture>
             {/* Clear to the page colour, solid where the words sit, then the

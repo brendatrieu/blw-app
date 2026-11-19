@@ -80,10 +80,13 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
     expect(count(html, 'loading="lazy"')).toBe(5);
     expect(count(html, 'loading="eager"')).toBe(1);
     // Each picture fills its slide, top-aligned: no frame, rounding or shadow.
-    const shots = [...html.matchAll(/<img[^>]*alt="(?!")[^"]+"[^>]*class="([^"]*)"/g)].map((m) => m[1]);
+    // It starts below the iOS band + status bar, as the header's padding does,
+    // so the brand stays on the shot's blank top (ledger 1007).
+    const shots = [...html.matchAll(/<img[^>]*alt="(?!")[^"]+"[^>]*class="([^"]*)" style="([^"]*)"/g)];
     expect(shots).toHaveLength(5);
-    for (const cls of shots) {
+    for (const [, cls, style] of shots) {
       expect(cls!.split(" ")).toEqual(["absolute", "inset-0", "h-full", "w-full", "object-cover", "object-top"]);
+      expect(style).toBe("padding-top:calc(env(safe-area-inset-top) + var(--top-edge-clearance))");
     }
   });
 
