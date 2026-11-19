@@ -80,9 +80,11 @@
      frosted panel: square, the picture blurred behind it, and white with
      transparency (dark: the dark elevated surface with transparency). The
      fallback, where backdrop-filter is unsupported, is a more opaque tint
-     (the @supports rule after the dark blocks). */
-  --color-landing-sheet: rgba(255, 255, 255, 0.75);
-  --color-landing-sheet-fallback: rgba(255, 255, 255, 0.94);
+     (the @supports rule after the dark blocks). Light is a faint sea-blue
+     white, not pure white: the shots' page is near-white too, and a pure
+     white sheet read as more of the screenshot (fix cycle 2). */
+  --color-landing-sheet: rgba(226, 236, 243, 0.9);
+  --color-landing-sheet-fallback: rgba(226, 236, 243, 0.94);
   /* Ledger 1008: the landing's intro slide, a soft sea blue -> apricot. */
   --color-intro-from: #cfe4f0;
   --color-intro-to: #fde3d1;

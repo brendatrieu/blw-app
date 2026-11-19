@@ -540,6 +540,16 @@ describe("landing sheet and intro (ledger 1012, 1008)", () => {
       expect([fallback.r, fallback.g, fallback.b]).toEqual([tint.r, tint.g, tint.b]);
     });
   }
+  // Fix cycle 2: in light mode the shots' page is near-white, so a white
+  // sheet read as part of the screenshot. Its tint (and fallback) over the
+  // page must itself differ from the page.
+  for (const tint of ["color-landing-sheet", "color-landing-sheet-fallback"]) {
+    it(`[light] ${tint} over color-bg differs from color-bg (>= 1.12:1)`, () => {
+      const page = parseColor(resolve("color-bg", "light"));
+      const sheet = compositeOver(tintOf(tint, "light"), page);
+      expect(contrastRatio(sheet, page)).toBeGreaterThanOrEqual(1.12);
+    });
+  }
   it("the fallback tint applies only where backdrop-filter is unsupported (both spellings)", () => {
     const rule = extractBlock(css, "@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))");
     expect(rule).toMatch(/\.landing-sheet\s*\{\s*background-color:\s*var\(--color-landing-sheet-fallback\);\s*\}/);

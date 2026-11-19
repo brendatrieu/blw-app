@@ -189,10 +189,10 @@ export function LandingPage() {
 
       {/* The sheet: a frosted panel over the picture (ledger 1012, amended):
           square edges, the picture blurred behind a translucent tint, no
-          shadow. Without backdrop-filter, .landing-sheet takes a more opaque
-          tint (index.css). */}
+          shadow; a hairline on top marks where the picture stops. Without
+          backdrop-filter, .landing-sheet takes a more opaque tint (index.css). */}
       <div
-        className="landing-sheet absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-[var(--color-landing-sheet)] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        className="landing-sheet absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-[var(--color-landing-sheet)] border-t border-[var(--color-divider)] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
         style={{ backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
       >
         {/* Every slide's words in one grid cell, only the active one shown:

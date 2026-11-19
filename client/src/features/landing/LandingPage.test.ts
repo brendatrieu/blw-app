@@ -226,6 +226,8 @@ describe("LandingPage markup (ledger 992, 1003, 1008, 1012)", () => {
     );
     const sheetTag = sheet.slice(0, sheet.indexOf(">") + 1);
     expect(sheetTag).not.toMatch(/rounded|shadow/);
+    // A hairline on top, so the words don't read as the screenshot's page.
+    expect(sheetTag).toContain("border-t border-[var(--color-divider)]");
     // Nothing drawn on the picture above it (no fade), on any slide.
     for (let page = 0; page < LANDING_SLIDES.length; page++) expect(sheetOf(renderAt(page))).not.toContain("bottom-full");
     // Words, then dots, then the two buttons, then About.
