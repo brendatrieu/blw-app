@@ -37,8 +37,9 @@ const BRITISH_VOCAB =
 // is lowercase and blanked with the other ids anyway.
 const BRITISH_CASED = /\bVeg\b/g;
 
-// Code identifiers, never rendered: the chart geometry's local `centre`, and
-// 999 used as a form limit, a sort key or a chart constant.
+// Code identifiers, never rendered: the chart geometry's local `centre`,
+// 999 used as a form limit, a sort key or a chart constant, and the landing
+// intro icon's 112px width/height attributes (ledger 1021).
 const ALLOWED = new Set([
   "client/src/components/charts/helpers.ts:centre",
   "client/src/components/charts/helpers.ts:999",
@@ -47,6 +48,7 @@ const ALLOWED = new Set([
   "client/src/features/storage/components/EditStorageItemForm.tsx:999",
   "client/src/features/storage/components/AddStorageItemForm.tsx:999",
   "client/src/features/storage/components/LeftoversFields.tsx:999",
+  "client/src/features/landing/LandingPage.tsx:112",
 ]);
 
 /** Blank what is an id rather than prose: slug/key/value/id/category string
