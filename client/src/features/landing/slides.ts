@@ -27,7 +27,7 @@ export const LANDING_SLIDES: readonly LandingSlide[] = [
     title: "Plan ahead, if you like.",
     body: "Fill in the days ahead, then serve today's meals with one tap.",
     shot: "plan",
-    alt: "Meal Plan for today: Breakfast served, with stars on each food, and Lunch with a Serve button.",
+    alt: "Meal Plan for today: Breakfast, Lunch, Snack and Dinner planned, each with its foods and a Serve button.",
   },
   {
     title: "Keep track of what you've prepped.",
