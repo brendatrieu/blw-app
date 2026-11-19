@@ -47,6 +47,7 @@ vi.mock("../../../lib/usage/useCatalogFiltered.js", () => ({
 }));
 
 import { EMPTY_RECIPE_FILTERS, RecipeCard, RecipeFilterGroups, RecipesSegment } from "./RecipesSegment.js";
+import { SearchInput } from "../../../components/ui/SearchInput.js";
 import { ActiveFilterPill, FilterChip, FunnelButton } from "./filters.js";
 
 interface El {
@@ -117,5 +118,15 @@ describe("RecipeFilterGroups allergen chips", () => {
     expect(filters.allergen).toEqual(["egg", "peanut"]);
     tap("Egg");
     expect(filters.allergen).toEqual(["peanut"]);
+  });
+});
+
+// Ledger 999: the search field's × empties the query this page owns.
+describe("RecipesSegment Clear search x", () => {
+  it("onClear empties the typed query", () => {
+    (all(render(), SearchInput)[0]!.props.onChange as (e: unknown) => void)({ target: { value: "ap" } });
+    expect(all(render(), SearchInput)[0]!.props.value).toBe("ap");
+    (all(render(), SearchInput)[0]!.props.onClear as () => void)();
+    expect(all(render(), SearchInput)[0]!.props.value).toBe("");
   });
 });

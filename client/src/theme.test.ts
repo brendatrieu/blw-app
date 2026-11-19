@@ -166,3 +166,12 @@ describe("index.html status bar tags (ledger 869)", () => {
     expect(config).toContain(`background_color: "${THEME_BG.light}",`);
   });
 });
+
+describe("one clear x per search field (ledger 999)", () => {
+  it("index.css hides the native WebKit search cancel button", () => {
+    const css = readFileSync(new URL("./styles/index.css", import.meta.url), "utf8");
+    expect(css).toMatch(
+      /input\[type="search"\]::-webkit-search-cancel-button\s*\{[^}]*-webkit-appearance:\s*none;[^}]*appearance:\s*none;/,
+    );
+  });
+});

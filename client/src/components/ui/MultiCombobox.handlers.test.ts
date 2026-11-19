@@ -145,9 +145,9 @@ describe("MultiCombobox Clear search × (ledger 999)", () => {
     (findInput(tree(props))!.props.onChange as (e: unknown) => void)({ target: { value: "ba" } });
 
     const typed = tree(props);
-    const clearEl = find(typed, (el) => el.type === ClearSearchButton)!;
     const focus = vi.fn();
-    (clearEl.props.inputRef as { current: unknown }).current = { focus };
+    // Bind the spy to the input's OWN ref: a wrong inputRef never reaches it.
+    (findInput(typed) as unknown as { ref: { current: unknown } }).ref.current = { focus };
     const button = clearOf(typed)!;
     expect(button.props["aria-label"]).toBe("Clear search");
     (button.props.onClick as () => void)();

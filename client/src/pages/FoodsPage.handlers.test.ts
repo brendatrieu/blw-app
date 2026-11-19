@@ -53,6 +53,7 @@ vi.mock("../lib/usage/useCatalogFiltered.js", () => ({
 }));
 
 import { EMPTY_EXTRA_FILTERS, FoodFilterGroups, FoodsPage } from "./FoodsPage.js";
+import { SearchInput } from "../components/ui/SearchInput.js";
 import { FoodTile } from "../features/catalog/components/FoodTile.js";
 import { ActiveFilterPill, FilterChip, FunnelButton } from "../features/catalog/components/filters.js";
 
@@ -129,5 +130,15 @@ describe("FoodsPage multi-select filters", () => {
     expect(all(after, ActiveFilterPill).map((pill) => pill.props.label)).toEqual(["Moderate vitamin C", "9m+"]);
     expect(h.reported.at(-1)).toMatchObject({ vitaminCLevel: ["moderate"], maxAgeMonths: 9 });
     applySheet({});
+  });
+});
+
+// Ledger 999: the search field's × empties the query this page owns.
+describe("FoodsPage Clear search x", () => {
+  it("onClear empties the typed query", () => {
+    (all(render(), SearchInput)[0]!.props.onChange as (e: unknown) => void)({ target: { value: "ap" } });
+    expect(all(render(), SearchInput)[0]!.props.value).toBe("ap");
+    (all(render(), SearchInput)[0]!.props.onClear as () => void)();
+    expect(all(render(), SearchInput)[0]!.props.value).toBe("");
   });
 });
