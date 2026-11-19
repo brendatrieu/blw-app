@@ -817,7 +817,7 @@ export function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
         }
         // No navigate (ledger 829), as with Sign out: RequireAuth sends this
         // page to sign-in once the session refetch reads signed out. Sooner,
-        // /login's guard still sees the old session and bounces to /about.
+        // /login's guard still sees the old session and bounces to /welcome.
       },
       onError: (mutationError) => {
         setPassword("");
@@ -914,7 +914,7 @@ export function SignOutButton() {
       await performSignOut(createSignOutDeps(queryClient));
       // No navigate: once better-auth's session refetch (~10 ms later) reads
       // signed out, RequireAuth sends this page to /login. Navigating sooner
-      // meets /login's guard with the old session, which bounces to /about.
+      // meets /login's guard with the old session, which bounces to /welcome.
     } catch {
       // The server never heard (offline): this device is cleared anyway
       // (performSignOut), and the button is back for another try.
