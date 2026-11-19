@@ -39,7 +39,7 @@ export const LANDING_SLIDES: readonly LandingSlide[] = [
     title: "Introduce allergens step by step.",
     body: "Work through the top 9, with a nudge when one is due for a serve.",
     shot: "allergens",
-    alt: "Allergen ladder: Peanut is established and due for a serve, with Milk and Wheat started below.",
+    alt: "Allergen ladder with the progress ring at the top, 2 of 9 established, then Peanut, established and due for a serve.",
   },
   {
     title: "Find iron-rich foods.",
