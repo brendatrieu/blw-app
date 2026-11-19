@@ -5,6 +5,7 @@ import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { SignupPage } from "./pages/SignupPage.js";
 import { AboutPage } from "./pages/AboutPage.js";
+import { LandingPage } from "./features/landing/LandingPage.js";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage.js";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage.js";
 import { DashboardPage } from "./pages/DashboardPage.js";
@@ -104,6 +105,9 @@ export function App() {
             </RequireAnonymous>
           }
         />
+        {/* Ledger 992: the signed-out front door, a swipe tour. It forwards a
+            signed-in visit Home itself, so no RequireAnonymous. */}
+        <Route path="/welcome" element={<LandingPage />} />
         {/* Item 611: public to everyone, signed in or out — no RequireAnonymous. */}
         <Route path="/about" element={<AboutPage />} />
         {/* Ledger 820: where a reset link lands. Public — no RequireAnonymous —

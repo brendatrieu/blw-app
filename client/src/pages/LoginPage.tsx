@@ -84,7 +84,7 @@ export function LoginPage() {
         <h1 className="font-display text-[var(--color-text)]">Welcome to Little Meals</h1>
         <p className="text-sm text-[var(--color-text-muted)]">Sign in or create an account.</p>
         <Link
-          to="/about"
+          to="/welcome"
           className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--color-accent)] underline"
         >
           What is Little Meals?

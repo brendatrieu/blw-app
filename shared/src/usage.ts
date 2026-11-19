@@ -39,7 +39,9 @@ import { storageLocationSchema, storageStatusSchema } from "./storage.js";
 export const ROUTE_PATTERNS = [
   "/login",
   "/signup",
-  /** What the app is, public (item 611): a signed-out "/" lands here. */
+  /** The landing tour (ledger 992): a signed-out "/" lands here. */
+  "/welcome",
+  /** What the app is, public (item 611), linked from the landing. */
   "/about",
   /** Where a password-reset link lands, public (ledger 820). The token rides
    * in the query, which a route pattern never carries. */

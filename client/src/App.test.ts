@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { App, OutsideAppLayout, legacyStoragePath } from "./App.js";
 import { RequireAnonymous, RequireAuth } from "./components/RequireAuth.js";
 import { AboutPage } from "./pages/AboutPage.js";
+import { LandingPage } from "./features/landing/LandingPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { SignupPage } from "./pages/SignupPage.js";
 import { PlanPage } from "./features/plan/PlanPage.js";
@@ -161,6 +162,12 @@ describe("App route wiring (items 611/612 — who may open what)", () => {
     expect(hit?.wrappers).not.toContain(RequireAuth);
   });
 
+  it("mounts /welcome as a bare LandingPage, which forwards a signed-in visit itself (ledger 992)", () => {
+    const hit = findRoute("/welcome");
+    expect((hit?.route.props.element as ReactElement).type).toBe(LandingPage);
+    expect(hit?.wrappers).not.toContain(RequireAuth);
+  });
+
   it.each([
     ["/login", LoginPage],
     ["/signup", SignupPage],
@@ -186,7 +193,7 @@ describe("App route wiring (items 611/612 — who may open what)", () => {
 describe("App route wiring (ledger 851 — screens outside AppLayout clear the iOS status bar)", () => {
   // The installed app draws under the status bar; AppLayout's header clears it
   // for app screens. Signed out, the 👋 sat under the Dynamic Island.
-  it.each(["/login", "/signup", "/about", "/forgot-password", "/reset-password"])(
+  it.each(["/login", "/signup", "/welcome", "/about", "/forgot-password", "/reset-password"])(
     "mounts %s under OutsideAppLayout",
     (path) => {
       expect(findRoute(path)?.wrappers).toContain(OutsideAppLayout);

@@ -2,15 +2,6 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useSession } from "../lib/auth.js";
 
-/**
- * History state on the About entry that stands in for "/" while signed out
- * (item 612). Once the visitor signs in, Back can return to that entry; the
- * About page then forwards to Home instead of showing itself (ledger 828).
- */
-export interface FrontDoorState {
-  frontDoor: true;
-}
-
 /** "Loading…" while the session (or, ledger 849, a waiting version) resolves. */
 export function SessionPending() {
   return (
@@ -40,9 +31,11 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   if (isPending) return <SessionPending />;
   if (!session) {
-    // Item 612: a signed-out visit to the front door shows what the app is.
+    // Item 612, ledger 992: a signed-out visit to the front door shows the
+    // landing tour. Signed in, the landing forwards Home, so Back after a
+    // sign-in never lands on it (ledger 828).
     if (location.pathname === "/") {
-      return <Navigate to="/about" replace state={{ frontDoor: true } satisfies FrontDoorState} />;
+      return <Navigate to="/welcome" replace />;
     }
     // The session just ended (no `from`), or (ledger 870) Back/Forward reached
     // a page from an earlier session: react-router keys every entry the app
@@ -60,7 +53,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
  * fresh sign-in or sign-up lands (ledger 828): the pages do not navigate on
  * success, because better-auth only refetches the session ~10 ms after the
  * call resolves, and a navigate in that gap meets RequireAuth while the
- * session still reads signed out ("/" → About). Honours the `from` that
+ * session still reads signed out ("/" → the landing). Honours the `from` that
  * RequireAuth stored, so a deep link comes back.
  *
  * Ledger 856: that landing is a PUSH, so the sign-in page stays beneath it and

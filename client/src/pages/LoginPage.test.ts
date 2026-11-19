@@ -68,8 +68,8 @@ describe("LoginPage (render)", () => {
     expect(render({ pathname: "/login", state: { from: "/meals" } })).not.toContain(notice);
   });
 
-  it("links to the About page for anyone who lands here directly (item 612)", () => {
-    expect(render()).toMatch(/<a[^>]*href="\/about"[^>]*>What is Little Meals\?<\/a>/);
+  it("links to the landing for anyone who lands here directly (items 612, 992)", () => {
+    expect(render()).toMatch(/<a[^>]*href="\/welcome"[^>]*>What is Little Meals\?<\/a>/);
   });
 
   // Item 235: Sign in was always enabled here; what was missing is the

@@ -30,19 +30,19 @@ export const LANDING_SLIDES: readonly LandingSlide[] = [
     title: "Keep track of what you've prepped.",
     body: "Each batch shows the servings left and when to use it by.",
     shot: "storage",
-    alt: "Storage with Fridge and Freezer containers, each showing servings left and days left.",
+    alt: "Storage with two Fridge and two Freezer containers, each showing the servings left and how long to use it within.",
   },
   {
     title: "Introduce allergens step by step.",
     body: "Work through the top 9, with a nudge when one is due for a serve.",
     shot: "allergens",
-    alt: "Allergen ladder: Peanut due for a serve, Egg established, Milk and Wheat started.",
+    alt: "Allergen ladder: Peanut is established and due for a serve, with Milk and Wheat started below.",
   },
   {
     title: "Find iron-rich foods.",
     body: "Filter for High iron, and see how to prep each one by age.",
     shot: "foods",
-    alt: "Foods filtered to High iron: a grid of iron-rich foods.",
+    alt: "Foods filtered to High iron: Beef, Cashews, Chia Seeds, Lentils and more iron-rich foods.",
   },
 ];
 

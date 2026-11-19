@@ -64,12 +64,12 @@ beforeEach(() => {
 });
 
 describe("RequireAuth signed-out redirects (item 612)", () => {
-  it("sends a signed-out visit to / to the About page, marked as the front door, with no `from`", () => {
+  it("sends a signed-out visit to / to the landing (ledger 992), replacing it, with no `from`", () => {
     const el = gate("/");
     expect(el.type).toBe(Navigate);
-    expect(el.props.to).toBe("/about");
-    // Ledger 828: AboutPage forwards this entry to Home once signed in.
-    expect(el.props.state).toEqual({ frontDoor: true });
+    expect(el.props).toMatchObject({ to: "/welcome", replace: true });
+    // Ledger 828: the landing forwards any signed-in visit Home, so it needs no marker.
+    expect(el.props.state).toBeUndefined();
   });
 
   it("sends every other signed-out path to /login with `from`, so deep links come back", () => {
@@ -128,8 +128,8 @@ describe("RequireAuth on Back/Forward to an earlier session's page (ledger 870)"
     });
   });
 
-  it("still sends the front door to About, whatever the entry", () => {
-    expect(gate("/", "", "a7d2rjdz").props.to).toBe("/about");
+  it("still sends the front door to the landing, whatever the entry", () => {
+    expect(gate("/", "", "a7d2rjdz").props.to).toBe("/welcome");
   });
 });
 

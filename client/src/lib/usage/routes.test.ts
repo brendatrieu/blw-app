@@ -57,6 +57,7 @@ describe("toRoutePattern", () => {
   const CASES: Array<[string, string]> = [
     ["/login", "/login"],
     ["/signup", "/signup"],
+    ["/welcome", "/welcome"],
     ["/about", "/about"],
     ["/reset-password", "/reset-password"],
     ["/forgot-password", "/forgot-password"],
