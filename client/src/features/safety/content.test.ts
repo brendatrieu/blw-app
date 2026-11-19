@@ -385,6 +385,13 @@ describe("dark guide screenshots", () => {
       "serve-3-stars": [780, 840],
       "serve-4-notes": [780, 470],
       "recipe-5-saved": [780, 1416],
+      // Ledger 999/1000/1001: retaken at their earlier sizes (the clear ×,
+      // the day markers; plan-1-day's top moved below the How-to underline).
+      "meal-1-foods": [780, 558],
+      "recipe-2-ingredients": [780, 446],
+      "storage-1-what": [780, 450],
+      "plan-1-day": [780, 1006],
+      "plan-3-copy": [780, 1382],
     };
     for (const [name, dims] of Object.entries(expected)) {
       for (const file of [`${name}.webp`, `${name}-dark.webp`]) {
