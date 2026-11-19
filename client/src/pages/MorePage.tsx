@@ -37,7 +37,7 @@ const moreLinks: MoreRow[] = [
   {
     to: "/guides",
     label: "How-To Guides",
-    description: "Step by step: foods, recipes, meals, and storage.",
+    description: "Step by step: foods, recipes, meals, storage, and planning.",
     emoji: "📖",
   },
   // Ledger 904: the meal plan's other way in, besides the header's calendar

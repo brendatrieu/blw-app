@@ -64,6 +64,7 @@ const EXPECTED_GUIDES = [
   "how-to-log-a-meal",
   "how-to-add-to-storage",
   "how-to-serve-from-storage",
+  "how-to-plan-meals",
 ];
 
 const IMAGE_RE = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
@@ -129,8 +130,9 @@ describe("how-to guides (item 601)", () => {
     const meal = steps("how-to-log-a-meal");
     // Ledger 962 (owner-approved 2026-11-08): the one plate page, steps in page
     // order (stars before When). 964: "its own rating", not "its own stars".
+    // Ledger 992 (owner-approved 2026-11-18): the Add more custom-food row (961/984).
     expect(meal[0]).toContain(
-      "\n\nTap **+ Add more** and type to search, or look under **In storage**, **Recipes**, and **Foods**. Tick everything your baby had, then tap **Done**. Left something out of a recipe? Tap **Ingredients** under it and untick that food.\n\n",
+      "\n\nTap **+ Add more** and type to search, or look under **In storage**, **Recipes**, and **Foods**. Tick everything your baby had, then tap **Done**. Left something out of a recipe? Tap **Ingredients** under it and untick that food. Not in the list? Tap **Add '…' as a custom food** under the results, with what you typed. Once you save it, it comes back ticked.\n\n",
     );
     expect(meal[0]).toContain(
       '![Add more with "avo" typed in the search and Foods picked, and Avocado ticked.](/guides/meal-1-foods.webp)',
@@ -184,6 +186,32 @@ describe("how-to guides (item 601)", () => {
     expect(serve).toHaveLength(5);
   });
 
+  // Ledger 992 (owner-approved 2026-11-18, review doc rev 4465): the planner guide, word for word.
+  it("plan-meals reads exactly as approved", () => {
+    const guide = getGuide("how-to-plan-meals");
+    expect(guide?.title).toBe("How to plan meals");
+    expect(guide?.summary).toBe("Plan meals for the days ahead, if you like, then serve them from the plan.");
+    const [intro = "", ...steps] = (guide?.body ?? "").split(/^## /m);
+    expect(intro.trim()).toBe(
+      "Planning is optional. Plan one meal, a whole week, or nothing, and log meals as usual whenever you like. A plan never logs itself: a meal counts once you serve it.",
+    );
+    const text = steps.map((step) => step.replace(/\n\n!\[[^\]]*\]\([^)]*\)\s*$/, ""));
+    expect(text).toEqual([
+      "1. Pick a day\n\nTap a day in the week strip. The arrows change the week, and **Today** jumps back. A dot under a day means something is planned.",
+      "2. Plan a meal\n\nEach day starts with your daily meals. Tap one to plan it, or tap **+ Add a meal** for another. Tap **+ Add more** to fill the plate, add a time if you like, then tap **Save**. If a container may not keep until that day, a note says so. It's only a heads-up; you can still save.",
+      "3. Copy it to other days (optional)\n\nTap **Save & copy to…** instead of **Save**, or pick **Copy to…** from a planned meal's ⋮ menu. Tap the days you want. Each day picks its meal with the same name, and you can change that under **Meals**. If one already has something planned, choose **Keep it** or **Replace it**. Then tap **Copy**.",
+      "4. Serve it\n\nWhen a planned meal's day comes, it shows **Serve**. Today, one tap logs it just as planned, and Home's **Up next** has the same **Serve**. For an earlier day, or if something ran out, **Serve** opens the meal so you can check it first. Once served, rate each item or tap **Add more**.",
+      "5. Set your daily meals (optional)\n\nTap **Daily meals** at the top to choose the meals every new day starts with. Rename them, tap **+ Add a meal**, drag to reorder, and add times if you like, then tap **Save**. Days you've already planned keep their meals.",
+    ]);
+    expect([...(guide?.body ?? "").matchAll(IMAGE_RE)].map((m) => m[2])).toEqual([
+      "/guides/plan-1-day.webp",
+      "/guides/plan-2-meal.webp",
+      "/guides/plan-3-copy.webp",
+      "/guides/plan-4-serve.webp",
+      "/guides/plan-5-daily.webp",
+    ]);
+  });
+
   // Item 735 audit: every step whose action can be skipped says "(optional)".
   // The rest are required by their forms (or, like allergens, must be asked).
   it("marks exactly the skippable steps (optional)", () => {
@@ -199,6 +227,8 @@ describe("how-to guides (item 601)", () => {
       "how-to-serve-from-storage: Serve more than one item (optional)",
       "how-to-serve-from-storage: Rate it with stars (optional)",
       "how-to-serve-from-storage: Add a reaction or a note (optional)",
+      "how-to-plan-meals: Copy it to other days (optional)",
+      "how-to-plan-meals: Set your daily meals (optional)",
     ]);
   });
 
@@ -212,6 +242,7 @@ describe("how-to guides (item 601)", () => {
       "Add what your baby had",
       "Choose what you're storing",
       "Set the servings and time",
+      "Pick a day",
     ]);
     for (const guide of guideArticles) {
       expect(guide.body, guide.slug).not.toMatch(/On \*\*Home\*\*|in the bottom bar/);

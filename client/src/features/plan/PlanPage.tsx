@@ -12,6 +12,7 @@ import { copiedLabel } from "./copy.js";
 import { CopySheet } from "./CopySheet.js";
 import { useOneTapServe, usePlan } from "./hooks.js";
 import { PlanMealCard } from "./PlanMealCard.js";
+import { HowToLink } from "../safety/HowToLink.js";
 import {
   NEW_PLANNED_MEAL,
   PLAN_COPY_PARAM,
@@ -144,6 +145,7 @@ export function PlanPage() {
           </Link>
         }
       />
+      <HowToLink slug="how-to-plan-meals" />
 
       {babyLoading && <Skeleton className="h-40 w-full rounded-[var(--radius-lg)]" />}
 

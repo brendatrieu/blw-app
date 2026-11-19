@@ -176,7 +176,7 @@ describe("MorePage (item 274)", () => {
     const guides = rows.filter((row) => row.includes("How-To Guides"));
     expect(guides).toHaveLength(1);
     expect(guides[0]).toContain('href="/guides"');
-    expect(guides[0]).toContain("Step by step: foods, recipes, meals, and storage.");
+    expect(guides[0]).toContain("Step by step: foods, recipes, meals, storage, and planning.");
   });
 
   it("changes nothing else on the page — same entries, same destinations", () => {
