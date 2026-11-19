@@ -2,7 +2,7 @@ import type { RecipeSeed } from './types'
 
 // Batch A of the recipe-coverage set (ledger items 338-339). Twenty curated recipes written to
 // the design in .workflow/scratch/recipe-coverage/design.md, which chose the ingredient slugs so
-// that every catalog food reaches the owner's minimum (>= 3 recipes per food, >= 2 per spice).
+// that every catalog food reaches the owner's minimum (>= 3 recipes per food; spices had >= 2, no floor since ledger 998).
 // The slugs in `ingredients` are load-bearing for that proof — do not drop or swap one without
 // re-running coverage-proof.mts.
 //

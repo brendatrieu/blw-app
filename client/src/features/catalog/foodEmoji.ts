@@ -2,7 +2,7 @@ import type { FoodCategory } from "@blw/shared";
 
 /**
  * Explicit emoji per seed food slug — one entry for every food in
- * `server/db/seeds/data/foods.ts` (92 as of writing, pinned slug-by-slug in
+ * `server/db/seeds/data/foods.ts` (98 as of writing, pinned slug-by-slug in
  * `foodEmoji.test.ts` so a seed addition cannot quietly fall through to the
  * category fallback). Kept as a plain
  * record rather than derived from the food's name/category so each choice
@@ -119,6 +119,12 @@ export const FOOD_EMOJI: Record<string, string> = {
   basil: "🌿",
   cilantro: "🌿",
   dill: "🌿",
+  parsley: "🌿",
+  mint: "🌿",
+  chives: "🌿",
+  thyme: "🌿",
+  rosemary: "🌿",
+  sage: "🌿",
 
   // Ingredient foods (ledger 838)
   milk: "🥛",
@@ -291,6 +297,12 @@ const TINT_SLUGS: Record<Exclude<PlateTint, "neutral">, readonly string[]> = {
     "basil",
     "cilantro",
     "dill",
+    "parsley",
+    "mint",
+    "chives",
+    "thyme",
+    "rosemary",
+    "sage",
   ],
   fruit: [
     "strawberry",

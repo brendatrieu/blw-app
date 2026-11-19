@@ -758,8 +758,8 @@ const curatedRecipes: RecipeSeed[] = [
 //
 // The coverage block exists to satisfy the owner's rule, pinned by the guard in
 // server/src/test/recipe-coverage.test.ts: every non-spice catalog food is an
-// ingredient of at least 3 seeded recipes (its "Simple <food>" basic counts as one)
-// and every spice of at least 2. Most foods sit exactly ON that minimum, so dropping
+// ingredient of at least 3 seeded recipes (its "Simple <food>" basic counts as one);
+// spices & herbs have no floor (ledger 998). Most foods sit exactly ON that minimum, so dropping
 // an ingredient link from any recipe in these files breaks the guard.
 export const recipes: RecipeSeed[] = [
   ...curatedRecipes,

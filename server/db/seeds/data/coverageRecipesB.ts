@@ -1,7 +1,7 @@
 import type { RecipeSeed } from './types'
 
 // Recipe-coverage batch B (ledger item 339). Nineteen of the thirty-nine curated recipes that
-// bring every catalog food up to the owner's minimum — three recipes per food, two per spice,
+// bring every catalog food up to the owner's minimum — three recipes per food (two per spice then; no spice floor since ledger 998),
 // counted over recipe_ingredients links. Design and coverage proof:
 // .workflow/scratch/recipe-coverage/design.md
 //

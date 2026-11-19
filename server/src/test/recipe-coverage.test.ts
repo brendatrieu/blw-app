@@ -24,9 +24,10 @@ async function loadRunSeeds(): Promise<(db: Database) => Promise<void>> {
  * Ledger item 337 — the owner's coverage rule, made permanent.
  *
  * Every catalog food that is not a spice has to be an ingredient of at least
- * THREE seeded recipes, and every spice of at least TWO. The food's own
- * "Simple <food>" basic counts as one of the three; spices have no basic
- * (item 331), which is why their floor is lower. Lemon has no basic either
+ * THREE seeded recipes. The food's own "Simple <food>" basic counts as one of
+ * the three; spices have no basic (item 331). Spices & herbs have no floor
+ * (ledger 998, owner: a herb is seasoning, recipes not required); existing
+ * spice links stay. Lemon has no basic either
  * (item 484) but keeps the fruit floor, so all three of its uses are composite.
  * Onion has no basic either (item 728, owner's call: no "Simple onion") and
  * keeps the floor the same way, through its three composite recipes.
@@ -50,7 +51,6 @@ async function loadRunSeeds(): Promise<(db: Database) => Promise<void>> {
  * numbers below.
  */
 const NON_SPICE_MINIMUM = 3;
-const SPICE_MINIMUM = 2;
 
 describe("recipe coverage per catalog food", () => {
   let close: () => Promise<void>;
@@ -110,12 +110,12 @@ describe("recipe coverage per catalog food", () => {
     return foodRows.map((food) => ({
       slug: food.slug,
       category: food.category,
-      minimum: food.kind !== "food" ? 0 : food.category === "spice" ? SPICE_MINIMUM : NON_SPICE_MINIMUM,
+      minimum: food.kind !== "food" || food.category === "spice" ? 0 : NON_SPICE_MINIMUM,
       recipeCount: recipeIdsByFoodId.get(food.id)?.size ?? 0,
     }));
   }
 
-  it("puts every non-spice food in at least 3 recipes and every spice in at least 2", async () => {
+  it("puts every non-spice food in at least 3 recipes; spices and herbs have no floor", async () => {
     const rows = await recipesPerFood();
 
     // Guard the guard: a seeder that wrote no foods, or a join that matched

@@ -74,14 +74,14 @@ const CATALOG_SLUGS = [
   "pumpkin_seeds", "sunflower_seed_butter", "cashew_butter", "walnuts", "pistachios", "hazelnuts", "pecans",
   "almonds", "cashews",
   "cinnamon", "cumin", "turmeric", "paprika", "curry_powder", "black_pepper", "oregano", "garlic", "ginger",
-  "basil", "cilantro", "dill",
+  "basil", "cilantro", "dill", "parsley", "mint", "chives", "thyme", "rosemary", "sage",
   // Ledger 838's ingredient foods.
   "milk", "brown_rice", "wheat_flour", "unsalted_butter", "sesame_oil",
 ];
 
 describe("emoji coverage for the seeded catalog", () => {
-  it("has an explicit emoji for all 92 catalog slugs", () => {
-    expect(CATALOG_SLUGS).toHaveLength(92);
+  it("has an explicit emoji for all 98 catalog slugs", () => {
+    expect(CATALOG_SLUGS).toHaveLength(98);
     expect(new Set(CATALOG_SLUGS).size).toBe(CATALOG_SLUGS.length);
 
     // The only fallback is the generic plate — so a slug that resolves to
@@ -226,6 +226,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "chicken": "protein",
         "chicken_thigh": "protein",
         "chickpeas": "legume",
+        "chives": "veg",
         "cilantro": "veg",
         "cinnamon": "grain",
         "cod": "protein",
@@ -250,11 +251,13 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "lentils": "legume",
         "mango": "fruit",
         "milk": "dairy",
+        "mint": "veg",
         "oats": "grain",
         "onion": "veg",
         "orange": "fruit",
         "oregano": "veg",
         "paprika": "grain",
+        "parsley": "veg",
         "peanut_butter": "legume",
         "pear": "fruit",
         "peas": "veg",
@@ -267,6 +270,8 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "pumpkin_seeds": "legume",
         "quinoa": "grain",
         "rice": "grain",
+        "rosemary": "veg",
+        "sage": "veg",
         "salmon": "protein",
         "sardines": "protein",
         "sesame_oil": "legume",
@@ -277,6 +282,7 @@ describe("plate pins the verifier asked for (items 657, 658)", () => {
         "sunflower_seed_butter": "legume",
         "sweet_potato": "veg",
         "tahini": "legume",
+        "thyme": "veg",
         "tofu": "legume",
         "tomato": "veg",
         "trout": "protein",

@@ -23,8 +23,8 @@ async function loadRunSeeds(): Promise<(db: Database) => Promise<void>> {
 }
 
 /** Catalog size after the spices batch (329-332), the plain nuts (item 342), cauliflower (item 508), onion (item 728)
- * the five ingredient foods (ledger 838), the five fall/winter foods (835) and the five beans (841). */
-const CATALOG_FOOD_COUNT = 92;
+ * the five ingredient foods (ledger 838), the five fall/winter foods (835), the five beans (841) and the six herbs (998). */
+const CATALOG_FOOD_COUNT = 98;
 
 /**
  * Ledger 838: every catalog food that is not plain `food`, with its kind, and
@@ -43,7 +43,7 @@ const NON_FOOD_KINDS: Record<string, "ingredient" | "info"> = {
 const NON_COUNTING_TAGS = ["milk/milk", "sesame_oil/sesame", "unsalted_butter/milk"];
 const COUNTS_WHEN_ALONE_TAGS = ["milk/milk"];
 
-/** The 12 spice/herb rows, in seed order. */
+/** The 18 spice/herb rows, in seed order. */
 const SPICE_SLUGS = [
   "cinnamon",
   "cumin",
@@ -57,6 +57,12 @@ const SPICE_SLUGS = [
   "basil",
   "cilantro",
   "dill",
+  "parsley",
+  "mint",
+  "chives",
+  "thyme",
+  "rosemary",
+  "sage",
 ];
 
 /** Every catalog food that carries each allergen, after the expansion. */
@@ -367,7 +373,7 @@ describe("seeded catalog after the spices expansion", () => {
     await close();
   });
 
-  it("seeds exactly 92 catalog foods, 12 of them spices", async () => {
+  it("seeds exactly 98 catalog foods, 18 of them spices", async () => {
     const rows = await db
       .select({ slug: schema.foods.slug, category: schema.foods.category })
       .from(schema.foods)

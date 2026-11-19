@@ -1,6 +1,6 @@
 import type { FoodSeed } from './types'
 
-// ~92 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
+// ~98 starter foods spanning iron anchors, vitamin-C pairing foods, allergen vehicles, and
 // staples. minAgeMonths is 6 for nearly everything (BLW typically starts around 6 months when
 // baby shows readiness signs); shellfish is held to 9 months per the allergen ladder ordering.
 // Prep guidance is age-specific: 6-8m favors palmar-grasp finger shapes and thinned textures,
@@ -1857,6 +1857,126 @@ export const foods: FoodSeed[] = [
       'Use finely snipped fresh dill in family food, keeping the tough stalks out.',
     chokingNotes: 'Dill stalks are tough and stringy — use only the soft fronds, snipped small.',
     notes: 'Mild and grassy, and a natural partner for the fish and yogurt already in this catalog.',
+    allergens: [],
+    storageCategory: 'produce_raw_cut',
+  },
+  {
+    slug: 'parsley',
+    name: 'Parsley',
+    category: 'spice',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'low',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Chop fresh parsley leaves very finely and stir a small amount through a warm mash, lentils, egg, or a soft meatball mix.',
+    prep9m:
+      'Stir very finely chopped parsley into rice, pasta, scrambled egg, soft vegetables, or fish.',
+    prep12m:
+      'Use finely chopped parsley in family food; dried parsley, rubbed fine between your fingers, works too.',
+    chokingNotes: 'Whole leaves are thin and can stick to the roof of the mouth or the back of the throat, and the stalks are stringy — chop the leaves finely and stir them in rather than serving sprigs.',
+    notes: 'Fresh and mild, and the easiest herb to start with. Flat-leaf has more flavor than curly; both work.',
+    allergens: [],
+    storageCategory: 'produce_raw_cut',
+  },
+  {
+    slug: 'mint',
+    name: 'Mint',
+    category: 'spice',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'low',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Chop fresh mint leaves very finely and stir a small amount through yogurt, mashed peas, or a soft lamb or bean mash.',
+    prep9m:
+      'Stir very finely chopped mint into yogurt, peas, couscous, soft fruit, or a meatball mix.',
+    prep12m:
+      'Use finely chopped mint in family food; whole leaves stay off the menu until chewing is confident.',
+    chokingNotes: 'A whole mint leaf is thin and can cling to the back of the throat — chop it finely, stir it in, and leave the stems out.',
+    notes: 'Cool and fresh, and a natural partner for peas, yogurt, and lamb. The leaf is food; peppermint oil and menthol rubs are not for babies.',
+    allergens: [],
+    storageCategory: 'produce_raw_cut',
+  },
+  {
+    slug: 'chives',
+    name: 'Chives',
+    category: 'spice',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'low',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Snip chives very finely with scissors and stir a small amount through scrambled egg, a warm mash, or yogurt.',
+    prep9m:
+      'Stir finely snipped chives into egg, potato, soft vegetables, or a yogurt dip.',
+    prep12m:
+      'Use finely snipped chives in family food — eggs, potatoes, noodles, dumplings.',
+    chokingNotes: 'Long pieces are stringy — snip them short and fine rather than serving whole stems, and pull any chive flowers apart before using them.',
+    notes: 'A gentle onion flavor with no cooking needed. Chives are in the onion and garlic family, so a baby who reacts to those may react to chives too.',
+    allergens: [],
+    storageCategory: 'produce_raw_cut',
+  },
+  {
+    slug: 'thyme',
+    name: 'Thyme',
+    category: 'spice',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'low',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Strip fresh leaves off the woody stems and chop them finely, or rub a pinch of dried thyme fine between your fingers, and cook it into vegetables, lentils, a tomato sauce, or ground meat.',
+    prep9m:
+      'Add a pinch of finely chopped fresh or finely rubbed dried thyme to soups, stews, roasted vegetables, or a meatball mix.',
+    prep12m:
+      'Use thyme as you would in family cooking, whole fresh leaves included; if you cook with whole sprigs, lift them out before serving.',
+    chokingNotes: 'The stems are woody and twig-like — strip the leaves off and never serve a sprig.',
+    notes: 'Gentle and savory, and an easy way to make salt-free chicken, beans, or root vegetables taste finished. Cooking amounts only — thyme essential oil is not for babies.',
+    allergens: [],
+    storageCategory: 'produce_raw_cut',
+  },
+  {
+    slug: 'rosemary',
+    name: 'Rosemary',
+    category: 'spice',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'low',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Strip the needles off the stem and chop them very finely, then cook a small pinch into roasted vegetables, potatoes, beans, or meat.',
+    prep9m:
+      'Cook very finely chopped fresh rosemary, or ground dried rosemary, into roasted vegetables, stews, beans, or a meatball mix.',
+    prep12m:
+      'Use rosemary in family cooking, still chopped small; take out whole sprigs before the food reaches the tray.',
+    chokingNotes: 'Rosemary needles are tough and the stems are woody — chop the needles very finely and lift out every sprig before serving.',
+    notes: 'Strong and piney, so a little goes a long way. Cooking amounts only — rosemary essential oil, extracts, and teas are not for babies.',
+    allergens: [],
+    storageCategory: 'produce_raw_cut',
+  },
+  {
+    slug: 'sage',
+    name: 'Sage',
+    category: 'spice',
+    ironLevel: 'low',
+    vitaminCLevel: 'low',
+    fiberLevel: 'low',
+    chokingRisk: 'low',
+    minAgeMonths: 6,
+    prep6m:
+      'Chop fresh sage very finely, or use a pinch of rubbed dried sage, and cook it into squash, sweet potato, beans, or a meatball mix.',
+    prep9m:
+      'Cook a pinch of finely chopped or rubbed dried sage into squash, soups, stuffing, or ground meat.',
+    prep12m:
+      'Use sage in family cooking in seasoning amounts; whole leaves stay off the menu until chewing is confident.',
+    chokingNotes: 'Sage leaves are thick and fuzzy and can stick to the mouth — chop them finely and cook them in rather than serving a leaf.',
+    notes: 'Earthy and warm, and a classic with squash. Seasoning amounts only: sage tea, supplements, and essential oil are not for babies, because common sage contains thujone, which is harmful in large amounts.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },

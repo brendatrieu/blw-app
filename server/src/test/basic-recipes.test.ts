@@ -1431,7 +1431,7 @@ describe("catalog recipes: the single-food basics and the curated dishes", () =>
 
     // One curated recipe and one basic, pinned exactly.
     // Item 338: cumin left this list when it became a real `cumin` ingredient
-    // link, so the spice counts toward its own coverage minimum. Olive oil has
+    // link, so the spice shows under the ingredient filter. Olive oil has
     // no catalog food row, so it stays an extra.
     expect(bySlug.get("beef-sweet-potato-strips")).toEqual([{ name: "olive oil", quantityNote: "" }]);
     expect(bySlug.get("simple-egg")).toEqual([
