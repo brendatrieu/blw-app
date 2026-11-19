@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { ClearSearchButton } from "./SearchInput.js";
 
 export type MultiComboboxOption = {
   value: string;
@@ -939,6 +940,18 @@ export function MultiCombobox({
             onKeyDown={handleKeyDown}
             className="min-w-0 flex-1 border-none bg-transparent px-1 py-2 text-base text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] disabled:cursor-not-allowed"
           />
+          {/* Ledger 999: the shared Clear search ×, in the row so the text
+              stops before it. -my-px keeps the row 44px; mr-1 keeps the
+              chevron's padded box (-m-[10px]) off it. Clearing is an empty
+              query, like deleting the text. */}
+          {!disabled && (
+            <ClearSearchButton
+              value={query}
+              onClear={() => setUi((prev) => applyQuery(prev, ""))}
+              inputRef={inputRef}
+              className="-my-px mr-1"
+            />
+          )}
           {showCountBadge && (
             <span
               id={countBadgeId}

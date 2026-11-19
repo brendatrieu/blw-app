@@ -33,6 +33,7 @@ vi.mock("react", async (importOriginal) => {
 });
 
 import { MultiCombobox } from "./MultiCombobox.js";
+import { ClearSearchButton } from "./SearchInput.js";
 
 type MultiComboboxProps = Parameters<typeof MultiCombobox>[0];
 
@@ -112,5 +113,65 @@ describe("MultiCombobox chip remove buttons stay keyboard reachable (item 798)",
       expect(b).not.toContain("tabindex");
       expect(b).not.toMatch(/\sdisabled(=|\s|>)/);
     }
+  });
+});
+
+describe("MultiCombobox Clear search × (ledger 999)", () => {
+  function find(node: unknown, match: (el: El) => boolean): El | null {
+    if (!node || typeof node !== "object") return null;
+    if (Array.isArray(node)) {
+      for (const child of node) {
+        const hit = find(child, match);
+        if (hit) return hit;
+      }
+      return null;
+    }
+    const el = node as El;
+    if (match(el)) return el;
+    return find(el.props?.children, match);
+  }
+  const tree = (props: MultiComboboxProps) => {
+    h.store.s = 0;
+    return MultiCombobox(props);
+  };
+  const clearOf = (node: unknown) => {
+    const el = find(node, (candidate) => candidate.type === ClearSearchButton);
+    return el ? (ClearSearchButton(el.props as unknown as Parameters<typeof ClearSearchButton>[0]) as unknown as El | null) : null;
+  };
+
+  it("appears with text; a tap empties the query, keeps the listbox open and focus on the input; Escape still closes", () => {
+    const props: MultiComboboxProps = { options, value: [], onChange: vi.fn(), mode: "multi" };
+    expect(clearOf(tree(props))).toBeNull();
+    (findInput(tree(props))!.props.onChange as (e: unknown) => void)({ target: { value: "ba" } });
+
+    const typed = tree(props);
+    const clearEl = find(typed, (el) => el.type === ClearSearchButton)!;
+    const focus = vi.fn();
+    (clearEl.props.inputRef as { current: unknown }).current = { focus };
+    const button = clearOf(typed)!;
+    expect(button.props["aria-label"]).toBe("Clear search");
+    (button.props.onClick as () => void)();
+    expect(focus).toHaveBeenCalledOnce();
+
+    const after = tree(props);
+    const input = findInput(after)!;
+    expect(input.props.value).toBe("");
+    expect(clearOf(after)).toBeNull();
+    // The combobox semantics are untouched: still a combobox owning its
+    // listbox, open, all options back, nothing selected by the clear.
+    expect(input.props.role).toBe("combobox");
+    expect(input.props["aria-expanded"]).toBe(true);
+    expect(input.props["aria-controls"]).toBe("test-mc-id-listbox");
+    expect(find(after, (el) => el.props?.listboxId === "test-mc-id-listbox")!.props.options).toEqual(options);
+    expect(props.onChange).not.toHaveBeenCalled();
+    const escape = key(input, "Escape");
+    expect(escape.preventDefault).toHaveBeenCalledOnce();
+    expect(findInput(tree(props))!.props["aria-expanded"]).toBe(false);
+  });
+
+  it("is not offered on a disabled field", () => {
+    const props: MultiComboboxProps = { options, value: [], onChange: vi.fn(), disabled: true };
+    (findInput(tree(props))!.props.onChange as (e: unknown) => void)({ target: { value: "ba" } });
+    expect(find(tree(props), (el) => el.type === ClearSearchButton)).toBeNull();
   });
 });

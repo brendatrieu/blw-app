@@ -3,10 +3,12 @@ import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes } fro
 const CONTROL_BASE =
   "w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-3 py-2 text-base text-[var(--color-text)] outline-none transition-colors duration-[var(--duration-fast)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60";
 
-/** Single-line text input matching the app's control styling (44px min height). */
-export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={`min-h-11 ${CONTROL_BASE} ${className}`} {...props} />;
-}
+/** Single-line text input matching the app's control styling (44px min height).
+ * `forwardRef` for the same reason as `Textarea`: `SearchInput`'s clear
+ * button hands focus back to the real element (ledger 999). */
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className = "", ...props }, ref) {
+  return <input ref={ref} className={`min-h-11 ${CONTROL_BASE} ${className}`} {...props} />;
+});
 
 /**
  * Multi-line text input for longer free text (notes, chat composer).

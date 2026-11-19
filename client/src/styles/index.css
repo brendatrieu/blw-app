@@ -679,6 +679,13 @@ textarea {
   display: none;
 }
 
+/* One clear × per search field (ledger 999): the app's own "Clear search"
+   button (SearchInput, MultiCombobox), never WebKit's native one beside it. */
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 /* -------------------------------------------------------------------------
  * Focus visibility — everywhere, for free. One rule instead of a className
  * on every interactive element across the app. Being unlayered, it also

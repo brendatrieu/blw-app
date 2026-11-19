@@ -86,7 +86,7 @@ import { ADD_MORE_SEARCH_TABS, ADD_MORE_TABS, AddMoreSheet, RECENT_LIMIT, addMor
 import type { AddMoreIds } from "../addMoreSelection.js";
 import { Button } from "../../../components/ui/Button.js";
 import { CustomFoodSheet } from "../../catalog/components/FoodPicker.js";
-import { Input } from "../../../components/ui/Input.js";
+import { SearchInput } from "../../../components/ui/SearchInput.js";
 import { SegmentedControl } from "../../../components/ui/SegmentedControl.js";
 
 const BASE: StorageItem = {
@@ -186,7 +186,7 @@ const tick = (title: string, checked = true) => {
   (row.props.onToggle as (checked: boolean) => void)(checked);
 };
 const goTo = (tab: string) => (one(render(), SegmentedControl).props.onChange as (value: string) => void)(tab);
-const type = (text: string) => (one(render(), Input).props.onChange as (event: unknown) => void)({ target: { value: text } });
+const type = (text: string) => (one(render(), SearchInput).props.onChange as (event: unknown) => void)({ target: { value: text } });
 /** The scrolling list's key: a new one remounts it, back at the top. */
 const listKey = (tree: El) =>
   (findAll(tree, (element) => String(element.props?.className ?? "").includes("overflow-y-auto"))[0] as unknown as { key: string }).key;
@@ -246,8 +246,7 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     expect(ADD_MORE_TABS.map((tab) => tab.label)).toEqual(["In storage", "Recipes", "Foods"]);
     expect(one(tree, SegmentedControl).props.value).toBe("storage");
     expect(one(tree, SegmentedControl).props["aria-label"]).toBe("Add more");
-    const search = one(tree, Input);
-    expect(search.props.type).toBe("search");
+    const search = one(tree, SearchInput);
     expect(search.props.placeholder).toBe("Search storage, recipes, foods…");
     expect(h.mealsBaby).toBe("baby-1");
     // The search box, the tabs and the Add footer never shrink; only the
@@ -356,7 +355,7 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     }
     goTo("all");
     expect(titles(render())).toEqual(["Salmon Oat Cakes", "Apple Oatmeal", "Oat Pancakes", "Oats"]);
-    expect(one(render(), Input).props.value).toBe("oat");
+    expect(one(render(), SearchInput).props.value).toBe("oat");
   });
 
   it("a kind tapped while searching narrows to it and keeps the text; All goes back to grouped (ledger 794)", () => {
@@ -370,7 +369,7 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     for (const [kind, shown, heading] of kinds) {
       goTo(kind);
       const tree = render();
-      expect(one(tree, Input).props.value).toBe("oat");
+      expect(one(tree, SearchInput).props.value).toBe("oat");
       expect(tabRow(tree).value).toBe(kind);
       expect(titles(tree)).toEqual(shown);
       const out = html(tree);
@@ -389,7 +388,7 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     goTo("all");
     expect(tabRow(render()).value).toBe("all");
     expect(titles(render())).toEqual(["Salmon Oat Cakes"]);
-    expect(one(render(), Input).props.value).toBe("salmon");
+    expect(one(render(), SearchInput).props.value).toBe("salmon");
   });
 
   it("a narrowed search that misses here but hits another kind says which kind, and Search all widens keeping the text (ledger 921)", () => {
@@ -424,11 +423,11 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
       }
       tree = render();
       expect(focused).toEqual(["add-more-all"]);
-      expect(focused).not.toContain(one(tree, Input).props.id);
+      expect(focused).not.toContain(one(tree, SearchInput).props.id);
       expect(tabRow(tree).value).toBe("all");
       expect((one(tree, SegmentedControl).props.options as Array<{ value: string; id?: string }>)[0]).toMatchObject({ value: "all", id: "add-more-all" });
       expect(html(tree)).toMatch(/<button id="add-more-all" type="button" role="radio" aria-checked="true"[^>]*>All<\/button>/);
-      expect(one(tree, Input).props.value).toBe(text);
+      expect(one(tree, SearchInput).props.value).toBe(text);
       expect(titles(tree).length).toBeGreaterThan(0);
       expect(searchAll(tree)).toEqual([]);
     }
@@ -462,6 +461,18 @@ describe("AddMoreSheet (MR2 boards, ledger 789)", () => {
     tree = render();
     expect(tabRow(tree).value).toBe("food");
     expect(titles(tree)).toEqual(["Pear"]);
+  });
+
+  it("the search's Clear search × does the same: the three tabs come back on the one open before (ledger 999)", () => {
+    reset([BASE, SALMON, PEAR_FOODS]);
+    goTo("food");
+    type("o");
+    goTo("recipe");
+    (one(render(), SearchInput).props.onClear as () => void)();
+    const tree = render();
+    expect(one(tree, SearchInput).props.value).toBe("");
+    expect(tabRow(tree)).toEqual({ labels: ["In storage", "Recipes", "Foods"], value: "food" });
+    expect(titles(tree)).toEqual(["Banana", "Oats", "Pear", "Whole Milk"]);
   });
 
   it("keeps picks across tabs and searches, and adds them all at once, in the order picked", () => {
@@ -796,7 +807,7 @@ describe("AddMoreSheet's custom-food shortcut (ledger 961)", () => {
     expect(sheet(tree).props).toMatchObject({ name: "papaya", idPrefix: "add-more-custom", recipeLink: false });
     // It is a child of the Add more sheet (it portals over it), and Add more stays as it was.
     expect(findAll(tree.props.children, (element) => element.type === CustomFoodSheet)).toHaveLength(1);
-    expect(one(tree, Input).props.value).toBe("papaya ");
+    expect(one(tree, SearchInput).props.value).toBe("papaya ");
     (sheet(tree).props.onClose as () => void)();
     tree = render();
     expect(sheet(tree).props.name).toBeNull();

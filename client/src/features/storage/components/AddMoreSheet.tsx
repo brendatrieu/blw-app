@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { FoodListItem, MealItem, RecipeListItem, StorageItem } from "@blw/shared";
 import { Button } from "../../../components/ui/Button.js";
-import { Input } from "../../../components/ui/Input.js";
+import { SearchInput } from "../../../components/ui/SearchInput.js";
 import { SegmentedControl, type SegmentedControlOption } from "../../../components/ui/SegmentedControl.js";
 import { shouldShowCreateRow } from "../../../components/ui/MultiCombobox.js";
 import { Sheet } from "../../../components/ui/Sheet.js";
@@ -307,14 +307,16 @@ export function AddMoreSheet({ babyId, serving, requireContainer, onDone, onClos
 
   return (
     <Sheet open onClose={onClose} title="Add more" showClose fixedHeight>
-      <Input
+      <SearchInput
         id={SEARCH_ID}
-        type="search"
         value={query}
         onChange={(event) => {
           if (!q && event.target.value.trim()) setSearchTab(tabPicked ? tab : "all");
           setQuery(event.target.value);
         }}
+        // Ledger 999: an empty search, so the three tabs come back on the
+        // one open before it (the same rule as deleting the text).
+        onClear={() => setQuery("")}
         placeholder="Search storage, recipes, foods…"
         aria-label="Search storage, recipes, foods"
         className="shrink-0"

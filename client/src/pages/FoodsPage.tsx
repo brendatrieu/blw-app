@@ -29,7 +29,7 @@ import {
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { SkeletonList } from "../components/ui/Skeleton.js";
-import { Input } from "../components/ui/Input.js";
+import { SearchInput } from "../components/ui/SearchInput.js";
 import { Sheet } from "../components/ui/Sheet.js";
 import { Button, ButtonLink } from "../components/ui/Button.js";
 
@@ -314,10 +314,10 @@ export function FoodsPage() {
         className="sticky z-[5] -mx-4 flex flex-col gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-4 pt-1 pb-2"
         style={{ top: "var(--header-height)" }}
       >
-        <Input
-          type="search"
+        <SearchInput
           value={q}
           onChange={(e) => setQ(e.target.value)}
+          onClear={() => setQ("")}
           placeholder="Search foods…"
           aria-label="Search foods"
         />
