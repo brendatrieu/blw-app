@@ -1896,7 +1896,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Use finely chopped mint in family food; whole leaves stay off the menu until chewing is confident.',
     chokingNotes: 'A whole mint leaf is thin and can cling to the back of the throat — chop it finely, stir it in, and leave the stems out.',
-    notes: 'Cool and fresh, and a natural partner for peas, yogurt, and lamb. The leaf is food; peppermint oil and menthol rubs are not for babies.',
+    notes: 'Cool and fresh, and a natural partner for peas, yogurt, and lamb.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },
@@ -1936,7 +1936,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Use thyme as you would in family cooking, whole fresh leaves included; if you cook with whole sprigs, lift them out before serving.',
     chokingNotes: 'The stems are woody and twig-like — strip the leaves off and never serve a sprig.',
-    notes: 'Gentle and savory, and an easy way to make salt-free chicken, beans, or root vegetables taste finished. Cooking amounts only — thyme essential oil is not for babies.',
+    notes: 'Gentle and savory, and an easy way to make salt-free chicken, beans, or root vegetables taste finished.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },
@@ -1956,7 +1956,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Use rosemary in family cooking, still chopped small; take out whole sprigs before the food reaches the tray.',
     chokingNotes: 'Rosemary needles are tough and the stems are woody — chop the needles very finely and lift out every sprig before serving.',
-    notes: 'Strong and piney, so a little goes a long way. Cooking amounts only — rosemary essential oil, extracts, and teas are not for babies.',
+    notes: 'Strong and piney, so a little goes a long way.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },
@@ -1976,7 +1976,7 @@ export const foods: FoodSeed[] = [
     prep12m:
       'Use sage in family cooking in seasoning amounts; whole leaves stay off the menu until chewing is confident.',
     chokingNotes: 'Sage leaves are thick and fuzzy and can stick to the mouth — chop them finely and cook them in rather than serving a leaf.',
-    notes: 'Earthy and warm, and a classic with squash. Seasoning amounts only: sage tea, supplements, and essential oil are not for babies, because common sage contains thujone, which is harmful in large amounts.',
+    notes: 'Earthy and warm, and a classic with squash. Use it in seasoning amounts.',
     allergens: [],
     storageCategory: 'produce_raw_cut',
   },
