@@ -6,8 +6,8 @@ import {
 } from "./preferences.js";
 import { ACCOUNT_EXPORT_VERSION, accountExportSchema } from "./account.js";
 
-const seen = { tourCompletedAt: "2026-09-11T10:00:00.000Z", shareUsageData: true };
-const unseen = { tourCompletedAt: null, shareUsageData: false };
+const seen = { tourCompletedAt: "2026-09-11T10:00:00.000Z", shareUsageData: true, planOfferDismissedAt: "2026-11-18T09:00:00.000Z" };
+const unseen = { tourCompletedAt: null, shareUsageData: false, planOfferDismissedAt: null };
 
 describe("userPreferencesSchema", () => {
   it("accepts a stamped tour and an unseen one, each with a sharing choice", () => {
@@ -22,6 +22,10 @@ describe("userPreferencesSchema", () => {
     expect(userPreferencesSchema.safeParse({ ...seen, tourCompletedAt: "yesterday" }).success).toBe(false);
     expect(userPreferencesSchema.safeParse({ ...seen, tourCompletedAt: true }).success).toBe(false);
     expect(userPreferencesSchema.safeParse({ ...seen, shareUsageData: "yes" }).success).toBe(false);
+    // Ledger 995: the offer's "Not now" stamp is always present, null or a time.
+    expect(userPreferencesSchema.safeParse({ tourCompletedAt: null, shareUsageData: true }).success).toBe(false);
+    expect(userPreferencesSchema.safeParse({ ...seen, planOfferDismissedAt: "now" }).success).toBe(false);
+    expect(userPreferencesSchema.safeParse({ ...seen, planOfferDismissedAt: true }).success).toBe(false);
   });
 
   it("shares on by default — the events cannot carry anything about a child", () => {
@@ -52,6 +56,13 @@ describe("updatePreferencesInputSchema", () => {
     // A typo'd key would otherwise be a PATCH that reports success and
     // changes nothing.
     expect(updatePreferencesInputSchema.safeParse({ shareUsage: false }).success).toBe(false);
+  });
+
+  it("takes the planning offer's Not now on its own or beside the others, true only (ledger 995)", () => {
+    expect(updatePreferencesInputSchema.parse({ planOfferDismissed: true })).toEqual({ planOfferDismissed: true });
+    expect(updatePreferencesInputSchema.parse({ planOfferDismissed: true, tourCompleted: true })).toEqual({ planOfferDismissed: true, tourCompleted: true });
+    expect(updatePreferencesInputSchema.safeParse({ planOfferDismissed: false }).success).toBe(false);
+    expect(updatePreferencesInputSchema.safeParse({ planOfferDismissedAt: "2026-11-18T09:00:00.000Z" }).success).toBe(false);
   });
 });
 
@@ -95,7 +106,8 @@ describe("account export v16", () => {
   });
 
   it("bumped its version and carries usage events alongside the preferences", () => {
-    expect(ACCOUNT_EXPORT_VERSION).toBe(21);
+    // v22 (ledger 995): preferences carry planOfferDismissedAt.
+    expect(ACCOUNT_EXPORT_VERSION).toBe(22);
 
     const shape = accountExportSchema.shape;
     expect(shape.preferences.safeParse(null).success).toBe(true);
@@ -103,6 +115,8 @@ describe("account export v16", () => {
     // v10's shape is not a v11 preferences object: the sharing choice is part
     // of the bundle now, which is why the version moved.
     expect(shape.preferences.safeParse({ tourCompletedAt: null }).success).toBe(false);
+    // A v21 preferences object, without the offer's stamp, is not a v22 one.
+    expect(shape.preferences.safeParse({ tourCompletedAt: null, shareUsageData: true }).success).toBe(false);
     // Absent is not the same as null — the key is always present in a v11 file.
     expect(shape.preferences.safeParse(undefined).success).toBe(false);
 

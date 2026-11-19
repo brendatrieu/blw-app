@@ -31,6 +31,12 @@ export const userPreferencesSchema = z.object({
    * everything already collected for the account in the same transaction.
    */
   shareUsageData: z.boolean(),
+  /**
+   * Ledger 995: when the parent tapped "Not now" on Home's one-time planning
+   * offer (Up next, for an account that has never planned food). Null: not
+   * dismissed. Like `tourCompletedAt`, it only moves from null to a time.
+   */
+  planOfferDismissedAt: z.string().datetime().nullable(),
 });
 export type UserPreferences = z.infer<typeof userPreferencesSchema>;
 
@@ -63,10 +69,13 @@ export const updatePreferencesInputSchema = z
   .object({
     tourCompleted: z.literal(true).optional(),
     shareUsageData: z.boolean().optional(),
+    /** Ledger 995: "Not now" on the planning offer. `true` only, like
+     * `tourCompleted`: there is no un-dismiss. */
+    planOfferDismissed: z.literal(true).optional(),
   })
   .strict()
   .refine(
-    (value) => value.tourCompleted !== undefined || value.shareUsageData !== undefined,
+    (value) => value.tourCompleted !== undefined || value.shareUsageData !== undefined || value.planOfferDismissed !== undefined,
     { message: "at least one preference must be given" },
   );
 export type UpdatePreferencesInput = z.infer<typeof updatePreferencesInputSchema>;

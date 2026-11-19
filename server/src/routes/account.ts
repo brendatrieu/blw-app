@@ -518,6 +518,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
       .select({
         tourCompletedAt: userPreferences.tourCompletedAt,
         shareUsageData: userPreferences.shareUsageData,
+        planOfferDismissedAt: userPreferences.planOfferDismissedAt,
       })
       .from(userPreferences)
       .where(eq(userPreferences.userId, userId))
@@ -712,6 +713,7 @@ export function registerAccountRoutes(app: FastifyInstance, db: Database): void 
         ? {
             tourCompletedAt: isoOrNull(preferencesRow.tourCompletedAt),
             shareUsageData: preferencesRow.shareUsageData,
+            planOfferDismissedAt: isoOrNull(preferencesRow.planOfferDismissedAt),
           }
         : null,
       usageEvents: usageEventRows.map((row) => ({

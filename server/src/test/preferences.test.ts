@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import { userPreferencesSchema, type UserPreferences } from "@blw/shared";
+import { ACCOUNT_DELETE_CONFIRMATION, userPreferencesSchema, type UserPreferences } from "@blw/shared";
 import { createTestApp, signUpUser, usageEnvelope, type TestUser } from "./helpers.js";
 import type { Database } from "../db/index.js";
 import * as schema from "../db/schema.js";
@@ -43,6 +43,7 @@ describe("preferences API", () => {
       // Sharing is on unless the parent turns it off, and "no row" is the
       // same answer as "a row that has never been touched".
       shareUsageData: true,
+      planOfferDismissedAt: null,
     });
 
     // And it really is "no row", not a row quietly created by the read: a
@@ -110,6 +111,7 @@ describe("preferences API", () => {
     expect((await get(other.cookie)).json<UserPreferences>()).toEqual({
       tourCompletedAt: null,
       shareUsageData: true,
+      planOfferDismissedAt: null,
     });
 
     await patch(other.cookie);
@@ -230,6 +232,7 @@ describe("usage sharing", () => {
     expect(userPreferencesSchema.parse(response.json())).toEqual({
       tourCompletedAt: null,
       shareUsageData: false,
+      planOfferDismissedAt: null,
     });
     expect(await db.select().from(schema.usageEvents)).toHaveLength(0);
     expect((await get(user.cookie)).json<UserPreferences>().shareUsageData).toBe(false);
@@ -284,6 +287,92 @@ describe("usage sharing", () => {
     const [row] = await db.select().from(schema.userPreferences);
     expect(row?.tourCompletedAt).toBeNull();
     expect(row?.shareUsageData).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Ledger 995: Home's planning offer, "Not now"
+// ---------------------------------------------------------------------------
+describe("planning offer dismissal", () => {
+  let app: FastifyInstance;
+  let db: Database;
+  let close: () => Promise<void>;
+  let user: TestUser;
+
+  beforeEach(async () => {
+    ({ app, db, close } = await createTestApp());
+    user = await signUpUser(app);
+  });
+
+  afterEach(async () => {
+    await close();
+  });
+
+  const get = (cookie: string) => app.inject({ method: "GET", url: "/api/preferences", headers: { cookie } });
+  const patch = (cookie: string, payload: Record<string, unknown>) =>
+    app.inject({ method: "PATCH", url: "/api/preferences", headers: { cookie }, payload });
+
+  it("stamps Not now once, leaving the tour and sharing alone, and the stamp never moves", async () => {
+    await patch(user.cookie, { shareUsageData: false });
+    const before = Date.now();
+    const first = userPreferencesSchema.parse((await patch(user.cookie, { planOfferDismissed: true })).json());
+    expect(Date.parse(first.planOfferDismissedAt!)).toBeGreaterThanOrEqual(before - 1000);
+    expect(first.tourCompletedAt).toBeNull();
+    expect(first.shareUsageData).toBe(false);
+
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    const second = userPreferencesSchema.parse((await patch(user.cookie, { planOfferDismissed: true })).json());
+    expect(second.planOfferDismissedAt).toBe(first.planOfferDismissedAt);
+    expect((await get(user.cookie)).json<UserPreferences>()).toEqual(second);
+  });
+
+  it("creates the row from Not now alone", async () => {
+    const body = userPreferencesSchema.parse((await patch(user.cookie, { planOfferDismissed: true })).json());
+    expect(body.planOfferDismissedAt).not.toBeNull();
+    expect(body.tourCompletedAt).toBeNull();
+    expect(body.shareUsageData).toBe(true);
+    expect(await db.select().from(schema.userPreferences)).toHaveLength(1);
+  });
+
+  it("an older client's PATCH (no offer key) keeps working and never dismisses the offer", async () => {
+    const tour = userPreferencesSchema.parse((await patch(user.cookie, { tourCompleted: true })).json());
+    expect(tour.tourCompletedAt).not.toBeNull();
+    expect(tour.planOfferDismissedAt).toBeNull();
+    const share = userPreferencesSchema.parse((await patch(user.cookie, { shareUsageData: false })).json());
+    expect(share.planOfferDismissedAt).toBeNull();
+    // And the tour or the Privacy switch never blanks a stamped Not now.
+    const dismissed = userPreferencesSchema.parse((await patch(user.cookie, { planOfferDismissed: true })).json());
+    const after = userPreferencesSchema.parse((await patch(user.cookie, { shareUsageData: true, tourCompleted: true })).json());
+    expect(after.planOfferDismissedAt).toBe(dismissed.planOfferDismissedAt);
+  });
+
+  it("rejects an un-dismiss, a client-chosen time, or a wrong type", async () => {
+    for (const payload of [
+      { planOfferDismissed: false },
+      { planOfferDismissed: "true" },
+      { planOfferDismissedAt: "2026-11-18T09:00:00.000Z" },
+    ]) {
+      const response = await patch(user.cookie, payload);
+      expect(response.statusCode).toBe(400);
+      expect(response.json<{ error: string }>().error).toBe("invalid_request");
+    }
+    expect(await db.select().from(schema.userPreferences)).toHaveLength(0);
+  });
+
+  it("keeps one account's Not now out of another's, and goes away with the account", async () => {
+    const other = await signUpUser(app, "Other Parent");
+    await patch(user.cookie, { planOfferDismissed: true });
+    expect((await get(other.cookie)).json<UserPreferences>().planOfferDismissedAt).toBeNull();
+
+    // The account delete itself (password-confirmed), not a raw row delete.
+    const deleted = await app.inject({
+      method: "DELETE",
+      url: "/api/account",
+      headers: { cookie: user.cookie },
+      payload: { confirm: ACCOUNT_DELETE_CONFIRMATION, password: user.password },
+    });
+    expect(deleted.statusCode).toBe(204);
+    expect(await db.select().from(schema.userPreferences)).toHaveLength(0);
   });
 });
 

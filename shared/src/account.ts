@@ -20,7 +20,7 @@ import { userPreferencesSchema } from "./preferences.js";
  * Bumped whenever the bundle's shape changes incompatibly, so a file
  * exported today is still identifiable years later.
  */
-export const ACCOUNT_EXPORT_VERSION = 21;
+export const ACCOUNT_EXPORT_VERSION = 22;
 
 /** `blw-export-2026-08-24.json` — date only, matching the attachment name. */
 export function accountExportFilename(date: Date = new Date()): string {
@@ -359,6 +359,7 @@ export const accountExportSchema = z.object({
    * "seen" timestamp. Null when the account has never written one: the row
    * is created lazily, and "no row" is a real, distinguishable state rather
    * than a defaulted object pretending to be one. */
+  /** v22 (ledger 995): also `planOfferDismissedAt`, the planning offer's "Not now". */
   preferences: userPreferencesSchema.nullable(),
   /** v11. Anonymous usage events, oldest first. Empty for an account that has
    * sharing switched off — turning it off deletes them. */

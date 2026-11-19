@@ -791,6 +791,10 @@ export const userPreferences = pgTable("user_preferences", {
   // give the consent check two paths to get wrong. Turning this off deletes
   // every `usage_events` row for the account in the same transaction.
   shareUsageData: boolean("share_usage_data").notNull().default(true),
+  // Ledger 995 (migration 0027): when the parent tapped "Not now" on Home's
+  // one-time planning offer. Null: not dismissed. Like the tour stamp it only
+  // moves from null to a timestamp.
+  planOfferDismissedAt: timestamp("plan_offer_dismissed_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

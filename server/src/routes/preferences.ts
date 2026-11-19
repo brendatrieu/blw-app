@@ -9,6 +9,8 @@
 //     PATCH is a no-op on the value, so replaying the tour (or a retried
 //     request, or two tabs finishing at once) never rewrites the date the
 //     parent actually first saw it;
+//     `plan_offer_dismissed_at` (ledger 995, Home's planning offer "Not now")
+//     works the same way;
 //   * PATCH is a PARTIAL update. Only the keys in the body are written, so
 //     the Privacy switch can never blank the tour stamp and finishing the
 //     tour can never turn sharing back on for somebody who switched it off;
@@ -44,6 +46,7 @@ export function registerPreferenceRoutes(app: FastifyInstance, db: Database): vo
       .select({
         tourCompletedAt: userPreferences.tourCompletedAt,
         shareUsageData: userPreferences.shareUsageData,
+        planOfferDismissedAt: userPreferences.planOfferDismissedAt,
       })
       .from(userPreferences)
       .where(eq(userPreferences.userId, currentUserId(request)))
@@ -57,6 +60,7 @@ export function registerPreferenceRoutes(app: FastifyInstance, db: Database): vo
     return {
       tourCompletedAt: row?.tourCompletedAt?.toISOString() ?? null,
       shareUsageData: row?.shareUsageData ?? DEFAULT_SHARE_USAGE_DATA,
+      planOfferDismissedAt: row?.planOfferDismissedAt?.toISOString() ?? null,
     };
   });
 
@@ -70,7 +74,7 @@ export function registerPreferenceRoutes(app: FastifyInstance, db: Database): vo
     }
 
     const userId = currentUserId(request);
-    const { tourCompleted, shareUsageData } = parsed.data;
+    const { tourCompleted, shareUsageData, planOfferDismissed } = parsed.data;
     const now = new Date();
 
     // Only the keys that were actually sent end up in `set`, which is what
@@ -85,6 +89,9 @@ export function registerPreferenceRoutes(app: FastifyInstance, db: Database): vo
     if (shareUsageData !== undefined) {
       set.shareUsageData = shareUsageData;
     }
+    if (planOfferDismissed !== undefined) {
+      set.planOfferDismissedAt = sql`coalesce(${userPreferences.planOfferDismissedAt}, excluded."plan_offer_dismissed_at")`;
+    }
 
     const row = await db.transaction(async (tx) => {
       // Upsert in one statement so there is no read-then-write window for two
@@ -95,6 +102,7 @@ export function registerPreferenceRoutes(app: FastifyInstance, db: Database): vo
           userId,
           tourCompletedAt: tourCompleted ? now : null,
           shareUsageData: shareUsageData ?? DEFAULT_SHARE_USAGE_DATA,
+          planOfferDismissedAt: planOfferDismissed ? now : null,
           updatedAt: now,
         })
         .onConflictDoUpdate({ target: userPreferences.userId, set })
@@ -115,6 +123,7 @@ export function registerPreferenceRoutes(app: FastifyInstance, db: Database): vo
     const body: UserPreferences = {
       tourCompletedAt: row?.tourCompletedAt?.toISOString() ?? (tourCompleted ? now.toISOString() : null),
       shareUsageData: row?.shareUsageData ?? shareUsageData ?? DEFAULT_SHARE_USAGE_DATA,
+      planOfferDismissedAt: row?.planOfferDismissedAt?.toISOString() ?? (planOfferDismissed ? now.toISOString() : null),
     };
     return reply.code(200).send(body);
   });

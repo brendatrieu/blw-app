@@ -270,7 +270,7 @@ async function seedOneOfEverything(
   // v10: this account has already seen the first-run tour.
   await db
     .insert(schema.userPreferences)
-    .values({ userId, tourCompletedAt: new Date("2026-03-02T08:00:00Z") });
+    .values({ userId, tourCompletedAt: new Date("2026-03-02T08:00:00Z"), planOfferDismissedAt: new Date("2026-03-04T08:00:00Z") });
 
   // v11: two anonymous usage events, out of order so the export's sort is
   // doing real work.
@@ -569,7 +569,7 @@ describe("account export", () => {
       ].sort(),
     );
 
-    expect(bundle.exportVersion).toBe(21);
+    expect(bundle.exportVersion).toBe(22);
     expect(bundle.exportVersion).toBe(ACCOUNT_EXPORT_VERSION);
 
     expect(bundle.profile.email).toBe(user.email);
@@ -720,7 +720,7 @@ describe("account export", () => {
     const bundle = accountExportSchema.parse(
       (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: user.cookie } })).json(),
     );
-    expect(bundle.exportVersion).toBe(21);
+    expect(bundle.exportVersion).toBe(22);
     expect(bundle.customFoods).toHaveLength(1);
     expect(bundle.customFoods[0]).toMatchObject({ id: food.id, name: "Satay sauce" });
     expect(Date.parse(bundle.customFoods[0]!.deletedAt!)).not.toBeNaN();
@@ -783,7 +783,7 @@ describe("account export", () => {
     const bundle = accountExportSchema.parse(
       (await app.inject({ method: "GET", url: "/api/account/export", headers: { cookie: user.cookie } })).json(),
     );
-    expect(bundle.exportVersion).toBe(21);
+    expect(bundle.exportVersion).toBe(22);
     expect(bundle.customRecipes).toHaveLength(1);
     expect(bundle.customRecipes[0]).toMatchObject({ id: seeded.customRecipeId, title: "Satay noodles" });
     expect(Date.parse(bundle.customRecipes[0]!.deletedAt!)).not.toBeNaN();
@@ -880,7 +880,7 @@ describe("account export", () => {
     expect(raw).not.toContain(stored!.encryptedKey);
   });
 
-  it("carries the account's app preferences (v10) and its sharing choice (v11)", async () => {
+  it("carries the account's app preferences (v10), its sharing choice (v11) and the planning offer's Not now (v22)", async () => {
     const response = await app.inject({
       method: "GET",
       url: "/api/account/export",
@@ -890,6 +890,7 @@ describe("account export", () => {
     expect(response.json<AccountExport>().preferences).toEqual({
       tourCompletedAt: "2026-03-02T08:00:00.000Z",
       shareUsageData: true,
+      planOfferDismissedAt: "2026-03-04T08:00:00.000Z",
     });
   });
 
