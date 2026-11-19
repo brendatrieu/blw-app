@@ -12,6 +12,7 @@ import {
   copyWarningNotes,
   firstCopiedDate,
   planDayLabel,
+  shortDate,
   planDaysAhead,
   setAllClashes,
   shortDay,
@@ -23,8 +24,6 @@ import {
   dailyMealErrors,
   dailyMealRows,
   dayHasPlan,
-  accentsToday,
-  copyDayName,
   dayName,
   dragTarget,
   flagNotes,
@@ -94,15 +93,9 @@ describe("plan weeks (ledger 969: Sunday first, ‹ › a week at a time)", () =
     expect(dayName("2026-10-14")).toBe("Wednesday, October 14");
   });
 
-  it("names the Copy sheet's source day after its date, and only that day (ledger 1000)", () => {
-    expect(copyDayName("2026-10-14", "2026-10-14")).toBe("Wednesday, October 14, copying from this day");
-    expect(copyDayName("2026-10-15", "2026-10-14")).toBe("Thursday, October 15");
-  });
-
-  it("accents today's number, but not on the pressed apricot fill (ledger 1000)", () => {
-    expect(accentsToday("2026-10-14", "2026-10-14", false)).toBe(true);
-    expect(accentsToday("2026-10-14", "2026-10-14", true)).toBe(false);
-    expect(accentsToday("2026-10-15", "2026-10-14", false)).toBe(false);
+  it("writes the app's short date for the Copy sheet's From line (ledger 1017)", () => {
+    expect(shortDate("2026-11-20")).toBe("Fri, Nov 20");
+    expect(planDayLabel("2026-10-12", "2026-10-14")).toBe(shortDate("2026-10-12"));
   });
 
   it("dots a day only when something is planned on it", () => {

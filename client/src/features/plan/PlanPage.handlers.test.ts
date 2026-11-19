@@ -168,12 +168,21 @@ describe("PlanPage (CD-Plan-Day)", () => {
     ]);
   });
 
-  it("today's number is in the accent while another day is picked; pressed, it stays ink on apricot (ledger 1000)", () => {
-    const numbers = (tree: El) =>
-      dayButtons(tree).map((day) => String(findAll(day, (el) => el.type === "span")[1]!.props.className).includes("text-[var(--color-accent)]"));
-    expect(numbers(render())).toEqual([false, false, false, false, false, false, false]); // today pressed
+  it("outlines today (aria-current) whichever day is picked; the picked day keeps the strong apricot; no accent number (ledger 1017)", () => {
+    const look = (tree: El) =>
+      dayButtons(tree).map((day) => {
+        const classes = String(day.props.className);
+        const number = String(findAll(day, (el) => el.type === "span")[1]!.props.className);
+        return [
+          classes.includes("bg-[var(--color-apricot)]") ? "fill" : "",
+          classes.includes("inset-ring-2 inset-ring-[var(--color-accent)]") ? "ring" : "",
+          day.props["aria-current"] === "date" ? "current" : "",
+          number.includes("text-[var(--color-accent)]") ? "accent" : "",
+        ].join(" ").trim();
+      });
+    expect(look(render())).toEqual(["", "", "", "fill ring current", "", "", ""]); // today picked
     h.search = new URLSearchParams({ date: "2026-10-16" });
-    expect(numbers(render())).toEqual([false, false, false, true, false, false, false]);
+    expect(look(render())).toEqual(["", "", "", "ring current", "", "fill", ""]);
   });
 
   it("‹ › move a week, keeping the weekday; a day button selects that day; all in place of the URL entry", () => {

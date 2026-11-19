@@ -168,7 +168,7 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
       ["Sunday, October 11", true, false], // no plan loaded for it here
       ["Monday, October 12", true, false], // nor for this one
       ["Tuesday, October 13", false, false],
-      ["Wednesday, October 14, copying from this day", false, false], // the source (ledger 1000)
+      ["Wednesday, October 14", false, false], // the source: named in words above, no marker (ledger 1017)
       ["Thursday, October 15", false, false],
       ["Friday, October 16", false, false],
       ["Saturday, October 17", false, false],
@@ -181,26 +181,31 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
     expect(findAll(tree, (el) => el.props["aria-labelledby"] === "copy-days")[0]!.props["aria-describedby"]).toBeUndefined();
   });
 
-  it("rings the day copied from and colours today's number; a picked source keeps both fill and ring, a picked today goes ink (ledger 1000)", () => {
+  it("outlines today only; says the day copied from in words; a picked day takes the meal chips' soft fill and a check (ledger 1017)", () => {
     const look = (tree: El) =>
       dayButtons(tree).map((button) => {
         const classes = String(button.props.className);
         const number = String(findAll(button, (el) => el.type === "span")[1]!.props.className);
         return [
-          classes.includes("bg-[var(--color-apricot)]") ? "fill" : "",
+          classes.includes("bg-[var(--color-apricot-soft)]") ? "soft" : "",
+          classes.includes("bg-[var(--color-apricot)]") ? "strong" : "",
           classes.includes("inset-ring-2 inset-ring-[var(--color-accent)]") ? "ring" : "",
-          number.includes("text-[var(--color-accent)]") ? "accent" : "",
-        ].join(" ").trim();
+          button.props["aria-current"] === "date" ? "current" : "",
+          findAll(button, (el) => typeof el.type === "function" && el.type.name === "CheckGlyph").length ? "check" : "",
+          classes.includes("text-[var(--color-text)]") && !/text-\[var\(--color-(apricot|accent)/.test(classes + number) ? "" : "colour",
+        ]
+          .filter(Boolean)
+          .join(" ");
       });
     // Copying from Thursday the 15th, today Wednesday the 14th.
     let tree = render({ date: "2026-10-15" });
-    expect(look(tree)).toEqual(["", "", "", "accent", "ring", "", ""]);
-    expect(dayButtons(tree)[4]!.props["aria-label"]).toBe("Thursday, October 15, copying from this day");
-    expect(dayButtons(tree).filter((button) => String(button.props["aria-label"]).includes("copying from"))).toHaveLength(1);
+    expect(look(tree)).toEqual(["", "", "", "ring current", "", "", ""]);
+    expect(findAll(tree, (el) => el.type === "p").map((p) => text(p.props.children))[0]).toBe("From Thu, Oct 15");
+    expect(dayButtons(tree).map((button) => button.props["aria-label"]).join()).not.toContain("copying");
     click(dayButtons(tree)[4]); // the source day can take the copy too (another meal)
     click(dayButtons(again())[3]); // and today
     tree = again();
-    expect(look(tree)).toEqual(["", "", "", "fill", "fill ring", "", ""]);
+    expect(look(tree)).toEqual(["", "", "", "soft ring current check", "soft check", "", ""]);
     expect(dayButtons(tree).map((button) => button.props["aria-pressed"])).toEqual([false, false, false, true, true, false, false]);
   });
 

@@ -10,7 +10,6 @@ import { COPY_FAILED, COPY_PAST_LIMIT, allClashesLabel, clashCountLine, clashLin
 import { useCopyCheck, useCopyPlan, usePlanWeeks } from "./hooks.js";
 import {
   WEEKDAY_INITIALS,
-  accentsToday,
   addDays,
   allClashChoice,
   canCopyInto,
@@ -20,11 +19,12 @@ import {
   copyRows,
   copyTargets,
   copyWarningNotes,
-  copyDayName,
+  dayName,
   dayOfMonth,
   firstCopiedDate,
   plannedLines,
   setAllClashes,
+  shortDate,
   shortDay,
   toggleCopyDay,
   toggleCopySlot,
@@ -128,6 +128,8 @@ export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheet
     <>
       {/* The only part that scrolls; the clash summary and Copy stay put. */}
       <div className="scroll-momentum scroll-thin -mx-4 min-h-0 flex-1 overflow-y-auto px-4 pb-2">
+        {/* Ledger 1017: the day copied from, in words under the title. */}
+        <p className="mb-1.5 text-[13px] leading-[1.3] text-[var(--color-text-muted)]">From {shortDate(date)}</p>
         <span id="copy-plate" className={LABEL}>
           On the plate
         </span>
@@ -188,25 +190,21 @@ export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheet
                 key={day}
                 type="button"
                 aria-pressed={pressed}
-                aria-label={copyDayName(day, date)}
+                aria-label={dayName(day)}
+                aria-current={day === today ? "date" : undefined}
                 disabled={day < earliest || !plan}
                 onClick={() => plan && setSelection(toggleCopyDay(selection, plan, source))}
-                // Ledger 1000: the day copied from wears an accent ring, inside
-                // its box so it never touches a neighbour; picked, it keeps
-                // the apricot fill too.
-                className={`flex min-w-0 flex-1 flex-col items-center gap-px rounded-[var(--radius-md)] pt-1.5 pb-1 disabled:opacity-45 ${
-                  pressed
-                    ? "bg-[var(--color-apricot)] text-[var(--color-apricot-ink)]"
-                    : "bg-[var(--color-bg-inset)] text-[var(--color-text)]"
-                }${day === date ? " inset-ring-2 inset-ring-[var(--color-accent)]" : ""}`}
+                // Ledger 1017: today wears an accent ring, inside its box so it
+                // never touches a neighbour; a picked day takes the selected
+                // meal chips' soft apricot with the normal text and a check.
+                className={`flex min-w-0 flex-1 flex-col items-center gap-px rounded-[var(--radius-md)] pt-1.5 pb-1 text-[var(--color-text)] disabled:opacity-45 ${
+                  pressed ? "bg-[var(--color-apricot-soft)]" : "bg-[var(--color-bg-inset)]"
+                }${day === today ? " inset-ring-2 inset-ring-[var(--color-accent)]" : ""}`}
               >
                 <span aria-hidden="true" className="text-xs font-semibold">
                   {WEEKDAY_INITIALS[index]}
                 </span>
-                <span
-                  aria-hidden="true"
-                  className={`text-base leading-[1.25] font-extrabold${accentsToday(day, today, pressed) ? " text-[var(--color-accent)]" : ""}`}
-                >
+                <span aria-hidden="true" className="text-base leading-[1.25] font-extrabold">
                   {dayOfMonth(day)}
                 </span>
                 {pressed ? <CheckGlyph /> : <span aria-hidden="true" className="h-3.5" />}

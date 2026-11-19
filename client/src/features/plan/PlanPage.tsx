@@ -17,7 +17,6 @@ import {
   NEW_PLANNED_MEAL,
   PLAN_COPY_PARAM,
   WEEKDAY_INITIALS,
-  accentsToday,
   addDays,
   dayHasPlan,
   dayName,
@@ -208,15 +207,12 @@ export function PlanPage() {
                     onClick={() => select(date)}
                     className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-[var(--radius-md)] pt-1.5 pb-[5px] ${
                       pressed ? "bg-[var(--color-apricot)] text-[var(--color-apricot-ink)]" : "text-[var(--color-text)]"
-                    }`}
+                    }${date === today ? " inset-ring-2 inset-ring-[var(--color-accent)]" : ""}`}
                   >
                     <span aria-hidden="true" className={`text-xs font-semibold ${pressed ? "" : "text-[var(--color-text-muted)]"}`}>
                       {WEEKDAY_INITIALS[index]}
                     </span>
-                    <span
-                      aria-hidden="true"
-                      className={`text-base leading-normal font-extrabold${accentsToday(date, today, pressed) ? " text-[var(--color-accent)]" : ""}`}
-                    >
+                    <span aria-hidden="true" className="text-base leading-normal font-extrabold">
                       {dayOfMonth(date)}
                     </span>
                     <span

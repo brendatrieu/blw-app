@@ -227,15 +227,19 @@ const BASE_PAIRS: Pair[] = [
   { name: "elevated text on accent fill (Copy's picked Keep it / Replace it)", fg: "color-bg-elevated", bg: "color-accent" },
   // The More tab's "Update available" row: its Reload sits on inset (ledger 790).
   { name: "accent text on inset surface (More update row)", fg: "color-accent", bg: "color-bg-inset" },
-  // Ledger 1000: today's date number in the accent, on the Meal Plan strip
-  // (elevated) and on an unpicked Copy day (inset); on a pressed apricot day
-  // it stays ink (accent there is 3.89:1 in light, below text AA).
-  { name: "today's date number on the Meal Plan strip (ledger 1000)", fg: "color-accent", bg: "color-bg-elevated" },
-  { name: "today's date number on an unpicked Copy day (ledger 1000)", fg: "color-accent", bg: "color-bg-inset" },
-  { name: "today's date number on a pressed day stays ink (ledger 1000)", fg: "color-apricot-ink", bg: "color-apricot" },
-  // The Copy sheet's source-day ring (non-text, 3:1) on both day fills.
-  { name: "Copy source-day ring on an unpicked day (ledger 1000)", fg: "color-accent", bg: "color-bg-inset", min: 3 },
-  { name: "Copy source-day ring on a picked apricot day (ledger 1000)", fg: "color-accent", bg: "color-apricot", min: 3 },
+  // Ledger 1017: today's outline (an inset accent ring, non-text 3:1) in both
+  // strips, on every fill its day can wear and the page around the strip;
+  // a picked Copy day is the meal chips' soft apricot with the text colour
+  // and its check (currentColor). The Meal Plan's picked day keeps ink on apricot.
+  { name: "today outline on the Meal Plan strip (ledger 1017)", fg: "color-accent", bg: "color-bg-elevated", min: 3 },
+  { name: "today outline vs the page (ledger 1017)", fg: "color-accent", bg: "color-bg", min: 3 },
+  { name: "today outline on the Meal Plan's picked apricot day (ledger 1017)", fg: "color-accent", bg: "color-apricot", min: 3 },
+  { name: "today outline on an unpicked Copy day (ledger 1017)", fg: "color-accent", bg: "color-bg-inset", min: 3 },
+  { name: "today outline on a picked Copy day (ledger 1017)", fg: "color-accent", bg: "color-apricot-soft", min: 3 },
+  { name: "picked Copy day number on the soft apricot (ledger 1017)", fg: "color-text", bg: "color-apricot-soft" },
+  { name: "picked Copy day check on the soft apricot (ledger 1017)", fg: "color-text", bg: "color-apricot-soft", min: 3 },
+  { name: "picked Meal Plan day number, ink on apricot (ledger 1017)", fg: "color-apricot-ink", bg: "color-apricot" },
+  { name: "Copy sheet From line, muted on elevated (ledger 1017)", fg: "color-text-muted", bg: "color-bg-elevated" },
 
   // Focus ring — non-text UI, 3:1 against both grounds it can appear over.
   { name: "focus ring vs page", fg: "color-accent", bg: "color-bg", min: 3 },
