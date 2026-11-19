@@ -90,6 +90,8 @@ describe("Fraunces is for page titles and the Home baby name only (item 648)", (
   const TITLE_FILES = [
     "components/AppLayout.tsx",
     "components/ui/PageHeader.tsx",
+    // The signed-out landing's "Little Meals", titled like About (ledger 992).
+    "features/landing/LandingPage.tsx",
     "pages/AboutPage.tsx",
     "pages/FoodDetailPage.tsx",
     // Signed-out password screens, titled like sign-in and sign-up (ledger 820/822).
