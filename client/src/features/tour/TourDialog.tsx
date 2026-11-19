@@ -16,7 +16,7 @@ interface TourDialogProps {
 }
 
 /**
- * The tour: six slides on one horizontal, snapping track, inside a centred
+ * The tour: five slides on one horizontal, snapping track, inside a centred
  * modal card over whatever the parent was already looking at.
  *
  * A real scroll container rather than a transform carousel — a swipe, a

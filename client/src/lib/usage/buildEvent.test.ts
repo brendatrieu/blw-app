@@ -125,8 +125,10 @@ describe("buildEvent — every catalog entry round-trips", () => {
     expect(usageEventId()).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
   });
 
-  it("pins the tour's slide ceiling against the deck the dialog actually renders", () => {
-    expect(USAGE_TOUR_SLIDE_MAX).toBe(TOUR_SLIDE_COUNT - 1);
+  it("keeps the tour's slide ceiling at or above the deck the dialog actually renders", () => {
+    // Ledger 992 trimmed the deck from six slides to five. The ceiling stays 5 so
+    // skips stored from the six-slide deck still parse on the metrics page.
+    expect(USAGE_TOUR_SLIDE_MAX).toBeGreaterThanOrEqual(TOUR_SLIDE_COUNT - 1);
   });
 
   it("pins the article slug set against the manifest the Learn pages actually render", () => {
@@ -163,8 +165,8 @@ describe("buildEvent — what it refuses", () => {
     expect(buildEvent("tour_opened", { source: "first_run", extra: true } as never, options)).toBeNull();
   });
 
-  it("refuses a tour slide past the end of the deck", () => {
-    const props = { ...SAMPLES.tour_skipped, slide: TOUR_SLIDE_COUNT } as never;
+  it("refuses a tour slide past the ceiling", () => {
+    const props = { ...SAMPLES.tour_skipped, slide: USAGE_TOUR_SLIDE_MAX + 1 } as never;
     expect(buildEvent("tour_skipped", props, options)).toBeNull();
   });
 

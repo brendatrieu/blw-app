@@ -195,8 +195,9 @@ export const catalogFilterKeySchema = z.enum([
 ]);
 export type CatalogFilterKey = z.infer<typeof catalogFilterKeySchema>;
 
-/** Highest 0-based slide index the six-slide tour can report. The client
- * pins this against `TOUR_SLIDE_COUNT - 1`. */
+/** Highest 0-based slide index the tour has ever reported: six slides until
+ * ledger 992 trimmed it to five. Kept at 5 so stored skips still parse; the
+ * client pins it at or above `TOUR_SLIDE_COUNT - 1`. */
 export const USAGE_TOUR_SLIDE_MAX = 5;
 
 // ---------------------------------------------------------------------------

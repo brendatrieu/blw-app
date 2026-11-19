@@ -7,9 +7,9 @@ import { TOUR_SLIDES, TOUR_SLIDE_COUNT } from "./slides.js";
  * not a drive-by tweak in a component.
  */
 describe("tour deck", () => {
-  it("is the six slides the copy was written for, verbatim", () => {
-    expect(TOUR_SLIDE_COUNT).toBe(6);
-    expect(TOUR_SLIDES).toHaveLength(6);
+  it("is the five slides the copy was written for, verbatim", () => {
+    expect(TOUR_SLIDE_COUNT).toBe(5);
+    expect(TOUR_SLIDES).toHaveLength(5);
     expect(TOUR_SLIDES).toEqual([
       {
         title: "Welcome to Little Meals",
@@ -18,22 +18,17 @@ describe("tour deck", () => {
       },
       {
         title: "Log meals",
-        body: "Tap Log meal after your baby eats. Over time you get a full picture of what they've tried, and if a reaction shows up you can trace it back to the foods and allergens served that day.",
+        body: "Tap Log meal after your baby eats, and rate each food if you like. Over time you get a full picture of what they've tried, and if a reaction shows up you can trace it back to the foods and allergens served that day.",
         emoji: "🍽️",
       },
       {
-        title: "Keep track of what you've prepped",
-        body: "Add batches to Storage. Each item shows how long it stays fresh, so you serve it in time and toss it when it's expired.",
-        emoji: "📦",
-      },
-      {
-        title: "Introduce allergens step by step",
-        body: "Mark each allergen as established once it's been tolerated, and the ladder will nudge you when it's time to serve it again.",
-        emoji: "🪜",
+        title: "Plan ahead, if you like",
+        body: "Tap the calendar at the top to plan meals for the days ahead. When it's time, tap Serve under Up next on Home to log the meal.",
+        emoji: "🗓️",
       },
       {
         title: "Help when you need it",
-        body: "Learn has short guides on choking, allergies, and tummy changes. Symptom check helps you decide if you should seek care. Find both under More, along with how-tos for using the app. Always stay with baby and keep them sitting upright while they eat.",
+        body: "Learn has short guides on choking, allergies, and tummy changes. Symptom Check helps you decide if you should seek care. Find both under More, along with how-tos for using the app. Always stay with baby and keep them sitting upright while they eat.",
         emoji: "🛟",
       },
       {
