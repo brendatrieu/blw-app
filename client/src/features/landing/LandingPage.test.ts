@@ -56,7 +56,15 @@ beforeEach(() => {
   h.track = null;
 });
 
-describe("LandingPage markup (ledger 992, 1003)", () => {
+const N = LANDING_SLIDES.length;
+const SHOTS = LANDING_SLIDES.flatMap((slide) => (slide.shot ? [slide] : []));
+/** Renders as if the track were on slide `page` (renderToString never scrolls). */
+const renderAt = (page: number) => {
+  h.track = { pages: { page }, trackRef: { current: null }, near: null, onScroll: () => {}, onTouchStart: () => {}, onWheel: () => {}, goTo: () => {} };
+  return render();
+};
+
+describe("LandingPage markup (ledger 992, 1003, 1008, 1012)", () => {
   it("shows the small icon and the name once, at the top, over a fade that lets taps through", () => {
     const html = render();
     expect(count(html, "<h1")).toBe(1);
@@ -70,20 +78,28 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
     expect(html.indexOf("<header")).toBeLessThan(html.indexOf('aria-roledescription="carousel"'));
   });
 
-  it("renders the five slides as a carousel of groups, each a full-bleed light/dark shot", () => {
+  it("hides the small brand row on the intro, whose big logo it would repeat, and shows it on the others (ledger 1008)", () => {
+    const header = (html: string) => html.match(/<header class="([^"]*)"/)![1]!.split(" ");
+    expect(header(render())).toContain("opacity-0");
+    expect(header(renderAt(1))).toContain("opacity-100");
+    // Still the page's one h1 for screen readers; the big name is decorative.
+    expect(count(render(), "<h1")).toBe(1);
+  });
+
+  it("renders six slides: the plain intro, then five full-bleed light/dark shots", () => {
     const html = render();
+    expect(N).toBe(6);
     expect(html).toContain('aria-roledescription="carousel"');
-    expect(count(html, 'aria-roledescription="slide"')).toBe(5);
-    for (const [i, slide] of LANDING_SLIDES.entries()) {
-      expect(html).toContain(`aria-label="${i + 1} of 5"`);
-      expect(html).toContain(`>${slide.title.replace("'", "&#x27;")}</h2>`);
-      expect(html).toContain(`>${slide.body.replace("'", "&#x27;")}</p>`);
+    expect(count(html, 'aria-roledescription="slide"')).toBe(6);
+    for (let i = 1; i <= N; i++) expect(html).toContain(`aria-label="${i} of 6"`);
+    for (const slide of SHOTS) {
       expect(html).toContain(`srcSet="/landing/${slide.shot}-dark.webp" media="(prefers-color-scheme: dark)"`);
       expect(html).toContain(`alt="${slide.alt.replace("'", "&#x27;")}"`);
     }
-    // Slides 2-5 load lazily, as does the wide-screen backdrop; the first slide does not.
-    expect(count(html, 'loading="lazy"')).toBe(5);
+    // The first picture (slide 2, one tap from the intro) loads now; the rest lazily.
+    expect(count(html, 'loading="lazy"')).toBe(4);
     expect(count(html, 'loading="eager"')).toBe(1);
+    expect(html.indexOf('loading="eager"')).toBeGreaterThan(html.indexOf('aria-label="2 of 6"'));
     // Each picture fills its slide, top-aligned: no frame, rounding or shadow.
     // It starts below the iOS band + status bar, as the header's padding does,
     // so the brand stays on the shot's blank top (ledger 1007).
@@ -95,11 +111,27 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
     }
   });
 
+  it("makes the intro the logo, the name and the tagline on the gradient, with first foods around the logo (ledger 1008)", () => {
+    const html = render();
+    const intro = html.slice(html.indexOf('aria-label="1 of 6"'), html.indexOf('aria-label="2 of 6"'));
+    expect(intro).not.toContain("<picture");
+    expect(intro).toMatch(/<div aria-hidden="true" class="absolute inset-0" style="background:linear-gradient\(to bottom, var\(--color-intro-from\) 15%, var\(--color-intro-to\) 70%\)">/);
+    expect(intro).toContain('<img src="/icons/icon-512.png" alt=""');
+    expect(intro).toMatch(/<p class="font-display[^"]*"[^>]*>Little Meals<\/p>/);
+    expect(intro).toContain(">Starting solids, made simpler.</p>");
+    // Avocado, banana, sweet potato, egg: placed, never animated.
+    const foods = [...intro.matchAll(/<span class="absolute text-\[2rem\] leading-none ([^"]*)">([^<]*)<\/span>/g)];
+    expect(foods.map((m) => m[2])).toEqual(["🥑", "🍌", "🍠", "🥚"]);
+    for (const [, at] of foods) expect(at).not.toMatch(/animate|transition/);
+    // The tagline is on the gradient; the sheet carries only the welcome line.
+    expect(LANDING_SLIDES[0]).toMatchObject({ title: "Starting solids, made simpler.", shot: null });
+  });
+
   it("gives screen readers each slide's words with its picture, once (ledger 1012)", () => {
     const html = render();
     const slides = html.split('aria-roledescription="slide"').slice(1);
     for (const [i, slide] of LANDING_SLIDES.entries()) {
-      const words = slides[i]!.match(/<div class="sr-only"><h2>([^<]*)<\/h2><p>([^<]*)<\/p>/)!;
+      const words = slides[i]!.match(/<div class="sr-only"><h2 class="font-h2">([^<]*)<\/h2><p>([^<]*)<\/p>/)!;
       expect(words[1]).toBe(slide.title.replace("'", "&#x27;"));
       expect(words[2]).toBe(slide.body.replace("'", "&#x27;"));
     }
@@ -109,27 +141,38 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
   });
 
   it("shows the active slide's words in the sheet, the others stacked in the same cell but hidden", () => {
-    const html = render();
-    const sheet = sheetOf(html);
-    const cells = [...sheet.matchAll(/<div class="col-start-1 row-start-1 flex flex-col justify-center gap-1 [^"]* (opacity-\d+)"><p class="font-h2 text-\[var\(--color-text\)\]">([^<]*)<\/p><p class="text-sm text-\[var\(--color-text-muted\)\]">([^<]*)<\/p>/g)];
-    expect(cells.map((m) => m[2])).toEqual(LANDING_SLIDES.map((slide) => slide.title.replace("'", "&#x27;")));
-    expect(cells.map((m) => m[1])).toEqual(LANDING_SLIDES.map((_, i) => (i === 0 ? "opacity-100" : "opacity-0")));
+    const cellsAt = (page: number) =>
+      [...sheetOf(renderAt(page)).matchAll(/<div class="col-start-1 row-start-1 flex flex-col justify-center gap-1 [^"]* (opacity-\d+)">(.*?)<p class="text-sm text-\[var\(--color-text-muted\)\]">([^<]*)<\/p>/g)].map(
+        (m) => ({ shown: m[1] === "opacity-100", title: m[2]!.match(/^<p class="font-h2 text-\[var\(--color-text\)\]">([^<]*)<\/p>$/)?.[1] ?? null, body: m[3] }),
+      );
+    const escape = (text: string) => text.replace("'", "&#x27;");
+    for (const page of [0, 3, 5]) {
+      const cells = cellsAt(page);
+      expect(cells.map((cell) => cell.body)).toEqual(LANDING_SLIDES.map((slide) => escape(slide.body)));
+      expect(cells.map((cell) => cell.shown)).toEqual(LANDING_SLIDES.map((_, i) => i === page));
+      // The intro's tagline is on its gradient, so its cell has no headline.
+      expect(cells.map((cell) => cell.title)).toEqual(LANDING_SLIDES.map((slide) => (slide.shot ? escape(slide.title) : null)));
+    }
+    expect(cellsAt(0)[0]!.body).toBe("Here to help you start solids with confidence, one little meal at a time.");
     // Instant under reduced motion.
-    expect(sheet).toContain("transition-opacity duration-[var(--duration-fast)] motion-reduce:transition-none");
+    expect(sheetOf(render())).toContain("transition-opacity duration-[var(--duration-fast)] motion-reduce:transition-none");
   });
 
   it("fills the sides of a wide screen with the current picture, blurred, dimmed and hidden from AT", () => {
-    const html = render();
+    const html = renderAt(2);
     const backdrop = html.match(/<div aria-hidden="true" class="([^"]*)">(.*?)<\/div>/)!;
     expect(backdrop[1]!.split(" ")).toEqual(expect.arrayContaining(["absolute", "w-screen", "overflow-hidden", "hidden", "min-[33rem]:block"]));
-    expect(backdrop[2]).toContain(`srcSet="/landing/${LANDING_SLIDES[0]!.shot}-dark.webp"`);
+    expect(backdrop[2]).toContain(`srcSet="/landing/${SHOTS[1]!.shot}-dark.webp"`);
     const img = backdrop[2]!.match(/<img[^>]*alt=""[^>]*loading="lazy"[^>]*class="([^"]*)"/)![1]!.split(" ");
     expect(img).toEqual(expect.arrayContaining(["object-cover", "blur-2xl", "opacity-40"]));
     expect(html.indexOf(backdrop[0])).toBeLessThan(html.indexOf('aria-roledescription="carousel"'));
+    // On the intro, the sides are its gradient (no picture to fetch).
+    const intro = renderAt(0).match(/<div aria-hidden="true" class="[^"]*min-\[33rem\]:block">(.*?)<\/div><header/)![1]!;
+    expect(intro).toBe('<div class="h-full w-full" style="background:linear-gradient(to bottom, var(--color-intro-from) 15%, var(--color-intro-to) 70%)"></div>');
   });
 
   it("ships every shot it names, light and dark", () => {
-    for (const slide of LANDING_SLIDES) {
+    for (const slide of SHOTS) {
       for (const theme of ["light", "dark"]) {
         expect(existsSync(new URL(`../../../public/landing/${slide.shot}-${theme}.webp`, import.meta.url)), `${slide.shot}-${theme}`).toBe(true);
       }
@@ -146,15 +189,15 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
     expect(sheet.indexOf(DISCLAIMER)).toBeGreaterThan(sheet.indexOf(last.body));
   });
 
-  it("has a 44px dot per slide, the current one wider, and no visible 'N of 5' (ledger 1003)", () => {
+  it("has a 44px dot per slide, the current one wider, and no visible 'N of 6' or 'N of 5' (ledger 1003)", () => {
     const html = render();
-    expect(count(html, /aria-label="Go to slide \d of 5"/)).toBe(5);
-    expect(count(html, 'class="flex h-11 w-11 items-center justify-center"')).toBe(5);
+    expect(count(html, /aria-label="Go to slide \d of 6"/)).toBe(6);
+    expect(count(html, 'class="flex h-11 w-11 items-center justify-center"')).toBe(6);
     expect(count(html, 'aria-current="true"')).toBe(1);
     expect(count(html, /class="h-2 rounded-full[^"]* w-5"/)).toBe(1);
-    expect(count(html, /class="h-2 rounded-full[^"]* w-2"/)).toBe(4);
+    expect(count(html, /class="h-2 rounded-full[^"]* w-2"/)).toBe(5);
     const text = html.replace(/<[^>]*>/g, " ");
-    expect(text).not.toMatch(/\bof\s+5\b/);
+    expect(text).not.toMatch(/\bof\s+[56]\b/);
     expect(html).not.toContain("aria-live");
   });
 
@@ -167,7 +210,7 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
     // Ledger 1001: after the track itself, not just after slide 5 inside it.
     const close = trackClose(html);
     expect(close).toBeGreaterThan(lastSlideEnd);
-    for (const label of [">Go to slide 1 of 5<", 'aria-label="Go to slide 1 of 5"', ">Create an account<", ">Sign in<", ">About Little Meals<"]) {
+    for (const label of [">Go to slide 1 of 6<", 'aria-label="Go to slide 1 of 6"', ">Create an account<", ">Sign in<", ">About Little Meals<"]) {
       expect(html.indexOf(label) === -1 || html.indexOf(label) > close, `${label} after the track closes`).toBe(true);
     }
     expect(html.indexOf(">Create an account<")).toBeGreaterThan(close);
@@ -180,7 +223,9 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
       /^<div class="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center rounded-t-\[var\(--radius-lg\)\] bg-\[var\(--color-landing-sheet\)\] [^"]*" style="box-shadow:var\(--shadow-sheet\)">/,
     );
     // Only a short fade on the picture just above it.
-    expect(sheet).toMatch(/^<div[^>]*><div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-full h-6" style="background:linear-gradient\(to bottom, transparent, color-mix\(in srgb, var\(--color-bg\) 60%, transparent\)\)"><\/div>/);
+    expect(sheetOf(renderAt(1))).toMatch(/^<div[^>]*><div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-full h-6 " style="background:linear-gradient\(to bottom, transparent, color-mix\(in srgb, var\(--color-bg\) 60%, transparent\)\)"><\/div>/);
+    // None on the intro's gradient.
+    expect(sheet).toContain('class="pointer-events-none absolute inset-x-0 bottom-full h-6 hidden"');
     // Words, then dots, then the two buttons, then About.
     const order = ['class="grid w-full text-center"', `aria-label="Go to slide ${LANDING_SLIDES.length} of ${LANDING_SLIDES.length}"`, ">Create an account<", ">Sign in<", ">About Little Meals<"];
     const at = order.map((label) => sheet.indexOf(label));
@@ -213,8 +258,8 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
     expect(html).not.toContain('href="/signup"');
     expect(html).not.toContain('href="/login"');
     expect(html).not.toContain('href="/about"');
-    expect(count(html, 'aria-roledescription="slide"')).toBe(5);
-    expect(count(html, /aria-label="Go to slide \d of 5"/)).toBe(5);
+    expect(count(html, 'aria-roledescription="slide"')).toBe(6);
+    expect(count(html, /aria-label="Go to slide \d of 6"/)).toBe(6);
     // The space stays, so the sheet does not grow when they arrive.
     expect(sheetOf(html)).toContain('<div class="h-[5.5rem]"></div>');
   });
@@ -229,7 +274,7 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
   });
 });
 
-describe("LandingPage handlers (ledger 992, 1003)", () => {
+describe("LandingPage handlers (ledger 992, 1003, 1008)", () => {
   type Listener = (event: { key: string; altKey?: boolean; ctrlKey?: boolean; metaKey?: boolean; preventDefault: () => void }) => void;
   let listeners: Record<string, Listener>;
   const goTo = vi.fn();
@@ -240,7 +285,7 @@ describe("LandingPage handlers (ledger 992, 1003)", () => {
     goTo.mockReset();
     el.scrollLeft = 0;
     h.track = {
-      pages: { page: 0, last: 4, start: 0, end: 1, total: 5 },
+      pages: { page: 0, last: 5, start: 0, end: 1, total: 6 },
       size: 1,
       trackRef: { current: el },
       onScroll: () => {},
@@ -280,7 +325,7 @@ describe("LandingPage handlers (ledger 992, 1003)", () => {
   it("never moves past either end by key", () => {
     mount();
     press("ArrowLeft");
-    el.scrollLeft = 1600; // slide 5
+    el.scrollLeft = 2000; // slide 6
     press("ArrowRight");
     expect(goTo).not.toHaveBeenCalled();
   });
@@ -296,13 +341,13 @@ describe("LandingPage handlers (ledger 992, 1003)", () => {
       walk(props.children);
     };
     walk(tree);
-    for (const at of [0, 1, 2, 3]) {
+    for (const at of [0, 1, 2, 3, 4]) {
       el.scrollLeft = at * 400;
       onClick!();
       expect(goTo).toHaveBeenLastCalledWith(at + 1);
     }
     goTo.mockReset();
-    el.scrollLeft = 1600;
+    el.scrollLeft = 2000;
     onClick!();
     expect(goTo).not.toHaveBeenCalled();
   });
@@ -325,7 +370,7 @@ describe("LandingPage handlers (ledger 992, 1003)", () => {
       walk(props.children);
     };
     walk(tree);
-    expect(dots).toHaveLength(5);
+    expect(dots).toHaveLength(6);
     dots[3]!.props.onClick();
     expect(goTo).toHaveBeenCalledWith(3);
   });

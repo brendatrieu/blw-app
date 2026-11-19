@@ -492,7 +492,7 @@ describe("dark-mode block parity", () => {
   });
 });
 
-describe("landing sheet (ledger 1012)", () => {
+describe("landing sheet and intro (ledger 1012, 1008)", () => {
   // The signed-out landing's bottom sheet: the active slide's words, the
   // dots and the three ways in, on their own surface above the screenshots.
   const SHEET_PAIRS: Pair[] = [
@@ -501,6 +501,9 @@ describe("landing sheet (ledger 1012)", () => {
     { name: "About link on the landing sheet", fg: "color-accent", bg: "color-landing-sheet" },
     { name: "current dot on the landing sheet", fg: "color-accent", bg: "color-landing-sheet", min: 3 },
     { name: "other dots on the landing sheet", fg: "color-text-muted", bg: "color-landing-sheet", min: 3 },
+    // Ledger 1008: the intro slide's name and tagline, at both ends of its gradient.
+    { name: "intro name and tagline on the gradient's top", fg: "color-text", bg: "color-intro-from" },
+    { name: "intro name and tagline on the gradient's bottom", fg: "color-text", bg: "color-intro-to" },
   ];
   for (const mode of ["light", "dark"] as const) {
     for (const pair of SHEET_PAIRS) {

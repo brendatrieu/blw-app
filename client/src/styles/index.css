@@ -81,6 +81,9 @@
      a hairline on top. */
   --color-landing-sheet: #e3edf4;
   --shadow-sheet: 0 -1px 0 rgb(31 42 54 / 0.1), 0 -8px 24px rgb(31 42 54 / 0.14);
+  /* Ledger 1008: the landing's intro slide, a soft sea blue -> apricot. */
+  --color-intro-from: #cfe4f0;
+  --color-intro-to: #fde3d1;
 
   /* ---- Text (deep navy — the hue the dark ground is built from) ---- */
   --color-text: #1f2a36;
@@ -314,6 +317,8 @@
   --_dark-color-bg-inset: #232b35;
   --_dark-landing-sheet: #222d3a;
   --_dark-shadow-sheet: 0 -1px 0 rgb(255 255 255 / 0.1), 0 -8px 24px rgb(0 0 0 / 0.5);
+  --_dark-intro-from: #173349;
+  --_dark-intro-to: #43301f;
   --_dark-color-text: #eef3f7;
   --_dark-color-text-muted: #a3afba;
   --_dark-color-border: #28313c;
@@ -401,6 +406,8 @@
     --color-bg-inset: var(--_dark-color-bg-inset);
     --color-landing-sheet: var(--_dark-landing-sheet);
     --shadow-sheet: var(--_dark-shadow-sheet);
+    --color-intro-from: var(--_dark-intro-from);
+    --color-intro-to: var(--_dark-intro-to);
 
     --color-text: var(--_dark-color-text);
     --color-text-muted: var(--_dark-color-text-muted);
@@ -490,6 +497,8 @@
   --color-bg-inset: var(--_dark-color-bg-inset);
   --color-landing-sheet: var(--_dark-landing-sheet);
   --shadow-sheet: var(--_dark-shadow-sheet);
+  --color-intro-from: var(--_dark-intro-from);
+  --color-intro-to: var(--_dark-intro-to);
 
   --color-text: var(--_dark-color-text);
   --color-text-muted: var(--_dark-color-text-muted);

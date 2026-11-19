@@ -5,11 +5,20 @@ import { ButtonLink } from "../../components/ui/Button.js";
 import { usePagedTrack } from "../../components/ui/Pager.js";
 import { slideIndexFromScroll } from "../../lib/scrollTrack.js";
 import { darkMediaQuery } from "../../theme.js";
+import { FOOD_EMOJI } from "../catalog/foodEmoji.js";
 import { DISCLAIMER, LANDING_SLIDES } from "./slides.js";
 
 const COUNT = LANDING_SLIDES.length;
 const WAY_IN = "flex-1 max-[22.5rem]:px-2.5 max-[22.5rem]:text-[0.8125rem]";
 const shotSrc = (shot: string, theme: "light" | "dark") => `/landing/${shot}-${theme}.webp`;
+const INTRO_BG = "linear-gradient(to bottom, var(--color-intro-from) 15%, var(--color-intro-to) 70%)";
+/** First foods around the intro's logo, placed (never animated) clear of it and of the words. */
+const INTRO_FOODS = [
+  { emoji: FOOD_EMOJI.avocado, at: "-left-16 -top-2 -rotate-12" },
+  { emoji: FOOD_EMOJI.banana, at: "-right-16 top-3 rotate-12" },
+  { emoji: FOOD_EMOJI.sweet_potato, at: "-left-14 bottom-0 rotate-6" },
+  { emoji: FOOD_EMOJI.egg, at: "-right-14 bottom-5 -rotate-6" },
+];
 
 /**
  * Ledger 992/1003/1012: the signed-out front door ("/" lands here, RequireAuth).
@@ -69,20 +78,27 @@ export function LandingPage() {
       {/* Wide screens: the current picture, blurred and dimmed, fills the
           sides. Decorative; not displayed (so never loaded) on a phone. */}
       <div aria-hidden="true" className="absolute inset-y-0 left-1/2 hidden w-screen -translate-x-1/2 overflow-hidden min-[33rem]:block">
-        <picture>
-          <source srcSet={shotSrc(current.shot, "dark")} media={media} />
-          <source srcSet={shotSrc(current.shot, "light")} />
-          <img
-            src={shotSrc(current.shot, theme)}
-            alt=""
-            loading="lazy"
-            className="h-full w-full scale-110 object-cover opacity-40 blur-2xl"
-          />
-        </picture>
+        {current.shot ? (
+          <picture>
+            <source srcSet={shotSrc(current.shot, "dark")} media={media} />
+            <source srcSet={shotSrc(current.shot, "light")} />
+            <img
+              src={shotSrc(current.shot, theme)}
+              alt=""
+              loading="lazy"
+              className="h-full w-full scale-110 object-cover opacity-40 blur-2xl"
+            />
+          </picture>
+        ) : (
+          <div className="h-full w-full" style={{ background: INTRO_BG }} />
+        )}
       </div>
 
+      {/* Hidden (not removed: it is the page's h1) on the intro, whose big logo it would repeat. */}
       <header
-        className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-center gap-2 px-4 pb-6"
+        className={`pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-center gap-2 px-4 pb-6 transition-opacity duration-[var(--duration-fast)] motion-reduce:transition-none ${
+          current.shot ? "opacity-100" : "opacity-0"
+        }`}
         style={{
           paddingTop: "calc(env(safe-area-inset-top) + var(--top-edge-clearance) + 0.75rem)",
           background: "linear-gradient(to bottom, color-mix(in srgb, var(--color-bg) 85%, transparent) 55%, transparent)",
@@ -108,7 +124,7 @@ export function LandingPage() {
       >
         {LANDING_SLIDES.map((slide, slideIndex) => (
           <section
-            key={slide.shot}
+            key={slide.shot ?? "intro"}
             role="group"
             aria-roledescription="slide"
             aria-label={`${slideIndex + 1} of ${COUNT}`}
@@ -116,24 +132,54 @@ export function LandingPage() {
               track.near === null || Math.abs(slideIndex - track.near) <= 1 ? "snap-start snap-always" : "snap-align-none"
             }`}
           >
-            <picture>
-              <source srcSet={shotSrc(slide.shot, "dark")} media={media} />
-              <source srcSet={shotSrc(slide.shot, "light")} />
-              <img
-                src={shotSrc(slide.shot, theme)}
-                alt={slide.alt}
-                width={780}
-                height={1688}
-                loading={slideIndex === 0 ? "eager" : "lazy"}
-                className="absolute inset-0 h-full w-full object-cover object-top"
-                // Starts where the header's padding does (iOS band + status
-                // bar), so the shot's blank top stays under "Little Meals".
-                style={{ paddingTop: "calc(env(safe-area-inset-top) + var(--top-edge-clearance))" }}
-              />
-            </picture>
+            {slide.shot ? (
+              <picture>
+                <source srcSet={shotSrc(slide.shot, "dark")} media={media} />
+                <source srcSet={shotSrc(slide.shot, "light")} />
+                <img
+                  src={shotSrc(slide.shot, theme)}
+                  alt={slide.alt}
+                  width={780}
+                  height={1688}
+                  // The first picture is one tap from the intro: load it now.
+                  loading={slideIndex === 1 ? "eager" : "lazy"}
+                  className="absolute inset-0 h-full w-full object-cover object-top"
+                  // Starts where the header's padding does (iOS band + status
+                  // bar), so the shot's blank top stays under "Little Meals".
+                  style={{ paddingTop: "calc(env(safe-area-inset-top) + var(--top-edge-clearance))" }}
+                />
+              </picture>
+            ) : (
+              // The plain first slide: logo, name and tagline on the gradient,
+              // centred above the sheet. Its words are read from the slide's
+              // own copy below, so all of this is decorative.
+              <div aria-hidden="true" className="absolute inset-0" style={{ background: INTRO_BG }}>
+                <div
+                  className="absolute inset-x-0 top-0 flex flex-col items-center justify-center gap-3 px-4 text-center"
+                  // ponytail: the sheet's usual height (~16.8rem at 320-512px wide), not measured; measure it if a slide's copy grows.
+                  style={{
+                    paddingTop: "calc(env(safe-area-inset-top) + var(--top-edge-clearance))",
+                    bottom: "calc(16rem + max(1rem, env(safe-area-inset-bottom)))",
+                  }}
+                >
+                  <div className="relative">
+                    <img src="/icons/icon-512.png" alt="" width={112} height={112} className="h-28 w-28" />
+                    {INTRO_FOODS.map(({ emoji, at }) => (
+                      <span key={emoji} className={`absolute text-[2rem] leading-none ${at}`}>
+                        {emoji}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="font-display text-[var(--color-text)]" style={{ fontSize: "2.5rem" }}>
+                    Little Meals
+                  </p>
+                  <p className="font-h2 text-[var(--color-text)]">{slide.title}</p>
+                </div>
+              </div>
+            )}
             {/* The words for screen readers, with the picture; the sheet shows them. */}
             <div className="sr-only">
-              <h2>{slide.title}</h2>
+              <h2 className="font-h2">{slide.title}</h2>
               <p>{slide.body}</p>
               {slideIndex === COUNT - 1 ? <p>{DISCLAIMER}</p> : null}
             </div>
@@ -143,14 +189,14 @@ export function LandingPage() {
 
       {/* The sheet: its own surface (not the screenshots' page colour), a
           rounded top with an upward shadow and hairline, and a short fade on
-          the picture just above it. */}
+          the picture just above it (none on the intro's gradient). */}
       <div
         className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center rounded-t-[var(--radius-lg)] bg-[var(--color-landing-sheet)] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
         style={{ boxShadow: "var(--shadow-sheet)" }}
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-full h-6"
+          className={`pointer-events-none absolute inset-x-0 bottom-full h-6 ${current.shot ? "" : "hidden"}`}
           style={{ background: "linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-bg) 60%, transparent))" }}
         />
         {/* Every slide's words in one grid cell, only the active one shown:
@@ -159,12 +205,13 @@ export function LandingPage() {
         <div aria-hidden="true" className="grid w-full text-center">
           {LANDING_SLIDES.map((slide, slideIndex) => (
             <div
-              key={slide.shot}
+              key={slide.shot ?? "intro"}
               className={`col-start-1 row-start-1 flex flex-col justify-center gap-1 transition-opacity duration-[var(--duration-fast)] motion-reduce:transition-none ${
                 slideIndex === index ? "opacity-100" : "opacity-0"
               }`}
             >
-              <p className="font-h2 text-[var(--color-text)]">{slide.title}</p>
+              {/* The intro's tagline is already on its gradient. */}
+              {slide.shot ? <p className="font-h2 text-[var(--color-text)]">{slide.title}</p> : null}
               <p className="text-sm text-[var(--color-text-muted)]">{slide.body}</p>
               {slideIndex === COUNT - 1 ? (
                 <p className="text-xs italic text-[var(--color-text-muted)]">{DISCLAIMER}</p>
@@ -175,7 +222,7 @@ export function LandingPage() {
         <div className="flex shrink-0 items-center justify-center">
           {LANDING_SLIDES.map((slide, slideIndex) => (
             <button
-              key={slide.shot}
+              key={slide.shot ?? "intro"}
               type="button"
               aria-label={`Go to slide ${slideIndex + 1} of ${COUNT}`}
               aria-current={slideIndex === index ? "true" : undefined}

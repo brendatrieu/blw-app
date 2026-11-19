@@ -1,19 +1,22 @@
+import { TOUR_SLIDES } from "../tour/slides.js";
+
 /**
- * The signed-out landing's slides (ledger 992), in order, as data so the
- * copy is pinned word for word (`slides.test.ts`) and a native app or App
- * Store listing can reuse it. Each `shot` names a pair of screenshots,
- * `client/public/landing/{shot}-{light,dark}.webp`: whole 390x844 @2x app
- * screens with made-up data (baby "Mila"), taken on an isolated stack.
- * Retake them when Log meal, Meal Plan, Storage, the ladder or Foods change.
+ * The signed-out landing's slides (ledger 992, 1008), in order, as data so
+ * the copy is pinned word for word (`slides.test.ts`) and a native app or App
+ * Store listing can reuse it. The first is the plain intro (logo, name and
+ * tagline on a gradient: no screenshot). Every other `shot` names a pair of
+ * screenshots, `client/public/landing/{shot}-{light,dark}.webp`: 390x844 @2x
+ * app screens with made-up data (baby "Mila"), taken on an isolated stack
+ * with the app header hidden and scrolled to the slide's key content.
+ * Retake them when Log meal, Meal Plan, Home's Storage, the ladder or Foods change.
  */
-export interface LandingSlide {
-  title: string;
-  body: string;
-  shot: "log" | "plan" | "storage" | "allergens" | "foods";
-  alt: string;
-}
+export type LandingShot = "log" | "plan" | "storage" | "allergens" | "foods";
+
+export type LandingSlide = { title: string; body: string } & ({ shot: LandingShot; alt: string } | { shot: null });
 
 export const LANDING_SLIDES: readonly LandingSlide[] = [
+  // The tagline sits on the gradient; the sheet carries the tour's welcome line.
+  { title: "Starting solids, made simpler.", body: TOUR_SLIDES[0]!.body, shot: null },
   {
     title: "Log what they ate.",
     body: "Put each food on the plate, rate it with stars if you like, and note any reaction.",

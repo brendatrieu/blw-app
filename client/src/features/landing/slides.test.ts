@@ -3,8 +3,10 @@ import { DISCLAIMER, LANDING_SLIDES } from "./slides.js";
 
 /** Ledger 992: the owner-approved copy, word for word, and one shot pair per slide. */
 describe("landing slides", () => {
-  it("are the five approved slides, in order, verbatim", () => {
+  it("are the intro and the five approved slides, in order, verbatim (ledger 1008)", () => {
     expect(LANDING_SLIDES.map(({ title, body, shot }) => ({ title, body, shot }))).toEqual([
+      // The tagline, then the first-run tour's welcome line: no new wording.
+      { title: "Starting solids, made simpler.", body: "Here to help you start solids with confidence, one little meal at a time.", shot: null },
       {
         title: "Log what they ate.",
         body: "Put each food on the plate, rate it with stars if you like, and note any reaction.",
@@ -26,7 +28,7 @@ describe("landing slides", () => {
   });
 
   it("gives every screenshot alt text", () => {
-    for (const slide of LANDING_SLIDES) expect(slide.alt.trim().length, slide.shot).toBeGreaterThan(20);
+    for (const slide of LANDING_SLIDES) if (slide.shot) expect(slide.alt.trim().length, slide.shot).toBeGreaterThan(20);
   });
 
   it("keeps the disclaimer's wording", () => {
