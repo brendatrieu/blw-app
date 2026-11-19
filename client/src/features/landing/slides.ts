@@ -33,7 +33,7 @@ export const LANDING_SLIDES: readonly LandingSlide[] = [
     title: "Keep track of what you've prepped.",
     body: "Each batch shows the servings left and when to use it by.",
     shot: "storage",
-    alt: "Storage with two Fridge and two Freezer containers, each showing the servings left and how long to use it within.",
+    alt: "Home with the Storage section highlighted: Pear and Spinach in the Fridge and Sweet Potato Lentil Patties in the Freezer, each with the days left.",
   },
   {
     title: "Introduce allergens step by step.",
