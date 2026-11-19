@@ -17,6 +17,7 @@ import {
   NEW_PLANNED_MEAL,
   PLAN_COPY_PARAM,
   WEEKDAY_INITIALS,
+  accentsToday,
   addDays,
   dayHasPlan,
   dayName,
@@ -212,7 +213,10 @@ export function PlanPage() {
                     <span aria-hidden="true" className={`text-xs font-semibold ${pressed ? "" : "text-[var(--color-text-muted)]"}`}>
                       {WEEKDAY_INITIALS[index]}
                     </span>
-                    <span aria-hidden="true" className="text-base leading-normal font-extrabold">
+                    <span
+                      aria-hidden="true"
+                      className={`text-base leading-normal font-extrabold${accentsToday(date, today, pressed) ? " text-[var(--color-accent)]" : ""}`}
+                    >
                       {dayOfMonth(date)}
                     </span>
                     <span

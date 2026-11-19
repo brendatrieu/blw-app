@@ -70,6 +70,19 @@ export function dayName(date: string): string {
   return utc(date).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
 }
 
+/** The Copy sheet's day button name (ledger 1000): the day being copied
+ * from says so after its date, so screen readers hear the ring. */
+export function copyDayName(date: string, sourceDate: string): string {
+  return date === sourceDate ? `${dayName(date)}, copying from this day` : dayName(date);
+}
+
+/** Whether a strip shows the day's number in the accent colour: today's,
+ * in both strips (ledger 1000), except on the pressed apricot fill, where
+ * the accent is under 4.5:1 in light (3.89) and the ink stays. */
+export function accentsToday(date: string, today: string, pressed: boolean): boolean {
+  return date === today && !pressed;
+}
+
 /** Whether the strip shows a dot under the day: anything planned on it. */
 export function dayHasPlan(day: PlanDay | undefined): boolean {
   return Boolean(day?.meals.some((meal) => meal.items.length > 0));

@@ -168,6 +168,14 @@ describe("PlanPage (CD-Plan-Day)", () => {
     ]);
   });
 
+  it("today's number is in the accent while another day is picked; pressed, it stays ink on apricot (ledger 1000)", () => {
+    const numbers = (tree: El) =>
+      dayButtons(tree).map((day) => String(findAll(day, (el) => el.type === "span")[1]!.props.className).includes("text-[var(--color-accent)]"));
+    expect(numbers(render())).toEqual([false, false, false, false, false, false, false]); // today pressed
+    h.search = new URLSearchParams({ date: "2026-10-16" });
+    expect(numbers(render())).toEqual([false, false, false, true, false, false, false]);
+  });
+
   it("‹ › move a week, keeping the weekday; a day button selects that day; all in place of the URL entry", () => {
     const tree = render();
     click(byLabel(tree, "Previous week"));

@@ -23,6 +23,8 @@ import {
   dailyMealErrors,
   dailyMealRows,
   dayHasPlan,
+  accentsToday,
+  copyDayName,
   dayName,
   dragTarget,
   flagNotes,
@@ -90,6 +92,17 @@ describe("plan weeks (ledger 969: Sunday first, ‹ › a week at a time)", () =
 
   it("names a day button by its whole date, whatever the device's zone", () => {
     expect(dayName("2026-10-14")).toBe("Wednesday, October 14");
+  });
+
+  it("names the Copy sheet's source day after its date, and only that day (ledger 1000)", () => {
+    expect(copyDayName("2026-10-14", "2026-10-14")).toBe("Wednesday, October 14, copying from this day");
+    expect(copyDayName("2026-10-15", "2026-10-14")).toBe("Thursday, October 15");
+  });
+
+  it("accents today's number, but not on the pressed apricot fill (ledger 1000)", () => {
+    expect(accentsToday("2026-10-14", "2026-10-14", false)).toBe(true);
+    expect(accentsToday("2026-10-14", "2026-10-14", true)).toBe(false);
+    expect(accentsToday("2026-10-15", "2026-10-14", false)).toBe(false);
   });
 
   it("dots a day only when something is planned on it", () => {

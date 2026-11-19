@@ -168,7 +168,7 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
       ["Sunday, October 11", true, false], // no plan loaded for it here
       ["Monday, October 12", true, false], // nor for this one
       ["Tuesday, October 13", false, false],
-      ["Wednesday, October 14", false, false],
+      ["Wednesday, October 14, copying from this day", false, false], // the source (ledger 1000)
       ["Thursday, October 15", false, false],
       ["Friday, October 16", false, false],
       ["Saturday, October 17", false, false],
@@ -179,6 +179,29 @@ describe("Copy to… (CD-Copy-Per-Day)", () => {
     // Ledger 956: this week has no days out of reach, so no limit line.
     expect(pastLimit(tree)).toEqual([]);
     expect(findAll(tree, (el) => el.props["aria-labelledby"] === "copy-days")[0]!.props["aria-describedby"]).toBeUndefined();
+  });
+
+  it("rings the day copied from and colours today's number; a picked source keeps both fill and ring, a picked today goes ink (ledger 1000)", () => {
+    const look = (tree: El) =>
+      dayButtons(tree).map((button) => {
+        const classes = String(button.props.className);
+        const number = String(findAll(button, (el) => el.type === "span")[1]!.props.className);
+        return [
+          classes.includes("bg-[var(--color-apricot)]") ? "fill" : "",
+          classes.includes("inset-ring-2 inset-ring-[var(--color-accent)]") ? "ring" : "",
+          number.includes("text-[var(--color-accent)]") ? "accent" : "",
+        ].join(" ").trim();
+      });
+    // Copying from Thursday the 15th, today Wednesday the 14th.
+    let tree = render({ date: "2026-10-15" });
+    expect(look(tree)).toEqual(["", "", "", "accent", "ring", "", ""]);
+    expect(dayButtons(tree)[4]!.props["aria-label"]).toBe("Thursday, October 15, copying from this day");
+    expect(dayButtons(tree).filter((button) => String(button.props["aria-label"]).includes("copying from"))).toHaveLength(1);
+    click(dayButtons(tree)[4]); // the source day can take the copy too (another meal)
+    click(dayButtons(again())[3]); // and today
+    tree = again();
+    expect(look(tree)).toEqual(["", "", "", "fill", "fill ring", "", ""]);
+    expect(dayButtons(tree).map((button) => button.props["aria-pressed"])).toEqual([false, false, false, true, true, false, false]);
   });
 
   it("a past source opens on today's week; a later one on its own", () => {

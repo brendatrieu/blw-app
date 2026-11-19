@@ -10,6 +10,7 @@ import { COPY_FAILED, COPY_PAST_LIMIT, allClashesLabel, clashCountLine, clashLin
 import { useCopyCheck, useCopyPlan, usePlanWeeks } from "./hooks.js";
 import {
   WEEKDAY_INITIALS,
+  accentsToday,
   addDays,
   allClashChoice,
   canCopyInto,
@@ -19,7 +20,7 @@ import {
   copyRows,
   copyTargets,
   copyWarningNotes,
-  dayName,
+  copyDayName,
   dayOfMonth,
   firstCopiedDate,
   plannedLines,
@@ -187,19 +188,25 @@ export function CopyForm({ babyId, date, today, meal, onCopied }: Omit<CopySheet
                 key={day}
                 type="button"
                 aria-pressed={pressed}
-                aria-label={dayName(day)}
+                aria-label={copyDayName(day, date)}
                 disabled={day < earliest || !plan}
                 onClick={() => plan && setSelection(toggleCopyDay(selection, plan, source))}
+                // Ledger 1000: the day copied from wears an accent ring, inside
+                // its box so it never touches a neighbour; picked, it keeps
+                // the apricot fill too.
                 className={`flex min-w-0 flex-1 flex-col items-center gap-px rounded-[var(--radius-md)] pt-1.5 pb-1 disabled:opacity-45 ${
                   pressed
                     ? "bg-[var(--color-apricot)] text-[var(--color-apricot-ink)]"
                     : "bg-[var(--color-bg-inset)] text-[var(--color-text)]"
-                }`}
+                }${day === date ? " inset-ring-2 inset-ring-[var(--color-accent)]" : ""}`}
               >
                 <span aria-hidden="true" className="text-xs font-semibold">
                   {WEEKDAY_INITIALS[index]}
                 </span>
-                <span aria-hidden="true" className="text-base leading-[1.25] font-extrabold">
+                <span
+                  aria-hidden="true"
+                  className={`text-base leading-[1.25] font-extrabold${accentsToday(day, today, pressed) ? " text-[var(--color-accent)]" : ""}`}
+                >
                   {dayOfMonth(day)}
                 </span>
                 {pressed ? <CheckGlyph /> : <span aria-hidden="true" className="h-3.5" />}

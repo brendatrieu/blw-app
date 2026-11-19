@@ -227,6 +227,15 @@ const BASE_PAIRS: Pair[] = [
   { name: "elevated text on accent fill (Copy's picked Keep it / Replace it)", fg: "color-bg-elevated", bg: "color-accent" },
   // The More tab's "Update available" row: its Reload sits on inset (ledger 790).
   { name: "accent text on inset surface (More update row)", fg: "color-accent", bg: "color-bg-inset" },
+  // Ledger 1000: today's date number in the accent, on the Meal Plan strip
+  // (elevated) and on an unpicked Copy day (inset); on a pressed apricot day
+  // it stays ink (accent there is 3.89:1 in light, below text AA).
+  { name: "today's date number on the Meal Plan strip (ledger 1000)", fg: "color-accent", bg: "color-bg-elevated" },
+  { name: "today's date number on an unpicked Copy day (ledger 1000)", fg: "color-accent", bg: "color-bg-inset" },
+  { name: "today's date number on a pressed day stays ink (ledger 1000)", fg: "color-apricot-ink", bg: "color-apricot" },
+  // The Copy sheet's source-day ring (non-text, 3:1) on both day fills.
+  { name: "Copy source-day ring on an unpicked day (ledger 1000)", fg: "color-accent", bg: "color-bg-inset", min: 3 },
+  { name: "Copy source-day ring on a picked apricot day (ledger 1000)", fg: "color-accent", bg: "color-apricot", min: 3 },
 
   // Focus ring — non-text UI, 3:1 against both grounds it can appear over.
   { name: "focus ring vs page", fg: "color-accent", bg: "color-bg", min: 3 },
