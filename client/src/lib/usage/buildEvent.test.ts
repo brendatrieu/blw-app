@@ -91,6 +91,8 @@ const SAMPLES: { [N in UsageEvent["name"]]: Extract<UsageEvent, { name: N }>["pr
   plan_saved: { item_count: "2", has_storage: false, days_ahead: "1" },
   plan_copied: { target_count: "3", replaced: true, warned: false },
   daily_meals_saved: { meal_count: "4-5", has_times: false },
+  plan_offer_shown: {},
+  plan_offer_answered: { answer: "plan_today" },
 };
 
 describe("buildEvent — every catalog entry round-trips", () => {

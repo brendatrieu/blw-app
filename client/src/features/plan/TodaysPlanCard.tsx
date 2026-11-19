@@ -1,10 +1,12 @@
-import { useState } from "react";
-import { localDate } from "@blw/shared";
+import { useEffect, useState } from "react";
+import { localDate, upNextMode } from "@blw/shared";
 import { Button, ButtonLink } from "../../components/ui/Button.js";
 import { Card, HOME_CARD_LABEL_CLASS } from "../../components/ui/Card.js";
 import { ChevronLeftGlyph, ChevronRightGlyph } from "../../components/ui/iconButton.js";
 import { PAGER_BUTTON } from "../../components/ui/Pager.js";
 import { useIsOffline } from "../../lib/online.js";
+import { track } from "../../lib/usage/track.js";
+import { useDismissPlanOffer, usePreferences } from "../tour/hooks.js";
 import { DeletedMark } from "../catalog/components/DeletedMark.js";
 import { ItemPlate } from "../plate/PlateItemRow.js";
 import { ServedMealLines, addMoreHref } from "../tracking/components/RatedMealLines.js";
@@ -46,15 +48,68 @@ function CheckGlyph({ size }: { size: number }) {
  * everything served, the last page says so, with Plan tomorrow
  * (CD-Home-Today-Done). It reads the week the meal plan shows, so the two
  * share one cached answer.
+ *
+ * Ledger 995 changes the empty page (`upNextMode`): an account that has never
+ * planned food, for any baby, sees the one-time offer instead ("Plan meals
+ * ahead, if you like.", Plan today, Not now), and after Not now no card.
  */
 export function TodaysPlanCard({ babyId }: { babyId: string }) {
   const today = localDate(new Date(), deviceTimeZone());
   const week = weekOf(today);
   const plan = usePlan(babyId, week[0]!, week[6]!);
   const pages = todaysPlanPages(plan.data?.days?.find((day) => day.date === today));
+  const preferences = usePreferences().data;
   // Not loaded, failed (an older server 404s the plan route), or an answer
   // without days: no card (no flash of the empty page), never the error page.
-  return pages.length === 0 ? null : <TodaysPlan babyId={babyId} today={today} pages={pages} />;
+  // Preferences not known yet: no offer either (ledger 995).
+  const mode = upNextMode(pages, plan.data?.accountHasPlannedFood, preferences ? preferences.planOfferDismissedAt != null : undefined);
+  if (mode === "hidden") return null;
+  return mode === "offer" ? <PlanOffer today={today} /> : <TodaysPlan babyId={babyId} today={today} pages={pages} />;
+}
+
+/** `plan_offer_shown` goes once per app load, however often Home remounts. */
+let offerShownSent = false;
+
+/** Ledger 995: the one-time planning offer, in 948's card look. */
+export function PlanOffer({ today }: { today: string }) {
+  const dismiss = useDismissPlanOffer();
+  useEffect(() => {
+    if (offerShownSent) return;
+    offerShownSent = true;
+    track("plan_offer_shown", {});
+  }, []);
+
+  return (
+    <Card as="section" padding="none" aria-labelledby="up-next" className="px-4 pt-4 pb-3.5">
+      <h2 id="up-next" className={HOME_CARD_LABEL_CLASS}>
+        Up next
+      </h2>
+      <p className="mt-2 text-[17px] leading-[1.3] font-bold text-[var(--color-text)]">Plan meals ahead, if you like.</p>
+      <div className="mt-3 flex gap-2.5">
+        <ButtonLink
+          to={`/plan?date=${today}`}
+          variant="quiet"
+          size="lg"
+          className="flex-1"
+          onClick={() => track("plan_offer_answered", { answer: "plan_today" })}
+        >
+          Plan today
+        </ButtonLink>
+        <Button
+          type="button"
+          variant="ghost"
+          size="lg"
+          className="flex-1"
+          onClick={() => {
+            track("plan_offer_answered", { answer: "not_now" });
+            dismiss.mutate();
+          }}
+        >
+          Not now
+        </Button>
+      </div>
+    </Card>
+  );
 }
 
 /** The card itself, mounted only once there is a plan to show. */

@@ -403,6 +403,12 @@ const eventProps = {
       has_times: z.boolean(),
     })
     .strict(),
+
+  /** Ledger 995: Home's one-time planning offer was on screen, once per app
+   * load. No props: the offer only ever shows to never-planned accounts. */
+  plan_offer_shown: z.object({}).strict(),
+  /** Its answer: Plan today, or Not now. The first plan itself is `plan_saved`. */
+  plan_offer_answered: z.object({ answer: z.enum(["plan_today", "not_now"]) }).strict(),
 } as const;
 
 /** Every P1 event name, in catalog order. Pinned against the union below. */
@@ -430,6 +436,8 @@ export const USAGE_EVENT_NAMES = [
   "plan_saved",
   "plan_copied",
   "daily_meals_saved",
+  "plan_offer_shown",
+  "plan_offer_answered",
 ] as const;
 
 export type UsageEventName = (typeof USAGE_EVENT_NAMES)[number];
@@ -568,6 +576,8 @@ export const usageEventSchema = z
     event("plan_saved"),
     event("plan_copied"),
     event("daily_meals_saved"),
+    event("plan_offer_shown"),
+    event("plan_offer_answered"),
   ])
   .superRefine(rejectPii);
 
@@ -629,6 +639,8 @@ export const usageEventEnvelopeSchema = z
     envelope("plan_saved"),
     envelope("plan_copied"),
     envelope("daily_meals_saved"),
+    envelope("plan_offer_shown"),
+    envelope("plan_offer_answered"),
   ])
   .superRefine((value, ctx) => {
     rejectPii(value, ctx);

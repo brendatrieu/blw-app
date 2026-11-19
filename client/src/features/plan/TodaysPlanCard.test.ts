@@ -18,6 +18,10 @@ const h = vi.hoisted(() => ({
   picked: null as string | null,
   setPicked: [] as unknown[],
   direct: false,
+  // Ledger 995: the account's preferences (Not now) and what the offer sent.
+  prefs: undefined as { planOfferDismissedAt: string | null } | undefined,
+  dismissCalls: 0,
+  tracked: [] as unknown[][],
 }));
 
 vi.mock("react", async (importOriginal) => {
@@ -26,6 +30,8 @@ vi.mock("react", async (importOriginal) => {
     ...actual,
     useState: (init: unknown) =>
       h.direct ? [h.picked, (value: unknown) => h.setPicked.push(value)] : (actual.useState as (i: unknown) => unknown)(init),
+    // Called as a function, an effect runs at once (the offer's shown event).
+    useEffect: (effect: () => void, deps?: unknown[]) => (h.direct ? effect() : actual.useEffect(effect, deps)),
   };
 });
 vi.mock("./hooks.js", () => ({
@@ -40,8 +46,13 @@ vi.mock("./plan.js", async (importOriginal) => ({
   deviceTimeZone: () => "UTC",
 }));
 vi.mock("../../lib/online.js", () => ({ useIsOffline: () => h.offline }));
+vi.mock("../tour/hooks.js", () => ({
+  usePreferences: () => ({ data: h.prefs }),
+  useDismissPlanOffer: () => ({ mutate: () => h.dismissCalls++ }),
+}));
+vi.mock("../../lib/usage/track.js", () => ({ track: (...args: unknown[]) => h.tracked.push(args) }));
 
-import { TodaysPlan, TodaysPlanCard } from "./TodaysPlanCard.js";
+import { PlanOffer, TodaysPlan, TodaysPlanCard } from "./TodaysPlanCard.js";
 import { ServedMealLines } from "../tracking/components/RatedMealLines.js";
 import { todaysPlanPages } from "./plan.js";
 
@@ -95,6 +106,9 @@ beforeEach(() => {
   h.picked = null;
   h.setPicked.length = 0;
   h.direct = false;
+  h.prefs = { planOfferDismissedAt: null };
+  h.dismissCalls = 0;
+  h.tracked.length = 0;
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -270,5 +284,81 @@ describe("TodaysPlan (handlers)", () => {
     serve = byLabel(offline, "Serve Breakfast");
     expect(serve.props).toMatchObject({ disabled: true, "aria-describedby": "up-next-offline", children: "Serve" });
     expect(text(all(offline, (el) => el.props.id === "up-next-offline")[0])).toBe("You're offline.");
+  });
+});
+
+describe("Up next's one-time planning offer (ledger 995)", () => {
+  const never = (meals: PlannedMeal[] = [], has = false) => ({ data: { ...plan(meals), accountHasPlannedFood: has } });
+
+  it("never planned, not dismissed, nothing today: the offer line with Plan today (948's target) and Not now, no pager", () => {
+    for (const meals of [[], [SNACK]]) {
+      h.plan = never(meals);
+      if (meals.length) h.plan = { data: { ...plan(meals, TODAY, false), accountHasPlannedFood: false } };
+      const out = card();
+      expect(out).toMatch(/^<section [^>]*aria-labelledby="up-next"/);
+      expect(out).toContain(">Up next</h2>");
+      expect(out).toContain('<p class="mt-2 text-[17px] leading-[1.3] font-bold text-[var(--color-text)]">Plan meals ahead, if you like.</p>');
+      expect(out).toMatch(new RegExp(`<a class="[^"]*bg-\\[var\\(--color-bg-inset\\)\\][^"]*min-h-12[^"]*flex-1" href="/plan\\?date=${TODAY}"[^>]*>Plan today</a>`));
+      expect(out).toMatch(/<button class="[^"]*min-h-12[^"]*flex-1" type="button">Not now<\/button>/);
+      expect(out).not.toContain("Nothing planned for today.");
+      expect(out).not.toContain("Previous meal");
+    }
+  });
+
+  it("never planned and dismissed: no card; preferences not known yet: no card either (no flash of the offer)", () => {
+    h.plan = never();
+    h.prefs = { planOfferDismissedAt: "2026-11-18T09:00:00.000Z" };
+    expect(card()).toBe("");
+    h.prefs = undefined;
+    expect(card()).toBe("");
+  });
+
+  it("planned before (any baby), or an older server without the signal: 948's line, dismissed or not", () => {
+    for (const prefs of [{ planOfferDismissedAt: null }, { planOfferDismissedAt: "2026-11-18T09:00:00.000Z" }, undefined]) {
+      h.prefs = prefs;
+      for (const data of [never([], true).data, plan([])]) {
+        h.plan = { data };
+        const out = card();
+        expect(out).toContain(">Nothing planned for today.</p>");
+        expect(out).toMatch(new RegExp(`href="/plan\\?date=${TODAY}"[^>]*>Plan today</a>`));
+        expect(out).not.toContain("Plan meals ahead");
+        expect(out).not.toContain("Not now");
+      }
+    }
+  });
+
+  it("today with food always wins, even never-planned and dismissed", () => {
+    h.plan = never([BREAKFAST]);
+    h.prefs = { planOfferDismissedAt: "2026-11-18T09:00:00.000Z" };
+    const out = card();
+    expect(out).toContain(">Breakfast</span>");
+    expect(out).toContain(">Serve</button>");
+    expect(out).not.toContain("Plan meals ahead");
+  });
+
+  it("Not now sends not_now and the dismiss; Plan today sends plan_today and keeps its link; shown is sent once per app load", () => {
+    type El = { type: unknown; props: Record<string, unknown> & { children?: unknown } };
+    const find = (node: unknown, label: string): El | undefined => {
+      if (Array.isArray(node)) return node.map((child) => find(child, label)).find(Boolean);
+      if (!node || typeof node !== "object" || !("props" in node)) return undefined;
+      const el = node as El;
+      if (el.props.children === label) return el;
+      return Object.values(el.props).map((value) => find(value, label)).find(Boolean);
+    };
+    h.direct = true;
+    const render = () => (PlanOffer as unknown as (props: unknown) => El)({ today: TODAY });
+    const tree = render();
+    render();
+    expect(h.tracked).toEqual([["plan_offer_shown", {}]]);
+    h.tracked.length = 0;
+    (find(tree, "Not now")!.props.onClick as () => void)();
+    expect(h.tracked).toEqual([["plan_offer_answered", { answer: "not_now" }]]);
+    expect(h.dismissCalls).toBe(1);
+    h.tracked.length = 0;
+    const planToday = find(tree, "Plan today")!;
+    expect(planToday.props.to).toBe(`/plan?date=${TODAY}`);
+    (planToday.props.onClick as () => void)();
+    expect(h.tracked).toEqual([["plan_offer_answered", { answer: "plan_today" }]]);
+    expect(h.dismissCalls).toBe(1);
   });
 });

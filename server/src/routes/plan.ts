@@ -396,6 +396,20 @@ async function loadPlan(db: Queryable, babyId: string, from: string, to: string,
   return { dailyMeals, days };
 }
 
+/** Ledger 995: any planned item, on any day, for any of the account's babies
+ * (archived ones too). One indexed EXISTS; Home's Up next reads it to choose
+ * between the 948 line and the one-time planning offer. */
+async function hasPlannedFood(db: Queryable, userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ yes: sql<boolean>`true` })
+    .from(plannedItems)
+    .innerJoin(plannedMeals, eq(plannedMeals.id, plannedItems.plannedMealId))
+    .innerJoin(babies, eq(babies.id, plannedMeals.babyId))
+    .where(eq(babies.userId, userId))
+    .limit(1);
+  return row !== undefined;
+}
+
 async function loadDay(db: Queryable, babyId: string, date: string, flags?: Flags): Promise<PlanDay> {
   const [day] = (await loadPlan(db, babyId, date, date, flags)).days;
   if (!day) throw new Error("A plan day could not be read back");
@@ -524,7 +538,8 @@ export function registerPlanRoutes(app: FastifyInstance, db: Database): void {
     const today = localDate(new Date(), tz);
     const { flags } = await loadFlags(db, currentUserId(request), today, tz);
     const plan = await loadPlan(db, params.data.babyId, from, to, flags);
-    return reply.send({ today, ...plan } satisfies PlanResponse);
+    const accountHasPlannedFood = await hasPlannedFood(db, currentUserId(request));
+    return reply.send({ today, ...plan, accountHasPlannedFood } satisfies PlanResponse);
   });
 
   // -----------------------------------------------------------------------

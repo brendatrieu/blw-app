@@ -334,6 +334,11 @@ export const planResponseSchema = z.object({
   today: planDateSchema,
   dailyMeals: z.array(dailyMealSchema),
   days: z.array(planDaySchema),
+  /** Ledger 995: whether this ACCOUNT has anything planned, on any day, for
+   * any of its babies (computed live, so deleting every plan makes it false
+   * again). Rides the plan read because every plan write refetches it. Absent
+   * from an older server: Home then keeps ledger 948's card. */
+  accountHasPlannedFood: z.boolean().optional(),
 });
 export type PlanResponse = z.infer<typeof planResponseSchema>;
 
@@ -365,6 +370,27 @@ export function nextPlannedMeal<T extends { position: number; time: string | nul
     open.find((meal, index) => meal.time === null || now - minutes(meal.time) <= NEXT_MEAL_GRACE_MIN || index === open.length - 1) ??
     null
   );
+}
+
+/** What Home's Up next shows (ledger 995): its usual pages, the one-time
+ * planning offer, or no card at all. */
+export type UpNextMode = "normal" | "offer" | "hidden";
+
+/**
+ * Ledger 995 (owner pick 4; settles 949, changes 948). `pages` are the card's
+ * pages for today (the client's `todaysPlanPages`: `[]` before the plan has
+ * loaded, `["empty"]` when today has nothing to show). Today having anything
+ * to show always wins. With nothing today, an account that has ever planned
+ * food (`accountHasPlannedFood`, from the plan read; undefined from an older
+ * server, which keeps the 948 card) sees 948's "Nothing planned for today.";
+ * one that never has sees the offer until it says Not now
+ * (`offerDismissed`), then no card. Until the preferences are known
+ * (undefined) it shows nothing extra: no card, never a flash of the offer.
+ */
+export function upNextMode(pages: readonly unknown[], accountHasPlannedFood: boolean | undefined, offerDismissed: boolean | undefined): UpNextMode {
+  if (pages.length === 0) return "hidden";
+  if (pages.length > 1 || pages[0] !== "empty" || accountHasPlannedFood !== false) return "normal";
+  return offerDismissed === false ? "offer" : "hidden";
 }
 
 /**

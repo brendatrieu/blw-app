@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  upNextMode,
   DEFAULT_DAILY_MEALS,
   NEXT_MEAL_GRACE_MIN,
   addPlannedMealInputSchema,
@@ -102,6 +103,29 @@ describe("nextPlannedMeal (SPEC §4.3, chair Q8)", () => {
     expect(at([meal(0, "07:00"), meal(1, null), meal(2, "18:00")], "11:00")).toBe(1);
     expect(at([meal(0, "07:00", true), meal(1, null, true)], "11:00")).toBe(null);
     expect(at([], "11:00")).toBe(null);
+  });
+});
+
+describe("upNextMode (ledger 995: the one-time planning offer)", () => {
+  const meal = { slotId: "m1" };
+  it("before the plan has loaded: no card, whatever else is known", () => {
+    for (const has of [true, false, undefined]) for (const dismissed of [true, false, undefined]) expect(upNextMode([], has, dismissed)).toBe("hidden");
+  });
+  it("today with anything to show always wins, even for a never-planned, dismissed account", () => {
+    for (const pages of [[meal], [meal, "done"], [meal, meal]]) {
+      for (const has of [true, false, undefined]) for (const dismissed of [true, false, undefined]) expect(upNextMode(pages, has, dismissed)).toBe("normal");
+    }
+  });
+  it("nothing today, the account has planned before: 948's line, dismissed or not", () => {
+    for (const dismissed of [true, false, undefined]) expect(upNextMode(["empty"], true, dismissed)).toBe("normal");
+  });
+  it("nothing today, an older server without the signal: 948's line as before", () => {
+    for (const dismissed of [true, false, undefined]) expect(upNextMode(["empty"], undefined, dismissed)).toBe("normal");
+  });
+  it("nothing today, never planned: the offer until Not now, then no card; nothing while the preferences load", () => {
+    expect(upNextMode(["empty"], false, false)).toBe("offer");
+    expect(upNextMode(["empty"], false, true)).toBe("hidden");
+    expect(upNextMode(["empty"], false, undefined)).toBe("hidden");
   });
 });
 

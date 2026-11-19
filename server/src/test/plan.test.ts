@@ -159,6 +159,41 @@ describe("planning (ledger 903, step 3.1)", () => {
     });
   });
 
+  describe("the account's planned-food signal (ledger 995)", () => {
+    const signal = async (baby = babyId, user: TestUser = parent) => {
+      const response = await getPlan(DAY, DAY, TZ, baby, user);
+      expect(response.statusCode, response.body).toBe(200);
+      return planResponseSchema.parse(response.json()).accountHasPlannedFood;
+    };
+
+    it("false with nothing planned (a saved day with an empty meal or Daily meals alone don't count)", async () => {
+      expect(await signal()).toBe(false);
+      expect((await add(DAY, { name: "Tea", items: [] })).statusCode).toBe(201);
+      expect((await inject("PUT", `/api/babies/${babyId}/daily-meals`, { meals: [{ name: "Tea" }] })).statusCode).toBe(200);
+      expect(await signal()).toBe(false);
+    });
+
+    it("true for every baby of the account once one baby has food planned on any day, never for another account", async () => {
+      const sibling = await newBaby(parent, "Sam");
+      // Only the sibling, on a day outside the range read.
+      expect((await put("2026-12-24", LUNCH, { items: [{ kind: "food", foodId: fx.egg.id }] }, sibling)).statusCode).toBe(200);
+      expect(await signal()).toBe(true);
+      expect(await signal(sibling)).toBe(true);
+      const stranger = await signUpUser(app, "Stranger");
+      expect(await signal(await newBaby(stranger, "Kit"), stranger)).toBe(false);
+    });
+
+    it("false again once every plan is gone: a meal emptied, a baby deleted", async () => {
+      const sibling = await newBaby(parent, "Sam");
+      await planned(DAY, LUNCH, [{ kind: "food", foodId: fx.egg.id }]);
+      expect((await put(DAY, LUNCH, { items: [{ kind: "food", foodId: fx.pear.id }] }, sibling)).statusCode).toBe(200);
+      await planned(DAY, LUNCH, []);
+      expect(await signal()).toBe(true);
+      expect((await inject("DELETE", `/api/babies/${sibling}`)).statusCode).toBe(204);
+      expect(await signal()).toBe(false);
+    });
+  });
+
   describe("materializing a day", () => {
     it("the first write gives the day one row per daily meal; the daily meal's id keeps finding its row", async () => {
       const after = await planned(DAY, LUNCH, [{ kind: "food", foodId: fx.egg.id }]);

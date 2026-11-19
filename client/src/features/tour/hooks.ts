@@ -73,3 +73,31 @@ export function useUpdatePreferences() {
     },
   });
 }
+
+/**
+ * Ledger 995: "Not now" on Home's one-time planning offer. Optimistic: the
+ * cached preferences read as dismissed at once, so the offer goes before the
+ * server answers (or, offline, before the paused write runs on reconnect).
+ * Otherwise the tour's rule: no rollback and no error message, so a write
+ * that fails costs at most one more showing on a later load.
+ */
+export function useDismissPlanOffer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => updatePreferences({ planOfferDismissed: true }),
+    onMutate: async () => {
+      // A read in flight must not land after this and bring the offer back.
+      await queryClient.cancelQueries({ queryKey: preferenceKeys.all() });
+      queryClient.setQueryData<UserPreferences>(preferenceKeys.all(), (old) =>
+        old ? { ...old, planOfferDismissedAt: old.planOfferDismissedAt ?? new Date().toISOString() } : old,
+      );
+    },
+    onSuccess: (preferences: UserPreferences) => {
+      queryClient.setQueryData(preferenceKeys.all(), preferences);
+    },
+    onError: () => {
+      // Deliberately silent — see above.
+    },
+  });
+}

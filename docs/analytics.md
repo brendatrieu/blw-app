@@ -77,6 +77,8 @@ six buckets is as much as it can ever carry.
 | `plan_saved` | a planned meal's items saved (not sent for a save that empties a meal: the bucket starts at 1) | `item_count` (the `food_count` buckets, counting plate items), `has_storage` (a container is planned), `days_ahead` (`past` for a day before today, else `0` / `1` / `2-7` / `8+` days after today; never the date) |
 | `plan_copied` | a Copy to… that persisted | `target_count` (the `food_count` buckets), `replaced` (any target was Replace it), `warned` (the dry run showed warnings) |
 | `daily_meals_saved` | Daily meals saved | `meal_count` (the `food_count` buckets), `has_times` (any meal has a time); never the names |
+| `plan_offer_shown` | Home's one-time planning offer (ledger 995; only an account that has never planned food) is on screen; once per app load | — |
+| `plan_offer_answered` | the offer's Plan today or Not now is tapped (the first plan itself is `plan_saved`) | `answer` (`plan_today` / `not_now`) |
 
 `via` is always DERIVED from the route and its query parameters — `/log-meal?food=`
 is `food_page`, `/storage/add` reached from Home is `home` — never wired to a

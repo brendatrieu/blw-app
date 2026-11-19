@@ -97,6 +97,8 @@ const SAMPLE_PROPS: Record<UsageEventName, Record<string, unknown>> = {
   plan_saved: { item_count: "3", has_storage: true, days_ahead: "2-7" },
   plan_copied: { target_count: "4-5", replaced: false, warned: true },
   daily_meals_saved: { meal_count: "4-5", has_times: true },
+  plan_offer_shown: {},
+  plan_offer_answered: { answer: "not_now" },
 };
 
 function envelopeFor(name: UsageEventName, overrides: Record<string, unknown> = {}) {
@@ -113,7 +115,7 @@ function envelopeFor(name: UsageEventName, overrides: Record<string, unknown> = 
 }
 
 describe("the P1 catalog", () => {
-  it("is exactly the 23 events the plan lists, in order", () => {
+  it("is exactly the 25 events the plan lists, in order", () => {
     expect(USAGE_EVENT_NAMES).toEqual([
       "session_started",
       "screen_viewed",
@@ -138,6 +140,8 @@ describe("the P1 catalog", () => {
       "plan_saved",
       "plan_copied",
       "daily_meals_saved",
+      "plan_offer_shown",
+      "plan_offer_answered",
     ]);
 
     // The exported list and the union it documents cannot drift apart.
@@ -190,6 +194,14 @@ describe("the P1 catalog", () => {
     expect(parse("plan_saved", { ...SAMPLE_PROPS.plan_saved, date: "2026-11-02" })).toBe(false);
     expect(parse("plan_copied", { ...SAMPLE_PROPS.plan_copied, target_count: 4 })).toBe(false);
     expect(parse("daily_meals_saved", { ...SAMPLE_PROPS.daily_meals_saved, names: ["Lunch"] })).toBe(false);
+  });
+
+  it("the planning offer's events (ledger 995): shown with no props, answered as plan_today or not_now only", () => {
+    const parse = (name: UsageEventName, props: Record<string, unknown>) => usageEventSchema.safeParse({ name, props }).success;
+    expect(parse("plan_offer_shown", {})).toBe(true);
+    expect(parse("plan_offer_shown", { baby_count: "1" })).toBe(false);
+    for (const answer of ["plan_today", "not_now"]) expect(parse("plan_offer_answered", { answer })).toBe(true);
+    for (const props of [{}, { answer: "later" }, { answer: "not_now", date: "2026-11-18" }]) expect(parse("plan_offer_answered", props)).toBe(false);
   });
 
   it("takes storage_item_added via \"plate_ran_out\" (ledger 904, CD-Ran-Out-Add), and no other new value", () => {
