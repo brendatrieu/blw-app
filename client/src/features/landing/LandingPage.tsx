@@ -12,13 +12,14 @@ const WAY_IN = "flex-1 max-[22.5rem]:px-2.5 max-[22.5rem]:text-[0.8125rem]";
 const shotSrc = (shot: string, theme: "light" | "dark") => `/landing/${shot}-${theme}.webp`;
 
 /**
- * Ledger 992/1003: the signed-out front door ("/" lands here, RequireAuth).
+ * Ledger 992/1003/1012: the signed-out front door ("/" lands here, RequireAuth).
  * One app-width column exactly the screen's height: it runs up under
  * OutsideAppLayout's top clearance (the brand row clears it again), so the
- * page never scrolls. Each slide is a full-bleed screenshot with its words on
- * a gradient to the page colour; the dots and the ways in sit in one panel
- * pinned to the bottom, outside the track (absolute, never fixed chrome),
- * whose height `--panel-h` every slide keeps clear under its words. The track is the
+ * page never scrolls. Each slide is a full-bleed screenshot; its words sit
+ * in one sheet pinned to the bottom, outside the track (absolute, never fixed
+ * chrome), on its own surface so it never reads as part of the screenshot.
+ * The sheet shows the active slide's words with the dots and the ways in;
+ * screen readers get each slide's words with its picture instead. The track is the
  * Pager's swipe track (one flick = one slide, item 778): it moves only by
  * scrolling, never the URL or history (ledger 849), and only when the visitor
  * moves it. Signed in, it forwards Home, so Back after a sign-in never shows
@@ -62,7 +63,7 @@ export function LandingPage() {
 
   return (
     <div
-      className="relative mx-auto max-w-lg [--panel-h:calc(8.25rem+max(1rem,env(safe-area-inset-bottom)))]"
+      className="relative mx-auto max-w-lg"
       style={{ height: "100dvh", marginTop: "calc(-1 * (env(safe-area-inset-top) + var(--top-edge-clearance)))" }}
     >
       {/* Wide screens: the current picture, blurred and dimmed, fills the
@@ -130,29 +131,47 @@ export function LandingPage() {
                 style={{ paddingTop: "calc(env(safe-area-inset-top) + var(--top-edge-clearance))" }}
               />
             </picture>
-            {/* Clear to the page colour, solid where the words sit, then the
-                panel's reserved height (which also hides the shot's tab bar). */}
-            <div
-              className="absolute inset-x-0 bottom-0 flex flex-col gap-1 px-4 pt-8 text-center"
-              style={{
-                paddingBottom: "var(--panel-h)",
-                background: "linear-gradient(to bottom, transparent, var(--color-bg) 1.75rem)",
-              }}
-            >
-              <h2 className="font-h2 text-[var(--color-text)]">{slide.title}</h2>
-              <p className="text-sm text-[var(--color-text-muted)]">{slide.body}</p>
-              {slideIndex === COUNT - 1 ? (
-                <p className="text-xs italic text-[var(--color-text-muted)]">{DISCLAIMER}</p>
-              ) : null}
+            {/* The words for screen readers, with the picture; the sheet shows them. */}
+            <div className="sr-only">
+              <h2>{slide.title}</h2>
+              <p>{slide.body}</p>
+              {slideIndex === COUNT - 1 ? <p>{DISCLAIMER}</p> : null}
             </div>
           </section>
         ))}
       </div>
 
+      {/* The sheet: its own surface (not the screenshots' page colour), a
+          rounded top with an upward shadow and hairline, and a short fade on
+          the picture just above it. */}
       <div
-        className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-[var(--color-bg)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
-        style={{ height: "var(--panel-h)" }}
+        className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center rounded-t-[var(--radius-lg)] bg-[var(--color-landing-sheet)] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        style={{ boxShadow: "var(--shadow-sheet)" }}
       >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-full h-6"
+          style={{ background: "linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-bg) 60%, transparent))" }}
+        />
+        {/* Every slide's words in one grid cell, only the active one shown:
+            the sheet is as tall as the longest, so it never jumps. Hidden
+            from screen readers, who hear them with each picture. */}
+        <div aria-hidden="true" className="grid w-full text-center">
+          {LANDING_SLIDES.map((slide, slideIndex) => (
+            <div
+              key={slide.shot}
+              className={`col-start-1 row-start-1 flex flex-col justify-center gap-1 transition-opacity duration-[var(--duration-fast)] motion-reduce:transition-none ${
+                slideIndex === index ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <p className="font-h2 text-[var(--color-text)]">{slide.title}</p>
+              <p className="text-sm text-[var(--color-text-muted)]">{slide.body}</p>
+              {slideIndex === COUNT - 1 ? (
+                <p className="text-xs italic text-[var(--color-text-muted)]">{DISCLAIMER}</p>
+              ) : null}
+            </div>
+          ))}
+        </div>
         <div className="flex shrink-0 items-center justify-center">
           {LANDING_SLIDES.map((slide, slideIndex) => (
             <button
@@ -176,12 +195,14 @@ export function LandingPage() {
         </div>
 
         {/* Until the session is known, no way in: a signed-in parent reloading
-            here must not see "Create an account" flash first. */}
-        {isPending ? null : (
+            here must not see "Create an account" flash first. The space is
+            kept (button row + About), so the sheet does not grow later. */}
+        {isPending ? (
+          <div className="h-[5.5rem]" />
+        ) : (
           <>
             {/* Side by side at every width (a touch smaller under 360px, so
-                "Create an account" fits one line at 320px), which keeps the
-                panel one row of buttons tall: --panel-h. */}
+                "Create an account" fits one line at 320px): one row. */}
             <div className="flex w-full gap-2">
               <ButtonLink to="/signup" className={WAY_IN}>
                 Create an account

@@ -76,6 +76,11 @@
   --color-bg: #fbfaf8;
   --color-bg-elevated: #ffffff;
   --color-bg-inset: #f1efeb;
+  /* Ledger 1012: the signed-out landing's bottom sheet, its own surface (a
+     sea tint, not the screenshots' page colour) with an upward shadow and
+     a hairline on top. */
+  --color-landing-sheet: #e3edf4;
+  --shadow-sheet: 0 -1px 0 rgb(31 42 54 / 0.1), 0 -8px 24px rgb(31 42 54 / 0.14);
 
   /* ---- Text (deep navy — the hue the dark ground is built from) ---- */
   --color-text: #1f2a36;
@@ -307,6 +312,8 @@
   --_dark-color-bg: #0e1218; /* near-black blue */
   --_dark-color-bg-elevated: #171d25;
   --_dark-color-bg-inset: #232b35;
+  --_dark-landing-sheet: #222d3a;
+  --_dark-shadow-sheet: 0 -1px 0 rgb(255 255 255 / 0.1), 0 -8px 24px rgb(0 0 0 / 0.5);
   --_dark-color-text: #eef3f7;
   --_dark-color-text-muted: #a3afba;
   --_dark-color-border: #28313c;
@@ -392,6 +399,8 @@
     --color-bg: var(--_dark-color-bg);
     --color-bg-elevated: var(--_dark-color-bg-elevated);
     --color-bg-inset: var(--_dark-color-bg-inset);
+    --color-landing-sheet: var(--_dark-landing-sheet);
+    --shadow-sheet: var(--_dark-shadow-sheet);
 
     --color-text: var(--_dark-color-text);
     --color-text-muted: var(--_dark-color-text-muted);
@@ -479,6 +488,8 @@
   --color-bg: var(--_dark-color-bg);
   --color-bg-elevated: var(--_dark-color-bg-elevated);
   --color-bg-inset: var(--_dark-color-bg-inset);
+  --color-landing-sheet: var(--_dark-landing-sheet);
+  --shadow-sheet: var(--_dark-shadow-sheet);
 
   --color-text: var(--_dark-color-text);
   --color-text-muted: var(--_dark-color-text-muted);

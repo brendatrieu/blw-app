@@ -43,6 +43,11 @@ const closeOf = (html: string, open: number) => {
   return -1;
 };
 const trackClose = (html: string) => closeOf(html, html.lastIndexOf("<div", html.indexOf('aria-roledescription="carousel"')));
+/** The bottom sheet: the first element after the track. */
+const sheetOf = (html: string) => {
+  const open = html.indexOf("<div", trackClose(html));
+  return html.slice(open, closeOf(html, open));
+};
 
 beforeEach(() => {
   h.session = null;
@@ -90,13 +95,27 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
     }
   });
 
-  it("sets each slide's words on a gradient to the page colour, clear of the panel's height", () => {
+  it("gives screen readers each slide's words with its picture, once (ledger 1012)", () => {
     const html = render();
-    const captions = [...html.matchAll(/<div class="absolute inset-x-0 bottom-0 flex flex-col gap-1 px-4 pt-8 text-center" style="([^"]*)">/g)];
-    expect(captions).toHaveLength(5);
-    for (const [, style] of captions) {
-      expect(style).toBe("padding-bottom:var(--panel-h);background:linear-gradient(to bottom, transparent, var(--color-bg) 1.75rem)");
+    const slides = html.split('aria-roledescription="slide"').slice(1);
+    for (const [i, slide] of LANDING_SLIDES.entries()) {
+      const words = slides[i]!.match(/<div class="sr-only"><h2>([^<]*)<\/h2><p>([^<]*)<\/p>/)!;
+      expect(words[1]).toBe(slide.title.replace("'", "&#x27;"));
+      expect(words[2]).toBe(slide.body.replace("'", "&#x27;"));
     }
+    // The sheet's copy is hidden from them, so nothing is read twice.
+    const stack = sheetOf(html).match(/<div aria-hidden="true" class="grid w-full text-center">/);
+    expect(stack).not.toBeNull();
+  });
+
+  it("shows the active slide's words in the sheet, the others stacked in the same cell but hidden", () => {
+    const html = render();
+    const sheet = sheetOf(html);
+    const cells = [...sheet.matchAll(/<div class="col-start-1 row-start-1 flex flex-col justify-center gap-1 [^"]* (opacity-\d+)"><p class="font-h2 text-\[var\(--color-text\)\]">([^<]*)<\/p><p class="text-sm text-\[var\(--color-text-muted\)\]">([^<]*)<\/p>/g)];
+    expect(cells.map((m) => m[2])).toEqual(LANDING_SLIDES.map((slide) => slide.title.replace("'", "&#x27;")));
+    expect(cells.map((m) => m[1])).toEqual(LANDING_SLIDES.map((_, i) => (i === 0 ? "opacity-100" : "opacity-0")));
+    // Instant under reduced motion.
+    expect(sheet).toContain("transition-opacity duration-[var(--duration-fast)] motion-reduce:transition-none");
   });
 
   it("fills the sides of a wide screen with the current picture, blurred, dimmed and hidden from AT", () => {
@@ -117,10 +136,14 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
     }
   });
 
-  it("puts the disclaimer under slide 5 only", () => {
+  it("puts the disclaimer with the last slide only: its words, and its words in the sheet", () => {
     const html = render();
-    expect(count(html, DISCLAIMER)).toBe(1);
-    expect(html.indexOf(DISCLAIMER)).toBeGreaterThan(html.indexOf(LANDING_SLIDES[4]!.body));
+    const last = LANDING_SLIDES.at(-1)!;
+    const slides = html.slice(0, trackClose(html)).split('aria-roledescription="slide"').slice(1);
+    expect(slides.map((slide) => count(slide, DISCLAIMER))).toEqual(LANDING_SLIDES.map((_, i) => (i === LANDING_SLIDES.length - 1 ? 1 : 0)));
+    const sheet = sheetOf(html);
+    expect(count(sheet, DISCLAIMER)).toBe(1);
+    expect(sheet.indexOf(DISCLAIMER)).toBeGreaterThan(sheet.indexOf(last.body));
   });
 
   it("has a 44px dot per slide, the current one wider, and no visible 'N of 5' (ledger 1003)", () => {
@@ -150,23 +173,28 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
     expect(html.indexOf(">Create an account<")).toBeGreaterThan(close);
   });
 
-  it("pins the dots and the ways in to the bottom, in one solid panel as tall as --panel-h", () => {
+  it("pins the words, the dots and the ways in to the bottom in one sheet on its own surface (ledger 1012)", () => {
     const html = render();
-    const open = html.indexOf("<div", trackClose(html));
-    const panel = html.slice(open, closeOf(html, open));
-    expect(panel).toMatch(/^<div class="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-\[var\(--color-bg\)\] [^"]*" style="height:var\(--panel-h\)">/);
-    for (const label of ['aria-label="Go to slide 5 of 5"', ">Create an account<", ">Sign in<", ">About Little Meals<"]) {
-      expect(panel, label).toContain(label);
-    }
+    const sheet = sheetOf(html);
+    expect(sheet).toMatch(
+      /^<div class="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center rounded-t-\[var\(--radius-lg\)\] bg-\[var\(--color-landing-sheet\)\] [^"]*" style="box-shadow:var\(--shadow-sheet\)">/,
+    );
+    // Only a short fade on the picture just above it.
+    expect(sheet).toMatch(/^<div[^>]*><div aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-full h-6" style="background:linear-gradient\(to bottom, transparent, color-mix\(in srgb, var\(--color-bg\) 60%, transparent\)\)"><\/div>/);
+    // Words, then dots, then the two buttons, then About.
+    const order = ['class="grid w-full text-center"', `aria-label="Go to slide ${LANDING_SLIDES.length} of ${LANDING_SLIDES.length}"`, ">Create an account<", ">Sign in<", ">About Little Meals<"];
+    const at = order.map((label) => sheet.indexOf(label));
+    expect(at.every((i) => i > 0), JSON.stringify(at)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
     // One row of buttons at every width; a touch smaller under 360px.
-    expect(count(panel, /class="[^"]*\bflex-1 max-\[22.5rem\]:px-2.5 max-\[22.5rem\]:text-\[0.8125rem\]"/)).toBe(2);
-    expect(panel).toContain('<div class="flex w-full gap-2">');
+    expect(count(sheet, /class="[^"]*\bflex-1 max-\[22.5rem\]:px-2.5 max-\[22.5rem\]:text-\[0.8125rem\]"/)).toBe(2);
+    expect(sheet).toContain('<div class="flex w-full gap-2">');
   });
 
   it("is one app-width column with no fixed chrome (item 703, CLAUDE.md)", () => {
     const html = render();
     const root = html.match(/^<div class="([^"]*)"/)?.[1]?.split(" ") ?? [];
-    expect(root).toEqual(expect.arrayContaining(["relative", "mx-auto", "max-w-lg", "[--panel-h:calc(8.25rem+max(1rem,env(safe-area-inset-bottom)))]"]));
+    expect(root).toEqual(expect.arrayContaining(["relative", "mx-auto", "max-w-lg"]));
     const classes = [...html.matchAll(/class="([^"]*)"/g)].flatMap((m) => m[1]!.split(" "));
     expect(classes).not.toContain("fixed");
     expect(classes).not.toContain("sticky");
@@ -187,6 +215,8 @@ describe("LandingPage markup (ledger 992, 1003)", () => {
     expect(html).not.toContain('href="/about"');
     expect(count(html, 'aria-roledescription="slide"')).toBe(5);
     expect(count(html, /aria-label="Go to slide \d of 5"/)).toBe(5);
+    // The space stays, so the sheet does not grow when they arrive.
+    expect(sheetOf(html)).toContain('<div class="h-[5.5rem]"></div>');
   });
 
   it("forwards a signed-in visit Home, replacing the entry", () => {

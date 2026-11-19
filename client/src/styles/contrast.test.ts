@@ -492,6 +492,30 @@ describe("dark-mode block parity", () => {
   });
 });
 
+describe("landing sheet (ledger 1012)", () => {
+  // The signed-out landing's bottom sheet: the active slide's words, the
+  // dots and the three ways in, on their own surface above the screenshots.
+  const SHEET_PAIRS: Pair[] = [
+    { name: "headline on the landing sheet", fg: "color-text", bg: "color-landing-sheet" },
+    { name: "body and disclaimer on the landing sheet", fg: "color-text-muted", bg: "color-landing-sheet" },
+    { name: "About link on the landing sheet", fg: "color-accent", bg: "color-landing-sheet" },
+    { name: "current dot on the landing sheet", fg: "color-accent", bg: "color-landing-sheet", min: 3 },
+    { name: "other dots on the landing sheet", fg: "color-text-muted", bg: "color-landing-sheet", min: 3 },
+  ];
+  for (const mode of ["light", "dark"] as const) {
+    for (const pair of SHEET_PAIRS) {
+      it(`[${mode}] ${pair.name} >= ${pair.min ?? 4.5}:1`, () => {
+        expect(ratioOf(pair.fg, pair.bg, mode)).toBeGreaterThanOrEqual(pair.min ?? 4.5);
+      });
+    }
+    // Not part of the screenshot: the sheet is a different colour from the
+    // page the shots were taken on (owner: "a bit more contrast").
+    it(`[${mode}] the sheet differs from the screenshots' page colour`, () => {
+      expect(ratioOf("color-landing-sheet", "color-bg", mode)).toBeGreaterThanOrEqual(1.1);
+    });
+  }
+});
+
 describe("food plates (items 657, 658)", () => {
   // The tinted discs are decorative (aria-hidden, the food's name is always
   // text beside them), so the tints carry no 3:1 graphics gate. The one plate
