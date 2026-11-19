@@ -1,6 +1,5 @@
-import { Navigate, useLocation } from "react-router-dom";
 import { useSession } from "../lib/auth.js";
-import type { FrontDoorState } from "../components/RequireAuth.js";
+import { DISCLAIMER } from "../features/landing/slides.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { Card } from "../components/ui/Card.js";
 import { BackButton } from "../components/ui/BackButton.js";
@@ -14,7 +13,8 @@ export const ABOUT_FEATURES = [
   { emoji: "🍎", name: "Foods and recipes", text: "iron- and vitamin C-rich foods, with prep by age." },
   { emoji: "🪜", name: "Allergens", text: "introduce the top 9 and keep them in rotation." },
   { emoji: "🍽️", name: "Meal log", text: "what your baby ate, how it went, and any reactions." },
-  { emoji: "🛟", name: "Learn", text: "safety guides you can read offline." },
+  { emoji: "🗓️", name: "Meal Plan", text: "plan the days ahead if you like, then serve in one tap." },
+  { emoji: "🛟", name: "Learn", text: "safety guides you can read offline, How-To Guides, and Symptom Check." },
 ] as const;
 
 /** The two ways in, shown only to a signed-out visitor, once, at the top. */
@@ -33,22 +33,17 @@ function SignUpButtons() {
 
 /**
  * Item 611: what the app is, then why it exists. Public — a signed-out
- * visitor lands here from "/" (RequireAuth); a signed-in parent reaches it
+ * visitor reaches it from the landing (/welcome, ledger 992) and gets a back
+ * chevron to it above the sign-up buttons; a signed-in parent reaches it
  * from More and gets a back chevron instead of the sign-up buttons.
  */
 export function AboutPage() {
   const { data: session, isPending } = useSession();
-  const location = useLocation();
   // Until the session is known, show neither the sign-up buttons nor the back
   // button: a signed-in parent reloading this page must not see "Create an
   // account" flash first.
   const signedIn = Boolean(session);
   const signedOut = !isPending && !session;
-  // Ledger 828: Back after signing in returns to the entry that stood in for
-  // "/" while signed out. Signed in, that entry is Home.
-  if (signedIn && (location.state as Partial<FrontDoorState> | null)?.frontDoor === true) {
-    return <Navigate to="/" replace />;
-  }
 
   return (
     // Item 703: as wide as every page inside AppLayout (its max-w-lg column,
@@ -57,6 +52,13 @@ export function AboutPage() {
     <div className="mx-auto flex min-h-full max-w-lg flex-col gap-6 p-4">
       {!signedIn ? (
         <div className="flex flex-col items-center gap-4 text-center">
+          {/* Ledger 992: back to the landing ("/" sends a signed-out visit there);
+              an installed app has no browser Back. */}
+          {signedOut ? (
+            <div className="self-start">
+              <BackButton fallback="/" />
+            </div>
+          ) : null}
           {/* The home-screen icon above the name (owner, 2026-09-30); decorative — the h1 names it. */}
           <img src="/icons/icon-192.png" alt="" width={72} height={72} className="h-18 w-18 rounded-2xl" />
           <div className="flex flex-col gap-2">
@@ -108,9 +110,7 @@ export function AboutPage() {
         </p>
       </Card>
 
-      <p className="text-xs italic text-[var(--color-text-muted)]">
-        Little Meals is educational, not medical advice. Consult your pediatrician.
-      </p>
+      <p className="text-xs italic text-[var(--color-text-muted)]">{DISCLAIMER}</p>
     </div>
   );
 }

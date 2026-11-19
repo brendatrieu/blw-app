@@ -262,7 +262,7 @@ describe("the app's user-facing name (item 308)", () => {
   });
 
   it("describes the app the same way in link previews and the install prompt (owner, 2026-09-30)", () => {
-    const description = "Starting solids, made simpler: storage, iron-rich foods, allergens, and a meal log, even offline.";
+    const description = "Starting solids, made simpler: storage, iron-rich foods, allergens, a meal log, and meal planning, even offline.";
     expect(read("../index.html")).toContain(`<meta name="description" content="${description}" />`);
     expect(read("../vite.config.ts")).toContain(`description: "${description}",`);
     for (const file of ["../index.html", "../vite.config.ts"]) expect(read(file)).not.toMatch(/calm|companion/i);

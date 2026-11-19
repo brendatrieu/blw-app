@@ -18,6 +18,20 @@ import { ABOUT_FEATURES, AboutPage } from "./AboutPage.js";
 import { BackButton } from "../components/ui/BackButton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 
+/** The first BackButton anywhere in an element tree (a plain function call, no render). */
+function findBack(node: ReactNode): ReactElement<{ fallback: string }> | null {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const hit = findBack(child);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  if (!isValidElement(node)) return null;
+  if (node.type === BackButton) return node as ReactElement<{ fallback: string }>;
+  return findBack((node.props as { children?: ReactNode }).children);
+}
+
 function render(): string {
   return renderToString(
     createElement(MemoryRouter, { initialEntries: ["/about"] }, createElement(AboutPage, null)),
@@ -40,13 +54,14 @@ describe("AboutPage signed out (item 611)", () => {
     expect(html).not.toContain("calm companion");
   });
 
-  it("lists the five features in order, each emoji hidden from assistive tech", () => {
+  it("lists the six features in order, each emoji hidden from assistive tech", () => {
     const html = render();
     expect(ABOUT_FEATURES.map((f) => f.name)).toEqual([
       "Storage",
       "Foods and recipes",
       "Allergens",
       "Meal log",
+      "Meal Plan",
       "Learn",
     ]);
     let last = -1;
@@ -67,7 +82,8 @@ describe("AboutPage signed out (item 611)", () => {
       ["Foods and recipes", "iron- and vitamin C-rich foods, with prep by age."],
       ["Allergens", "introduce the top 9 and keep them in rotation."],
       ["Meal log", "what your baby ate, how it went, and any reactions."],
-      ["Learn", "safety guides you can read offline."],
+      ["Meal Plan", "plan the days ahead if you like, then serve in one tap."],
+      ["Learn", "safety guides you can read offline, How-To Guides, and Symptom Check."],
     ];
     expect(ABOUT_FEATURES.map((f) => [f.name, f.text])).toEqual(expected);
     for (const [name, text] of expected) {
@@ -108,7 +124,7 @@ describe("AboutPage signed out (item 611)", () => {
     expect(html).not.toContain("Your data is yours");
   });
 
-  it("offers Create an account and Sign in once, at the top only (owner, 2026-09-30), and no back button", () => {
+  it("offers Create an account and Sign in once, at the top only (owner, 2026-09-30)", () => {
     const html = render();
     expect(count(html, /<a[^>]*href="\/signup"[^>]*>Create an account<\/a>/)).toBe(1);
     expect(count(html, /<a[^>]*href="\/login"[^>]*>Sign in<\/a>/)).toBe(1);
@@ -116,7 +132,14 @@ describe("AboutPage signed out (item 611)", () => {
     // Nothing after the disclaimer: it ends the page.
     expect(html.indexOf(">Sign in<")).toBeLessThan(html.indexOf("not medical advice"));
     expect(html).toMatch(/Consult your pediatrician\.<\/p><\/div>$/);
-    expect(html).not.toContain(">Back<");
+  });
+
+  it("has a back chevron to the landing, above the icon (ledger 992)", () => {
+    const html = render();
+    expect(count(html, '<span class="sr-only">Back</span>')).toBe(1);
+    expect(html.indexOf(">Back<")).toBeLessThan(html.indexOf("/icons/icon-192.png"));
+    const back = findBack((AboutPage as () => ReactElement)());
+    expect(back?.props.fallback).toBe("/");
   });
 });
 
@@ -202,27 +225,15 @@ describe("AboutPage signed in (item 611)", () => {
   });
 });
 
-describe("AboutPage as the signed-out front door (ledger 828)", () => {
-  const page = () => (AboutPage as () => ReactElement<{ to?: string; replace?: boolean }>)();
-
-  it("forwards to Home once signed in, so Back after sign-in never lands on About", () => {
-    h.session = { user: { id: "u1" } };
+describe("AboutPage is no longer the front door (ledger 992)", () => {
+  // The landing (/welcome) took over the 828 forward; About never redirects.
+  it.each([
+    ["signed out", null],
+    ["signed in", { user: { id: "u1" } }],
+  ])("shows itself when %s, whatever the history state", (_label, session) => {
+    h.session = session;
     h.state = { frontDoor: true };
-    expect(page().type).toBe(Navigate);
-    expect(page().props).toMatchObject({ to: "/", replace: true });
-  });
-
-  it("still shows itself on that entry while signed out or loading", () => {
-    h.state = { frontDoor: true };
-    expect(page().type).not.toBe(Navigate);
-    h.isPending = true;
-    expect(page().type).not.toBe(Navigate);
-    h.isPending = false;
-  });
-
-  it("stays put for a signed-in parent who opened it from More", () => {
-    h.session = { user: { id: "u1" } };
-    expect(page().type).not.toBe(Navigate);
+    expect((AboutPage as () => ReactElement)().type).not.toBe(Navigate);
   });
 });
 

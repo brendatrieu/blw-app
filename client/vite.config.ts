@@ -34,7 +34,7 @@ export default defineConfig({
       manifest: {
         name: "Little Meals",
         short_name: "Little Meals",
-        description: "Starting solids, made simpler: storage, iron-rich foods, allergens, and a meal log, even offline.",
+        description: "Starting solids, made simpler: storage, iron-rich foods, allergens, a meal log, and meal planning, even offline.",
         theme_color: "#fbfaf8",
         background_color: "#fbfaf8",
         display: "standalone",
