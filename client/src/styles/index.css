@@ -327,7 +327,7 @@
   --_dark-landing-muted: #a3afba; /* --_dark-color-text-muted */
   --_dark-landing-dot: #76818c;
   --_dark-shadow-landing-chip: 0 14px 34px rgba(0, 0, 0, 0.45);
-  --_dark-shadow-landing-icon: 0 0 0 1px #28313c, 0 16px 44px rgba(180, 212, 230, 0.22);
+  --_dark-shadow-landing-icon: 0 0 0 1px #28313c, 0 16px 36px rgba(0, 0, 0, 0.45);
   --_dark-color-text: #eef3f7;
   --_dark-color-text-muted: #a3afba;
   --_dark-color-border: #28313c;

@@ -545,6 +545,14 @@ describe("landing (ledger 1040)", () => {
       }
     });
   }
+
+  // Ledger 1054: the dark logo shadow is a plain one like light's, no sea halo
+  // (the dark-block parity pin above keeps the OS-dark block on the same value).
+  it("[dark] the logo shadow has no sea-coloured layer (ledger 1054)", () => {
+    const shadow = resolve("shadow-landing-icon", "dark");
+    expect(shadow).toBe("0 0 0 1px #28313c, 0 16px 36px rgba(0, 0, 0, 0.45)");
+    expect(shadow).not.toContain("180, 212, 230");
+  });
 });
 
 describe("food plates (items 657, 658)", () => {
