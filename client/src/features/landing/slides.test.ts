@@ -9,21 +9,21 @@ describe("landing slides", () => {
       { title: "Starting solids, made simpler.", body: "Here to help you start solids with confidence, one little meal at a time.", shot: null },
       {
         title: "Log what they ate.",
-        body: "Put each food on the plate, rate it with stars if you like, and note any reaction.",
+        body: "Rate each food and note any reaction.",
         shot: "log",
       },
-      { title: "Plan ahead, if you like.", body: "Fill in the days ahead, then serve today's meals with one tap.", shot: "plan" },
+      { title: "Plan ahead, if you like.", body: "Then serve today's meals in one tap.", shot: "plan" },
       {
         title: "Keep track of what you've prepped.",
-        body: "Each batch shows the servings left and when to use it by.",
+        body: "See servings left and when to use each batch.",
         shot: "storage",
       },
       {
         title: "Introduce allergens step by step.",
-        body: "Work through the top 9, with a nudge when one is due for a serve.",
+        body: "The top 9, with a nudge when one is due.",
         shot: "allergens",
       },
-      { title: "Find iron-rich foods.", body: "Filter for High iron, and see how to prep each one by age.", shot: "foods" },
+      { title: "Find food and recipe ideas.", body: "Recipes and first foods, with prep for your baby's age.", shot: "recipes" },
     ]);
   });
 

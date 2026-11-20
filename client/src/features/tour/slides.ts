@@ -19,17 +19,17 @@ export const TOUR_SLIDES: readonly TourSlide[] = [
   },
   {
     title: "Log meals",
-    body: "Tap Log meal after your baby eats, and rate each food if you like. Over time you get a full picture of what they've tried, and if a reaction shows up you can trace it back to the foods and allergens served that day.",
+    body: "Tap Log meal after each meal. If a reaction shows up, you can trace it back.",
     emoji: "🍽️",
   },
   {
     title: "Plan ahead, if you like",
-    body: "Tap the calendar at the top to plan meals for the days ahead. When it's time, tap Serve under Up next on Home to log the meal.",
+    body: "Plan days ahead from the calendar at the top, then tap Serve on Home.",
     emoji: "🗓️",
   },
   {
     title: "Help when you need it",
-    body: "Learn has short guides on choking, allergies, and tummy changes. Symptom Check helps you decide if you should seek care. Find both under More, along with how-tos for using the app. Always stay with baby and keep them sitting upright while they eat.",
+    body: "Safety guides and Symptom Check are under More. Always stay with baby and keep them upright while they eat.",
     emoji: "🛟",
   },
   {
