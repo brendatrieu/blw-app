@@ -39,7 +39,7 @@ export const LANDING_SLIDES: readonly LandingSlide[] = [
     glow: { sea: "22% 62%", apricot: "80% 46%" },
     chips: [
       card("log-avocado", "Avocado on the plate, rated 5 stars.", 254, 0, 64),
-      card("log-banana", "Banana on the plate, rated 4 stars.", 254, 10, 164),
+      card("log-banana", "Banana on the plate, rated 4 stars.", 254, 24, 164),
     ],
   },
   {
@@ -47,7 +47,7 @@ export const LANDING_SLIDES: readonly LandingSlide[] = [
     body: "Then serve today's meals in one tap.",
     glow: { sea: "76% 56%", apricot: "20% 72%" },
     chips: [
-      card("plan-week", "The meal plan's week, Sunday 15 to Saturday 21, with today, Friday 20, picked and dots under the planned days.", 210, 10, 48),
+      card("plan-week", "The meal plan's week, Sunday 15 to Saturday 21, with today, Friday 20, picked and dots under the planned days.", 210, 24, 48),
       card("plan-breakfast", "Breakfast at 8:00 AM, planned with Iron-Fortified Oats and Banana, and a Serve button.", 336, 0, 140),
     ],
   },
@@ -71,7 +71,7 @@ export const LANDING_SLIDES: readonly LandingSlide[] = [
     glow: { sea: "72% 58%", apricot: "16% 48%" },
     chips: [
       card("allergens-ring", "Allergen progress ring: 2 of 9 established, 1 due for a serve, 2 started and 5 not started yet.", 318, 0, 28),
-      card("allergens-peanut", "Peanut, established, with how to serve it safely and a Serve again soon nudge.", 510, 22, 140),
+      card("allergens-peanut", "Peanut, established, with how to serve it safely and a Serve again soon nudge.", 510, 24, 140),
     ],
   },
   {
@@ -80,8 +80,8 @@ export const LANDING_SLIDES: readonly LandingSlide[] = [
     glow: { sea: "30% 54%", apricot: "80% 40%" },
     chips: [
       card("recipe-egg-muffins", "Recipe card: Broccoli Cheese Egg Muffins, with broccoli, cheese and egg, from 6 months.", 306, 0, 20),
-      card("recipe-beet-hummus", "Recipe card: Pink Beet Hummus, with beets, chickpeas, lemon and tahini, from 6 months.", 306, 14, 116),
-      { ...card("recipe-omelet-fingers", "Recipe card: Veggie Omelet Fingers, with bell pepper, egg and spinach, from 6 months.", 306, 4, 212), optional: true },
+      card("recipe-beet-hummus", "Recipe card: Pink Beet Hummus, with beets, chickpeas, lemon and tahini, from 6 months.", 306, 24, 116),
+      { ...card("recipe-omelet-fingers", "Recipe card: Veggie Omelet Fingers, with bell pepper, egg and spinach, from 6 months.", 306, 0, 212), optional: true },
     ],
   },
 ];
