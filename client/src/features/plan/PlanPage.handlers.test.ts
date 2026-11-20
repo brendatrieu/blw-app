@@ -1,5 +1,5 @@
 // The meal plan page (ledger 904, CD-Plan-Day): which week it asks for, the
-// strip, ‹ ›, Today, the selected day's meals and the Daily meals link;
+// strip, ‹ › (no Today button, ledger 1045), the selected day's meals and the Daily meals link;
 // step 4.2: "+ Add a meal", ⋮ Copy to… and "Copied to {n} meals".
 // Called as a plain function with its hooks mocked (node env, no DOM); the
 // day is pinned with fake timers in UTC.
@@ -131,7 +131,7 @@ describe("PlanPage (CD-Plan-Day)", () => {
     expect(days.map((day) => day.props["aria-current"])).toEqual([undefined, undefined, undefined, "date", undefined, undefined, undefined]);
     expect(days[0]!.props["aria-label"]).toBe("Sunday, October 11");
     expect(days[3]!.props["aria-label"]).toBe("Wednesday, October 14");
-    // Today is showing, so no Today button.
+    // No Today button (ledger 1045).
     expect(byText(tree, "Today")).toBeUndefined();
     const cards = findAll(tree, (el) => el.type === PlanMealCard);
     expect(cards.map((card) => [card.props.date, card.props.today, (card.props.meal as { name: string }).name])).toEqual([
@@ -219,7 +219,7 @@ describe("PlanPage (CD-Plan-Day)", () => {
     revealBelowStrip({ ...box(52, 128), nextElementSibling: null } as unknown as Element);
     revealBelowStrip(null);
     expect(scrolls).toEqual([-140]);
-    // The page asks for its strip on every pick (day, ‹ ›, Today, a Copy's day).
+    // The page asks for its strip on every pick (day, ‹ ›, a Copy's day).
     const asked: string[] = [];
     vi.stubGlobal("document", { getElementById: (id: string) => (asked.push(id), { ...box(52, 128), nextElementSibling: box(100, 120) }) });
     const tree = render();
@@ -290,17 +290,29 @@ describe("PlanPage (CD-Plan-Day)", () => {
     expect(props.size).toBe(0);
   });
 
-  it("another day: asks for that week, shows Today, and Today goes back with no ?date=", () => {
+  it("no Today button on today, another day this week, or another week (ledger 1045)", () => {
+    for (const date of [null, "2026-10-16", "2026-10-21", "2026-10-07"]) {
+      h.search = new URLSearchParams(date ? { date } : {});
+      const tree = render();
+      expect(byText(tree, "Today"), String(date)).toBeUndefined();
+      expect(findAll(tree, (el) => text(el.props.children).trim() === "Today"), String(date)).toEqual([]);
+      // The week row is the arrows and the label only.
+      const row = findAll(tree, (el) => el.props.className === "-mb-1 flex items-center")[0]!;
+      expect(buttons(row).map((el) => el.props["aria-label"]), String(date)).toEqual(["Previous week", "Next week"]);
+    }
+  });
+
+  it("another week: asks for that week, today is not outlined, and the arrows move by ?date= (none when they land on today)", () => {
     h.search = new URLSearchParams({ date: "2026-10-21" });
     h.plan = { data: week("2026-10-18", []), isLoading: false, isError: false, isFetching: false };
     const tree = render();
     expect(h.planArgs).toEqual([["baby-1", "2026-10-18", "2026-10-24"]]);
     expect(dayButtons(tree).map((day) => day.props["aria-pressed"])).toEqual([false, false, false, true, false, false, false]);
     expect(dayButtons(tree).some((day) => day.props["aria-current"])).toBe(false);
-    click(byText(tree, "Today"));
+    click(byLabel(tree, "Next week"));
     click(byLabel(tree, "Previous week"));
     expect(h.setSearch).toEqual([
-      [{}, { replace: true }],
+      [{ date: "2026-10-28" }, { replace: true }],
       [{}, { replace: true }],
     ]);
   });

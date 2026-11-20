@@ -26,7 +26,7 @@ import {
   weekOf,
 } from "./plan.js";
 
-/** The header's two pills, Daily meals and Today (CD-Plan-Day). */
+/** The header's Daily meals pill (CD-Plan-Day). */
 export const PLAN_PILL =
   "flex min-h-11 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-3.5 text-sm font-bold whitespace-nowrap text-[var(--color-accent)] disabled:opacity-60";
 
@@ -86,7 +86,7 @@ const ADD_MEAL =
 
 /**
  * The meal plan (ledger 904, CD-Plan-Day): a Sunday-to-Saturday week strip (969)
- * paged with ‹ ›, Today when another day is selected, and the selected day's
+ * paged with ‹ ›, and the selected day's
  * meals, then "+ Add a meal". The day lives in the URL (`?date=`, absent
  * for today), so Back from a meal (or from Daily meals, its own page since
  * ledger 924) lands on the same day. Copy to… opens a sheet; after a Copy the plan shows the first day
@@ -161,7 +161,7 @@ export function PlanPage() {
       {activeBaby && (
         <>
           {/* CD-Plan-Day: 2px between the week row and the strip. */}
-          <div className="-mb-1 flex items-center justify-between gap-2">
+          <div className="-mb-1 flex items-center">
             <div className="-mx-2.5 flex items-center">
               <button type="button" aria-label="Previous week" className={`${ICON_BUTTON_CLASSES} text-[var(--color-icon)]`} onClick={() => select(addDays(selected, -7))}>
                 <ChevronLeftGlyph />
@@ -173,11 +173,6 @@ export function PlanPage() {
                 <ChevronRightGlyph />
               </button>
             </div>
-            {selected !== today && (
-              <button type="button" className={PLAN_PILL} onClick={() => select(today)}>
-                Today
-              </button>
-            )}
           </div>
 
           {/* Ledger 951: the strip stays under the app header while the day
