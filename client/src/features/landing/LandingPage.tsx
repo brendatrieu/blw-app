@@ -18,6 +18,26 @@ const glowOf = ({ glow }: LandingSlide) =>
   `radial-gradient(circle at ${glow.sea}, var(--color-landing-glow-sea), transparent 55%), radial-gradient(circle at ${glow.apricot}, var(--color-landing-glow-apricot), transparent 50%)`;
 
 
+/** The two ways in: the accent pill, then "Already have an account? Sign in". Also About's (ledger 1052). */
+export function SignUpLinks() {
+  return (
+    <>
+      <Link
+        to="/signup"
+        className="flex min-h-[3.25rem] w-full items-center justify-center rounded-full bg-[var(--color-accent)] text-base font-semibold text-[var(--color-bg-elevated)] transition-transform duration-[var(--duration-fast)] active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
+      >
+        Create an account
+      </Link>
+      <p className="mt-3.5 flex items-center gap-1 text-[0.9375rem] text-[var(--color-landing-muted)]">
+        Already have an account?
+        <Link to="/login" className={`inline-flex min-h-11 items-center ${ACCENT_LINK}`}>
+          Sign in
+        </Link>
+      </p>
+    </>
+  );
+}
+
 /** A card's corner at a 304px card (the app's 20px at 0.85): scaled with the card, so a small card keeps its shape. */
 const CHIP_RADIUS = 17;
 
@@ -285,20 +305,7 @@ export function LandingPage() {
         {isPending ? (
           <div className="h-[6.875rem]" />
         ) : (
-          <>
-            <Link
-              to="/signup"
-              className="flex min-h-[3.25rem] w-full items-center justify-center rounded-full bg-[var(--color-accent)] text-base font-semibold text-[var(--color-bg-elevated)] transition-transform duration-[var(--duration-fast)] active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
-            >
-              Create an account
-            </Link>
-            <p className="mt-3.5 flex items-center gap-1 text-[0.9375rem] text-[var(--color-landing-muted)]">
-              Already have an account?
-              <Link to="/login" className={`inline-flex min-h-11 items-center ${ACCENT_LINK}`}>
-                Sign in
-              </Link>
-            </p>
-          </>
+          <SignUpLinks />
         )}
       </div>
     </div>

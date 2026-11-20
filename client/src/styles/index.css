@@ -91,6 +91,13 @@
   --color-landing-dot: #6f7b85;
   --shadow-landing-chip: 0 14px 34px rgba(31, 42, 54, 0.14);
   --shadow-landing-icon: 0 16px 36px rgba(31, 42, 54, 0.16);
+  /* Ledger 1052: About's frosted cards over the landing's glows (.glass-card
+     below). Light: white glass, blur only; dark: a faint white veil, blur +
+     saturate. contrast.test gates the inks over the glass over each glow. */
+  --color-glass: rgba(255, 255, 255, 0.55);
+  --color-glass-border: rgba(255, 255, 255, 0.75);
+  --shadow-glass: 0 14px 34px rgba(31, 42, 54, 0.08);
+  --glass-filter: blur(22px);
 
   /* ---- Text (deep navy — the hue the dark ground is built from) ---- */
   --color-text: #1f2a36;
@@ -328,6 +335,10 @@
   --_dark-landing-dot: #76818c;
   --_dark-shadow-landing-chip: 0 14px 34px rgba(0, 0, 0, 0.45);
   --_dark-shadow-landing-icon: 0 0 0 1px #28313c, 0 16px 36px rgba(0, 0, 0, 0.45);
+  --_dark-glass: rgba(255, 255, 255, 0.07);
+  --_dark-glass-border: rgba(255, 255, 255, 0.12);
+  --_dark-shadow-glass: 0 14px 34px rgba(0, 0, 0, 0.35);
+  --_dark-glass-filter: blur(22px) saturate(140%);
   --_dark-color-text: #eef3f7;
   --_dark-color-text-muted: #a3afba;
   --_dark-color-border: #28313c;
@@ -419,6 +430,10 @@
     --color-landing-dot: var(--_dark-landing-dot);
     --shadow-landing-chip: var(--_dark-shadow-landing-chip);
     --shadow-landing-icon: var(--_dark-shadow-landing-icon);
+    --color-glass: var(--_dark-glass);
+    --color-glass-border: var(--_dark-glass-border);
+    --shadow-glass: var(--_dark-shadow-glass);
+    --glass-filter: var(--_dark-glass-filter);
 
     --color-text: var(--_dark-color-text);
     --color-text-muted: var(--_dark-color-text-muted);
@@ -512,6 +527,10 @@
   --color-landing-dot: var(--_dark-landing-dot);
   --shadow-landing-chip: var(--_dark-shadow-landing-chip);
   --shadow-landing-icon: var(--_dark-shadow-landing-icon);
+  --color-glass: var(--_dark-glass);
+  --color-glass-border: var(--_dark-glass-border);
+  --shadow-glass: var(--_dark-shadow-glass);
+  --glass-filter: var(--_dark-glass-filter);
 
   --color-text: var(--_dark-color-text);
   --color-text-muted: var(--_dark-color-text-muted);
@@ -678,6 +697,29 @@ textarea {
 }
 .scroll-hidden::-webkit-scrollbar {
   display: none;
+}
+
+/* Ledger 1052: a frosted card (About), the glows blurred through it. Where
+   the blur is missing or the reader asks for less transparency, a
+   near-opaque card instead, so the text never sits on a see-through veil. */
+.glass-card {
+  background-color: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-glass);
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-card {
+    background-color: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass-card {
+    background-color: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 /* One clear × per search field (ledger 999): the app's own "Clear search"

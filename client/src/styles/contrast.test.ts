@@ -555,6 +555,41 @@ describe("landing (ledger 1040)", () => {
   });
 });
 
+describe("About in the landing look (ledger 1052)", () => {
+  // About's header and disclaimer sit on the page and its glows, the header
+  // right at the sea glow's middle: gated at FULL glow strength. The cards'
+  // ink sits on the frosted glass over the page or over either glow at full
+  // strength (the blur only spreads it).
+  const ON_GROUND: Omit<Pair, "bg">[] = [
+    { name: "name", fg: "color-text" },
+    { name: "tagline and Sign in", fg: "color-accent" },
+    { name: "'Already have an account?' and disclaimer", fg: "color-landing-muted" },
+  ];
+  for (const mode of ["light", "dark"] as const) {
+    const bg = parseColor(resolve("color-bg", mode));
+    const glass = parseColor(resolve("color-glass", mode));
+    const grounds = {
+      page: bg,
+      sea: compositeOver(parseColor(resolve("color-landing-glow-sea", mode)), bg),
+      apricot: compositeOver(parseColor(resolve("color-landing-glow-apricot", mode)), bg),
+    };
+    for (const [where, ground] of Object.entries(grounds)) {
+      for (const pair of ON_GROUND) {
+        it(`[${mode}] ${pair.name} over the ${where} glow at full strength >= 4.5:1`, () => {
+          expect(contrastRatio(parseColor(resolve(pair.fg, mode)), ground)).toBeGreaterThanOrEqual(4.5);
+        });
+      }
+      it(`[${mode}] card text on the glass over the ${where} glow >= 4.5:1`, () => {
+        expect(contrastRatio(parseColor(resolve("color-text", mode)), compositeOver(glass, ground))).toBeGreaterThanOrEqual(4.5);
+      });
+    }
+    it(`[${mode}] the glass is translucent`, () => {
+      expect(glass.a).toBeGreaterThan(0);
+      expect(glass.a).toBeLessThan(1);
+    });
+  }
+});
+
 describe("food plates (items 657, 658)", () => {
   // The tinted discs are decorative (aria-hidden, the food's name is always
   // text beside them), so the tints carry no 3:1 graphics gate. The one plate

@@ -1,9 +1,7 @@
 import { useSession } from "../lib/auth.js";
-import { DISCLAIMER } from "../features/landing/slides.js";
-import { ButtonLink } from "../components/ui/Button.js";
-import { Card } from "../components/ui/Card.js";
+import { DISCLAIMER, LANDING_SLIDES } from "../features/landing/slides.js";
+import { SignUpLinks } from "../features/landing/LandingPage.js";
 import { BackButton } from "../components/ui/BackButton.js";
-import { PageHeader } from "../components/ui/PageHeader.js";
 
 const TITLE = "Little Meals";
 const TAGLINE = "Starting solids, made simpler.";
@@ -13,104 +11,122 @@ export const ABOUT_FEATURES = [
   { emoji: "🍎", name: "Foods and recipes", text: "iron- and vitamin C-rich foods, with prep by age." },
   { emoji: "🪜", name: "Allergens", text: "introduce the top 9 and keep them in rotation." },
   { emoji: "🍽️", name: "Meal log", text: "what your baby ate, how it went, and any reactions." },
-  { emoji: "🗓️", name: "Meal Plan", text: "plan the days ahead if you like, then serve in one tap." },
+  { emoji: "🗓️", name: "Meal Plan", text: "plan the week ahead, then serve in one tap." },
   { emoji: "🛟", name: "Learn", text: "safety guides you can read offline, How-To Guides, and Symptom Check." },
 ] as const;
 
-/** The two ways in, shown only to a signed-out visitor, once, at the top. */
-function SignUpButtons() {
-  return (
-    <div className="flex w-full flex-col gap-3">
-      <ButtonLink to="/signup" className="text-base">
-        Create an account
-      </ButtonLink>
-      <ButtonLink to="/login" variant="secondary" className="text-base">
-        Sign in
-      </ButtonLink>
-    </div>
-  );
-}
+export const ABOUT_STORY = [
+  "When my baby started solids, I tried a few apps, but none had quite what I needed. I kept losing track of what I’d prepped and how long it would last. I wanted to make sure my baby got enough iron and vitamin C. I also needed help introducing allergens, then keeping them in the rotation.",
+  "Parents already juggle so much. I hope Little Meals makes this part a little easier, with tools and resources to guide you along the way.",
+] as const;
 
 /**
- * Item 611: what the app is, then why it exists. Public — a signed-out
- * visitor reaches it from the landing (/welcome, ledger 992) and gets a back
- * chevron to it above the sign-up buttons; a signed-in parent reaches it
- * from More and gets a back chevron instead of the sign-up buttons.
+ * Ledger 1052: the landing's glows, one pair per screen down the page: the
+ * intro's (sea behind the logo, apricot low right), then sea left and apricot
+ * right, alternating. Each is drawn as the landing draws it (`circle at x% y%`,
+ * gone at 55% / 50% of the farthest corner of ONE screen), but on one ground
+ * the page's height, so no screen's edge cuts a glow.
+ */
+const SCREENS = [LANDING_SLIDES[0]!.glow, { sea: "10% 28%", apricot: "85% 60%" }] as const;
+// ponytail: 6 screens of glow; a page taller than that (very large text) ends on the bare page color.
+const SCREEN_COUNT = 6;
+
+function glowLayer(token: "sea" | "apricot", at: string, screen: number): string {
+  const [x, y] = at.split(" ").map((part) => Number.parseFloat(part)) as [number, number];
+  const radius = `calc(${token === "sea" ? 0.55 : 0.5} * hypot(${Math.max(x, 100 - x)}vw, ${Math.max(y, 100 - y)}svh))`;
+  return `radial-gradient(circle ${radius} at ${x}% ${screen * 100 + y}svh, var(--color-landing-glow-${token}), transparent)`;
+}
+
+export const ABOUT_GLOWS = Array.from({ length: SCREEN_COUNT }, (_, screen) => {
+  const glow = SCREENS[screen % 2]!;
+  return `${glowLayer("sea", glow.sea, screen)}, ${glowLayer("apricot", glow.apricot, screen)}`;
+}).join(", ");
+
+const CARD = "glass-card flex flex-col rounded-[var(--radius-lg)] px-5 py-[1.375rem]";
+const CARD_HEADING = { fontFamily: "var(--font-family-display)", fontSize: "1.4375rem", lineHeight: 1.15 } as const;
+
+/**
+ * Item 611 / ledger 1052: what the app is, then why it exists, in the
+ * landing's look. Public: a signed-out visitor comes from the landing and
+ * gets a back chevron to it plus the landing's two ways in; a signed-in
+ * parent comes from More and gets a back chevron there, no buttons. Until the
+ * session is known, neither (a signed-in reload must not flash "Create an
+ * account"); the chevron's space is kept.
  */
 export function AboutPage() {
   const { data: session, isPending } = useSession();
-  // Until the session is known, show neither the sign-up buttons nor the back
-  // button: a signed-in parent reloading this page must not see "Create an
-  // account" flash first.
-  const signedIn = Boolean(session);
   const signedOut = !isPending && !session;
 
   return (
-    // Item 703: as wide as every page inside AppLayout (its max-w-lg column,
-    // a page's p-4), signed in or out. Item 710: no AppLayout header above it;
-    // its route's OutsideAppLayout clears the iOS status bar (ledger 851).
-    <div className="mx-auto flex min-h-full max-w-lg flex-col gap-6 p-4">
-      {!signedIn ? (
-        <div className="flex flex-col items-center gap-4 text-center">
-          {/* Ledger 992: back to the landing ("/" sends a signed-out visit there);
-              an installed app has no browser Back. */}
-          {signedOut ? (
-            <div className="self-start">
-              <BackButton fallback="/" />
+    // OutsideAppLayout clears the iOS status bar (ledger 851); the glows run
+    // up under that clearance and across the whole width, behind the column.
+    <div className="relative">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 bg-[var(--color-bg)]"
+        style={{ top: "calc(-1 * (env(safe-area-inset-top) + var(--top-edge-clearance)))", backgroundImage: ABOUT_GLOWS }}
+      />
+      <div className="relative mx-auto flex max-w-lg flex-col gap-6 px-6 pt-4 pb-8">
+        <div className="relative flex flex-col items-center gap-4 pt-9 text-center">
+          {session || signedOut ? (
+            // Ledger 992: an installed app has no browser Back.
+            <div className="absolute top-0 left-0">
+              <BackButton fallback={session ? "/more" : "/"} />
             </div>
           ) : null}
-          {/* The home-screen icon above the name (owner, 2026-09-30); decorative — the h1 names it. */}
-          <img src="/icons/icon-192.png" alt="" width={72} height={72} className="h-18 w-18 rounded-2xl" />
-          <div className="flex flex-col gap-2">
-            <h1 className="font-display text-[var(--color-text)]">{TITLE}</h1>
-            <p className="text-sm text-[var(--color-text-muted)]">{TAGLINE}</p>
+          {/* Decorative: the h1 names it. */}
+          <img
+            src="/icons/icon-512.png"
+            alt=""
+            width={88}
+            height={88}
+            className="h-22 w-22 rounded-[22px]"
+            style={{ boxShadow: "var(--shadow-landing-icon)" }}
+          />
+          <div className="flex flex-col items-center gap-2">
+            <h1 className="font-display text-[var(--color-text)]" style={{ fontSize: "2.5rem", lineHeight: 1.05, letterSpacing: "-0.5px" }}>
+              {TITLE}
+            </h1>
+            <p className="text-[1.0625rem] font-semibold text-[var(--color-accent)]">{TAGLINE}</p>
           </div>
-          {signedOut ? <SignUpButtons /> : null}
+          {signedOut ? (
+            <div className="mt-2 flex w-full flex-col items-center">
+              <SignUpLinks />
+            </div>
+          ) : null}
         </div>
-      ) : (
-        <PageHeader title={TITLE} description={TAGLINE} leading={<BackButton fallback="/more" />} />
-      )}
 
-      <Card
-        padding="md"
-        as="section"
-        aria-labelledby="about-features"
-        className="flex flex-col gap-3"
-      >
-        <h2 id="about-features" className="font-h2 text-[var(--color-text)]">
-          Features
-        </h2>
-        <ul className="flex flex-col gap-3">
-          {ABOUT_FEATURES.map((feature) => (
-            <li key={feature.name} className="flex gap-3 text-sm text-[var(--color-text)]">
-              <span aria-hidden="true" className="text-xl leading-none">
-                {feature.emoji}
-              </span>
-              <span>
-                <strong className="font-semibold">{feature.name}:</strong> {feature.text}
-              </span>
-            </li>
+        <section aria-labelledby="about-features" className={`${CARD} gap-3.5`}>
+          <h2 id="about-features" className="font-h2 text-[var(--color-text)]" style={CARD_HEADING}>
+            Features
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {ABOUT_FEATURES.map((feature) => (
+              <li key={feature.name} className="flex gap-3 text-[0.9375rem] leading-normal text-[var(--color-text)]">
+                <span aria-hidden="true" className="text-xl leading-[1.2]">
+                  {feature.emoji}
+                </span>
+                <span>
+                  <strong className="font-semibold">{feature.name}:</strong> {feature.text}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-labelledby="about-story" className={`${CARD} gap-3`}>
+          <h2 id="about-story" className="font-h2 text-[var(--color-text)]" style={CARD_HEADING}>
+            From one parent to another
+          </h2>
+          {ABOUT_STORY.map((paragraph) => (
+            <p key={paragraph} className="text-[0.9375rem] leading-[1.55] text-[var(--color-text)]">
+              {paragraph}
+            </p>
           ))}
-        </ul>
-      </Card>
+        </section>
 
-      <Card padding="md" as="section" aria-labelledby="about-story" className="flex flex-col gap-3">
-        <h2 id="about-story" className="font-h2 text-[var(--color-text)]">
-          From one parent to another
-        </h2>
-        <p className="text-sm text-[var(--color-text)]">
-          When my baby started solids, I tried a few apps, but none had quite what I needed. I kept
-          losing track of what I&rsquo;d prepped and how long it would last. I wanted to make sure my
-          baby got enough iron and vitamin C. I also needed help introducing allergens, then keeping
-          them in the rotation.
-        </p>
-        <p className="text-sm text-[var(--color-text)]">
-          Parents already juggle so much. I hope Little Meals makes this part a little easier, with
-          tools and resources to guide you along the way.
-        </p>
-      </Card>
-
-      <p className="text-xs italic text-[var(--color-text-muted)]">{DISCLAIMER}</p>
+        <p className="px-3 text-center text-[0.8125rem] leading-normal italic text-[var(--color-landing-muted)]">{DISCLAIMER}</p>
+      </div>
     </div>
   );
 }
