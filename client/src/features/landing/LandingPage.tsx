@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useSession } from "../../lib/auth.js";
 import { ButtonLink } from "../../components/ui/Button.js";
 import { usePagedTrack } from "../../components/ui/Pager.js";
-import { slideIndexFromScroll } from "../../lib/scrollTrack.js";
+import { newWheelGesture, slideIndexFromScroll, swipeStep, wheelStep } from "../../lib/scrollTrack.js";
+import { ignoreTapsBriefly } from "../../lib/tapGuard.js";
 import { darkMediaQuery } from "../../theme.js";
 import { FOOD_EMOJI } from "../catalog/foodEmoji.js";
 import { DISCLAIMER, LANDING_SLIDES } from "./slides.js";
@@ -39,6 +40,9 @@ export function LandingPage() {
   const track = usePagedTrack(COUNT, 1);
   const { goTo } = track;
   const index = track.pages.page;
+  // Ledger 1024: a swipe or a sideways trackpad scroll on the sheet moves the track too.
+  const swipe = useRef<{ id: number; x: number; y: number } | null>(null);
+  const wheel = useRef(newWheelGesture());
 
   // One slide on from where the track is; nothing past either end.
   const move = (step: number) => {
@@ -156,10 +160,10 @@ export function LandingPage() {
               <div aria-hidden="true" className="absolute inset-0" style={{ background: INTRO_BG }}>
                 <div
                   className="absolute inset-x-0 top-0 flex flex-col items-center justify-center gap-3 px-4 text-center"
-                  // ponytail: the sheet's usual height (~16.8rem at 320-512px wide), not measured; measure it if a slide's copy grows.
+                  // ponytail: the sheet's usual height (~11.6-13.7rem at 320-512px wide), not measured; measure it if a slide's copy grows.
                   style={{
                     paddingTop: "calc(env(safe-area-inset-top) + var(--top-edge-clearance))",
-                    bottom: "calc(16rem + max(1rem, env(safe-area-inset-bottom)))",
+                    bottom: "calc(13rem + env(safe-area-inset-bottom) / 2)",
                   }}
                 >
                   <div className="relative">
@@ -187,13 +191,35 @@ export function LandingPage() {
         ))}
       </div>
 
-      {/* The sheet: a frosted panel over the picture (ledger 1012, amended):
-          square edges, the picture blurred behind a translucent tint, no
-          shadow; a hairline on top marks where the picture stops. Without
-          backdrop-filter, .landing-sheet takes a more opaque tint (index.css). */}
+      {/* The sheet: a frosted panel over the picture (ledger 1012, 1022-1024):
+          square edges, the picture blurred behind a half-clear tint, no
+          shadow or hairline, as short as its 44px targets allow. Without
+          backdrop-filter, .landing-sheet takes a more opaque tint (index.css).
+          A sideways swipe on it (touch, pen) moves one slide, as on the
+          picture; up/down is left to the browser (pan-y) and never moves. */}
       <div
-        className="landing-sheet absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-[var(--color-landing-sheet)] border-t border-[var(--color-divider)] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
-        style={{ backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
+        className="landing-sheet absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-[var(--color-landing-sheet)] px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)/2)]"
+        style={{ backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", touchAction: "pan-y" }}
+        onPointerDown={(event) => {
+          if (event.pointerType !== "mouse") swipe.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
+        }}
+        onPointerUp={(event) => {
+          const start = swipe.current;
+          swipe.current = null;
+          if (start?.id !== event.pointerId) return;
+          const step = swipeStep(event.clientX - start.x, event.clientY - start.y);
+          if (!step) return;
+          // A swipe that started on a button or a dot is not also a tap on it.
+          ignoreTapsBriefly();
+          move(step);
+        }}
+        onPointerCancel={() => {
+          swipe.current = null;
+        }}
+        onWheel={(event) => {
+          const step = wheelStep(wheel.current, event.deltaX, event.deltaY, event.timeStamp);
+          if (step) move(step);
+        }}
       >
         {/* Every slide's words in one grid cell, only the active one shown:
             the sheet is as tall as the longest, so it never jumps. Hidden
@@ -202,20 +228,22 @@ export function LandingPage() {
           {LANDING_SLIDES.map((slide, slideIndex) => (
             <div
               key={slide.shot ?? "intro"}
-              className={`col-start-1 row-start-1 flex flex-col justify-center gap-1 transition-opacity duration-[var(--duration-fast)] motion-reduce:transition-none ${
+              className={`col-start-1 row-start-1 flex flex-col justify-center gap-0.5 transition-opacity duration-[var(--duration-fast)] motion-reduce:transition-none ${
                 slideIndex === index ? "opacity-100" : "opacity-0"
               }`}
             >
               {/* The intro's tagline is already on its gradient. */}
               {slide.shot ? <p className="font-h2 text-[var(--color-text)]">{slide.title}</p> : null}
-              <p className="text-sm text-[var(--color-text-muted)]">{slide.body}</p>
+              <p className="text-sm leading-[1.125rem] text-[var(--color-text-muted)]">{slide.body}</p>
               {slideIndex === COUNT - 1 ? (
                 <p className="text-xs italic text-[var(--color-text-muted)]">{DISCLAIMER}</p>
               ) : null}
             </div>
           ))}
         </div>
-        <div className="flex shrink-0 items-center justify-center">
+        {/* 9px above and below the dots; each 44px target reaches up over
+            the words' bottom edge instead (never down over the buttons). */}
+        <div className="-mt-[1.125rem] flex shrink-0 items-center justify-center">
           {LANDING_SLIDES.map((slide, slideIndex) => (
             <button
               key={slide.shot ?? "intro"}
@@ -223,7 +251,7 @@ export function LandingPage() {
               aria-label={`Go to slide ${slideIndex + 1} of ${COUNT}`}
               aria-current={slideIndex === index ? "true" : undefined}
               onClick={() => goTo(slideIndex)}
-              className="flex h-11 w-11 items-center justify-center"
+              className="flex h-11 w-11 items-end justify-center pb-[0.5625rem]"
             >
               {/* The current dot is wider, not only another colour. */}
               <span
@@ -256,7 +284,8 @@ export function LandingPage() {
             </div>
             <Link
               to="/about"
-              className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--color-accent)] underline"
+              // The words 6px under the buttons; the rest of the 44px target below them.
+              className="inline-flex min-h-11 items-start pt-1.5 text-sm font-medium text-[var(--color-accent)] underline"
             >
               About Little Meals
             </Link>

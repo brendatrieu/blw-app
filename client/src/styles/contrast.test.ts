@@ -505,10 +505,10 @@ describe("dark-mode block parity", () => {
   });
 });
 
-describe("landing sheet and intro (ledger 1012, 1008)", () => {
+describe("landing sheet and intro (ledger 1012, 1008, 1023)", () => {
   // The signed-out landing's bottom sheet: the active slide's words, the
   // dots and the three ways in, on a frosted panel over the screenshots
-  // (ledger 1012, amended). Its tint is translucent, so each pairing is
+  // (ledger 1012, 1023). Its tint is translucent, so each pairing is
   // gated on the tint (and on the more opaque fallback tint) composited over
   // what shows through it: the shots' page and panels, and the intro's
   // gradient. The blurred shots themselves are measured in the headless check.
@@ -553,16 +553,14 @@ describe("landing sheet and intro (ledger 1012, 1008)", () => {
       expect([fallback.r, fallback.g, fallback.b]).toEqual([tint.r, tint.g, tint.b]);
     });
   }
-  // Fix cycle 2: in light mode the shots' page is near-white, so a white
-  // sheet read as part of the screenshot. Its tint (and fallback) over the
-  // page must itself differ from the page.
-  for (const tint of ["color-landing-sheet", "color-landing-sheet-fallback"]) {
-    it(`[light] ${tint} over color-bg differs from color-bg (>= 1.12:1)`, () => {
-      const page = parseColor(resolve("color-bg", "light"));
-      const sheet = compositeOver(tintOf(tint, "light"), page);
-      expect(contrastRatio(sheet, page)).toBeGreaterThanOrEqual(1.12);
-    });
-  }
+  // Ledger 1023: white (dark: the dark surface) at about half, blending
+  // with the shots; 0.55 / 0.6 are the least the pixel-sampled headless check
+  // passed at. Pinned so a lighter tint can't creep back in unmeasured.
+  it("the sheet tint is white at 0.55 (light) and the dark surface at 0.6 (dark)", () => {
+    expect(tintOf("color-landing-sheet", "light")).toEqual({ r: 255, g: 255, b: 255, a: 0.55 });
+    const surface = parseColor(resolve("color-bg-elevated", "dark"));
+    expect(tintOf("color-landing-sheet", "dark")).toEqual({ ...surface, a: 0.6 });
+  });
   it("the fallback tint applies only where backdrop-filter is unsupported (both spellings)", () => {
     const rule = extractBlock(css, "@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))");
     expect(rule).toMatch(/\.landing-sheet\s*\{\s*background-color:\s*var\(--color-landing-sheet-fallback\);\s*\}/);

@@ -76,15 +76,17 @@
   --color-bg: #fbfaf8;
   --color-bg-elevated: #ffffff;
   --color-bg-inset: #f1efeb;
-  /* Ledger 1012 (amended): the signed-out landing's bottom sheet is a
-     frosted panel: square, the picture blurred behind it, and white with
-     transparency (dark: the dark elevated surface with transparency). The
-     fallback, where backdrop-filter is unsupported, is a more opaque tint
-     (the @supports rule after the dark blocks). Light is a faint sea-blue
-     white, not pure white: the shots' page is near-white too, and a pure
-     white sheet read as more of the screenshot (fix cycle 2). */
-  --color-landing-sheet: rgba(226, 236, 243, 0.9);
-  --color-landing-sheet-fallback: rgba(226, 236, 243, 0.94);
+  /* Ledger 1012, 1023: the signed-out landing's bottom sheet is a frosted
+     panel: square, the picture blurred behind it (24px), and white at about
+     half opacity (dark: the dark elevated surface at about half), so it
+     blends with the screenshot. 0.55 / 0.6, not 0.5: the least that keeps
+     the words, the About link and the dots >= 4.5:1 over the busiest blurred
+     shot, pixel-sampled (light: Storage at 375 / Allergens at 1280; dark: the
+     Meal Plan's buttons). The fallback, where backdrop-filter is unsupported,
+     is a more opaque tint (the @supports rule after the dark blocks): with
+     nothing blurred, the picture's text must not show through. */
+  --color-landing-sheet: rgba(255, 255, 255, 0.55);
+  --color-landing-sheet-fallback: rgba(255, 255, 255, 0.94);
   /* Ledger 1008: the landing's intro slide, a soft sea blue -> apricot. */
   --color-intro-from: #cfe4f0;
   --color-intro-to: #fde3d1;
@@ -319,7 +321,7 @@
   --_dark-color-bg: #0e1218; /* near-black blue */
   --_dark-color-bg-elevated: #171d25;
   --_dark-color-bg-inset: #232b35;
-  --_dark-landing-sheet: rgba(23, 29, 37, 0.75); /* --_dark-color-bg-elevated */
+  --_dark-landing-sheet: rgba(23, 29, 37, 0.6); /* --_dark-color-bg-elevated */
   --_dark-landing-sheet-fallback: rgba(23, 29, 37, 0.94);
   --_dark-intro-from: #173349;
   --_dark-intro-to: #43301f;

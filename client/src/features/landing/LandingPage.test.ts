@@ -10,7 +10,10 @@ const h = vi.hoisted(() => ({
   effects: [] as (() => void | (() => void))[],
   /** Set for the handler tests: stands in for usePagedTrack. */
   track: null as null | Record<string, unknown>,
+  ignoreTaps: vi.fn(),
 }));
+
+vi.mock("../../lib/tapGuard.js", () => ({ ignoreTapsBriefly: h.ignoreTaps }));
 
 vi.mock("../../lib/auth.js", () => ({
   useSession: () => ({ data: h.session, isPending: h.isPending }),
@@ -19,7 +22,8 @@ vi.mock("../../lib/auth.js", () => ({
 vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react")>();
   // Collected, never run by renderToString anyway; the handler tests run them.
-  return { ...actual, useEffect: (fn: () => void) => void h.effects.push(fn) };
+  // useRef as a plain box, so the handler tests can call the page as a function.
+  return { ...actual, useEffect: (fn: () => void) => void h.effects.push(fn), useRef: <T,>(current: T) => ({ current }) };
 });
 
 vi.mock("../../components/ui/Pager.js", async (importOriginal) => {
@@ -142,7 +146,7 @@ describe("LandingPage markup (ledger 992, 1003, 1008, 1012)", () => {
 
   it("shows the active slide's words in the sheet, the others stacked in the same cell but hidden", () => {
     const cellsAt = (page: number) =>
-      [...sheetOf(renderAt(page)).matchAll(/<div class="col-start-1 row-start-1 flex flex-col justify-center gap-1 [^"]* (opacity-\d+)">(.*?)<p class="text-sm text-\[var\(--color-text-muted\)\]">([^<]*)<\/p>/g)].map(
+      [...sheetOf(renderAt(page)).matchAll(/<div class="col-start-1 row-start-1 flex flex-col justify-center gap-0.5 [^"]* (opacity-\d+)">(.*?)<p class="text-sm leading-\[1.125rem\] text-\[var\(--color-text-muted\)\]">([^<]*)<\/p>/g)].map(
         (m) => ({ shown: m[1] === "opacity-100", title: m[2]!.match(/^<p class="font-h2 text-\[var\(--color-text\)\]">([^<]*)<\/p>$/)?.[1] ?? null, body: m[3] }),
       );
     const escape = (text: string) => text.replace("'", "&#x27;");
@@ -192,7 +196,9 @@ describe("LandingPage markup (ledger 992, 1003, 1008, 1012)", () => {
   it("has a 44px dot per slide, the current one wider, and no visible 'N of 6' or 'N of 5' (ledger 1003)", () => {
     const html = render();
     expect(count(html, /aria-label="Go to slide \d of 6"/)).toBe(6);
-    expect(count(html, 'class="flex h-11 w-11 items-center justify-center"')).toBe(6);
+    // Ledger 1022: 9px above and below the dot; the 44px target reaches up over the words, never down over the buttons.
+    expect(count(html, 'class="flex h-11 w-11 items-end justify-center pb-[0.5625rem]"')).toBe(6);
+    expect(html).toContain('<div class="-mt-[1.125rem] flex shrink-0 items-center justify-center">');
     expect(count(html, 'aria-current="true"')).toBe(1);
     expect(count(html, /class="h-2 rounded-full[^"]* w-5"/)).toBe(1);
     expect(count(html, /class="h-2 rounded-full[^"]* w-2"/)).toBe(5);
@@ -216,18 +222,20 @@ describe("LandingPage markup (ledger 992, 1003, 1008, 1012)", () => {
     expect(html.indexOf(">Create an account<")).toBeGreaterThan(close);
   });
 
-  it("pins the words, the dots and the ways in to the bottom in one sheet on its own surface (ledger 1012)", () => {
+  it("pins the words, the dots and the ways in to the bottom in one sheet on its own surface (ledger 1012, 1022, 1023)", () => {
     const html = render();
     const sheet = sheetOf(html);
-    // Amended: a frosted panel, square, blurred behind (both spellings), a
-    // translucent tint, no shadow; .landing-sheet carries the fallback tint.
+    // A frosted panel, square, blurred behind (both spellings), a translucent
+    // tint, no shadow or hairline; .landing-sheet carries the fallback tint.
+    // Half the old padding: 8px sides and top, half the bottom inset. Up/down
+    // drags stay the browser's (pan-y); sideways ones are the sheet's swipe.
     expect(sheet).toMatch(
-      /^<div class="landing-sheet absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-\[var\(--color-landing-sheet\)\] [^"]*" style="backdrop-filter:blur\(16px\);-webkit-backdrop-filter:blur\(16px\)">/,
+      /^<div class="landing-sheet absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-\[var\(--color-landing-sheet\)\] px-2 pt-2 pb-\[calc\(env\(safe-area-inset-bottom\)\/2\)\]" style="backdrop-filter:blur\(24px\);-webkit-backdrop-filter:blur\(24px\);touch-action:pan-y">/,
     );
     const sheetTag = sheet.slice(0, sheet.indexOf(">") + 1);
-    expect(sheetTag).not.toMatch(/rounded|shadow/);
-    // A hairline on top, so the words don't read as the screenshot's page.
-    expect(sheetTag).toContain("border-t border-[var(--color-divider)]");
+    expect(sheetTag).not.toMatch(/rounded|shadow|border|divider/);
+    // About: its words 6px under the buttons, the rest of its 44px target below them.
+    expect(sheet).toMatch(/<a class="inline-flex min-h-11 items-start pt-1.5 [^"]*" href="\/about"[^>]*>About Little Meals<\/a>/);
     // Nothing drawn on the picture above it (no fade), on any slide.
     for (let page = 0; page < LANDING_SLIDES.length; page++) expect(sheetOf(renderAt(page))).not.toContain("bottom-full");
     // Words, then dots, then the two buttons, then About.
@@ -361,6 +369,64 @@ describe("LandingPage handlers (ledger 992, 1003, 1008)", () => {
     press("Enter");
     press("ArrowRight", { metaKey: true });
     expect(goTo).not.toHaveBeenCalled();
+  });
+
+  const sheetOfTree = (tree: ReactNode) => {
+    let found: Record<string, (event: object) => void> | undefined;
+    const walk = (node: ReactNode) => {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (!isValidElement(node)) return;
+      const props = node.props as { className?: string; children?: ReactNode };
+      if (props.className?.startsWith("landing-sheet ")) found = props as unknown as Record<string, (event: object) => void>;
+      walk(props.children);
+    };
+    walk(tree);
+    return found!;
+  };
+  const drag = (sheet: Record<string, (event: object) => void>, dx: number, dy: number, pointerType = "touch") => {
+    sheet.onPointerDown!({ pointerType, pointerId: 1, clientX: 200, clientY: 700 });
+    sheet.onPointerUp!({ pointerType, pointerId: 1, clientX: 200 + dx, clientY: 700 + dy });
+  };
+
+  it("moves one slide on a sideways swipe on the sheet, and eats the tap it would make (ledger 1024)", () => {
+    h.ignoreTaps.mockReset();
+    const sheet = sheetOfTree(mount());
+    el.scrollLeft = 800; // slide 3
+    drag(sheet, -120, 10);
+    expect(goTo).toHaveBeenLastCalledWith(3);
+    drag(sheet, 90, -20, "pen");
+    expect(goTo).toHaveBeenLastCalledWith(1);
+    expect(h.ignoreTaps).toHaveBeenCalledTimes(2);
+  });
+
+  it("never moves on a tap, an up/down drag, a mouse drag, a cancelled touch or past either end (ledger 1024)", () => {
+    h.ignoreTaps.mockReset();
+    const sheet = sheetOfTree(mount());
+    el.scrollLeft = 800;
+    drag(sheet, 3, 2); // a tap on a button keeps its click
+    drag(sheet, -30, 200); // vertical
+    drag(sheet, -200, 0, "mouse");
+    sheet.onPointerDown!({ pointerType: "touch", pointerId: 1, clientX: 200, clientY: 700 });
+    sheet.onPointerCancel!({});
+    sheet.onPointerUp!({ pointerType: "touch", pointerId: 1, clientX: 0, clientY: 700 });
+    sheet.onPointerDown!({ pointerType: "touch", pointerId: 1, clientX: 200, clientY: 700 });
+    sheet.onPointerUp!({ pointerType: "touch", pointerId: 2, clientX: 0, clientY: 700 });
+    el.scrollLeft = 2000; // last slide
+    drag(sheet, -200, 0);
+    expect(goTo).not.toHaveBeenCalled();
+    expect(h.ignoreTaps).toHaveBeenCalledTimes(1); // the swipe past the end still is not a tap
+  });
+
+  it("moves one slide per sideways trackpad gesture over the sheet, never on a vertical one (ledger 1024)", () => {
+    const sheet = sheetOfTree(mount());
+    el.scrollLeft = 400; // slide 2
+    for (const [i, deltaX] of [20, 40, 60, 40, 20].entries()) sheet.onWheel!({ deltaX, deltaY: 0, timeStamp: i * 16 });
+    expect(goTo).toHaveBeenCalledTimes(1);
+    expect(goTo).toHaveBeenLastCalledWith(2);
+    sheet.onWheel!({ deltaX: -100, deltaY: 0, timeStamp: 1000 });
+    expect(goTo).toHaveBeenLastCalledWith(0);
+    sheet.onWheel!({ deltaX: 5, deltaY: 120, timeStamp: 2000 });
+    expect(goTo).toHaveBeenCalledTimes(2);
   });
 
   it("moves to a dot's slide on tap", () => {
