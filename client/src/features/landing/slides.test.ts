@@ -27,8 +27,8 @@ describe("landing slides", () => {
     ]);
   });
 
-  it("staggers a card by 8% of the 304px card (24 mockup px), single cards stay put (ledger 1050)", () => {
-    expect(LANDING_SLIDES.map((slide) => slide.chips.map((chip) => chip.x))).toEqual([[], [0, 24], [24, 0], [8], [0, 24], [0, 24, 0]]);
+  it("staggers a card by 8% of the 304px card (24 mockup px), the single Storage card sits at 0 (ledger 1050, 1060)", () => {
+    expect(LANDING_SLIDES.map((slide) => slide.chips.map((chip) => chip.x))).toEqual([[], [0, 24], [24, 0], [0], [0, 24], [0, 24, 0]]);
   });
 
   it("gives every card its alt text, verbatim", () => {

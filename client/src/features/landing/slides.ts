@@ -60,7 +60,7 @@ export const LANDING_SLIDES: readonly LandingSlide[] = [
         "storage-list",
         "Storage: Pear and Spinach in the fridge and Sweet Potato Lentil Patties in the freezer, each with its servings and days left.",
         654,
-        8,
+        0,
         40,
       ),
     ],
