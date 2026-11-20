@@ -27,8 +27,15 @@ describe("landing slides", () => {
     ]);
   });
 
-  it("gives every screenshot alt text", () => {
-    for (const slide of LANDING_SLIDES) if (slide.shot) expect(slide.alt.trim().length, slide.shot).toBeGreaterThan(20);
+  it("gives every screenshot its alt text, verbatim (ledger 1027)", () => {
+    expect(LANDING_SLIDES.map((slide) => (slide.shot ? slide.alt : null))).toEqual([
+      null,
+      "Log meal with Avocado and Banana on the plate, each rated with stars.",
+      "Meal Plan for today: Breakfast, Lunch, Snack and Dinner planned, each with its foods and a Serve button.",
+      "Home with the Storage section highlighted: Pear and Spinach in the Fridge and Sweet Potato Lentil Patties in the Freezer, each with the days left.",
+      "Allergen ladder with the progress ring at the top, 2 of 9 established, then Peanut, established and due for a serve.",
+      "Recipes list with search and All, Favorites and Custom chips: Apple Cinnamon Tahini Oatmeal, Baked Butter Beans in Tomato Sauce and more, each marked 6m+ with its foods.",
+    ]);
   });
 
   it("keeps the disclaimer's wording", () => {

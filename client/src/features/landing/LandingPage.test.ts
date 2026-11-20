@@ -234,8 +234,9 @@ describe("LandingPage markup (ledger 992, 1003, 1008, 1012)", () => {
     );
     const sheetTag = sheet.slice(0, sheet.indexOf(">") + 1);
     expect(sheetTag).not.toMatch(/rounded|shadow|border|divider/);
-    // About: its words 6px under the buttons, the rest of its 44px target below them.
-    expect(sheet).toMatch(/<a class="inline-flex min-h-11 items-start pt-1.5 [^"]*" href="\/about"[^>]*>About Little Meals<\/a>/);
+    // About: its words 6px under the buttons, the rest of its 44px target below them;
+    // sheet text colour + underline, not accent, which failed 4.5:1 over the picture (ledger 1027).
+    expect(sheet).toMatch(/<a class="inline-flex min-h-11 items-start pt-1.5 text-sm font-medium text-\[var\(--color-text\)\] underline" href="\/about"[^>]*>About Little Meals<\/a>/);
     // Nothing drawn on the picture above it (no fade), on any slide.
     for (let page = 0; page < LANDING_SLIDES.length; page++) expect(sheetOf(renderAt(page))).not.toContain("bottom-full");
     // Words, then dots, then the two buttons, then About.

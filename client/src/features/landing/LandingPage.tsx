@@ -285,7 +285,8 @@ export function LandingPage() {
             <Link
               to="/about"
               // The words 6px under the buttons; the rest of the 44px target below them.
-              className="inline-flex min-h-11 items-start pt-1.5 text-sm font-medium text-[var(--color-accent)] underline"
+              // Sheet text colour, underline as the link cue: accent fell to 4.32:1 over the blurred picture (ledger 1027).
+              className="inline-flex min-h-11 items-start pt-1.5 text-sm font-medium text-[var(--color-text)] underline"
             >
               About Little Meals
             </Link>
