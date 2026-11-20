@@ -103,16 +103,42 @@ describe("LandingPage markup (ledger 992, 1003, 1040)", () => {
       );
       expect(html).toContain(`>${escape(slide.body)}</p>`);
       const imgs = [...html.matchAll(/<img src="\/landing\/chips\/([\w-]+)\.webp" alt="([^"]+)" width="(\d+)" height="(\d+)" loading="(\w+)"/g)];
-      expect(imgs.map((m) => [m[1], m[2], Number(m[3]), Number(m[4])])).toEqual(slide.chips.map((chip) => [chip.name, escape(chip.alt), chip.width, chip.height]));
+      // A slide with optional cards also renders the collage without them (shown on a short screen).
+      const shown = [...slide.chips, ...(slide.chips.some((chip) => chip.optional) ? slide.chips.filter((chip) => !chip.optional) : [])];
+      expect(imgs.map((m) => [m[1], m[2], Number(m[3]), Number(m[4])])).toEqual(shown.map((chip) => [chip.name, escape(chip.alt), chip.width, chip.height]));
       // Slide 2 is one tap from the intro: its cards load now, the rest lazily.
       for (const m of imgs) expect(m[5]).toBe(i === 1 ? "eager" : "lazy");
       // Light cards in both modes, rounded, with the token shadow.
-      expect(count(html, /<div class="absolute overflow-hidden rounded-\[17px\]" style="left:[\d.]+%;top:[\d.]+%;width:[\d.]+%;box-shadow:var\(--shadow-landing-chip\)">/)).toBe(slide.chips.length);
+      // The corner is a share of the card (17px at 304), never a fixed size that a small card's own edge would be clipped by.
+      const cards = [...html.matchAll(/<div class="absolute overflow-hidden" style="left:[\d.]+%;top:[\d.]+%;width:[\d.]+%;border-radius:([\d.]+)% \/ ([\d.]+)%;box-shadow:var\(--shadow-landing-chip\)">/g)];
+      expect(cards.map((m) => [Number(m[1]), Number(m[2])])).toEqual(shown.map((chip) => [5.592, Number(((100 * 17) / ((304 * chip.height) / chip.width)).toFixed(3))]));
       expect(html).not.toContain("<picture");
       // The cards shrink to the room they have (a size container), never past their own size.
       expect(html).toMatch(/style="container-type:size"/);
       expect(html).toMatch(/style="width:min\(\d+(\.\d+)?px, 100cqw, [\d.]+ \* 100cqh\);aspect-ratio:[\d.]+ \/ [\d.]+"/);
     }
+  });
+
+  it("shows two recipe cards instead of three when their box is short (ledger 1040: or two if three don't fit)", () => {
+    expect(LANDING_SLIDES.map((slide) => slide.chips.filter((chip) => chip.optional).map((chip) => chip.name))).toEqual([[], [], [], [], [], ["recipe-omelet-fingers"]]);
+    const recipes = slidesOf(render())[5]!;
+    const all = recipes.indexOf('class="relative [@container(height&lt;240px)]:hidden"');
+    const few = recipes.indexOf('class="relative hidden [@container(height&lt;240px)]:block"');
+    expect(all).toBeGreaterThan(-1);
+    expect(few).toBeGreaterThan(all);
+    expect(count(recipes.slice(all, few), "<img")).toBe(3);
+    expect(recipes.slice(few)).not.toContain("recipe-omelet-fingers");
+    expect(count(recipes.slice(few), "<img")).toBe(2);
+    // Every other slide has one collage.
+    for (const slide of slidesOf(render()).slice(1, 5)) expect(count(slide, 'class="relative" style="width:min(')).toBe(1);
+  });
+
+  it("lets the cards' shadow fade out above the track's clip edge: the track runs 3rem under the bottom block, each slide keeps it empty", () => {
+    const html = render();
+    expect(html).toMatch(/<div aria-roledescription="carousel" aria-label="What Little Meals does" class="scroll-hidden relative -mb-12 flex /);
+    expect(count(html.slice(0, trackClose(html)), /<section [^>]*class="relative flex h-full w-full shrink-0 flex-col pb-12 /)).toBe(N);
+    // The bottom block paints over the track's last 3rem (later and positioned), so it still gets every tap.
+    expect(footOf(html)).toMatch(/^<div class="landing-foot relative /);
   });
 
   it("puts the disclaimer under the last slide only", () => {

@@ -18,36 +18,61 @@ const glowOf = ({ glow }: LandingSlide) =>
   `radial-gradient(circle at ${glow.sea}, var(--color-landing-glow-sea), transparent 55%), radial-gradient(circle at ${glow.apricot}, var(--color-landing-glow-apricot), transparent 50%)`;
 
 
-/**
- * A slide's cards, placed as in the mockup and scaled down as one (never up)
- * to fit the room between the words and the bottom block: the collage is
- * `W` x `H` mockup px, as wide as fits both the width and the height of its
- * box (a size container), so a short screen shows smaller cards, never cut.
- */
-function Chips({ chips, eager }: { chips: readonly LandingChip[]; eager: boolean }) {
+/** A card's corner at a 304px card (the app's 20px at 0.85): scaled with the card, so a small card keeps its shape. */
+const CHIP_RADIUS = 17;
+
+/** One collage: the cards placed as in the mockup, `W` x `H` mockup px, scaled down as one (never up). */
+function Collage({ chips, eager, className }: { chips: readonly LandingChip[]; eager: boolean; className: string }) {
   const W = Math.max(...chips.map((chip) => chip.x + CHIP_W));
   const H = Math.max(...chips.map((chip) => chip.y + (CHIP_W * chip.height) / chip.width));
   const pct = (part: number, whole: number) => `${((100 * part) / whole).toFixed(3)}%`;
   return (
+    <div className={className} style={{ width: `min(${W}px, 100cqw, ${(W / H).toFixed(4)} * 100cqh)`, aspectRatio: `${W} / ${H}` }}>
+      {chips.map((chip) => (
+        <div
+          key={chip.name}
+          className="absolute overflow-hidden"
+          style={{
+            left: pct(chip.x, W),
+            top: pct(chip.y, H),
+            width: pct(CHIP_W, W),
+            borderRadius: `${pct(CHIP_RADIUS, CHIP_W)} / ${pct(CHIP_RADIUS, (CHIP_W * chip.height) / chip.width)}`,
+            boxShadow: "var(--shadow-landing-chip)",
+          }}
+        >
+          <img
+            src={`/landing/chips/${chip.name}.webp`}
+            alt={chip.alt}
+            width={chip.width}
+            height={chip.height}
+            loading={eager ? "eager" : "lazy"}
+            className="block h-auto w-full"
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A slide's cards, as wide as fits both the width and the height of their box
+ * (a size container), so a short screen shows smaller cards, never cut. A
+ * slide with `optional` cards also has the collage without them, shown
+ * instead when its box is under 240px tall (the full recipes set would be
+ * under 0.8 there): two bigger cards read better than three tiny ones.
+ */
+function Chips({ chips, eager }: { chips: readonly LandingChip[]; eager: boolean }) {
+  const few = chips.filter((chip) => !chip.optional);
+  return (
     <div className="relative min-h-0 flex-1" style={{ containerType: "size" }}>
-      <div className="relative" style={{ width: `min(${W}px, 100cqw, ${(W / H).toFixed(4)} * 100cqh)`, aspectRatio: `${W} / ${H}` }}>
-        {chips.map((chip) => (
-          <div
-            key={chip.name}
-            className="absolute overflow-hidden rounded-[17px]"
-            style={{ left: pct(chip.x, W), top: pct(chip.y, H), width: pct(CHIP_W, W), boxShadow: "var(--shadow-landing-chip)" }}
-          >
-            <img
-              src={`/landing/chips/${chip.name}.webp`}
-              alt={chip.alt}
-              width={chip.width}
-              height={chip.height}
-              loading={eager ? "eager" : "lazy"}
-              className="block h-auto w-full"
-            />
-          </div>
-        ))}
-      </div>
+      {few.length === chips.length ? (
+        <Collage chips={chips} eager={eager} className="relative" />
+      ) : (
+        <>
+          <Collage chips={chips} eager={eager} className="relative [@container(height<240px)]:hidden" />
+          <Collage chips={few} eager={eager} className="relative hidden [@container(height<240px)]:block" />
+        </>
+      )}
     </div>
   );
 }
@@ -118,7 +143,11 @@ export function LandingPage() {
         ))}
       </div>
 
-      {/* A tap on a slide is the → key: the next slide, none after the last. */}
+      {/* A tap on a slide is the → key: the next slide, none after the last.
+          The track runs 3rem under the bottom block (painted over it, so the
+          block still gets every tap) and each slide keeps that 3rem empty:
+          the cards' shadow (0 14px 34px) fades out before the track's clip
+          edge, never cut in a line on a short screen. */}
       <div
         ref={track.trackRef}
         onScroll={track.onScroll}
@@ -127,7 +156,7 @@ export function LandingPage() {
         onClick={() => move(1)}
         aria-roledescription="carousel"
         aria-label="What Little Meals does"
-        className="scroll-hidden relative flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain"
+        className="scroll-hidden relative -mb-12 flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain"
       >
         {LANDING_SLIDES.map((slide, slideIndex) => (
           <section
@@ -135,7 +164,7 @@ export function LandingPage() {
             role="group"
             aria-roledescription="slide"
             aria-label={`${slideIndex + 1} of ${COUNT}`}
-            className={`relative flex h-full w-full shrink-0 flex-col ${SIDES} ${
+            className={`relative flex h-full w-full shrink-0 flex-col pb-12 ${SIDES} ${
               track.near === null || Math.abs(slideIndex - track.near) <= 1 ? "snap-start snap-always" : "snap-align-none"
             }`}
             style={{ paddingTop: slideIndex === 0 ? "calc(env(safe-area-inset-top) + var(--top-edge-clearance))" : SLIDE_TOP }}
@@ -188,7 +217,6 @@ export function LandingPage() {
                   </p>
                 </div>
                 {/* The first cards are one tap from the intro: load them now. */}
-                {/* Room below for the cards' shadow, which the track would clip. */}
                 <div className="flex min-h-0 flex-1 flex-col pt-[clamp(0.5rem,2dvh,1rem)] pb-[clamp(1rem,4dvh,2rem)]">
                   <Chips chips={slide.chips} eager={slideIndex === 1} />
                 </div>

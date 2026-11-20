@@ -6,9 +6,11 @@ import { TOUR_SLIDES } from "../tour/slides.js";
  * light (shown light in both modes) at 3x on an isolated stack with made-up
  * data (baby "Mila"). `width`/`height` are the image's pixels (its shape);
  * `x`/`y` place it in the slide's collage in mockup px at a 390-wide screen,
- * where a 358px app card shows 304px wide (0.85). Retake when the card changes.
+ * where a 358px app card shows 304px wide (0.85). An `optional` card is left
+ * out on a short screen (ledger 1040: "or two of them if three don't fit").
+ * Retake when the card changes.
  */
-export type LandingChip = { name: string; alt: string; width: number; height: number; x: number; y: number };
+export type LandingChip = { name: string; alt: string; width: number; height: number; x: number; y: number; optional?: true };
 
 /** Where the sea and apricot glows sit behind the slide (`x% y%`), moving per slide. */
 export type LandingGlow = { sea: string; apricot: string };
@@ -79,7 +81,7 @@ export const LANDING_SLIDES: readonly LandingSlide[] = [
     chips: [
       card("recipe-egg-muffins", "Recipe card: Broccoli Cheese Egg Muffins, with broccoli, cheese and egg, from 6 months.", 306, 0, 20),
       card("recipe-beet-hummus", "Recipe card: Pink Beet Hummus, with beets, chickpeas, lemon and tahini, from 6 months.", 306, 14, 116),
-      card("recipe-omelet-fingers", "Recipe card: Veggie Omelet Fingers, with bell pepper, egg and spinach, from 6 months.", 306, 4, 212),
+      { ...card("recipe-omelet-fingers", "Recipe card: Veggie Omelet Fingers, with bell pepper, egg and spinach, from 6 months.", 306, 4, 212), optional: true },
     ],
   },
 ];
