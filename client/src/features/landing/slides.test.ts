@@ -1,41 +1,66 @@
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DISCLAIMER, LANDING_SLIDES } from "./slides.js";
 
-/** Ledger 992: the owner-approved copy, word for word, and one shot pair per slide. */
+/** Ledger 992/1040: the owner-approved copy, word for word, and the app's own cards per slide. */
 describe("landing slides", () => {
-  it("are the intro and the five approved slides, in order, verbatim (ledger 1008)", () => {
-    expect(LANDING_SLIDES.map(({ title, body, shot }) => ({ title, body, shot }))).toEqual([
+  it("are the intro and the five approved slides, in order, verbatim (ledger 1040)", () => {
+    expect(LANDING_SLIDES.map(({ title, body }) => ({ title, body }))).toEqual([
       // The tagline, then the first-run tour's welcome line: no new wording.
-      { title: "Starting solids, made simpler.", body: "Here to help you start solids with confidence, one little meal at a time.", shot: null },
-      {
-        title: "Log what they ate.",
-        body: "Rate each food and note any reaction.",
-        shot: "log",
-      },
-      { title: "Plan ahead, if you like.", body: "Then serve today's meals in one tap.", shot: "plan" },
-      {
-        title: "Keep track of what you've prepped.",
-        body: "See servings left and when to use each batch.",
-        shot: "storage",
-      },
-      {
-        title: "Introduce allergens step by step.",
-        body: "The top 9, with a nudge when one is due.",
-        shot: "allergens",
-      },
-      { title: "Find food and recipe ideas.", body: "Recipes and first foods, with prep for your baby's age.", shot: "recipes" },
+      { title: "Starting solids, made simpler.", body: "Here to help you start solids with confidence, one little meal at a time." },
+      { title: "Log what they ate.", body: "Rate each food and note any reaction." },
+      { title: "Plan the week ahead.", body: "Then serve today's meals in one tap." },
+      { title: "Keep track of what you've prepped.", body: "See servings left and when to use each batch." },
+      { title: "Introduce allergens step by step.", body: "Know what's started, established, and due next." },
+      { title: "Find food and recipe ideas.", body: "Recipes and first foods, with prep for your baby's age." },
     ]);
   });
 
-  it("gives every screenshot its alt text, verbatim (ledger 1027)", () => {
-    expect(LANDING_SLIDES.map((slide) => (slide.shot ? slide.alt : null))).toEqual([
-      null,
-      "Log meal with Avocado and Banana on the plate, each rated with stars.",
-      "Meal Plan for today: Breakfast, Lunch, Snack and Dinner planned, each with its foods and a Serve button.",
-      "Home with the Storage section highlighted: Pear and Spinach in the Fridge and Sweet Potato Lentil Patties in the Freezer, each with the days left.",
-      "Allergen ladder with the progress ring at the top, 2 of 9 established, then Peanut, established and due for a serve.",
-      "Recipes list with search and All, Favorites and Custom chips: Apple Cinnamon Tahini Oatmeal, Baked Butter Beans in Tomato Sauce and more, each marked 6m+ with its foods.",
+  it("floats the chosen app cards on each slide, none on the intro (ledger 1040)", () => {
+    expect(LANDING_SLIDES.map((slide) => slide.chips.map((chip) => chip.name))).toEqual([
+      [],
+      ["log-avocado", "log-banana"],
+      ["plan-week", "plan-breakfast"],
+      ["storage-list"],
+      ["allergens-ring", "allergens-peanut"],
+      ["recipe-egg-muffins", "recipe-beet-hummus", "recipe-omelet-fingers"],
     ]);
+  });
+
+  it("gives every card its alt text, verbatim", () => {
+    expect(LANDING_SLIDES.flatMap((slide) => slide.chips.map((chip) => chip.alt))).toEqual([
+      "Avocado on the plate, rated 5 stars.",
+      "Banana on the plate, rated 4 stars.",
+      "The meal plan's week, Sunday 15 to Saturday 21, with today, Friday 20, picked and dots under the planned days.",
+      "Breakfast at 8:00 AM, planned with Iron-Fortified Oats and Banana, and a Serve button.",
+      "Storage: Pear and Spinach in the fridge and Sweet Potato Lentil Patties in the freezer, each with its servings and days left.",
+      "Allergen progress ring: 2 of 9 established, 1 due for a serve, 2 started and 5 not started yet.",
+      "Peanut, established, with how to serve it safely and a Serve again soon nudge.",
+      "Recipe card: Broccoli Cheese Egg Muffins, with broccoli, cheese and egg, from 6 months.",
+      "Recipe card: Pink Beet Hummus, with beets, chickpeas, lemon and tahini, from 6 months.",
+      "Recipe card: Veggie Omelet Fingers, with bell pepper, egg and spinach, from 6 months.",
+    ]);
+  });
+
+  it("ships every card it names, at the size it states (WebP header)", () => {
+    for (const chip of LANDING_SLIDES.flatMap((slide) => slide.chips)) {
+      const url = new URL(`../../../public/landing/chips/${chip.name}.webp`, import.meta.url);
+      expect(existsSync(url), chip.name).toBe(true);
+      const file = readFileSync(url);
+      expect(file.subarray(0, 4).toString("latin1") + file.subarray(8, 12).toString("latin1"), chip.name).toBe("RIFFWEBP");
+      // Simple lossy (VP8: 14-bit sizes at 26-29) or extended (VP8X: 24-bit sizes minus one at 24-29).
+      const size =
+        file.subarray(12, 16).toString("latin1") === "VP8X"
+          ? [file.readUIntLE(24, 3) + 1, file.readUIntLE(27, 3) + 1]
+          : [file.readUInt16LE(26) & 0x3fff, file.readUInt16LE(28) & 0x3fff];
+      expect(size, chip.name).toEqual([chip.width, chip.height]);
+    }
+  });
+
+  it("moves the glows per slide: no two slides share a place", () => {
+    const places = LANDING_SLIDES.map(({ glow }) => `${glow.sea} ${glow.apricot}`);
+    expect(new Set(places).size).toBe(LANDING_SLIDES.length);
+    for (const { glow } of LANDING_SLIDES) for (const at of [glow.sea, glow.apricot]) expect(at).toMatch(/^\d{1,3}% \d{1,3}%$/);
   });
 
   it("keeps the disclaimer's wording", () => {

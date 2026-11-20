@@ -23,8 +23,8 @@ export const TOUR_SLIDES: readonly TourSlide[] = [
     emoji: "🍽️",
   },
   {
-    title: "Plan ahead, if you like",
-    body: "Plan days ahead from the calendar at the top, then tap Serve on Home.",
+    title: "Plan the week ahead",
+    body: "Use the calendar at the top, then tap Serve on Home.",
     emoji: "🗓️",
   },
   {

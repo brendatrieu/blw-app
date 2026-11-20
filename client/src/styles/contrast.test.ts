@@ -505,66 +505,46 @@ describe("dark-mode block parity", () => {
   });
 });
 
-describe("landing sheet and intro (ledger 1012, 1008, 1023)", () => {
-  // The signed-out landing's bottom sheet: the active slide's words, the
-  // dots and the three ways in, on a frosted panel over the screenshots
-  // (ledger 1012, 1023). Its tint is translucent, so each pairing is
-  // gated on the tint (and on the more opaque fallback tint) composited over
-  // what shows through it: the shots' page and panels, and the intro's
-  // gradient. The blurred shots themselves are measured in the headless check.
-  const SHEET_PAIRS: Omit<Pair, "bg">[] = [
-    { name: "headline on the landing sheet", fg: "color-text" },
-    { name: "body and disclaimer on the landing sheet", fg: "color-text-muted" },
-    { name: "About link on the landing sheet", fg: "color-accent" },
-    { name: "current dot on the landing sheet", fg: "color-accent", min: 3 },
-    { name: "other dots on the landing sheet", fg: "color-text-muted", min: 3 },
+describe("landing (ledger 1040)", () => {
+  // The signed-out landing: the page colour with a sea and an apricot glow
+  // placed per slide. The words sit where the glows have faded (pixel-measured
+  // >= 4.5:1 over them in the headless check); here each ink is gated over the
+  // bare page and over each glow at half its strength.
+  const PAIRS: Omit<Pair, "bg">[] = [
+    { name: "name and headlines", fg: "color-text" },
+    { name: "lines, disclaimer and 'Already have an account?'", fg: "color-landing-muted" },
+    { name: "tagline, About and Sign in", fg: "color-accent" },
+    { name: "current dot", fg: "color-accent", min: 3 },
+    { name: "other dots", fg: "color-landing-dot", min: 3 },
   ];
-  const THROUGH = ["color-bg", "color-bg-inset", "color-intro-from", "color-intro-to"];
-  const INTRO_PAIRS: Pair[] = [
-    // Ledger 1008: the intro slide's name and tagline, at both ends of its gradient.
-    { name: "intro name and tagline on the gradient's top", fg: "color-text", bg: "color-intro-from" },
-    { name: "intro name and tagline on the gradient's bottom", fg: "color-text", bg: "color-intro-to" },
-  ];
-  const tintOf = (token: string, mode: Mode) => parseColor(resolve(token, mode));
+  const half = (token: string, mode: Mode) => {
+    const glow = parseColor(resolve(token, mode));
+    return { ...glow, a: glow.a / 2 };
+  };
   for (const mode of ["light", "dark"] as const) {
-    for (const tint of ["color-landing-sheet", "color-landing-sheet-fallback"]) {
-      for (const ground of THROUGH) {
-        for (const pair of SHEET_PAIRS) {
-          it(`[${mode}] ${pair.name} (${tint} over ${ground}) >= ${pair.min ?? 4.5}:1`, () => {
-            const bg = compositeOver(tintOf(tint, mode), parseColor(resolve(ground, mode)));
-            expect(contrastRatio(parseColor(resolve(pair.fg, mode)), bg)).toBeGreaterThanOrEqual(pair.min ?? 4.5);
-          });
-        }
+    const bg = parseColor(resolve("color-bg", mode));
+    const sea = compositeOver(half("color-landing-glow-sea", mode), bg);
+    const apricot = compositeOver(half("color-landing-glow-apricot", mode), bg);
+    const grounds = { page: bg, sea, apricot };
+    for (const [where, ground] of Object.entries(grounds)) {
+      for (const pair of PAIRS) {
+        it(`[${mode}] ${pair.name} over the ${where} glow >= ${pair.min ?? 4.5}:1`, () => {
+          expect(contrastRatio(parseColor(resolve(pair.fg, mode)), ground)).toBeGreaterThanOrEqual(pair.min ?? 4.5);
+        });
       }
     }
-    for (const pair of INTRO_PAIRS) {
-      it(`[${mode}] ${pair.name} >= ${pair.min ?? 4.5}:1`, () => {
-        expect(ratioOf(pair.fg, pair.bg, mode)).toBeGreaterThanOrEqual(pair.min ?? 4.5);
-      });
-    }
-    // Frosted, not opaque: the tint lets the blurred picture through, and the
-    // no-blur fallback is a more opaque tint of the same colour.
-    it(`[${mode}] the sheet tint is translucent and its fallback more opaque`, () => {
-      const tint = tintOf("color-landing-sheet", mode);
-      const fallback = tintOf("color-landing-sheet-fallback", mode);
-      expect(tint.a).toBeGreaterThan(0);
-      expect(tint.a).toBeLessThan(1);
-      expect(fallback.a).toBeGreaterThan(tint.a);
-      expect([fallback.r, fallback.g, fallback.b]).toEqual([tint.r, tint.g, tint.b]);
+    it(`[${mode}] "Create an account" on its accent pill >= 4.5:1`, () => {
+      expect(ratioOf("color-bg-elevated", "color-accent", mode)).toBeGreaterThanOrEqual(4.5);
+    });
+    // The glows are translucent tints, faint in dark, so the page colour shows through.
+    it(`[${mode}] the glows are translucent`, () => {
+      for (const token of ["color-landing-glow-sea", "color-landing-glow-apricot"]) {
+        const { a } = parseColor(resolve(token, mode));
+        expect(a).toBeGreaterThan(0);
+        expect(a).toBeLessThanOrEqual(mode === "light" ? 0.7 : 0.2);
+      }
     });
   }
-  // Ledger 1023: white (dark: the dark surface) at about half, blending
-  // with the shots; 0.55 / 0.6 are the least the pixel-sampled headless check
-  // passed at. Pinned so a lighter tint can't creep back in unmeasured.
-  it("the sheet tint is white at 0.55 (light) and the dark surface at 0.6 (dark)", () => {
-    expect(tintOf("color-landing-sheet", "light")).toEqual({ r: 255, g: 255, b: 255, a: 0.55 });
-    const surface = parseColor(resolve("color-bg-elevated", "dark"));
-    expect(tintOf("color-landing-sheet", "dark")).toEqual({ ...surface, a: 0.6 });
-  });
-  it("the fallback tint applies only where backdrop-filter is unsupported (both spellings)", () => {
-    const rule = extractBlock(css, "@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))");
-    expect(rule).toMatch(/\.landing-sheet\s*\{\s*background-color:\s*var\(--color-landing-sheet-fallback\);\s*\}/);
-  });
 });
 
 describe("food plates (items 657, 658)", () => {

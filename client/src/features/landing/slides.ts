@@ -1,51 +1,86 @@
 import { TOUR_SLIDES } from "../tour/slides.js";
 
 /**
- * The signed-out landing's slides (ledger 992, 1008), in order, as data so
- * the copy is pinned word for word (`slides.test.ts`) and a native app or App
- * Store listing can reuse it. The first is the plain intro (logo, name and
- * tagline on a gradient: no screenshot). Every other `shot` names a pair of
- * screenshots, `client/public/landing/{shot}-{light,dark}.webp`: 390x844 @2x
- * app screens with made-up data (baby "Mila"), taken on an isolated stack
- * with the app header hidden and scrolled to the slide's key content.
- * Retake them when Log meal, Meal Plan, Home's Storage, the ladder or Recipes change.
+ * One floating card on a landing slide (ledger 1040): an element screenshot
+ * of the app's own card, `client/public/landing/chips/{name}.webp`, taken
+ * light (shown light in both modes) at 3x on an isolated stack with made-up
+ * data (baby "Mila"). `width`/`height` are the image's pixels (its shape);
+ * `x`/`y` place it in the slide's collage in mockup px at a 390-wide screen,
+ * where a 358px app card shows 304px wide (0.85). Retake when the card changes.
  */
-export type LandingShot = "log" | "plan" | "storage" | "allergens" | "recipes";
+export type LandingChip = { name: string; alt: string; width: number; height: number; x: number; y: number };
 
-export type LandingSlide = { title: string; body: string } & ({ shot: LandingShot; alt: string } | { shot: null });
+/** Where the sea and apricot glows sit behind the slide (`x% y%`), moving per slide. */
+export type LandingGlow = { sea: string; apricot: string };
+
+/**
+ * The signed-out landing's slides (ledger 992, 1008, 1040), in order, as data
+ * so the copy is pinned word for word (`slides.test.ts`) and a native app or
+ * App Store listing can reuse it. The first is the intro (logo, name, the
+ * tagline as its title and the tour's welcome line); it has no chips.
+ */
+export type LandingSlide = { title: string; body: string; glow: LandingGlow; chips: readonly LandingChip[] };
+
+/** Every card is a 358px-wide app card, captured 1074px wide (3x). */
+const card = (name: string, alt: string, height: number, x: number, y: number): LandingChip => ({ name, alt, width: 1074, height, x, y });
 
 export const LANDING_SLIDES: readonly LandingSlide[] = [
-  // The tagline sits on the gradient; the sheet carries the tour's welcome line.
-  { title: "Starting solids, made simpler.", body: TOUR_SLIDES[0]!.body, shot: null },
+  {
+    title: "Starting solids, made simpler.",
+    body: TOUR_SLIDES[0]!.body,
+    glow: { sea: "50% 28%", apricot: "84% 84%" },
+    chips: [],
+  },
   {
     title: "Log what they ate.",
     body: "Rate each food and note any reaction.",
-    shot: "log",
-    alt: "Log meal with Avocado and Banana on the plate, each rated with stars.",
+    glow: { sea: "22% 62%", apricot: "80% 46%" },
+    chips: [
+      card("log-avocado", "Avocado on the plate, rated 5 stars.", 254, 0, 64),
+      card("log-banana", "Banana on the plate, rated 4 stars.", 254, 10, 164),
+    ],
   },
   {
-    title: "Plan ahead, if you like.",
+    title: "Plan the week ahead.",
     body: "Then serve today's meals in one tap.",
-    shot: "plan",
-    alt: "Meal Plan for today: Breakfast, Lunch, Snack and Dinner planned, each with its foods and a Serve button.",
+    glow: { sea: "76% 56%", apricot: "20% 72%" },
+    chips: [
+      card("plan-week", "The meal plan's week, Sunday 15 to Saturday 21, with today, Friday 20, picked and dots under the planned days.", 210, 10, 48),
+      card("plan-breakfast", "Breakfast at 8:00 AM, planned with Iron-Fortified Oats and Banana, and a Serve button.", 336, 0, 140),
+    ],
   },
   {
     title: "Keep track of what you've prepped.",
     body: "See servings left and when to use each batch.",
-    shot: "storage",
-    alt: "Home with the Storage section highlighted: Pear and Spinach in the Fridge and Sweet Potato Lentil Patties in the Freezer, each with the days left.",
+    glow: { sea: "26% 52%", apricot: "82% 66%" },
+    chips: [
+      card(
+        "storage-list",
+        "Storage: Pear and Spinach in the fridge and Sweet Potato Lentil Patties in the freezer, each with its servings and days left.",
+        654,
+        8,
+        40,
+      ),
+    ],
   },
   {
     title: "Introduce allergens step by step.",
-    body: "The top 9, with a nudge when one is due.",
-    shot: "allergens",
-    alt: "Allergen ladder with the progress ring at the top, 2 of 9 established, then Peanut, established and due for a serve.",
+    body: "Know what's started, established, and due next.",
+    glow: { sea: "72% 58%", apricot: "16% 48%" },
+    chips: [
+      card("allergens-ring", "Allergen progress ring: 2 of 9 established, 1 due for a serve, 2 started and 5 not started yet.", 318, 0, 28),
+      card("allergens-peanut", "Peanut, established, with how to serve it safely and a Serve again soon nudge.", 510, 22, 140),
+    ],
   },
   {
     title: "Find food and recipe ideas.",
     body: "Recipes and first foods, with prep for your baby's age.",
-    shot: "recipes",
-    alt: "Recipes list with search and All, Favorites and Custom chips: Apple Cinnamon Tahini Oatmeal, Baked Butter Beans in Tomato Sauce and more, each marked 6m+ with its foods.",
+    glow: { sea: "30% 54%", apricot: "80% 40%" },
+    chips: [
+      card("recipe-egg-muffins", "Recipe card: Broccoli Cheese Egg Muffins, with broccoli, cheese and egg, from 6 months.", 306, 0, 20),
+      card("recipe-beet-hummus", "Recipe card: Pink Beet Hummus, with beets, chickpeas, lemon and tahini, from 6 months.", 306, 14, 116),
+      card("recipe-omelet-fingers", "Recipe card: Veggie Omelet Fingers, with bell pepper, egg and spinach, from 6 months.", 306, 4, 212),
+    ],
   },
 ];
 

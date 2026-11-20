@@ -48,7 +48,6 @@ const ALLOWED = new Set([
   "client/src/features/storage/components/EditStorageItemForm.tsx:999",
   "client/src/features/storage/components/AddStorageItemForm.tsx:999",
   "client/src/features/storage/components/LeftoversFields.tsx:999",
-  "client/src/features/landing/LandingPage.tsx:112",
 ]);
 
 /** Blank what is an id rather than prose: slug/key/value/id/category string

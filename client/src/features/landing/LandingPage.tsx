@@ -1,46 +1,77 @@
 import { useEffect, useRef } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useSession } from "../../lib/auth.js";
-import { ButtonLink } from "../../components/ui/Button.js";
 import { usePagedTrack } from "../../components/ui/Pager.js";
 import { newWheelGesture, slideIndexFromScroll, swipeStep, wheelStep } from "../../lib/scrollTrack.js";
 import { ignoreTapsBriefly } from "../../lib/tapGuard.js";
-import { darkMediaQuery } from "../../theme.js";
-import { FOOD_EMOJI } from "../catalog/foodEmoji.js";
-import { DISCLAIMER, LANDING_SLIDES } from "./slides.js";
+import { DISCLAIMER, LANDING_SLIDES, type LandingChip, type LandingSlide } from "./slides.js";
 
 const COUNT = LANDING_SLIDES.length;
-const WAY_IN = "flex-1 max-[22.5rem]:px-2.5 max-[22.5rem]:text-[0.8125rem]";
-const shotSrc = (shot: string, theme: "light" | "dark") => `/landing/${shot}-${theme}.webp`;
-const INTRO_BG = "linear-gradient(to bottom, var(--color-intro-from) 15%, var(--color-intro-to) 70%)";
-/** First foods around the intro's logo, placed (never animated) clear of it and of the words. */
-const INTRO_FOODS = [
-  { emoji: FOOD_EMOJI.avocado, at: "-left-16 -top-2 -rotate-12" },
-  { emoji: FOOD_EMOJI.banana, at: "-right-16 top-3 rotate-12" },
-  { emoji: FOOD_EMOJI.sweet_potato, at: "-left-14 bottom-0 rotate-6" },
-  { emoji: FOOD_EMOJI.egg, at: "-right-14 bottom-5 -rotate-6" },
-];
+/** A 358px app card shows 304px wide in the mockups (0.85). */
+const CHIP_W = 304;
+const SIDES = "px-[clamp(1.25rem,8.2vw,2rem)]";
+/** Clears the iOS band and status bar when installed; about 96px down a 844px browser screen otherwise (the mockup). */
+const SLIDE_TOP = "max(calc(env(safe-area-inset-top) + var(--top-edge-clearance) + 1.5rem), 11.4dvh)";
+const ACCENT_LINK = "font-semibold text-[var(--color-accent)] underline";
+
+const glowOf = ({ glow }: LandingSlide) =>
+  `radial-gradient(circle at ${glow.sea}, var(--color-landing-glow-sea), transparent 55%), radial-gradient(circle at ${glow.apricot}, var(--color-landing-glow-apricot), transparent 50%)`;
+
 
 /**
- * Ledger 992/1003/1012: the signed-out front door ("/" lands here, RequireAuth).
- * One app-width column exactly the screen's height: it runs up under
- * OutsideAppLayout's top clearance (the brand row clears it again), so the
- * page never scrolls. Each slide is a full-bleed screenshot; its words sit
- * in one sheet pinned to the bottom, outside the track (absolute, never fixed
- * chrome), on its own surface so it never reads as part of the screenshot.
- * The sheet shows the active slide's words with the dots and the ways in;
- * screen readers get each slide's words with its picture instead. The track is the
- * Pager's swipe track (one flick = one slide, item 778): it moves only by
- * scrolling, never the URL or history (ledger 849), and only when the visitor
- * moves it. Signed in, it forwards Home, so Back after a sign-in never shows
- * it (ledger 828).
+ * A slide's cards, placed as in the mockup and scaled down as one (never up)
+ * to fit the room between the words and the bottom block: the collage is
+ * `W` x `H` mockup px, as wide as fits both the width and the height of its
+ * box (a size container), so a short screen shows smaller cards, never cut.
+ */
+function Chips({ chips, eager }: { chips: readonly LandingChip[]; eager: boolean }) {
+  const W = Math.max(...chips.map((chip) => chip.x + CHIP_W));
+  const H = Math.max(...chips.map((chip) => chip.y + (CHIP_W * chip.height) / chip.width));
+  const pct = (part: number, whole: number) => `${((100 * part) / whole).toFixed(3)}%`;
+  return (
+    <div className="relative min-h-0 flex-1" style={{ containerType: "size" }}>
+      <div className="relative" style={{ width: `min(${W}px, 100cqw, ${(W / H).toFixed(4)} * 100cqh)`, aspectRatio: `${W} / ${H}` }}>
+        {chips.map((chip) => (
+          <div
+            key={chip.name}
+            className="absolute overflow-hidden rounded-[17px]"
+            style={{ left: pct(chip.x, W), top: pct(chip.y, H), width: pct(CHIP_W, W), boxShadow: "var(--shadow-landing-chip)" }}
+          >
+            <img
+              src={`/landing/chips/${chip.name}.webp`}
+              alt={chip.alt}
+              width={chip.width}
+              height={chip.height}
+              loading={eager ? "eager" : "lazy"}
+              className="block h-auto w-full"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ledger 992/1040: the signed-out front door ("/" lands here, RequireAuth).
+ * One app-width column exactly the screen's height, pulled up under
+ * OutsideAppLayout's top clearance, so the page never scrolls: the slides'
+ * track above a bottom block (dots, Create an account, Sign in) that stays
+ * put. Behind both, the page color with a sea and an apricot glow that move
+ * per slide (crossfaded; instant under reduced motion), across the whole
+ * width on a wide screen. Slide 1 is the centered intro; the others a big
+ * headline, its line and the app's own cards floating below. The track is
+ * the Pager's swipe track (one flick = one slide, item 778): it moves only by
+ * scrolling, never the URL or history (ledger 849), and only when the
+ * visitor moves it. Signed in, it forwards Home, so Back after a sign-in
+ * never shows it (ledger 828).
  */
 export function LandingPage() {
   const { data: session, isPending } = useSession();
   const track = usePagedTrack(COUNT, 1);
   const { goTo } = track;
   const index = track.pages.page;
-  // Ledger 1024: a swipe or a sideways trackpad scroll on the sheet moves the track too.
+  // Ledger 1024: a swipe or a sideways trackpad scroll on the bottom block moves the track too.
   const swipe = useRef<{ id: number; x: number; y: number } | null>(null);
   const wheel = useRef(newWheelGesture());
 
@@ -69,53 +100,25 @@ export function LandingPage() {
 
   if (session) return <Navigate to="/" replace />;
 
-  const media = darkMediaQuery();
-  const dark = typeof matchMedia === "function" && matchMedia(media).matches;
-  const theme = dark ? "dark" : "light";
-  const current = LANDING_SLIDES[index]!;
-
   return (
     <div
-      className="relative mx-auto max-w-lg"
+      className="relative mx-auto flex max-w-lg flex-col"
       style={{ height: "100dvh", marginTop: "calc(-1 * (env(safe-area-inset-top) + var(--top-edge-clearance)))" }}
     >
-      {/* Wide screens: the current picture, blurred and dimmed, fills the
-          sides. Decorative; not displayed (so never loaded) on a phone. */}
-      <div aria-hidden="true" className="absolute inset-y-0 left-1/2 hidden w-screen -translate-x-1/2 overflow-hidden min-[33rem]:block">
-        {current.shot ? (
-          <picture>
-            <source srcSet={shotSrc(current.shot, "dark")} media={media} />
-            <source srcSet={shotSrc(current.shot, "light")} />
-            <img
-              src={shotSrc(current.shot, theme)}
-              alt=""
-              loading="lazy"
-              className="h-full w-full scale-110 object-cover opacity-40 blur-2xl"
-            />
-          </picture>
-        ) : (
-          <div className="h-full w-full" style={{ background: INTRO_BG }} />
-        )}
+      {/* The ground and the glows, one layer per slide, the current one shown. Decorative. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 overflow-hidden bg-[var(--color-bg)]">
+        {LANDING_SLIDES.map((slide, slideIndex) => (
+          <div
+            key={slide.title}
+            className={`absolute inset-0 transition-opacity duration-[var(--duration-slow)] motion-reduce:transition-none ${
+              slideIndex === index ? "opacity-100" : "opacity-0"
+            }`}
+            style={{ background: glowOf(slide) }}
+          />
+        ))}
       </div>
 
-      {/* Hidden (not removed: it is the page's h1) on the intro, whose big logo it would repeat. */}
-      <header
-        className={`pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-center gap-2 px-4 pb-6 transition-opacity duration-[var(--duration-fast)] motion-reduce:transition-none ${
-          current.shot ? "opacity-100" : "opacity-0"
-        }`}
-        style={{
-          paddingTop: "calc(env(safe-area-inset-top) + var(--top-edge-clearance) + 0.75rem)",
-          background: "linear-gradient(to bottom, color-mix(in srgb, var(--color-bg) 85%, transparent) 55%, transparent)",
-        }}
-      >
-        {/* Decorative: the h1 names it. */}
-        <img src="/icons/icon-192.png" alt="" width={28} height={28} className="h-7 w-7 rounded-lg" />
-        <h1 className="font-display text-[var(--color-text)]" style={{ fontSize: "1.375rem" }}>
-          Little Meals
-        </h1>
-      </header>
-
-      {/* A tap on a picture is the → key: the next slide, none after the last. */}
+      {/* A tap on a slide is the → key: the next slide, none after the last. */}
       <div
         ref={track.trackRef}
         onScroll={track.onScroll}
@@ -124,82 +127,86 @@ export function LandingPage() {
         onClick={() => move(1)}
         aria-roledescription="carousel"
         aria-label="What Little Meals does"
-        className="scroll-hidden absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain"
+        className="scroll-hidden relative flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain"
       >
         {LANDING_SLIDES.map((slide, slideIndex) => (
           <section
-            key={slide.shot ?? "intro"}
+            key={slide.title}
             role="group"
             aria-roledescription="slide"
             aria-label={`${slideIndex + 1} of ${COUNT}`}
-            className={`relative h-full w-full shrink-0 ${
+            className={`relative flex h-full w-full shrink-0 flex-col ${SIDES} ${
               track.near === null || Math.abs(slideIndex - track.near) <= 1 ? "snap-start snap-always" : "snap-align-none"
             }`}
+            style={{ paddingTop: slideIndex === 0 ? "calc(env(safe-area-inset-top) + var(--top-edge-clearance))" : SLIDE_TOP }}
           >
-            {slide.shot ? (
-              <picture>
-                <source srcSet={shotSrc(slide.shot, "dark")} media={media} />
-                <source srcSet={shotSrc(slide.shot, "light")} />
+            {slideIndex === 0 ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-5 text-center">
+                {/* Decorative: the name is right under it. */}
                 <img
-                  src={shotSrc(slide.shot, theme)}
-                  alt={slide.alt}
-                  width={780}
-                  height={1688}
-                  // The first picture is one tap from the intro: load it now.
-                  loading={slideIndex === 1 ? "eager" : "lazy"}
-                  className="absolute inset-0 h-full w-full object-cover object-top"
-                  // Starts where the header's padding does (iOS band + status
-                  // bar), so the shot's blank top stays under "Little Meals".
-                  style={{ paddingTop: "calc(env(safe-area-inset-top) + var(--top-edge-clearance))" }}
+                  src="/icons/icon-512.png"
+                  alt=""
+                  width={108}
+                  height={108}
+                  className="h-[6.75rem] w-[6.75rem] rounded-[27px]"
+                  style={{ boxShadow: "var(--shadow-landing-icon)" }}
                 />
-              </picture>
-            ) : (
-              // The plain first slide: logo, name and tagline on the gradient,
-              // centred above the sheet. Its words are read from the slide's
-              // own copy below, so all of this is decorative.
-              <div aria-hidden="true" className="absolute inset-0" style={{ background: INTRO_BG }}>
-                <div
-                  className="absolute inset-x-0 top-0 flex flex-col items-center justify-center gap-3 px-4 text-center"
-                  // ponytail: the sheet's usual height (~11.6-13.7rem at 320-512px wide), not measured; measure it if a slide's copy grows.
-                  style={{
-                    paddingTop: "calc(env(safe-area-inset-top) + var(--top-edge-clearance))",
-                    bottom: "calc(13rem + env(safe-area-inset-bottom) / 2)",
-                  }}
-                >
-                  <div className="relative">
-                    <img src="/icons/icon-512.png" alt="" width={112} height={112} className="h-28 w-28" />
-                    {INTRO_FOODS.map(({ emoji, at }) => (
-                      <span key={emoji} className={`absolute text-[2rem] leading-none ${at}`}>
-                        {emoji}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="font-display text-[var(--color-text)]" style={{ fontSize: "2.5rem" }}>
+                <div className="flex flex-col items-center gap-2.5">
+                  <h1 className="font-display text-[var(--color-text)]" style={{ fontSize: "2.625rem", lineHeight: 1.05, letterSpacing: "-0.5px" }}>
                     Little Meals
-                  </p>
-                  <p className="font-h2 text-[var(--color-text)]">{slide.title}</p>
+                  </h1>
+                  <p className="text-lg font-semibold text-[var(--color-accent)]">{slide.title}</p>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <p className="max-w-[16.875rem] text-[0.9375rem] leading-normal text-[var(--color-landing-muted)]">{slide.body}</p>
+                  {/* Until the session is known, no way in (the space is kept). */}
+                  {isPending ? (
+                    <div className="h-11" />
+                  ) : (
+                    <Link
+                      to="/about"
+                      // A link, not the slide's tap-to-next.
+                      onClick={(event) => event.stopPropagation()}
+                      className={`inline-flex min-h-11 items-center px-2 text-[0.8125rem] ${ACCENT_LINK}`}
+                    >
+                      About Little Meals
+                    </Link>
+                  )}
                 </div>
               </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-4">
+                  <h2
+                    className="font-h2 max-w-[19.5rem] text-[var(--color-text)]"
+                    style={{ fontFamily: "var(--font-family-display)", fontSize: "clamp(1.75rem, 4.8dvh, 2.5rem)", lineHeight: 1.08, letterSpacing: "-0.6px" }}
+                  >
+                    {slide.title}
+                  </h2>
+                  <p className="max-w-[18.125rem] leading-normal text-[var(--color-landing-muted)]" style={{ fontSize: "clamp(0.9375rem, 2dvh, 1.0625rem)" }}>
+                    {slide.body}
+                  </p>
+                </div>
+                {/* The first cards are one tap from the intro: load them now. */}
+                {/* Room below for the cards' shadow, which the track would clip. */}
+                <div className="flex min-h-0 flex-1 flex-col pt-[clamp(0.5rem,2dvh,1rem)] pb-[clamp(1rem,4dvh,2rem)]">
+                  <Chips chips={slide.chips} eager={slideIndex === 1} />
+                </div>
+                {slideIndex === COUNT - 1 ? (
+                  <p className="mx-auto max-w-[18.75rem] pt-2 text-center text-[0.8125rem] leading-[1.45] text-[var(--color-landing-muted)]">{DISCLAIMER}</p>
+                ) : null}
+              </>
             )}
-            {/* The words for screen readers, with the picture; the sheet shows them. */}
-            <div className="sr-only">
-              <h2 className="font-h2">{slide.title}</h2>
-              <p>{slide.body}</p>
-              {slideIndex === COUNT - 1 ? <p>{DISCLAIMER}</p> : null}
-            </div>
           </section>
         ))}
       </div>
 
-      {/* The sheet: a frosted panel over the picture (ledger 1012, 1022-1024):
-          square edges, the picture blurred behind a half-clear tint, no
-          shadow or hairline, as short as its 44px targets allow. Without
-          backdrop-filter, .landing-sheet takes a more opaque tint (index.css).
-          A sideways swipe on it (touch, pen) moves one slide, as on the
-          picture; up/down is left to the browser (pan-y) and never moves. */}
+      {/* The bottom block, the same on every slide, outside the track. A
+          sideways swipe on it (touch, pen) moves one slide, as on the slides;
+          up/down is left to the browser (pan-y) and never moves. */}
       <div
-        className="landing-sheet absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-[var(--color-landing-sheet)] px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)/2)]"
-        style={{ backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", touchAction: "pan-y" }}
+        className={`landing-foot relative flex shrink-0 flex-col items-center ${SIDES}`}
+        style={{ paddingBottom: "max(3.3dvh, env(safe-area-inset-bottom))", touchAction: "pan-y" }}
         onPointerDown={(event) => {
           if (event.pointerType !== "mouse") swipe.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
         }}
@@ -221,45 +228,24 @@ export function LandingPage() {
           if (step) move(step);
         }}
       >
-        {/* Every slide's words in one grid cell, only the active one shown:
-            the sheet is as tall as the longest, so it never jumps. Hidden
-            from screen readers, who hear them with each picture. */}
-        <div aria-hidden="true" className="grid w-full text-center">
-          {LANDING_SLIDES.map((slide, slideIndex) => (
-            <div
-              key={slide.shot ?? "intro"}
-              className={`col-start-1 row-start-1 flex flex-col justify-center gap-0.5 transition-opacity duration-[var(--duration-fast)] motion-reduce:transition-none ${
-                slideIndex === index ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              {/* The intro's tagline is already on its gradient. */}
-              {slide.shot ? <p className="font-h2 text-[var(--color-text)]">{slide.title}</p> : null}
-              <p className="text-sm leading-[1.125rem] text-[var(--color-text-muted)]">{slide.body}</p>
-              {slideIndex === COUNT - 1 ? (
-                <p className="text-xs italic text-[var(--color-text-muted)]">{DISCLAIMER}</p>
-              ) : null}
-            </div>
-          ))}
-        </div>
-        {/* 9px above and below the dots; each 44px target reaches up over
-            the words' bottom edge instead (never down over the buttons). */}
-        <div className="-mt-[1.125rem] flex shrink-0 items-center justify-center">
+        {/* 44px targets; the dot sits 14px above the button, the rest of its target above it. */}
+        <div className="flex shrink-0 items-center justify-center">
           {LANDING_SLIDES.map((slide, slideIndex) => (
             <button
-              key={slide.shot ?? "intro"}
+              key={slide.title}
               type="button"
               aria-label={`Go to slide ${slideIndex + 1} of ${COUNT}`}
               aria-current={slideIndex === index ? "true" : undefined}
               onClick={() => goTo(slideIndex)}
-              className="flex h-11 w-11 items-end justify-center pb-[0.5625rem]"
+              className="flex h-11 w-11 items-end justify-center pb-3.5"
             >
-              {/* The current dot is wider, not only another colour. */}
+              {/* The current dot is longer, not only another color. */}
               <span
                 aria-hidden="true"
-                className={`h-2 rounded-full transition-[width,background-color] duration-[var(--duration-fast)] motion-reduce:transition-none ${
-                  slideIndex === index ? "w-5" : "w-2"
+                className={`h-[7px] rounded-full transition-[width,background-color] duration-[var(--duration-fast)] motion-reduce:transition-none ${
+                  slideIndex === index ? "w-[22px]" : "w-[7px]"
                 }`}
-                style={{ backgroundColor: slideIndex === index ? "var(--color-accent)" : "var(--color-text-muted)" }}
+                style={{ backgroundColor: slideIndex === index ? "var(--color-accent)" : "var(--color-landing-dot)" }}
               />
             </button>
           ))}
@@ -267,29 +253,23 @@ export function LandingPage() {
 
         {/* Until the session is known, no way in: a signed-in parent reloading
             here must not see "Create an account" flash first. The space is
-            kept (button row + About), so the sheet does not grow later. */}
+            kept, so nothing moves when they arrive. */}
         {isPending ? (
-          <div className="h-[5.5rem]" />
+          <div className="h-[6.875rem]" />
         ) : (
           <>
-            {/* Side by side at every width (a touch smaller under 360px, so
-                "Create an account" fits one line at 320px): one row. */}
-            <div className="flex w-full gap-2">
-              <ButtonLink to="/signup" className={WAY_IN}>
-                Create an account
-              </ButtonLink>
-              <ButtonLink to="/login" variant="secondary" className={WAY_IN}>
-                Sign in
-              </ButtonLink>
-            </div>
             <Link
-              to="/about"
-              // The words 6px under the buttons; the rest of the 44px target below them.
-              // Sheet text colour, underline as the link cue: accent fell to 4.32:1 over the blurred picture (ledger 1027).
-              className="inline-flex min-h-11 items-start pt-1.5 text-sm font-medium text-[var(--color-text)] underline"
+              to="/signup"
+              className="flex min-h-[3.25rem] w-full items-center justify-center rounded-full bg-[var(--color-accent)] text-base font-semibold text-[var(--color-bg-elevated)] transition-transform duration-[var(--duration-fast)] active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
             >
-              About Little Meals
+              Create an account
             </Link>
+            <p className="mt-3.5 flex items-center gap-1 text-[0.9375rem] text-[var(--color-landing-muted)]">
+              Already have an account?
+              <Link to="/login" className={`inline-flex min-h-11 items-center ${ACCENT_LINK}`}>
+                Sign in
+              </Link>
+            </p>
           </>
         )}
       </div>
