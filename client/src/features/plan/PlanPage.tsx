@@ -178,16 +178,18 @@ export function PlanPage() {
           {/* Ledger 951: the strip stays under the app header while the day
               scrolls; the week row above scrolls away. Sticky in flow, never
               fixed (CLAUDE.md iOS rule), at the slim header's own height
-              (--header-height: its row plus the safe area). The page colour
-              behind it, out to the page's edges and 6px below (given back by
-              -mb-1.5, so the layout is unchanged), hides cards passing under.
+              (--header-height: its row plus the safe area). The box runs out
+              to the page's edges and 6px below (given back by -mb-1.5, so the
+              layout is unchanged). Ledger 1079: the box is clear and the strip
+              itself is frosted like a bar (round 15; dark keeps the lifted
+              tint, --color-bar-glass), so cards blur away under it.
               z-15: above card action rows (z-10), below the header (z-20);
               Menu, Sheet and Dialog portal to body above both. */}
-          <div id={DAY_STRIP_ID} className="sticky z-[15] -mx-4 -mb-1.5 bg-[var(--color-bg)] px-4 pb-1.5" style={{ top: "var(--header-height)" }}>
+          <div id={DAY_STRIP_ID} className="sticky z-[15] -mx-4 -mb-1.5 px-4 pb-1.5" style={{ top: "var(--header-height)" }}>
             <div
               role="group"
               aria-label="Days"
-              className="flex gap-0.5 rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-1 shadow-[var(--shadow-sm)]"
+              className="app-frost flex gap-0.5 rounded-[18px] border border-[var(--color-bar-hairline)] p-1 shadow-[var(--shadow-sm)]"
             >
               {week.map((date, index) => {
                 const pressed = date === selected;

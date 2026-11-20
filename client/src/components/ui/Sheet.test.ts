@@ -1,6 +1,7 @@
 // Item 737: a long sheet keeps its header (handle, X, title) pinned while the
 // body scrolls. Measured live (390x844 and 320, light/dark, longest guide);
 // these pins keep the markup that makes it work.
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -12,24 +13,37 @@ const render = (props: { title?: string; showClose?: boolean; fixedHeight?: bool
 const classOf = (html: string, marker: string) => html.match(new RegExp(`<div ${marker}[^>]*class="([^"]*)"`))?.[1] ?? "";
 
 describe("SheetPanel pinned header (item 737)", () => {
-  it("wraps the handle, X and title in one sticky, opaque header inside the panel's own scroll", () => {
+  it("wraps the handle, X and title in one sticky header inside the panel's own scroll, clear at rest and solid once scrolled under (ledger 1081)", () => {
     const html = render({ title: "How to create a custom recipe", showClose: true });
     const header = html.match(/<div data-sheet-header="" class="([^"]*)">([\s\S]*?)<\/h2><\/div><\/div>/);
     expect(header).not.toBeNull();
     const cls = header![1]!.split(" ");
-    for (const c of ["sticky", "top-0", "z-10", "bg-[var(--color-bg-elevated)]", "pt-4", "-mx-4", "px-4"]) {
+    for (const c of ["app-frost-edge", "sticky", "top-0", "z-10", "pt-4", "-mx-4", "px-4"]) {
       expect(cls).toContain(c);
     }
     // The X and the title live inside it; the body does not.
     expect(header![2]).toContain('aria-label="Close"');
     expect(header![2]).toContain("How to create a custom recipe");
     expect(html.indexOf("<p>body</p>")).toBeGreaterThan(html.indexOf("data-sheet-header"));
-    // No band below the title row that would take HowToLink's -my-3 taps:
-    // only a 12px fade under it that ignores pointers.
+    // No band below the title row that would take HowToLink's -my-3 taps,
+    // and no fill of its own: the frosted panel shows through at rest (a fill
+    // or even a no-op blur drew a band there, measured).
     expect(cls).not.toContain("pb-3");
-    for (const c of ["after:pointer-events-none", "after:absolute", "after:top-full", "after:h-3", "after:from-[var(--color-bg-elevated)]", "after:to-transparent"]) {
-      expect(cls).toContain(c);
-    }
+    expect(cls.filter((c) => c.startsWith("bg-") || c.startsWith("after:") || c.startsWith("backdrop-"))).toEqual([]);
+    expect(cls).not.toContain("app-frost");
+  });
+
+  it("is frosted like the bars (ledger 1081), and its pinned row turns into the panel's look, solid, once the body scrolls under it", () => {
+    const panel = classOf(render({ title: "Serve" }), 'role="dialog"').split(" ");
+    expect(panel).toEqual(expect.arrayContaining(["app-frost", "border-t", "border-[var(--color-bar-hairline)]"]));
+    expect(panel.filter((c) => c.startsWith("bg-"))).toEqual([]);
+    const css = readFileSync(new URL("../../styles/index.css", import.meta.url), "utf8");
+    // No nested blur on the row; scrolled, the frost tint over the overlay's dim, which is Sheet's own overlay class.
+    expect(css).toMatch(/\.app-frost \.app-frost-edge \{\s*-webkit-backdrop-filter: none;\s*backdrop-filter: none;/);
+    const dim = /\.app-frost \.app-frost-edge\[data-scrolled\] \{\s*background-color: color-mix\(in srgb, var\(--color-text\) (\d+)%, var\(--color-bg\)\);\s*background-image: linear-gradient\(var\(--color-bar-glass\), var\(--color-bar-glass\)\);/.exec(css);
+    expect(dim).not.toBeNull();
+    const sheet = readFileSync(new URL("./Sheet.tsx", import.meta.url), "utf8");
+    expect(sheet).toContain(`sheet-overlay absolute inset-0 bg-[var(--color-text)]/${dim![1]}`);
   });
 
   it("scrolls the panel itself, with no top padding (so sticky pins at the very edge in WebKit too) and room for focus", () => {

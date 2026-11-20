@@ -197,15 +197,21 @@ describe("PlanPage (CD-Plan-Day)", () => {
     ]);
   });
 
-  it("keeps the day strip pinned under the app header: sticky in flow, page colour behind it, between cards and header (ledger 951)", () => {
+  it("keeps the day strip pinned under the app header: sticky in flow, between cards and header, the strip frosted like a bar (ledgers 951, 1079)", () => {
     const strip = findAll(render(), (el) => el.props.id === DAY_STRIP_ID)[0]!;
     const classes = String(strip.props.className).split(" ");
-    expect(classes).toEqual(expect.arrayContaining(["sticky", "z-[15]", "bg-[var(--color-bg)]", "-mx-4", "px-4", "pb-1.5", "-mb-1.5"]));
+    expect(classes).toEqual(expect.arrayContaining(["sticky", "z-[15]", "-mx-4", "px-4", "pb-1.5", "-mb-1.5"]));
     expect(classes).not.toContain("fixed");
+    // Round 15: the box is clear (no page-colour band across the glow) ...
+    expect(classes.filter((c) => c.startsWith("bg-"))).toEqual([]);
     expect(strip.props.style).toEqual({ top: "var(--header-height)" });
     // It holds the Days group itself; the week row (‹ ›) stays outside and scrolls away.
     const group = strip.props.children as El;
     expect([group.props.role, group.props["aria-label"]]).toEqual(["group", "Days"]);
+    // ... and the strip itself is the frosted bar, the bars' hairline, no opaque fill.
+    const groupClasses = String(group.props.className).split(" ");
+    expect(groupClasses).toEqual(expect.arrayContaining(["app-frost", "border", "border-[var(--color-bar-hairline)]"]));
+    expect(groupClasses.filter((c) => c.startsWith("bg-"))).toEqual([]);
     expect(findAll(strip, (el) => el.props["aria-label"] === "Previous week")).toEqual([]);
   });
 

@@ -580,7 +580,7 @@ describe("Home paging (item 694)", () => {
   it("grouped (Home, item 664): one card of divided rows, each kebab named after its meal", () => {
     const [html] = shownSlides(renderList(3, "/meals", true));
     expect((html!.match(LIST_UL) ?? []).length).toBe(1);
-    expect(html).toMatch(/<ul class="rounded-\[var\(--radius-lg\)\] border border-\[var\(--color-border\)\] bg-\[var\(--color-bg-elevated\)\][^"]*"/);
+    expect(html).toMatch(/<ul class="app-card rounded-\[var\(--radius-lg\)\] border [^"]*"/);
     const rows = html!.match(/<li class="relative[^"]*"/g) ?? [];
     expect(rows).toHaveLength(3);
     for (const row of rows) {

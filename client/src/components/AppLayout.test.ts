@@ -260,7 +260,7 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
 
   it("keeps the header pinned (sticky top-0) and in order: back/X slot, chip, then the gear alone on the right (item 692)", () => {
     for (const p of ["/", "/foods"]) {
-      expect(header(layoutWith([remy], p)), p).toMatch(/^<header class="sticky top-0 z-20 flex justify-between gap-3 px-4 /);
+      expect(header(layoutWith([remy], p)), p).toMatch(/^<header class="app-frost app-frost-edge sticky top-0 z-20 flex justify-between gap-3 px-4 /);
     }
     // A-Home tops the gear with the greeting; inner rows center (item 679).
     expect(header(layoutWith([remy], "/"))).toMatch(/^<header class="[^"]*\bitems-start py-2\.5"/);
@@ -321,13 +321,32 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
     }
   });
 
-  it("is the page's own color with no line on every page, like A-Home/A-Salmon (item 679)", () => {
+  it("is a frosted bar, clear while nothing is under it, with no border to add height (ledgers 679, 1079)", () => {
     for (const p of ["/", "/foods"]) {
       const open = header(layoutWith([remy], p)).match(/^<header [^>]*>/)![0];
-      expect(open, p).toContain("background-color:var(--color-bg);");
+      // The fill, blur and line all come from the classes (index.css): no
+      // inline page colour, and the line is an inset shadow, never a border.
+      expect(open, p).toMatch(/class="app-frost app-frost-edge /);
+      expect(open, p).not.toContain("background-color");
       expect(open, p).not.toContain("--color-bg-elevated");
       expect(open, p).not.toMatch(/\bborder/);
+      // Server-rendered at the top: lib/scrollEdge.ts adds data-scrolled once content is under it.
+      expect(open, p).not.toContain("data-scrolled");
     }
+    const css = readFileSync(new URL("../styles/index.css", import.meta.url), "utf8");
+    expect(css).toMatch(/\.app-frost-edge:not\(\[data-scrolled\]\) \{\s*background-color: transparent;\s*box-shadow: inset 0 -1px 0 transparent;/);
+    expect(css).toMatch(/\.app-frost-edge \{\s*box-shadow: inset 0 -1px 0 var\(--color-bar-hairline\);\s*transition:\s*background-color 180ms/);
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\.app-frost-edge \{\s*transition: none;/);
+  });
+
+  it("sits on the glow ground, full-bleed behind the column, never fixed (ledger 1078)", () => {
+    const html = layoutWith([remy], "/foods");
+    const ground = /<div class="app-ground" style="background-image:([^"]*)"><div class="mx-auto flex min-h-screen/.exec(html);
+    expect(ground).not.toBeNull();
+    expect(ground![1]).toContain("var(--color-app-glow-sea)");
+    expect(ground![1]).toContain("var(--color-app-glow-apricot)");
+    expect(ground![1]).not.toContain("landing");
+    expect(html).not.toMatch(/background-attachment|position:fixed/);
   });
 
   it("inner pages are one slim row (py-1 + 44px targets = 52px); Home keeps its taller padding", () => {
@@ -417,7 +436,7 @@ describe("AppLayout shell column (item 379 — the nav stopped being fixed)", ()
     // ...and still inside the shell column: the column's closing tag comes
     // after the nav, so the nav is the column's last flex child.
     expect(html.indexOf("</nav>")).toBeLessThan(html.lastIndexOf("</div>"));
-    expect(html).toMatch(/<nav class="sticky bottom-0 /);
+    expect(html).toMatch(/<nav class="app-frost sticky bottom-0 /);
   });
 });
 

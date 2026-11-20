@@ -2,6 +2,7 @@ import { useSession } from "../lib/auth.js";
 import { DISCLAIMER, LANDING_SLIDES } from "../features/landing/slides.js";
 import { SignUpLinks } from "../features/landing/LandingPage.js";
 import { BackButton } from "../components/ui/BackButton.js";
+import { glowScreens } from "../lib/glows.js";
 
 const TITLE = "Little Meals";
 const TAGLINE = "Starting solids, made simpler.";
@@ -23,24 +24,13 @@ export const ABOUT_STORY = [
 /**
  * Ledger 1052: the landing's glows, one pair per screen down the page: the
  * intro's (sea behind the logo, apricot low right), then sea left and apricot
- * right, alternating. Each is drawn as the landing draws it (`circle at x% y%`,
- * gone at 55% / 50% of the farthest corner of ONE screen), but on one ground
- * the page's height, so no screen's edge cuts a glow.
+ * right, alternating (lib/glows.ts draws them, ledger 1078).
  */
 const SCREENS = [LANDING_SLIDES[0]!.glow, { sea: "10% 28%", apricot: "85% 60%" }] as const;
 // ponytail: 6 screens of glow; a page taller than that (very large text) ends on the bare page color.
 const SCREEN_COUNT = 6;
 
-function glowLayer(token: "sea" | "apricot", at: string, screen: number): string {
-  const [x, y] = at.split(" ").map((part) => Number.parseFloat(part)) as [number, number];
-  const radius = `calc(${token === "sea" ? 0.55 : 0.5} * hypot(${Math.max(x, 100 - x)}vw, ${Math.max(y, 100 - y)}svh))`;
-  return `radial-gradient(circle ${radius} at ${x}% ${screen * 100 + y}svh, var(--color-landing-glow-${token}), transparent)`;
-}
-
-export const ABOUT_GLOWS = Array.from({ length: SCREEN_COUNT }, (_, screen) => {
-  const glow = SCREENS[screen % 2]!;
-  return `${glowLayer("sea", glow.sea, screen)}, ${glowLayer("apricot", glow.apricot, screen)}`;
-}).join(", ");
+export const ABOUT_GLOWS = glowScreens("landing", SCREENS, SCREEN_COUNT);
 
 const CARD = "glass-card flex flex-col rounded-[var(--radius-lg)] px-5 py-[1.375rem]";
 const CARD_HEADING = { fontFamily: "var(--font-family-display)", fontSize: "1.4375rem", lineHeight: 1.15 } as const;

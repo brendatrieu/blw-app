@@ -310,7 +310,8 @@ export function MenuPanel({ id, position = null, panelRef, children }: MenuPanel
       id={id}
       role="menu"
       style={style}
-      className="z-20 min-w-40 max-h-[70vh] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] py-1 shadow-[var(--shadow-lg)]"
+      // Ledger 1081: frosted like the bars (index.css .app-frost).
+      className="z-20 min-w-40 max-h-[70vh] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-bar-hairline)] app-frost py-1 shadow-[var(--shadow-lg)]"
     >
       {children}
     </div>

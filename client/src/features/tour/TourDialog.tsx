@@ -198,7 +198,9 @@ export function TourDialog({ onClose, source }: TourDialogProps) {
                 aria-hidden="true"
                 className="h-2 w-2 rounded-full transition-colors duration-[var(--duration-fast)]"
                 style={{
-                  backgroundColor: slideIndex === index ? "var(--color-accent)" : "var(--color-border)",
+                  // Ledger 1081: the other dots wear the landing's "other dots" ink
+                  // (3:1 over glass); --color-border vanished on the frosted card.
+                  backgroundColor: slideIndex === index ? "var(--color-accent)" : "var(--color-landing-dot)",
                 }}
               />
             </button>

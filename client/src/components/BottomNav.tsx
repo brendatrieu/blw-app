@@ -132,15 +132,15 @@ export function BottomNav() {
   // painting a band under the bar on the one tab too short to scroll. `mt-auto`
   // pins it to the bottom of a short column; z-index, height and the
   // safe-area padding are unchanged.
-  // A-Home's nav (items 687/689): page-colored with a 1px top border, padding
-  // 6px 4px 10px + the safe area, each tab top-aligned (pill, 2px, label) so
-  // the spare height sits under the labels.
+  // A-Home's nav (items 687/689): a 1px top border, padding 6px 4px 10px +
+  // the safe area, each tab top-aligned (pill, 2px, label) so the spare height
+  // sits under the labels. Ledger 1079: always frosted, its line the bars'
+  // hairline (index.css .app-frost).
   return (
     <nav
-      className="sticky bottom-0 z-10 mx-auto mt-auto flex w-full max-w-lg items-stretch border-t px-1 pt-1.5"
+      className="app-frost sticky bottom-0 z-10 mx-auto mt-auto flex w-full max-w-lg items-stretch border-t px-1 pt-1.5"
       style={{
-        backgroundColor: "var(--color-bg)",
-        borderColor: "var(--color-border)",
+        borderColor: "var(--color-bar-hairline)",
         height: "calc(var(--nav-height) + env(safe-area-inset-bottom))",
         paddingBottom: "calc(10px + env(safe-area-inset-bottom))",
       }}

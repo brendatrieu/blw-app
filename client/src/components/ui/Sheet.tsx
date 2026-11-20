@@ -1,5 +1,6 @@
-import { useRef, type ReactNode, type Ref } from "react";
+import { useEffect, useRef, type ReactNode, type Ref } from "react";
 import { createPortal } from "react-dom";
+import { watchScrollEdge } from "../../lib/scrollEdge.js";
 import { CloseGlyph, ICON_BUTTON_CLASSES, ICON_BUTTON_EDGE_INSET } from "./iconButton.js";
 import { useModal } from "./useModal.js";
 
@@ -94,6 +95,14 @@ interface SheetPanelProps {
  * `createPortal` to mount into.
  */
 export function SheetPanel({ title, showClose = false, headerAction, fixedHeight = false, onClose, children, panelRef }: SheetPanelProps) {
+  // Ledger 1081: the pinned row is clear at rest and takes the panel's look
+  // once the body scrolls under it (the app header's rule, the panel as its
+  // scroller).
+  const headerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const header = headerRef.current;
+    return header?.parentElement ? watchScrollEdge(header, header.parentElement) : undefined;
+  }, []);
   return (
     <div
       ref={panelRef}
@@ -101,7 +110,8 @@ export function SheetPanel({ title, showClose = false, headerAction, fixedHeight
       aria-modal="true"
       aria-label={typeof title === "string" ? title : undefined}
       tabIndex={-1}
-      className={`sheet-panel scroll-momentum relative z-10 flex w-full max-w-lg scroll-pt-28 flex-col gap-3 overflow-y-auto rounded-t-[var(--radius-lg)] border-t border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-4 outline-none scroll-thin ${fixedHeight ? FIXED_HEIGHT_CLASSES : "max-h-[85vh] shadow-[var(--shadow-lg)]"}`}
+      // Ledger 1081: frosted like the bars (index.css .app-frost).
+      className={`app-frost sheet-panel scroll-momentum relative z-10 flex w-full max-w-lg scroll-pt-28 flex-col gap-3 overflow-y-auto rounded-t-[var(--radius-lg)] border-t border-[var(--color-bar-hairline)] px-4 outline-none scroll-thin ${fixedHeight ? FIXED_HEIGHT_CLASSES : "max-h-[85vh] shadow-[var(--shadow-lg)]"}`}
       style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
     >
       {/* Item 737: the handle and header row stay pinned while a long body
@@ -109,15 +119,16 @@ export function SheetPanel({ title, showClose = false, headerAction, fixedHeight
           own scroll (never position: fixed, which iOS mis-places), with the
           panel's top padding moved inside it (pt-4) so it pins at the very
           top edge in every engine. At rest it lays out exactly as before.
-          Below it, a 12px fade (after:) keeps scrolled text from being sliced
-          right under the title; it takes no taps, so HowToLink's 44px target,
-          which reaches 12px up into the gap (-my-3), still gets them. At rest
-          it only covers that empty gap, in the panel's own color.
-          scroll-pt-28 (taller than a two-line header) keeps a focused field
-          from scrolling in under it. */}
+          Ledger 1081: the panel is frosted, so at rest the row has no fill of
+          its own (a fill on the frost drew a band); once the body scrolls
+          under it, it takes the panel's look, solid, with the bars' hairline
+          (index.css .app-frost .app-frost-edge) instead of item 737's 12px
+          fade in the panel's colour. scroll-pt-28 (taller than a two-line
+          header) keeps a focused field from scrolling in under it. */}
       <div
+        ref={headerRef}
         data-sheet-header=""
-        className="sticky top-0 z-10 -mx-4 flex shrink-0 flex-col gap-3 bg-[var(--color-bg-elevated)] px-4 pt-4 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-3 after:bg-linear-to-b after:from-[var(--color-bg-elevated)] after:to-transparent"
+        className="app-frost-edge sticky top-0 z-10 -mx-4 flex shrink-0 flex-col gap-3 px-4 pt-4"
       >
         <div className="mx-auto h-1.5 w-10 shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-border)]" aria-hidden="true" />
         {/* The close X sits at the LEFT of the header row, before the title —

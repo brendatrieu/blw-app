@@ -135,8 +135,8 @@ describe("MorePage (item 274)", () => {
     // button.
     const rowClasses = /<button[^>]*class="([^"]*)"/.exec(html)?.[1] ?? "";
     expect(rowClasses).toContain("rounded-[var(--radius-lg)]");
-    expect(rowClasses).toContain("border-[var(--color-border)]");
-    expect(rowClasses).toContain("bg-[var(--color-bg-elevated)]");
+    expect(rowClasses.split(" ")).toContain("app-card");
+    expect(rowClasses.split(" ")).toContain("border");
     expect(rowClasses).toContain("p-3");
     expect(html).toMatch(/<button[^>]*type="button"/);
 

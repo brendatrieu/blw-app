@@ -9,7 +9,10 @@ const PADDING_CLASSES: Record<CardPadding, string> = {
   md: "p-4",
 };
 
-const BASE = "rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-sm)]";
+// Ledger 1080: the app's card glass (index.css .app-card): a translucent fill,
+// light border and soft shadow over the glow ground. No backdrop blur: over
+// the smooth glow it changed nothing visible, so only bars and popups blur.
+const BASE = "app-card rounded-[var(--radius-lg)] border";
 // No hover border/shadow: whole-card hover reads as a special state nothing
 // else in the app has. The press-down scale stays — it is touch feedback,
 // not a hover affordance.

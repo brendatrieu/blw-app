@@ -28,14 +28,15 @@ describe("DialogPanel (item 309)", () => {
     expect(html).toContain("panel content");
   });
 
-  it("is a centred card, not a full-bleed sheet: bounded width, rounded, elevated, bordered, padded", () => {
+  it("is a centred card, not a full-bleed sheet: bounded width, rounded, frosted like the bars (ledger 1081), bordered, padded", () => {
     const html = render();
     const className = /class="([^"]*)"/.exec(html)?.[1] ?? "";
 
     expect(className).toContain("w-[min(100%-2rem,24rem)]");
     expect(className).toContain("rounded-2xl");
-    expect(className).toContain("bg-[var(--color-bg-elevated)]");
-    expect(className).toContain("border-[var(--color-border)]");
+    expect(className.split(" ")).toContain("app-frost");
+    expect(className).not.toContain("bg-[var(--color-bg-elevated)]");
+    expect(className).toContain("border-[var(--color-bar-hairline)]");
     expect(className).toContain("p-4");
     // A tall dialog scrolls inside itself rather than off the viewport.
     expect(className).toContain("max-h-[85dvh]");

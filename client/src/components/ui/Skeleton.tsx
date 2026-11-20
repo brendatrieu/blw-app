@@ -11,14 +11,15 @@ interface SkeletonListProps {
   count?: number;
 }
 
-/** Card-shaped skeleton rows for list pages, matching the real `Card` footprint. */
+/** Card-shaped skeleton rows for list pages, matching the real `Card`
+ * footprint and its glass (ledger 1080). */
 export function SkeletonList({ count = 3 }: SkeletonListProps) {
   return (
     <div className="flex flex-col gap-2" role="status" aria-label="Loading">
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3"
+          className="app-card flex flex-col gap-2 rounded-[var(--radius-lg)] border p-3"
         >
           <Skeleton className="h-4 w-2/3" />
           <Skeleton className="h-3 w-1/3" />

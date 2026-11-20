@@ -4,7 +4,9 @@ import { ageInMonths } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
 import { TourProvider } from "../features/tour/TourProvider.js";
+import { glowScreens } from "../lib/glows.js";
 import { timeOfDayGreeting } from "../lib/greeting.js";
+import { watchScrollEdge } from "../lib/scrollEdge.js";
 import { BabyChip } from "./BabyChip.js";
 import { BottomNav } from "./BottomNav.js";
 import { OfflineBanner } from "./OfflineBanner.js";
@@ -203,6 +205,21 @@ export function useScrollToTopOnPathChange(): void {
   }, [pathname]);
 }
 
+/**
+ * Ledger 1078: the soft glow behind every page (round 15), the app's own
+ * tokens on About's mechanism: sea top centre and apricot low right, then sea
+ * left and apricot right, repeated down the page.
+ */
+// ponytail: 12 screens of glow; a longer page (a long Food log) ends on the bare page colour.
+export const APP_GLOWS = glowScreens(
+  "app",
+  [
+    { sea: "50% 22%", apricot: "86% 82%" },
+    { sea: "6% 26%", apricot: "94% 82%" },
+  ],
+  12,
+);
+
 export function AppLayout() {
   const location = useLocation();
   useScrollToTopOnPathChange();
@@ -212,6 +229,9 @@ export function AppLayout() {
   // A ref callback into state: set in the commit phase, so the button moves
   // into the header before the first paint (no inline flash).
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
+  // Ledger 1079: clear at the top, frosted once content scrolls under it.
+  const headerRef = useRef<HTMLElement>(null);
+  useEffect(() => (headerRef.current ? watchScrollEdge(headerRef.current) : undefined), []);
 
   return (
     <CelebrationProvider>
@@ -228,62 +248,66 @@ export function AppLayout() {
             would leave 100vh overriding the dvh one it is meant to back up.
             No bottom padding reservation any more — the nav is in flow and
             occupies its own space (item 379). */}
-        <div className="mx-auto flex min-h-screen supports-[height:100dvh]:min-h-[100dvh] max-w-lg flex-col">
-          {/* z-20, not z-10 (item 674): card action rows are `relative z-10`
-              and come later in the tree, so at a tie they painted over the
-              header when scrolled under it (reduced motion, where
-              .page-transition leaves no stacking context). Menu (z-20) and
-              Sheet/Dialog (z-30) portal to body, after the header, so they
-              still float above it. */}
-          <header
-            // Home tops the gear with the greeting, as A-Home does.
-            className={`sticky top-0 z-20 flex justify-between gap-3 px-4 ${isHome ? "items-start py-2.5" : "items-center py-1"}`}
-            style={{
-              // The page's own color, no line (item 679, A-Home/A-Salmon): the
-              // bar reads as part of the page, still opaque so content
-              // scrolling under it disappears.
-              backgroundColor: "var(--color-bg)",
-              // Ledger 898: the slim header needs more room to clear iOS's top blur.
-              paddingTop: isHome ? safeTop("1.125rem") : safeTop("0.25rem", "--top-edge-clearance-slim"),
-            }}
-          >
-            {isHome ? (
-              <>
-                <BabySwitcher />
-                <div className="flex shrink-0 items-center">
-                  <PlanLink />
-                  <SettingsLink />
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Item 692: [back/X][chip] on the left, the gear on the
-                    right. The slot is `contents`, so with no button in it (tab
-                    pages) it takes no space and the chip starts at 16px; the
-                    44px gear keeps the row 52px tall. */}
-                <div className="flex min-w-0 items-center gap-0.5">
-                  <div ref={setHeaderSlot} className="contents" />
-                  <BabyChip />
-                </div>
-                {/* Ledger 953: [calendar][gear] as on Home; the chip gives way. */}
-                <div className="flex shrink-0 items-center">
-                  {showsPlanLink(location.pathname) && <PlanLink />}
-                  <SettingsLink />
-                </div>
-              </>
-            )}
-            <UpdateCard />
-          </header>
-          <OfflineBanner />
+        {/* Ledger 1078: the glow ground, full-bleed behind the column (no
+            fixed anything, iOS); it also gives the text inks their on-glass
+            shades (index.css .app-ground). */}
+        <div className="app-ground" style={{ backgroundImage: APP_GLOWS }}>
+          <div className="mx-auto flex min-h-screen supports-[height:100dvh]:min-h-[100dvh] max-w-lg flex-col">
+            {/* z-20, not z-10 (item 674): card action rows are `relative z-10`
+                and come later in the tree, so at a tie they painted over the
+                header when scrolled under it (reduced motion, where
+                .page-transition leaves no stacking context). Menu (z-20) and
+                Sheet/Dialog (z-30) portal to body, after the header, so they
+                still float above it. */}
+            <header
+              ref={headerRef}
+              // Home tops the gear with the greeting, as A-Home does. Ledger
+              // 1079: no fill or line at the top, the glow shows through; frosted
+              // (index.css .app-frost-edge) once content scrolls under it.
+              className={`app-frost app-frost-edge sticky top-0 z-20 flex justify-between gap-3 px-4 ${isHome ? "items-start py-2.5" : "items-center py-1"}`}
+              style={{
+                // Ledger 898: the slim header needs more room to clear iOS's top blur.
+                paddingTop: isHome ? safeTop("1.125rem") : safeTop("0.25rem", "--top-edge-clearance-slim"),
+              }}
+            >
+              {isHome ? (
+                <>
+                  <BabySwitcher />
+                  <div className="flex shrink-0 items-center">
+                    <PlanLink />
+                    <SettingsLink />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Item 692: [back/X][chip] on the left, the gear on the
+                      right. The slot is `contents`, so with no button in it (tab
+                      pages) it takes no space and the chip starts at 16px; the
+                      44px gear keeps the row 52px tall. */}
+                  <div className="flex min-w-0 items-center gap-0.5">
+                    <div ref={setHeaderSlot} className="contents" />
+                    <BabyChip />
+                  </div>
+                  {/* Ledger 953: [calendar][gear] as on Home; the chip gives way. */}
+                  <div className="flex shrink-0 items-center">
+                    {showsPlanLink(location.pathname) && <PlanLink />}
+                    <SettingsLink />
+                  </div>
+                </>
+              )}
+              <UpdateCard />
+            </header>
+            <OfflineBanner />
 
-          <main className="scroll-momentum flex-1">
-            <div key={location.pathname} className="page-transition">
-              <HeaderSlotContext.Provider value={headerSlot}>
-                <Outlet />
-              </HeaderSlotContext.Provider>
-            </div>
-          </main>
-          <BottomNav />
+            <main className="scroll-momentum flex-1">
+              <div key={location.pathname} className="page-transition">
+                <HeaderSlotContext.Provider value={headerSlot}>
+                  <Outlet />
+                </HeaderSlotContext.Provider>
+              </div>
+            </main>
+            <BottomNav />
+          </div>
         </div>
       </TourProvider>
     </CelebrationProvider>

@@ -169,13 +169,16 @@ describe("resolveActiveTab (one rule for highlight AND aria-current)", () => {
 describe("BottomNav matches A-Home's nav (items 687-689)", () => {
   const css = readFileSync(fileURLToPath(new URL("../styles/index.css", import.meta.url)), "utf8");
 
-  it("is page-colored (not elevated) with a 1px top border (item 687)", () => {
+  it("is always frosted (ledger 1079), with a 1px top border in the bars' hairline (item 687)", () => {
     const html = renderAt("/");
     const nav = html.match(/<nav class="([^"]+)" style="([^"]+)"/);
-    expect(nav?.[1]?.split(" ")).toContain("border-t");
-    expect(nav?.[2]).toContain("background-color:var(--color-bg);");
-    expect(nav?.[2]).toContain("border-color:var(--color-border)");
+    expect(nav?.[1]?.split(" ")).toEqual(expect.arrayContaining(["app-frost", "sticky", "border-t"]));
+    // Never the scroll-edge header's clear state, never an inline fill.
+    expect(nav?.[1]?.split(" ")).not.toContain("app-frost-edge");
+    expect(nav?.[2]).not.toContain("background-color");
+    expect(nav?.[2]).toContain("border-color:var(--color-bar-hairline)");
     expect(html).not.toContain("--color-bg-elevated");
+    expect(css).toMatch(/\.app-frost \{\s*background-color: var\(--color-bar-glass\);\s*-webkit-backdrop-filter: var\(--bar-filter\);\s*backdrop-filter: var\(--bar-filter\);/);
   });
 
   it("draws Home as the mockup's simple house, no door (item 688), every glyph 22px in a 24 box", () => {

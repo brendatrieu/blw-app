@@ -644,3 +644,127 @@ describe("Home allergen ring segments (items 663, 697)", () => {
     });
   }
 });
+
+describe("app glass, round 15 (ledger 1077-1082)", () => {
+  // The app's own glass, apart from About's (--color-glass*). Every AppLayout
+  // page sits on the app glow (lib/glows.ts); cards are a translucent fill;
+  // bars and popups are frosted. The pixel sampler (batch-1133 BUILD.md)
+  // measures the real screens; these gates hold the tokens to the worst
+  // case each surface can sit on.
+  const TOKENS = [
+    "color-app-glow-sea",
+    "color-app-glow-apricot",
+    "color-card-glass",
+    "color-card-glass-border",
+    "shadow-card-glass",
+    "color-bar-glass",
+    "color-bar-hairline",
+    "color-app-solid",
+    "color-apricot-text-glass",
+    "color-text-muted-glass",
+  ];
+  const mediaStart = css.indexOf("@media (prefers-color-scheme: dark)");
+  const mediaRoot = parseDeclarations(extractBlock(css.slice(mediaStart), ':root:not([data-theme="light"]) {') ?? "");
+  const dataThemeDark = parseDeclarations(darkBlock!);
+  for (const token of TOKENS) {
+    it(`--${token} is declared in :root and both dark blocks`, () => {
+      expect(rootVars.has(token)).toBe(true);
+      expect(mediaRoot.get(token)).toBe(`var(--_dark-${token.replace(/^color-/, "")})`);
+      expect(dataThemeDark.get(token)).toBe(`var(--_dark-${token.replace(/^color-/, "")})`);
+    });
+  }
+  it("the glass names never reuse About's (--color-glass*), so About's look cannot move", () => {
+    for (const token of TOKENS) expect(token.startsWith("color-glass")).toBe(false);
+  });
+
+  const rgb = (token: string, mode: Mode) => parseColor(resolve(token, mode));
+  // On-glass inks: the ground (.app-ground) and the popups (.app-frost) set these.
+  const INKS: Omit<Pair, "bg">[] = [
+    { name: "body text", fg: "color-text" },
+    { name: "muted text", fg: "color-text-muted-glass" },
+    { name: "apricot label (greeting, card labels, last day, active tab)", fg: "color-apricot-text-glass" },
+    { name: "accent link", fg: "color-accent" },
+    { name: "danger text", fg: "color-danger" },
+    { name: "icon (gear, calendar, kebab)", fg: "color-icon", min: 3 },
+  ];
+  for (const mode of ["light", "dark"] as const) {
+    const page = rgb("color-bg", mode);
+    const glow = (token: string, strength: number) => {
+      const c = rgb(token, mode);
+      return compositeOver({ ...c, a: c.a * strength }, page);
+    };
+    // Light at full glow strength. Dark at half, as the landing: its sea glow
+    // is strong at its centre, which sits under Home's first card; text on the
+    // bare ground there is pixel-measured instead.
+    const strength = mode === "light" ? 1 : 0.5;
+    const grounds = { page, sea: glow("color-app-glow-sea", strength), apricot: glow("color-app-glow-apricot", strength) };
+    const scrim = compositeOver({ ...rgb("color-text", mode), a: 0.4 }, page); // Sheet/Dialog overlay, bg-[var(--color-text)]/40
+    const surfaces: Record<string, Rgba> = { "popup over the dimmed page": compositeOver(rgb("color-bar-glass", mode), scrim) };
+    for (const [where, ground] of Object.entries(grounds)) {
+      surfaces[`bare ${where} ground`] = ground;
+      surfaces[`card over the ${where} glow`] = compositeOver(rgb("color-card-glass", mode), ground);
+      surfaces[`bar over the ${where} glow`] = compositeOver(rgb("color-bar-glass", mode), ground);
+    }
+    for (const [where, surface] of Object.entries(surfaces)) {
+      for (const pair of INKS) {
+        it(`[${mode}] ${pair.name} on the ${where} >= ${pair.min ?? 4.5}:1`, () => {
+          expect(contrastRatio(rgb(pair.fg, mode), surface)).toBeGreaterThanOrEqual(pair.min ?? 4.5);
+        });
+      }
+      // The strip's today outline (ledger 1017) on the frosted strip.
+      if (where.startsWith("bar")) {
+        it(`[${mode}] today outline on the ${where} >= 3:1`, () => {
+          expect(contrastRatio(rgb("color-accent", mode), surface)).toBeGreaterThanOrEqual(3);
+        });
+      }
+      // Chips: the tint composited over the surface, a muted ink in its
+      // on-glass shade. The neutral chip (Storage card, Food log) and
+      // RecipePicker's outline marker (a page form) never render in a popup.
+      for (const tone of CHIP_TONES) {
+        if (where.startsWith("bar")) continue;
+        if (where.startsWith("popup") && (tone.name === "neutral" || tone.name === "primary outline-marker")) continue;
+        const ink = tone.text === "color-text-muted" ? "color-text-muted-glass" : tone.text;
+        it(`[${mode}] ${tone.name} chip on the ${where} >= 4.5:1`, () => {
+          const tint = rgb(tone.tint, mode);
+          expect(contrastRatio(rgb(ink, mode), tint.a < 1 ? compositeOver(tint, surface) : tint)).toBeGreaterThanOrEqual(4.5);
+        });
+      }
+    }
+    // The chair's headroom (round 15 measured 4.67 header greeting / 4.84
+    // Storage "1"): the light apricot label clears 5:1 on every glass.
+    if (mode === "light") {
+      for (const [where, surface] of Object.entries(surfaces)) {
+        it(`[light] apricot label on the ${where} >= 5:1 (headroom)`, () => {
+          expect(contrastRatio(rgb("color-apricot-text-glass", "light"), surface)).toBeGreaterThanOrEqual(5);
+        });
+      }
+    }
+    it(`[${mode}] the glass is translucent and the fallback near-opaque`, () => {
+      for (const token of ["color-card-glass", "color-bar-glass"]) {
+        expect(rgb(token, mode).a).toBeGreaterThan(0);
+        expect(rgb(token, mode).a).toBeLessThan(1);
+      }
+      expect(rgb("color-app-solid", mode).a).toBeGreaterThanOrEqual(0.94);
+      expect(rgb("color-app-solid", mode).a).toBeLessThan(1);
+    });
+  }
+
+  // Round 15's approved values (owner 2026-11-20), pinned.
+  const EXPECTED: Record<string, { light: string; dark: string }> = {
+    "color-app-glow-sea": { light: "rgba(180, 212, 230, 0.4)", dark: "rgba(180, 212, 230, 0.4)" },
+    "color-app-glow-apricot": { light: "rgba(247, 180, 138, 0.28)", dark: "rgba(247, 180, 138, 0.22)" },
+    "color-card-glass": { light: "rgba(255, 255, 255, 0.45)", dark: "rgba(30, 38, 48, 0.7)" },
+    "color-card-glass-border": { light: "rgba(255, 255, 255, 0.6)", dark: "rgba(255, 255, 255, 0.08)" },
+    "color-bar-glass": { light: "rgba(255, 255, 255, 0.78)", dark: "rgba(30, 38, 48, 0.85)" },
+    "color-text-muted-glass": { light: "#5b6570", dark: "#aeb9c4" },
+  };
+  for (const [token, { light, dark }] of Object.entries(EXPECTED)) {
+    it(`--${token} is ${light} light / ${dark} dark`, () => {
+      expect(resolve(token, "light")).toBe(light);
+      expect(resolve(token, "dark")).toBe(dark);
+    });
+  }
+  it("bars and popups blur 22px + saturate 140% in both modes", () => {
+    expect(rootVars.get("bar-filter")).toMatch(/^blur\(22px\) saturate\(140%\)/);
+  });
+});

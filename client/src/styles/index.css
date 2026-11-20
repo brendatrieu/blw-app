@@ -98,6 +98,29 @@
   --color-glass-border: rgba(255, 255, 255, 0.75);
   --shadow-glass: 0 14px 34px rgba(31, 42, 54, 0.08);
   --glass-filter: blur(22px);
+  /* Ledger 1077 (round 15, the app redesign): the app's own glass, separate
+     from About's (--color-glass*). Every AppLayout page sits on a softer
+     glow than the landing's (lib/glows.ts, .app-ground below). Cards are a
+     translucent fill with a light border, no blur (.app-card); the bars
+     (header once scrolled, tab bar, Meal Plan day strip) and the popups
+     (Sheet, Dialog, Menu, the tour) are frosted (.app-frost): a lifted tint,
+     blur + saturate and a hairline. On the glass the apricot label ink is a
+     step darker than --color-apricot-text (>= 5:1 over glass + glow, the
+     chair's headroom) and dark muted a step lighter (the clear header over
+     the dark glow). --color-app-solid is the near-opaque surface where blur
+     is missing or the reader asks for less transparency. contrast.test gates
+     every ink over each surface over each glow. */
+  --color-app-glow-sea: rgba(180, 212, 230, 0.4);
+  --color-app-glow-apricot: rgba(247, 180, 138, 0.28);
+  --color-card-glass: rgba(255, 255, 255, 0.45);
+  --color-card-glass-border: rgba(255, 255, 255, 0.6);
+  --shadow-card-glass: 0 2px 6px rgba(31, 42, 54, 0.06);
+  --color-bar-glass: rgba(255, 255, 255, 0.78);
+  --color-bar-hairline: rgba(31, 42, 54, 0.1);
+  --color-app-solid: rgba(255, 255, 255, 0.94);
+  --color-apricot-text-glass: #9e4812;
+  --color-text-muted-glass: #5b6570;
+  --bar-filter: blur(22px) saturate(140%); /* same in both modes */
 
   /* ---- Text (deep navy — the hue the dark ground is built from) ---- */
   --color-text: #1f2a36;
@@ -339,6 +362,16 @@
   --_dark-glass-border: rgba(255, 255, 255, 0.12);
   --_dark-shadow-glass: 0 14px 34px rgba(0, 0, 0, 0.35);
   --_dark-glass-filter: blur(22px) saturate(140%);
+  --_dark-app-glow-sea: rgba(180, 212, 230, 0.4);
+  --_dark-app-glow-apricot: rgba(247, 180, 138, 0.22);
+  --_dark-card-glass: rgba(30, 38, 48, 0.7);
+  --_dark-card-glass-border: rgba(255, 255, 255, 0.08);
+  --_dark-shadow-card-glass: 0 2px 6px rgba(0, 0, 0, 0.28);
+  --_dark-bar-glass: rgba(30, 38, 48, 0.85); /* lifted, not the page colour: no dark band (round 13) */
+  --_dark-bar-hairline: rgba(255, 255, 255, 0.1);
+  --_dark-app-solid: rgba(26, 34, 44, 0.96);
+  --_dark-apricot-text-glass: #f7b48a;
+  --_dark-text-muted-glass: #aeb9c4;
   --_dark-color-text: #eef3f7;
   --_dark-color-text-muted: #a3afba;
   --_dark-color-border: #28313c;
@@ -434,6 +467,16 @@
     --color-glass-border: var(--_dark-glass-border);
     --shadow-glass: var(--_dark-shadow-glass);
     --glass-filter: var(--_dark-glass-filter);
+    --color-app-glow-sea: var(--_dark-app-glow-sea);
+    --color-app-glow-apricot: var(--_dark-app-glow-apricot);
+    --color-card-glass: var(--_dark-card-glass);
+    --color-card-glass-border: var(--_dark-card-glass-border);
+    --shadow-card-glass: var(--_dark-shadow-card-glass);
+    --color-bar-glass: var(--_dark-bar-glass);
+    --color-bar-hairline: var(--_dark-bar-hairline);
+    --color-app-solid: var(--_dark-app-solid);
+    --color-apricot-text-glass: var(--_dark-apricot-text-glass);
+    --color-text-muted-glass: var(--_dark-text-muted-glass);
 
     --color-text: var(--_dark-color-text);
     --color-text-muted: var(--_dark-color-text-muted);
@@ -531,6 +574,16 @@
   --color-glass-border: var(--_dark-glass-border);
   --shadow-glass: var(--_dark-shadow-glass);
   --glass-filter: var(--_dark-glass-filter);
+  --color-app-glow-sea: var(--_dark-app-glow-sea);
+  --color-app-glow-apricot: var(--_dark-app-glow-apricot);
+  --color-card-glass: var(--_dark-card-glass);
+  --color-card-glass-border: var(--_dark-card-glass-border);
+  --shadow-card-glass: var(--_dark-shadow-card-glass);
+  --color-bar-glass: var(--_dark-bar-glass);
+  --color-bar-hairline: var(--_dark-bar-hairline);
+  --color-app-solid: var(--_dark-app-solid);
+  --color-apricot-text-glass: var(--_dark-apricot-text-glass);
+  --color-text-muted-glass: var(--_dark-text-muted-glass);
 
   --color-text: var(--_dark-color-text);
   --color-text-muted: var(--_dark-color-text-muted);
@@ -719,6 +772,92 @@ textarea {
     background-color: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+}
+
+/* Ledger 1077-1082 (round 15): the app's glass, see the token note in :root.
+   In the components layer so a utility on one surface (the Settings danger
+   card's border) still wins. */
+@layer components {
+  /* The glow ground behind every AppLayout page (its background-image is
+     lib/glows.ts, set inline) and the popups: the inks take their on-glass
+     shades. */
+  .app-ground,
+  .app-frost {
+    --color-apricot-text: var(--color-apricot-text-glass);
+    --color-text-muted: var(--color-text-muted-glass);
+  }
+  .app-ground {
+    background-color: var(--color-bg);
+  }
+  /* Cards: a translucent fill, no blur (it changed nothing over the glow). */
+  .app-card {
+    background-color: var(--color-card-glass);
+    border-color: var(--color-card-glass-border);
+    box-shadow: var(--shadow-card-glass);
+  }
+  /* Bars and popups. */
+  .app-frost {
+    background-color: var(--color-bar-glass);
+    -webkit-backdrop-filter: var(--bar-filter);
+    backdrop-filter: var(--bar-filter);
+  }
+  /* The app header (ledger 1079) and a Sheet's pinned row (1081): no fill,
+     blur or line while nothing is under it (lib/scrollEdge.ts sets
+     data-scrolled), a 180ms fade in once content scrolls under it. The line
+     is an inset shadow, not a border, so the header keeps main's exact
+     height. blur(0px), not none, so the blur fades too. */
+  .app-frost-edge {
+    box-shadow: inset 0 -1px 0 var(--color-bar-hairline);
+    transition:
+      background-color 180ms ease-out,
+      box-shadow 180ms ease-out,
+      -webkit-backdrop-filter 180ms ease-out,
+      backdrop-filter 180ms ease-out;
+  }
+  .app-frost-edge:not([data-scrolled]) {
+    background-color: transparent;
+    box-shadow: inset 0 -1px 0 transparent;
+    -webkit-backdrop-filter: blur(0px) saturate(100%);
+    backdrop-filter: blur(0px) saturate(100%);
+  }
+  /* A pinned row inside a frosted popup (a Sheet's title row). A nested blur
+     there misreads (measured: a band at rest, the text under it unblurred),
+     so it has none: clear at rest, and once the body scrolls under it the
+     panel's own look painted solid, the frost tint over the dimmed page
+     (Sheet's overlay is bg-[var(--color-text)]/40), so what scrolls under
+     the title is hidden. */
+  .app-frost .app-frost-edge {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .app-frost .app-frost-edge[data-scrolled] {
+    background-color: color-mix(in srgb, var(--color-text) 40%, var(--color-bg));
+    background-image: linear-gradient(var(--color-bar-glass), var(--color-bar-glass));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .app-frost-edge {
+      transition: none;
+    }
+  }
+  /* No blur available: the frosted surfaces go near-opaque (cards never blur). */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .app-frost,
+    .app-frost .app-frost-edge[data-scrolled] {
+      background-color: var(--color-app-solid);
+      background-image: none;
+    }
+  }
+  /* Less transparency asked for: every glass surface near-opaque, no blur. */
+  @media (prefers-reduced-transparency: reduce) {
+    .app-card,
+    .app-frost,
+    .app-frost .app-frost-edge[data-scrolled] {
+      background-color: var(--color-app-solid);
+      background-image: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
   }
 }
 
