@@ -437,6 +437,9 @@ describe("dark guide screenshots", () => {
   it("precaches no images: both variants reach the offline cache only when viewed", () => {
     const config = readFileSync(path.join(repoRoot, "client/vite.config.ts"), "utf8");
     expect(config).not.toMatch(/globPatterns|webp/);
-    expect(config).toMatch(/request\.destination === "image",\s*handler: "CacheFirst"/);
+    // Revalidating, so a retaken picture under the same URL reaches phones (ledger 1063).
+    expect(config).toMatch(
+      /request\.destination === "image",\s*handler: "StaleWhileRevalidate",\s*options: \{\s*cacheName: "image-cache",\s*expiration: \{\s*maxEntries: 200,/,
+    );
   });
 });

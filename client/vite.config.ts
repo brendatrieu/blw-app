@@ -78,8 +78,10 @@ export default defineConfig({
             },
           },
           {
+            // StaleWhileRevalidate, not CacheFirst: a retaken picture keeps its
+            // URL, so CacheFirst served the old bytes forever (ledger 1063).
             urlPattern: ({ request }) => request.destination === "image",
-            handler: "CacheFirst",
+            handler: "StaleWhileRevalidate",
             options: {
               cacheName: "image-cache",
               expiration: {
