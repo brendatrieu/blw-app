@@ -103,10 +103,10 @@ describe("BottomNav position (item 379 — the Storage band)", () => {
     expect(navClass).not.toContain("inset-x-0");
   });
 
-  it("keeps its --nav-height height (the 10px bottom swapped for --nav-pad-bottom, ledger 1091) and stacking level", () => {
+  it("keeps its --nav-height + safe-area height and stacking level (10px back, ledger 1106)", () => {
     const html = renderAt("/");
 
-    expect(html).toContain("height:calc(var(--nav-height) - 10px + var(--nav-pad-bottom))");
+    expect(html).toContain("height:calc(var(--nav-height) + env(safe-area-inset-bottom))");
     // Below the Sheet/Dialog overlays (z-30) and the Celebration toast (z-40).
     expect(html).toMatch(/<nav class="[^"]*\bz-10\b/);
   });
@@ -189,11 +189,11 @@ describe("BottomNav matches A-Home's nav (items 687-689)", () => {
     expect(html.match(/<svg width="22" height="22" viewBox="0 0 24 24"/g)).toHaveLength(5);
   });
 
-  it("pads 6px 4px and max(10px, safe area) and top-aligns pill, 2px gap, label (item 689, ledger 1091)", () => {
+  it("pads 6px 4px 10px + safe area and top-aligns pill, 2px gap, label (item 689, ledger 1106)", () => {
     const html = renderAt("/");
     const nav = html.match(/<nav class="([^"]+)" style="([^"]+)"/);
     expect(nav?.[1]?.split(" ")).toEqual(expect.arrayContaining(["pt-1.5", "px-1", "items-stretch"]));
-    expect(nav?.[2]).toContain("padding-bottom:var(--nav-pad-bottom)");
+    expect(nav?.[2]).toContain("padding-bottom:calc(10px + env(safe-area-inset-bottom))");
     const links = [...html.matchAll(/<a [^>]*class="([^"]+)"/g)].map(([, c]) => (c ?? "").split(" "));
     expect(links).toHaveLength(5);
     for (const c of links) {
@@ -210,11 +210,8 @@ describe("BottomNav matches A-Home's nav (items 687-689)", () => {
     expect(css).toMatch(/--nav-height: 4\.125rem;/);
     // 66px less border, top and bottom padding leaves the tab 49px (>= 44px).
     expect(66 - 1 - 6 - 10).toBeGreaterThanOrEqual(44);
-    // Ledger 1091: 10px or the home-indicator inset, not both. With no inset
-    // the height is --nav-height - 10 + 10: unchanged.
-    expect(css).toContain("--nav-pad-bottom: max(10px, env(safe-area-inset-bottom));");
-    const navHeight = (inset: number) => 66 - 10 + Math.max(10, inset);
-    expect([navHeight(0), navHeight(34)]).toEqual([66, 90]);
+    // Ledger 1106: 10px AND the home-indicator inset (1091's max() is gone).
+    expect(css).not.toContain("--nav-pad-bottom");
     // The label line (caption, 0.75rem/1.4) is what the 16.8 assumes.
     expect(css).toMatch(/--font-caption: 500 0\.75rem\/1\.4 /);
   });

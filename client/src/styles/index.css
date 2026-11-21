@@ -327,15 +327,11 @@
   /* Fixed chrome heights. `--nav-height` is the bottom bar's own height; it
      is no longer also reserved as page padding, since the bar is in flow.
      66px = A-Home's nav (item 689): 1px border + 6px top + 30px pill + 2px
-     + 16.8px label + 10px bottom (or the safe area: --nav-pad-bottom).
+     + 16.8px label + 10px bottom (BottomNav adds the safe area).
      `--header-height` is the slim inner-page header (AppLayout: py-1 around a
      44px row, no border, plus the notch inset it pads in) — the sticky
      `top` of the bars that dock under it, so no gap opens between them. */
   --nav-height: 4.125rem;
-  /* Ledger 1091: the nav's bottom padding, 10px or the home-indicator inset,
-     whichever is larger (not both). Its height is --nav-height - 10px + this,
-     so with no inset (iPhone SE, Android, desktop) nothing moves. */
-  --nav-pad-bottom: max(10px, env(safe-area-inset-bottom));
   --header-height: calc(3.25rem + env(safe-area-inset-top) + var(--top-edge-clearance-slim));
 
   /* Ledger 892: extra room under the top safe area, so text and buttons sit
