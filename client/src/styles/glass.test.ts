@@ -9,7 +9,7 @@ import { Card, CardButton, CardLink } from "../components/ui/Card.js";
 import { MenuPanel } from "../components/ui/Menu.js";
 import { SkeletonList } from "../components/ui/Skeleton.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
-import { FilterBar } from "../features/catalog/components/filters.js";
+import { FilterBar, FilterChip, FunnelButton } from "../features/catalog/components/filters.js";
 
 const css = readFileSync(new URL("./index.css", import.meta.url), "utf8");
 const classesOf = (html: string) => (/class="([^"]*)"/.exec(html)?.[1] ?? "").split(" ");
@@ -172,5 +172,49 @@ describe("the ground's even top row (ledger 1090)", () => {
     expect(glowTiles("app", APP_GLOW_PLACES, 3).backgroundImage).not.toMatch(/linear-gradient|glow-top/);
     expect(ABOUT_GLOWS).not.toMatch(/linear-gradient|glow-top/);
     expect(readFileSync(new URL("../pages/AboutPage.tsx", import.meta.url), "utf8")).not.toContain("app-ground");
+  });
+});
+
+// Ledger 1122, the owner's pick ("1 is fine": glass like the cards): the
+// Foods/Recipes strip's chips + funnel. Measured (batch-1140/chips): 44px tap
+// box, 34px visible chip, 4px side padding, no label cut at 320/384/390.
+describe("strip chips (ledger 1122)", () => {
+  const noop = () => undefined;
+  const chip = (active: boolean, strip?: boolean) =>
+    classesOf(renderToString(createElement(FilterChip, { active, label: "x", onClick: noop, strip, className: "px-1" })));
+  it("a strip chip keeps the 44px tap box with no fill or border colour of its own; .strip-chip draws the chip", () => {
+    for (const active of [false, true]) {
+      const cls = chip(active, true);
+      expect(cls).toEqual(expect.arrayContaining(["strip-chip", "min-h-11", "border", "border-transparent", "px-1"]));
+      // px-2.5 would win over the caller's px-1 in the CSS order (the bug until 1122).
+      expect(cls.filter((c) => /^(bg-|px-2\.5$|border-\[)/.test(c))).toEqual([]);
+    }
+    expect(chip(true, true)).toContain("text-[var(--color-selected-contrast)]");
+    expect(chip(false, true)).toContain("text-[var(--color-text)]");
+  });
+  it("the Filters sheet's chips are unchanged: solid fill, border, px-2.5, no .strip-chip", () => {
+    expect(chip(false)).toEqual(expect.arrayContaining(["px-2.5", "border-[var(--color-border)]", "bg-[var(--color-bg)]"]));
+    expect(chip(true)).toEqual(expect.arrayContaining(["px-2.5", "border-[var(--color-selected)]", "bg-[var(--color-selected)]"]));
+    expect(chip(false)).not.toContain("strip-chip");
+  });
+  it("the funnel is a strip chip; its count dot sits on the visible chip (top-0), not above the tap box", () => {
+    const html = renderToString(createElement(FunnelButton, { onClick: noop, activeCount: 2 }));
+    const cls = classesOf(html);
+    expect(cls).toEqual(expect.arrayContaining(["strip-chip", "min-h-11", "min-w-11", "border-transparent"]));
+    expect(cls.filter((c) => /^(bg-|border-\[)/.test(c))).toEqual([]);
+    expect(html).toMatch(/<span aria-hidden="true" class="absolute top-0 -right-1 /);
+  });
+  it("the visible chip is 34px (inset 4px in the 42px padding box), the card glass; selected keeps its fill", () => {
+    expect(css.indexOf(".strip-chip {", layerStart)).toBeGreaterThan(layerStart);
+    expect(rule(".strip-chip", layerStart)).toContain("isolation: isolate;");
+    const before = rule(".strip-chip::before", layerStart)!;
+    expect(before).toContain("inset: 4px 0;");
+    expect(before).toContain("z-index: -1;");
+    expect(before).toContain("background-color: var(--color-card-glass);");
+    expect(before).toContain("border: 1px solid var(--color-card-glass-border);");
+    expect(before).toContain("box-shadow: var(--shadow-card-glass);");
+    const active = rule('.strip-chip[aria-pressed="true"]::before', layerStart)!;
+    expect(active).toContain("background-color: var(--color-selected);");
+    expect(active).toContain("border-color: var(--color-selected);");
   });
 });

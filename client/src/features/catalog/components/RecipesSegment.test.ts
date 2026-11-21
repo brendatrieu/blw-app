@@ -230,6 +230,15 @@ describe("RecipesSegment", () => {
     expect(html).toContain("Filters");
     // The funnel's contents live in the sheet, closed on arrival.
     expect(html).not.toContain("Contains ingredient");
+    // Ledger 1122: scope chips + funnel are glass strip chips; px-1 applies.
+    const strip = html.slice(html.indexOf('aria-label="Recipe scope"'), html.indexOf("</div>", html.indexOf('aria-label="Recipe scope"')));
+    const buttons = [...strip.matchAll(/<button [^>]*class="([^"]*)"/g)].map((m) => m[1]!.split(" "));
+    expect(buttons).toHaveLength(4);
+    for (const cls of buttons) {
+      expect(cls).toContain("strip-chip");
+      expect(cls).not.toContain("px-2.5");
+    }
+    expect(buttons.slice(0, 3).every((cls) => cls.includes("px-1"))).toBe(true);
   });
 
   it("defaults to the All scope, with nothing else pressed", () => {

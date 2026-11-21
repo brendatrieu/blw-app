@@ -30,6 +30,9 @@ interface FilterChipProps {
   label: string;
   onClick: () => void;
   className?: string;
+  /** Ledger 1122: a chip in the Foods/Recipes strip (index.css .strip-chip):
+   * a 34px glass chip inside the 44px tap box, padding from the caller. */
+  strip?: boolean;
 }
 
 /**
@@ -38,17 +41,19 @@ interface FilterChipProps {
  * 210) needed the same chip for its scope/allergen/age filters — "the same
  * FilterChip style" is a shared component here, not a copy that can drift.
  */
-export function FilterChip({ active, label, onClick, className = "" }: FilterChipProps) {
+export function FilterChip({ active, label, onClick, className = "", strip = false }: FilterChipProps) {
+  const ink = active ? "text-[var(--color-selected-contrast)]" : "text-[var(--color-text)]";
+  // The strip's chips take their padding from the caller: a px-2.5 here would
+  // win over the caller's px-1 in the CSS order (it did until ledger 1122).
+  const look = strip
+    ? `strip-chip border-transparent ${ink}`
+    : `px-2.5 ${active ? "border-[var(--color-selected)] bg-[var(--color-selected)]" : "border-[var(--color-border)] bg-[var(--color-bg)]"} ${ink}`;
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border px-2.5 py-1 text-center text-xs font-medium whitespace-nowrap transition-colors ${
-        active
-          ? "border-[var(--color-selected)] bg-[var(--color-selected)] text-[var(--color-selected-contrast)]"
-          : "border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)]"
-      } ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border py-1 text-center text-xs font-medium whitespace-nowrap transition-colors ${look} ${className}`}
     >
       {label}
     </button>
@@ -110,20 +115,22 @@ interface FunnelButtonProps {
   activeCount: number;
 }
 
-/** The funnel button itself, badge and all — identical on both segments. */
+/** The funnel button itself, badge and all — identical on both segments. A
+ * strip chip (ledger 1122): the count dot sits on the 34px visible chip's
+ * corner, 5px inside the 44px tap box. */
 export function FunnelButton({ onClick, activeCount }: FunnelButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="relative flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] text-xs font-medium text-[var(--color-text)]"
+      className="strip-chip flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-[var(--radius-md)] border border-transparent text-xs font-medium text-[var(--color-text)]"
     >
       <FunnelIcon />
       <span className="sr-only">Filters</span>
       {activeCount > 0 && (
         <span
           aria-hidden="true"
-          className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-apricot-graphic)] px-1 text-[10px] font-semibold tabular-nums text-[var(--color-apricot-graphic-ink)]"
+          className="absolute top-0 -right-1 flex h-4 min-w-4 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-apricot-graphic)] px-1 text-[10px] font-semibold tabular-nums text-[var(--color-apricot-graphic-ink)]"
         >
           {activeCount}
         </span>

@@ -65,6 +65,15 @@ describe("FoodsPage", () => {
     expect(row).not.toContain("flex");
     // 384 holds only at this chip size: a bigger font or padding clips again.
     expect(html).toMatch(/<button [^>]*class="[^"]*\bpx-1 text-\[10px\][^"]*"[^>]*>Legume</);
+    // Ledger 1122: every strip button is a glass strip chip, and the chips'
+    // px-1 is the only side padding (FilterChip's px-2.5 used to win over it).
+    const strip = html.slice(html.indexOf('aria-label="Category"'), html.indexOf("</div>", html.indexOf('aria-label="Category"')));
+    const buttons = [...strip.matchAll(/<button [^>]*class="([^"]*)"/g)].map((m) => m[1]!.split(" "));
+    expect(buttons).toHaveLength(8);
+    for (const cls of buttons) {
+      expect(cls).toContain("strip-chip");
+      expect(cls).not.toContain("px-2.5");
+    }
   });
 
   // Item 179: adding a food of your own is a first-class action on this page,

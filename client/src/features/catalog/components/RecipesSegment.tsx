@@ -314,6 +314,7 @@ export function RecipesSegment() {
               // Tapping the active chip falls back to "All" — the default —
               // rather than leaving the list with no scope at all.
               onClick={() => setScope(option.value === scope ? "all" : option.value)}
+              strip
               className="min-w-0 flex-1 overflow-hidden px-1 text-xs text-ellipsis"
             />
           ))}

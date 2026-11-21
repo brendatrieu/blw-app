@@ -857,6 +857,31 @@ textarea {
     border-color: var(--color-card-glass-border);
     box-shadow: var(--shadow-card-glass);
   }
+  /* Ledger 1122 (owner's pick: "glass like the cards"): the Foods/Recipes
+     strip's chips + funnel (filters.tsx `strip`, FunnelButton). The button
+     keeps its 44px tap box with a transparent 1px border; the visible chip
+     is a ::before 34px tall inside the padding box (inset 4px 0; not -1px:
+     the Foods chips clip overflow), in the card glass. Selected keeps its
+     fill. The Filters sheet's chips are not strip chips. */
+  .strip-chip {
+    position: relative;
+    isolation: isolate;
+  }
+  .strip-chip::before {
+    content: "";
+    position: absolute;
+    inset: 4px 0;
+    z-index: -1;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-card-glass-border);
+    background-color: var(--color-card-glass);
+    box-shadow: var(--shadow-card-glass);
+  }
+  .strip-chip[aria-pressed="true"]::before {
+    border-color: var(--color-selected);
+    background-color: var(--color-selected);
+    box-shadow: none;
+  }
   /* Bars and popups. */
   .app-frost {
     background-color: var(--color-bar-glass);

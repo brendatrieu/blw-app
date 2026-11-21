@@ -330,6 +330,7 @@ export function FoodsPage() {
               label={categoryChipLabel(opt)}
               active={category.includes(opt.value)}
               onClick={() => setCategory(toggleValue(CATEGORIES, category, opt.value))}
+              strip
               className="min-w-0 flex-1 overflow-hidden px-1 text-[10px] text-ellipsis"
             />
           ))}
