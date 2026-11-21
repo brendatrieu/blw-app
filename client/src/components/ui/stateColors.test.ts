@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { Badge } from "./Badge.js";
 import { SegmentedControl } from "./SegmentedControl.js";
 import { Switch } from "./Switch.js";
-import { FilterChip } from "../../features/catalog/components/filters.js";
+import { FilterChip, FunnelButton } from "../../features/catalog/components/filters.js";
 
 const SELECTED_FILL = "bg-[var(--color-selected)]";
 const SELECTED_INK = "text-[var(--color-selected-contrast)]";
@@ -47,6 +47,16 @@ describe("selected / on states use --color-selected (item 644)", () => {
     expect(active).toContain(`border-[var(--color-selected)] ${SELECTED_FILL} ${SELECTED_INK}`);
     expect(idle).not.toContain(SELECTED_FILL);
     expect(active + idle).not.toContain("--color-primary");
+  });
+
+  it("FilterChip and FunnelButton take the controls radius, not a full pill (ledger 1107), still 44px tall", () => {
+    const chip = renderToString(createElement(FilterChip, { active: false, label: "Protein", onClick: () => {} }));
+    const funnel = renderToString(createElement(FunnelButton, { activeCount: 0, onClick: () => {} }));
+    for (const html of [chip, funnel]) {
+      expect(html).toContain("rounded-[var(--radius-md)]");
+      expect(html).not.toContain("rounded-full");
+      expect(html).toContain("min-h-11");
+    }
   });
 });
 

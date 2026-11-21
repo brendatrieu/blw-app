@@ -44,7 +44,7 @@ export function FilterChip({ active, label, onClick, className = "" }: FilterChi
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex min-h-11 items-center justify-center rounded-full border px-2.5 py-1 text-center text-xs font-medium whitespace-nowrap transition-colors ${
+      className={`inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border px-2.5 py-1 text-center text-xs font-medium whitespace-nowrap transition-colors ${
         active
           ? "border-[var(--color-selected)] bg-[var(--color-selected)] text-[var(--color-selected-contrast)]"
           : "border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text)]"
@@ -116,7 +116,7 @@ export function FunnelButton({ onClick, activeCount }: FunnelButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className="relative flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-bg)] text-xs font-medium text-[var(--color-text)]"
+      className="relative flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg)] text-xs font-medium text-[var(--color-text)]"
     >
       <FunnelIcon />
       <span className="sr-only">Filters</span>
