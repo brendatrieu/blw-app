@@ -153,3 +153,24 @@ describe("fallbacks (ledger 1082)", () => {
     expect(css).toContain("@media (prefers-reduced-transparency: reduce) {\n  .glass-card {");
   });
 });
+
+describe("the ground's even top row (ledger 1090)", () => {
+  it("is its own 4rem box over the glows and under the content, not a layer of the page-tall glow background", () => {
+    const ground = rule(".app-ground", css.indexOf("  .app-ground {", layerStart))!;
+    expect(ground).toContain("position: relative;");
+    expect(ground).toContain("isolation: isolate;"); // z-index -1 stays above the ground's own background
+    const band = rule(".app-ground::before", layerStart)!;
+    for (const decl of ['content: "";', "position: absolute;", "inset: 0 0 auto;", "height: 4rem;", "z-index: -1;", "pointer-events: none;"]) {
+      expect(band).toContain(decl);
+    }
+    expect(band).toContain("background-image: linear-gradient(var(--color-app-glow-top), transparent);");
+  });
+  it("the tall glow backgrounds carry no band (Chrome filters their top row), and About does not wear the ground", async () => {
+    const { APP_GLOW_PLACES } = await import("../components/AppLayout.js");
+    const { glowTiles } = await import("../lib/glows.js");
+    const { ABOUT_GLOWS } = await import("../pages/AboutPage.js");
+    expect(glowTiles("app", APP_GLOW_PLACES, 3).backgroundImage).not.toMatch(/linear-gradient|glow-top/);
+    expect(ABOUT_GLOWS).not.toMatch(/linear-gradient|glow-top/);
+    expect(readFileSync(new URL("../pages/AboutPage.tsx", import.meta.url), "utf8")).not.toContain("app-ground");
+  });
+});

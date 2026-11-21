@@ -114,8 +114,8 @@
   /* How far out (of its radius) the sea glow holds its centre colour before
      fading (lib/glows.ts). Light 0%: the plain round-15 fade. */
   --app-glow-sea-flat: 0%;
-  /* Ledger 1090: the ground's top row in one colour (lib/glows.ts fades it
-     out over the top band): the sea glow's own colour at the top centre, so
+  /* Ledger 1090: the ground's top row in one colour (.app-ground::before
+     fades it out over the top 4rem): the sea glow's own colour at the top centre, so
      the installed app's opaque status bar (theme.ts STATUS_BAR, index.html)
      continues the page. */
   --color-app-glow-top: #ecf2f4;
@@ -822,6 +822,23 @@ textarea {
   }
   .app-ground {
     background-color: var(--color-bg);
+    position: relative;
+    isolation: isolate;
+  }
+  /* Ledger 1090: the ground's top row in one colour (--color-app-glow-top),
+     faded into the glows over 4rem, so the opaque status bar above it
+     (theme.ts STATUS_BAR) reads as the page. Its own short box, not a layer
+     of the page-tall glow background: Chrome filters that one's top row
+     (up to 10/255 dark on Recipes, 18000px). z-index -1 in the ground's own
+     stacking context: over the glows, under the content. */
+  .app-ground::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 4rem;
+    z-index: -1;
+    pointer-events: none;
+    background-image: linear-gradient(var(--color-app-glow-top), transparent);
   }
   /* Cards: on the glow ground and in the frosted popups, a translucent fill,
      no blur (it changed nothing over the glow). Anywhere else (sign-in,
