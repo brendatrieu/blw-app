@@ -203,14 +203,15 @@ const BASE_PAIRS: Pair[] = [
   { name: "active nav pill against the page-colored nav (item 687)", fg: "color-apricot", bg: "color-bg", min: 1.3, lightMin: 1.25 },
   // Rating stars (filled and the empty outline), the recipe-list heart, the
   // ring's due segments: graphics, 3:1 on page/elevated in dark. Light is the
-  // owner's lighter orange (ledger 1115, shade 1 #ec8a4f, 2026-11-21: the
-  // #e1732e "comes across darker on the phone"), 2.42 / 2.53:1: a deliberate
-  // exception, as every one of them has its value in text or aria beside it
-  // (StarRating's radios and "Rated N stars", the ★ summary's sr-only line,
-  // the heart's card name, the ring's "N due for a serve" line). Held at
-  // that shade: a still lighter one fails here.
-  { name: "apricot graphic (stars, heart) on page", fg: "color-apricot-graphic", bg: "color-bg", min: 3, lightMin: 2.4 },
-  { name: "apricot graphic (stars, heart) on elevated surface", fg: "color-apricot-graphic", bg: "color-bg-elevated", min: 3, lightMin: 2.5 },
+  // owner's lighter orange: shade 2 #f29d66 (ledger 1123, 2026-11-21, picked
+  // on the phone over 1115's shade 1 #ec8a4f, 2.42 / 2.53:1; both after the
+  // #e1732e "comes across darker on the phone"), 2.06 / 2.15:1 (1.93 on the
+  // glass card, batch 1113): a deliberate exception, as every one of them has
+  // its value in text or aria beside it (StarRating's radios and "Rated N
+  // stars", the ★ summary's sr-only line, the heart's card name, the ring's
+  // "N due for a serve" line). Held at that shade: a still lighter one fails here.
+  { name: "apricot graphic (stars, heart) on page", fg: "color-apricot-graphic", bg: "color-bg", min: 3, lightMin: 2.05 },
+  { name: "apricot graphic (stars, heart) on elevated surface", fg: "color-apricot-graphic", bg: "color-bg-elevated", min: 3, lightMin: 2.1 },
   // Item 653: the filter-count dot is a graphic fill (gated as a state mark
   // by the two pairs above) carrying its number in graphic-ink.
   { name: "filter-count number (graphic-ink) on apricot graphic dot", fg: "color-apricot-graphic-ink", bg: "color-apricot-graphic" },
@@ -422,7 +423,7 @@ const DARK_STATE_PAIRS: Pair[] = [
   ),
 ];
 
-describe("owner exceptions (ledger 1115)", () => {
+describe("owner exceptions (ledger 1115, 1123)", () => {
   // The only pairings held below their floor, and in light only: a new one
   // has to be added here on purpose, with its reason where it is set.
   const OWNER_EXCEPTIONS = [
@@ -496,7 +497,8 @@ describe("Direction A token values (items 634, 636, 639, 641, 644, 645, 653, 667
     "color-apricot": { light: "#fbd9c2", dark: "#3a2a20" },
     "color-apricot-ink": { light: "#3d1a06", dark: "#f7b48a" },
     "color-apricot-text": { light: "#b9571a", dark: "#f7b48a" },
-    "color-apricot-graphic": { light: "#ec8a4f", dark: "#f7b48a" },
+    // Ledger 1123: shade 2 in light (was 1115's #ec8a4f); dark unchanged.
+    "color-apricot-graphic": { light: "#f29d66", dark: "#f7b48a" },
     // Ledger 1115: the Meal Plan's today ring (its width below), dark = the accent as before.
     "color-plan-today": { light: "#4d82a4", dark: "#b4d4e6" },
     "color-apricot-soft": { light: "#fde3d1", dark: "#3a2a20" },

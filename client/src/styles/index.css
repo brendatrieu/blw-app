@@ -157,9 +157,10 @@
      colour picks 2026-11-21: was #f7b48a). Text: the lightest same-hue
      shade at 4.5:1 on page/elevated (NOT on inset, 4.12:1). Graphic: stars
      (filled, and the empty one's outline), hearts, the ring's due segments,
-     the filter-count dot. Light is the owner's lighter shade 1 (ledger
-     1115: #e1732e "comes across darker on the phone"), 2.4:1 on the page:
-     a documented exception to the 3:1 graphics gate (contrast.test.ts), as
+     the filter-count dot. Light is the owner's lighter shade 2 (ledger
+     1123, after shade 1 #ec8a4f on the phone; 1115: #e1732e "comes across
+     darker on the phone"), 2.06:1 on the page: a documented exception to
+     the 3:1 graphics gate (contrast.test.ts), as
      every star, heart and due segment has its value in text or aria beside
      it. Soft: a chip tint that carries body text only. Graphic-ink: the
      number on a graphic-filled dot (the Foods/Recipes filter count, item
@@ -167,7 +168,7 @@
   --color-apricot: #fbd9c2;
   --color-apricot-ink: #3d1a06;
   --color-apricot-text: #b9571a;
-  --color-apricot-graphic: #ec8a4f;
+  --color-apricot-graphic: #f29d66;
   --color-apricot-soft: #fde3d1;
   --color-apricot-graphic-ink: #3d1a06;
   --color-avatar: #f7b48a;
