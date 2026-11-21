@@ -23,7 +23,6 @@ import {
   canRemoveDailyMeal,
   dailyMealErrors,
   dailyMealRows,
-  dayHasPlan,
   dayName,
   dragTarget,
   flagNotes,
@@ -96,13 +95,6 @@ describe("plan weeks (ledger 969: Sunday first, ‹ › a week at a time)", () =
   it("writes the app's short date for the Copy sheet's From line (ledger 1017)", () => {
     expect(shortDate("2026-11-20")).toBe("Fri, Nov 20");
     expect(planDayLabel("2026-10-12", "2026-10-14")).toBe(shortDate("2026-10-12"));
-  });
-
-  it("dots a day only when something is planned on it", () => {
-    const meal = (items: unknown[]) => ({ slotId: id(1), name: "Lunch", time: null, position: 0, served: null, items }) as PlannedMeal;
-    expect(dayHasPlan(undefined)).toBe(false);
-    expect(dayHasPlan({ date: "2026-10-14", planned: false, meals: [meal([])] })).toBe(false);
-    expect(dayHasPlan({ date: "2026-10-14", planned: true, meals: [meal([]), meal([{}])] })).toBe(true);
   });
 
   it("writes a meal's time in the app's own format", () => {

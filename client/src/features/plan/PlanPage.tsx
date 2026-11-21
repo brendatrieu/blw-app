@@ -18,7 +18,6 @@ import {
   PLAN_COPY_PARAM,
   WEEKDAY_INITIALS,
   addDays,
-  dayHasPlan,
   dayName,
   dayOfMonth,
   deviceTimeZone,
@@ -193,7 +192,6 @@ export function PlanPage() {
             >
               {week.map((date, index) => {
                 const pressed = date === selected;
-                const dot = dayHasPlan(days.find((entry) => entry.date === date));
                 return (
                   <button
                     key={date}
@@ -202,7 +200,7 @@ export function PlanPage() {
                     aria-label={dayName(date)}
                     aria-current={date === today ? "date" : undefined}
                     onClick={() => select(date)}
-                    className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-[var(--radius-md)] pt-1.5 pb-[5px] ${
+                    className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-[var(--radius-md)] py-1.5 ${
                       pressed ? "bg-[var(--color-apricot)] text-[var(--color-apricot-ink)]" : "text-[var(--color-text)]"
                     }${date === today ? " inset-ring-2 inset-ring-[var(--color-accent)]" : ""}`}
                   >
@@ -212,10 +210,6 @@ export function PlanPage() {
                     <span aria-hidden="true" className="text-base leading-normal font-extrabold">
                       {dayOfMonth(date)}
                     </span>
-                    <span
-                      aria-hidden="true"
-                      className={`size-[5px] rounded-full ${dot ? (pressed ? "bg-[var(--color-apricot-ink)]" : "bg-[var(--color-accent)]") : ""}`}
-                    />
                   </button>
                 );
               })}

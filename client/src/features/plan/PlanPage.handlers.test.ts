@@ -155,17 +155,12 @@ describe("PlanPage (CD-Plan-Day)", () => {
     ]);
   });
 
-  it("dots each day with something planned; the selected day's dot is ink on apricot", () => {
-    const dots = dayButtons(render()).map((day) => String(findAll(day, (el) => el.type === "span").at(-1)!.props.className));
-    expect(dots.map((dot) => (dot.includes("apricot-ink") ? "ink" : dot.includes("color-accent") ? "dot" : "none"))).toEqual([
-      "none",
-      "none",
-      "dot",
-      "ink",
-      "none",
-      "none",
-      "none",
-    ]);
+  it("shows no has-food-planned dot: a day cell is just weekday + date on equal top and bottom padding (ledger 1108)", () => {
+    for (const day of dayButtons(render())) {
+      expect(findAll(day, (el) => el.type === "span")).toHaveLength(2);
+      expect(String(day.props.className)).toContain(" py-1.5 ");
+      expect(String(day.props.className)).not.toMatch(/\bp[tb]-/);
+    }
   });
 
   it("outlines today (aria-current) whichever day is picked; the picked day keeps the strong apricot; no accent number (ledger 1017)", () => {

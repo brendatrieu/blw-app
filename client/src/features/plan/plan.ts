@@ -70,11 +70,6 @@ export function dayName(date: string): string {
   return utc(date).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
 }
 
-/** Whether the strip shows a dot under the day: anything planned on it. */
-export function dayHasPlan(day: PlanDay | undefined): boolean {
-  return Boolean(day?.meals.some((meal) => meal.items.length > 0));
-}
-
 /** A meal's optional time, `HH:MM`, in the app's own format ("7:30 AM"). */
 export function mealTimeLabel(time: string): string {
   return new Date(2000, 0, 1, Number(time.slice(0, 2)), Number(time.slice(3, 5))).toLocaleTimeString(undefined, {
