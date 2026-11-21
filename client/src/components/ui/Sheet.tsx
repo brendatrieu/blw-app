@@ -51,6 +51,21 @@ const FIXED_HEIGHT_CLASSES =
   "mt-[15svh] h-[calc(100%-15svh)] min-h-[85svh] shadow-[0_50vh_0_0_var(--color-bg-elevated),var(--shadow-lg)]";
 
 /**
+ * Ledger 1119: the fixedHeight panel's floor, once its fixed box is measured.
+ * 15svh + 85svh is exactly 100svh, so wherever the box is shorter than 100svh
+ * (an installed iOS app since 869, where the opaque status bar takes 47px off
+ * the web view but svh can still be the whole screen) the floor pushed the
+ * panel's bottom, and the pinned Done, below the visible area: Done sat 3px
+ * from the edge, cut off by the rounded corners but still tappable. The floor
+ * is now 85svh or the box's height at open less 15svh, whichever is smaller.
+ * Measured once at open, not live, so the iOS keyboard shrinking the box
+ * still cannot shrink the panel (789).
+ */
+export function fixedMinHeight(boxHeightPx: number): string {
+  return `min(85svh, calc(${Math.round(boxHeightPx)}px - 15svh))`;
+}
+
+/**
  * Bottom sheet: a dimmed overlay behind a panel that slides up from the
  * bottom edge (instant, no slide, for reduced-motion users — see the
  * `.sheet-overlay` / `.sheet-panel` rules in index.css). Closes on Escape
@@ -103,6 +118,16 @@ export function SheetPanel({ title, showClose = false, headerAction, fixedHeight
     const header = headerRef.current;
     return header?.parentElement ? watchScrollEdge(header, header.parentElement) : undefined;
   }, []);
+  // Ledger 1119: cap the fixedHeight floor at the fixed box it hangs in, so
+  // its bottom (Done, Add) stays on screen. Written to the panel directly:
+  // React never sets minHeight, so a re-render keeps it.
+  // ponytail: measured at open only; a sheet left open across a rotation keeps
+  // the old floor (portrait-only app), re-measure on a width change if needed.
+  useEffect(() => {
+    const panel = headerRef.current?.parentElement;
+    const box = panel?.parentElement;
+    if (fixedHeight && panel && box && box.clientHeight > 0) panel.style.minHeight = fixedMinHeight(box.clientHeight);
+  }, [fixedHeight]);
   return (
     <div
       ref={panelRef}
