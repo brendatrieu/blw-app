@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getStoredTheme, initTheme, setTheme, THEME_BG } from "./theme.js";
+import { getStoredTheme, initTheme, setStatusBarSurface, setTheme, STATUS_BAR, statusBarColor, THEME_BG } from "./theme.js";
 
 const STORAGE_KEY = "blw-theme";
 
@@ -93,8 +93,8 @@ describe("theme", () => {
 /** index.html's two theme-color metas as attribute bags. */
 function makeFakeThemeColorMetas() {
   return [
-    { content: THEME_BG.light, media: "(prefers-color-scheme: light)" },
-    { content: THEME_BG.dark, media: "(prefers-color-scheme: dark)" },
+    { content: STATUS_BAR.top.light, media: "(prefers-color-scheme: light)" },
+    { content: STATUS_BAR.top.dark, media: "(prefers-color-scheme: dark)" },
   ].map((attrs) => {
     const map = new Map(Object.entries(attrs));
     return {
@@ -123,23 +123,71 @@ describe("theme-color follows the in-app theme (ledger 869)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("a forced theme sets both metas to that theme's background", () => {
+  afterEach(() => {
+    setStatusBarSurface("top");
+  });
+
+  it("a forced theme sets both metas to that theme's colour", () => {
     setTheme("dark");
-    expect(contents()).toEqual([THEME_BG.dark, THEME_BG.dark]);
+    expect(contents()).toEqual([STATUS_BAR.top.dark, STATUS_BAR.top.dark]);
     setTheme("light");
-    expect(contents()).toEqual([THEME_BG.light, THEME_BG.light]);
+    expect(contents()).toEqual([STATUS_BAR.top.light, STATUS_BAR.top.light]);
   });
 
   it("a stored forced theme sets both metas at boot", () => {
     localStorage.setItem(STORAGE_KEY, "dark");
     initTheme();
-    expect(contents()).toEqual([THEME_BG.dark, THEME_BG.dark]);
+    expect(contents()).toEqual([STATUS_BAR.top.dark, STATUS_BAR.top.dark]);
   });
 
   it("'system' restores each meta's own scheme value", () => {
     setTheme("dark");
     setTheme("system");
-    expect(contents()).toEqual([THEME_BG.light, THEME_BG.dark]);
+    expect(contents()).toEqual([STATUS_BAR.top.light, STATUS_BAR.top.dark]);
+  });
+
+  it("follows the surface under the status bar (ledger 1090), in every theme", () => {
+    for (const preference of ["system", "light", "dark"] as const) {
+      setTheme(preference);
+      for (const surface of ["top", "frost", "page", "top"] as const) {
+        setStatusBarSurface(surface);
+        expect(contents()).toEqual([statusBarColor("light", preference, surface), statusBarColor("dark", preference, surface)]);
+      }
+    }
+    setTheme("system");
+    setStatusBarSurface("frost");
+    expect(contents()).toEqual([STATUS_BAR.frost.light, STATUS_BAR.frost.dark]);
+    // A theme change keeps the surface.
+    setTheme("dark");
+    expect(contents()).toEqual([STATUS_BAR.frost.dark, STATUS_BAR.frost.dark]);
+  });
+});
+
+describe("statusBarColor: scheme x theme x surface (ledger 1090)", () => {
+  it("system follows each meta's scheme; a forced theme wins over it", () => {
+    for (const surface of ["top", "frost", "page"] as const) {
+      for (const scheme of ["light", "dark"] as const) {
+        expect(statusBarColor(scheme, "system", surface)).toBe(STATUS_BAR[surface][scheme]);
+        expect(statusBarColor(scheme, "light", surface)).toBe(STATUS_BAR[surface].light);
+        expect(statusBarColor(scheme, "dark", surface)).toBe(STATUS_BAR[surface].dark);
+      }
+    }
+  });
+
+  it("pins the measured colours (390x844, batch-1134 measure): top = the ground's even top row, frost = the scrolled header's", () => {
+    expect(STATUS_BAR.top).toEqual({ light: "#ecf2f4", dark: "#2f3942" });
+    expect(STATUS_BAR.frost).toEqual({ light: "#f9fcfd", dark: "#222a34" });
+    // Outside AppLayout: the page colour, as before 1090.
+    expect(STATUS_BAR.page).toBe(THEME_BG);
+  });
+
+  it("is a no-op without a DOM", () => {
+    vi.stubGlobal("document", undefined);
+    expect(() => {
+      setStatusBarSurface("frost");
+      setStatusBarSurface("top");
+    }).not.toThrow();
+    vi.unstubAllGlobals();
   });
 });
 
@@ -155,9 +203,19 @@ describe("index.html status bar tags (ledger 869)", () => {
     expect(html).toContain("viewport-fit=cover");
   });
 
-  it("has both theme-color metas, equal to the bg tokens and the manifest", () => {
-    expect(html).toContain(`<meta name="theme-color" content="${THEME_BG.light}" media="(prefers-color-scheme: light)" />`);
-    expect(html).toContain(`<meta name="theme-color" content="${THEME_BG.dark}" media="(prefers-color-scheme: dark)" />`);
+  it("has both theme-color metas at the app ground's top row (ledger 1090: a signed-in boot paints it first)", () => {
+    expect(html).toContain(`<meta name="theme-color" content="${STATUS_BAR.top.light}" media="(prefers-color-scheme: light)" />`);
+    expect(html).toContain(`<meta name="theme-color" content="${STATUS_BAR.top.dark}" media="(prefers-color-scheme: dark)" />`);
+    expect(html.match(/<meta name="theme-color"/g)).toHaveLength(2);
+  });
+
+  it("the top colour is the ground's own token (index.css --color-app-glow-top)", () => {
+    const css = read("./styles/index.css");
+    expect(css).toContain(`--color-app-glow-top: ${STATUS_BAR.top.light};`);
+    expect(css).toContain(`--_dark-app-glow-top: ${STATUS_BAR.top.dark};`);
+  });
+
+  it("the bg tokens and the manifest stay the page colour (the manifest drives Android's splash, left alone in 1090)", () => {
     const css = read("./styles/index.css");
     expect(css).toContain(`--color-bg: ${THEME_BG.light};`);
     expect(css).toContain(`--_dark-color-bg: ${THEME_BG.dark};`);

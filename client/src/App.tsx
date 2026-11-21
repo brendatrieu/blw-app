@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { AI_FEATURES_ENABLED } from "@blw/shared";
 import { AppLayout, useScrollToTopOnPathChange } from "./components/AppLayout.js";
@@ -39,6 +40,7 @@ import { MorePage } from "./pages/MorePage.js";
 import { FeedbackPage } from "./pages/FeedbackPage.js";
 import { AdminMetricsPage } from "./pages/AdminMetricsPage.js";
 import { NotFoundPage } from "./pages/NotFoundPage.js";
+import { setStatusBarSurface } from "./theme.js";
 
 /**
  * Items 287 and 293: the tab was the Pantry, then the Fridge, and is now
@@ -78,6 +80,10 @@ export function MealPageRedirect() {
  */
 export function OutsideAppLayout() {
   useScrollToTopOnPathChange();
+  // Ledger 1090: these pages' own colour under the status bar (theme.ts).
+  useEffect(() => {
+    setStatusBarSurface("page");
+  }, []);
   return (
     <div style={{ paddingTop: "calc(env(safe-area-inset-top) + var(--top-edge-clearance))" }}>
       <Outlet />

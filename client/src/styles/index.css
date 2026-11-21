@@ -114,6 +114,11 @@
   /* How far out (of its radius) the sea glow holds its centre colour before
      fading (lib/glows.ts). Light 0%: the plain round-15 fade. */
   --app-glow-sea-flat: 0%;
+  /* Ledger 1090: the ground's top row in one colour (lib/glows.ts fades it
+     out over the top band): the sea glow's own colour at the top centre, so
+     the installed app's opaque status bar (theme.ts STATUS_BAR, index.html)
+     continues the page. */
+  --color-app-glow-top: #ecf2f4;
   --color-app-glow-apricot: rgba(247, 180, 138, 0.28);
   --color-card-glass: rgba(255, 255, 255, 0.45);
   --color-card-glass-border: rgba(255, 255, 255, 0.6);
@@ -325,11 +330,15 @@
   /* Fixed chrome heights. `--nav-height` is the bottom bar's own height; it
      is no longer also reserved as page padding, since the bar is in flow.
      66px = A-Home's nav (item 689): 1px border + 6px top + 30px pill + 2px
-     + 16.8px label + 10px bottom (BottomNav adds the safe area).
+     + 16.8px label + 10px bottom (or the safe area: --nav-pad-bottom).
      `--header-height` is the slim inner-page header (AppLayout: py-1 around a
      44px row, no border, plus the notch inset it pads in) — the sticky
      `top` of the bars that dock under it, so no gap opens between them. */
   --nav-height: 4.125rem;
+  /* Ledger 1091: the nav's bottom padding, 10px or the home-indicator inset,
+     whichever is larger (not both). Its height is --nav-height - 10px + this,
+     so with no inset (iPhone SE, Android, desktop) nothing moves. */
+  --nav-pad-bottom: max(10px, env(safe-area-inset-bottom));
   --header-height: calc(3.25rem + env(safe-area-inset-top) + var(--top-edge-clearance-slim));
 
   /* Ledger 892: extra room under the top safe area, so text and buttons sit
@@ -378,6 +387,7 @@
      between the cards is round 15's, only the hot centre is cut. */
   --_dark-app-glow-sea: rgba(180, 212, 230, 0.24);
   --_dark-app-glow-sea-flat: 40%;
+  --_dark-app-glow-top: #2f3942;
   --_dark-app-glow-apricot: rgba(247, 180, 138, 0.22);
   --_dark-card-glass: rgba(30, 38, 48, 0.7);
   --_dark-card-glass-border: rgba(255, 255, 255, 0.08);
@@ -485,6 +495,7 @@
     --glass-filter: var(--_dark-glass-filter);
     --color-app-glow-sea: var(--_dark-app-glow-sea);
     --app-glow-sea-flat: var(--_dark-app-glow-sea-flat);
+    --color-app-glow-top: var(--_dark-app-glow-top);
     --color-app-glow-apricot: var(--_dark-app-glow-apricot);
     --color-card-glass: var(--_dark-card-glass);
     --color-card-glass-border: var(--_dark-card-glass-border);
@@ -594,6 +605,7 @@
   --glass-filter: var(--_dark-glass-filter);
   --color-app-glow-sea: var(--_dark-app-glow-sea);
   --app-glow-sea-flat: var(--_dark-app-glow-sea-flat);
+  --color-app-glow-top: var(--_dark-app-glow-top);
   --color-app-glow-apricot: var(--_dark-app-glow-apricot);
   --color-card-glass: var(--_dark-card-glass);
   --color-card-glass-border: var(--_dark-card-glass-border);

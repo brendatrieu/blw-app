@@ -60,6 +60,22 @@ describe("watchScrollEdge (ledgers 1079, 1081)", () => {
     expect(target.attrs.has("data-scrolled")).toBe(true);
   });
 
+  it("onChange hears the state at once and on each flip only, from the same listener (ledger 1090: the status bar)", () => {
+    const target = fakeTarget();
+    const win = fakeSource({ scrollY: 0 });
+    const heard: boolean[] = [];
+    const stop = watchScrollEdge(target, win, false, (under) => heard.push(under));
+    expect(heard).toEqual([false]);
+    for (const y of [10, 200, 0, 0, 5]) {
+      win.scrollY = y;
+      win.fire();
+    }
+    expect(heard).toEqual([false, true, false, true]);
+    expect(win.listeners).toHaveLength(1);
+    stop();
+    expect(heard).toHaveLength(4);
+  });
+
   it("the cleanup removes the listener and the attribute", () => {
     const target = fakeTarget();
     const win = fakeSource({ scrollY: 300 });

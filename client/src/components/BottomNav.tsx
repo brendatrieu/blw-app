@@ -132,17 +132,19 @@ export function BottomNav() {
   // painting a band under the bar on the one tab too short to scroll. `mt-auto`
   // pins it to the bottom of a short column; z-index, height and the
   // safe-area padding are unchanged.
-  // A-Home's nav (items 687/689): a 1px top border, padding 6px 4px 10px +
-  // the safe area, each tab top-aligned (pill, 2px, label) so the spare height
-  // sits under the labels. Ledger 1079: always frosted, its line the bars'
-  // hairline (index.css .app-frost).
+  // A-Home's nav (items 687/689): a 1px top border, padding 6px 4px 10px,
+  // each tab top-aligned (pill, 2px, label) so the spare height sits under the
+  // labels. Ledger 1091: on a phone with a home indicator the labels sit on
+  // the safe-area line, as iOS's own tab bars do (index.css --nav-pad-bottom).
+  // Ledger 1079: always frosted, its line the bars' hairline (index.css
+  // .app-frost).
   return (
     <nav
       className="app-frost sticky bottom-0 z-10 mx-auto mt-auto flex w-full max-w-lg items-stretch border-t px-1 pt-1.5"
       style={{
         borderColor: "var(--color-bar-hairline)",
-        height: "calc(var(--nav-height) + env(safe-area-inset-bottom))",
-        paddingBottom: "calc(10px + env(safe-area-inset-bottom))",
+        height: "calc(var(--nav-height) - 10px + var(--nav-pad-bottom))",
+        paddingBottom: "var(--nav-pad-bottom)",
       }}
     >
       {tabs.map(({ to, label, Icon }) => {

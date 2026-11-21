@@ -26,14 +26,21 @@ export type ScrollSource = ({ scrollY: number } | { scrollTop: number }) & Pick<
  * offset (`docks`: `isDocked`, from the target's own sticky top). Returns the
  * cleanup, which also clears the attribute.
  * `toggleAttribute` is a no-op when the state does not change, so a scroll
- * costs one compare (a docking strip also reads its own rect and top). */
-export function watchScrollEdge(target: Element, source: ScrollSource = window, docks = false): () => void {
+ * costs one compare (a docking strip also reads its own rect and top).
+ * `onChange` hears the state at the start and each time it flips (ledger 1090:
+ * the status bar follows the header). */
+export function watchScrollEdge(target: Element, source: ScrollSource = window, docks = false, onChange?: (under: boolean) => void): () => void {
+  let last: boolean | undefined;
   const update = () => {
     const offset = "scrollY" in source ? source.scrollY : source.scrollTop;
     const under = docks
       ? isDocked(offset, target.getBoundingClientRect().top, Number.parseFloat(getComputedStyle(target).top))
       : isScrolledUnder(offset);
     target.toggleAttribute("data-scrolled", under);
+    if (under !== last) {
+      last = under;
+      onChange?.(under);
+    }
   };
   update();
   source.addEventListener("scroll", update, { passive: true });

@@ -7,6 +7,7 @@ import { TourProvider } from "../features/tour/TourProvider.js";
 import { glowTiles, watchGlowScreens } from "../lib/glows.js";
 import { timeOfDayGreeting } from "../lib/greeting.js";
 import { watchScrollEdge } from "../lib/scrollEdge.js";
+import { setStatusBarSurface } from "../theme.js";
 import { BabyChip } from "./BabyChip.js";
 import { BottomNav } from "./BottomNav.js";
 import { OfflineBanner } from "./OfflineBanner.js";
@@ -226,8 +227,17 @@ export function AppLayout() {
   // into the header before the first paint (no inline flash).
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   // Ledger 1079: clear at the top, frosted once content scrolls under it.
+  // Ledger 1090: the status bar above it follows (theme.ts STATUS_BAR).
   const headerRef = useRef<HTMLElement>(null);
-  useEffect(() => (headerRef.current ? watchScrollEdge(headerRef.current) : undefined), []);
+  useEffect(
+    () =>
+      headerRef.current
+        ? watchScrollEdge(headerRef.current, window, false, (under) => {
+            setStatusBarSurface(under ? "frost" : "top");
+          })
+        : undefined,
+    [],
+  );
   // Ledger 1078: as many screens of glow as the page is tall (3 = the first
   // screen and its neighbours, until it is measured).
   const groundRef = useRef<HTMLDivElement>(null);

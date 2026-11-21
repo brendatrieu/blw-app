@@ -654,6 +654,7 @@ describe("app glass, round 15 (ledger 1077-1082)", () => {
   const TOKENS = [
     "color-app-glow-sea",
     "app-glow-sea-flat",
+    "color-app-glow-top",
     "color-app-glow-apricot",
     "color-card-glass",
     "color-card-glass-border",
@@ -775,6 +776,8 @@ describe("app glass, round 15 (ledger 1077-1082)", () => {
     // Dark: centre capped at .24 (ledger 1083 sweep: .40 failed the page inks there), flat to 40% of the radius.
     "color-app-glow-sea": { light: "rgba(180, 212, 230, 0.4)", dark: "rgba(180, 212, 230, 0.24)" },
     "app-glow-sea-flat": { light: "0%", dark: "40%" },
+    // Ledger 1090: the sea glow's colour at the top centre (390x844), the ground's even top row and the status bar's.
+    "color-app-glow-top": { light: "#ecf2f4", dark: "#2f3942" },
     "color-app-glow-apricot": { light: "rgba(247, 180, 138, 0.28)", dark: "rgba(247, 180, 138, 0.22)" },
     "color-card-glass": { light: "rgba(255, 255, 255, 0.45)", dark: "rgba(30, 38, 48, 0.7)" },
     "color-card-glass-border": { light: "rgba(255, 255, 255, 0.6)", dark: "rgba(255, 255, 255, 0.08)" },
