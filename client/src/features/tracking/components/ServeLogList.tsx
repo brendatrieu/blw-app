@@ -7,7 +7,8 @@ import { mealLines } from "../../plate/plate.js";
 import { ItemPlate } from "../../plate/PlateItemRow.js";
 import { MealActionsMenu } from "./MealActionsMenu.js";
 import { Badge } from "../../catalog/components/Badge.js";
-import { ButtonLink } from "../../../components/ui/Button.js";
+import { Button, ButtonLink } from "../../../components/ui/Button.js";
+import { Sheet } from "../../../components/ui/Sheet.js";
 import { StarRatingShown } from "../../../components/ui/StarRating.js";
 import { Card, CARD_ROW_DIVIDER } from "../../../components/ui/Card.js";
 import { HEADING_CONTROL_INSET, SectionLink } from "../../../components/ui/SectionLink.js";
@@ -99,6 +100,59 @@ export function MealDeleteDialog({ meal, babyId, open, onClose }: MealDeleteDial
  * about as far as its text is from the left (the kebab's padding is less). */
 const STARS_AT_END = "ml-auto mr-2";
 
+type Line = ReturnType<typeof mealLines>[number];
+
+/** One line's plate, name and (ledger 966) read-only stars. `oneLine`: Home's
+ * fixed-height row truncates the name instead of wrapping it (ledger 1121). */
+function lineParts(line: Line, oneLine = false) {
+  const own = line.ratings[0]?.rating ?? null;
+  return (
+    <>
+      <ItemPlate plates={line.plates} size={28} />
+      <span className={`min-w-0 text-sm leading-[1.3] font-medium ${oneLine ? "truncate" : "break-words"} text-[var(--color-text)]`}>
+        {line.name}
+        <DeletedMark deleted={line.deleted} />
+      </span>
+      {own !== null && <StarRatingShown value={own} className={STARS_AT_END} />}
+    </>
+  );
+}
+
+/** Every line of a meal: the /meals card's and the full-meal sheet's list. */
+function MealLineList({ meal }: { meal: MealItem }) {
+  // No aria-label: on a card the list sits inside the edit link, and a label
+  // there would BE the link's name, hiding the foods and "Rated N stars" (966).
+  // Ledger 973: a container's foods and recipes are lines of their own.
+  return (
+    <ul className="flex flex-col">
+      {mealLines(meal, { flattenContainers: true }).map((line) => (
+        <li key={line.key} className="flex items-center gap-2 py-[3px]">
+          {lineParts(line)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Ledger 1121: how many lines a Home row shows, each exactly one line tall. */
+export const ROW_SLOTS = 2;
+
+/**
+ * Ledger 1121: a Home row's lines: all of them when they fit its slots, else
+ * the first ones and "+N more" in the last slot (3 foods: the first and "+2
+ * more"), so every row, and so every page, is the same height.
+ */
+export function previewLines<T>(lines: readonly T[], slots = ROW_SLOTS): { shown: T[]; more: number } {
+  if (lines.length <= slots) return { shown: [...lines], more: 0 };
+  return { shown: lines.slice(0, slots - 1), more: lines.length - (slots - 1) };
+}
+
+/** A Home row's slot: the 28px plate plus 3px above and below, as a line on /meals. */
+const SLOT = "flex h-[34px] items-center gap-2";
+
+const STRETCHED_TARGET =
+  "-mt-1 block rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]";
+
 export interface MealCardProps {
   meal: MealItem;
   /** Asks to delete this meal — the list owns the one `MealDeleteDialog`. */
@@ -107,6 +161,10 @@ export interface MealCardProps {
    * no border or fill (the list's card has them), an inset divider, and a
    * kebab named after the meal. */
   grouped?: boolean;
+  /** Ledger 1121, Home's paged rows: a fixed height (the date line, then
+   * `ROW_SLOTS` one-line slots, no notes) and a tap opens the whole meal
+   * through this instead of Edit (which stays in the kebab). */
+  onOpen?: (meal: MealItem) => void;
 }
 
 /**
@@ -114,33 +172,46 @@ export interface MealCardProps {
  * muted "Today · 2:05 PM" line with the "From storage" badge and the kebab
  * at the top, then one line per food or recipe on the plate, a container's
  * each on its own in its place (ledger 973; its plate and name, and its
- * stars at a glance once rated, ledger 966), then the notes. On Home, on
- * /meals and on a container's page (its meals). Exported
- * standalone-renderable per the app's convention for card-shaped list items.
+ * stars at a glance once rated, ledger 966), then the notes. On Home (as a
+ * fixed-height row that opens `MealSheet`, ledger 1121), on /meals and on a
+ * container's page (its meals). Exported standalone-renderable per the app's
+ * convention for card-shaped list items.
  */
-export function MealCard({ meal, onRequestDelete, grouped = false }: MealCardProps) {
-  // No aria-label: the list sits inside the edit link, and a label there
-  // would BE the link's name, hiding the foods and "Rated N stars" (966).
-  const lines = (
-    <ul className="flex flex-col">
-      {mealLines(meal, { flattenContainers: true }).map((line) => {
-        // Ledger 966: a rated item's stars sit at the end of its line,
-        // read-only; unrated lines are just the name. Ledger 973: a
-        // container's foods and recipes are lines of their own, like these.
-        const own = line.ratings[0]?.rating ?? null;
-        return (
-          <li key={line.key} className="flex items-center gap-2 py-[3px]">
-            <ItemPlate plates={line.plates} size={28} />
-            <span className="min-w-0 text-sm leading-[1.3] font-medium break-words text-[var(--color-text)]">
-              {line.name}
-              <DeletedMark deleted={line.deleted} />
-            </span>
-            {own !== null && <StarRatingShown value={own} className={STARS_AT_END} />}
-          </li>
-        );
-      })}
-    </ul>
-  );
+export function MealCard({ meal, onRequestDelete, grouped = false, onOpen }: MealCardProps) {
+  const fixed = onOpen !== undefined;
+  let body;
+  if (onOpen) {
+    const { shown, more } = previewLines(mealLines(meal, { flattenContainers: true }));
+    const slots = shown.map((line) => (
+      <span key={line.key} className={SLOT}>
+        {lineParts(line, true)}
+      </span>
+    ));
+    if (more > 0)
+      slots.push(
+        <span key="more" className={`${SLOT} pl-9 text-sm text-[var(--color-text-muted)]`}>
+          {`+${more} more`}
+        </span>,
+      );
+    // A one-food meal keeps its second slot, empty, so its row is as tall as the rest.
+    while (slots.length < ROW_SLOTS) slots.push(<span key={`empty-${slots.length}`} className={SLOT} aria-hidden="true" />);
+    // A button, not a link (ledger 1121): it opens the meal in a sheet. Named
+    // by its content, as the link was: the foods, "Rated N stars", "+N more".
+    body = (
+      <button type="button" aria-haspopup="dialog" onClick={() => onOpen(meal)} className={`${STRETCHED_TARGET} w-full text-left`}>
+        <span className="flex flex-col">{slots}</span>
+      </button>
+    );
+  } else {
+    // Stretched link: the anchor's ::after overlay covers the whole card, so
+    // tapping anywhere opens the meal for editing (which is why there is no
+    // separate Edit link).
+    body = (
+      <Link to={`/log-meal?edit=${meal.id}`} className={STRETCHED_TARGET}>
+        <MealLineList meal={meal} />
+      </Link>
+    );
+  }
 
   return (
     <li
@@ -152,14 +223,25 @@ export function MealCard({ meal, onRequestDelete, grouped = false }: MealCardPro
     >
       {/* Wraps instead of overflowing (ledger 776): at 320px a long date
           line plus the badge and kebab put those two on a line of their own,
-          right-aligned. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-2">
-        <span className="text-xs text-[var(--color-text-muted)]">{servedLine(meal.servedAt)}</span>
-        {/* Above the stretched link's overlay (relative z-10), as siblings:
-            nothing interactive is ever nested inside the anchor (the rule
+          right-aligned. A fixed row (1121) never wraps: under 360px its badge
+          is the 📦 alone (named for screen readers), and the date line is
+          cut short before it could push the kebab down. */}
+      <div className={fixed ? "flex items-center justify-between gap-x-2" : "flex flex-wrap items-center justify-between gap-x-2"}>
+        <span className={fixed ? "min-w-0 truncate text-xs text-[var(--color-text-muted)]" : "text-xs text-[var(--color-text-muted)]"}>
+          {servedLine(meal.servedAt)}
+        </span>
+        {/* Above the stretched target's overlay (relative z-10), as siblings:
+            nothing interactive is ever nested inside it (the rule
             `StorageItemCard` follows too). */}
         <div className="relative z-10 flex shrink-0 items-center gap-0.5 ml-auto">
-          {fromStorage(meal) && <Badge tone="neutral">📦 From storage</Badge>}
+          {fromStorage(meal) &&
+            (fixed ? (
+              <Badge tone="neutral" title="From storage">
+                📦<span className="max-[359px]:sr-only"> From storage</span>
+              </Badge>
+            ) : (
+              <Badge tone="neutral">📦 From storage</Badge>
+            ))}
           <MealActionsMenu
             mealId={meal.id}
             onRequestDelete={() => onRequestDelete(meal)}
@@ -168,20 +250,53 @@ export function MealCard({ meal, onRequestDelete, grouped = false }: MealCardPro
         </div>
       </div>
 
-      {/* Stretched link: the anchor's ::after overlay covers the whole card,
-          so tapping anywhere opens the meal for editing (which is why there
-          is no separate Edit link). */}
-      <Link
-        to={`/log-meal?edit=${meal.id}`}
-        className="-mt-1 block rounded-[var(--radius-sm)] after:absolute after:inset-0 after:rounded-[var(--radius-lg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
-      >
-        {lines}
-      </Link>
+      {body}
 
-      {meal.notes && <p className="mt-1 text-xs text-[var(--color-text-muted)]">{meal.notes}</p>}
+      {!fixed && meal.notes && <p className="mt-1 text-xs text-[var(--color-text-muted)]">{meal.notes}</p>}
 
-      {meal.reactionNote && <p className="mt-1 text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</p>}
+      {!fixed && meal.reactionNote && <p className="mt-1 text-xs text-[var(--color-danger)]">Reaction: {meal.reactionNote}</p>}
     </li>
+  );
+}
+
+export interface MealSheetProps {
+  /** The meal shown; null = closed. */
+  meal: MealItem | null;
+  onClose: () => void;
+  /** Delete only asks: the list owns `MealDeleteDialog`. */
+  onRequestDelete: (meal: MealItem) => void;
+}
+
+/**
+ * Ledger 1121: the whole meal behind a Home row (the row shows two lines):
+ * its date line, the "From storage" badge, every line with its stars, the
+ * notes and reaction, and the row kebab's two actions as buttons. The meal
+ * page itself is retired (ledger 966), so Edit is the plate page, as before.
+ */
+export function MealSheet({ meal, onClose, onRequestDelete }: MealSheetProps) {
+  return (
+    <Sheet open={meal !== null} onClose={onClose} title={meal ? servedLine(meal.servedAt) : undefined} showClose>
+      {meal && (
+        <>
+          {fromStorage(meal) && (
+            <div className="flex">
+              <Badge tone="neutral">📦 From storage</Badge>
+            </div>
+          )}
+          <MealLineList meal={meal} />
+          {meal.notes && <p className="text-sm text-[var(--color-text-muted)]">{meal.notes}</p>}
+          {meal.reactionNote && <p className="text-sm text-[var(--color-danger)]">Reaction: {meal.reactionNote}</p>}
+          <div className="mt-1 grid grid-cols-2 gap-2">
+            <ButtonLink to={`/log-meal?edit=${meal.id}`} variant="secondary">
+              Edit
+            </ButtonLink>
+            <Button type="button" variant="danger-quiet" onClick={() => onRequestDelete(meal)}>
+              Delete
+            </Button>
+          </div>
+        </>
+      )}
+    </Sheet>
   );
 }
 
@@ -217,24 +332,31 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, gr
   // The meal itself, not its id: the delete removes the row optimistically,
   // and the question has to outlive it to show a failure.
   const [pendingDelete, setPendingDelete] = useState<MealItem | null>(null);
+  // Ledger 1121: the meal open in `MealSheet`, by id, so it follows a refetch
+  // and the sheet closes by itself once the meal is gone.
+  const [openId, setOpenId] = useState<string | null>(null);
   // The API returns meals newest-first; the slices preserve that order.
   const all = data?.items ?? [];
-  // After pendingDelete: the handler tests index useState slots by call order.
+  const openMeal = all.find((meal) => meal.id === openId) ?? null;
+  // After pendingDelete and openId: the handler tests index useState slots by call order.
   // Always called (hook order); without a limit it is one unused page.
   const track = usePagedTrack(all.length, limit ?? Math.max(all.length, 1));
   const pages = limit === undefined ? null : track.pages;
+  // Ledger 1121: paged (Home), every row is one fixed height and opens the whole meal.
+  const onOpen = pages ? (meal: MealItem) => setOpenId(meal.id) : undefined;
 
   const renderMeals = (meals: readonly MealItem[]) =>
     grouped ? (
-      <Card as="ul" padding="none" className="flex flex-col">
+      // h-full: a short last page's card is as tall as a full one (PageTrack `fill`).
+      <Card as="ul" padding="none" className={`flex flex-col ${pages ? "h-full" : ""}`}>
         {meals.map((meal) => (
-          <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} grouped />
+          <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} grouped onOpen={onOpen} />
         ))}
       </Card>
     ) : (
       <ul className="flex flex-col gap-2">
         {meals.map((meal) => (
-          <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} />
+          <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} onOpen={onOpen} />
         ))}
       </ul>
     );
@@ -271,11 +393,20 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, gr
         />
       )}
 
-      {/* `fit` (ledger 1105): paged, this is Home's last section, so nothing
-          below it has to hold still; its tallest page's reserve was empty
-          space between the card and the tab bar. */}
+      {/* Ledger 1121 (replaces 1105's `fit`): every row is one height, so
+          every page is too; `fill` stretches a short last page's card to it.
+          The card never changes height on a swipe or ‹ ›, nothing resizes
+          mid-gesture, and Home still ends 16px above the tab bar. */}
       {all.length > 0 &&
-        (pages ? <PageTrack track={track} items={all} bleed fit renderSlide={renderMeals} /> : renderMeals(all))}
+        (pages ? <PageTrack track={track} items={all} bleed fill renderSlide={renderMeals} /> : renderMeals(all))}
+      <MealSheet
+        meal={openMeal}
+        onClose={() => setOpenId(null)}
+        onRequestDelete={(meal) => {
+          setOpenId(null);
+          setPendingDelete(meal);
+        }}
+      />
       {pendingDelete && (
         <MealDeleteDialog meal={pendingDelete} babyId={babyId} open onClose={() => setPendingDelete(null)} />
       )}

@@ -60,7 +60,13 @@ vi.mock("../features/storage/hooks.js", async (importOriginal) => ({
 }));
 
 import { PageTrack, Pager, type PageWindow, type PagedTrack } from "../components/ui/Pager.js";
-import { MealCard, ServeLogList } from "../features/tracking/components/ServeLogList.js";
+import {
+  MealCard,
+  MealDeleteDialog,
+  MealSheet,
+  ServeLogList,
+  type MealSheetProps,
+} from "../features/tracking/components/ServeLogList.js";
 import { StorageItemRow } from "../features/storage/components/StorageItemCard.js";
 import { StorageItemActionsMenu } from "../features/storage/components/StorageItemActionsMenu.js";
 import { AllergenReminderMenu } from "../features/tracking/components/AllergenReminderMenu.js";
@@ -498,43 +504,55 @@ describe("Swipe paging (item 775)", () => {
   });
 });
 
-// Ledger 1105: at the bottom of Home, the Food log's track kept its tallest
-// page's height (item 778's hold-still reserve), so an off-screen taller page
-// left ~68px of empty space between the shown card and the tab bar. The Food
-// log is Home's last section: only pages reached so far keep their height
-// (`fit`); the sections above it keep the reserve, since they have pages below.
-describe("Home's last list ends at its shown page (ledger 1105)", () => {
-  const slideClasses = (tree: unknown) =>
-    ((PageTrack(find(tree, PageTrack)!.props as unknown as Parameters<typeof PageTrack>[0]) as unknown as El).props
-      .children as El[]).map((slide) => slide.props.className as string);
-  const swipeTo = (track: PagedTrack, page: number) => {
-    const el = scroller(track);
-    el.scrollLeft = page * TRACK_WIDTH;
-    track.onScroll({ currentTarget: el } as never);
-  };
+// Ledger 1121 (replaces 1105's `fit`, whose mid-swipe resize left iOS stuck
+// between two pages, 1120): every Food log row is one fixed height, so every
+// page is too; the track stretches a short last page's card to it (`fill`),
+// and a tap on a row opens the whole meal in a sheet.
+describe("Home's Food log: fixed-height pages, a tap opens the meal (ledger 1121)", () => {
+  const rows = (tree: unknown) => ((shownSlide(tree)?.props.children ?? []) as El[]).filter((el) => el.type === MealCard);
+  const sheet = (tree: unknown) => find(tree, MealSheet)!.props as unknown as MealSheetProps;
 
-  it("the Food log asks for fit; Storage, with sections below it, does not", () => {
-    expect(find(foodLog().tree, PageTrack)!.props.fit).toBe(true);
-    expect(find(storage().tree, PageTrack)!.props.fit).toBeUndefined();
+  it("the Food log asks for fill and its card fills the slide; Storage, with its own reserve, does not", () => {
+    expect(find(foodLog().tree, PageTrack)!.props.fill).toBe(true);
+    expect(String(shownSlide(foodLog().tree)!.props.className).split(" ")).toContain("h-full");
+    expect(find(storage().tree, PageTrack)!.props.fill).toBeUndefined();
   });
 
-  it("on load only the shown page has a height; pages not reached yet take none", () => {
-    expect(foodLog().track!.seen).toBe(0);
-    expect(slideClasses(foodLog().tree).map((c) => c.endsWith(" h-0"))).toEqual([false, true, true]);
-    // Storage keeps every page's height, so the sections under it never move on a flip (item 778).
-    expect(slideClasses(storage().tree).some((c) => c.includes("h-0"))).toBe(false);
+  it("every row on every page is a fixed row that opens the meal (not the edit link)", () => {
+    for (let page = 0; page < 3; page++) {
+      const v = foodLog();
+      expect(v.pages?.page).toBe(page);
+      expect(rows(v.tree).every((row) => typeof row.props.onOpen === "function")).toBe(true);
+      v.next();
+    }
   });
 
-  it("a page keeps its height once shown, so flipping back never shrinks the track (and never moves the page)", () => {
-    foodLog().next();
-    expect(foodLog().track!.seen).toBe(1);
-    expect(slideClasses(foodLog().tree).map((c) => c.endsWith(" h-0"))).toEqual([false, false, true]);
-    swipeTo(foodLog().track!, 2);
-    swipeTo(foodLog().track!, 0);
-    const v = foodLog();
-    expect(v.pages?.page).toBe(0);
-    expect(v.track!.seen).toBe(2);
-    expect(slideClasses(v.tree).map((c) => c.endsWith(" h-0"))).toEqual([false, false, false]);
+  it("a tap opens the sheet on that meal; it follows the list and closes once the meal is gone", () => {
+    expect(sheet(foodLog().tree).meal).toBeNull();
+    const second = rows(foodLog().tree)[1]!;
+    (second.props.onOpen as (meal: unknown) => void)(second.props.meal);
+    expect(sheet(foodLog().tree).meal?.id).toBe("meal-1");
+    sheet(foodLog().tree).onClose();
+    expect(sheet(foodLog().tree).meal).toBeNull();
+    (second.props.onOpen as (meal: unknown) => void)(second.props.meal);
+    h.meals = h.meals.filter((m) => (m as { id: string }).id !== "meal-1");
+    expect(sheet(foodLog().tree).meal).toBeNull();
+  });
+
+  it("Delete in the sheet closes it and asks the list's one delete question, for that meal", () => {
+    const first = rows(foodLog().tree)[0]!;
+    (first.props.onOpen as (meal: unknown) => void)(first.props.meal);
+    const open = sheet(foodLog().tree);
+    open.onRequestDelete(open.meal!);
+    const tree = foodLog().tree;
+    expect(sheet(tree).meal).toBeNull();
+    expect((find(tree, MealDeleteDialog)!.props.meal as { id: string }).id).toBe("meal-0");
+  });
+
+  it("/meals (no limit) keeps its cards and their edit link: no fixed rows", () => {
+    const tree = (ServeLogList as unknown as (p: unknown) => unknown)({ babyId: "b", showHeading: false });
+    expect(find(tree, PageTrack)).toBeNull();
+    expect(find(tree, MealCard)!.props.onOpen).toBeUndefined();
   });
 });
 

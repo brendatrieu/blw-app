@@ -134,7 +134,6 @@ describe("PageTrack (item 775)", () => {
     onTouchStart: () => {},
     onWheel: () => {},
     goTo: () => {},
-    seen: page,
   });
   const html = (page: number, bleed?: boolean) =>
     renderToString(
@@ -166,23 +165,24 @@ describe("PageTrack (item 775)", () => {
     expect(html(0, true)).toContain('<div class="w-full shrink-0 snap-start snap-always px-2 pb-2"><ul>0,1,2</ul>');
   });
 
-  it("fit (ledger 1105): pages past the furthest one shown take no height; without it every page keeps its own", () => {
-    const classes = (fit: boolean, seen: number) =>
-      [
-        ...renderToString(
-          createElement(PageTrack<number>, {
-            track: { ...track(0), seen },
-            items: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-            bleed: true,
-            fit,
-            renderSlide: (slice) => createElement("ul", null, slice.join(",")),
-          }),
-        ).matchAll(/<div class="(w-full[^"]*)"/g),
-      ].map((m) => m[1]);
-    const SLIDE = "w-full shrink-0 snap-start snap-always px-2 pb-2";
-    expect(classes(true, 0)).toEqual([SLIDE, `${SLIDE} h-0`, `${SLIDE} h-0`, `${SLIDE} h-0`]);
-    expect(classes(true, 2)).toEqual([SLIDE, SLIDE, SLIDE, `${SLIDE} h-0`]);
-    expect(classes(false, 0)).toEqual([SLIDE, SLIDE, SLIDE, SLIDE]);
+  it("fill (ledger 1121): every slide stretches to the tallest, so a short last page's h-full card keeps the full height; without it a slide is its own height", () => {
+    const track_ = (fill?: boolean) =>
+      renderToString(
+        createElement(PageTrack<number>, {
+          track: track(0),
+          items: [0, 1, 2, 3, 4, 5, 6],
+          bleed: true,
+          fill,
+          renderSlide: (slice) => createElement("ul", null, slice.join(",")),
+        }),
+      );
+    expect(track_(true)).toMatch(/^<div class="scroll-hidden flex snap-x snap-mandatory items-stretch overflow-x-auto [^"]* -mx-2 -mb-2">/);
+    expect(track_(false)).toMatch(/^<div class="scroll-hidden flex snap-x snap-mandatory items-start overflow-x-auto [^"]* -mx-2 -mb-2">/);
+    // Ledger 1105's `fit` is gone (1120): no slide ever collapses, so nothing resizes mid-swipe.
+    for (const fill of [true, false]) {
+      const slides = [...track_(fill).matchAll(/<div class="(w-full[^"]*)"/g)].map((m) => m[1]);
+      expect(slides).toEqual(Array(3).fill("w-full shrink-0 snap-start snap-always px-2 pb-2"));
+    }
   });
 
   it("after a touch, only the page it started on and its neighbours snap: one flick = one page (item 778)", () => {

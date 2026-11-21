@@ -12,10 +12,14 @@ import {
   hasStorageFood,
   HOME_MEAL_LIMIT,
   MealCard,
+  MealSheet,
+  previewLines,
+  ROW_SLOTS,
   ServeLogList,
   servedLine,
   timeLabel,
 } from "./ServeLogList.js";
+import { Button } from "../../../components/ui/Button.js";
 import { MealActionsMenu } from "./MealActionsMenu.js";
 
 interface El {
@@ -544,7 +548,9 @@ describe("Home paging (item 694)", () => {
     const html = renderList(3, "/meals");
     const [shown, ...more] = shownSlides(html);
     expect(more).toEqual([]);
-    expect((shown!.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(3);
+    // Ledger 1121: a paged row opens the meal in a sheet (Edit stays in its kebab), not the edit page.
+    expect((shown!.match(/<button type="button" aria-haspopup="dialog"/g) ?? []).length).toBe(3);
+    expect(shown).not.toMatch(/<a [^>]*href="\/log-meal\?edit=meal-/);
     expect(shown).toContain("Food 0");
     expect(shown).not.toContain("Food 3");
     // The rest wait on the next, inert, slide.
@@ -606,5 +612,110 @@ describe("Home paging (item 694)", () => {
     // Newest first: the meals arrive newest-first and the list preserves that.
     expect(html.indexOf("Food 0")).toBeLessThan(html.indexOf("Food 1"));
     expect(html.indexOf("Food 1")).toBeLessThan(html.indexOf("Food 4"));
+  });
+});
+
+// Ledger 1121: Home's Food log is a fixed height. Each paged row is the date
+// line plus exactly two one-line slots (a 3+ line meal: its first line, then
+// "+N more"; a one-line meal: an empty second slot), no notes, and it opens
+// the whole meal in `MealSheet` instead of the edit page.
+describe("Home's fixed-height row and the full-meal sheet (ledger 1121)", () => {
+  const meal = (names: string[], extra: Partial<MealItem> = {}): MealItem => ({
+    ...baseMeal,
+    foods: names.map((name, i) => food({ id: `food-${i}`, slug: name.toLowerCase(), name })),
+    ...extra,
+  });
+  const renderRow = (m: MealItem, onOpen: (meal: MealItem) => void = () => {}) => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return renderToString(
+      createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(MemoryRouter, null, createElement("ul", null, createElement(MealCard, { meal: m, onRequestDelete: () => {}, grouped: true, onOpen }))),
+      ),
+    ).replace(/<!-- -->/g, "");
+  };
+  const SLOT = 'class="flex h-[34px] items-center gap-2';
+  const slots = (html: string) => {
+    const inner = /<button type="button" aria-haspopup="dialog"[^>]*><span class="flex flex-col">([\s\S]*)<\/span><\/button>/.exec(html)![1]!;
+    return inner.split(`<span ${SLOT}`).slice(1);
+  };
+  const FIVE = ["Sweet Potato", "Broccoli", "Carrot", "Lentils", "Spinach"];
+
+  it("previewLines: all lines while they fit the slots, else the first ones and the rest counted in the last slot", () => {
+    expect(ROW_SLOTS).toBe(2);
+    expect(previewLines([])).toEqual({ shown: [], more: 0 });
+    expect(previewLines(["a"])).toEqual({ shown: ["a"], more: 0 });
+    expect(previewLines(["a", "b"])).toEqual({ shown: ["a", "b"], more: 0 });
+    expect(previewLines(["a", "b", "c"])).toEqual({ shown: ["a"], more: 2 });
+    expect(previewLines(["a", "b", "c", "d", "e"])).toEqual({ shown: ["a"], more: 4 });
+    expect(previewLines(["a", "b", "c", "d"], 3)).toEqual({ shown: ["a", "b"], more: 2 });
+  });
+
+  it("every row has exactly two 34px slots: 1, 2, 3 and 5 foods", () => {
+    for (const names of [["Egg"], ["Egg", "Pear"], ["Pear", "Oats", "Yogurt"], FIVE]) {
+      const html = renderRow(meal(names));
+      expect(slots(html)).toHaveLength(2);
+    }
+    const [, emptySlot] = slots(renderRow(meal(["Egg"])));
+    expect(emptySlot).toBe('" aria-hidden="true"></span>');
+    const [first, more] = slots(renderRow(meal(FIVE)));
+    expect(first).toContain(">Sweet Potato<");
+    expect(more).toBe(' pl-9 text-sm text-[var(--color-text-muted)]">+4 more</span>');
+    expect(slots(renderRow(meal(["Pear", "Oats", "Yogurt"])))[1]).toContain(">+2 more<");
+    const two = slots(renderRow(meal(["Egg", "Pear"])));
+    expect(two[0]).toContain(">Egg<");
+    expect(two[1]).toContain(">Pear<");
+  });
+
+  it("a slot never wraps: one-line names, the header never wraps and its date is cut short before the kebab moves", () => {
+    const html = renderRow(meal(["A very long custom food name that would wrap twice", "Pear"]));
+    expect(html).toContain('<span class="min-w-0 text-sm leading-[1.3] font-medium truncate text-[var(--color-text)]">');
+    expect(html).not.toContain("break-words");
+    expect(html).toMatch(/<div class="flex items-center justify-between gap-x-2"><span class="min-w-0 truncate text-xs text-\[var\(--color-text-muted\)\]">/);
+    expect(html).not.toContain("flex-wrap");
+  });
+
+  it("notes and the reaction wait in the sheet, so they never change a row's height", () => {
+    const html = renderRow(meal(["Egg"], { notes: "ate it all", reactionNote: "mild rash" }));
+    expect(html).not.toContain("ate it all");
+    expect(html).not.toContain("Reaction:");
+  });
+
+  it("under 360px the From storage badge is the 📦 alone, still named for screen readers", () => {
+    const html = renderRow(meal(["Egg"], { foods: [food({ name: "Egg", storageItemId: "s-1" })] }));
+    expect(html).toMatch(/<span [^>]*title="From storage"[^>]*>📦<span class="max-\[359px\]:sr-only"> From storage<\/span><\/span>/);
+  });
+
+  it("the row is a button named by its lines (no edit link); a tap hands the meal to onOpen", () => {
+    const m = meal(FIVE);
+    const html = renderRow(m);
+    expect(html).not.toContain('href="/log-meal?edit=');
+    expect(html).toMatch(/<button type="button" aria-haspopup="dialog" class="-mt-1 block [^"]*after:absolute after:inset-0[^"]* w-full text-left">/);
+    const opened: MealItem[] = [];
+    const li = (MealCard as unknown as (p: unknown) => El)({ meal: m, onRequestDelete: () => {}, grouped: true, onOpen: (x: MealItem) => opened.push(x) });
+    (findElement(li, "button")!.props.onClick as () => void)();
+    expect(opened).toEqual([m]);
+    // The kebab keeps Edit and Delete, above the stretched target.
+    expect(findElement(li, MealActionsMenu)!.props.mealId).toBe(m.id);
+  });
+
+  it("the sheet shows every line with its stars, the badge, notes and reaction, Edit and Delete", () => {
+    const m = meal(FIVE, { notes: "ate it all", reactionNote: "mild rash", foods: FIVE.map((name, i) => food({ id: `f${i}`, name, storageItemId: i === 0 ? "s-1" : null })) });
+    const asked: MealItem[] = [];
+    const el = (MealSheet as unknown as (p: unknown) => El)({ meal: m, onClose: () => {}, onRequestDelete: (x: MealItem) => asked.push(x) });
+    expect(el.props.open).toBe(true);
+    expect(el.props.title).toBe(servedLine(m.servedAt));
+    expect(el.props.showClose).toBe(true);
+    const html = renderToString(createElement(MemoryRouter, null, el.props.children as never)).replace(/<!-- -->/g, "");
+    for (const name of FIVE) expect(html).toContain(`>${name}<`);
+    expect(html).not.toContain("+4 more");
+    expect(html).toContain("📦 From storage");
+    expect(html).toContain("ate it all");
+    expect(html).toContain("Reaction: mild rash");
+    expect(html).toMatch(/<a class="[^"]*" href="\/log-meal\?edit=meal-1"[^>]*>Edit<\/a>/);
+    (findElement(el.props.children, Button)!.props.onClick as () => void)();
+    expect(asked).toEqual([m]);
+    expect((MealSheet as unknown as (p: unknown) => El)({ meal: null, onClose: () => {}, onRequestDelete: () => {} }).props.open).toBe(false);
   });
 });

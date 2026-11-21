@@ -277,7 +277,9 @@ describe("DashboardPage", () => {
     expect(HOME_STORAGE_LIMIT).toBe(3);
     expect((html.match(/href="\/storage\/storage-/g) ?? []).length).toBe(3);
     expect(html).not.toContain("Storage food 3");
-    expect((html.match(/href="\/log-meal\?edit=meal-/g) ?? []).length).toBe(3);
+    // Ledger 1121: a Home row opens the meal in a sheet; Edit is in its kebab.
+    expect((html.match(/<button type="button" aria-haspopup="dialog"/g) ?? []).length).toBe(3);
+    expect(html).not.toMatch(/<a [^>]*href="\/log-meal\?edit=meal-/);
     expect(html).not.toContain("Meal food 3");
     expect(html).not.toMatch(/<a [^>]*href="\/storage"[^>]*>See all</);
     expect(html).toMatch(/<a [^>]*href="\/meals"[^>]*>See all<span aria-hidden="true">\u00a0›<\/span><\/a>/);
@@ -645,9 +647,10 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       expect(firstInRow).toHaveLength(5);
       for (const start of firstInRow) expect(start.startsWith(PLATE)).toBe(true);
       // Food log 2 (CD-Food-Log): under the date line, each item line starts
-      // with its plate at the row's own padding, where the line starts.
+      // with its plate at the row's own padding, where the line starts
+      // (ledger 1121: a fixed row's first slot, in the button that opens the meal).
       const logLines = html.match(
-        /<a [^>]*><ul class="flex flex-col"><li class="flex items-center gap-2 py-\[3px\]"><span aria-hidden="true" class="flex shrink-0 /g,
+        /<button type="button" aria-haspopup="dialog" [^>]*><span class="flex flex-col"><span class="flex h-\[34px\] items-center gap-2"><span aria-hidden="true" class="flex shrink-0 /g,
       );
       expect(logLines).toHaveLength(2);
     });
