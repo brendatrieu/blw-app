@@ -811,8 +811,17 @@ textarea {
   .app-ground {
     background-color: var(--color-bg);
   }
-  /* Cards: a translucent fill, no blur (it changed nothing over the glow). */
+  /* Cards: on the glow ground and in the frosted popups, a translucent fill,
+     no blur (it changed nothing over the glow). Anywhere else (sign-in,
+     sign-up and the password pages, outside AppLayout: ledger 1083 keeps them
+     as they were) a card is main's solid one. */
   .app-card {
+    background-color: var(--color-bg-elevated);
+    border-color: var(--color-border);
+    box-shadow: var(--shadow-sm);
+  }
+  .app-ground .app-card,
+  .app-frost .app-card {
     background-color: var(--color-card-glass);
     border-color: var(--color-card-glass-border);
     box-shadow: var(--shadow-card-glass);
@@ -876,7 +885,8 @@ textarea {
   }
   /* Less transparency asked for: every glass surface near-opaque, no blur. */
   @media (prefers-reduced-transparency: reduce) {
-    .app-card,
+    .app-ground .app-card,
+    .app-frost .app-card,
     .app-frost,
     .app-frost .app-frost-edge[data-scrolled] {
       background-color: var(--color-app-solid);

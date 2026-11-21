@@ -8,7 +8,7 @@ import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => {
-  const store = { state: [] as unknown[], s: 0, pathname: "/foods" };
+  const store = { state: [] as unknown[], s: 0, pathname: "/foods", effects: [] as (() => unknown)[] };
   return {
     store,
     useState: (init: unknown) => {
@@ -17,7 +17,9 @@ const h = vi.hoisted(() => {
       return [store.state[i], (next: unknown) => (store.state[i] = next)];
     },
     useRef: (init: unknown) => ({ current: init }),
-    useEffect: () => {},
+    useEffect: (effect: () => unknown) => {
+      store.effects.push(effect);
+    },
   };
 });
 
@@ -56,6 +58,7 @@ function find(node: ReactNode, match: (el: El) => boolean): El | null {
 function render(pathname: string) {
   h.store.pathname = pathname;
   h.store.s = 0;
+  h.store.effects = [];
   return AppLayout() as ReactNode;
 }
 
@@ -78,5 +81,44 @@ describe("AppLayout header slot wiring (item 654)", () => {
   it("Home has no slot (its header keeps the greeting), so nothing portals there", () => {
     h.store.state = [];
     expect(find(render("/"), (el) => typeof el.ref === "function")).toBeNull();
+  });
+});
+
+describe("AppLayout glow ground wiring (ledger 1078, verify c1)", () => {
+  it("counts the ground's screens from the 100svh probe and redraws the glow that far down", () => {
+    h.store.state = [];
+    const first = render("/recipes");
+    const ground = find(first, (el) => (el.props as { className?: string }).className === "app-ground");
+    const probe = find(first, (el) => /\bh-\[100svh\]/.test((el.props as { className?: string }).className ?? ""));
+    expect(ground).not.toBeNull();
+    expect(probe).not.toBeNull();
+    expect((probe!.props as Record<string, unknown>)["aria-hidden"]).toBe("true");
+    const style = (el: El | null) => (el!.props as { style: { backgroundImage: string; backgroundRepeat: string } }).style;
+    // Before it is measured: three screens (the first screen and its neighbours).
+    expect(style(ground).backgroundImage.split("var(--color-app-glow-sea)")).toHaveLength(4);
+    expect(style(ground).backgroundRepeat).toBe("no-repeat");
+
+    let fire = () => {};
+    const saved = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = class {
+      constructor(callback: () => void) {
+        fire = callback;
+      }
+      observe() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+    try {
+      (ground!.ref as { current: unknown }).current = { getBoundingClientRect: () => ({ height: 844 * 21.4 }) };
+      (probe!.ref as { current: unknown }).current = { getBoundingClientRect: () => ({ height: 844 }) };
+      const cleanups = h.store.effects.map((effect) => effect());
+      fire();
+      expect(cleanups.some((cleanup) => typeof cleanup === "function")).toBe(true);
+    } finally {
+      globalThis.ResizeObserver = saved;
+    }
+    // Recipes, 21.4 screens tall: 23 screens of glow, one sea glow each.
+    const second = render("/recipes");
+    const grown = find(second, (el) => (el.props as { className?: string }).className === "app-ground");
+    expect(style(grown).backgroundImage.split("var(--color-app-glow-sea)")).toHaveLength(24);
   });
 });

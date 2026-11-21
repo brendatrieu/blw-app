@@ -38,12 +38,27 @@ describe("card glass (ledger 1080)", () => {
     expect(css.indexOf(".app-card {", layerStart)).toBeGreaterThan(layerStart);
     expect(classesOf(renderToString(createElement(Card, { className: "border-2 border-[var(--color-danger)]" }, "x")))).toContain("border-[var(--color-danger)]");
   });
-  it("the card is the translucent fill, light border and soft shadow, and never blurs (the chair's PERF call)", () => {
-    const card = rule(".app-card", layerStart)!;
+  it("on the glow ground and in the popups the card is the translucent fill, light border and soft shadow, and never blurs (the chair's PERF call)", () => {
+    const card = rule(".app-ground .app-card,\n  .app-frost .app-card", layerStart)!;
     expect(card).toContain("background-color: var(--color-card-glass);");
     expect(card).toContain("border-color: var(--color-card-glass-border);");
     expect(card).toContain("box-shadow: var(--shadow-card-glass);");
     expect(card).not.toContain("backdrop-filter");
+  });
+  it("anywhere else (sign-in, sign-up, the password pages: outside AppLayout, verify c1) a card is main's solid one", () => {
+    // main's Card BASE: border-[var(--color-border)] bg-[var(--color-bg-elevated)] shadow-[var(--shadow-sm)]
+    const card = rule(".app-card", layerStart)!;
+    expect(card).toContain("background-color: var(--color-bg-elevated);");
+    expect(card).toContain("border-color: var(--color-border);");
+    expect(card).toContain("box-shadow: var(--shadow-sm);");
+    expect(card).not.toContain("backdrop-filter");
+    // The glass rule is scoped and comes after the base, so it wins on the ground.
+    expect(css.indexOf(".app-ground .app-card,", layerStart)).toBeGreaterThan(css.indexOf(".app-card {", layerStart));
+    for (const page of ["LoginPage", "SignupPage", "ForgotPasswordPage", "ResetPasswordPage"]) {
+      const src = readFileSync(new URL(`../pages/${page}.tsx`, import.meta.url), "utf8");
+      expect(src, page).toContain("<Card ");
+      expect(src, page).not.toMatch(/app-ground|app-frost/);
+    }
   });
   it("skeleton cards wear the same glass", () => {
     const html = renderToString(createElement(SkeletonList, { count: 1 }));
@@ -129,7 +144,7 @@ describe("fallbacks (ledger 1082)", () => {
   });
   it("reduced transparency: cards, bars and popups near-opaque with no blur", () => {
     expect(reducedAt).toBeGreaterThan(layerStart);
-    const body = rule(".app-card,\n    .app-frost,\n    .app-frost .app-frost-edge[data-scrolled]", reducedAt)!;
+    const body = rule(".app-ground .app-card,\n    .app-frost .app-card,\n    .app-frost,\n    .app-frost .app-frost-edge[data-scrolled]", reducedAt)!;
     expect(body).toContain("background-color: var(--color-app-solid);");
     expect(body).toContain("backdrop-filter: none;");
   });

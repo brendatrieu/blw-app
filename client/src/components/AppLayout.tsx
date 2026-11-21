@@ -4,7 +4,7 @@ import { ageInMonths } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { useAllergenProgress } from "../features/tracking/hooks.js";
 import { TourProvider } from "../features/tour/TourProvider.js";
-import { glowScreens } from "../lib/glows.js";
+import { glowTiles, watchGlowScreens } from "../lib/glows.js";
 import { timeOfDayGreeting } from "../lib/greeting.js";
 import { watchScrollEdge } from "../lib/scrollEdge.js";
 import { BabyChip } from "./BabyChip.js";
@@ -208,17 +208,13 @@ export function useScrollToTopOnPathChange(): void {
 /**
  * Ledger 1078: the soft glow behind every page (round 15), the app's own
  * tokens on About's mechanism: sea top centre and apricot low right, then sea
- * left and apricot right, repeated down the page.
+ * left and apricot right, repeated down the page as far as the page goes
+ * (lib/glows.ts watchGlowScreens counts the screens).
  */
-// ponytail: 12 screens of glow; a longer page (a long Food log) ends on the bare page colour.
-export const APP_GLOWS = glowScreens(
-  "app",
-  [
-    { sea: "50% 22%", apricot: "86% 82%" },
-    { sea: "6% 26%", apricot: "94% 82%" },
-  ],
-  12,
-);
+export const APP_GLOW_PLACES = [
+  { sea: "50% 22%", apricot: "86% 82%" },
+  { sea: "6% 26%", apricot: "94% 82%" },
+] as const;
 
 export function AppLayout() {
   const location = useLocation();
@@ -232,6 +228,15 @@ export function AppLayout() {
   // Ledger 1079: clear at the top, frosted once content scrolls under it.
   const headerRef = useRef<HTMLElement>(null);
   useEffect(() => (headerRef.current ? watchScrollEdge(headerRef.current) : undefined), []);
+  // Ledger 1078: as many screens of glow as the page is tall (3 = the first
+  // screen and its neighbours, until it is measured).
+  const groundRef = useRef<HTMLDivElement>(null);
+  const screenRef = useRef<HTMLDivElement>(null);
+  const [glowCount, setGlowCount] = useState(3);
+  useEffect(
+    () => (groundRef.current && screenRef.current ? watchGlowScreens(groundRef.current, screenRef.current, setGlowCount) : undefined),
+    [],
+  );
 
   return (
     <CelebrationProvider>
@@ -251,7 +256,7 @@ export function AppLayout() {
         {/* Ledger 1078: the glow ground, full-bleed behind the column (no
             fixed anything, iOS); it also gives the text inks their on-glass
             shades (index.css .app-ground). */}
-        <div className="app-ground" style={{ backgroundImage: APP_GLOWS }}>
+        <div ref={groundRef} className="app-ground" style={glowTiles("app", APP_GLOW_PLACES, glowCount)}>
           <div className="mx-auto flex min-h-screen supports-[height:100dvh]:min-h-[100dvh] max-w-lg flex-col">
             {/* z-20, not z-10 (item 674): card action rows are `relative z-10`
                 and come later in the tree, so at a tie they painted over the
@@ -308,6 +313,9 @@ export function AppLayout() {
             </main>
             <BottomNav />
           </div>
+          {/* The glows' screen (100svh) in px, for watchGlowScreens: out of
+              flow at the page top, never seen. */}
+          <div ref={screenRef} aria-hidden="true" className="pointer-events-none invisible absolute top-0 h-[100svh] w-0" />
         </div>
       </TourProvider>
     </CelebrationProvider>

@@ -346,7 +346,13 @@ describe("AppLayout slim inner-page header (items 654/655)", () => {
     expect(ground![1]).toContain("var(--color-app-glow-sea)");
     expect(ground![1]).toContain("var(--color-app-glow-apricot)");
     expect(ground![1]).not.toContain("landing");
+    // Each glow its own no-repeat tile (lib/glows.ts glowTiles), so the ground
+    // can run the whole page down (verify c1).
+    expect(ground![1]).toContain("background-repeat:no-repeat");
+    expect(ground![1]).toContain("background-size:100% calc(2 * calc(0.55 * hypot(50vw, 78svh)))");
     expect(html).not.toMatch(/background-attachment|position:fixed/);
+    // The 100svh probe watchGlowScreens measures: out of flow at the top, hidden.
+    expect(html).toMatch(/<div aria-hidden="true" class="pointer-events-none invisible absolute top-0 h-\[100svh\] w-0"><\/div><\/div>/);
   });
 
   it("inner pages are one slim row (py-1 + 44px targets = 52px); Home keeps its taller padding", () => {
