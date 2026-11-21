@@ -463,7 +463,8 @@ export function todaysPlanPages(day: PlanDay | undefined): TodayPage[] {
   return food.length > 0 && food.every((meal) => meal.served) ? [...meals, "done"] : meals;
 }
 
-const pageKey = (page: TodayPage): string => (typeof page === "string" ? page : page.slotId);
+/** A page's key, what `picked` holds: the meal's slot, or "done" / "empty". */
+export const todaysPlanKey = (page: TodayPage): string => (typeof page === "string" ? page : page.slotId);
 
 /**
  * Which page shows: the one the parent paged to (or just served) while it is
@@ -472,18 +473,12 @@ const pageKey = (page: TodayPage): string => (typeof page === "string" ? page : 
  * served, the done page (or the empty page, then the only one). `nowLocal` is the wall clock, `HH:MM`.
  */
 export function todaysPlanIndex(pages: readonly TodayPage[], picked: string | null, nowLocal: string): number {
-  const at = picked === null ? -1 : pages.findIndex((page) => pageKey(page) === picked);
+  const at = picked === null ? -1 : pages.findIndex((page) => todaysPlanKey(page) === picked);
   if (at >= 0) return at;
   const meals = pages.filter((page): page is PlannedMeal => typeof page !== "string");
   const food = meals.filter((meal) => meal.items.length > 0);
   const next = nextPlannedMeal(food.length > 0 ? food : meals, nowLocal);
   return next ? pages.indexOf(next) : pages.length - 1;
-}
-
-/** What ‹ or › lands on, by its key (null at either end). */
-export function todaysPlanStep(pages: readonly TodayPage[], index: number, step: -1 | 1): string | null {
-  const page = pages[index + step];
-  return page === undefined ? null : pageKey(page);
 }
 
 /** The device's wall clock as `HH:MM` (what `nextPlannedMeal` reads). */

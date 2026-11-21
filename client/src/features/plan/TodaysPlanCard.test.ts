@@ -2,11 +2,16 @@
 // CD-Home-Today-Done, the one "Nothing planned for today." page (ledger 948;
 // it replaced CD-Home-No-Plan's no card), and no card before the plan loads. Markup through renderToString; ‹ › and Serve by calling
 // the card as a plain function with its hooks mocked (node env, no DOM).
+// Ledger 1142a: the pages are slides on Home's swipe track, so a fake scroller
+// stands in for the browser: its scrollTo fires the scroll handler, as the
+// browser does, and a swipe is a scroll the test reports by hand.
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlanResponse, PlannedMeal, StorageItem } from "@blw/shared";
+import type { TodayPage } from "./plan.js";
 
 const h = vi.hoisted(() => ({
   plan: { data: undefined as unknown } as { data: unknown; isError?: boolean },
@@ -14,10 +19,15 @@ const h = vi.hoisted(() => ({
   oneTap: { pendingSlot: null as string | null, failedSlot: null as string | null },
   serves: [] as unknown[][],
   offline: false,
-  // The card's one useState (the page it is on), when called as a function.
+  // The card's first useState (the page it is on), when called as a function;
+  // the swipe track's own state and refs (usePagedTrack) sit in slots after it.
   picked: null as string | null,
   setPicked: [] as unknown[],
   direct: false,
+  states: [] as unknown[],
+  s: 0,
+  refs: [] as { current: unknown }[],
+  r: 0,
   // Ledger 995: the account's preferences (Not now) and what the offer sent.
   prefs: undefined as { planOfferDismissedAt: string | null } | undefined,
   dismissCalls: 0,
@@ -28,12 +38,35 @@ vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react")>();
   return {
     ...actual,
-    useState: (init: unknown) =>
-      h.direct ? [h.picked, (value: unknown) => h.setPicked.push(value)] : (actual.useState as (i: unknown) => unknown)(init),
-    // Called as a function, an effect runs at once (the offer's shown event).
+    useState: (init: unknown) => {
+      if (!h.direct) return (actual.useState as (i: unknown) => unknown)(init);
+      const i = h.s++;
+      if (i === 0)
+        return [
+          h.picked,
+          (value: unknown) => {
+            h.setPicked.push(value);
+            h.picked = value as string | null;
+          },
+        ];
+      if (!(i in h.states)) h.states[i] = init;
+      return [h.states[i], (value: unknown) => (h.states[i] = value)];
+    },
+    useRef: (init: unknown) => {
+      if (!h.direct) return actual.useRef(init);
+      const i = h.r++;
+      if (!(i in h.refs)) h.refs[i] = { current: init };
+      return h.refs[i];
+    },
+    // Called as a function, an effect runs at once (the offer's shown event, the track's placing).
     useEffect: (effect: () => void, deps?: unknown[]) => (h.direct ? effect() : actual.useEffect(effect, deps)),
+    useLayoutEffect: (effect: () => void, deps?: unknown[]) => (h.direct ? effect() : actual.useLayoutEffect(effect, deps)),
   };
 });
+vi.mock("react-dom", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-dom")>()),
+  flushSync: (fn: () => void) => fn(),
+}));
 vi.mock("./hooks.js", () => ({
   usePlan: (...args: unknown[]) => {
     h.planArgs.push(args);
@@ -54,6 +87,7 @@ vi.mock("../../lib/usage/track.js", () => ({ track: (...args: unknown[]) => h.tr
 
 import { PlanOffer, TodaysPlan, TodaysPlanCard } from "./TodaysPlanCard.js";
 import { ServedMealLines } from "../tracking/components/RatedMealLines.js";
+import { PageTrack, type PagedTrack } from "../../components/ui/Pager.js";
 import { todaysPlanPages } from "./plan.js";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -91,10 +125,18 @@ const plan = (meals: PlannedMeal[], date = TODAY, planned = true): PlanResponse 
 });
 
 const html = (node: unknown) =>
-  renderToString(createElement(MemoryRouter, null, node as never))
+  renderToString(createElement(QueryClientProvider, { client: new QueryClient() }, createElement(MemoryRouter, null, node as never)))
     .replace(/<!-- -->/g, "")
     .replace(/\u202f/g, " ");
 const card = () => html(createElement(TodaysPlanCard, { babyId: "baby-1" }));
+// Ledger 1142a: one slide per page on the swipe track; off-screen slides are
+// inert, so the one without `inert` is the page on show.
+const slides = (out: string) => out.split('<div class="w-full shrink-0 snap-start').slice(1);
+const shownSlide = (out: string) => {
+  const shown = slides(out).filter((slide) => !slide.slice(0, slide.indexOf(">")).includes("inert"));
+  expect(shown).toHaveLength(1);
+  return shown[0]!;
+};
 
 beforeEach(() => {
   vi.useFakeTimers({ now: new Date("2026-10-14T07:10:00Z"), toFake: ["Date"] });
@@ -106,6 +148,8 @@ beforeEach(() => {
   h.picked = null;
   h.setPicked.length = 0;
   h.direct = false;
+  h.states = [];
+  h.refs = [];
   h.prefs = { planOfferDismissedAt: null };
   h.dismissCalls = 0;
   h.tracked.length = 0;
@@ -144,6 +188,8 @@ describe("TodaysPlanCard (render)", () => {
       expect(out).not.toContain("Nothing planned yet");
       expect(out).not.toContain("Serve");
       expect(out).not.toContain("Plan tomorrow");
+      // Ledger 1142a: one slide, so nothing to swipe to.
+      expect(slides(out)).toHaveLength(1);
     }
   });
 
@@ -161,13 +207,19 @@ describe("TodaysPlanCard (render)", () => {
     expect(out).toContain(">Egg</p>");
     expect(out).toContain("width:36px;height:36px");
     expect(out).toMatch(/<button class="[^"]*min-h-12[^"]*w-full" type="button" aria-label="Serve Breakfast">Serve<\/button>/);
-    expect(out).not.toContain("Snack");
+    // Ledger 1142a: every page waits on its own slide; Breakfast's is the one on show,
+    // and the live line under the label names it (the rows sit still on a swipe).
+    expect(slides(out).map((slide) => /<span class="text-xl[^>]*>([^<]*)</.exec(slide)?.[1])).toEqual(["Breakfast", "Lunch", "Snack"]);
+    const shown = shownSlide(out);
+    expect(shown).toContain(">Breakfast</span>");
+    expect(shown).not.toContain("Snack");
+    expect(out).toContain('<p aria-live="polite" class="sr-only">Breakfast, 7:30 AM</p>');
   });
 
   it("a saved day's meal with no food: its name and time, Nothing planned yet, and Plan this meal to its Plan a meal; no Serve (ledger 927)", () => {
     const EMPTY_BREAKFAST: PlannedMeal = { ...BREAKFAST, items: [] };
     h.plan = { data: plan([EMPTY_BREAKFAST, SNACK]) };
-    let out = card();
+    let out = shownSlide(card());
     // All empty: opens on the next of them all (Breakfast, 07:30, at 07:10).
     expect(out).toContain(">Breakfast</span>");
     expect(out).toContain(">7:30 AM</span>");
@@ -176,11 +228,11 @@ describe("TodaysPlanCard (render)", () => {
     expect(out).not.toContain("On the plate");
     expect(out).not.toContain(">Serve<");
     expect(out).not.toContain("Everything planned for today is served.");
-    expect(out).toMatch(/aria-label="Previous meal" aria-disabled="true"/);
-    expect(out).toMatch(/aria-label="Next meal"(?! aria-disabled)/);
+    expect(card()).toMatch(/aria-label="Previous meal" aria-disabled="true"/);
+    expect(card()).toMatch(/aria-label="Next meal"(?! aria-disabled)/);
     // Mixed: opens on the same meal as before (Lunch, the next with food), and Serve is only there.
     h.plan = { data: plan([EMPTY_BREAKFAST, LUNCH, SNACK]) };
-    out = card();
+    out = shownSlide(card());
     expect(out).toContain(">Lunch</span>");
     expect(out).toMatch(/aria-label="Serve Lunch">Serve<\/button>/);
     expect(out).not.toContain("Nothing planned yet");
@@ -189,7 +241,7 @@ describe("TodaysPlanCard (render)", () => {
 
   it("a container's row says where it is and what is left", () => {
     h.plan = { data: plan([{ ...BREAKFAST, served: SERVED }, LUNCH]) };
-    const out = card();
+    const out = shownSlide(card());
     expect(out).toContain(">Lunch</span>");
     expect(out).toContain(">Broccoli Cheese Egg Muffins</p>");
     expect(out).toContain(">Fridge · 2 of 6 left</p>");
@@ -203,7 +255,10 @@ describe("TodaysPlanCard (render)", () => {
     expect(out).toContain("bg-[var(--color-bg-inset)]");
     expect(out).toMatch(/aria-label="Next meal" aria-disabled="true"/);
     expect(out).toMatch(/aria-label="Previous meal"(?! aria-disabled)/);
-    expect(out).not.toContain("Serve");
+    const shown = shownSlide(out);
+    expect(shown).toContain("Everything planned for today is served.");
+    expect(shown).not.toContain("Serve");
+    expect(out).toContain('<p aria-live="polite" class="sr-only">Everything planned for today is served.</p>');
   });
 });
 
@@ -221,17 +276,48 @@ describe("TodaysPlan (handlers)", () => {
   const text = (node: unknown): string =>
     Array.isArray(node) ? node.map(text).join("") : typeof node === "string" ? node : node && typeof node === "object" && "props" in node ? text((node as El).props.children) : "";
   const byLabel = (tree: unknown, label: string) => all(tree, (el) => el.props["aria-label"] === label)[0]!;
-  const render = (meals: PlannedMeal[]) => {
+  type Fn = (props: unknown) => El;
+  type TrackProps = { track: PagedTrack; items: TodayPage[]; renderSlide: (slice: TodayPage[]) => El };
+  const trackOf = (tree: unknown) => all(tree, (el) => el.type === PageTrack)[0]!.props as unknown as TrackProps;
+  let latest: unknown = null;
+  /** The card's tree, with the page on show expanded (its slide only names `UpNextPage`). */
+  const call = (pages: TodayPage[]): El[] => {
     h.direct = true;
-    return (TodaysPlan as unknown as (props: unknown) => El)({ babyId: "baby-1", today: TODAY, pages: todaysPlanPages(plan(meals).days[0]) });
+    h.s = 0;
+    h.r = 0;
+    const tree = (TodaysPlan as unknown as Fn)({ babyId: "baby-1", today: TODAY, pages });
+    const { track, items, renderSlide } = trackOf(tree);
+    const page = renderSlide([items[track.pages.page]!]).props.children as El;
+    latest = tree;
+    return [tree, (page.type as Fn)(page.props)];
+  };
+  const render = (meals: PlannedMeal[]) => call(todaysPlanPages(plan(meals).days[0]));
+  const shownName = (tree: El[]) => text(all(tree[1], (el) => typeof el.props.className === "string" && el.props.className.startsWith("text-xl"))[0]);
+  /** The browser's side of the track: 300px pages; scrollTo scrolls and fires the scroll handler, as the browser does. */
+  const scroller = (tree: El[]) => {
+    const el = {
+      clientWidth: 300,
+      scrollLeft: 0,
+      scrolls: [] as unknown[],
+      scrollTo(to: { left: number; behavior: string }) {
+        el.scrolls.push(to);
+        el.scrollLeft = to.left;
+        el.scroll();
+      },
+      /** A scroll event (a swipe, or the browser catching up on a scroll the card set). */
+      scroll() {
+        trackOf(latest).track.onScroll({ currentTarget: el } as never);
+      },
+    };
+    trackOf(tree).track.trackRef.current = el as never;
+    return el;
   };
 
   it("a saved day pages through its empty meals in the parent's order; Serve is only on the meals with food; done once those are served (ledger 927)", () => {
     const pages = (meals: PlannedMeal[]) => todaysPlanPages(plan(meals).days[0]);
     const pageOf = (meals: PlannedMeal[], slot: string | null) => {
-      h.direct = true;
       h.picked = slot;
-      return (TodaysPlan as unknown as (props: unknown) => El)({ babyId: "baby-1", today: TODAY, pages: pages(meals) });
+      return call(pages(meals));
     };
     const day = [SNACK, BREAKFAST, { ...LUNCH, items: [] }];
     expect(pages(day).map((page) => (typeof page === "string" ? page : page.name))).toEqual(["Snack", "Breakfast", "Lunch"]);
@@ -248,11 +334,54 @@ describe("TodaysPlan (handlers)", () => {
     expect(text(pageOf(served, null))).toContain("Everything planned for today is served.");
   });
 
-  it("› and ‹ move a meal by its slot; ‹ at the first meal does nothing", () => {
-    const tree = render([BREAKFAST, LUNCH]);
+  it("loads on the time-based page: the track is put there at once, and that scroll picks nothing (ledger 1142a)", () => {
+    const meals = [{ ...BREAKFAST, served: SERVED }, LUNCH];
+    const el = scroller(render(meals));
+    // Breakfast served at 07:10: Lunch is next, placed without a slide.
+    const tree = render(meals);
+    expect(shownName(tree)).toBe("Lunch");
+    expect(trackOf(tree[0]).track.pages.page).toBe(1);
+    expect([el.scrollLeft, el.scrolls]).toEqual([300, []]);
+    el.scroll();
+    expect(h.setPicked).toEqual([]);
+    // Placed once: a later render leaves the track alone.
+    render(meals);
+    expect(el.scrollLeft).toBe(300);
+  });
+
+  it("a swipe picks the page it settles past half of, as ‹ › do, and the track stays where the finger left it (ledger 1142a)", () => {
+    const meals = [{ ...BREAKFAST, served: SERVED }, LUNCH];
+    const el = scroller(render(meals));
+    render(meals);
+    el.scrollLeft = 160; // not yet half way back to Breakfast
+    el.scroll();
+    expect(h.setPicked).toEqual([]);
+    el.scrollLeft = 140;
+    el.scroll();
+    expect(h.setPicked).toEqual([id(1)]);
+    const tree = render(meals);
+    expect(shownName(tree)).toBe("Breakfast");
+    expect(el.scrollLeft).toBe(140);
+    expect(byLabel(tree, "Previous meal").props["aria-disabled"]).toBe(true);
+  });
+
+  it("› and ‹ scroll the same track a page; the scroll picks the meal; nothing past either end (ledger 1142a)", () => {
+    const meals = [BREAKFAST, LUNCH];
+    const el = scroller(render(meals));
+    let tree = render(meals);
     (byLabel(tree, "Previous meal").props.onClick as () => void)();
+    expect([el.scrolls, h.setPicked]).toEqual([[], []]);
     (byLabel(tree, "Next meal").props.onClick as () => void)();
+    expect(el.scrolls).toEqual([{ left: 300, behavior: "smooth" }]);
     expect(h.setPicked).toEqual([id(2)]);
+    tree = render(meals);
+    expect(shownName(tree)).toBe("Lunch");
+    expect(byLabel(tree, "Next meal").props["aria-disabled"]).toBe(true);
+    (byLabel(tree, "Next meal").props.onClick as () => void)();
+    expect(el.scrolls).toHaveLength(1);
+    (byLabel(tree, "Previous meal").props.onClick as () => void)();
+    expect(el.scrolls.at(-1)).toEqual({ left: 0, behavior: "smooth" });
+    expect(h.setPicked).toEqual([id(2), id(1)]);
   });
 
   it("Serve is today's one tap for that meal, and the card stays on it once served (CD-After-Serve)", () => {
@@ -282,8 +411,8 @@ describe("TodaysPlan (handlers)", () => {
     h.offline = true;
     const offline = render([BREAKFAST]);
     serve = byLabel(offline, "Serve Breakfast");
-    expect(serve.props).toMatchObject({ disabled: true, "aria-describedby": "up-next-offline", children: "Serve" });
-    expect(text(all(offline, (el) => el.props.id === "up-next-offline")[0])).toBe("You're offline.");
+    expect(serve.props).toMatchObject({ disabled: true, "aria-describedby": `up-next-offline-${id(1)}`, children: "Serve" });
+    expect(text(all(offline, (el) => el.props.id === `up-next-offline-${id(1)}`)[0])).toBe("You're offline.");
   });
 });
 

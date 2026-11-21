@@ -75,7 +75,7 @@ describe("DashboardPage with a meal plan", () => {
   it("puts the plan card, titled Up next (ledger 945), first, above Log meal / Add to storage, when today has something planned", () => {
     const html = home(day([egg]));
     expect(html).toContain('<section class="app-card rounded-[var(--radius-lg)]');
-    expect(html).toMatch(/aria-labelledby="up-next"[^>]*><div class="flex items-center justify-between"><h2 id="up-next" class="[^"]*">Up next<\/h2>/);
+    expect(html).toMatch(/aria-labelledby="up-next"[^>]*><div class="flex items-center justify-between px-4"><h2 id="up-next" class="[^"]*">Up next<\/h2>/);
     expect(html).not.toContain("Today&#x27;s plan");
     expect(html).toContain('aria-label="Serve Breakfast"');
     expect(html.indexOf('id="up-next"')).toBeLessThan(html.indexOf(">Log meal<"));

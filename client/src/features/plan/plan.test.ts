@@ -39,7 +39,7 @@ import {
   localClock,
   todaysPlanIndex,
   todaysPlanPages,
-  todaysPlanStep,
+  todaysPlanKey,
   planMealEditHref,
   planCopyHref,
   savedPlanSlot,
@@ -466,8 +466,7 @@ describe("Up next (the plan card) on Home", () => {
       for (const now of ["00:00", "12:00", "23:59"]) expect(todaysPlanIndex(pages, null, now)).toBe(0);
       expect(todaysPlanIndex(pages, "empty", "12:00")).toBe(0);
       expect(todaysPlanIndex(pages, id(1), "12:00")).toBe(0);
-      expect(todaysPlanStep(pages, 0, 1)).toBeNull();
-      expect(todaysPlanStep(pages, 0, -1)).toBeNull();
+      expect(pages.map(todaysPlanKey)).toEqual(["empty"]);
     }
     // Food today: the meal pages, no empty page.
     expect(todaysPlanPages(day([meal(1)], false))).not.toContain("empty");
@@ -485,17 +484,15 @@ describe("Up next (the plan card) on Home", () => {
     expect(todaysPlanIndex(done, null, "12:00")).toBe(1);
   });
 
-  it("keeps the page the parent paged to or served while it is there; ‹ › step by key, nothing past either end", () => {
+  it("keeps the page the parent paged to (by its key) or served while it is there", () => {
     const pages = todaysPlanPages(day([meal(1), meal(2), meal(3)]));
     expect(todaysPlanIndex(pages, id(3), "08:00")).toBe(2);
     expect(todaysPlanIndex(pages, id(99), "08:00")).toBe(0);
-    expect(todaysPlanStep(pages, 0, 1)).toBe(id(2));
-    expect(todaysPlanStep(pages, 0, -1)).toBeNull();
-    expect(todaysPlanStep(pages, 2, 1)).toBeNull();
+    expect(pages.map(todaysPlanKey)).toEqual([id(1), id(2), id(3)]);
     const done = todaysPlanPages(day([meal(1, { served })]));
-    expect(todaysPlanStep(done, 0, 1)).toBe("done");
+    expect(done.map(todaysPlanKey)).toEqual([id(1), "done"]);
     expect(todaysPlanIndex(done, "done", "08:00")).toBe(1);
-    expect(todaysPlanStep(done, 1, -1)).toBe(id(1));
+    expect(todaysPlanIndex(done, id(1), "08:00")).toBe(0);
   });
 
   it("reads the wall clock as HH:MM", () => {
