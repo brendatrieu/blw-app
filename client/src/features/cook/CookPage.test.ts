@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -113,5 +114,12 @@ describe("CookPage screens (ledger 1095, copy 1098)", () => {
 
   it("does not slide on arrival (a reload or a deep link)", () => {
     expect(renderCook("?stage=6&step=1")).not.toContain("cook-slide");
+  });
+
+  it("never slides for a reduced-motion user (ledger 1141a pin)", () => {
+    const css = readFileSync(new URL("../../styles/index.css", import.meta.url), "utf8");
+    // Each reduced-motion block, up to its closing brace at the line start.
+    const reduce = css.split("@media (prefers-reduced-motion: reduce) {").slice(1).map((rest) => rest.slice(0, rest.indexOf("\n}")));
+    expect(reduce.some((block) => /\.cook-slide\s*\{\s*animation: none;/.test(block.replace(/\.[\w-]+,\s*/g, "")))).toBe(true);
   });
 });

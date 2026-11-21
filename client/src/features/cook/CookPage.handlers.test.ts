@@ -56,6 +56,7 @@ vi.mock("../../pwa/wakeLock.js", () => ({ keepScreenAwake: h.keepScreenAwake }))
 vi.mock("../../lib/tapGuard.js", () => ({ ignoreTapsBriefly: h.ignoreTapsBriefly }));
 vi.mock("../../theme.js", () => ({ setStatusBarSurface: h.setStatusBarSurface }));
 
+import { Navigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button.js";
 import { CookPage } from "./CookPage.js";
 
@@ -207,5 +208,21 @@ describe("CookPage: moving between screens (ledger 1095)", () => {
     drag(-60, 200);
     drag(-120, 0, "mouse");
     expect(h.setSearchParams).not.toHaveBeenCalled();
+  });
+});
+
+describe("CookPage: leaving for the recipe and the log (ledger 1141a pins)", () => {
+  it("a typed cook link to a stage with no steps goes to the recipe, replacing the cook URL", () => {
+    h.recipe = { ...RECIPE, variants: [{ ageStage: "6", textureNote: "", steps: [] }] };
+    const { tree } = render("?stage=6");
+    expect(tree.type).toBe(Navigate);
+    expect(tree.props).toMatchObject({ to: "/recipes/r1", replace: true });
+  });
+
+  it("All done's Log meal replaces cook mode in history, so its own Back is the recipe", () => {
+    const { tree } = render("?stage=6&step=2");
+    const log = all(tree).filter((el) => el.props.to === "/log-meal?recipe=r1");
+    expect(log).toHaveLength(1);
+    expect(log[0]!.props.replace).toBe(true);
   });
 });
