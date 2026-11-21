@@ -119,7 +119,7 @@ export function SymptomCheckPage() {
       {runCheck.isPending && (
         <div
           role="status"
-          className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-4"
+          className="app-card flex flex-col gap-2 rounded-lg border p-4"
         >
           <p className="text-sm font-medium text-[var(--color-text)]">Reviewing the last 7 days of foods…</p>
           <p className="text-xs text-[var(--color-text-muted)]">

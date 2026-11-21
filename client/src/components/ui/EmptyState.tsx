@@ -7,10 +7,11 @@ interface EmptyStateProps {
   action?: ReactNode;
 }
 
-/** Friendly one-liner + primary action, used wherever a list has nothing in it yet. */
+/** Friendly one-liner + primary action, used wherever a list has nothing in it yet.
+ * Ledger 1083: a glass card on the glow, not an inset slab. */
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-[var(--radius-lg)] bg-[var(--color-bg-inset)] p-8 text-center">
+    <div className="app-card flex flex-col items-center gap-2 rounded-[var(--radius-lg)] border p-8 text-center">
       {icon ? (
         <div className="text-5xl leading-none" aria-hidden="true">
           {icon}

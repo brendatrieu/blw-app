@@ -27,11 +27,11 @@ import {
   type RecipeEntry,
 } from "./plate.js";
 
-/** One item's card (CD boards): elevated, hairline border, 20px corners. A
+/** One item's card (CD boards): the card glass (ledger 1083), 20px corners. A
  * size container, so its star line can drop below the plate when the name
  * column is too narrow for five 44px stars (ratings A at 320, round 3). */
 const ITEM =
-  "@container rounded-[var(--radius-lg)] border border-[var(--color-divider)] bg-[var(--color-bg-elevated)] py-2 pr-2 pl-3";
+  "@container app-card rounded-[var(--radius-lg)] border py-2 pr-2 pl-3";
 const TITLE = "font-semibold leading-[1.3] break-words text-[var(--color-text)]";
 const DETAIL = "text-[13px] leading-[1.35] text-[var(--color-text-muted)]";
 const FOCUS_RING =

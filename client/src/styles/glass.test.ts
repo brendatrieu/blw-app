@@ -8,6 +8,8 @@ import { describe, expect, it } from "vitest";
 import { Card, CardButton, CardLink } from "../components/ui/Card.js";
 import { MenuPanel } from "../components/ui/Menu.js";
 import { SkeletonList } from "../components/ui/Skeleton.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
+import { FilterBar } from "../features/catalog/components/filters.js";
 
 const css = readFileSync(new URL("./index.css", import.meta.url), "utf8");
 const classesOf = (html: string) => (/class="([^"]*)"/.exec(html)?.[1] ?? "").split(" ");
@@ -50,6 +52,51 @@ describe("card glass (ledger 1080)", () => {
   });
 });
 
+describe("the sweep's surfaces (ledger 1083)", () => {
+  // Hand-rolled card-like surfaces outside Card: each wears .app-card instead
+  // of the opaque elevated/inset fill that sat flat on the glow.
+  const CARD_LIKE: Record<string, number> = {
+    "features/storage/components/StorageItemCard.tsx": 1,
+    "features/tracking/components/ServeLogList.tsx": 1,
+    "features/plate/PlateItemRow.tsx": 1,
+    "features/plan/DailyMealsPage.tsx": 1,
+    "features/catalog/components/FoodTile.tsx": 1,
+    "features/catalog/components/EmojiChooser.tsx": 1,
+    "features/symptom/components/CandidateCard.tsx": 1,
+    "features/symptom/components/SymptomHistoryList.tsx": 1,
+    "features/symptom/components/SymptomResultView.tsx": 1,
+    "features/symptom/components/SymptomSurveyForm.tsx": 1,
+    "pages/SymptomCheckPage.tsx": 1,
+    "pages/FoodDetailPage.tsx": 2,
+    "pages/RecipeDetailPage.tsx": 4,
+  };
+  for (const [file, count] of Object.entries(CARD_LIKE)) {
+    it(`${file} wears the card glass on its ${count} card-like surface(s)`, () => {
+      const src = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+      expect(src.match(/\bapp-card\b/g)?.length ?? 0).toBe(count);
+    });
+  }
+  it("EmptyState is a glass card, not an inset slab", () => {
+    const cls = classesOf(renderToString(createElement(EmptyState, { title: "x" })));
+    expect(cls).toEqual(expect.arrayContaining(["app-card", "border"]));
+    expect(cls.filter((c) => c.startsWith("bg-"))).toEqual([]);
+  });
+  it("the Foods / Recipes filter strip is clear at rest and frosts like the header, height unchanged", () => {
+    const html = renderToString(createElement(FilterBar, null, "x"));
+    const cls = classesOf(html);
+    expect(cls).toEqual(expect.arrayContaining(["app-frost", "app-frost-edge", "sticky", "border-b", "border-transparent"]));
+    expect(cls.filter((c) => c.startsWith("bg-"))).toEqual([]);
+    // Docked, it carries the one line under the header: the header drops its own.
+    expect(html).toContain('data-dock=""');
+    expect(rule(".app-frost-edge:has(~ main [data-dock][data-scrolled])", layerStart)).toMatch(/box-shadow: inset 0 -1px 0 transparent/);
+    for (const page of ["../pages/FoodsPage.tsx", "../features/catalog/components/RecipesSegment.tsx"]) {
+      const src = readFileSync(new URL(page, import.meta.url), "utf8");
+      expect(src).toContain("<FilterBar>");
+      expect(src).not.toContain("sticky z-[5]");
+    }
+  });
+});
+
 describe("frosted bars and popups (ledgers 1079, 1081)", () => {
   it("the frost is the bars' tint, blur + saturate, and the on-glass inks", () => {
     const frost = rule("/* Bars and popups. */\n  .app-frost", layerStart)!;
@@ -59,6 +106,7 @@ describe("frosted bars and popups (ledgers 1079, 1081)", () => {
     const inks = rule(".app-ground,\n  .app-frost", layerStart)!;
     expect(inks).toContain("--color-apricot-text: var(--color-apricot-text-glass);");
     expect(inks).toContain("--color-text-muted: var(--color-text-muted-glass);");
+    expect(inks).toContain("--color-primary-soft-text: var(--color-primary-soft-text-glass);"); // nutrient chips (ledger 1083)
   });
   it("the Menu panel is frosted with the bars' hairline, not the elevated fill", () => {
     const cls = classesOf(renderToString(createElement(MenuPanel, { children: null })));

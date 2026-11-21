@@ -13,7 +13,10 @@ export type GlowPlace = { readonly sea: string; readonly apricot: string };
 function glowLayer(family: GlowFamily, token: "sea" | "apricot", at: string, screen: number): string {
   const [x, y] = at.split(" ").map((part) => Number.parseFloat(part)) as [number, number];
   const radius = `calc(${token === "sea" ? 0.55 : 0.5} * hypot(${Math.max(x, 100 - x)}vw, ${Math.max(y, 100 - y)}svh))`;
-  return `radial-gradient(circle ${radius} at ${x}% ${screen * 100 + y}svh, var(--color-${family}-glow-${token}), transparent)`;
+  // Ledger 1083: the app's sea glow may hold its colour flat near the centre
+  // (index.css --app-glow-sea-flat: dark caps its centre, light 0% = none).
+  const flat = family === "app" && token === "sea" ? " var(--app-glow-sea-flat)" : "";
+  return `radial-gradient(circle ${radius} at ${x}% ${screen * 100 + y}svh, var(--color-${family}-glow-${token})${flat}, transparent)`;
 }
 
 /** `count` screens of glow, cycling through `places` (one per screen). A page

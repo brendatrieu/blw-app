@@ -27,7 +27,7 @@ function HistoryRow({ item }: { item: SymptomCheckHistoryItem }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <li className="flex flex-col gap-2 rounded-lg bg-[var(--color-bg-elevated)] p-3">
+    <li className="app-card flex flex-col gap-2 rounded-lg border p-3">
       <button type="button" onClick={() => setOpen((value) => !value)} className="flex flex-col gap-1 text-left">
         <span className="flex items-center gap-2">
           <span

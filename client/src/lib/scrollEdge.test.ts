@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { isScrolledUnder, watchScrollEdge } from "./scrollEdge.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { isDocked, isScrolledUnder, watchScrollEdge } from "./scrollEdge.js";
 
 function fakeTarget() {
   const attrs = new Set<string>();
@@ -68,5 +68,40 @@ describe("watchScrollEdge (ledgers 1079, 1081)", () => {
     stop();
     expect(win.listeners).toHaveLength(0);
     expect(target.attrs.has("data-scrolled")).toBe(false);
+  });
+});
+
+describe("isDocked (ledger 1083): the Foods / Recipes filter strip", () => {
+  it("is false while the strip is still in flow below its docked offset, even with the page scrolled", () => {
+    expect(isDocked(0, 140, 56)).toBe(false);
+    expect(isDocked(40, 100, 56)).toBe(false);
+  });
+  it("is true once the page has scrolled and the strip sits at its docked offset (sub-pixel tolerant)", () => {
+    expect(isDocked(84, 56, 56)).toBe(true);
+    expect(isDocked(600, 56.4, 56)).toBe(true);
+  });
+  it("is false at the top even when the strip starts at the docked offset (nothing under it yet)", () => {
+    expect(isDocked(0, 56, 56)).toBe(false);
+    expect(isDocked(-30, 56, 56)).toBe(false);
+  });
+});
+
+describe("watchScrollEdge(…, docks) (ledger 1083)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("reads the strip's own rect and sticky top on every scroll", () => {
+    let top = 140;
+    const target = Object.assign(fakeTarget(), { getBoundingClientRect: () => ({ top }) });
+    vi.stubGlobal("getComputedStyle", () => ({ top: "56px" }));
+    const win = fakeSource({ scrollY: 0 });
+    const stop = watchScrollEdge(target, win, true);
+    win.scrollY = 40;
+    top = 100;
+    win.fire();
+    expect(target.attrs.has("data-scrolled")).toBe(false); // the page scrolled, the strip has not docked
+    win.scrollY = 120;
+    top = 56;
+    win.fire();
+    expect(target.attrs.has("data-scrolled")).toBe(true);
+    stop();
   });
 });

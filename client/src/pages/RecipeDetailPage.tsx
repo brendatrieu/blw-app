@@ -268,7 +268,7 @@ export function RecipeDetailPage() {
             <li key={ingredient.foodId}>
               <Link
                 to={`/foods/${ingredient.foodSlug}`}
-                className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text)]"
+                className="app-card flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-sm text-[var(--color-text)]"
               >
                 <FoodPlate {...foodPlate({ slug: ingredient.foodSlug, emoji: ingredient.foodEmoji })} size={32} />
                 <span className="flex-1">
@@ -295,7 +295,7 @@ export function RecipeDetailPage() {
           {recipe.extraIngredients.map((extra, index) => (
             <li
               key={`${index}-${extra.name}`}
-              className="flex items-center gap-2 rounded-[var(--radius-md)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text-muted)]"
+              className="app-card flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-sm text-[var(--color-text-muted)]"
             >
               <FoodPlate emoji={getExtraIngredientEmoji(extra.name)} tint="neutral" size={32} />
               {formatExtraIngredient(extra)}
@@ -341,7 +341,7 @@ export function RecipeDetailPage() {
         customSteps.length > 0 ? (
           <section className="flex flex-col gap-2.5">
             <h2 className="font-h2 text-[var(--color-text)]">Steps</h2>
-            <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+            <div className="app-card flex flex-col gap-2 rounded-[var(--radius-lg)] border p-3">
               <ol className="flex flex-col gap-1.5 text-sm text-[var(--color-text)]">
                 {customSteps.map((step, i) => (
                   <li key={i} className="flex gap-2">
@@ -373,7 +373,7 @@ export function RecipeDetailPage() {
         )}
 
         {activeVariant && (
-          <div className="flex flex-col gap-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+          <div className="app-card flex flex-col gap-2 rounded-[var(--radius-lg)] border p-3">
             <p className="text-xs font-medium text-[var(--color-text-muted)]">{activeVariant.textureNote}</p>
             <ol className="flex flex-col gap-1.5 text-sm text-[var(--color-text)]">
               {activeVariant.steps.map((step, i) => (

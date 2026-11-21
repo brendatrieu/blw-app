@@ -203,7 +203,7 @@ describe("StorageItemCard tap-through link (item 139)", () => {
         ),
       ),
     );
-    expect(html).toMatch(/<li class="relative /);
+    expect(html).toMatch(/<li class="app-card relative /); // the card glass (ledger 1083)
     expect(html).toMatch(/<a [^>]*class="[^"]*after:absolute after:inset-0[^"]*"[^>]*href="\/storage\//);
     expect(html).toMatch(/<div class="relative z-10 [^"]*">(?:(?!<\/div>).)*Actions slot marker/s);
   });

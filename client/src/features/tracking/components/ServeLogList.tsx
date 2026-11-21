@@ -147,7 +147,7 @@ export function MealCard({ meal, onRequestDelete, grouped = false }: MealCardPro
       className={
         grouped
           ? `relative flex flex-col pt-1.5 pr-1 pb-2.5 pl-3.5 ${CARD_ROW_DIVIDER}`
-          : "relative flex flex-col rounded-[var(--radius-lg)] border border-[var(--color-divider)] bg-[var(--color-bg-elevated)] pt-1.5 pr-1.5 pb-2.5 pl-3"
+          : "app-card relative flex flex-col rounded-[var(--radius-lg)] border pt-1.5 pr-1.5 pb-2.5 pl-3"
       }
     >
       {/* Wraps instead of overflowing (ledger 776): at 320px a long date

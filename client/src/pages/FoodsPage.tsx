@@ -9,6 +9,7 @@ import { useCatalogFilteredEvent } from "../lib/usage/useCatalogFiltered.js";
 import { FoodTile } from "../features/catalog/components/FoodTile.js";
 import {
   ActiveFilterPill,
+  FilterBar,
   FilterChip,
   FunnelButton,
   RatingSortGroup,
@@ -310,10 +311,7 @@ export function FoodsPage() {
         }
       />
 
-      <div
-        className="sticky z-[5] -mx-4 flex flex-col gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-4 pt-1 pb-2"
-        style={{ top: "var(--header-height)" }}
-      >
+      <FilterBar>
         <SearchInput
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -337,7 +335,7 @@ export function FoodsPage() {
           ))}
           <FunnelButton onClick={() => setFiltersOpen(true)} activeCount={activeExtraFilterCount} />
         </div>
-      </div>
+      </FilterBar>
 
       {pills.length > 0 && (
         <div className="flex flex-wrap gap-1.5">

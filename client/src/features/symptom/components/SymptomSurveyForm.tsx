@@ -141,7 +141,7 @@ export function SymptomSurveyForm({ onSubmit, isPending, errorMessage }: Symptom
               {entries.map((entry) => (
                 <label
                   key={entry.value}
-                  className="flex items-center gap-2 rounded-lg bg-[var(--color-bg-elevated)] px-3 py-2 text-sm text-[var(--color-text)]"
+                  className="app-card flex items-center gap-2 rounded-lg border px-3 py-2 text-sm text-[var(--color-text)]"
                 >
                   <input
                     id={symptomCheckboxId(entry.value)}

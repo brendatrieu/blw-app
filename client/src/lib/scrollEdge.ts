@@ -12,16 +12,28 @@ export function isScrolledUnder(offset: number): boolean {
   return offset > 0;
 }
 
+/** Ledger 1083: a strip that docks under the header (the Foods / Recipes
+ * search, sticky at the header's height) is still in flow until it reaches
+ * that offset; only then does content scroll under it. */
+export function isDocked(offset: number, top: number, dockedTop: number): boolean {
+  return isScrolledUnder(offset) && top <= dockedTop + 0.5;
+}
+
 /** The window, or an element that scrolls itself (a Sheet panel). */
 export type ScrollSource = ({ scrollY: number } | { scrollTop: number }) & Pick<EventTarget, "addEventListener" | "removeEventListener">;
 
 /** Keeps `data-scrolled` on `target` matching `isScrolledUnder` for `source`'s
- * offset. Returns the cleanup, which also clears the attribute.
+ * offset (`docks`: `isDocked`, from the target's own sticky top). Returns the
+ * cleanup, which also clears the attribute.
  * `toggleAttribute` is a no-op when the state does not change, so a scroll
- * costs one compare. */
-export function watchScrollEdge(target: Element, source: ScrollSource = window): () => void {
+ * costs one compare (a docking strip also reads its own rect and top). */
+export function watchScrollEdge(target: Element, source: ScrollSource = window, docks = false): () => void {
   const update = () => {
-    target.toggleAttribute("data-scrolled", isScrolledUnder("scrollY" in source ? source.scrollY : source.scrollTop));
+    const offset = "scrollY" in source ? source.scrollY : source.scrollTop;
+    const under = docks
+      ? isDocked(offset, target.getBoundingClientRect().top, Number.parseFloat(getComputedStyle(target).top))
+      : isScrolledUnder(offset);
+    target.toggleAttribute("data-scrolled", under);
   };
   update();
   source.addEventListener("scroll", update, { passive: true });

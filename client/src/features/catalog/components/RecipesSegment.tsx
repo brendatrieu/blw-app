@@ -5,7 +5,7 @@ import { AGE_THRESHOLDS, ALLERGEN_SLUGS, RECIPE_SCOPES } from "../constants.js";
 import { useFoods, useRecipes } from "../hooks.js";
 import { useCatalogFilteredEvent } from "../../../lib/usage/useCatalogFiltered.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../basicRecipe.js";
-import { ActiveFilterPill, FilterChip, FunnelButton, RatingSortGroup, toggleValue, withoutPill } from "./filters.js";
+import { ActiveFilterPill, FilterBar, FilterChip, FunnelButton, RatingSortGroup, toggleValue, withoutPill } from "./filters.js";
 import { ratingSortLabel, sortByRating, type RatingSort } from "../ratingSort.js";
 import { useActiveBaby } from "../../babies/useActiveBaby.js";
 import { useRatings } from "../../tracking/hooks.js";
@@ -296,10 +296,7 @@ export function RecipesSegment() {
 
   return (
     <>
-      <div
-        className="sticky z-[5] -mx-4 flex flex-col gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-4 pt-1 pb-2"
-        style={{ top: "var(--header-height)" }}
-      >
+      <FilterBar>
         <SearchInput
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -322,7 +319,7 @@ export function RecipesSegment() {
           ))}
           <FunnelButton onClick={() => setFiltersOpen(true)} activeCount={activeExtraFilterCount} />
         </div>
-      </div>
+      </FilterBar>
 
       {pills.length > 0 && (
         <div className="flex flex-wrap gap-1.5">

@@ -78,7 +78,7 @@ export function SymptomResultView({ result, onReopenAlarm }: SymptomResultViewPr
       </section>
 
       {result.kind === "fallback" && (
-        <div className="flex flex-col gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+        <div className="app-card flex flex-col gap-1.5 rounded-lg border p-3">
           <p className="text-sm text-[var(--color-text)]">
             {/* Item 589: switched off, an older "AI unavailable" result reads as the plain rule too. */}
             {result.reason === "no_ai_key" || !AI_FEATURES_ENABLED

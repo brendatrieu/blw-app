@@ -280,7 +280,7 @@ export function DeleteFoodQuestion({ food, onClose }: { food: FoodDetail; onClos
 export function DeletedFoodNotice({ food }: { food: FoodDetail }) {
   const restore = useRestoreCustomFood();
   return (
-    <div className="flex flex-col items-start gap-2 rounded-[var(--radius-lg)] bg-[var(--color-bg-inset)] p-4">
+    <div className="app-card flex flex-col items-start gap-2 rounded-[var(--radius-lg)] border p-4">
       <p className="text-sm text-[var(--color-text)]">You deleted this food.</p>
       <Button type="button" variant="secondary" size="sm" disabled={restore.isPending} onClick={() => restore.mutate(food)}>
         {restore.isPending ? "Restoring…" : "Restore"}
@@ -345,7 +345,7 @@ export function FoodDetailPage() {
       )}
 
       {food.isCustom && (
-        <p className="rounded-[var(--radius-lg)] bg-[var(--color-bg-inset)] p-4 text-sm text-[var(--color-text-muted)]">
+        <p className="app-card rounded-[var(--radius-lg)] border p-4 text-sm text-[var(--color-text-muted)]">
           {CUSTOM_FOOD_SOFT_NOTE}
         </p>
       )}

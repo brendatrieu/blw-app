@@ -111,6 +111,9 @@
      is missing or the reader asks for less transparency. contrast.test gates
      every ink over each surface over each glow. */
   --color-app-glow-sea: rgba(180, 212, 230, 0.4);
+  /* How far out (of its radius) the sea glow holds its centre colour before
+     fading (lib/glows.ts). Light 0%: the plain round-15 fade. */
+  --app-glow-sea-flat: 0%;
   --color-app-glow-apricot: rgba(247, 180, 138, 0.28);
   --color-card-glass: rgba(255, 255, 255, 0.45);
   --color-card-glass-border: rgba(255, 255, 255, 0.6);
@@ -120,6 +123,9 @@
   --color-app-solid: rgba(255, 255, 255, 0.94);
   --color-apricot-text-glass: #9e4812;
   --color-text-muted-glass: #5b6570;
+  /* Ledger 1083: the nutrient chip's ink on the glass (sea text on a sea tint
+     over the sea glow); dark a step lighter, light unchanged. */
+  --color-primary-soft-text-glass: #1c3e52;
   --bar-filter: blur(22px) saturate(140%); /* same in both modes */
 
   /* ---- Text (deep navy — the hue the dark ground is built from) ---- */
@@ -362,7 +368,16 @@
   --_dark-glass-border: rgba(255, 255, 255, 0.12);
   --_dark-shadow-glass: 0 14px 34px rgba(0, 0, 0, 0.35);
   --_dark-glass-filter: blur(22px) saturate(140%);
-  --_dark-app-glow-sea: rgba(180, 212, 230, 0.4);
+  /* Ledger 1083 (sweep): round 15's .40 sea glow, its centre capped at .24.
+     At .40 the centre (50% 22svh, behind every inner page's title and intro)
+     measured 3.26-3.98 for muted text, how-to links and nutrient chips on 14
+     screens; .24 is where every ink clears 4.5 there (contrast.test gates it).
+     A plain .24 glow read as "is that there?" (round 14 reviewer, at .30), so
+     the colour holds flat out to 40% of the radius and then fades exactly as
+     a .40 glow does (.24 / (1 - 0.40) = .40): the haze behind the header and
+     between the cards is round 15's, only the hot centre is cut. */
+  --_dark-app-glow-sea: rgba(180, 212, 230, 0.24);
+  --_dark-app-glow-sea-flat: 40%;
   --_dark-app-glow-apricot: rgba(247, 180, 138, 0.22);
   --_dark-card-glass: rgba(30, 38, 48, 0.7);
   --_dark-card-glass-border: rgba(255, 255, 255, 0.08);
@@ -372,6 +387,7 @@
   --_dark-app-solid: rgba(26, 34, 44, 0.96);
   --_dark-apricot-text-glass: #f7b48a;
   --_dark-text-muted-glass: #aeb9c4;
+  --_dark-primary-soft-text-glass: #c6e0ef; /* nutrient chips: 4.44 -> 5.0 over the sea glow (sweep) */
   --_dark-color-text: #eef3f7;
   --_dark-color-text-muted: #a3afba;
   --_dark-color-border: #28313c;
@@ -468,6 +484,7 @@
     --shadow-glass: var(--_dark-shadow-glass);
     --glass-filter: var(--_dark-glass-filter);
     --color-app-glow-sea: var(--_dark-app-glow-sea);
+    --app-glow-sea-flat: var(--_dark-app-glow-sea-flat);
     --color-app-glow-apricot: var(--_dark-app-glow-apricot);
     --color-card-glass: var(--_dark-card-glass);
     --color-card-glass-border: var(--_dark-card-glass-border);
@@ -477,6 +494,7 @@
     --color-app-solid: var(--_dark-app-solid);
     --color-apricot-text-glass: var(--_dark-apricot-text-glass);
     --color-text-muted-glass: var(--_dark-text-muted-glass);
+    --color-primary-soft-text-glass: var(--_dark-primary-soft-text-glass);
 
     --color-text: var(--_dark-color-text);
     --color-text-muted: var(--_dark-color-text-muted);
@@ -575,6 +593,7 @@
   --shadow-glass: var(--_dark-shadow-glass);
   --glass-filter: var(--_dark-glass-filter);
   --color-app-glow-sea: var(--_dark-app-glow-sea);
+  --app-glow-sea-flat: var(--_dark-app-glow-sea-flat);
   --color-app-glow-apricot: var(--_dark-app-glow-apricot);
   --color-card-glass: var(--_dark-card-glass);
   --color-card-glass-border: var(--_dark-card-glass-border);
@@ -584,6 +603,7 @@
   --color-app-solid: var(--_dark-app-solid);
   --color-apricot-text-glass: var(--_dark-apricot-text-glass);
   --color-text-muted-glass: var(--_dark-text-muted-glass);
+  --color-primary-soft-text-glass: var(--_dark-primary-soft-text-glass);
 
   --color-text: var(--_dark-color-text);
   --color-text-muted: var(--_dark-color-text-muted);
@@ -786,6 +806,7 @@ textarea {
   .app-frost {
     --color-apricot-text: var(--color-apricot-text-glass);
     --color-text-muted: var(--color-text-muted-glass);
+    --color-primary-soft-text: var(--color-primary-soft-text-glass);
   }
   .app-ground {
     background-color: var(--color-bg);
@@ -834,6 +855,11 @@ textarea {
   .app-frost .app-frost-edge[data-scrolled] {
     background-color: color-mix(in srgb, var(--color-text) 40%, var(--color-bg));
     background-image: linear-gradient(var(--color-bar-glass), var(--color-bar-glass));
+  }
+  /* A docked Foods / Recipes filter strip (FilterBar) carries the one line
+     under the header, as main's strip did: the header drops its own. */
+  .app-frost-edge:has(~ main [data-dock][data-scrolled]) {
+    box-shadow: inset 0 -1px 0 transparent;
   }
   @media (prefers-reduced-motion: reduce) {
     .app-frost-edge {

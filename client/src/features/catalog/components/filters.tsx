@@ -1,4 +1,29 @@
+import { useEffect, useRef, type ReactNode } from "react";
+import { watchScrollEdge } from "../../../lib/scrollEdge.js";
 import { RATING_SORTS, type RatingSort } from "../ratingSort.js";
+
+/**
+ * The search + filter strip that docks under the app header on Foods and
+ * Recipes (sticky in flow, never fixed). Ledger 1083: it sits on the glow,
+ * so it is clear while in flow and frosted like the header (index.css
+ * .app-frost-edge) once docked with content under it; then it carries the
+ * one line under the header (data-dock), as main's strip did. The
+ * transparent bottom border keeps main's height.
+ */
+export function FilterBar({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => (ref.current ? watchScrollEdge(ref.current, window, true) : undefined), []);
+  return (
+    <div
+      ref={ref}
+      data-dock=""
+      className="app-frost app-frost-edge sticky z-[5] -mx-4 flex flex-col gap-2 border-b border-transparent px-4 pt-1 pb-2"
+      style={{ top: "var(--header-height)" }}
+    >
+      {children}
+    </div>
+  );
+}
 
 interface FilterChipProps {
   active: boolean;

@@ -24,7 +24,7 @@ export function FoodTile({ food, rating }: FoodTileProps) {
   return (
     <Link
       to={`/foods/${food.slug}`}
-      className="relative flex min-h-[44px] flex-col items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] p-3 text-center shadow-[var(--shadow-sm)] transition-transform duration-[var(--duration-fast)] ease-[var(--ease-spring)] active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100"
+      className="relative flex min-h-[44px] flex-col items-center gap-1.5 app-card rounded-[var(--radius-md)] border p-3 text-center transition-transform duration-[var(--duration-fast)] ease-[var(--ease-spring)] active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100"
     >
       <FoodPlate {...foodPlate(food)} size={56} />
       <span className="font-caption line-clamp-2 text-[var(--color-text)]">{food.name}</span>

@@ -383,11 +383,11 @@ describe("MealCard lines (CD-Food-Log, ledger 902)", () => {
 });
 
 describe("MealCard (render, storage-card styling — item 192)", () => {
-  it("uses the card chrome of the boards (relative li, rounded-lg, border, elevated bg; 6/6/10/12 padding for the 44px kebab)", () => {
+  it("uses the card chrome of the boards (relative li, rounded-lg, the card glass with its border; 6/6/10/12 padding for the 44px kebab)", () => {
     const html = renderMealCard(baseMeal);
-    expect(html).toMatch(/<li class="relative [^"]*rounded-\[var\(--radius-lg\)\][^"]*"/);
-    expect(html).toMatch(/<li class="[^"]*border border-\[var\(--color-divider\)\][^"]*"/);
-    expect(html).toMatch(/<li class="[^"]*bg-\[var\(--color-bg-elevated\)\][^"]*"/);
+    // Ledger 1083: the card glass (index.css .app-card), not the opaque elevated fill.
+    expect(html).toMatch(/<li class="app-card relative [^"]*rounded-\[var\(--radius-lg\)\] border [^"]*"/);
+    expect(html).not.toMatch(/<li class="[^"]*bg-\[var\(--color-bg-elevated\)\][^"]*"/);
     expect(html).toMatch(/<li class="[^"]*\bpt-1\.5 pr-1\.5 pb-2\.5 pl-3\b/);
   });
 

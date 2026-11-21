@@ -125,7 +125,7 @@ export function EmojiChooser({ id, value, onChange }: EmojiChooserProps) {
           // focuses it, not the Sheet's panel outside the chooser (which
           // the blur check would read as leaving).
           tabIndex={-1}
-          className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-2"
+          className="app-card flex flex-col gap-2 rounded-[var(--radius-md)] border p-2"
         >
           {EMOJI_CHOICE_GROUPS.map((group) => (
             <div key={group.label} className="flex flex-col gap-1">

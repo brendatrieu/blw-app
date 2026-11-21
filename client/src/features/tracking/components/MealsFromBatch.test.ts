@@ -71,7 +71,7 @@ describe("MealsFromBatch cards (ledger 966): the Food log's own card", () => {
     expect(html).toContain('href="/log-meal?edit=meal-7"');
     expect(html).not.toContain('href="/meals/meal-7"');
     expect(html).toContain('aria-label="Actions"');
-    expect(html).toMatch(/<li class="relative flex flex-col rounded-\[var\(--radius-lg\)\] border/);
+    expect(html).toMatch(/<li class="app-card relative flex flex-col rounded-\[var\(--radius-lg\)\] border /); // the card glass (ledger 1083)
     expect(html).toMatch(/📦 (?:<!-- -->)?From storage/);
   });
 

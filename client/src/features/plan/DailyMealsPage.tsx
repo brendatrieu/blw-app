@@ -169,7 +169,7 @@ export function DailyMealsForm({ babyId, meals, onDone }: { babyId: string; meal
 
       <ul
         ref={listRef}
-        className="flex flex-col rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-bg-elevated)] py-0.5 pr-1 pl-0.5 shadow-[var(--shadow-sm)]"
+        className="app-card flex flex-col rounded-[var(--radius-lg)] border py-0.5 pr-1 pl-0.5"
       >
         {rows.map((row, index) => {
           const error = errors[row.key];

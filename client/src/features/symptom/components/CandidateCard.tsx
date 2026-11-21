@@ -28,7 +28,7 @@ function Chip({ children }: { children: React.ReactNode }) {
 
 export function CandidateCard({ candidate, rank }: { candidate: SymptomCandidate; rank: number }) {
   return (
-    <li className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+    <li className="app-card flex flex-col gap-2 rounded-lg border p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col">
           <Link to={`/foods/${candidate.foodSlug}`} className="text-sm font-medium text-[var(--color-text)] underline">

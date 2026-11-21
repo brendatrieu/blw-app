@@ -142,7 +142,8 @@ const MUFFINS: StorageItem = {
 describe("a fresh food", () => {
   it("is the 40px plate, its name with the stars right under it, and × (CD-Log-Meal)", () => {
     const out = html(FOOD);
-    expect(out).toMatch(/^<li class="@container rounded-\[var\(--radius-lg\)\] border border-\[var\(--color-divider\)\] bg-\[var\(--color-bg-elevated\)\]/);
+    // Ledger 1083: the card glass (index.css .app-card), not the opaque elevated fill.
+    expect(out).toMatch(/^<li class="@container app-card rounded-\[var\(--radius-lg\)\] border py-2/);
     expect(out).toContain('<p class="font-semibold leading-[1.3] break-words text-[var(--color-text)]">Egg</p>');
     expect(out).toContain('role="radiogroup" aria-label="Rating for Egg"');
     expect(out).toContain('aria-label="Remove Egg"');
