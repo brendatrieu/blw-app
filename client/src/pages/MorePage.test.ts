@@ -103,7 +103,7 @@ describe("MorePage (item 274)", () => {
       { tag: "a", href: "/guides", emoji: "📖", label: "How-To Guides" },
       // Ledger 904: the meal plan's second way in (Home has the calendar).
       { tag: "a", href: "/plan", emoji: "🗓️", label: "Meal Plan" },
-      { tag: "a", href: "/favorites", emoji: "❤️", label: "Favorites" },
+      { tag: "a", href: "/favorites", emoji: "🧡", label: "Favorites" },
       { tag: "a", href: "/symptom-check", emoji: "🩺", label: "Symptom Check" },
       { tag: "a", href: "/chat", emoji: "💬", label: "Chat" },
       { tag: "a", href: "/feedback", emoji: "💌", label: "Send Feedback" },

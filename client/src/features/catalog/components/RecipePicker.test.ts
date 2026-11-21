@@ -61,14 +61,14 @@ describe("recipePickerOptions", () => {
     expect(options.map((option) => option.markers)).toEqual([[{ label: "Custom", tone: "outline" }], undefined, undefined]);
   });
 
-  it("keeps 💛 on every favorite, including a favorited own recipe", () => {
+  it("keeps 🧡 on every favorite, including a favorited own recipe", () => {
     const options = recipePickerOptions([
       recipe({ id: "mine", isCustom: true, isFavorite: true }),
       recipe({ id: "plain-mine", isCustom: true }),
       recipe({ id: "starred", isFavorite: true }),
       recipe({ id: "catalog" }),
     ]);
-    expect(options.map((option) => option.emoji)).toEqual(["💛", undefined, "💛", undefined]);
+    expect(options.map((option) => option.emoji)).toEqual(["🧡", undefined, "🧡", undefined]);
     // The two marks say two different things and both survive on one row.
     expect(options[0]!.markers).toEqual([{ label: "Custom", tone: "outline" }]);
   });

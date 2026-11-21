@@ -36,7 +36,7 @@ function recipePickerRank(recipe: RecipeListItem): number {
  * Each group carries its own mark, so the reordering reads as intentional
  * rather than random: `markers: ["Custom"]` on the parent's own recipes (the
  * chip `MultiCombobox` renders in both the menu row and the selected chip),
- * the 💛 emoji on favorites — including a favorited custom recipe, where the
+ * the 🧡 emoji on favorites — including a favorited custom recipe, where the
  * two marks say two different things. Pure, and exported so the ordering rule
  * is pinned by a test rather than by a `.sort()` buried in a component.
  */
@@ -46,7 +46,7 @@ export function recipePickerOptions(recipes: RecipeListItem[]): MultiComboboxOpt
     .map((recipe) => ({
       value: recipe.id,
       label: recipe.title,
-      ...(recipe.isFavorite ? { emoji: "💛" } : {}),
+      ...(recipe.isFavorite ? { emoji: "🧡" } : {}),
       ...(recipe.isCustom ? { markers: [{ label: "Custom", tone: "outline" as const }] } : {}),
     }));
 }

@@ -43,7 +43,7 @@ const moreLinks: MoreRow[] = [
   // Ledger 904: the meal plan's other way in, besides the header's calendar
   // button (beside the gear on every page but the Meal Plan pages, 953).
   { to: "/plan", label: "Meal Plan", description: "Plan meals for the days ahead.", emoji: "🗓️" },
-  { to: "/favorites", label: "Favorites", description: "Recipes you've saved.", emoji: "❤️" },
+  { to: "/favorites", label: "Favorites", description: "Recipes you've saved.", emoji: "🧡" },
   {
     to: "/symptom-check",
     label: "Symptom Check",

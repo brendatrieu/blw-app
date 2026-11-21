@@ -14,7 +14,7 @@ function FavoriteCard({ item }: { item: FavoriteItem }) {
       <div className="flex items-baseline justify-between gap-2">
         <span className="flex items-center gap-2 text-base font-medium text-[var(--color-text)]">
           <span aria-hidden="true" className="text-xl leading-none">
-            💛
+            🧡
           </span>
           {item.title}
         </span>
@@ -35,7 +35,7 @@ export function FavoritesPage() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <PageHeader title="Favorites" emoji="💛" description="Recipes you've saved to come back to." />
+      <PageHeader title="Favorites" emoji="🧡" description="Recipes you've saved to come back to." />
 
       {isLoading && <SkeletonList count={3} />}
       {isError && <p className="text-sm text-[var(--color-danger)]">Couldn't load favorites.</p>}
