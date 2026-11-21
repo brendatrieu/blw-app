@@ -27,6 +27,7 @@ import { RecipesPage } from "./pages/RecipesPage.js";
 import { RecipeDetailPage } from "./pages/RecipeDetailPage.js";
 import { RecipeCreatePage } from "./pages/RecipeCreatePage.js";
 import { RecipeEditPage } from "./pages/RecipeEditPage.js";
+import { CookPage } from "./features/cook/CookPage.js";
 import { BabyAllergensPage } from "./pages/BabyAllergensPage.js";
 import { AllergenDetailPage } from "./pages/AllergenDetailPage.js";
 import { FavoritesPage } from "./pages/FavoritesPage.js";
@@ -129,6 +130,17 @@ export function App() {
           }
         />
       </Route>
+
+      {/* Ledger 1095: cook mode is full screen, so it sits outside AppLayout
+          (no header, no tab bar) but behind the same session guard. */}
+      <Route
+        path="/recipes/:id/cook"
+        element={
+          <RequireAuth>
+            <CookPage />
+          </RequireAuth>
+        }
+      />
 
       {/* Everything below the guard needs a session. The server enforces
           this independently; the wrapper just keeps the UI honest. */}

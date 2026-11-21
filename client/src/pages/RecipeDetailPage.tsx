@@ -6,7 +6,8 @@ import { ageInMonths, formatExtraIngredient } from "@blw/shared";
 import { useActiveBaby } from "../features/babies/useActiveBaby.js";
 import { RatingHistory, RatingSummaryRow } from "../features/tracking/components/RatingHistory.js";
 import { useDeleteCustomRecipe, useRecipe, useRecipePlanCount } from "../features/catalog/hooks.js";
-import { AGE_STAGE_OPTIONS, clampStageToAvailable, stageForAge } from "../features/catalog/stage.js";
+import { AGE_STAGE_OPTIONS, stageForAge } from "../features/catalog/stage.js";
+import { cookHref, shownVariant } from "../features/cook/cook.js";
 import { BASIC_RECIPE_LABEL, isBasicRecipe } from "../features/catalog/basicRecipe.js";
 import { Badge } from "../features/catalog/components/Badge.js";
 import { AllergenChips } from "../features/catalog/components/AllergenChips.js";
@@ -133,6 +134,91 @@ export function CustomRecipeActions({ recipe }: CustomRecipeActionsProps) {
   );
 }
 
+const INGREDIENT_ROW =
+  "app-card flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-sm text-[var(--color-text)]";
+
+/**
+ * The recipe's ingredient rows, also cook mode's "You'll need" (ledger 1095).
+ * There `linked` is false: the same rows, but a tap mid-cook never leaves.
+ */
+export function IngredientList({
+  recipe,
+  linked = true,
+}: {
+  recipe: Pick<RecipeDetail, "ingredients" | "extraIngredients">;
+  linked?: boolean;
+}) {
+  return (
+    <ul className="flex flex-col gap-1.5">
+      {/* The whole row is the link to the food's page, so nothing inside
+          it may be interactive. A custom ingredient's own emoji wins over
+          the slug map (item 212); `quantityNote` is "" when the parent
+          gave no amount, so the dash is dropped with it. */}
+      {recipe.ingredients.map((ingredient) => {
+        const row = (
+          <>
+            <FoodPlate {...foodPlate({ slug: ingredient.foodSlug, emoji: ingredient.foodEmoji })} size={32} />
+            <span className="flex-1">
+              <span className="font-medium">{ingredient.foodName}</span>
+              <DeletedMark deleted={ingredient.deleted} />
+              {ingredient.quantityNote ? (
+                <span className="text-[var(--color-text-muted)]"> — {ingredient.quantityNote}</span>
+              ) : null}
+            </span>
+            {/* Item 334: which INGREDIENT brought the allergen the header
+                badges the whole dish with — "this recipe contains fish"
+                is not the same answer as "the salmon is the fish". Badges
+                are plain spans, so the row stays a single link. */}
+            <AllergenChips allergens={ingredient.allergens} />
+          </>
+        );
+        return (
+          <li key={ingredient.foodId}>
+            {linked ? (
+              <Link to={`/foods/${ingredient.foodSlug}`} className={INGREDIENT_ROW}>
+                {row}
+              </Link>
+            ) : (
+              <div className={INGREDIENT_ROW}>{row}</div>
+            )}
+          </li>
+        );
+      })}
+      {/* An extra reads as "a drizzle of olive oil" — quantity first,
+          name after, and the name alone when no quantity was given
+          (item 299). The whole row is already in the muted tone a real
+          ingredient's quantity note gets, so the quantity needs no
+          styling of its own; `formatExtraIngredient` is shared with the
+          AI recipe tool so the two can never word it differently. */}
+      {recipe.extraIngredients.map((extra, index) => (
+        <li
+          key={`${index}-${extra.name}`}
+          className="app-card flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-sm text-[var(--color-text-muted)]"
+        >
+          <FoodPlate emoji={getExtraIngredientEmoji(extra.name)} tint="neutral" size={32} />
+          {formatExtraIngredient(extra)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Ledger 1094: opens cook mode for exactly the steps on screen (the stage
+ * shown, or a custom recipe's own). The page renders it only when there are
+ * steps, and not on a deleted recipe's read-only page.
+ */
+function StartCooking({ href }: { href: string }) {
+  return (
+    <ButtonLink to={href} variant="secondary" size="lg" className="w-full">
+      <svg aria-hidden="true" viewBox="0 0 24 24" width={18} height={18} fill="currentColor">
+        <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" />
+      </svg>
+      Start cooking
+    </ButtonLink>
+  );
+}
+
 /**
  * What a deleted recipe's page shows instead of Log meal / Add to storage
  * (ledger 957, as a deleted food's page does, ledger 543): the page is
@@ -188,13 +274,14 @@ export function RecipeDetailPage() {
   // "6" here resolves to "9", and the tab strip highlights whatever this
   // resolves to rather than the raw request: the highlighted tab and the prep
   // below it must always name the same stage.
-  const resolvedStage = clampStageToAvailable(
-    activeStage,
-    recipe.variants.map((v) => v.ageStage),
-  );
-  const activeVariant = recipe.variants.find((v) => v.ageStage === resolvedStage) ?? recipe.variants[0];
+  const { stage: resolvedStage, variant: activeVariant } = shownVariant(recipe, activeStage);
   /** A custom recipe's single set of steps — empty when the parent wrote none. */
   const customSteps = recipe.variants[0]?.steps ?? [];
+  // Ledger 1094: only for steps on screen, and not on a deleted recipe's read-only page.
+  const startCooking =
+    !recipe.deletedAt && (activeVariant?.steps.length ?? 0) > 0 ? (
+      <StartCooking href={cookHref(recipe, resolvedStage)} />
+    ) : null;
 
   return (
     <div className="flex flex-col gap-[18px] p-4">
@@ -259,49 +346,7 @@ export function RecipeDetailPage() {
 
       <section className="flex flex-col gap-2.5">
         <h2 className="font-h2 text-[var(--color-text)]">Ingredients</h2>
-        <ul className="flex flex-col gap-1.5">
-          {/* The whole row is the link to the food's page, so nothing inside
-              it may be interactive. A custom ingredient's own emoji wins over
-              the slug map (item 212); `quantityNote` is "" when the parent
-              gave no amount, so the dash is dropped with it. */}
-          {recipe.ingredients.map((ingredient) => (
-            <li key={ingredient.foodId}>
-              <Link
-                to={`/foods/${ingredient.foodSlug}`}
-                className="app-card flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-sm text-[var(--color-text)]"
-              >
-                <FoodPlate {...foodPlate({ slug: ingredient.foodSlug, emoji: ingredient.foodEmoji })} size={32} />
-                <span className="flex-1">
-                  <span className="font-medium">{ingredient.foodName}</span>
-                  <DeletedMark deleted={ingredient.deleted} />
-                  {ingredient.quantityNote ? (
-                    <span className="text-[var(--color-text-muted)]"> — {ingredient.quantityNote}</span>
-                  ) : null}
-                </span>
-                {/* Item 334: which INGREDIENT brought the allergen the header
-                    badges the whole dish with — "this recipe contains fish"
-                    is not the same answer as "the salmon is the fish". Badges
-                    are plain spans, so the row stays a single link. */}
-                <AllergenChips allergens={ingredient.allergens} />
-              </Link>
-            </li>
-          ))}
-          {/* An extra reads as "a drizzle of olive oil" — quantity first,
-              name after, and the name alone when no quantity was given
-              (item 299). The whole row is already in the muted tone a real
-              ingredient's quantity note gets, so the quantity needs no
-              styling of its own; `formatExtraIngredient` is shared with the
-              AI recipe tool so the two can never word it differently. */}
-          {recipe.extraIngredients.map((extra, index) => (
-            <li
-              key={`${index}-${extra.name}`}
-              className="app-card flex items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-sm text-[var(--color-text-muted)]"
-            >
-              <FoodPlate emoji={getExtraIngredientEmoji(extra.name)} tint="neutral" size={32} />
-              {formatExtraIngredient(extra)}
-            </li>
-          ))}
-        </ul>
+        <IngredientList recipe={recipe} />
       </section>
 
       {/* Item 334 follow-up: the ingredient rows say WHICH food brought an
@@ -341,6 +386,7 @@ export function RecipeDetailPage() {
         customSteps.length > 0 ? (
           <section className="flex flex-col gap-2.5">
             <h2 className="font-h2 text-[var(--color-text)]">Steps</h2>
+            {startCooking}
             <div className="app-card flex flex-col gap-2 rounded-[var(--radius-lg)] border p-3">
               <ol className="flex flex-col gap-1.5 text-sm text-[var(--color-text)]">
                 {customSteps.map((step, i) => (
@@ -371,6 +417,8 @@ export function RecipeDetailPage() {
             }}
           />
         )}
+
+        {startCooking}
 
         {activeVariant && (
           <div className="app-card flex flex-col gap-2 rounded-[var(--radius-lg)] border p-3">

@@ -584,3 +584,37 @@ describe("RecipeDetailPage rating history (item 581)", () => {
     expect(html).not.toContain("rating history");
   });
 });
+
+// Ledger 1094: Start cooking plays exactly the steps on screen, and only when there are some.
+describe("RecipeDetailPage — Start cooking", () => {
+  const cookLink = (html: string) => html.match(/<a[^>]*href="([^"]*\/cook[^"]*)"[^>]*>[\s\S]*?Start cooking<\/a>/)?.[1];
+
+  it("opens cook mode for the stage shown on a catalog recipe (6–8 mo with no baby)", () => {
+    const html = renderRecipe(catalogRecipe());
+    expect(cookLink(html)).toBe("/recipes/11111111-1111-4111-8111-111111111111/cook?stage=6");
+    // A 48px target.
+    expect(html).toMatch(/<a[^>]*class="[^"]*min-h-12[^"]*"[^>]*href="[^"]*\/cook/);
+  });
+
+  it("carries the stage the page resolved to, not the raw request (a 9-month-only recipe)", () => {
+    const html = renderRecipe(
+      catalogRecipe({ variants: [{ ageStage: "9", textureNote: "", steps: ["Cook through"] }] }),
+    );
+    expect(cookLink(html)).toBe("/recipes/11111111-1111-4111-8111-111111111111/cook?stage=9");
+  });
+
+  it("is hidden when the stage shown has no steps", () => {
+    const html = renderRecipe(catalogRecipe({ variants: [{ ageStage: "6", textureNote: "Serve whole", steps: [] }] }));
+    expect(html).not.toContain("Start cooking");
+  });
+
+  it("opens a custom recipe's own steps, with no stage, and is hidden when it has none", () => {
+    expect(cookLink(renderRecipe(CUSTOM_RECIPE))).toBe("/recipes/22222222-2222-4222-8222-222222222222/cook");
+    const noSteps = { ...CUSTOM_RECIPE, variants: [{ ageStage: "6" as const, textureNote: "", steps: [] }] };
+    expect(renderRecipe(noSteps)).not.toContain("Start cooking");
+  });
+
+  it("is not offered on a deleted recipe's read-only page", () => {
+    expect(renderRecipe({ ...CUSTOM_RECIPE, deletedAt: "2026-11-08T10:00:00.000Z" })).not.toContain("Start cooking");
+  });
+});

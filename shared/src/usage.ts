@@ -48,6 +48,9 @@ export const ROUTE_PATTERNS = [
   "/reset-password",
   /** Ask for a reset email, signed out (ledger 822). */
   "/forgot-password",
+  /** Cook mode (ledger 1095): full screen, signed in, outside the app's
+   * header and tab bar. The step rides in the query, which never travels. */
+  "/recipes/:id/cook",
   "/",
   "/log-meal",
   "/meals",

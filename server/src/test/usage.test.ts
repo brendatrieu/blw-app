@@ -124,6 +124,23 @@ describe("POST /api/usage", () => {
     expect((await post({ events: [dated] }, user.cookie)).statusCode).toBe(400);
   });
 
+  // Ledger 1097: cook mode's route is in the closed enum; its id never travels.
+  it("accepts cook mode's screen view as a pattern, and refuses a real recipe id in it", async () => {
+    const view = usageEnvelope({
+      route: "/recipes/:id/cook",
+      props: { route_pattern: "/recipes/:id/cook", from_route: "/recipes/:id" },
+    });
+    expect((await post({ events: [view] }, user.cookie)).statusCode).toBe(204);
+    const [row] = await db.select().from(schema.usageEvents);
+    expect(row?.route).toBe("/recipes/:id/cook");
+    expect(row?.props).toEqual({ route_pattern: "/recipes/:id/cook", from_route: "/recipes/:id" });
+    const leaky = usageEnvelope({
+      route: "/recipes/:id/cook",
+      props: { route_pattern: "/recipes/6f1c0b1a-0000-4000-8000-000000000003/cook", from_route: null },
+    });
+    expect((await post({ events: [leaky] }, user.cookie)).statusCode).toBe(400);
+  });
+
   // Ledger 754: a meal with two or more recipes is `recipe_kind: "several"`,
   // with `includes_basic` saying whether one of them is a basic. Optional, so
   // the shipped app's events (without it) keep landing.

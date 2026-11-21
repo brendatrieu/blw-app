@@ -11,6 +11,7 @@ import { LoginPage } from "./pages/LoginPage.js";
 import { SignupPage } from "./pages/SignupPage.js";
 import { PlanPage } from "./features/plan/PlanPage.js";
 import { PlateScreen } from "./features/plate/PlateScreen.js";
+import { CookPage } from "./features/cook/CookPage.js";
 import { storageKeys } from "./features/storage/hooks.js";
 import { preferenceKeys } from "./features/tour/hooks.js";
 
@@ -279,5 +280,15 @@ describe("the app's user-facing name (item 308)", () => {
     // The repo, the packages and the API are still @blw/*; renaming those
     // would be a rename of the codebase, not of the product.
     expect(read("../package.json")).toContain('"name": "@blw/client"');
+  });
+});
+
+describe("App route wiring (ledger 1095 — cook mode)", () => {
+  it("mounts /recipes/:id/cook signed in, outside AppLayout and OutsideAppLayout (no header, no tab bar)", () => {
+    const hit = findRoute("/recipes/:id/cook");
+    const element = hit?.route.props.element as ReactElement<{ children: ReactElement }>;
+    expect(element.type).toBe(RequireAuth);
+    expect(element.props.children.type).toBe(CookPage);
+    expect(hit?.wrappers).toEqual([]);
   });
 });

@@ -998,6 +998,19 @@ input[type="search"]::-webkit-search-cancel-button {
   animation: page-enter var(--duration-slow) var(--ease-out) both;
 }
 
+/* Cook mode (ledger 1095): a step slides in from the side it came from
+ * (CookPage sets --cook-slide-from); none for reduced-motion users. */
+@keyframes cook-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--cook-slide-from));
+  }
+}
+
+.cook-slide {
+  animation: cook-slide-in var(--duration-base) var(--ease-out) both;
+}
+
 /* -------------------------------------------------------------------------
  * Skeleton loading — a slow, quiet warm shimmer; a still block for
  * reduced-motion users rather than a pulse.
@@ -1119,7 +1132,8 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-transition {
+  .page-transition,
+  .cook-slide {
     animation: none;
   }
   .skeleton {

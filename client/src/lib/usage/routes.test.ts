@@ -61,6 +61,7 @@ describe("toRoutePattern", () => {
     ["/about", "/about"],
     ["/reset-password", "/reset-password"],
     ["/forgot-password", "/forgot-password"],
+    ["/recipes/6f1c0b1a-0000-4000-8000-000000000003/cook", "/recipes/:id/cook"], // ledger 1095
     ["/", "/"],
     ["/log-meal", "/log-meal"],
     ["/meals", "/meals"],
