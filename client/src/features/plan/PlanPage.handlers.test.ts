@@ -163,14 +163,14 @@ describe("PlanPage (CD-Plan-Day)", () => {
     }
   });
 
-  it("outlines today (aria-current) whichever day is picked; the picked day keeps the strong apricot; no accent number (ledger 1017)", () => {
+  it("outlines today (aria-current) whichever day is picked, in its own thin ring (ledger 1115); the picked day keeps the apricot fill; no accent number (ledger 1017)", () => {
     const look = (tree: El) =>
       dayButtons(tree).map((day) => {
         const classes = String(day.props.className);
         const number = String(findAll(day, (el) => el.type === "span")[1]!.props.className);
         return [
           classes.includes("bg-[var(--color-apricot)]") ? "fill" : "",
-          classes.includes("inset-ring-2 inset-ring-[var(--color-accent)]") ? "ring" : "",
+          classes.includes("inset-ring-[length:var(--plan-today-ring)] inset-ring-[var(--color-plan-today)]") && !classes.includes("color-accent") ? "ring" : "",
           day.props["aria-current"] === "date" ? "current" : "",
           number.includes("text-[var(--color-accent)]") ? "accent" : "",
         ].join(" ").trim();

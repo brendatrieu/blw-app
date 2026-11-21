@@ -48,13 +48,14 @@ describe("StarRating markup", () => {
     expect(html).toMatch(/<\/div><button type="button" aria-label="Clear rating for Banana" class="sr-only [^"]*focus-visible:not-sr-only[^"]*">Clear<\/button>/);
   });
 
-  it("paints filled stars in the apricot graphic, empty ones a soft fill with an apricot-text outline (item 640, ratings A)", () => {
+  it("paints filled stars in the apricot graphic, empty ones a soft fill with an outline in the same graphic (item 640; ledger 1115)", () => {
     const html = renderToString(createElement(StarRating, { value: 3, onChange: () => {}, label: "Rating for Banana" }));
     expect(html.match(/text-\[var\(--color-apricot-graphic\)\]"[^>]*><svg[^>]*><path[^>]*stroke="currentColor"[^>]*class="fill-current"/g)).toHaveLength(3);
     expect(
-      html.match(/text-\[var\(--color-apricot-text\)\]"[^>]*><svg[^>]*><path[^>]*stroke="currentColor"[^>]*class="fill-\[var\(--color-apricot-soft\)\]"/g),
+      html.match(/text-\[var\(--color-apricot-graphic\)\]"[^>]*><svg[^>]*><path[^>]*stroke="currentColor"[^>]*class="fill-\[var\(--color-apricot-soft\)\]"/g),
     ).toHaveLength(2);
     expect(html).not.toContain("text-[var(--color-accent)]");
+    expect(html).not.toContain("apricot-text");
     expect(html).not.toContain("text-[var(--color-text-muted)]\"");
   });
 
@@ -150,8 +151,9 @@ describe("StarRatingShown", () => {
     const svgs = html.match(/<svg [^>]*>[\s\S]*?<\/svg>/g)!;
     expect(svgs).toHaveLength(5);
     expect(svgs.every((svg) => svg.includes('aria-hidden="true" width="14" height="14"'))).toBe(true);
-    // StarRating's own colors: filled apricot, empty a soft apricot fill with an apricot-text outline.
-    expect(svgs.map((svg) => (svg.includes("fill-current") && svg.includes("apricot-graphic") ? "on" : svg.includes("fill-[var(--color-apricot-soft)]") && svg.includes("apricot-text") ? "off" : "?"))).toEqual(["on", "on", "on", "off", "off"]);
+    // StarRating's own colors: filled apricot, empty a soft apricot fill with an outline in the same graphic (ledger 1115).
+    expect(svgs.map((svg) => (svg.includes("fill-current") && svg.includes("apricot-graphic") ? "on" : svg.includes("fill-[var(--color-apricot-soft)]") && svg.includes("apricot-graphic") ? "off" : "?"))).toEqual(["on", "on", "on", "off", "off"]);
+    expect(html).not.toContain("apricot-text");
     expect(render(1)).toContain('aria-label="Rated 1 star"');
     expect(render(5).match(/fill-current/g)).toHaveLength(5);
   });

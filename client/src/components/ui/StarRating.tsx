@@ -57,8 +57,8 @@ function StarGlyph({ filled, size, className }: { filled: boolean; size: number;
   );
 }
 
-const FILLED = "text-[var(--color-apricot-graphic)]";
-const EMPTY = "text-[var(--color-apricot-text)]";
+/** Filled and empty alike (ledger 1115, owner: the empty outline matches the fill; it was the darker apricot text). */
+const STAR_COLOR = "text-[var(--color-apricot-graphic)]";
 
 /**
  * Item 574, ratings option A (ledger 807): five tappable stars. Tapping star
@@ -70,7 +70,7 @@ const EMPTY = "text-[var(--color-apricot-text)]";
  * `SegmentedControl`, with the roving tabindex and arrow keys that one lacks:
  * Tab lands on the chosen star (or the first), arrows move the choice and
  * the focus together. Every target is 44px. Filled stars wear the apricot
- * graphic; empty ones a soft apricot fill with an apricot-text outline.
+ * graphic; empty ones a soft apricot fill with an outline in the same graphic.
  */
 export function StarRating({ value, onChange, label, disabled = false }: StarRatingProps) {
   const focusable = value ?? 1;
@@ -100,7 +100,7 @@ export function StarRating({ value, onChange, label, disabled = false }: StarRat
               disabled={disabled}
               onClick={() => onChange(value === star ? null : star)}
               onKeyDown={handleKeyDown}
-              className={`flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] ${FOCUS_RING} ${filled ? FILLED : EMPTY}`}
+              className={`flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] ${FOCUS_RING} ${STAR_COLOR}`}
             >
               <StarGlyph filled={filled} size={26} />
             </button>
@@ -137,7 +137,7 @@ export function StarRatingShown({ value, className = "" }: { value: number; clas
   return (
     <span role="img" aria-label={value === 1 ? "Rated 1 star" : `Rated ${value} stars`} className={`flex shrink-0 ${className}`}>
       {STARS.map((star) => (
-        <StarGlyph key={star} filled={star <= value} size={14} className={star <= value ? FILLED : EMPTY} />
+        <StarGlyph key={star} filled={star <= value} size={14} className={STAR_COLOR} />
       ))}
     </span>
   );

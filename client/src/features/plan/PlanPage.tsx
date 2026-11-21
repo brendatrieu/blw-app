@@ -202,7 +202,7 @@ export function PlanPage() {
                     onClick={() => select(date)}
                     className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-[var(--radius-md)] py-1.5 ${
                       pressed ? "bg-[var(--color-apricot)] text-[var(--color-apricot-ink)]" : "text-[var(--color-text)]"
-                    }${date === today ? " inset-ring-2 inset-ring-[var(--color-accent)]" : ""}`}
+                    }${date === today ? " inset-ring-[length:var(--plan-today-ring)] inset-ring-[var(--color-plan-today)]" : ""}`}
                   >
                     <span aria-hidden="true" className={`text-xs font-semibold ${pressed ? "" : "text-[var(--color-text-muted)]"}`}>
                       {WEEKDAY_INITIALS[index]}

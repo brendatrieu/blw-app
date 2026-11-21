@@ -155,7 +155,14 @@ interface Pair {
   fg: string;
   bg: string;
   min?: number;
+  /** A lower floor in LIGHT only: an owner's deliberate pick below `min`,
+   * documented where it is set and listed in OWNER_EXCEPTIONS below. Dark
+   * keeps `min`. */
+  lightMin?: number;
 }
+
+/** The floor a pairing is held to in a mode. */
+const minFor = (pair: Pair, mode: Mode) => (mode === "light" ? pair.lightMin : undefined) ?? pair.min ?? 4.5;
 
 const GROUNDS = ["color-bg", "color-bg-elevated"] as const;
 
@@ -190,11 +197,20 @@ const BASE_PAIRS: Pair[] = [
   { name: "inactive nav label on the page-colored nav (item 687)", fg: "color-text-muted", bg: "color-bg" },
   { name: "inactive nav icon on the page-colored nav (item 687)", fg: "color-text-muted", bg: "color-bg", min: 3 },
   // The pill is decorative (label color and weight carry the state): dark is
-  // 1.37:1 on the page, up from 1.24:1 on the old elevated nav.
-  { name: "active nav pill against the page-colored nav (item 687)", fg: "color-apricot", bg: "color-bg", min: 1.3 },
-  // Rating stars and the recipe-list heart: graphics, 3:1 on page/elevated.
-  { name: "apricot graphic (stars, heart) on page", fg: "color-apricot-graphic", bg: "color-bg", min: 3 },
-  { name: "apricot graphic (stars, heart) on elevated surface", fg: "color-apricot-graphic", bg: "color-bg-elevated", min: 3 },
+  // 1.37:1 on the page, up from 1.24:1 on the old elevated nav. Light is the
+  // owner's tint since ledger 1115 (round-1 pick B, 2026-11-21: was the solid
+  // #f7b48a), 1.27:1: held there, not dropped.
+  { name: "active nav pill against the page-colored nav (item 687)", fg: "color-apricot", bg: "color-bg", min: 1.3, lightMin: 1.25 },
+  // Rating stars (filled and the empty outline), the recipe-list heart, the
+  // ring's due segments: graphics, 3:1 on page/elevated in dark. Light is the
+  // owner's lighter orange (ledger 1115, shade 1 #ec8a4f, 2026-11-21: the
+  // #e1732e "comes across darker on the phone"), 2.42 / 2.53:1: a deliberate
+  // exception, as every one of them has its value in text or aria beside it
+  // (StarRating's radios and "Rated N stars", the ★ summary's sr-only line,
+  // the heart's card name, the ring's "N due for a serve" line). Held at
+  // that shade: a still lighter one fails here.
+  { name: "apricot graphic (stars, heart) on page", fg: "color-apricot-graphic", bg: "color-bg", min: 3, lightMin: 2.4 },
+  { name: "apricot graphic (stars, heart) on elevated surface", fg: "color-apricot-graphic", bg: "color-bg-elevated", min: 3, lightMin: 2.5 },
   // Item 653: the filter-count dot is a graphic fill (gated as a state mark
   // by the two pairs above) carrying its number in graphic-ink.
   { name: "filter-count number (graphic-ink) on apricot graphic dot", fg: "color-apricot-graphic-ink", bg: "color-apricot-graphic" },
@@ -227,13 +243,15 @@ const BASE_PAIRS: Pair[] = [
   { name: "elevated text on accent fill (Copy's picked Keep it / Replace it)", fg: "color-bg-elevated", bg: "color-accent" },
   // The More tab's "Update available" row: its Reload sits on inset (ledger 790).
   { name: "accent text on inset surface (More update row)", fg: "color-accent", bg: "color-bg-inset" },
-  // Ledger 1017: today's outline (an inset accent ring, non-text 3:1) in both
+  // Ledger 1017: today's outline (an inset ring, non-text 3:1) in both
   // strips, on every fill its day can wear and the page around the strip;
   // a picked Copy day is the meal chips' soft apricot with the text colour
-  // and its check (currentColor). The Meal Plan's picked day keeps ink on apricot.
-  { name: "today outline on the Meal Plan strip (ledger 1017)", fg: "color-accent", bg: "color-bg-elevated", min: 3 },
-  { name: "today outline vs the page (ledger 1017)", fg: "color-accent", bg: "color-bg", min: 3 },
-  { name: "today outline on the Meal Plan's picked apricot day (ledger 1017)", fg: "color-accent", bg: "color-apricot", min: 3 },
+  // and its check (currentColor). The Meal Plan's picked day keeps ink on
+  // apricot. Ledger 1115: the Meal Plan's ring is --color-plan-today (light a
+  // lighter sea, dark the accent); the Copy sheet's stays the accent.
+  { name: "today outline on the Meal Plan strip (ledger 1017)", fg: "color-plan-today", bg: "color-bg-elevated", min: 3 },
+  { name: "today outline vs the page (ledger 1017)", fg: "color-plan-today", bg: "color-bg", min: 3 },
+  { name: "today outline on the Meal Plan's picked apricot day (ledger 1017)", fg: "color-plan-today", bg: "color-apricot", min: 3 },
   { name: "today outline on an unpicked Copy day (ledger 1017)", fg: "color-accent", bg: "color-bg-inset", min: 3 },
   { name: "today outline on a picked Copy day (ledger 1017)", fg: "color-accent", bg: "color-apricot-soft", min: 3 },
   { name: "picked Copy day number on the soft apricot (ledger 1017)", fg: "color-text", bg: "color-apricot-soft" },
@@ -334,7 +352,7 @@ const failures: { mode: Mode; pair: Pair; ratio: number }[] = [];
 for (const mode of ["light", "dark"] as const) {
   for (const pair of BASE_PAIRS) {
     const ratio = ratioOf(pair.fg, pair.bg, mode);
-    if (ratio < (pair.min ?? 4.5)) failures.push({ mode, pair, ratio });
+    if (ratio < minFor(pair, mode)) failures.push({ mode, pair, ratio });
   }
   for (const pair of CHIP_PAIRS as (Pair & { _ground: string })[]) {
     const bg = parseColor(resolve(pair._ground, mode));
@@ -350,7 +368,7 @@ describe("design token contrast (WCAG AA)", () => {
   it("passes every declared pairing in both themes", () => {
     if (failures.length > 0) {
       const report = failures
-        .map(({ mode, pair, ratio }) => `  [${mode}] ${pair.name}: ${ratio.toFixed(2)}:1 (need ${pair.min ?? 4.5}:1)`)
+        .map(({ mode, pair, ratio }) => `  [${mode}] ${pair.name}: ${ratio.toFixed(2)}:1 (need ${minFor(pair, mode)}:1)`)
         .join("\n");
       throw new Error(`${failures.length} pairing(s) below WCAG AA:\n${report}`);
     }
@@ -361,8 +379,8 @@ describe("design token contrast (WCAG AA)", () => {
   // straight at the specific pairing instead of just a count.
   for (const mode of ["light", "dark"] as const) {
     for (const pair of BASE_PAIRS) {
-      it(`[${mode}] ${pair.name} >= ${pair.min ?? 4.5}:1`, () => {
-        expect(ratioOf(pair.fg, pair.bg, mode)).toBeGreaterThanOrEqual(pair.min ?? 4.5);
+      it(`[${mode}] ${pair.name} >= ${minFor(pair, mode)}:1`, () => {
+        expect(ratioOf(pair.fg, pair.bg, mode)).toBeGreaterThanOrEqual(minFor(pair, mode));
       });
     }
     for (const pair of CHIP_PAIRS as (Pair & { _ground: string })[]) {
@@ -403,6 +421,24 @@ const DARK_STATE_PAIRS: Pair[] = [
     GROUNDS.map((ground) => ({ name: `confetti --${token} vs ${ground}`, fg: token, bg: ground, min: 3 })),
   ),
 ];
+
+describe("owner exceptions (ledger 1115)", () => {
+  // The only pairings held below their floor, and in light only: a new one
+  // has to be added here on purpose, with its reason where it is set.
+  const OWNER_EXCEPTIONS = [
+    "active nav pill against the page-colored nav (item 687)",
+    "apricot graphic (stars, heart) on page",
+    "apricot graphic (stars, heart) on elevated surface",
+  ];
+  it("lists every pairing with a light-only floor, each one below its own min", () => {
+    const relaxed = BASE_PAIRS.filter((pair) => pair.lightMin !== undefined);
+    expect(relaxed.map((pair) => pair.name)).toEqual(OWNER_EXCEPTIONS);
+    for (const pair of relaxed) expect(pair.lightMin!).toBeLessThan(pair.min ?? 4.5);
+  });
+  it("the chip pairs and every other gate never take one", () => {
+    expect((CHIP_PAIRS as Pair[]).some((pair) => pair.lightMin !== undefined)).toBe(false);
+  });
+});
 
 describe("dark-mode selected / on states and confetti (items 644, 645)", () => {
   it("reads the three confetti swatches from Celebration.tsx", () => {
@@ -456,10 +492,13 @@ describe("Direction A token values (items 634, 636, 639, 641, 644, 645, 653, 667
     "color-primary-contrast": { light: "#000000", dark: "#000000" },
     "color-success": { light: "#cde9da", dark: "#cde9da" },
     "color-success-contrast": { light: "#000000", dark: "#000000" },
-    "color-apricot": { light: "#f7b48a", dark: "#3a2a20" },
+    // Ledger 1115 (owner's colour picks 2026-11-21): light pill/picked-day tint and the lighter graphic orange.
+    "color-apricot": { light: "#fbd9c2", dark: "#3a2a20" },
     "color-apricot-ink": { light: "#3d1a06", dark: "#f7b48a" },
     "color-apricot-text": { light: "#b9571a", dark: "#f7b48a" },
-    "color-apricot-graphic": { light: "#e1732e", dark: "#f7b48a" },
+    "color-apricot-graphic": { light: "#ec8a4f", dark: "#f7b48a" },
+    // Ledger 1115: the Meal Plan's today ring (its width below), dark = the accent as before.
+    "color-plan-today": { light: "#4d82a4", dark: "#b4d4e6" },
     "color-apricot-soft": { light: "#fde3d1", dark: "#3a2a20" },
     "color-apricot-graphic-ink": { light: "#3d1a06", dark: "#3d1a06" },
     // Item 675: the baby-chip avatar is the light mockup's disc in both modes.
@@ -622,6 +661,13 @@ describe("food plates (items 657, 658)", () => {
   }
 });
 
+describe("Meal Plan today ring width (ledger 1115)", () => {
+  it("is 1.5px light (owner's pick), 2px dark as before", () => {
+    expect(resolve("plan-today-ring", "light")).toBe("1.5px");
+    expect(resolve("plan-today-ring", "dark")).toBe("2px");
+  });
+});
+
 describe("Home allergen ring segments (items 663, 697)", () => {
   // The ring is supplementary: the counts are always text beside it
   // ("3 established", "2 due for a serve", "3 started · 3 not started yet";
@@ -708,10 +754,10 @@ describe("app glass, round 15 (ledger 1077-1082)", () => {
           expect(contrastRatio(rgb(pair.fg, mode), surface)).toBeGreaterThanOrEqual(pair.min ?? 4.5);
         });
       }
-      // The strip's today outline (ledger 1017) on the frosted strip.
+      // The Meal Plan strip's today outline (ledger 1017; its own token since 1115) on the frosted strip.
       if (where.startsWith("bar")) {
         it(`[${mode}] today outline on the ${where} >= 3:1`, () => {
-          expect(contrastRatio(rgb("color-accent", mode), surface)).toBeGreaterThanOrEqual(3);
+          expect(contrastRatio(rgb("color-plan-today", mode), surface)).toBeGreaterThanOrEqual(3);
         });
       }
       // Chips: the tint composited over the surface, a muted ink in its

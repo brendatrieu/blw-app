@@ -35,10 +35,11 @@
  * - --color-mint: the pastel mint confetti swatch, fixed in both modes
  *   (item 645) — kept as its own role apart from --color-success.
  * - --color-apricot / -ink / -text / -graphic / -soft: the identity color
- *   (item 634) — the active bottom-nav pill (fill + ink) and its label
- *   (text), rating stars and the favorite heart (graphic), and a soft chip;
+ *   (item 634) — the active bottom-nav pill and the Meal Plan's picked day
+ *   (fill + ink), the nav label (text), rating stars (filled and the empty
+ *   outline) and the favorite heart (graphic), and a soft chip;
  *   -graphic-ink is the number on the graphic-filled filter-count dot.
- *   The fill is never text on a light ground (1.7:1).
+ *   The fill is never text on a light ground (1.27:1).
  * - --color-avatar / -ink: the baby chip's initial disc — apricot with
  *   deep ink in BOTH modes (item 675; the dark apricot fill matched the
  *   dark soft chip, so the disc vanished).
@@ -151,17 +152,22 @@
   --color-selected: #b4d4e6;
   --color-selected-contrast: #000000;
 
-  /* ---- Apricot identity (item 634). Fill + ink: the active nav pill.
-     Text: the lightest same-hue shade at 4.5:1 on page/elevated (NOT on
-     inset, 4.12:1). Graphic: the lightest at 3:1 on page/elevated, for
-     stars and hearts. Soft: a chip tint that carries body text only.
-     Graphic-ink: the number on a graphic-filled dot (the Foods/Recipes
-     filter count, item 653), dark in BOTH modes since the dark graphic is
-     the light peach. ---- */
-  --color-apricot: #f7b48a;
+  /* ---- Apricot identity (item 634). Fill + ink: the active nav pill and
+     the Meal Plan's picked day; light is a tint since ledger 1115 (owner's
+     colour picks 2026-11-21: was #f7b48a). Text: the lightest same-hue
+     shade at 4.5:1 on page/elevated (NOT on inset, 4.12:1). Graphic: stars
+     (filled, and the empty one's outline), hearts, the ring's due segments,
+     the filter-count dot. Light is the owner's lighter shade 1 (ledger
+     1115: #e1732e "comes across darker on the phone"), 2.4:1 on the page:
+     a documented exception to the 3:1 graphics gate (contrast.test.ts), as
+     every star, heart and due segment has its value in text or aria beside
+     it. Soft: a chip tint that carries body text only. Graphic-ink: the
+     number on a graphic-filled dot (the Foods/Recipes filter count, item
+     653), dark in BOTH modes since the dark graphic is the light peach. ---- */
+  --color-apricot: #fbd9c2;
   --color-apricot-ink: #3d1a06;
   --color-apricot-text: #b9571a;
-  --color-apricot-graphic: #e1732e;
+  --color-apricot-graphic: #ec8a4f;
   --color-apricot-soft: #fde3d1;
   --color-apricot-graphic-ink: #3d1a06;
   --color-avatar: #f7b48a;
@@ -196,6 +202,11 @@
      from-storage markers, selected-state labels) — mode-dependent because
      the sky blue is too pale to read as body-size text on a light ground. ---- */
   --color-accent: #2f5f7c;
+  /* ---- Today's outline in the Meal Plan day strip (ledger 1115, owner's
+     pick): light a thinner, lighter sea ring that still reads on the picked
+     day's apricot tint; dark keeps the accent at 2px. ---- */
+  --color-plan-today: #4d82a4;
+  --plan-today-ring: 1.5px;
 
   /* ---- Semantic swatches — solid, used for confetti + tiny status dots,
      never as a body-text color. ---- */
@@ -500,6 +511,8 @@
     --color-divider: rgba(255, 255, 255, 0.14);
 
     --color-accent: var(--_dark-accent);
+    --color-plan-today: var(--_dark-accent);
+    --plan-today-ring: 2px;
     --color-selected: var(--_dark-selected);
     --color-selected-contrast: var(--_dark-selected-contrast);
     --color-mint: var(--_dark-mint);
@@ -609,6 +622,8 @@
   --color-divider: rgba(255, 255, 255, 0.14);
 
   --color-accent: var(--_dark-accent);
+  --color-plan-today: var(--_dark-accent);
+  --plan-today-ring: 2px;
   --color-selected: var(--_dark-selected);
   --color-selected-contrast: var(--_dark-selected-contrast);
   --color-mint: var(--_dark-mint);
