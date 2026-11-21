@@ -134,6 +134,7 @@ describe("PageTrack (item 775)", () => {
     onTouchStart: () => {},
     onWheel: () => {},
     goTo: () => {},
+    seen: page,
   });
   const html = (page: number, bleed?: boolean) =>
     renderToString(
@@ -163,6 +164,25 @@ describe("PageTrack (item 775)", () => {
   it("bleeds 8px past the sides and bottom when asked, so a slide's card keeps its shadow", () => {
     expect(html(0, true)).toMatch(/^<div class="[^"]* overscroll-x-contain -mx-2 -mb-2">/);
     expect(html(0, true)).toContain('<div class="w-full shrink-0 snap-start snap-always px-2 pb-2"><ul>0,1,2</ul>');
+  });
+
+  it("fit (ledger 1105): pages past the furthest one shown take no height; without it every page keeps its own", () => {
+    const classes = (fit: boolean, seen: number) =>
+      [
+        ...renderToString(
+          createElement(PageTrack<number>, {
+            track: { ...track(0), seen },
+            items: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            bleed: true,
+            fit,
+            renderSlide: (slice) => createElement("ul", null, slice.join(",")),
+          }),
+        ).matchAll(/<div class="(w-full[^"]*)"/g),
+      ].map((m) => m[1]);
+    const SLIDE = "w-full shrink-0 snap-start snap-always px-2 pb-2";
+    expect(classes(true, 0)).toEqual([SLIDE, `${SLIDE} h-0`, `${SLIDE} h-0`, `${SLIDE} h-0`]);
+    expect(classes(true, 2)).toEqual([SLIDE, SLIDE, SLIDE, `${SLIDE} h-0`]);
+    expect(classes(false, 0)).toEqual([SLIDE, SLIDE, SLIDE, SLIDE]);
   });
 
   it("after a touch, only the page it started on and its neighbours snap: one flick = one page (item 778)", () => {

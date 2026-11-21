@@ -99,6 +99,8 @@ export interface PagedTrack {
   onWheel: () => void;
   /** The ‹ › handler: scrolls the track; the scroll then sets the page. */
   goTo: (page: number) => void;
+  /** The furthest page shown so far (ledger 1105): a `fit` track keeps the height of pages up to it only. */
+  seen: number;
 }
 
 /**
@@ -109,6 +111,8 @@ export interface PagedTrack {
  */
 export function usePagedTrack(total: number, size: number): PagedTrack {
   const trackRef = useRef<HTMLDivElement | null>(null);
+  // A ref, not state: it only changes with `page`, whose setter re-renders.
+  const seenRef = useRef(0);
   const [page, setPage] = useState(0);
   const [near, setNear] = useState<number | null>(null);
   const pages = pageWindow(total, page, size);
@@ -119,8 +123,11 @@ export function usePagedTrack(total: number, size: number): PagedTrack {
     trackRef,
     onScroll: (event) => {
       const el = event.currentTarget;
-      setPage(slideIndexFromScroll(el.scrollLeft, el.clientWidth, count));
+      const next = slideIndexFromScroll(el.scrollLeft, el.clientWidth, count);
+      seenRef.current = Math.max(seenRef.current, next);
+      setPage(next);
     },
+    seen: seenRef.current,
     near,
     // One flick = one page (item 778): Chromium's touch fling ignores
     // snap-always and can fly two pages, so a touch freezes the snap points
@@ -159,6 +166,12 @@ export function usePagedTrack(total: number, size: number): PagedTrack {
  * are `inert`: Tab, screen readers and kebabs only reach the page the range
  * names. `bleed` widens the track 8px past each side and under the bottom,
  * so a slide's card keeps its shadow instead of being clipped by the scroller.
+ * `fit` (ledger 1105) is for a track with nothing below it (Home's Food log):
+ * there the tallest page's reserve was only empty space above the tab bar, so
+ * pages not reached yet take no height (`h-0`; their rows overflow, clipped by
+ * the track while one slides in) and the track is as tall as the tallest page
+ * shown so far. It grows when a taller page first comes in and never shrinks,
+ * so a flip back never pulls the page up or down.
  */
 // Whole class names only: Tailwind's scanner misses a class glued to `${`.
 const TRACK_CLASSES =
@@ -172,11 +185,13 @@ export function PageTrack<T>({
   items,
   renderSlide,
   bleed = false,
+  fit = false,
 }: {
   track: PagedTrack;
   items: readonly T[];
   renderSlide: (slice: readonly T[]) => ReactNode;
   bleed?: boolean;
+  fit?: boolean;
 }) {
   const slides: (readonly T[])[] = [];
   for (let start = 0; start < items.length; start += track.size) slides.push(items.slice(start, start + track.size));
@@ -192,7 +207,7 @@ export function PageTrack<T>({
         <div
           // Position keys: a slide is "page n", whatever rows it holds now.
           key={index}
-          className={`${track.near === null || Math.abs(index - track.near) <= 1 ? SLIDE_CLASSES : FAR_SLIDE_CLASSES}${bleed ? " px-2 pb-2" : ""}`}
+          className={`${track.near === null || Math.abs(index - track.near) <= 1 ? SLIDE_CLASSES : FAR_SLIDE_CLASSES}${bleed ? " px-2 pb-2" : ""}${fit && index > track.seen ? " h-0" : ""}`}
           // ponytail: React 18 has no boolean `inert`, so "" sets the
           // attribute; on React 19 this becomes `inert={true}`.
           {...(index !== track.pages.page && { inert: "" })}

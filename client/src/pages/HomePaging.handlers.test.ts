@@ -498,6 +498,46 @@ describe("Swipe paging (item 775)", () => {
   });
 });
 
+// Ledger 1105: at the bottom of Home, the Food log's track kept its tallest
+// page's height (item 778's hold-still reserve), so an off-screen taller page
+// left ~68px of empty space between the shown card and the tab bar. The Food
+// log is Home's last section: only pages reached so far keep their height
+// (`fit`); the sections above it keep the reserve, since they have pages below.
+describe("Home's last list ends at its shown page (ledger 1105)", () => {
+  const slideClasses = (tree: unknown) =>
+    ((PageTrack(find(tree, PageTrack)!.props as unknown as Parameters<typeof PageTrack>[0]) as unknown as El).props
+      .children as El[]).map((slide) => slide.props.className as string);
+  const swipeTo = (track: PagedTrack, page: number) => {
+    const el = scroller(track);
+    el.scrollLeft = page * TRACK_WIDTH;
+    track.onScroll({ currentTarget: el } as never);
+  };
+
+  it("the Food log asks for fit; Storage, with sections below it, does not", () => {
+    expect(find(foodLog().tree, PageTrack)!.props.fit).toBe(true);
+    expect(find(storage().tree, PageTrack)!.props.fit).toBeUndefined();
+  });
+
+  it("on load only the shown page has a height; pages not reached yet take none", () => {
+    expect(foodLog().track!.seen).toBe(0);
+    expect(slideClasses(foodLog().tree).map((c) => c.endsWith(" h-0"))).toEqual([false, true, true]);
+    // Storage keeps every page's height, so the sections under it never move on a flip (item 778).
+    expect(slideClasses(storage().tree).some((c) => c.includes("h-0"))).toBe(false);
+  });
+
+  it("a page keeps its height once shown, so flipping back never shrinks the track (and never moves the page)", () => {
+    foodLog().next();
+    expect(foodLog().track!.seen).toBe(1);
+    expect(slideClasses(foodLog().tree).map((c) => c.endsWith(" h-0"))).toEqual([false, false, true]);
+    swipeTo(foodLog().track!, 2);
+    swipeTo(foodLog().track!, 0);
+    const v = foodLog();
+    expect(v.pages?.page).toBe(0);
+    expect(v.track!.seen).toBe(2);
+    expect(slideClasses(v.tree).map((c) => c.endsWith(" h-0"))).toEqual([false, false, false]);
+  });
+});
+
 // Item 712 B1: RemindersCard and ServeLogList once shared key={activeBaby.id} in
 // the same <div>, so each baby switch left a dead Reminders card behind. This
 // walks Home's real element tree, so it fails on any sibling key collision.

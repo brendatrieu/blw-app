@@ -271,8 +271,11 @@ export function ServeLogList({ babyId, limit, seeAllHref, showHeading = true, gr
         />
       )}
 
+      {/* `fit` (ledger 1105): paged, this is Home's last section, so nothing
+          below it has to hold still; its tallest page's reserve was empty
+          space between the card and the tab bar. */}
       {all.length > 0 &&
-        (pages ? <PageTrack track={track} items={all} bleed renderSlide={renderMeals} /> : renderMeals(all))}
+        (pages ? <PageTrack track={track} items={all} bleed fit renderSlide={renderMeals} /> : renderMeals(all))}
       {pendingDelete && (
         <MealDeleteDialog meal={pendingDelete} babyId={babyId} open onClose={() => setPendingDelete(null)} />
       )}
