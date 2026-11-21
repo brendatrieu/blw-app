@@ -19,10 +19,9 @@ describe("glowScreens (ledgers 1052, 1078)", () => {
     expect(count(glows, "var(--color-app-glow-apricot)")).toBe(3);
     expect(glows).not.toContain("landing");
     // Sized to ONE screen (55% / 50% of its farthest corner), placed down the page.
-    // The app's sea glow carries its flat-centre stop (ledger 1083, index.css --app-glow-sea-flat); apricot and the landing do not.
-    expect(glows).toContain("radial-gradient(circle calc(0.55 * hypot(50vw, 78svh)) at 50% 22svh, var(--color-app-glow-sea) var(--app-glow-sea-flat), transparent)");
-    expect(count(glows, "var(--app-glow-sea-flat)")).toBe(3);
-    expect(glowScreens("landing", [{ sea: "50% 22%", apricot: "86% 82%" }], 1)).not.toContain("flat");
+    // Ledger 1101: a plain fade, no flat-centre stop (the 1083 cap went with the .20 dark glow).
+    expect(glows).toContain("radial-gradient(circle calc(0.55 * hypot(50vw, 78svh)) at 50% 22svh, var(--color-app-glow-sea), transparent)");
+    expect(glows).not.toContain("flat");
     expect(glows).toContain("radial-gradient(circle calc(0.5 * hypot(94vw, 82svh)) at 94% 182svh, var(--color-app-glow-apricot), transparent)");
     expect(glows).toContain("at 50% 222svh, var(--color-app-glow-sea)");
   });
@@ -53,10 +52,10 @@ describe("glowTiles: the app ground for a page of any length (ledger 1078, verif
     expect(tiles.backgroundRepeat).toBe("no-repeat");
     // The same circle as glowScreens draws at 50% 22svh, centred in a tile 2r tall whose top is 22svh - r.
     const r = "calc(0.55 * hypot(50vw, 78svh))";
-    expect(images[0]).toBe(`radial-gradient(circle ${r} at 50% 50%, var(--color-app-glow-sea) var(--app-glow-sea-flat), transparent)`);
+    expect(images[0]).toBe(`radial-gradient(circle ${r} at 50% 50%, var(--color-app-glow-sea), transparent)`);
     expect(sizes[0]).toBe(`100% calc(2 * ${r})`);
     expect(positions[0]).toBe(`0 calc(22svh - ${r})`);
-    expect(glowScreens("app", places, 3)).toContain(`radial-gradient(circle ${r} at 50% 22svh, var(--color-app-glow-sea) var(--app-glow-sea-flat), transparent)`);
+    expect(glowScreens("app", places, 3)).toContain(`radial-gradient(circle ${r} at 50% 22svh, var(--color-app-glow-sea), transparent)`);
     // Third screen: the first place again, 200svh down.
     expect(positions[4]).toBe(`0 calc(222svh - ${r})`);
     expect(images[5]).toBe("radial-gradient(circle calc(0.5 * hypot(86vw, 82svh)) at 86% 50%, var(--color-app-glow-apricot), transparent)");

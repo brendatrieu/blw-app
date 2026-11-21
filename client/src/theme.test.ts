@@ -174,9 +174,10 @@ describe("statusBarColor: scheme x theme x surface (ledger 1090)", () => {
     }
   });
 
-  it("pins the measured colours (390x844, batch-1134 measure): top = the ground's even top row, frost = the scrolled header's", () => {
-    expect(STATUS_BAR.top).toEqual({ light: "#ecf2f4", dark: "#2f3942" });
-    expect(STATUS_BAR.frost).toEqual({ light: "#f9fcfd", dark: "#222a34" });
+  it("pins the measured colours (ledger 1100/1093, batch-1133 finish: every tab page, 390x844 + 320x568): top = the ground's even top row, frost = the scrolled header's", () => {
+    // Dark top = the .20 sea glow's colour at the top centre (was #2f3942 on the 1083 capped .40 glow).
+    expect(STATUS_BAR.top).toEqual({ light: "#ecf2f4", dark: "#1f262d" });
+    expect(STATUS_BAR.frost).toEqual({ light: "#fafcfc", dark: "#1e2630" });
     // Outside AppLayout: the page colour, as before 1090.
     expect(STATUS_BAR.page).toBe(THEME_BG);
   });

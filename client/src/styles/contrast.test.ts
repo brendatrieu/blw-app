@@ -653,7 +653,6 @@ describe("app glass, round 15 (ledger 1077-1082)", () => {
   // case each surface can sit on.
   const TOKENS = [
     "color-app-glow-sea",
-    "app-glow-sea-flat",
     "color-app-glow-top",
     "color-app-glow-apricot",
     "color-card-glass",
@@ -692,15 +691,10 @@ describe("app glass, round 15 (ledger 1077-1082)", () => {
   ];
   for (const mode of ["light", "dark"] as const) {
     const page = rgb("color-bg", mode);
-    const glow = (token: string, strength: number) => {
-      const c = rgb(token, mode);
-      return compositeOver({ ...c, a: c.a * strength }, page);
-    };
-    // Light at full glow strength. Dark at half, as the landing, for the
-    // surfaces and chips (pixel-measured in the ledger 1083 sweep); the inks on
-    // the bare ground are also gated at the dark sea glow's full centre below.
-    const strength = mode === "light" ? 1 : 0.5;
-    const grounds = { page, sea: glow("color-app-glow-sea", strength), apricot: glow("color-app-glow-apricot", strength) };
+    // Both modes at the glows' full centre (ledger 1093: dark at the
+    // landing's .20/.14 clears every pairing there, so the half-strength
+    // stand-in and the separate dark centre gates of the .40 glow are gone).
+    const grounds = { page, sea: compositeOver(rgb("color-app-glow-sea", mode), page), apricot: compositeOver(rgb("color-app-glow-apricot", mode), page) };
     const scrim = compositeOver({ ...rgb("color-text", mode), a: 0.4 }, page); // Sheet/Dialog overlay, bg-[var(--color-text)]/40
     const surfaces: Record<string, Rgba> = { "popup over the dimmed page": compositeOver(rgb("color-bar-glass", mode), scrim) };
     for (const [where, ground] of Object.entries(grounds)) {
@@ -733,25 +727,6 @@ describe("app glass, round 15 (ledger 1077-1082)", () => {
         });
       }
     }
-    // Ledger 1083 (sweep): every inner page's title, intro, how-to link and
-    // field errors sit on the bare ground at the first sea glow's centre. Dark
-    // is gated there at FULL strength (the half-strength grounds above were a
-    // stand-in until the pixel sweep measured 3.26-3.98 at .40).
-    if (mode === "dark") {
-      const centre = glow("color-app-glow-sea", 1);
-      for (const pair of INKS) {
-        it(`[dark] ${pair.name} on the bare ground at the sea glow's full centre >= ${pair.min ?? 4.5}:1`, () => {
-          expect(contrastRatio(rgb(pair.fg, mode), centre)).toBeGreaterThanOrEqual(pair.min ?? 4.5);
-        });
-      }
-      // The nutrient chips on the food and recipe pages sit there too (sea ink
-      // on a sea tint over the sea glow: 4.44 measured with the plain ink).
-      it("[dark] nutrient chip on the bare ground at the sea glow's full centre >= 4.5:1, with headroom", () => {
-        const chip = compositeOver(rgb("color-primary-soft", mode), centre);
-        expect(contrastRatio(rgb("color-primary-soft-text", mode), chip)).toBeLessThan(4.55);
-        expect(contrastRatio(rgb("color-primary-soft-text-glass", mode), chip)).toBeGreaterThanOrEqual(4.9);
-      });
-    }
     // The chair's headroom (round 15 measured 4.67 header greeting / 4.84
     // Storage "1"): the light apricot label clears 5:1 on every glass.
     if (mode === "light") {
@@ -773,12 +748,12 @@ describe("app glass, round 15 (ledger 1077-1082)", () => {
 
   // Round 15's approved values (owner 2026-11-20), pinned.
   const EXPECTED: Record<string, { light: string; dark: string }> = {
-    // Dark: centre capped at .24 (ledger 1083 sweep: .40 failed the page inks there), flat to 40% of the radius.
-    "color-app-glow-sea": { light: "rgba(180, 212, 230, 0.4)", dark: "rgba(180, 212, 230, 0.24)" },
-    "app-glow-sea-flat": { light: "0%", dark: "40%" },
-    // Ledger 1090: the sea glow's colour at the top centre (390x844), the ground's even top row and the status bar's.
-    "color-app-glow-top": { light: "#ecf2f4", dark: "#2f3942" },
-    "color-app-glow-apricot": { light: "rgba(247, 180, 138, 0.28)", dark: "rgba(247, 180, 138, 0.22)" },
+    // Dark: the landing's strength (ledger 1093, owner: round 15's dark glow "too busy").
+    "color-app-glow-sea": { light: "rgba(180, 212, 230, 0.4)", dark: "rgba(180, 212, 230, 0.2)" },
+    // Ledger 1090: the sea glow's colour at the top centre (390x844), the ground's even top row and the status bar's
+    // (dark re-measured on the .20 glow, ledger 1093).
+    "color-app-glow-top": { light: "#ecf2f4", dark: "#1f262d" },
+    "color-app-glow-apricot": { light: "rgba(247, 180, 138, 0.28)", dark: "rgba(247, 180, 138, 0.14)" },
     "color-card-glass": { light: "rgba(255, 255, 255, 0.45)", dark: "rgba(30, 38, 48, 0.7)" },
     "color-card-glass-border": { light: "rgba(255, 255, 255, 0.6)", dark: "rgba(255, 255, 255, 0.08)" },
     "color-bar-glass": { light: "rgba(255, 255, 255, 0.78)", dark: "rgba(30, 38, 48, 0.85)" },
@@ -791,12 +766,12 @@ describe("app glass, round 15 (ledger 1077-1082)", () => {
       expect(resolve(token, "dark")).toBe(dark);
     });
   }
-  it("outside its flat centre the sea glow fades exactly as round 15's .40 glow did, in both modes", () => {
-    // A stop of alpha a at f of the radius, then linear to 0: alpha(r) = a (1 - r) / (1 - f), i.e. a .40 fade when a / (1 - f) = .40.
-    for (const mode of ["light", "dark"] as const) {
-      const flat = Number.parseFloat(resolve("app-glow-sea-flat", mode)) / 100;
-      expect(parseColor(resolve("color-app-glow-sea", mode)).a / (1 - flat)).toBeCloseTo(0.4, 5);
-    }
+  it("dark: the app glow is the landing's dark glow (ledger 1093), the landing's tokens untouched", () => {
+    expect(resolve("color-app-glow-sea", "dark")).toBe(resolve("color-landing-glow-sea", "dark"));
+    expect(resolve("color-app-glow-apricot", "dark")).toBe(resolve("color-landing-glow-apricot", "dark"));
+    expect(resolve("color-landing-glow-sea", "dark")).toBe("rgba(180, 212, 230, 0.2)");
+    expect(resolve("color-landing-glow-apricot", "dark")).toBe("rgba(247, 180, 138, 0.14)");
+    expect(css).not.toContain("glow-sea-flat"); // ledger 1101: no flat-centre cap
   });
   it("bars and popups blur 22px + saturate 140% in both modes", () => {
     expect(rootVars.get("bar-filter")).toMatch(/^blur\(22px\) saturate\(140%\)/);

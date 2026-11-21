@@ -111,9 +111,6 @@
      is missing or the reader asks for less transparency. contrast.test gates
      every ink over each surface over each glow. */
   --color-app-glow-sea: rgba(180, 212, 230, 0.4);
-  /* How far out (of its radius) the sea glow holds its centre colour before
-     fading (lib/glows.ts). Light 0%: the plain round-15 fade. */
-  --app-glow-sea-flat: 0%;
   /* Ledger 1090: the ground's top row in one colour (.app-ground::before
      fades it out over the top 4rem): the sea glow's own colour at the top centre, so
      the installed app's opaque status bar (theme.ts STATUS_BAR, index.html)
@@ -377,18 +374,13 @@
   --_dark-glass-border: rgba(255, 255, 255, 0.12);
   --_dark-shadow-glass: 0 14px 34px rgba(0, 0, 0, 0.35);
   --_dark-glass-filter: blur(22px) saturate(140%);
-  /* Ledger 1083 (sweep): round 15's .40 sea glow, its centre capped at .24.
-     At .40 the centre (50% 22svh, behind every inner page's title and intro)
-     measured 3.26-3.98 for muted text, how-to links and nutrient chips on 14
-     screens; .24 is where every ink clears 4.5 there (contrast.test gates it).
-     A plain .24 glow read as "is that there?" (round 14 reviewer, at .30), so
-     the colour holds flat out to 40% of the radius and then fades exactly as
-     a .40 glow does (.24 / (1 - 0.40) = .40): the haze behind the header and
-     between the cards is round 15's, only the hot centre is cut. */
-  --_dark-app-glow-sea: rgba(180, 212, 230, 0.24);
-  --_dark-app-glow-sea-flat: 40%;
-  --_dark-app-glow-top: #2f3942;
-  --_dark-app-glow-apricot: rgba(247, 180, 138, 0.22);
+  /* Ledger 1093 (owner, on the phone: round 15's dark glow "too busy and
+     distracting"): the landing's dark strength, same placement. At .20 every
+     ink clears 4.5 at the sea glow's centre (contrast.test gates it), so the
+     1083 flat-centre cap is gone (ledger 1101). */
+  --_dark-app-glow-sea: rgba(180, 212, 230, 0.2);
+  --_dark-app-glow-top: #1f262d;
+  --_dark-app-glow-apricot: rgba(247, 180, 138, 0.14);
   --_dark-card-glass: rgba(30, 38, 48, 0.7);
   --_dark-card-glass-border: rgba(255, 255, 255, 0.08);
   --_dark-shadow-card-glass: 0 2px 6px rgba(0, 0, 0, 0.28);
@@ -494,7 +486,6 @@
     --shadow-glass: var(--_dark-shadow-glass);
     --glass-filter: var(--_dark-glass-filter);
     --color-app-glow-sea: var(--_dark-app-glow-sea);
-    --app-glow-sea-flat: var(--_dark-app-glow-sea-flat);
     --color-app-glow-top: var(--_dark-app-glow-top);
     --color-app-glow-apricot: var(--_dark-app-glow-apricot);
     --color-card-glass: var(--_dark-card-glass);
@@ -604,7 +595,6 @@
   --shadow-glass: var(--_dark-shadow-glass);
   --glass-filter: var(--_dark-glass-filter);
   --color-app-glow-sea: var(--_dark-app-glow-sea);
-  --app-glow-sea-flat: var(--_dark-app-glow-sea-flat);
   --color-app-glow-top: var(--_dark-app-glow-top);
   --color-app-glow-apricot: var(--_dark-app-glow-apricot);
   --color-card-glass: var(--_dark-card-glass);

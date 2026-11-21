@@ -19,15 +19,16 @@ export const THEME_BG = { light: "#fbfaf8", dark: "#0e1218" } as const;
  * - "top": an AppLayout page at scroll 0, the glow ground's even top row
  *   (index.css --color-app-glow-top). index.html's metas start here.
  * - "frost": once scrolled, the frosted header's top row over the plain
- *   ground (--color-bar-glass over the glow, measured at 390x844; busy
- *   content under the header moves it a few levels).
+ *   ground (--color-bar-glass over the glow; ledger 1100: the middle of what
+ *   every tab page measured at 390x844 and 320x568, all within 3/255; busy
+ *   content under the header moves it further).
  * - "page": the screens outside AppLayout (landing, About, auth): the page
  *   colour, as before.
  * A native shell picks its own status bar from the same table.
  */
 export const STATUS_BAR = {
-  top: { light: "#ecf2f4", dark: "#2f3942" },
-  frost: { light: "#f9fcfd", dark: "#222a34" },
+  top: { light: "#ecf2f4", dark: "#1f262d" },
+  frost: { light: "#fafcfc", dark: "#1e2630" },
   page: THEME_BG,
 } as const;
 export type StatusBarSurface = keyof typeof STATUS_BAR;
