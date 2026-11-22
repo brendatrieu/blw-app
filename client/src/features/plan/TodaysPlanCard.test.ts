@@ -89,6 +89,7 @@ import { PlanOffer, TodaysPlan, TodaysPlanCard } from "./TodaysPlanCard.js";
 import { ServedMealLines } from "../tracking/components/RatedMealLines.js";
 import { PageTrack, type PagedTrack } from "../../components/ui/Pager.js";
 import { todaysPlanPages } from "./plan.js";
+import { SETTLE_MS } from "../../lib/trackSettle.js";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const TODAY = "2026-10-14";
@@ -363,6 +364,45 @@ describe("TodaysPlan (handlers)", () => {
     expect(shownName(tree)).toBe("Breakfast");
     expect(el.scrollLeft).toBe(140);
     expect(byLabel(tree, "Previous meal").props["aria-disabled"]).toBe(true);
+  });
+
+  it("the card takes the shown page's height only once the track has settled, never with a finger down (ledger 1142c)", () => {
+    vi.useRealTimers(); // a second useFakeTimers would keep beforeEach's Date-only clock
+    vi.useFakeTimers({ now: new Date("2026-10-14T07:10:00Z"), toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.stubGlobal("CSS", { supports: () => true }); // iOS: no `near` window
+    const meals = [BREAKFAST, LUNCH];
+    let tree = render(meals);
+    const el = Object.assign(scroller(tree), { children: [292, 190].map((height) => ({ getBoundingClientRect: () => ({ height }) })) });
+    const clipOf = (t: El[]) => all(t[0], (e) => typeof e.props.className === "string" && e.props.className.startsWith("overflow-clip"))[0]!;
+    expect(clipOf(tree).props.className).toContain("transition-[height]");
+    expect(clipOf(tree).props.className).toContain("motion-reduce:transition-none");
+    const box = { style: { height: "", transition: "" }, getBoundingClientRect: () => ({ height: 292 }), offsetHeight: 292 };
+    ((clipOf(tree) as unknown as { ref: { current: unknown } }).ref).current = box; // React 18 keeps `ref` off props
+    // At rest (the first placement): fitted at once, before paint.
+    tree = render(meals);
+    expect(box.style.height).toBe("292px");
+    // A finger drags to Lunch and holds still there: nothing changes.
+    trackOf(tree).track.onTouchStart();
+    for (const left of [100, 200, 300]) {
+      el.scrollLeft = left;
+      el.scroll();
+      tree = render(meals);
+    }
+    vi.advanceTimersByTime(1000);
+    expect(box.style.height).toBe("292px");
+    // Lifted: still nothing until the track has been still a while.
+    (clipOf(tree).props.onTouchEnd as (event: unknown) => void)({ touches: [] });
+    tree = render(meals);
+    expect(box.style.height).toBe("292px");
+    vi.advanceTimersByTime(SETTLE_MS);
+    expect(box.style.height).toBe("190px");
+    // An arrow's scroll settles the same way.
+    (byLabel(tree, "Previous meal").props.onClick as () => void)();
+    render(meals);
+    expect(box.style.height).toBe("190px");
+    vi.advanceTimersByTime(SETTLE_MS);
+    expect(box.style.height).toBe("292px");
+    vi.unstubAllGlobals();
   });
 
   it("› and ‹ scroll the same track a page; the scroll picks the meal; nothing past either end (ledger 1142a)", () => {

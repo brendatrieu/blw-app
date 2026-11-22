@@ -5,6 +5,7 @@ import { Card, HOME_CARD_LABEL_CLASS } from "../../components/ui/Card.js";
 import { ChevronLeftGlyph, ChevronRightGlyph } from "../../components/ui/iconButton.js";
 import { PAGER_BUTTON, PageTrack, pageWindow, usePagedTrack, type PagedTrack } from "../../components/ui/Pager.js";
 import { slideIndexFromScroll } from "../../lib/scrollTrack.js";
+import { fitToRestingSlide, holdHeight, watchSettle, type SettleWatch } from "../../lib/trackSettle.js";
 import { useIsOffline } from "../../lib/online.js";
 import { track } from "../../lib/usage/track.js";
 import { useDismissPlanOffer, usePreferences } from "../tour/hooks.js";
@@ -117,8 +118,11 @@ export function PlanOffer({ today }: { today: string }) {
  * The card itself, mounted only once there is a plan to show. Ledger 1142a:
  * each page is a slide on Home's swipe track (`PageTrack`, as the Food log
  * and Reminders), so a swipe follows the finger and snaps like theirs; ‹ ›
- * scroll that same track. The card is as tall as today's tallest page, so
- * nothing below moves on a flip. The page shown is still `todaysPlanIndex`:
+ * scroll that same track. Ledger 1142c: the card is as tall as the page it
+ * shows, but only changes height once the track has settled on that page
+ * (`watchSettle`), never mid-swipe; then it eases there. The track itself
+ * keeps its tallest-page height inside a clip box, so the scroller never
+ * resizes (1120's lesson). The page shown is still `todaysPlanIndex`:
  * the track is put there instantly (on load, or when the plan changes under
  * it), and a page the parent swipes or steps to becomes `picked`.
  */
@@ -137,12 +141,41 @@ export function TodaysPlan({ babyId, today, pages }: { babyId: string; today: st
     scrolled.current = index;
     el.scrollLeft = index * el.clientWidth;
   });
+  // Ledger 1142c: the clip box takes the resting page's height once the track settles.
+  const clip = useRef<HTMLDivElement | null>(null);
+  const fit = () => {
+    if (track.trackRef.current && clip.current) fitToRestingSlide(track.trackRef.current, clip.current);
+  };
+  const settle = useRef<SettleWatch | null>(null);
+  settle.current ??= watchSettle(fit);
+  const watch = settle.current;
+  // First placement and any render while settled (a served meal's lines loading, offline) fit at once, before paint.
+  useLayoutEffect(() => {
+    if (watch.idle()) fit();
+  });
+  // A page whose content reflows while settled (rotation, lines arriving after
+  // render). A timer left running at unmount finds no clip box and does nothing.
+  useEffect(() => {
+    const el = track.trackRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (watch.idle()) fit();
+    });
+    for (const slide of Array.from(el.children)) observer.observe(slide);
+    return () => observer.disconnect();
+  }, [pages.length]); // the slides change with the page count only
   const paged: PagedTrack = {
     ...track,
     // `inert` follows the page shown, before the first scroll event too.
     pages: pageWindow(pages.length, index, 1),
+    onTouchStart: () => {
+      track.onTouchStart();
+      watch.touchStart();
+      if (clip.current) holdHeight(clip.current);
+    },
     onScroll: (event) => {
       track.onScroll(event);
+      watch.scrolled();
       const el = event.currentTarget;
       scrolled.current = slideIndexFromScroll(el.scrollLeft, el.clientWidth, pages.length);
       if (scrolled.current !== index) setPicked(todaysPlanKey(pages[scrolled.current]!));
@@ -194,15 +227,23 @@ export function TodaysPlan({ babyId, today, pages }: { babyId: string; today: st
         </div>
       </div>
       {/* No bleed: a slide's px-4 pb-3.5 is the card's old padding, so a page slides out at the card's edge. */}
-      <PageTrack
-        track={paged}
-        items={pages}
-        renderSlide={([page]) => (
-          <div className="px-4 pb-3.5">
-            <UpNextPage babyId={babyId} today={today} page={page!} oneTap={oneTap} offline={offline} onServe={setPicked} />
-          </div>
-        )}
-      />
+      {/* Ledger 1142c: clips the track to the resting page; a taller page swiped in shows cut off until it settles. */}
+      <div
+        ref={clip}
+        onTouchEnd={(event) => event.touches.length === 0 && watch.touchEnd()}
+        onTouchCancel={(event) => event.touches.length === 0 && watch.touchEnd()}
+        className="overflow-clip transition-[height] duration-[var(--duration-base)] ease-[var(--ease-out)] motion-reduce:transition-none"
+      >
+        <PageTrack
+          track={paged}
+          items={pages}
+          renderSlide={([page]) => (
+            <div className="px-4 pb-3.5">
+              <UpNextPage babyId={babyId} today={today} page={page!} oneTap={oneTap} offline={offline} onServe={setPicked} />
+            </div>
+          )}
+        />
+      </div>
     </Card>
   );
 }
