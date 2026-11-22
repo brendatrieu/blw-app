@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { MealFood, MealItem } from "@blw/shared";
 import { useDeleteMeal, useMeals } from "../hooks.js";
-import { DeletedMark } from "../../catalog/components/DeletedMark.js";
+import { DeletedMark, FoodNames } from "../../catalog/components/DeletedMark.js";
 import { mealLines } from "../../plate/plate.js";
 import { ItemPlate } from "../../plate/PlateItemRow.js";
 import { MealActionsMenu } from "./MealActionsMenu.js";
@@ -102,14 +102,13 @@ const STARS_AT_END = "ml-auto mr-2";
 
 type Line = ReturnType<typeof mealLines>[number];
 
-/** One line's plate, name and (ledger 966) read-only stars. `oneLine`: Home's
- * fixed-height row truncates the name instead of wrapping it (ledger 1121). */
-function lineParts(line: Line, oneLine = false) {
+/** One line's plate, name and (ledger 966) read-only stars. */
+function lineParts(line: Line) {
   const own = line.ratings[0]?.rating ?? null;
   return (
     <>
       <ItemPlate plates={line.plates} size={28} />
-      <span className={`min-w-0 text-sm leading-[1.3] font-medium ${oneLine ? "truncate" : "break-words"} text-[var(--color-text)]`}>
+      <span className={`min-w-0 text-sm leading-[1.3] font-medium break-words text-[var(--color-text)]`}>
         {line.name}
         <DeletedMark deleted={line.deleted} />
       </span>
@@ -134,20 +133,7 @@ function MealLineList({ meal }: { meal: MealItem }) {
   );
 }
 
-/** Ledger 1121: how many lines a Home row shows, each exactly one line tall. */
-export const ROW_SLOTS = 2;
-
-/**
- * Ledger 1121: a Home row's lines: all of them when they fit its slots, else
- * the first ones and "+N more" in the last slot (3 foods: the first and "+2
- * more"), so every row, and so every page, is the same height.
- */
-export function previewLines<T>(lines: readonly T[], slots = ROW_SLOTS): { shown: T[]; more: number } {
-  if (lines.length <= slots) return { shown: [...lines], more: 0 };
-  return { shown: lines.slice(0, slots - 1), more: lines.length - (slots - 1) };
-}
-
-/** A Home row's slot: the 28px plate plus 3px above and below, as a line on /meals. */
+/** A Home row's food line: the 28px plate plus 3px above and below, as a line on /meals. */
 const SLOT = "flex h-[34px] items-center gap-2";
 
 const STRETCHED_TARGET =
@@ -162,7 +148,7 @@ export interface MealCardProps {
    * kebab named after the meal. */
   grouped?: boolean;
   /** Ledger 1121, Home's paged rows: a fixed height (the date line, then
-   * `ROW_SLOTS` one-line slots, no notes) and a tap opens the whole meal
+   * one food line, ledger 1143; no notes) and a tap opens the whole meal
    * through this instead of Edit (which stays in the kebab). */
   onOpen?: (meal: MealItem) => void;
 }
@@ -181,25 +167,28 @@ export function MealCard({ meal, onRequestDelete, grouped = false, onOpen }: Mea
   const fixed = onOpen !== undefined;
   let body;
   if (onOpen) {
-    const { shown, more } = previewLines(mealLines(meal, { flattenContainers: true }));
-    const slots = shown.map((line) => (
-      <span key={line.key} className={SLOT}>
-        {lineParts(line, true)}
-      </span>
-    ));
-    if (more > 0)
-      slots.push(
-        <span key="more" className={`${SLOT} pl-9 text-sm text-[var(--color-text-muted)]`}>
-          {`+${more} more`}
-        </span>,
-      );
-    // A one-food meal keeps its second slot, empty, so its row is as tall as the rest.
-    while (slots.length < ROW_SLOTS) slots.push(<span key={`empty-${slots.length}`} className={SLOT} aria-hidden="true" />);
-    // A button, not a link (ledger 1121): it opens the meal in a sheet. Named
-    // by its content, as the link was: the foods, "Rated N stars", "+N more".
+    // Ledger 1143: one line: the first food's plate, the first two names
+    // cut short with an ellipsis, then "+N" for the rest. No stars (the
+    // sheet has them). A button, not a link (ledger 1121): it opens the meal
+    // in a sheet, named by its content: the two names and "+N more".
+    const lines = mealLines(meal, { flattenContainers: true });
+    const more = lines.length - 2;
     body = (
       <button type="button" aria-haspopup="dialog" onClick={() => onOpen(meal)} className={`${STRETCHED_TARGET} w-full text-left`}>
-        <span className="flex flex-col">{slots}</span>
+        <span className={SLOT}>
+          {lines[0] && <ItemPlate plates={lines[0].plates} size={28} />}
+          <span className="min-w-0 truncate text-sm leading-[1.3] font-medium text-[var(--color-text)]">
+            <FoodNames foods={lines.slice(0, 2)} />
+          </span>
+          {more > 0 && (
+            <span className="mr-2 shrink-0">
+              <Badge tone="count">
+                +{more}
+                <span className="sr-only"> more</span>
+              </Badge>
+            </span>
+          )}
+        </span>
       </button>
     );
   } else {
@@ -268,7 +257,7 @@ export interface MealSheetProps {
 }
 
 /**
- * Ledger 1121: the whole meal behind a Home row (the row shows two lines):
+ * Ledger 1121: the whole meal behind a Home row (the row shows one line, 1143):
  * its date line, the "From storage" badge, every line with its stars, the
  * notes and reaction, and the row kebab's two actions as buttons. The meal
  * page itself is retired (ledger 966), so Edit is the plate page, as before.

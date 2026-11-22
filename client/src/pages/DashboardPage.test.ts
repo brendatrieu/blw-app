@@ -648,9 +648,9 @@ describe("DashboardPage Today layout (items 660-664)", () => {
       for (const start of firstInRow) expect(start.startsWith(PLATE)).toBe(true);
       // Food log 2 (CD-Food-Log): under the date line, each item line starts
       // with its plate at the row's own padding, where the line starts
-      // (ledger 1121: a fixed row's first slot, in the button that opens the meal).
+      // (ledger 1121/1143: a fixed row's one line, in the button that opens the meal).
       const logLines = html.match(
-        /<button type="button" aria-haspopup="dialog" [^>]*><span class="flex flex-col"><span class="flex h-\[34px\] items-center gap-2"><span aria-hidden="true" class="flex shrink-0 /g,
+        /<button type="button" aria-haspopup="dialog" [^>]*><span class="flex h-\[34px\] items-center gap-2"><span aria-hidden="true" class="flex shrink-0 /g,
       );
       expect(logLines).toHaveLength(2);
     });

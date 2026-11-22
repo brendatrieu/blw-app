@@ -229,6 +229,11 @@
      any other label that deliberately carries no semantic color. ---- */
   --color-neutral-soft: rgba(91, 101, 112, 0.12);
   --color-neutral-soft-text: #5b6570;
+  /* Ledger 1143: the Food log row's "+N" on the neutral tint. It sits on
+     Home's card over the glows, where the neutral ink held only 4.56:1 on
+     screen: a step darker in light, a step lighter in dark (>= 4.8:1 over
+     every glow, contrast.test). */
+  --color-count-text: #535d68;
 
   /* ---- Allergen pill — a soft plum, opaque in both modes (item 636). Red
      stays for reactions, choking notes and Delete. ---- */
@@ -440,6 +445,7 @@
 
   --_dark-neutral-soft: rgba(163, 175, 186, 0.16);
   --_dark-neutral-soft-text: #a3afba;
+  --_dark-count-text: #aeb9c4;
 
   --_dark-allergen-soft: #3b2541;
   --_dark-allergen-soft-text: #f2e3f5;
@@ -550,6 +556,7 @@
 
     --color-neutral-soft: var(--_dark-neutral-soft);
     --color-neutral-soft-text: var(--_dark-neutral-soft-text);
+    --color-count-text: var(--_dark-count-text);
 
     --color-allergen-soft: var(--_dark-allergen-soft);
     --color-allergen-soft-text: var(--_dark-allergen-soft-text);
@@ -661,6 +668,7 @@
 
   --color-neutral-soft: var(--_dark-neutral-soft);
   --color-neutral-soft-text: var(--_dark-neutral-soft-text);
+  --color-count-text: var(--_dark-count-text);
 
   --color-allergen-soft: var(--_dark-allergen-soft);
   --color-allergen-soft-text: var(--_dark-allergen-soft-text);

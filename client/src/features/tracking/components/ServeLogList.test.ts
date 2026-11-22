@@ -13,8 +13,6 @@ import {
   HOME_MEAL_LIMIT,
   MealCard,
   MealSheet,
-  previewLines,
-  ROW_SLOTS,
   ServeLogList,
   servedLine,
   timeLabel,
@@ -616,9 +614,9 @@ describe("Home paging (item 694)", () => {
 });
 
 // Ledger 1121: Home's Food log is a fixed height. Each paged row is the date
-// line plus exactly two one-line slots (a 3+ line meal: its first line, then
-// "+N more"; a one-line meal: an empty second slot), no notes, and it opens
-// the whole meal in `MealSheet` instead of the edit page.
+// line plus ONE food line (ledger 1143: the first plate, the first two names
+// cut short, "+N" for the rest, no stars), no notes, and it opens the whole
+// meal in `MealSheet` instead of the edit page.
 describe("Home's fixed-height row and the full-meal sheet (ledger 1121)", () => {
   const meal = (names: string[], extra: Partial<MealItem> = {}): MealItem => ({
     ...baseMeal,
@@ -635,42 +633,60 @@ describe("Home's fixed-height row and the full-meal sheet (ledger 1121)", () => 
       ),
     ).replace(/<!-- -->/g, "");
   };
-  const SLOT = 'class="flex h-[34px] items-center gap-2';
-  const slots = (html: string) => {
-    const inner = /<button type="button" aria-haspopup="dialog"[^>]*><span class="flex flex-col">([\s\S]*)<\/span><\/button>/.exec(html)![1]!;
-    return inner.split(`<span ${SLOT}`).slice(1);
-  };
+  /** The row's food line: everything inside its button. */
+  const foodLine = (html: string) => /<button type="button" aria-haspopup="dialog"[^>]*>([\s\S]*)<\/button>/.exec(html)![1]!;
+  const NAMES = '<span class="min-w-0 truncate text-sm leading-[1.3] font-medium text-[var(--color-text)]">';
   const FIVE = ["Sweet Potato", "Broccoli", "Carrot", "Lentils", "Spinach"];
 
-  it("previewLines: all lines while they fit the slots, else the first ones and the rest counted in the last slot", () => {
-    expect(ROW_SLOTS).toBe(2);
-    expect(previewLines([])).toEqual({ shown: [], more: 0 });
-    expect(previewLines(["a"])).toEqual({ shown: ["a"], more: 0 });
-    expect(previewLines(["a", "b"])).toEqual({ shown: ["a", "b"], more: 0 });
-    expect(previewLines(["a", "b", "c"])).toEqual({ shown: ["a"], more: 2 });
-    expect(previewLines(["a", "b", "c", "d", "e"])).toEqual({ shown: ["a"], more: 4 });
-    expect(previewLines(["a", "b", "c", "d"], 3)).toEqual({ shown: ["a", "b"], more: 2 });
-  });
-
-  it("every row has exactly two 34px slots: 1, 2, 3 and 5 foods", () => {
-    for (const names of [["Egg"], ["Egg", "Pear"], ["Pear", "Oats", "Yogurt"], FIVE]) {
-      const html = renderRow(meal(names));
-      expect(slots(html)).toHaveLength(2);
+  it("one 34px line: the first plate, the first two names joined in one truncating span, then +N (1/2/3/5 foods: none/none/+1/+3)", () => {
+    const cases: [string[], string, string | null][] = [
+      [["Egg"], "Egg", null],
+      [["Egg", "Pear"], "Egg, Pear", null],
+      [["Pear", "Oats", "Yogurt"], "Pear, Oats", "+1"],
+      [FIVE, "Sweet Potato, Broccoli", "+3"],
+    ];
+    for (const [names, shown, badge] of cases) {
+      const line = foodLine(renderRow(meal(names)));
+      expect(line.startsWith('<span class="flex h-[34px] items-center gap-2">'), names.join()).toBe(true);
+      expect((line.match(/<span class="flex h-\[34px\]/g) ?? []).length).toBe(1);
+      expect(line).toContain(`${NAMES}${shown}</span>`);
+      const counts = line.match(/>\+\d+</g) ?? [];
+      expect(counts, names.join()).toEqual(badge ? [`>${badge}<`] : []);
+      if (badge) {
+        expect(line).toMatch(new RegExp(`<span class="mr-2 shrink-0"><span class="[^"]*text-\\[var\\(--color-count-text\\)\\][^"]*">\\${badge}<span class="sr-only"> more</span></span></span></span>$`));
+      }
     }
-    const [, emptySlot] = slots(renderRow(meal(["Egg"])));
-    expect(emptySlot).toBe('" aria-hidden="true"></span>');
-    const [first, more] = slots(renderRow(meal(FIVE)));
-    expect(first).toContain(">Sweet Potato<");
-    expect(more).toBe(' pl-9 text-sm text-[var(--color-text-muted)]">+4 more</span>');
-    expect(slots(renderRow(meal(["Pear", "Oats", "Yogurt"])))[1]).toContain(">+2 more<");
-    const two = slots(renderRow(meal(["Egg", "Pear"])));
-    expect(two[0]).toContain(">Egg<");
-    expect(two[1]).toContain(">Pear<");
+    // Only the first food's plate leads the line: the same as a one-food meal's.
+    const plate = (names: string[]) => foodLine(renderRow(meal(names))).split(NAMES)[0];
+    expect(plate(FIVE)).toBe(plate(["Sweet Potato"]));
+    expect(plate(FIVE)).not.toBe(plate(["Broccoli"]));
   });
 
-  it("a slot never wraps: one-line names, the header never wraps and its date is cut short before the kebab moves", () => {
+  const plateFood = (n: number, name: string, rating: number | null, deleted?: boolean) => ({
+    kind: "food" as const,
+    id: `00000000-0000-4000-8000-0000000000${10 + n}`,
+    food: { id: `00000000-0000-4000-8000-0000000000${20 + n}`, slug: name.toLowerCase(), name, category: "fruit" as const, ...(deleted && { deleted }) },
+    rating,
+  });
+
+  it("a deleted food keeps its muted mark on the row", () => {
+    const html = renderRow({ ...baseMeal, items: [plateFood(0, "Zucchini", null, true), plateFood(1, "Mango", null)] });
+    expect(foodLine(html)).toContain(`${NAMES}<span>Zucchini<span class="font-normal text-[var(--color-text-muted)]">\u00a0(deleted)</span>, Mango</span></span>`);
+  });
+
+  it("no stars on the row, even for rated foods; the sheet lists every food with its stars", () => {
+    const rated: MealItem = { ...baseMeal, items: FIVE.map((name, i) => plateFood(i, name, i + 1)) };
+    const html = renderRow(rated);
+    expect(html).not.toContain('role="img"');
+    expect(html).not.toMatch(/Rated \d star/);
+    const el = (MealSheet as unknown as (p: unknown) => El)({ meal: rated, onClose: () => {}, onRequestDelete: () => {} });
+    const sheet = renderToString(createElement(MemoryRouter, null, el.props.children as never)).replace(/<!-- -->/g, "");
+    FIVE.forEach((name, i) => expect(sheet).toMatch(new RegExp(`>${name}</span><span role="img" aria-label="Rated ${i + 1} stars?"`)));
+  });
+
+  it("the row never wraps: names truncate, the header never wraps and its date is cut short before the kebab moves", () => {
     const html = renderRow(meal(["A very long custom food name that would wrap twice", "Pear"]));
-    expect(html).toContain('<span class="min-w-0 text-sm leading-[1.3] font-medium truncate text-[var(--color-text)]">');
+    expect(html).toContain(NAMES);
     expect(html).not.toContain("break-words");
     expect(html).toMatch(/<div class="flex items-center justify-between gap-x-2"><span class="min-w-0 truncate text-xs text-\[var\(--color-text-muted\)\]">/);
     expect(html).not.toContain("flex-wrap");

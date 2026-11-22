@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type BadgeTone = "primary" | "neutral" | "allergen" | "dangerSoft" | "sunshine" | "leaf" | "outline" | "nutrient";
+export type BadgeTone = "primary" | "neutral" | "allergen" | "dangerSoft" | "sunshine" | "leaf" | "outline" | "nutrient" | "count";
 
 const TONE_CLASSES: Record<BadgeTone, string> = {
   // Solid CTA-style fill — the single "strong" badge look, shared with buttons.
@@ -15,6 +15,9 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
   // shorthand for caution/success even though the token values underneath
   // are the new palette's.
   neutral: "bg-[var(--color-neutral-soft)] text-[var(--color-neutral-soft-text)]",
+  // Ledger 1143: the Food log row's "+N", the neutral chip with more contrast
+  // (it sits on Home's card over the glows).
+  count: "bg-[var(--color-neutral-soft)] text-[var(--color-count-text)]",
   sunshine: "bg-[var(--color-caution-soft)] text-[var(--color-caution-soft-text)]",
   leaf: "bg-[var(--color-success-soft)] text-[var(--color-success-soft-text)]",
   // Badge rules (item 637): tinted = status, outline = plain info (6m+,

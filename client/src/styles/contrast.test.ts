@@ -712,6 +712,7 @@ describe("app glass, round 15 (ledger 1077-1082)", () => {
     "color-apricot-text-glass",
     "color-text-muted-glass",
     "color-primary-soft-text-glass",
+    "color-count-text",
   ];
   const mediaStart = css.indexOf("@media (prefers-color-scheme: dark)");
   const mediaRoot = parseDeclarations(extractBlock(css.slice(mediaStart), ':root:not([data-theme="light"]) {') ?? "");
@@ -772,6 +773,13 @@ describe("app glass, round 15 (ledger 1077-1082)", () => {
         it(`[${mode}] ${tone.name} chip on the ${where} >= 4.5:1`, () => {
           const tint = rgb(tone.tint, mode);
           expect(contrastRatio(rgb(ink, mode), tint.a < 1 ? compositeOver(tint, surface) : tint)).toBeGreaterThanOrEqual(4.5);
+        });
+      }
+      // Ledger 1143: the Food log row's "+N" (Badge tone count) on Home's
+      // card, with headroom (on screen over the glow the neutral ink held 4.56).
+      if (where.startsWith("card")) {
+        it(`[${mode}] "+N" count chip on the ${where} >= 4.8:1`, () => {
+          expect(contrastRatio(rgb("color-count-text", mode), compositeOver(rgb("color-neutral-soft", mode), surface))).toBeGreaterThanOrEqual(4.8);
         });
       }
     }
