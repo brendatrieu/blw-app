@@ -89,7 +89,6 @@ import { PlanOffer, TodaysPlan, TodaysPlanCard } from "./TodaysPlanCard.js";
 import { ServedMealLines } from "../tracking/components/RatedMealLines.js";
 import { PageTrack, type PagedTrack } from "../../components/ui/Pager.js";
 import { todaysPlanPages } from "./plan.js";
-import { SETTLE_MS } from "../../lib/trackSettle.js";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const TODAY = "2026-10-14";
@@ -154,9 +153,12 @@ beforeEach(() => {
   h.prefs = { planOfferDismissedAt: null };
   h.dismissCalls = 0;
   h.tracked.length = 0;
+  // Ledger 1144a: a scroll asks for a frame to set the card's height; node has none.
+  vi.stubGlobal("requestAnimationFrame", () => 1);
 });
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe("TodaysPlanCard (render)", () => {
@@ -278,7 +280,7 @@ describe("TodaysPlan (handlers)", () => {
     Array.isArray(node) ? node.map(text).join("") : typeof node === "string" ? node : node && typeof node === "object" && "props" in node ? text((node as El).props.children) : "";
   const byLabel = (tree: unknown, label: string) => all(tree, (el) => el.props["aria-label"] === label)[0]!;
   type Fn = (props: unknown) => El;
-  type TrackProps = { track: PagedTrack; items: TodayPage[]; renderSlide: (slice: TodayPage[]) => El };
+  type TrackProps = { track: PagedTrack; items: TodayPage[]; renderSlide: (slice: TodayPage[]) => El; fill?: boolean };
   const trackOf = (tree: unknown) => all(tree, (el) => el.type === PageTrack)[0]!.props as unknown as TrackProps;
   let latest: unknown = null;
   /** The card's tree, with the page on show expanded (its slide only names `UpNextPage`). */
@@ -299,6 +301,7 @@ describe("TodaysPlan (handlers)", () => {
     const el = {
       clientWidth: 300,
       scrollLeft: 0,
+      children: [] as { getBoundingClientRect(): { height: number } }[],
       scrolls: [] as unknown[],
       scrollTo(to: { left: number; behavior: string }) {
         el.scrolls.push(to);
@@ -366,43 +369,80 @@ describe("TodaysPlan (handlers)", () => {
     expect(byLabel(tree, "Previous meal").props["aria-disabled"]).toBe(true);
   });
 
-  it("the card takes the shown page's height only once the track has settled, never with a finger down (ledger 1142c)", () => {
-    vi.useRealTimers(); // a second useFakeTimers would keep beforeEach's Date-only clock
-    vi.useFakeTimers({ now: new Date("2026-10-14T07:10:00Z"), toFake: ["Date", "setTimeout", "clearTimeout"] });
-    vi.stubGlobal("CSS", { supports: () => true }); // iOS: no `near` window
+  it("the card's height follows the swipe between the two pages, one update per frame, and is the page's own at rest (ledger 1144a)", () => {
+    const frames: (() => void)[] = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: () => void) => frames.push(callback));
+    const observers: (() => void)[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: () => void) {
+          observers.push(callback);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
     const meals = [BREAKFAST, LUNCH];
     let tree = render(meals);
-    const el = Object.assign(scroller(tree), { children: [292, 190].map((height) => ({ getBoundingClientRect: () => ({ height }) })) });
+    const sizes = [292, 190];
+    const el = scroller(tree);
+    el.children = sizes.map((_, at) => ({ getBoundingClientRect: () => ({ height: sizes[at]! }) }));
     const clipOf = (t: El[]) => all(t[0], (e) => typeof e.props.className === "string" && e.props.className.startsWith("overflow-clip"))[0]!;
-    expect(clipOf(tree).props.className).toContain("transition-[height]");
-    expect(clipOf(tree).props.className).toContain("motion-reduce:transition-none");
-    const box = { style: { height: "", transition: "" }, getBoundingClientRect: () => ({ height: 292 }), offsetHeight: 292 };
+    // No CSS transition: an ease would trail the finger again (1142c's lag).
+    expect(clipOf(tree).props.className).toBe("overflow-clip");
+    const box = { style: { height: "" } };
     ((clipOf(tree) as unknown as { ref: { current: unknown } }).ref).current = box; // React 18 keeps `ref` off props
-    // At rest (the first placement): fitted at once, before paint.
+    // At rest (the first placement): the page's own height at once, before paint.
     tree = render(meals);
     expect(box.style.height).toBe("292px");
-    // A finger drags to Lunch and holds still there: nothing changes.
-    trackOf(tree).track.onTouchStart();
-    for (const left of [100, 200, 300]) {
-      el.scrollLeft = left;
-      el.scroll();
-      tree = render(meals);
-    }
-    vi.advanceTimersByTime(1000);
-    expect(box.style.height).toBe("292px");
-    // Lifted: still nothing until the track has been still a while.
-    (clipOf(tree).props.onTouchEnd as (event: unknown) => void)({ touches: [] });
-    tree = render(meals);
-    expect(box.style.height).toBe("292px");
-    vi.advanceTimersByTime(SETTLE_MS);
+    const px = () => parseFloat(box.style.height);
+    // A drag: scroll events wait for the frame, and a frame's worth of them is one update.
+    el.scrollLeft = 75;
+    el.scroll();
+    el.scrollLeft = 90;
+    el.scroll();
+    expect([box.style.height, frames.length]).toEqual(["292px", 1]);
+    frames.shift()!();
+    expect(px()).toBeCloseTo(292 - 102 * 0.3, 9);
+    // Past half way, and still with a finger down: in step, not held.
+    el.scrollLeft = 240;
+    el.scroll();
+    frames.shift()!();
+    expect(px()).toBeCloseTo(292 - 102 * 0.8, 9);
+    // The snap lands: Lunch's own height, exactly.
+    el.scrollLeft = 300;
+    el.scroll();
+    frames.shift()!();
     expect(box.style.height).toBe("190px");
-    // An arrow's scroll settles the same way.
+    tree = render(meals);
+    expect(box.style.height).toBe("190px");
+    // Lunch reflows at rest (a served meal's lines arriving): measured again and refitted.
+    sizes[1] = 230;
+    observers.at(-1)!();
+    expect(box.style.height).toBe("230px");
+    // ‹ scrolls the track; its frames follow it like a finger's (one frame here: the fake jumps).
     (byLabel(tree, "Previous meal").props.onClick as () => void)();
-    render(meals);
-    expect(box.style.height).toBe("190px");
-    vi.advanceTimersByTime(SETTLE_MS);
+    expect(frames).toHaveLength(1);
+    frames.shift()!();
     expect(box.style.height).toBe("292px");
-    vi.unstubAllGlobals();
+    // The slides are measured, never written to: only the clip box changes.
+    expect(el.children.every((slide) => Object.keys(slide).join() === "getBoundingClientRect")).toBe(true);
+  });
+
+  it("Up next's track keeps each page its own height: no `fill` (ledger 1142c, V-1142 M18)", () => {
+    expect(card()).toContain("items-start overflow-x-auto");
+    const [tree] = render([BREAKFAST, LUNCH]);
+    expect(trackOf(tree).fill).toBeFalsy();
+  });
+
+  it("a touch reaches the swipe hook, so one flick moves one page on Chromium (item 778, V-1142 M26)", () => {
+    vi.stubGlobal("CSS", { supports: () => false }); // not WebKit: the `near` window applies
+    let [tree] = render([BREAKFAST, LUNCH]);
+    expect(trackOf(tree).track.near).toBeNull();
+    trackOf(tree).track.onTouchStart();
+    [tree] = render([BREAKFAST, LUNCH]);
+    expect(trackOf(tree).track.near).toBe(0); // the page the touch started on
   });
 
   it("› and ‹ scroll the same track a page; the scroll picks the meal; nothing past either end (ledger 1142a)", () => {
