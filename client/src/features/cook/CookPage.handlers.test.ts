@@ -58,6 +58,8 @@ vi.mock("../../theme.js", () => ({ setStatusBarSurface: h.setStatusBarSurface })
 
 import { Navigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button.js";
+import { Sheet } from "../../components/ui/Sheet.js";
+import { IngredientList } from "../../pages/RecipeDetailPage.js";
 import { CookPage } from "./CookPage.js";
 
 const RECIPE = {
@@ -65,7 +67,7 @@ const RECIPE = {
   title: "Salmon mash",
   isCustom: false,
   deletedAt: null,
-  ingredients: [],
+  ingredients: [{ foodId: "f1", foodSlug: "salmon", foodName: "Salmon", isCustom: false, foodEmoji: null, quantityNote: "1 fillet", allergens: [] }],
   extraIngredients: [],
   variants: [
     { ageStage: "6", textureNote: "", steps: ["Steam"] },
@@ -92,7 +94,8 @@ function render(search: string) {
   const tree = (CookPage as unknown as () => El)();
   const column = tree.props.children as El;
   const button = (label: string) => all(tree).find((el) => el.type === Button && el.props.children === label);
-  return { tree, column, button };
+  const sheet = () => all(tree).find((el) => el.type === Sheet);
+  return { tree, column, button, sheet };
 }
 
 /** The `?step=` the last setSearchParams call would leave, and its options. */
@@ -196,8 +199,9 @@ describe("CookPage: moving between screens (ledger 1095)", () => {
     const { column } = render("?stage=9&step=1");
     const drag = (dx: number, dy: number, pointerType = "touch") => {
       const props = column.props as Record<string, (event: unknown) => void>;
-      props.onPointerDown!({ pointerType, pointerId: 1, clientX: 200, clientY: 300 });
-      props.onPointerUp!({ pointerId: 1, clientX: 200 + dx, clientY: 300 + dy });
+      const inside = { currentTarget: { contains: () => true }, target: {} };
+      props.onPointerDown!({ ...inside, pointerType, pointerId: 1, clientX: 200, clientY: 300 });
+      props.onPointerUp!({ ...inside, pointerId: 1, clientX: 200 + dx, clientY: 300 + dy });
     };
     drag(-80, 10);
     expect(lastMove().step).toBe("2");
@@ -224,5 +228,45 @@ describe("CookPage: leaving for the recipe and the log (ledger 1141a pins)", () 
     const log = all(tree).filter((el) => el.props.to === "/log-meal?recipe=r1");
     expect(log).toHaveLength(1);
     expect(log[0]!.props.replace).toBe(true);
+  });
+});
+
+describe("CookPage: the Ingredients sheet (ledger 1147)", () => {
+  it("opens from the top bar over a step: titled You'll need, the same unlinked list, an X", () => {
+    expect(render("?stage=9&step=2").sheet()!.props.open).toBe(false);
+    render("?stage=9&step=2").button("Ingredients")!.props.onClick!();
+    const sheet = render("?stage=9&step=2").sheet()!;
+    expect(sheet.props).toMatchObject({ open: true, title: "You'll need", showClose: true });
+    const list = sheet.props.children as El;
+    expect(list.type).toBe(IngredientList);
+    expect(list.props).toMatchObject({ recipe: RECIPE, linked: false });
+    (sheet.props.onClose as () => void)();
+    expect(render("?stage=9&step=2").sheet()!.props.open).toBe(false);
+    expect(h.setSearchParams).not.toHaveBeenCalled();
+  });
+
+  it("a swipe that bubbles up from the sheet or its backdrop (a portal) never moves the step", () => {
+    const { column } = render("?stage=9&step=2");
+    const props = column.props as Record<string, (event: unknown) => void>;
+    const fromSheet = { currentTarget: { contains: () => false }, target: {} };
+    props.onPointerDown!({ ...fromSheet, pointerType: "touch", pointerId: 1, clientX: 200, clientY: 300 });
+    props.onPointerUp!({ ...fromSheet, pointerId: 1, clientX: 80, clientY: 300 });
+    // Started in the column, lifted in the sheet: still no move.
+    const inside = { currentTarget: { contains: () => true }, target: {} };
+    props.onPointerDown!({ ...inside, pointerType: "touch", pointerId: 2, clientX: 200, clientY: 300 });
+    props.onPointerUp!({ ...fromSheet, pointerId: 2, clientX: 80, clientY: 300 });
+    expect(h.setSearchParams).not.toHaveBeenCalled();
+    // The column's own swipe still works.
+    props.onPointerDown!({ ...inside, pointerType: "touch", pointerId: 3, clientX: 200, clientY: 300 });
+    props.onPointerUp!({ ...inside, pointerId: 3, clientX: 80, clientY: 300 });
+    expect(lastMove().step).toBe("3");
+  });
+
+  it("→ and ← leave the step alone while the sheet is open", () => {
+    render("?stage=9&step=2").button("Ingredients")!.props.onClick!();
+    render("?stage=9&step=2");
+    h.effects.forEach((effect) => effect());
+    listeners.get("keydown")!({ key: "ArrowRight", preventDefault: vi.fn() });
+    expect(h.setSearchParams).not.toHaveBeenCalled();
   });
 });

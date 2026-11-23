@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RecipeDetail } from "@blw/shared";
 import { SWIPE_MIN_PX, swipeStep } from "../../lib/scrollTrack.js";
-import { arrowStep, cookHref, cookProgress, cookScreen, moveScreen, readScreen, shownVariant } from "./cook.js";
+import { arrowStep, cookHref, cookProgress, cookScreen, moveScreen, readScreen, showsIngredients, shownVariant } from "./cook.js";
 
 const variant = (ageStage: "6" | "9" | "12", steps: string[]) => ({ ageStage, textureNote: "", steps });
 
@@ -85,5 +85,23 @@ describe("input: keyboard and swipe", () => {
     expect(swipeStep(40, 0)).toBe(-1);
     expect(swipeStep(-39, 0)).toBe(0);
     expect(swipeStep(-60, 80)).toBe(0);
+  });
+});
+
+describe("showsIngredients: the top bar's Ingredients sheet (ledger 1147)", () => {
+  const food = { foodId: "f1", foodSlug: "salmon", foodName: "Salmon", isCustom: false, foodEmoji: null, quantityNote: "", allergens: [] };
+  const both = { ingredients: [food], extraIngredients: [{ name: "oil", quantityNote: "" }] };
+
+  it("is on every step and All done, never on You'll need (it is the list)", () => {
+    expect(showsIngredients(cookScreen(0, 2), both)).toBe(false);
+    expect(showsIngredients(cookScreen(1, 2), both)).toBe(true);
+    expect(showsIngredients(cookScreen(2, 2), both)).toBe(true);
+    expect(showsIngredients(cookScreen(3, 2), both)).toBe(true);
+  });
+
+  it("counts extras alone, and is gone when the recipe lists nothing", () => {
+    expect(showsIngredients(cookScreen(1, 2), { ingredients: [], extraIngredients: both.extraIngredients })).toBe(true);
+    expect(showsIngredients(cookScreen(1, 2), { ingredients: [food], extraIngredients: [] })).toBe(true);
+    expect(showsIngredients(cookScreen(1, 2), { ingredients: [], extraIngredients: [] })).toBe(false);
   });
 });

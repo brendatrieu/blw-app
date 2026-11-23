@@ -69,3 +69,15 @@ export function cookProgress(screen: CookScreen): number {
   if (screen.kind === "done") return 1;
   return screen.n / screen.of;
 }
+
+/**
+ * Ledger 1147: whether the top bar offers the Ingredients sheet. On a step and
+ * on All done, never on "You'll need" (it is the list), and only when the
+ * recipe has something to list.
+ */
+export function showsIngredients(
+  screen: CookScreen,
+  recipe: Pick<RecipeDetail, "ingredients" | "extraIngredients">,
+): boolean {
+  return screen.kind !== "need" && recipe.ingredients.length + recipe.extraIngredients.length > 0;
+}

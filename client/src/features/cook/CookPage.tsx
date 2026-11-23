@@ -8,6 +8,7 @@ import { APP_GLOW_PLACES, safeTop } from "../../components/AppLayout.js";
 import { useBackNavigate } from "../../components/ui/BackButton.js";
 import { Button, ButtonLink } from "../../components/ui/Button.js";
 import { CloseButton } from "../../components/ui/CloseButton.js";
+import { Sheet } from "../../components/ui/Sheet.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";
 import { awaitingDetail } from "../../lib/detailQuery.js";
 import { glowTiles } from "../../lib/glows.js";
@@ -16,7 +17,7 @@ import { ignoreTapsBriefly } from "../../lib/tapGuard.js";
 import { keepScreenAwake } from "../../pwa/wakeLock.js";
 import { setStatusBarSurface } from "../../theme.js";
 import { IngredientList } from "../../pages/RecipeDetailPage.js";
-import { arrowStep, cookProgress, cookScreen, moveScreen, readScreen, shownVariant } from "./cook.js";
+import { arrowStep, cookProgress, cookScreen, moveScreen, readScreen, showsIngredients, shownVariant } from "./cook.js";
 
 /**
  * Cook mode (ledger 1094-1098, ROADMAP 4): "You'll need", then one step per
@@ -36,6 +37,8 @@ export function CookPage() {
   // Which way the last move went, for the slide; 0 = no move yet (no slide on arrival).
   const [direction, setDirection] = useState<-1 | 0 | 1>(0);
   const swipe = useRef<{ id: number; x: number; y: number } | null>(null);
+  // Ledger 1147: the full list over any step; closing hands focus back to its button (useModal).
+  const [ingredientsOpen, setIngredientsOpen] = useState(false);
 
   useEffect(() => {
     // Ledger 1090: one screen on the glow ground, so the installed app's
@@ -75,7 +78,8 @@ export function CookPage() {
     if (typeof document === "undefined") return;
     const onKeyDown = (event: KeyboardEvent) => {
       const by = arrowStep(event);
-      if (!by) return;
+      // Not while the Ingredients sheet is up: the step behind it stays put.
+      if (!by || ingredientsOpen) return;
       event.preventDefault();
       go(by);
     };
@@ -99,13 +103,17 @@ export function CookPage() {
         style={{ paddingTop: safeTop("0.25rem", "--top-edge-clearance-slim") }}
         // A sideways swipe (touch, pen) moves one screen, as on the landing;
         // up/down stays the step's own scroll.
+        // Ledger 1147: React bubbles pointer events from the Ingredients
+        // sheet (portaled to body) up to here; one that did not start inside
+        // this column (the sheet, its backdrop) never moves the step.
         onPointerDown={(event) => {
+          if (!event.currentTarget.contains(event.target as Node)) return;
           if (event.pointerType !== "mouse") swipe.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
         }}
         onPointerUp={(event) => {
           const start = swipe.current;
           swipe.current = null;
-          if (start?.id !== event.pointerId) return;
+          if (start?.id !== event.pointerId || !event.currentTarget.contains(event.target as Node)) return;
           const by = swipeStep(event.clientX - start.x, event.clientY - start.y);
           if (by) go(by);
         }}
@@ -122,6 +130,17 @@ export function CookPage() {
               {recipe.title}
               {stageLabel ? <span className="font-normal text-[var(--color-text-muted)]"> · {stageLabel}</span> : null}
             </h1>
+          ) : null}
+          {/* Ledger 1147: amounts mid-cook without leaving; the title truncates first. */}
+          {!waiting && recipe && showsIngredients(screen, recipe) ? (
+            <>
+              <Button type="button" variant="quiet" className="shrink-0" onClick={() => setIngredientsOpen(true)}>
+                Ingredients
+              </Button>
+              <Sheet open={ingredientsOpen} onClose={() => setIngredientsOpen(false)} title="You'll need" showClose>
+                <IngredientList recipe={recipe} linked={false} />
+              </Sheet>
+            </>
           ) : null}
         </div>
 

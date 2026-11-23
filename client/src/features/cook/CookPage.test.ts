@@ -122,4 +122,17 @@ describe("CookPage screens (ledger 1095, copy 1098)", () => {
     const reduce = css.split("@media (prefers-reduced-motion: reduce) {").slice(1).map((rest) => rest.slice(0, rest.indexOf("\n}")));
     expect(reduce.some((block) => /\.cook-slide\s*\{\s*animation: none;/.test(block.replace(/\.[\w-]+,\s*/g, "")))).toBe(true);
   });
+
+  it("offers Ingredients in the top bar, after the title, on every step and All done; not on You'll need (ledger 1147)", () => {
+    const ingredients = /<button[^>]*class="[^"]*min-h-11[^"]*shrink-0"[^>]*>Ingredients<\/button>/;
+    expect(renderCook("?stage=6")).not.toContain(">Ingredients<");
+    for (const step of ["1", "2", "3"]) {
+      const html = renderCook(`?stage=6&step=${step}`);
+      expect(html).toMatch(ingredients);
+      // Right of the title, which truncates first; the sheet stays closed until tapped.
+      expect(html).toMatch(/<h1 class="min-w-0 flex-1 truncate[^"]*">.*<\/h1><button[^>]*>Ingredients<\/button>/);
+      expect(html).not.toContain('role="dialog"');
+    }
+    expect(renderCook("?stage=6&step=1", { ...RECIPE, ingredients: [], extraIngredients: [] })).not.toContain(">Ingredients<");
+  });
 });
