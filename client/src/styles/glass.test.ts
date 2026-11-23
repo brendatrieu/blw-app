@@ -96,6 +96,11 @@ describe("the sweep's surfaces (ledger 1083)", () => {
     expect(cls).toEqual(expect.arrayContaining(["app-card", "border"]));
     expect(cls.filter((c) => c.startsWith("bg-"))).toEqual([]);
   });
+  it("the clear header rests at blur(0px) saturate(100%), so the blur fades in with the fill (ledger 1103 N2)", () => {
+    const body = rule(".app-frost-edge:not([data-scrolled])", layerStart)!;
+    expect(body).toContain("-webkit-backdrop-filter: blur(0px) saturate(100%);");
+    expect(body).toMatch(/(?<!-webkit-)backdrop-filter: blur\(0px\) saturate\(100%\);/);
+  });
   it("the Foods / Recipes filter strip is clear at rest and frosts like the header, height unchanged", () => {
     const html = renderToString(createElement(FilterBar, null, "x"));
     const cls = classesOf(html);

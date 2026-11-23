@@ -76,6 +76,12 @@ describe("FavoritesPage", () => {
     expect(html).not.toContain("--color-danger)");
   });
 
+  it("wears the 🧡 on every card, beside the title (ledger 1118c)", () => {
+    const html = renderPage([favorite(), favorite({ recipeId: "recipe-2", title: "Lentil mash" })]);
+    expect(html.match(/<span aria-hidden="true" class="text-xl leading-none">🧡<\/span>/g)).toHaveLength(2);
+    expect(html).toContain("🧡</span>Banana porridge");
+  });
+
   it("falls back to the empty state when there are no favorites", () => {
     const html = renderPage([]);
     expect(html).toContain("No favorites yet");

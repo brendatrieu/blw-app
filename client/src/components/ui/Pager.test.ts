@@ -76,6 +76,16 @@ describe("Pager", () => {
     expect(html).not.toContain("aria-disabled=");
   });
 
+  it("sizes its hidden labels by the page size it is given, not 3 (ledger 1150a)", () => {
+    // 7 items, 2 a page: pages 4 of 4 and 3 of 4 read "7 of 7" and "5–6 of 7".
+    const html = renderToString(
+      createElement(Pager, { label: "meals", pages: pageWindow(7, 0, 2), onPage: () => {} }),
+    );
+    const hidden = [...html.matchAll(/<span aria-hidden="true" class="invisible [^"]*">([^<]*)<\/span>/g)].map((m) => m[1]);
+    expect(hidden).toEqual(["5–6 of 7", "7 of 7"]);
+    expect(html).toContain('aria-live="polite" class="col-start-1 row-start-1">1–2 of 7<');
+  });
+
   it("dims ‹ on the first page and › on the last (aria-disabled, so focus stays put)", () => {
     const first = render(8, 0).match(/<button [^>]*>/g)!;
     expect(first[0]).toContain('aria-disabled="true"');

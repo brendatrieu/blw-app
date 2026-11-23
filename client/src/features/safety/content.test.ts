@@ -381,11 +381,13 @@ describe("dark guide screenshots", () => {
   it("keeps the 962 retakes at their shot size", () => {
     const expected: Record<string, number[]> = {
       "meal-2-stars": [780, 478],
+      // Ledger 1150c: Home's Food log with the new meal, retaken in 1148.
+      "meal-5-saved": [780, 290],
       "meal-3-when": [780, 1074],
       "serve-3-stars": [780, 840],
       "serve-4-notes": [780, 470],
       // Ledger 1148: retaken on today's app; recipe-5-saved keeps its framing
-      // (header to Edit/Delete) and grew for 1147's Start cooking button.
+      // (header to Edit/Delete) and grew for 1094's Start cooking button.
       "recipe-5-saved": [780, 1546],
       // Ledger 999/1000/1001: retaken at their earlier sizes (the clear ×,
       // the day markers; plan-1-day's top moved below the How-to underline).

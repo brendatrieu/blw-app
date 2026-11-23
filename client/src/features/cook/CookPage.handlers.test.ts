@@ -262,6 +262,16 @@ describe("CookPage: the Ingredients sheet (ledger 1147)", () => {
     expect(lastMove().step).toBe("3");
   });
 
+  it("a drag that starts in the sheet and lifts in the column never moves the step (ledger 1150b)", () => {
+    const { column } = render("?stage=9&step=2");
+    const props = column.props as Record<string, (event: unknown) => void>;
+    const fromSheet = { currentTarget: { contains: () => false }, target: {} };
+    const inside = { currentTarget: { contains: () => true }, target: {} };
+    props.onPointerDown!({ ...fromSheet, pointerType: "touch", pointerId: 1, clientX: 200, clientY: 300 });
+    props.onPointerUp!({ ...inside, pointerId: 1, clientX: 80, clientY: 300 });
+    expect(h.setSearchParams).not.toHaveBeenCalled();
+  });
+
   it("→ and ← leave the step alone while the sheet is open", () => {
     render("?stage=9&step=2").button("Ingredients")!.props.onClick!();
     render("?stage=9&step=2");
