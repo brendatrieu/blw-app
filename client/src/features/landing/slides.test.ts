@@ -35,7 +35,7 @@ describe("landing slides", () => {
     expect(LANDING_SLIDES.flatMap((slide) => slide.chips.map((chip) => chip.alt))).toEqual([
       "Avocado on the plate, rated 5 stars.",
       "Banana on the plate, rated 4 stars.",
-      "The meal plan's week, Sunday 15 to Saturday 21, with today, Friday 20, picked and dots under the planned days.",
+      "The meal plan's week, Sunday 15 to Saturday 21, with today, Friday 20, picked.",
       "Breakfast at 8:00 AM, planned with Iron-Fortified Oats and Banana, and a Serve button.",
       "Storage: Pear and Spinach in the fridge and Sweet Potato Lentil Patties in the freezer, each with its servings and days left.",
       "Allergen progress ring: 2 of 9 established, 1 due for a serve, 2 started and 5 not started yet.",

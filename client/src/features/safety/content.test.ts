@@ -148,7 +148,7 @@ describe("how-to guides (item 601)", () => {
     // Ledger 962: the plate lists items in tick order, Avocado first; the alt follows it.
     expect(meal[1]).toContain("![On the plate, Avocado has five stars and Banana has three.](/guides/meal-2-stars.webp)");
     expect(meal[4]).toContain(
-      "![Home's Food log shows the new meal, today at 11:56 AM: Avocado rated 5 stars and Banana rated 3, each on its own line, with its note below.](/guides/meal-5-saved.webp)",
+      "![Home's Food log shows the new meal, today at 11:56 AM, with Avocado and Banana on one line.](/guides/meal-5-saved.webp)",
     );
     // Item 782: the step-3 alt stays "Sweet Potato and Lentils"; the shots were retaken in that pick order.
     expect(steps("how-to-custom-recipe")[2]).toContain(
@@ -197,7 +197,7 @@ describe("how-to guides (item 601)", () => {
     );
     const text = steps.map((step) => step.replace(/\n\n!\[[^\]]*\]\([^)]*\)\s*$/, ""));
     expect(text).toEqual([
-      "1. Pick a day\n\nTap a day in the week strip. The arrows change the week. A dot under a day means something is planned.",
+      "1. Pick a day\n\nTap a day in the week strip. The arrows change the week.",
       "2. Plan a meal\n\nEach day starts with your daily meals. Tap one to plan it, or tap **+ Add a meal** for another. Tap **+ Add more** to fill the plate, add a time if you like, then tap **Save**. If a container may not keep until that day, a note says so. It's only a heads-up; you can still save.",
       "3. Copy it to other days (optional)\n\nTap **Save & copy to…** instead of **Save**, or pick **Copy to…** from a planned meal's ⋮ menu. Tap the days you want. Each day picks its meal with the same name, and you can change that under **Meals**. If one already has something planned, choose **Keep it** or **Replace it**. Then tap **Copy**.",
       "4. Serve it\n\nWhen a planned meal's day comes, it shows **Serve**. Today, one tap logs it just as planned, and Home's **Up next** has the same **Serve**. For an earlier day, or if something ran out, **Serve** opens the meal so you can check it first. Once served, rate each item or tap **Add more**.",
@@ -384,7 +384,9 @@ describe("dark guide screenshots", () => {
       "meal-3-when": [780, 1074],
       "serve-3-stars": [780, 840],
       "serve-4-notes": [780, 470],
-      "recipe-5-saved": [780, 1416],
+      // Ledger 1148: retaken on today's app; recipe-5-saved keeps its framing
+      // (header to Edit/Delete) and grew for 1147's Start cooking button.
+      "recipe-5-saved": [780, 1546],
       // Ledger 999/1000/1001: retaken at their earlier sizes (the clear ×,
       // the day markers; plan-1-day's top moved below the How-to underline).
       // Ledger 1046: plan-1-day retaken without the Today pill, same size.

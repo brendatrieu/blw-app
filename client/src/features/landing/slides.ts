@@ -47,7 +47,7 @@ export const LANDING_SLIDES: readonly LandingSlide[] = [
     body: "Then serve today's meals in one tap.",
     glow: { sea: "76% 56%", apricot: "20% 72%" },
     chips: [
-      card("plan-week", "The meal plan's week, Sunday 15 to Saturday 21, with today, Friday 20, picked and dots under the planned days.", 210, 24, 48),
+      card("plan-week", "The meal plan's week, Sunday 15 to Saturday 21, with today, Friday 20, picked.", 192, 24, 48),
       card("plan-breakfast", "Breakfast at 8:00 AM, planned with Iron-Fortified Oats and Banana, and a Serve button.", 336, 0, 140),
     ],
   },
