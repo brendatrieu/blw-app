@@ -418,8 +418,19 @@ describe("MealCard (render, storage-card styling — item 192)", () => {
     const label = html.indexOf(REACTION);
     expect(html.indexOf(servedLine(baseMeal.servedAt))).toBeLessThan(label);
     expect(label).toBeLessThan(html.indexOf('title="From storage"'));
-    expect(html.indexOf('title="From storage"')).toBeLessThan(html.indexOf('aria-label="Actions"'));
+    expect(html.indexOf('title="From storage"')).toBeLessThan(html.indexOf('aria-label="Avocado actions"'));
     expect(html).not.toContain("mild rash");
+  });
+
+  // Ledger 1152a (1146c option B): beside Reaction the badge is the 📦 alone
+  // at EVERY width (plain sr-only, no 360px breakpoint), still named "From storage".
+  it("beside the Reaction label the From storage badge is the 📦 alone at every width, its text for screen readers", () => {
+    const both = renderMealCard({ ...baseMeal, reactionNote: "mild rash", foods: [food({ id: "food-1", storageItemId: "storage-1" })] }).replace(/<!-- -->/g, "");
+    expect(both).toMatch(/title="From storage"[^>]*>📦<span class="sr-only"> From storage<\/span><\/span>/);
+    expect(both).not.toContain("max-[359px]:sr-only");
+    // Storage only: the text shows from 360px up, as before.
+    const storageOnly = renderMealCard({ ...baseMeal, foods: [food({ id: "food-1", storageItemId: "storage-1" })] }).replace(/<!-- -->/g, "");
+    expect(storageOnly).toMatch(/title="From storage"[^>]*>📦<span class="max-\[359px\]:sr-only"> From storage<\/span><\/span>/);
   });
 
   it("names the row's button 'Reaction: …' when the label shows (the label itself is hidden from screen readers)", () => {
@@ -463,16 +474,16 @@ describe("MealCard (render, storage-card styling — item 192)", () => {
 });
 
 describe("MealCard actions slot (item 194)", () => {
-  it("renders the kebab Actions menu by default, with no standalone Delete button", () => {
+  it("renders the kebab menu named after the meal, with no standalone Delete button", () => {
     const html = renderMealCard(baseMeal);
-    expect(html).toContain('aria-label="Actions"');
+    expect(html).toContain('aria-label="Avocado, Chicken actions"');
     expect(html).toContain('aria-haspopup="menu"');
     expect(html).not.toMatch(/<button[^>]*>Delete<\/button>/);
   });
 
   it("keeps the badge + kebab slot above the stretched overlay (relative z-10)", () => {
     const html = renderMealCard(baseMeal);
-    expect(html).toMatch(/<div class="relative z-10 [^"]*">(?:(?!<\/div>).)*aria-label="Actions"/s);
+    expect(html).toMatch(/<div class="relative z-10 [^"]*">(?:(?!<\/div>).)*aria-label="Avocado, Chicken actions"/s);
   });
 
   it("never shows a confirm of its own — its kebab's Delete asks the list, with the meal (item 599)", () => {
@@ -499,8 +510,8 @@ describe("MealCard tap target (items 195, 1121)", () => {
   it("keeps the kebab outside the row's button (no nested-interactive markup)", () => {
     const html = renderMealCard(baseMeal);
     const row = html.indexOf('aria-haspopup="dialog"');
-    expect(html.indexOf('aria-label="Actions"')).toBeLessThan(row);
-    expect(html.slice(row)).not.toContain('aria-label="Actions"');
+    expect(html.indexOf('aria-label="Avocado, Chicken actions"')).toBeLessThan(row);
+    expect(html.slice(row)).not.toContain(' actions"');
   });
 });
 
@@ -605,11 +616,13 @@ describe("Home paging (item 694)", () => {
     expect(html).not.toContain('aria-label="Actions"');
   });
 
-  it("not grouped (/meals) keeps a card per meal and the plain Actions label", () => {
+  // Ledger 1152a: off Home too, each kebab is named after its meal (Home's naming, no "Actions").
+  it("not grouped (/meals) keeps a card per meal, each kebab named after its meal", () => {
     const [html] = shownSlides(renderList(3, "/meals"));
     expect(html).toMatch(/<ul class="flex flex-col gap-2">/);
     expect(html).not.toContain("not-first:before");
-    expect((html!.match(/aria-label="Actions"/g) ?? []).length).toBe(3);
+    expect(html).not.toContain('aria-label="Actions"');
+    for (const i of [0, 1, 2]) expect(html).toContain(`aria-label="Food ${i} actions"`);
   });
 
   it("renders one flat newest-first <ul> with no day headers (item 193)", () => {

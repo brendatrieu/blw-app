@@ -66,7 +66,9 @@ describe("MealsFromBatch rows (ledgers 966, 1146): the Food log's own one-line r
     expect(html).toContain('<button type="button" aria-haspopup="dialog"');
     expect(html).not.toContain('href="/log-meal?edit=meal-7"');
     expect(html).not.toContain('href="/meals/meal-7"');
-    expect(html).toContain('aria-label="Actions"');
+    // Ledger 1152a: named after the meal, as on Home.
+    expect(html).toMatch(/aria-label="[^"]+ actions"/);
+    expect(html).not.toContain('aria-label="Actions"');
     expect(html).toMatch(/<li class="app-card relative flex flex-col rounded-\[var\(--radius-lg\)\] border /); // the card glass (ledger 1083)
     expect(html).toMatch(/title="From storage"[^>]*>📦/);
     expect(html).toContain('<span class="flex h-[34px] items-center gap-2">');

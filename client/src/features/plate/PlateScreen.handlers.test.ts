@@ -73,6 +73,7 @@ vi.mock("../tracking/hooks.js", async (importOriginal) => ({
   useMeal: (mealId: string | undefined) => ({
     data: mealId ? MEAL : undefined,
     isError: false,
+    isFetchedAfterMount: true,
     refetch: async () => {
       h.refetches++;
       return {};

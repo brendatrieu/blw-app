@@ -156,8 +156,9 @@ export type PlateStart =
 export function resolvePlateStart(input: {
   mode: PlateMode;
   offline: boolean;
-  /** Edit: GET /api/meals/:id. */
-  meal: { isError: boolean; data: MealItem | undefined };
+  /** Edit: GET /api/meals/:id. `isFetchedAfterMount`: this visit's own
+   * answer, not a copy another page cached (ledger 1152a). */
+  meal: { isError: boolean; data: MealItem | undefined; isFetchedAfterMount: boolean };
   /** Serve: the container's id, Storage's lists, and those lists' queries. */
   storageId: string | null;
   containers: readonly StorageItem[];
@@ -186,7 +187,10 @@ export function resolvePlateStart(input: {
     return input.offline ? { status: "offline" } : { status: "loading" };
   }
   if (input.mode === "edit") {
-    if (input.meal.data) return { status: "ready", plate: fromMeal(input.meal.data) };
+    // Offline, a meal in hand still opens (Save waits, ledger 766).
+    if (input.meal.data && (input.meal.isFetchedAfterMount || input.offline)) {
+      return { status: "ready", plate: fromMeal(input.meal.data) };
+    }
     if (input.offline) return { status: "offline" };
     return input.meal.isError ? { status: "missing" } : { status: "loading" };
   }

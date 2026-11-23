@@ -481,7 +481,9 @@ describe("AllergenDetailPage exposure history (items 187, 1146)", () => {
     expect(html).toContain(">Reaction</span>");
     expect(html).toContain('<span class="sr-only">Reaction: </span>');
     expect(html).not.toContain("mild rash");
-    expect(html).toContain('aria-label="Actions"');
+    // Ledger 1152a: named after the meal, as on Home.
+    expect(html).toMatch(/aria-label="[^"]+ actions"/);
+    expect(html).not.toContain('aria-label="Actions"');
   });
 
   it("names the carrying item(s) first, from the server's itemIds; an older server's body keeps plate order", () => {

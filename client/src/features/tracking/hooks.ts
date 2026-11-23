@@ -83,10 +83,13 @@ export function useMeals(babyId: string | undefined, query: MealsQuery = {}) {
 
 /**
  * One meal with its plate, for Edit meal (ledger 902). Fetched fresh on
- * every visit and dropped when the page closes (`gcTime: 0`), and never on
- * its own afterwards: the plate is built once from it, and a save names its
- * item ids, so it must never be a cached copy another save has replaced
- * (the server's 409 `meal_changed`). The page refetches it on that 409.
+ * every visit (`refetchOnMount: "always"`, even when another page holds a
+ * copy, e.g. an allergen's out-of-window row, ledger 1152a) and dropped when
+ * the page closes (`gcTime: 0`), and never on its own afterwards: the plate
+ * is built once from it (`resolvePlateStart` waits for this visit's answer),
+ * and a save names its item ids, so it must never be a cached copy another
+ * save has replaced (the server's 409 `meal_changed`). The page refetches it
+ * on that 409.
  */
 export function useMeal(id: string | undefined) {
   return useQuery({
@@ -95,6 +98,7 @@ export function useMeal(id: string | undefined) {
     enabled: Boolean(id),
     gcTime: 0,
     staleTime: Infinity,
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });

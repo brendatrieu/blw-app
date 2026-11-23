@@ -22,7 +22,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 }));
 vi.mock("../tracking/hooks.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  useMeal: () => ({ ...h.meal, refetch: async () => ({}) }),
+  useMeal: () => ({ isFetchedAfterMount: true, ...h.meal, refetch: async () => ({}) }),
 }));
 
 import { CelebrationProvider } from "../../components/ui/Celebration.js";
@@ -355,7 +355,7 @@ describe("PlateScreen (render)", () => {
 describe("resolvePlateStart", () => {
   const base = {
     offline: false,
-    meal: { isError: false, data: undefined },
+    meal: { isError: false, data: undefined, isFetchedAfterMount: false },
     storageId: null,
     containers: [] as StorageItem[],
     storageQueries: [] as { isPending: boolean; isFetching: boolean }[],
@@ -365,16 +365,24 @@ describe("resolvePlateStart", () => {
 
   it("Edit: loading until the meal answers, missing when it fails", () => {
     expect(resolvePlateStart({ ...base, mode: "edit" })).toEqual({ status: "loading" });
-    expect(resolvePlateStart({ ...base, mode: "edit", meal: { isError: true, data: undefined } })).toEqual({ status: "missing" });
-    const ready = resolvePlateStart({ ...base, mode: "edit", meal: { isError: false, data: MEAL } });
+    expect(resolvePlateStart({ ...base, mode: "edit", meal: { isError: true, data: undefined, isFetchedAfterMount: true } })).toEqual({ status: "missing" });
+    const ready = resolvePlateStart({ ...base, mode: "edit", meal: { isError: false, data: MEAL, isFetchedAfterMount: true } });
     expect(ready.status === "ready" && ready.plate.map((entry) => entry.kind)).toEqual(["recipe"]);
+  });
+
+  // Ledger 1152a: a copy another page cached (an allergen's out-of-window row)
+  // is not this visit's answer: the plate waits for its own GET.
+  it("Edit: a cached copy not fetched on this visit keeps loading; offline it opens (Save waits)", () => {
+    const cached = { isError: false, data: MEAL, isFetchedAfterMount: false };
+    expect(resolvePlateStart({ ...base, mode: "edit", meal: cached })).toEqual({ status: "loading" });
+    expect(resolvePlateStart({ ...base, mode: "edit", offline: true, meal: cached }).status).toBe("ready");
   });
 
   it("Edit offline: offline until the meal answers, whatever the paused fetch says; a meal in hand is ready", () => {
     const offline = { ...base, mode: "edit" as const, offline: true };
     expect(resolvePlateStart(offline)).toEqual({ status: "offline" });
-    expect(resolvePlateStart({ ...offline, meal: { isError: true, data: undefined } })).toEqual({ status: "offline" });
-    expect(resolvePlateStart({ ...offline, meal: { isError: false, data: MEAL } }).status).toBe("ready");
+    expect(resolvePlateStart({ ...offline, meal: { isError: true, data: undefined, isFetchedAfterMount: true } })).toEqual({ status: "offline" });
+    expect(resolvePlateStart({ ...offline, meal: { isError: false, data: MEAL, isFetchedAfterMount: true } }).status).toBe("ready");
     // Log meal and Serve are unchanged offline.
     expect(resolvePlateStart({ ...base, mode: "log", offline: true })).toEqual({ status: "ready", plate: [] });
   });

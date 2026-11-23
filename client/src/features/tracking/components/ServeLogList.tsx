@@ -141,8 +141,7 @@ export interface MealCardProps {
   /** Asks to delete this meal — the list owns the one `MealDeleteDialog`. */
   onRequestDelete: (meal: MealItem) => void;
   /** A row of a grouped list (Home, item 664) instead of a card of its own:
-   * no border or fill (the list's card has them), an inset divider, and a
-   * kebab named after the meal. */
+   * no border or fill (the list's card has them) and an inset divider. */
   grouped?: boolean;
   /** A tap opens the whole meal (`MealSheet`, ledger 1121); Edit stays in the kebab. */
   onOpen: (meal: MealItem) => void;
@@ -174,8 +173,8 @@ export function MealCard({ meal, onRequestDelete, grouped = false, onOpen, lead,
           : "app-card relative flex flex-col rounded-[var(--radius-lg)] border pt-1.5 pr-1.5 pb-2.5 pl-3"
       }
     >
-      {/* Never wraps (ledger 1121): under 360px the badge is the 📦 alone
-          (named for screen readers), and the date line is cut short before
+      {/* Never wraps (ledger 1121): under 360px (or beside Reaction) the
+          badge is the 📦 alone (named for screen readers), and the date line is cut short before
           it could push the label, badge or kebab down. */}
       <div className="flex items-center justify-between gap-x-2">
         <span className="min-w-0 truncate text-xs text-[var(--color-text-muted)]">{servedLine(meal.servedAt)}</span>
@@ -189,16 +188,17 @@ export function MealCard({ meal, onRequestDelete, grouped = false, onOpen, lead,
               <Badge tone="dangerSoft">Reaction</Badge>
             </span>
           )}
-          {/* Ledger 1146c option B would hide the text here also when `reaction`. */}
+          {/* Ledger 1152a (1146c option B): beside the Reaction label the
+              badge is the 📦 alone at every width, so the date stays whole. */}
           {fromStorage(meal) && (
             <Badge tone="neutral" title="From storage">
-              📦<span className="max-[359px]:sr-only"> From storage</span>
+              📦<span className={reaction ? "sr-only" : "max-[359px]:sr-only"}> From storage</span>
             </Badge>
           )}
           <MealActionsMenu
             mealId={meal.id}
             onRequestDelete={() => onRequestDelete(meal)}
-            {...(grouped && { label: `${meal.foods.map((food) => food.name).join(", ")} actions` })}
+            label={`${meal.foods.map((food) => food.name).join(", ")} actions`}
           />
         </div>
       </div>
