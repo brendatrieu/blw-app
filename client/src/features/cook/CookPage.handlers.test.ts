@@ -248,27 +248,35 @@ describe("CookPage: the Ingredients sheet (ledger 1147)", () => {
   it("a swipe that bubbles up from the sheet or its backdrop (a portal) never moves the step", () => {
     const { column } = render("?stage=9&step=2");
     const props = column.props as Record<string, (event: unknown) => void>;
-    const fromSheet = { currentTarget: { contains: () => false }, target: {} };
+    // contains() answers for its ARGUMENT, so the handler must ask about event.target.
+    const inside = {};
+    const outside = {};
+    const dom = { contains: (n: unknown) => n === inside };
+    const fromSheet = { currentTarget: dom, target: outside };
     props.onPointerDown!({ ...fromSheet, pointerType: "touch", pointerId: 1, clientX: 200, clientY: 300 });
     props.onPointerUp!({ ...fromSheet, pointerId: 1, clientX: 80, clientY: 300 });
     // Started in the column, lifted in the sheet: still no move.
-    const inside = { currentTarget: { contains: () => true }, target: {} };
-    props.onPointerDown!({ ...inside, pointerType: "touch", pointerId: 2, clientX: 200, clientY: 300 });
+    const inColumn = { currentTarget: dom, target: inside };
+    props.onPointerDown!({ ...inColumn, pointerType: "touch", pointerId: 2, clientX: 200, clientY: 300 });
     props.onPointerUp!({ ...fromSheet, pointerId: 2, clientX: 80, clientY: 300 });
     expect(h.setSearchParams).not.toHaveBeenCalled();
     // The column's own swipe still works.
-    props.onPointerDown!({ ...inside, pointerType: "touch", pointerId: 3, clientX: 200, clientY: 300 });
-    props.onPointerUp!({ ...inside, pointerId: 3, clientX: 80, clientY: 300 });
+    props.onPointerDown!({ ...inColumn, pointerType: "touch", pointerId: 3, clientX: 200, clientY: 300 });
+    props.onPointerUp!({ ...inColumn, pointerId: 3, clientX: 80, clientY: 300 });
     expect(lastMove().step).toBe("3");
   });
 
   it("a drag that starts in the sheet and lifts in the column never moves the step (ledger 1150b)", () => {
     const { column } = render("?stage=9&step=2");
     const props = column.props as Record<string, (event: unknown) => void>;
-    const fromSheet = { currentTarget: { contains: () => false }, target: {} };
-    const inside = { currentTarget: { contains: () => true }, target: {} };
+    // contains() answers for its ARGUMENT, so the handler must ask about event.target.
+    const inside = {};
+    const outside = {};
+    const dom = { contains: (n: unknown) => n === inside };
+    const fromSheet = { currentTarget: dom, target: outside };
+    const inColumn = { currentTarget: dom, target: inside };
     props.onPointerDown!({ ...fromSheet, pointerType: "touch", pointerId: 1, clientX: 200, clientY: 300 });
-    props.onPointerUp!({ ...inside, pointerId: 1, clientX: 80, clientY: 300 });
+    props.onPointerUp!({ ...inColumn, pointerId: 1, clientX: 80, clientY: 300 });
     expect(h.setSearchParams).not.toHaveBeenCalled();
   });
 

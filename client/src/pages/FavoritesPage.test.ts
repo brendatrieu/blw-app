@@ -76,6 +76,10 @@ describe("FavoritesPage", () => {
     expect(html).not.toContain("--color-danger)");
   });
 
+  it("wears the 🧡 in the header beside the title (ledger 1118c)", () => {
+    expect(renderPage([])).toContain('<span aria-hidden="true" class="text-2xl leading-none">🧡</span>Favorites</h1>');
+  });
+
   it("wears the 🧡 on every card, beside the title (ledger 1118c)", () => {
     const html = renderPage([favorite(), favorite({ recipeId: "recipe-2", title: "Lentil mash" })]);
     expect(html.match(/<span aria-hidden="true" class="text-xl leading-none">🧡<\/span>/g)).toHaveLength(2);
