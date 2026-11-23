@@ -185,7 +185,7 @@ export function MealCard({ meal, onRequestDelete, grouped = false, onOpen, lead,
         <div className="relative z-10 flex shrink-0 items-center gap-0.5 ml-auto">
           {/* Hidden here: the row's button says it (its name starts with it). */}
           {reaction && (
-            <span aria-hidden="true">
+            <span aria-hidden="true" className="flex">
               <Badge tone="dangerSoft">Reaction</Badge>
             </span>
           )}

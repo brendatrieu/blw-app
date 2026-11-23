@@ -406,7 +406,8 @@ describe("MealCard (render, storage-card styling — item 192)", () => {
 
   // Ledger 1146: a small red "Reaction" label on the date line, before the
   // badge and the kebab; the note itself waits in the sheet.
-  const REACTION = '<span aria-hidden="true"><span class="inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-medium whitespace-nowrap bg-[var(--color-danger-soft)] text-[var(--color-danger-soft-text)]">Reaction</span></span>';
+  // Wrapper is flex so the pill centers with the date, 📦 and ⋮ (V-1146 c1: a block wrapper left it 2px low on the text baseline).
+  const REACTION = '<span aria-hidden="true" class="flex"><span class="inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-medium whitespace-nowrap bg-[var(--color-danger-soft)] text-[var(--color-danger-soft-text)]">Reaction</span></span>';
   it("labels a meal with a reaction 'Reaction' (danger soft) before the badge and the kebab, never the note", () => {
     const html = renderMealCard({
       ...baseMeal,
