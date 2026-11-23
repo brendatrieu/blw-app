@@ -729,6 +729,12 @@ export const allergenDetailExposureSchema = z.object({
   /** `meals.reactionNote` under the name this page reads it by. */
   reaction: z.string().nullable(),
   notes: z.string().nullable(),
+  /** Ledger 1146: the ids of the meal's plate items (`MealItem.items[].id`,
+   * a container's `parts[].id`) that carried this allergen, in plate order,
+   * read from what the meal recorded (a recipe edited or deleted since still
+   * counts). Empty when none of them is known (a meal without plate items).
+   * Optional: an older server or cached body leaves it out (plate order). */
+  itemIds: z.array(z.string().uuid()).optional(),
 });
 export type AllergenDetailExposure = z.infer<typeof allergenDetailExposureSchema>;
 

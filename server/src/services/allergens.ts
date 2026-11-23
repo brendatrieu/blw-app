@@ -9,7 +9,7 @@
 // same allergen — the row saying "started", the page it opened saying
 // something else. Ownership is the caller's business here, exactly as in
 // `loadMeals`: these functions only read by id.
-import { and, asc, desc, eq, inArray, sql, type AnyColumn, type SQL } from "drizzle-orm";
+import { and, arrayOverlaps, asc, desc, eq, inArray, or, sql, type AnyColumn, type SQL } from "drizzle-orm";
 import {
   allergenDueAt,
   allergenReactionPauses,
@@ -301,6 +301,25 @@ export async function loadAllergenDetail(
           .orderBy(asc(foods.name))
       : [];
 
+  // Ledger 1146: the plate items that carried the allergen, from the
+  // meal_items SNAPSHOT `meal_foods` derives from (a food row's food, a
+  // recipe row's `counted_food_ids`, a container's parts alike), so a recipe
+  // edited or deleted after the meal still marks its item. Plate order. A
+  // legacy database has no `meal_items`: the field is left out there.
+  const carryingRows =
+    mealIds.length > 0 && reads === "items"
+      ? await db
+          .select({ mealId: mealItems.mealId, id: mealItems.id })
+          .from(mealItems)
+          .where(
+            and(
+              inArray(mealItems.mealId, mealIds),
+              or(inArray(mealItems.foodId, foodIds), arrayOverlaps(mealItems.countedFoodIds, foodIds)),
+            ),
+          )
+          .orderBy(asc(mealItems.mealId), asc(mealItems.position), asc(mealItems.id))
+      : null;
+
   const foodsByMealId = new Map<string, AllergenDetail["exposures"][number]["foods"]>();
   const countedMealIds = new Set<string>();
   for (const row of exposureFoodRows) {
@@ -323,6 +342,7 @@ export async function loadAllergenDetail(
     counted: countedMealIds.has(row.id),
     reaction: row.reactionNote,
     notes: row.notes,
+    ...(carryingRows && { itemIds: carryingRows.filter((item) => item.mealId === row.id).map((item) => item.id) }),
   }));
 
   return { progress, foods: detailFoods, exposures };
