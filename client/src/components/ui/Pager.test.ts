@@ -17,16 +17,16 @@ const render = (total: number, page: number, capped?: boolean) =>
 
 describe("pageWindow", () => {
   it("slices three at a time and knows the last page", () => {
-    expect(pageWindow(8, 0, 3)).toEqual({ page: 0, last: 2, start: 0, end: 3, total: 8 });
-    expect(pageWindow(8, 1, 3)).toEqual({ page: 1, last: 2, start: 3, end: 6, total: 8 });
-    expect(pageWindow(8, 2, 3)).toEqual({ page: 2, last: 2, start: 6, end: 8, total: 8 });
+    expect(pageWindow(8, 0, 3)).toEqual({ page: 0, last: 2, start: 0, end: 3, total: 8, size: 3 });
+    expect(pageWindow(8, 1, 3)).toEqual({ page: 1, last: 2, start: 3, end: 6, total: 8, size: 3 });
+    expect(pageWindow(8, 2, 3)).toEqual({ page: 2, last: 2, start: 6, end: 8, total: 8, size: 3 });
     expect(pageWindow(6, 1, 3)).toMatchObject({ last: 1, start: 3, end: 6 });
   });
 
   it("is one page at 3 or fewer, and empty at 0", () => {
     expect(pageWindow(3, 0, 3)).toMatchObject({ page: 0, last: 0, start: 0, end: 3 });
     expect(pageWindow(4, 0, 3).last).toBe(1);
-    expect(pageWindow(0, 0, 3)).toEqual({ page: 0, last: 0, start: 0, end: 0, total: 0 });
+    expect(pageWindow(0, 0, 3)).toEqual({ page: 0, last: 0, start: 0, end: 0, total: 0, size: 3 });
   });
 
   it("clamps a page the data no longer has (items shrank) and a negative one", () => {
@@ -60,7 +60,7 @@ describe("Pager", () => {
     const html = render(8, 1);
     // aria-live on the range (item 775): a swipe or an arrow changes it.
     expect(html).toMatch(
-      /^<div class="-mr-2 flex shrink-0 items-center"><span aria-live="polite" class="[^"]*text-sm[^"]*tabular-nums[^"]*text-\[var\(--color-text-muted\)\]">4–6 of 8<\/span>/,
+      /^<div class="-mr-2 flex shrink-0 items-center"><span class="[^"]*text-sm[^"]*tabular-nums[^"]*text-\[var\(--color-text-muted\)\]">(<span aria-hidden="true" class="invisible [^"]*">[^<]*<\/span>){2}<span aria-live="polite" class="col-start-1 row-start-1">4–6 of 8<\/span><\/span>/,
     );
     const buttons = html.match(/<button [^>]*>/g) ?? [];
     expect(buttons).toHaveLength(2);
@@ -105,6 +105,49 @@ describe("Pager", () => {
     next2!.props.onClick();
     prev2!.props.onClick();
     expect(calls).toEqual([1, 1]);
+  });
+});
+
+describe("Pager range width (ledger 1145)", () => {
+  // Every page reserves the same two unseen labels, so the range (and any
+  // header that wraps around it) is as wide on "7 of 7" as on "4–6 of 7".
+  const sizers = (html: string) => [...html.matchAll(/<span aria-hidden="true" class="([^"]*)">([^<]*)<\/span>/g)];
+  const live = (html: string) => [...html.matchAll(/<span aria-live="polite" class="([^"]*)">([^<]*)<\/span>/g)];
+
+  it("reserves the second-to-last and last pages' labels on every page, in the shown label's grid cell", () => {
+    for (const [total, capped, want] of [
+      [7, false, ["4–6 of 7", "7 of 7"]],
+      [12, false, ["7–9 of 12", "10–12 of 12"]],
+      [100, true, ["97–99 of 100+", "100 of 100+"]],
+    ] as const) {
+      const last = Math.ceil(total / 3) - 1;
+      for (let page = 0; page <= last; page++) {
+        const html = render(total, page, capped);
+        expect(sizers(html).map((m) => m[2])).toEqual(want);
+        for (const m of sizers(html)) expect(m[1]).toBe("invisible col-start-1 row-start-1");
+        // Screen readers hear only the shown range, once, still in full.
+        const shown = live(html);
+        expect(shown).toHaveLength(1);
+        expect(shown[0]![2]).toBe(rangeLabel(pageWindow(total, page, 3), capped));
+        expect(shown[0]![1]).toBe("col-start-1 row-start-1");
+        expect(html).toMatch(/^<div[^>]*><span class="mr-1 grid justify-items-end [^"]*whitespace-nowrap[^"]*">/);
+      }
+    }
+  });
+
+  it("those two are the widest: no page's label has more digits, or a dash the reserved one lacks", () => {
+    const digits = (l: string) => l.replace(/\D/g, "").length;
+    for (let size = 1; size <= 4; size++)
+      for (let total = size + 1; total <= 130; total++) {
+        const last = Math.ceil(total / size) - 1;
+        const wide = rangeLabel(pageWindow(total, last - 1, size));
+        const end = rangeLabel(pageWindow(total, last, size));
+        for (let page = 0; page <= last; page++) {
+          const l = rangeLabel(pageWindow(total, page, size));
+          const fits = (r: string) => digits(l) <= digits(r) && (!l.includes("–") || r.includes("–"));
+          expect(fits(wide) || fits(end), `${l} vs ${wide} / ${end}`).toBe(true);
+        }
+      }
   });
 });
 

@@ -11,6 +11,8 @@ export interface PageWindow {
   start: number;
   end: number;
   total: number;
+  /** Items per page. */
+  size: number;
 }
 
 /**
@@ -23,7 +25,7 @@ export function pageWindow(total: number, page: number, size: number): PageWindo
   const last = Math.max(0, Math.ceil(total / size) - 1);
   const clamped = Math.min(Math.max(page, 0), last);
   const start = clamped * size;
-  return { page: clamped, last, start, end: Math.min(total, start + size), total };
+  return { page: clamped, last, start, end: Math.min(total, start + size), total, size };
 }
 
 /** "1–3 of 8"; a one-row page reads "7 of 7". `capped` = the fetch hit its cap, so "of 100+". */
@@ -58,8 +60,21 @@ export function Pager({ label, pages: win, onPage, capped }: PagerProps) {
   const atEnd = win.page === win.last;
   return (
     <div className="-mr-2 flex shrink-0 items-center">
-      <span aria-live="polite" className="mr-1 text-sm whitespace-nowrap tabular-nums text-[var(--color-text-muted)]">
-        {rangeLabel(win, capped)}
+      {/* Ledger 1145: the range is as wide on every page, so a header that
+          wraps at 320 ("4–6 of 7") wraps on "7 of 7" too and a swipe never
+          changes its height. The widest label is always the second-to-last
+          page's or the last's (the most digits, and a dash unless one per
+          page; digits are tabular), so both sit unseen in the same grid cell,
+          the shown label right-aligned against ‹ as before. */}
+      <span className="mr-1 grid justify-items-end text-sm whitespace-nowrap tabular-nums text-[var(--color-text-muted)]">
+        {[win.last - 1, win.last].map((p) => (
+          <span key={p} aria-hidden="true" className="invisible col-start-1 row-start-1">
+            {rangeLabel(pageWindow(win.total, p, win.size), capped)}
+          </span>
+        ))}
+        <span aria-live="polite" className="col-start-1 row-start-1">
+          {rangeLabel(win, capped)}
+        </span>
       </span>
       <button
         type="button"

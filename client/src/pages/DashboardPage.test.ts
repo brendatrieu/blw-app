@@ -288,7 +288,9 @@ describe("DashboardPage", () => {
       expect(html, noun).toMatch(new RegExp(`<button [^>]*aria-label="Previous ${noun}" aria-disabled="true">`));
       expect(html, noun).toMatch(new RegExp(`<button [^>]*aria-label="Next ${noun}">`));
     }
-    expect(html.match(/>1–3 of 5</g)).toHaveLength(2);
+    // Shown twice; each pager also reserves its widest labels unseen (ledger 1145).
+    expect(html.match(/<span (?!aria-hidden)[^>]*>1–3 of 5</g)).toHaveLength(2);
+    expect(html.match(/<span aria-hidden="true" class="invisible [^"]*">(1–3|4–5) of 5</g)).toHaveLength(4);
     // The ranges are announced (item 775), not the rows.
     expect(html.match(/<span aria-live="polite"[^>]*>1–3 of 5</g)).toHaveLength(2);
     expect(html).not.toMatch(/<ul [^>]*aria-live/);
