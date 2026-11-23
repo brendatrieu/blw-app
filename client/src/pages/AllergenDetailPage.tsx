@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import type { AllergenDetail, AllergenDetailExposure, AllergenDetailFood } from "@blw/shared";
-import { useAllergenDetail } from "../features/tracking/hooks.js";
+import type { AllergenDetail, AllergenDetailExposure, AllergenDetailFood, MealItem } from "@blw/shared";
+import { useAllergenDetail, useMeal, useMeals } from "../features/tracking/hooks.js";
 import {
   ALLERGEN_STATUS_LABEL,
   ALLERGEN_STATUS_TONE,
@@ -20,14 +20,15 @@ import {
 } from "../features/tracking/allergenRow.js";
 import { allergenEmoji, allergenTint } from "../features/tracking/allergenEmoji.js";
 import { MarkEstablishedAction, OverriddenHint } from "../features/tracking/components/AllergenActions.js";
-import { servedLine } from "../features/tracking/components/ServeLogList.js";
+import { MealCard, MealDeleteDialog, MealSheet, servedLine } from "../features/tracking/components/ServeLogList.js";
 import { foodPlate } from "../features/catalog/foodEmoji.js";
+import { ApiError } from "../lib/api.js";
 import { FoodPlate } from "../features/catalog/components/FoodPlate.js";
-import { DeletedMark, FoodNames } from "../features/catalog/components/DeletedMark.js";
+import { DeletedMark } from "../features/catalog/components/DeletedMark.js";
 import { Badge } from "../components/ui/Badge.js";
 import { ButtonLink } from "../components/ui/Button.js";
 import { BackButton } from "../components/ui/BackButton.js";
-import { Card, CardLink } from "../components/ui/Card.js";
+import { Card } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Skeleton, SkeletonList } from "../components/ui/Skeleton.js";
@@ -66,34 +67,83 @@ function FoodRow({ food }: { food: AllergenDetailFood }) {
   );
 }
 
-function ExposureRow({ exposure }: { exposure: AllergenDetailExposure }) {
+/** The meals list Home reads (GET /api/babies/:id/meals, its newest 100). */
+const MEALS_WINDOW = { limit: 100 } as const;
+
+interface ExposureMealRowProps {
+  exposure: AllergenDetailExposure;
+  /** The meal from the meals list, when it is in its window. */
+  cached: MealItem | undefined;
+  /** The meals list has answered: a meal it lacks is fetched on its own. */
+  listSettled: boolean;
+  onOpen: (meal: MealItem) => void;
+  onRequestDelete: (meal: MealItem) => void;
+}
+
+/**
+ * Ledger 1146: one meal with this allergen as the Food log's one-line row,
+ * its carrying item(s) named first (the server's `itemIds`, read from what
+ * the meal recorded; an older server sends none: plate order), and the
+ * "not counted" line under it. A meal older than the meals list's window is
+ * fetched on its own (GET /api/meals/:id), after the list answers, so the
+ * page never fetches one it already has. Until then a placeholder of the
+ * row's height holds its place, so nothing moves when it arrives.
+ * ponytail: up to 50 single-meal GETs for a long history; a batch read if that is ever slow.
+ */
+function ExposureMealRow({ exposure, cached, listSettled, onOpen, onRequestDelete }: ExposureMealRowProps) {
+  const fetched = useMeal(listSettled && !cached ? exposure.mealId : undefined);
+  const meal = cached ?? fetched.data;
+  const subline = exposure.counted === false ? NOT_COUNTED_MEAL_LINE : undefined;
+  // Gone (deleted here or elsewhere): the detail's own refetch drops the row.
+  if (fetched.error instanceof ApiError && fetched.error.status === 404) return null;
+  if (meal) {
+    return <MealCard meal={meal} onRequestDelete={onRequestDelete} onOpen={onOpen} lead={exposure.itemIds} subline={subline} />;
+  }
   return (
-    // Whole row is the link (tap → edit that meal, the same destination
-    // `MealCard` uses) and carries nothing interactive inside it, so a
-    // `CardLink` is safe here where the food rows need the split.
-    <li>
-      <CardLink to={`/log-meal?edit=${exposure.mealId}`} padding="sm" className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-[var(--color-text)]">
-          {servedLine(exposure.servedAt)}
-        </span>
-        <span className="text-xs text-[var(--color-text-muted)]">
-          <FoodNames
-            foods={exposure.foods.map((food) => ({
-              name: food.emoji ? `${food.emoji} ${food.name}` : food.name,
-              deleted: food.deleted,
-            }))}
-          />
-        </span>
-        {exposure.counted === false && (
-          <span className="text-xs text-[var(--color-text-muted)]">{NOT_COUNTED_MEAL_LINE}</span>
-        )}
-        {exposure.reaction && (
-          <span className="w-fit">
-            <Badge tone="dangerSoft">Reaction: {exposure.reaction}</Badge>
-          </span>
-        )}
-      </CardLink>
+    <li className={`app-card flex flex-col justify-center rounded-[var(--radius-lg)] border px-3 ${subline ? "h-[108px]" : "h-[92px]"}`}>
+      {fetched.isError ? (
+        <>
+          <span className="text-xs text-[var(--color-text-muted)]">{servedLine(exposure.servedAt)}</span>
+          <span className="text-sm text-[var(--color-text)]">Couldn't load this meal.</span>
+        </>
+      ) : (
+        <Skeleton className="h-4 w-2/3" />
+      )}
     </li>
+  );
+}
+
+/** Ledger 1146: the history as one-line rows + `MealSheet`, in the server's order. */
+function ExposureMealList({ babyId, exposures }: { babyId: string; exposures: AllergenDetailExposure[] }) {
+  const meals = useMeals(babyId, MEALS_WINDOW);
+  // The meal itself: a meal outside the list's window lives only in its row.
+  const [openMeal, setOpenMeal] = useState<MealItem | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<MealItem | null>(null);
+  const byId = new Map((meals.data?.items ?? []).map((meal) => [meal.id, meal]));
+  return (
+    <>
+      <ul className="flex flex-col gap-2">
+        {exposures.map((exposure) => (
+          <ExposureMealRow
+            key={exposure.mealId}
+            exposure={exposure}
+            cached={byId.get(exposure.mealId)}
+            listSettled={!meals.isPending}
+            onOpen={setOpenMeal}
+            onRequestDelete={setPendingDelete}
+          />
+        ))}
+      </ul>
+      <MealSheet
+        meal={openMeal}
+        onClose={() => setOpenMeal(null)}
+        onRequestDelete={(meal) => {
+          setOpenMeal(null);
+          setPendingDelete(meal);
+        }}
+      />
+      {pendingDelete && <MealDeleteDialog meal={pendingDelete} babyId={babyId} open onClose={() => setPendingDelete(null)} />}
+    </>
   );
 }
 
@@ -182,11 +232,7 @@ function AllergenDetailBody({
             description={progress.introGuidance}
           />
         ) : (
-          <ul className="flex flex-col gap-2">
-            {exposures.map((exposure) => (
-              <ExposureRow key={exposure.mealId} exposure={exposure} />
-            ))}
-          </ul>
+          <ExposureMealList babyId={babyId} exposures={exposures} />
         )}
       </section>
 

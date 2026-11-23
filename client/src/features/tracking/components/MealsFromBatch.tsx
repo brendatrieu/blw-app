@@ -4,7 +4,7 @@ import { useMeals } from "../hooks.js";
 import { mealsFromStorageItem } from "../mealsFromBatch.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
 import { SkeletonList } from "../../../components/ui/Skeleton.js";
-import { MealCard, MealDeleteDialog } from "./ServeLogList.js";
+import { MealCard, MealDeleteDialog, MealSheet } from "./ServeLogList.js";
 
 interface MealsFromBatchProps {
   babyId: string | undefined;
@@ -19,10 +19,10 @@ interface MealsFromBatchProps {
  * ceiling, not an exact lifetime total). The heading carries no "(recent
  * meals)" qualifier (item 704, owner's pick).
  *
- * Each meal is the Food log's own card (ledger 966): a tap opens its Edit,
- * ⋮ has Edit and Delete. A delete keeps the parent on this page; the card
- * goes, and the container above gets its servings back (the delete
- * refreshes Storage).
+ * Each meal is the Food log's own one-line row (ledgers 966, 1146): a tap
+ * opens the whole meal in `MealSheet`, ⋮ has Edit and Delete. A delete keeps
+ * the parent on this page; the row goes, and the container above gets its
+ * servings back (the delete refreshes Storage).
  */
 export function MealsFromBatch({ babyId, storageItemId }: MealsFromBatchProps) {
   const { data, isLoading } = useMeals(babyId, { limit: 100 });
@@ -30,6 +30,8 @@ export function MealsFromBatch({ babyId, storageItemId }: MealsFromBatchProps) {
   // The meal itself, not its id: the delete removes the card optimistically,
   // and the question has to outlive it to show a failure (as on the Food log).
   const [pendingDelete, setPendingDelete] = useState<MealItem | null>(null);
+  // The meal open in `MealSheet`, by id, as on the Food log.
+  const [openId, setOpenId] = useState<string | null>(null);
 
   return (
     <section className="flex flex-col gap-2.5">
@@ -42,10 +44,18 @@ export function MealsFromBatch({ babyId, storageItemId }: MealsFromBatchProps) {
       {!isLoading && meals.length > 0 && (
         <ul className="flex flex-col gap-2">
           {meals.map((meal) => (
-            <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} />
+            <MealCard key={meal.id} meal={meal} onRequestDelete={setPendingDelete} onOpen={(open) => setOpenId(open.id)} />
           ))}
         </ul>
       )}
+      <MealSheet
+        meal={meals.find((meal) => meal.id === openId) ?? null}
+        onClose={() => setOpenId(null)}
+        onRequestDelete={(meal) => {
+          setOpenId(null);
+          setPendingDelete(meal);
+        }}
+      />
       {pendingDelete && (
         <MealDeleteDialog meal={pendingDelete} babyId={pendingDelete.babyId} open onClose={() => setPendingDelete(null)} />
       )}

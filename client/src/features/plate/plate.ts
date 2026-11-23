@@ -480,6 +480,13 @@ export function mealLines(
   });
 }
 
+/** Ledger 1146: `lines` with the ones keyed in `lead` first (an allergen's
+ * carrying items), each group keeping plate order. No `lead` = as they are. */
+export function leadLines<T extends { key: string }>(lines: readonly T[], lead: readonly string[] = []): T[] {
+  const first = new Set(lead);
+  return [...lines.filter((line) => first.has(line.key)), ...lines.filter((line) => !first.has(line.key))];
+}
+
 /** The plate a saved meal shows (GET /api/meals/:id), kept items by id.
  * `containers` (Storage's list) adds each container's live counts. */
 export function fromMeal(meal: Pick<MealItem, "items">, containers: readonly StorageItem[] = []): PlateEntry[] {

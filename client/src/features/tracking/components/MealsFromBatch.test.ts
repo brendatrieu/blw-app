@@ -44,38 +44,35 @@ describe("MealsFromBatch heading (item 704)", () => {
   });
 });
 
-describe("MealsFromBatch reactionNote (item 148)", () => {
-  it("shows the reaction note distinctly, matching MealCard's 'Reaction:' idiom", () => {
+describe("MealsFromBatch reaction (items 148, 1146)", () => {
+  it("labels a reaction meal 'Reaction' on its row; the note itself waits in the sheet", () => {
     const html = renderWithMeals([meal({ reactionNote: "mild rash around mouth" })]);
-    expect(html).toContain("Reaction: ");
-    expect(html).toContain("mild rash around mouth");
+    expect(html).toContain(">Reaction</span>");
+    expect(html).not.toContain("mild rash around mouth");
   });
 
-  it("omits the reaction note line when absent", () => {
-    const html = renderWithMeals([meal({})]);
-    expect(html).not.toContain("Reaction:");
+  it("no label when there is no reaction", () => {
+    expect(renderWithMeals([meal({})])).not.toContain("Reaction");
   });
 
-  it("shows both a general note and a reaction note distinctly, general note unprefixed", () => {
-    const html = renderWithMeals([meal({ notes: "ate the whole thing", reactionNote: "mild rash" })]);
-    expect(html).toContain("ate the whole thing");
-    expect(html).toContain("Reaction: ");
-    expect(html).toContain("mild rash");
-    expect(html).not.toMatch(/Reaction:\s*ate the whole thing/);
+  it("never shows the general note on the row", () => {
+    expect(renderWithMeals([meal({ notes: "ate the whole thing" })])).not.toContain("ate the whole thing");
   });
 });
 
-describe("MealsFromBatch cards (ledger 966): the Food log's own card", () => {
-  it("each meal is a Food log card: the whole card opens its Edit, ⋮ Actions above it, never the old meal page", () => {
+describe("MealsFromBatch rows (ledgers 966, 1146): the Food log's own one-line row", () => {
+  it("each meal is a Food log row: a tap opens its sheet (no edit link), ⋮ Actions above it, never the old meal page", () => {
     const html = renderWithMeals([meal({ id: "meal-7" })]);
-    expect(html).toContain('href="/log-meal?edit=meal-7"');
+    expect(html).toContain('<button type="button" aria-haspopup="dialog"');
+    expect(html).not.toContain('href="/log-meal?edit=meal-7"');
     expect(html).not.toContain('href="/meals/meal-7"');
     expect(html).toContain('aria-label="Actions"');
     expect(html).toMatch(/<li class="app-card relative flex flex-col rounded-\[var\(--radius-lg\)\] border /); // the card glass (ledger 1083)
-    expect(html).toMatch(/📦 (?:<!-- -->)?From storage/);
+    expect(html).toMatch(/title="From storage"[^>]*>📦/);
+    expect(html).toContain('<span class="flex h-[34px] items-center gap-2">');
   });
 
-  it("shows each rated item's stars, read-only, as the Food log does", () => {
+  it("no stars on the row, even for a rated item (the sheet has them)", () => {
     const html = renderWithMeals([
       meal({
         items: [
@@ -90,7 +87,7 @@ describe("MealsFromBatch cards (ledger 966): the Food log's own card", () => {
         ],
       }),
     ]);
-    expect(html).toContain('role="img" aria-label="Rated 4 stars"');
+    expect(html).not.toContain("Rated 4 stars");
     expect(html).not.toContain('role="radio"');
   });
 });
@@ -105,8 +102,7 @@ describe("MealsFromBatch deleted food (ledger 543/555)", () => {
         ],
       }),
     ]).replace(/<!-- -->/g, "");
-    expect(html).toContain('Banana bread<span class="font-normal text-[var(--color-text-muted)]">\u00a0(deleted)</span></span>');
-    expect(html).toContain(">Avocado</span>");
+    expect(html).toContain('Banana bread<span class="font-normal text-[var(--color-text-muted)]">\u00a0(deleted)</span>, Avocado</span>');
     expect(html.match(/\(deleted\)/g)).toHaveLength(1);
   });
 });
