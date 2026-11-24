@@ -130,6 +130,17 @@
      over the sea glow); dark a step lighter, light unchanged. */
   --color-primary-soft-text-glass: #1c3e52;
   --bar-filter: blur(22px) saturate(140%); /* same in both modes */
+  /* Ledger 1159c: cook mode's Ingredients button (.cook-ing), by mode. Light:
+     option A, frosted (the card glass + its hairline, a lifting shadow, the
+     glass blur). Dark: option C, the nutrient chip's sea tint and ink, flat
+     (no hairline, shadow or blur). -solid is the fill where blur is missing
+     or the reader asks for less transparency (dark: the same tint). */
+  --color-cook-ing: var(--color-card-glass);
+  --color-cook-ing-text: var(--color-text);
+  --color-cook-ing-border: var(--color-card-glass-border);
+  --color-cook-ing-solid: var(--color-app-solid);
+  --shadow-cook-ing: var(--shadow-md);
+  --cook-ing-filter: blur(22px);
 
   /* ---- Text (deep navy — the hue the dark ground is built from) ---- */
   --color-text: #1f2a36;
@@ -482,6 +493,16 @@
   --_dark-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 1px rgb(0 0 0 / 0.24);
   --_dark-shadow-md: 0 8px 20px rgb(0 0 0 / 0.36), 0 2px 6px rgb(0 0 0 / 0.24);
   --_dark-shadow-lg: 0 20px 40px rgb(0 0 0 / 0.44), 0 4px 10px rgb(0 0 0 / 0.28);
+
+  /* Ledger 1159c: the Ingredients button's dark look, option C (see :root). */
+  --_dark-cook-ing: var(--_dark-primary-soft);
+  /* The on-glass sea ink: the button sits on the frosted bar (.app-frost),
+     where the chip ink is already --color-primary-soft-text-glass. */
+  --_dark-cook-ing-text: var(--_dark-primary-soft-text-glass);
+  --_dark-cook-ing-border: transparent;
+  --_dark-cook-ing-solid: var(--_dark-primary-soft);
+  --_dark-shadow-cook-ing: none;
+  --_dark-cook-ing-filter: none;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -589,6 +610,13 @@
     --shadow-sm: var(--_dark-shadow-sm);
     --shadow-md: var(--_dark-shadow-md);
     --shadow-lg: var(--_dark-shadow-lg);
+
+    --color-cook-ing: var(--_dark-cook-ing);
+    --color-cook-ing-text: var(--_dark-cook-ing-text);
+    --color-cook-ing-border: var(--_dark-cook-ing-border);
+    --color-cook-ing-solid: var(--_dark-cook-ing-solid);
+    --shadow-cook-ing: var(--_dark-shadow-cook-ing);
+    --cook-ing-filter: var(--_dark-cook-ing-filter);
   }
 }
 
@@ -701,6 +729,13 @@
   --shadow-sm: var(--_dark-shadow-sm);
   --shadow-md: var(--_dark-shadow-md);
   --shadow-lg: var(--_dark-shadow-lg);
+
+  --color-cook-ing: var(--_dark-cook-ing);
+  --color-cook-ing-text: var(--_dark-cook-ing-text);
+  --color-cook-ing-border: var(--_dark-cook-ing-border);
+  --color-cook-ing-solid: var(--_dark-cook-ing-solid);
+  --shadow-cook-ing: var(--_dark-shadow-cook-ing);
+  --cook-ing-filter: var(--_dark-cook-ing-filter);
 }
 
 html,
@@ -1035,6 +1070,32 @@ input[type="search"]::-webkit-search-cancel-button {
 @media (prefers-reduced-transparency: reduce) {
   .cook-cue {
     background-color: var(--color-app-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Ledger 1159c: cook mode's Ingredients button, by mode through its tokens
+   (:root): light frosted, dark the sea tint. Unlayered, so it wins over the
+   Button's own fill, ink and border utilities. Without blur, or with less
+   transparency asked for, the light frost goes near-opaque as .glass-card;
+   dark keeps its tint (it has no blur to lose). */
+.cook-ing {
+  border-color: var(--color-cook-ing-border);
+  background-color: var(--color-cook-ing);
+  color: var(--color-cook-ing-text);
+  box-shadow: var(--shadow-cook-ing);
+  -webkit-backdrop-filter: var(--cook-ing-filter);
+  backdrop-filter: var(--cook-ing-filter);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .cook-ing {
+    background-color: var(--color-cook-ing-solid);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .cook-ing {
+    background-color: var(--color-cook-ing-solid);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

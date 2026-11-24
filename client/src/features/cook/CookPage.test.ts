@@ -136,11 +136,33 @@ describe("CookPage screens (ledger 1095, copy 1098)", () => {
     expect(renderCook("?stage=6&step=1", { ...RECIPE, ingredients: [], extraIngredients: [] })).not.toContain(">Ingredients<");
   });
 
-  it("tints the Ingredients button sea: the nutrient chip's soft fill and ink, nothing frosted (ledger 1154a, option C)", () => {
+  it("dresses the Ingredients button by mode through .cook-ing, on the quiet variant (ledger 1159c, 1156)", () => {
     const html = renderCook("?stage=6&step=1");
     const cls = html.match(/<button[^>]*class="([^"]*)"[^>]*>Ingredients<\/button>/)![1]!.split(" ");
-    expect(cls).toEqual(expect.arrayContaining(["!bg-[var(--color-primary-soft)]", "!text-[var(--color-primary-soft-text)]"]));
-    expect(cls.filter((c) => /card-glass|shadow-|backdrop-|apricot/.test(c))).toEqual([]);
+    expect(cls).toContain("cook-ing");
+    // The quiet variant (not secondary's bordered elevated fill), md for the 44px target.
+    expect(cls).toEqual(expect.arrayContaining(["border-transparent", "bg-[var(--color-bg-inset)]", "min-h-11"]));
+    expect(cls.filter((c) => /color-border\b|bg-elevated|shadow-\[/.test(c))).toEqual([]);
+    // No per-look overrides left in the markup: the mode lives in the tokens.
+    expect(cls.filter((c) => c.startsWith("!") || /card-glass|primary-soft|backdrop-/.test(c))).toEqual([]);
+  });
+
+  it("styles .cook-ing from its tokens, with the -webkit- blur twin and .glass-card's fallbacks (ledger 1159c)", () => {
+    const css = readFileSync(new URL("../../styles/index.css", import.meta.url), "utf8");
+    const after = css.slice(css.indexOf(".cook-ing {"));
+    expect(after).toMatch(
+      /^\.cook-ing \{\s*border-color: var\(--color-cook-ing-border\);\s*background-color: var\(--color-cook-ing\);\s*color: var\(--color-cook-ing-text\);\s*box-shadow: var\(--shadow-cook-ing\);\s*-webkit-backdrop-filter: var\(--cook-ing-filter\);\s*backdrop-filter: var\(--cook-ing-filter\);\s*\}\s*@supports not \(\(backdrop-filter: blur\(1px\)\) or \(-webkit-backdrop-filter: blur\(1px\)\)\) \{\s*\.cook-ing \{\s*background-color: var\(--color-cook-ing-solid\);\s*\}\s*\}\s*@media \(prefers-reduced-transparency: reduce\) \{\s*\.cook-ing \{\s*background-color: var\(--color-cook-ing-solid\);\s*-webkit-backdrop-filter: none;\s*backdrop-filter: none;\s*\}\s*\}/,
+    );
+    // Top level (in no @layer or block), so it beats the Button's utilities in Tailwind's layer.
+    const before = css.slice(0, css.indexOf(".cook-ing {")).replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(before.split("{").length - before.split("}").length).toBe(0);
+  });
+
+  it("anchors the scroll cue in the live region: the region is `relative` (ledger 1153b, 1156)", () => {
+    const html = renderCook("?stage=6&step=1");
+    const region = html.match(/<div aria-live="polite" class="([^"]*)"/)![1]!.split(" ");
+    expect(region).toContain("relative");
+    expect(region).toContain("overflow-hidden");
   });
 
   it("frosts the scroll cue's track like the bars, -webkit- twin for iOS Safari (ledger 1153b)", () => {

@@ -833,3 +833,54 @@ describe("app glass, round 15 (ledger 1077-1082)", () => {
     expect(rootVars.get("bar-filter")).toMatch(/^blur\(22px\) saturate\(140%\)/);
   });
 });
+
+describe("cook mode's Ingredients button by mode (ledger 1159c)", () => {
+  // Light: option A, frosted; dark: option C, the sea tint. Tokens follow the
+  // theme switch like every other (system dark unless data-theme="light", or
+  // data-theme="dark"), so they sit in :root and both dark blocks.
+  const TOKENS = ["color-cook-ing", "color-cook-ing-text", "color-cook-ing-border", "color-cook-ing-solid", "shadow-cook-ing", "cook-ing-filter"];
+  const mediaStart = css.indexOf("@media (prefers-color-scheme: dark)");
+  const mediaRoot = parseDeclarations(extractBlock(css.slice(mediaStart), ':root:not([data-theme="light"]) {') ?? "");
+  const dataThemeDark = parseDeclarations(darkBlock!);
+  for (const token of TOKENS) {
+    it(`--${token} is declared in :root and both dark blocks`, () => {
+      expect(rootVars.has(token)).toBe(true);
+      expect(mediaRoot.get(token)).toBe(`var(--_dark-${token.replace(/^color-/, "")})`);
+      expect(dataThemeDark.get(token)).toBe(`var(--_dark-${token.replace(/^color-/, "")})`);
+    });
+  }
+
+  it("light is option A: the card glass, its hairline, body ink, the lifting shadow, a 22px blur; app-solid without it", () => {
+    expect(resolve("color-cook-ing", "light")).toBe(resolve("color-card-glass", "light"));
+    expect(resolve("color-cook-ing-border", "light")).toBe(resolve("color-card-glass-border", "light"));
+    expect(resolve("color-cook-ing-text", "light")).toBe(resolve("color-text", "light"));
+    expect(resolve("shadow-cook-ing", "light")).toBe(resolve("shadow-md", "light"));
+    expect(resolve("cook-ing-filter", "light")).toBe("blur(22px)");
+    expect(resolve("color-cook-ing-solid", "light")).toBe(resolve("color-app-solid", "light"));
+  });
+
+  it("dark is option C: the nutrient chip's sea tint and its on-glass ink, no hairline, shadow or blur; the same tint without blur", () => {
+    expect(resolve("color-cook-ing", "dark")).toBe(resolve("color-primary-soft", "dark"));
+    // The on-glass shade, as the chip ink on the frosted bar it sits on (1154a measured 7.03 with it).
+    expect(resolve("color-cook-ing-text", "dark")).toBe(resolve("color-primary-soft-text-glass", "dark"));
+    expect(resolve("color-cook-ing-border", "dark")).toBe("transparent");
+    expect(resolve("shadow-cook-ing", "dark")).toBe("none");
+    expect(resolve("cook-ing-filter", "dark")).toBe("none");
+    expect(resolve("color-cook-ing-solid", "dark")).toBe(resolve("color-primary-soft", "dark"));
+  });
+
+  // The button sits on cook mode's glow ground: gate its label over the fill
+  // (and the no-blur fill) over the bare page and each glow at full strength.
+  for (const mode of ["light", "dark"] as const) {
+    const rgb = (token: string) => parseColor(resolve(token, mode));
+    const page = rgb("color-bg");
+    const grounds = { page, sea: compositeOver(rgb("color-app-glow-sea"), page), apricot: compositeOver(rgb("color-app-glow-apricot"), page) };
+    for (const [where, ground] of Object.entries(grounds)) {
+      for (const fill of ["color-cook-ing", "color-cook-ing-solid"]) {
+        it(`[${mode}] the label on --${fill} over the ${where} ground >= 4.5:1`, () => {
+          expect(contrastRatio(rgb("color-cook-ing-text"), compositeOver(rgb(fill), ground))).toBeGreaterThanOrEqual(4.5);
+        });
+      }
+    }
+  }
+});

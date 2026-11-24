@@ -172,12 +172,12 @@ export function CookPage() {
           {/* Ledger 1147: amounts mid-cook without leaving; the title truncates first. */}
           {!waiting && recipe && showsIngredients(screen, recipe) ? (
             <>
-              {/* Ledger 1154a (proto option C): the nutrient chip's sea tint and its
-                  on-glass ink, a gated pairing; no border, shadow or blur. */}
+              {/* Ledger 1159c: by mode (.cook-ing): light frosted (proto option A),
+                  dark the sea tint (option C); the theme switch picks, as for tokens. */}
               <Button
                 type="button"
                 variant="quiet"
-                className="shrink-0 !bg-[var(--color-primary-soft)] !text-[var(--color-primary-soft-text)]"
+                className="cook-ing shrink-0"
                 onClick={() => setIngredientsOpen(true)}
               >
                 Ingredients
