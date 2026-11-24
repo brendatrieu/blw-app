@@ -9,9 +9,11 @@ import type { RecipeDetail } from "@blw/shared";
 const h = vi.hoisted(() => {
   const store = { refs: [] as { current: unknown }[], r: 0, state: [] as unknown[], s: 0 };
   const effects: Array<() => void | (() => void)> = [];
+  const deps: Array<unknown[] | undefined> = [];
   return {
     store,
     effects,
+    deps,
     search: "",
     recipe: undefined as unknown,
     setSearchParams: vi.fn(),
@@ -28,10 +30,14 @@ const h = vi.hoisted(() => {
     useState: (init: unknown) => {
       const i = store.s++;
       if (!(i in store.state)) store.state[i] = init;
-      return [store.state[i], (next: unknown) => (store.state[i] = next)];
+      // A functional update (setCue's keep-prev) runs against the slot.
+      const set = (next: unknown) =>
+        (store.state[i] = typeof next === "function" ? (next as (prev: unknown) => unknown)(store.state[i]) : next);
+      return [store.state[i], set];
     },
-    useEffect: (effect: () => void | (() => void)) => {
+    useEffect: (effect: () => void | (() => void), list?: unknown[]) => {
       effects.push(effect);
+      deps.push(list);
     },
   };
 });
@@ -91,6 +97,7 @@ function render(search: string) {
   h.store.r = 0;
   h.store.s = 0;
   h.effects.length = 0;
+  h.deps.length = 0;
   const tree = (CookPage as unknown as () => El)();
   const column = tree.props.children as El;
   const button = (label: string) => all(tree).find((el) => el.type === Button && el.props.children === label);
@@ -286,5 +293,93 @@ describe("CookPage: the Ingredients sheet (ledger 1147)", () => {
     h.effects.forEach((effect) => effect());
     listeners.get("keydown")!({ key: "ArrowRight", preventDefault: vi.fn() });
     expect(h.setSearchParams).not.toHaveBeenCalled();
+  });
+});
+
+describe("CookPage: the long step's scroll cue (ledger 1153b/c)", () => {
+  // Slots in hook order: refs swipe, scroller; state direction, ingredientsOpen, cue.
+  const SCROLLER = 1;
+  const CUE = 2;
+
+  function fakeScroller(scrollTop = 0) {
+    const on = new Map<string, () => void>();
+    const el = {
+      scrollTop,
+      scrollHeight: 547,
+      clientHeight: 433,
+      firstElementChild: {},
+      addEventListener: (type: string, fn: () => void) => on.set(type, fn),
+      removeEventListener: (type: string) => on.delete(type),
+    };
+    return { el, on };
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal("getComputedStyle", () => ({ paddingBottom: "24px" }));
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
+  });
+
+  /** Runs each effect; returns the one that listens to the scroller, with its deps and cleanup. */
+  function measuring(el: object) {
+    h.store.refs[SCROLLER]!.current = el;
+    const runs = h.effects.map((effect, i) => ({ cleanup: effect(), deps: h.deps[i] }));
+    return runs;
+  }
+
+  it("measures the step's scroller on mount, follows its scroll, and lets go on cleanup", () => {
+    render("?stage=9&step=2");
+    const { el, on } = fakeScroller();
+    const runs = measuring(el);
+    expect(h.store.state[CUE]).toEqual({ top: 0, size: 433 / 547 });
+    el.scrollTop = 114;
+    on.get("scroll")!();
+    expect((h.store.state[CUE] as { top: number }).top).toBeCloseTo(1 - 433 / 547, 12);
+    runs.forEach((run) => typeof run.cleanup === "function" && run.cleanup());
+    expect(on.has("scroll")).toBe(false);
+  });
+
+  it("has a deps list with the step index (no run-every-render loop; the scroller is keyed by step)", () => {
+    render("?stage=9&step=2");
+    const { el, on } = fakeScroller();
+    const before = [...h.effects];
+    const deps = [...h.deps];
+    h.store.refs[SCROLLER]!.current = el;
+    const i = before.findIndex((effect) => {
+      on.clear();
+      const cleanup = effect();
+      const listens = on.has("scroll");
+      if (typeof cleanup === "function") cleanup();
+      return listens;
+    });
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(Array.isArray(deps[i])).toBe(true);
+    expect(deps[i]).toContain(2);
+    expect(deps[i]).toContain(RECIPE);
+  });
+
+  it("keeps the same cue state for the same numbers (a measure never re-renders)", () => {
+    render("?stage=9&step=2");
+    const { el, on } = fakeScroller(57);
+    measuring(el);
+    const first = h.store.state[CUE];
+    on.get("scroll")!();
+    expect(h.store.state[CUE]).toBe(first);
+  });
+
+  it("draws the cue aria-hidden and untouchable, the thumb at its fractions; none without a cue", () => {
+    h.store.state[CUE] = { top: 0.25, size: 0.5 };
+    const cue = all(render("?stage=9&step=2").tree).find((el) => "data-cook-cue" in el.props)!;
+    expect(cue.props["aria-hidden"]).toBe("true");
+    expect(String(cue.props.className).split(" ")).toEqual(expect.arrayContaining(["cook-cue", "pointer-events-none", "absolute"]));
+    const thumb = cue.props.children as El;
+    expect(thumb.props.style).toEqual({ top: "25%", height: "50%" });
+    h.store.state[CUE] = null;
+    expect(all(render("?stage=9&step=2").tree).some((el) => "data-cook-cue" in el.props)).toBe(false);
   });
 });

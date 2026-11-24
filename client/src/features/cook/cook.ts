@@ -81,3 +81,22 @@ export function showsIngredients(
 ): boolean {
   return screen.kind !== "need" && recipe.ingredients.length + recipe.extraIngredients.length > 0;
 }
+
+/** Ledger 1153b: the step's scroll cue, as fractions of its track; null = no cue. */
+export type ScrollCue = { top: number; size: number } | null;
+
+/**
+ * Ledger 1153b/c (1141b): the cue for a step's scroller. Shown only when more
+ * than the bottom padding is hidden (padding alone is not a hidden line); the
+ * thumb is visible / total, placed at the scroll position and clamped (iOS
+ * overscroll). The same numbers hand back `prev`, so a measure never re-renders.
+ */
+export function scrollCue(
+  prev: ScrollCue,
+  el: { scrollTop: number; scrollHeight: number; clientHeight: number; paddingBottom: number },
+): ScrollCue {
+  const hidden = el.scrollHeight - el.clientHeight;
+  const size = el.clientHeight / el.scrollHeight;
+  const next = hidden <= el.paddingBottom ? null : { top: Math.min(Math.max(el.scrollTop / hidden, 0), 1) * (1 - size), size };
+  return prev?.top === next?.top && prev?.size === next?.size ? prev : next;
+}

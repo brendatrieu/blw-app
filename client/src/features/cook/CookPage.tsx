@@ -17,7 +17,17 @@ import { ignoreTapsBriefly } from "../../lib/tapGuard.js";
 import { keepScreenAwake } from "../../pwa/wakeLock.js";
 import { setStatusBarSurface } from "../../theme.js";
 import { IngredientList } from "../../pages/RecipeDetailPage.js";
-import { arrowStep, cookProgress, cookScreen, moveScreen, readScreen, showsIngredients, shownVariant } from "./cook.js";
+import {
+  arrowStep,
+  cookProgress,
+  cookScreen,
+  moveScreen,
+  readScreen,
+  scrollCue,
+  showsIngredients,
+  shownVariant,
+  type ScrollCue,
+} from "./cook.js";
 
 /**
  * Cook mode (ledger 1094-1098, ROADMAP 4): "You'll need", then one step per
@@ -39,6 +49,9 @@ export function CookPage() {
   const swipe = useRef<{ id: number; x: number; y: number } | null>(null);
   // Ledger 1147: the full list over any step; closing hands focus back to its button (useModal).
   const [ingredientsOpen, setIngredientsOpen] = useState(false);
+  // Ledger 1153b: the step area's scroll cue, measured from the scroller itself.
+  const scroller = useRef<HTMLDivElement | null>(null);
+  const [cue, setCue] = useState<ScrollCue>(null);
 
   useEffect(() => {
     // Ledger 1090: one screen on the glow ground, so the installed app's
@@ -88,6 +101,31 @@ export function CookPage() {
   });
 
   const waiting = awaitingDetail(recipeQuery, Boolean(recipe)) || (!askedStage && isBabyLoading);
+
+  // Ledger 1153b/c: re-measure on scroll, on resize or reflow, and whenever the
+  // scroller mounts (keyed by step) or its content changes; never every render.
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const measure = () =>
+      setCue((prev) =>
+        scrollCue(prev, {
+          scrollTop: el.scrollTop,
+          scrollHeight: el.scrollHeight,
+          clientHeight: el.clientHeight,
+          paddingBottom: parseFloat(getComputedStyle(el).paddingBottom),
+        }),
+      );
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    ro?.observe(el);
+    if (el.firstElementChild) ro?.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      ro?.disconnect();
+    };
+  }, [waiting, recipe, variant, index]);
   // Nothing to cook (a typed link to a recipe with no steps): the recipe, as it has no button.
   if (!waiting && recipe && steps.length === 0) return <Navigate to={recipeHref} replace />;
 
@@ -134,7 +172,14 @@ export function CookPage() {
           {/* Ledger 1147: amounts mid-cook without leaving; the title truncates first. */}
           {!waiting && recipe && showsIngredients(screen, recipe) ? (
             <>
-              <Button type="button" variant="quiet" className="shrink-0" onClick={() => setIngredientsOpen(true)}>
+              {/* Ledger 1153a: frosted, the card glass + hairline, a lifting shadow and the
+                  bars' 22px blur (Tailwind emits the -webkit- twin for iOS Safari). */}
+              <Button
+                type="button"
+                variant="quiet"
+                className="shrink-0 !border-[var(--color-card-glass-border)] !bg-[var(--color-card-glass)] shadow-[var(--shadow-md)] backdrop-blur-[22px]"
+                onClick={() => setIngredientsOpen(true)}
+              >
                 Ingredients
               </Button>
               <Sheet open={ingredientsOpen} onClose={() => setIngredientsOpen(false)} title="You'll need" showClose>
@@ -175,8 +220,9 @@ export function CookPage() {
 
             {/* The live region stays; the screen inside it is new each move,
                 so a long step starts at its top and scrolls inside itself. */}
-            <div aria-live="polite" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div aria-live="polite" className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
               <div
+                ref={scroller}
                 key={index}
                 className={`min-h-0 flex-1 touch-pan-y touch-pinch-zoom overflow-y-auto overscroll-contain px-4 py-6 ${slide ? "cook-slide" : ""}`}
                 style={slide}
@@ -206,6 +252,16 @@ export function CookPage() {
                   </div>
                 )}
               </div>
+              {/* Ledger 1153b (1141b): a thin frosted track in the 16px gutter
+                  (the text never reaches it), a solid thumb; never takes a touch. */}
+              {cue ? (
+                <div aria-hidden="true" data-cook-cue="" className="cook-cue pointer-events-none absolute top-6 right-1.5 bottom-6 w-1 rounded-full">
+                  <div
+                    className="absolute inset-x-0 rounded-full bg-[var(--color-text-muted)]"
+                    style={{ top: `${cue.top * 100}%`, height: `${cue.size * 100}%` }}
+                  />
+                </div>
+              ) : null}
             </div>
 
             {/* Above the home indicator by its inset plus the bar's own

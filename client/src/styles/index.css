@@ -1018,6 +1018,14 @@ input[type="search"]::-webkit-search-cancel-button {
 .cook-slide {
   animation: cook-slide-in var(--duration-base) var(--ease-out) both;
 }
+/* Ledger 1153b (1141b): the step's scroll cue track, frosted like the bars
+   (bar glass + blur + hairline). No transition, so nothing to reduce. */
+.cook-cue {
+  background-color: var(--color-bar-glass);
+  box-shadow: inset 0 0 0 0.5px var(--color-bar-hairline);
+  -webkit-backdrop-filter: var(--bar-filter);
+  backdrop-filter: var(--bar-filter);
+}
 
 /* -------------------------------------------------------------------------
  * Skeleton loading — a slow, quiet warm shimmer; a still block for

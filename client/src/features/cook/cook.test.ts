@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RecipeDetail } from "@blw/shared";
 import { SWIPE_MIN_PX, swipeStep } from "../../lib/scrollTrack.js";
-import { arrowStep, cookHref, cookProgress, cookScreen, moveScreen, readScreen, showsIngredients, shownVariant } from "./cook.js";
+import { arrowStep, cookHref, cookProgress, cookScreen, moveScreen, readScreen, scrollCue, showsIngredients, shownVariant } from "./cook.js";
 
 const variant = (ageStage: "6" | "9" | "12", steps: string[]) => ({ ageStage, textureNote: "", steps });
 
@@ -103,5 +103,46 @@ describe("showsIngredients: the top bar's Ingredients sheet (ledger 1147)", () =
     expect(showsIngredients(cookScreen(1, 2), { ingredients: [], extraIngredients: both.extraIngredients })).toBe(true);
     expect(showsIngredients(cookScreen(1, 2), { ingredients: [food], extraIngredients: [] })).toBe(true);
     expect(showsIngredients(cookScreen(1, 2), { ingredients: [], extraIngredients: [] })).toBe(false);
+  });
+});
+
+describe("scrollCue: the long step's scroll cue (ledger 1153b/c, 1141b)", () => {
+  // The beans step at 320x568: 433px seen of 547, the area's 24px bottom padding.
+  const el = (scrollTop: number, scrollHeight = 547, clientHeight = 433) => ({ scrollTop, scrollHeight, clientHeight, paddingBottom: 24 });
+
+  it("shows only when more than the bottom padding is hidden: padding alone is not a hidden line", () => {
+    expect(scrollCue(null, el(0, 433 + 24))).toBeNull();
+    expect(scrollCue(null, el(0, 433 + 21))).toBeNull();
+    expect(scrollCue(null, el(0, 433))).toBeNull();
+    expect(scrollCue(null, el(0, 433 + 25))).not.toBeNull();
+    // A cue that was up goes when the content stops overflowing (a resize, a new step).
+    expect(scrollCue({ top: 0, size: 0.5 }, el(0, 433 + 24))).toBeNull();
+  });
+
+  it("sizes the thumb visible / total and places it at the top, the middle and the end", () => {
+    expect(scrollCue(null, el(0))).toEqual({ top: 0, size: 433 / 547 });
+    const size = 433 / 547;
+    expect(scrollCue(null, el(57))!.top).toBeCloseTo(0.5 * (1 - size), 12);
+    expect(scrollCue(null, el(114))!.top).toBeCloseTo(1 - size, 12);
+    const half = scrollCue(null, el(50, 400, 200))!;
+    expect(half.size).toBe(0.5);
+    expect(half.top).toBe(0.125);
+  });
+
+  it("clamps an overscroll (iOS rubber band) to the track", () => {
+    const size = 433 / 547;
+    expect(scrollCue(null, el(-40))!.top).toBe(0);
+    expect(scrollCue(null, el(114 + 60))!.top).toBeCloseTo(1 - size, 12);
+    expect(scrollCue(null, el(114 + 60))!.top + size).toBeLessThanOrEqual(1);
+  });
+
+  it("hands back the previous state for the same numbers, so measuring never re-renders", () => {
+    const up = scrollCue(null, el(57))!;
+    expect(scrollCue(up, el(57))).toBe(up);
+    const same = { ...up };
+    expect(scrollCue(same, el(57))).toBe(same);
+    const moved = scrollCue(up, el(58));
+    expect(moved).not.toBe(up);
+    expect(moved!.size).toBe(up.size);
   });
 });

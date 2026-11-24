@@ -124,7 +124,7 @@ describe("CookPage screens (ledger 1095, copy 1098)", () => {
   });
 
   it("offers Ingredients in the top bar, after the title, on every step and All done; not on You'll need (ledger 1147)", () => {
-    const ingredients = /<button[^>]*class="[^"]*min-h-11[^"]*shrink-0"[^>]*>Ingredients<\/button>/;
+    const ingredients = /<button[^>]*class="[^"]*min-h-11[^"]*shrink-0[^"]*"[^>]*>Ingredients<\/button>/;
     expect(renderCook("?stage=6")).not.toContain(">Ingredients<");
     for (const step of ["1", "2", "3"]) {
       const html = renderCook(`?stage=6&step=${step}`);
@@ -134,5 +134,31 @@ describe("CookPage screens (ledger 1095, copy 1098)", () => {
       expect(html).not.toContain('role="dialog"');
     }
     expect(renderCook("?stage=6&step=1", { ...RECIPE, ingredients: [], extraIngredients: [] })).not.toContain(">Ingredients<");
+  });
+
+  it("frosts the Ingredients button: card glass + hairline over the quiet fill, a lifting shadow, the 22px blur (ledger 1153a)", () => {
+    const html = renderCook("?stage=6&step=1");
+    const cls = html.match(/<button[^>]*class="([^"]*)"[^>]*>Ingredients<\/button>/)![1]!.split(" ");
+    for (const c of [
+      "!border-[var(--color-card-glass-border)]",
+      "!bg-[var(--color-card-glass)]",
+      "shadow-[var(--shadow-md)]",
+      "backdrop-blur-[22px]",
+    ]) {
+      expect(cls).toContain(c);
+    }
+  });
+
+  it("frosts the scroll cue's track like the bars, -webkit- twin for iOS Safari (ledger 1153b)", () => {
+    const css = readFileSync(new URL("../../styles/index.css", import.meta.url), "utf8");
+    const rule = css.slice(css.indexOf(".cook-cue {"), css.indexOf("}", css.indexOf(".cook-cue {")));
+    expect(rule).toContain("background-color: var(--color-bar-glass);");
+    expect(rule).toContain("box-shadow: inset 0 0 0 0.5px var(--color-bar-hairline);");
+    expect(rule).toContain("-webkit-backdrop-filter: var(--bar-filter);");
+    expect(rule).toMatch(/\n\s*backdrop-filter: var\(--bar-filter\);/);
+  });
+
+  it("shows no scroll cue before anything is measured (a reload lands on the step's top)", () => {
+    expect(renderCook("?stage=6&step=1")).not.toContain("data-cook-cue");
   });
 });
