@@ -173,9 +173,9 @@ export function MealCard({ meal, onRequestDelete, grouped = false, onOpen, lead,
           : "app-card relative flex flex-col rounded-[var(--radius-lg)] border pt-1.5 pr-1.5 pb-2.5 pl-3"
       }
     >
-      {/* Never wraps (ledger 1121): under 360px (or beside Reaction) the
-          badge is the 📦 alone (named for screen readers), and the date line is cut short before
-          it could push the label, badge or kebab down. */}
+      {/* Never wraps (ledger 1121): the badge is the 📦 alone (named for
+          screen readers), and the date line is cut short before it could
+          push the label, badge or kebab down. */}
       <div className="flex items-center justify-between gap-x-2">
         <span className="min-w-0 truncate text-xs text-[var(--color-text-muted)]">{servedLine(meal.servedAt)}</span>
         {/* Above the stretched target's overlay (relative z-10), as siblings:
@@ -188,11 +188,12 @@ export function MealCard({ meal, onRequestDelete, grouped = false, onOpen, lead,
               <Badge tone="dangerSoft">Reaction</Badge>
             </span>
           )}
-          {/* Ledger 1152a (1146c option B): beside the Reaction label the
-              badge is the 📦 alone at every width, so the date stays whole. */}
+          {/* Ledger 1159a: the 📦 alone on every row at every width, with or
+              without Reaction (one look everywhere); the words stay for screen
+              readers and as the title. The meal sheet's badge keeps them. */}
           {fromStorage(meal) && (
             <Badge tone="neutral" title="From storage">
-              📦<span className={reaction ? "sr-only" : "max-[359px]:sr-only"}> From storage</span>
+              📦<span className="sr-only"> From storage</span>
             </Badge>
           )}
           <MealActionsMenu

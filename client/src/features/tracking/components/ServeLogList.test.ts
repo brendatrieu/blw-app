@@ -394,7 +394,7 @@ describe("MealCard (render, storage-card styling — item 192)", () => {
       ...baseMeal,
       foods: [food({ id: "food-1", storageItemId: "storage-1" }), food({ id: "food-2", name: "Chicken" })],
     });
-    expect(html).toMatch(/title="From storage"[^>]*>📦<span class="max-\[359px\]:sr-only"> (?:<!-- -->)?From storage<\/span>/);
+    expect(html).toMatch(/title="From storage"[^>]*>📦<span class="sr-only"> (?:<!-- -->)?From storage<\/span>/);
     expect(html).toContain("bg-[var(--color-neutral-soft)]");
     // One badge for the meal, not one marker per food.
     expect((html.match(/> (?:<!-- -->)?From storage/g) ?? []).length).toBe(1);
@@ -422,15 +422,15 @@ describe("MealCard (render, storage-card styling — item 192)", () => {
     expect(html).not.toContain("mild rash");
   });
 
-  // Ledger 1152a (1146c option B): beside Reaction the badge is the 📦 alone
-  // at EVERY width (plain sr-only, no 360px breakpoint), still named "From storage".
-  it("beside the Reaction label the From storage badge is the 📦 alone at every width, its text for screen readers", () => {
+  // Ledger 1159a: the row badge is the 📦 alone on EVERY row at every width,
+  // with or without Reaction (plain sr-only, no breakpoint), still named "From storage".
+  it("the row's From storage badge is the 📦 alone at every width, with or without Reaction, its text for screen readers", () => {
+    const ALONE = /title="From storage"[^>]*>📦<span class="sr-only"> From storage<\/span><\/span>/;
     const both = renderMealCard({ ...baseMeal, reactionNote: "mild rash", foods: [food({ id: "food-1", storageItemId: "storage-1" })] }).replace(/<!-- -->/g, "");
-    expect(both).toMatch(/title="From storage"[^>]*>📦<span class="sr-only"> From storage<\/span><\/span>/);
-    expect(both).not.toContain("max-[359px]:sr-only");
-    // Storage only: the text shows from 360px up, as before.
+    expect(both).toMatch(ALONE);
     const storageOnly = renderMealCard({ ...baseMeal, foods: [food({ id: "food-1", storageItemId: "storage-1" })] }).replace(/<!-- -->/g, "");
-    expect(storageOnly).toMatch(/title="From storage"[^>]*>📦<span class="max-\[359px\]:sr-only"> From storage<\/span><\/span>/);
+    expect(storageOnly).toMatch(ALONE);
+    for (const html of [both, storageOnly]) expect(html).not.toMatch(/\]:sr-only|:not-sr-only/);
   });
 
   it("names the row's button 'Reaction: …' when the label shows (the label itself is hidden from screen readers)", () => {
@@ -720,9 +720,9 @@ describe("Home's fixed-height row and the full-meal sheet (ledger 1121)", () => 
     expect(html).not.toContain("mild rash");
   });
 
-  it("under 360px the From storage badge is the 📦 alone, still named for screen readers", () => {
+  it("the From storage badge is the 📦 alone at every width (ledger 1159a), still named for screen readers", () => {
     const html = renderRow(meal(["Egg"], { foods: [food({ name: "Egg", storageItemId: "s-1" })] }));
-    expect(html).toMatch(/<span [^>]*title="From storage"[^>]*>📦<span class="max-\[359px\]:sr-only"> From storage<\/span><\/span>/);
+    expect(html).toMatch(/<span [^>]*title="From storage"[^>]*>📦<span class="sr-only"> From storage<\/span><\/span>/);
   });
 
   it("the row is a button named by its lines (no edit link); a tap hands the meal to onOpen", () => {
