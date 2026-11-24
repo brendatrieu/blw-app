@@ -1,5 +1,5 @@
-// Ledger 966a: a container's meals are Food log cards, and their ⋮ Delete
-// asks right here. The component is called as a plain function with React's
+// Ledger 966a, 1146: a container's meals are Food log rows; a tap opens the
+// meal's sheet and ⋮ Delete (or the sheet's Delete) asks right here. The component is called as a plain function with React's
 // useState as a store and the meals query mocked (the CLAUDE.md idiom).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MealItem } from "@blw/shared";
@@ -22,7 +22,7 @@ vi.mock("../hooks.js", async (importOriginal) => ({
   useMeals: () => ({ data: { items: h.meals }, isLoading: false }),
 }));
 
-import { MealCard, MealDeleteDialog } from "./ServeLogList.js";
+import { MealCard, MealDeleteDialog, MealSheet } from "./ServeLogList.js";
 import { MealsFromBatch } from "./MealsFromBatch.js";
 
 interface El {
@@ -77,5 +77,19 @@ describe("MealsFromBatch delete (ledger 966a)", () => {
     expect(dialog!.props.onDeleted).toBeUndefined();
     (dialog!.props.onClose as () => void)();
     expect(findAll(render(), (el) => el.type === MealDeleteDialog)).toEqual([]);
+  });
+
+  it("a tap opens that meal's sheet; its Delete closes the sheet and asks the same question", () => {
+    let tree = render();
+    const sheetMeal = () => findAll(tree, (el) => el.type === MealSheet)[0]!.props.meal as MealItem | null;
+    expect(sheetMeal()).toBeNull();
+    const cards = findAll(tree, (el) => el.type === MealCard);
+    (cards[1]!.props.onOpen as (meal: MealItem) => void)(h.meals[2] as MealItem);
+    tree = render();
+    expect(sheetMeal()!.id).toBe("meal-3");
+    (findAll(tree, (el) => el.type === MealSheet)[0]!.props.onRequestDelete as (meal: MealItem) => void)(h.meals[2] as MealItem);
+    tree = render();
+    expect(sheetMeal()).toBeNull();
+    expect((findAll(tree, (el) => el.type === MealDeleteDialog)[0]!.props.meal as MealItem).id).toBe("meal-3");
   });
 });

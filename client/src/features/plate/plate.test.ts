@@ -25,6 +25,7 @@ import {
   fromMeal,
   fromPlanned,
   hasLeftovers,
+  leadLines,
   mealLines,
   nothingCounts,
   plateAddMoreServing,
@@ -444,6 +445,26 @@ describe("mealLines (CD-Food-Log)", () => {
       ["Lentil mash", true],
       ["Egg", undefined],
     ]);
+  });
+});
+
+describe("leadLines (ledger 1146: an allergen's items first)", () => {
+  const lines = ["a", "b", "c", "d", "e"].map((key) => ({ key }));
+  const keys = (lead?: string[]) => leadLines(lines, lead).map((line) => line.key);
+  it("puts the lead keys first, each group in plate order, whatever order lead names them", () => {
+    expect(keys(["d"])).toEqual(["d", "a", "b", "c", "e"]);
+    expect(keys(["e", "c"])).toEqual(["c", "e", "a", "b", "d"]);
+  });
+  it("keeps plate order with no lead (an older server), an empty one, or keys not on the plate", () => {
+    expect(keys()).toEqual(["a", "b", "c", "d", "e"]);
+    expect(keys([])).toEqual(["a", "b", "c", "d", "e"]);
+    expect(keys(["zz"])).toEqual(["a", "b", "c", "d", "e"]);
+  });
+  it("leads with a container part by its own key once containers are flattened", () => {
+    const flat = mealLines({ items: ITEMS, foods: [] }, { flattenContainers: true });
+    const part = flat[flat.length - 1]!;
+    expect(part.key).toBe(id(105));
+    expect(leadLines(flat, [part.key])[0]).toBe(part);
   });
 });
 

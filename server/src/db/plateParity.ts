@@ -156,7 +156,11 @@ export async function recordPlateParity(db: Database): Promise<ParityRecord> {
   for (const profile of Object.values(out.profile!) as ({ knownReactiveFoods: string[] } | null)[]) profile?.knownReactiveFoods.sort();
   for (const detail of Object.values(out.allergenDetail!) as ({ foods: Named[]; exposures: { foods: Named[] }[] } | null)[]) {
     detail?.foods.sort(byNameId);
-    for (const exposure of detail?.exposures ?? []) exposure.foods.sort(byNameId);
+    for (const exposure of (detail?.exposures ?? []) as { foods: Named[]; itemIds?: string[] }[]) {
+      exposure.foods.sort(byNameId);
+      // Ledger 1146: plate item ids, which a database from before 0024 has none of.
+      delete exposure.itemIds;
+    }
   }
   for (const meal of Object.values(out.loadMeals!) as { foods: Named[] }[]) meal.foods.sort(byNameId);
   return out;

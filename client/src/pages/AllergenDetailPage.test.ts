@@ -3,7 +3,8 @@ import { renderToString } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import { ALLERGEN_MAINTENANCE_DAYS, type AllergenDetail } from "@blw/shared";
+import { ALLERGEN_MAINTENANCE_DAYS, type AllergenDetail, type MealItem } from "@blw/shared";
+import { ApiError } from "../lib/api.js";
 import { trackingKeys } from "../features/tracking/hooks.js";
 import { formatAllergenDate } from "../features/tracking/allergenRow.js";
 import { AllergenDetailPage } from "./AllergenDetailPage.js";
@@ -107,9 +108,38 @@ function newClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
 
-function renderWithDetail(data: AllergenDetail, slug = SLUG) {
+/** A meal as GET /api/meals returns it: plate items in order, each item's id `item-<name>`. */
+function mealOf(id: string, servedAt: string, names: string[], extra: Partial<MealItem> = {}): MealItem {
+  const foods = names.map((name) => ({ id: `food-${name}`, slug: name.toLowerCase(), name, category: "protein" as const, storageItemId: null }));
+  return {
+    id,
+    babyId: BABY_ID,
+    servedAt,
+    reactionNote: null,
+    notes: null,
+    recipeId: null,
+    recipeTitle: null,
+    foods,
+    items: foods.map((food) => ({ kind: "food" as const, id: `item-${food.name}`, food, rating: null })),
+    ...extra,
+  };
+}
+
+/** The meals of `detail()`'s exposures, as the meals list (Home's) caches them. */
+const DEFAULT_MEALS = (): MealItem[] => [
+  mealOf(MEAL_ID, "2026-08-20T09:00:00.000Z", ["Banana", "Scrambled egg"], { reactionNote: "mild rash" }),
+];
+
+/** `meals`: the meals list's window (null = still loading); `single`: meals fetched on their own. */
+function renderWithDetail(
+  data: AllergenDetail,
+  slug = SLUG,
+  { meals = DEFAULT_MEALS(), single = [] }: { meals?: MealItem[] | null; single?: MealItem[] } = {},
+) {
   const queryClient = newClient();
   queryClient.setQueryData(trackingKeys.allergenDetail(BABY_ID, slug), data);
+  if (meals) queryClient.setQueryData([...trackingKeys.meals(BABY_ID), { limit: 100 }], { items: meals });
+  for (const meal of single) queryClient.setQueryData(trackingKeys.meal(meal.id), meal);
   return renderAtRoute(queryClient, slug);
 }
 
@@ -423,21 +453,45 @@ describe("AllergenDetailPage — a deleted food", () => {
   });
 
   it("marks it in the exposure history too, with the same muted mark as its row (ledger 555)", () => {
-    const marks = renderWithDetail(withDeleted()).match(
+    const omelette = { id: CUSTOM_FOOD_ID, slug: "nans-omelette", name: "Nan's omelette", category: "protein" as const, deleted: true };
+    const meal = { ...DEFAULT_MEALS()[0]!, items: [{ kind: "food" as const, id: "item-omelette", food: omelette, rating: null }] };
+    const marks = renderWithDetail(withDeleted(), SLUG, { meals: [meal] }).match(
       /Nan&#x27;s omelette<span class="font-normal text-\[var\(--color-text-muted\)\]">\u00a0(?:<!-- -->)?\(deleted\)<\/span>/g,
     );
-    // The food row and the exposure line.
+    // The food row and the meal's row.
     expect(marks).toHaveLength(2);
   });
 });
 
-describe("AllergenDetailPage exposure history (item 187)", () => {
-  it("lists each exposure with its foods and reaction, linking the row to the meal editor", () => {
-    const html = renderWithDetail(detail());
-    expect(html).toMatch(/Meals with (?:<!-- -->)?[a-z]/);
-    expect(html).toContain(`href="/log-meal?edit=${MEAL_ID}"`);
-    expect(html).toContain("Scrambled egg");
-    expect(html).toMatch(/Reaction: (?:<!-- -->)?mild rash/);
+// Ledger 1146: the history is the Food log's one-line rows: a tap opens the
+// meal's sheet, ⋮ has Edit and Delete, the carrying item is named first.
+describe("AllergenDetailPage exposure history (items 187, 1146)", () => {
+  const row = (html: string, mealName: string) => {
+    const start = html.lastIndexOf("<li", html.indexOf(mealName));
+    return html.slice(start, html.indexOf("</li>", start));
+  };
+  const names = (html: string) =>
+    [...html.replace(/<!-- -->/g, "").matchAll(/<span class="min-w-0 truncate text-sm[^"]*">([\s\S]*?)<\/span>/g)].map((m) => m[1]);
+
+  it("lists each exposure as a one-line row with the Reaction label, ⋮ Actions, and no edit link", () => {
+    const html = renderWithDetail(detail()).replace(/<!-- -->/g, "");
+    expect(html).toMatch(/Meals with [a-z]/);
+    expect(html).not.toContain(`href="/log-meal?edit=${MEAL_ID}"`);
+    expect(html).toContain('<button type="button" aria-haspopup="dialog"');
+    expect(html).toContain(">Reaction</span>");
+    expect(html).toContain('<span class="sr-only">Reaction: </span>');
+    expect(html).not.toContain("mild rash");
+    // Ledger 1152a: named after the meal, as on Home.
+    expect(html).toMatch(/aria-label="[^"]+ actions"/);
+    expect(html).not.toContain('aria-label="Actions"');
+  });
+
+  it("names the carrying item(s) first, from the server's itemIds; an older server's body keeps plate order", () => {
+    const meal = mealOf(MEAL_ID, "2026-08-20T09:00:00.000Z", ["Pear", "Oats", "Scrambled egg", "Banana", "Omelette"]);
+    const withItems = detail({ exposures: [{ ...detail().exposures[0]!, itemIds: ["item-Scrambled egg", "item-Omelette"] }] });
+    expect(names(renderWithDetail(withItems, SLUG, { meals: [meal] }))).toEqual(["Scrambled egg, Omelette"]);
+    // No itemIds (an older server, or a cached body): plate order, no failure.
+    expect(names(renderWithDetail(detail(), SLUG, { meals: [meal] }))).toEqual(["Pear, Oats"]);
   });
 
   it("keeps the list newest-first, in the order the server returned", () => {
@@ -447,26 +501,49 @@ describe("AllergenDetailPage exposure history (item 187)", () => {
       detail({
         exposures: [
           ...detail().exposures,
-          {
-            mealId: olderMealId,
-            servedAt: older,
-            foods: [{ id: CUSTOM_FOOD_ID, name: "Nan's omelette", emoji: "🍳" }],
-            reaction: null,
-            notes: null,
-          },
+          { mealId: olderMealId, servedAt: older, foods: [{ id: CUSTOM_FOOD_ID, name: "Nan's omelette", emoji: "🍳" }], reaction: null, notes: null },
         ],
       }),
+      SLUG,
+      { meals: [mealOf(olderMealId, older, ["Toast"]), ...DEFAULT_MEALS()] },
     );
-    expect(html.indexOf(`href="/log-meal?edit=${MEAL_ID}"`)).toBeLessThan(
-      html.indexOf(`href="/log-meal?edit=${olderMealId}"`),
-    );
+    expect(names(html)).toEqual(["Banana, Scrambled egg", "Toast"]);
+    expect(row(html, "Toast")).not.toContain("Reaction");
+  });
+
+  it("a meal outside the meals list's window renders as the same row, from its own GET /api/meals/:id", () => {
+    const oldId = "77777777-7777-4777-8777-777777777777";
+    const old = mealOf(oldId, "2025-12-01T09:00:00.000Z", ["Egg muffin"]);
+    const data = detail({ exposures: [{ ...detail().exposures[0]!, mealId: oldId, servedAt: old.servedAt }] });
+    const html = renderWithDetail(data, SLUG, { meals: DEFAULT_MEALS(), single: [old] });
+    expect(names(html)).toEqual(["Egg muffin"]);
+    expect(html).toContain('<button type="button" aria-haspopup="dialog"');
+  });
+
+  it("until the meals list answers, each row holds its place at the row's height", () => {
+    const html = renderWithDetail(detail(), SLUG, { meals: null });
+    expect(names(html)).toEqual([]);
+    expect(html).toMatch(/<li class="app-card flex flex-col justify-center rounded-\[var\(--radius-lg\)\] border px-3 h-\[92px\]">/);
+  });
+
+  const renderWithMealError = (error: Error) => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } });
+    queryClient.setQueryData(trackingKeys.allergenDetail(BABY_ID, SLUG), detail());
+    queryClient.setQueryData([...trackingKeys.meals(BABY_ID), { limit: 100 }], { items: [] });
+    queryClient.getQueryCache().build(queryClient, { queryKey: trackingKeys.meal(MEAL_ID) }).setState({ status: "error", error, fetchStatus: "idle" });
+    return renderAtRoute(queryClient);
+  };
+
+  it("a meal that is gone (404) leaves no row; any other failure says so on the row", () => {
+    expect(renderWithMealError(new ApiError(404, "not_found"))).not.toContain("<li class=\"app-card flex flex-col justify-center");
+    expect(renderWithMealError(new Error("offline"))).toMatch(/Couldn(?:&#x27;|')t load this meal\./);
   });
 
   it("shows the empty state with the guidance nudge when nothing has been logged", () => {
     const html = renderWithDetail(detail({ exposures: [] }));
     expect(html).toContain("No servings logged yet");
     expect(html).toContain("Offer well-cooked egg in the morning at home.");
-    expect(html).not.toContain("/log-meal?edit=");
+    expect(html).not.toContain('aria-haspopup="dialog"');
   });
 });
 
@@ -526,8 +603,13 @@ describe("AllergenDetailPage — foods that never move the ladder (ledger 836, 8
     };
   };
 
+  const milkMeals = () => [
+    mealOf(MEAL_ID, "2026-08-20T09:00:00.000Z", ["Oats", "Unsalted Butter"]),
+    mealOf("99999999-9999-4999-8999-999999999999", "2026-08-19T09:00:00.000Z", ["Yogurt"]),
+  ];
+
   it("says why under butter, and nothing under whole milk (ledger 881b) or yogurt", () => {
-    const html = renderWithDetail(milkDetail(), "milk");
+    const html = renderWithDetail(milkDetail(), "milk", { meals: milkMeals() });
     expect(html).toMatch(/Doesn(?:&#x27;|')t count toward the 3 servings: almost no milk protein\./);
     expect(html).not.toContain("when served on its own");
     expect(html).not.toContain("Counts toward the 3 servings");
@@ -542,12 +624,15 @@ describe("AllergenDetailPage — foods that never move the ladder (ledger 836, 8
     expect(html).toContain(`/log-meal?food=${YOGURT_ID}`);
   });
 
-  it("marks only the meal that did not count", () => {
-    const html = renderWithDetail(milkDetail(), "milk");
+  it("marks only the meal that did not count, under its food line", () => {
+    const html = renderWithDetail(milkDetail(), "milk", { meals: milkMeals() });
     expect(html.match(/Didn(?:&#x27;|')t count toward the 3 servings/g)).toHaveLength(1);
+    expect(html).toMatch(/<\/button><p class="text-xs text-\[var\(--color-text-muted\)\]">Didn(?:&#x27;|')t count toward the 3 servings<\/p><\/li>/);
+    // Its placeholder, while the meal loads, is that row's height.
+    expect(renderWithDetail(milkDetail(), "milk", { meals: null })).toContain("h-[108px]");
     // A body cached before the flag (no `counted`) reads as counted.
     const cached = milkDetail();
     cached.exposures = cached.exposures.map(({ counted: _counted, ...rest }) => rest);
-    expect(renderWithDetail(cached, "milk")).not.toMatch(/Didn(?:&#x27;|')t count/);
+    expect(renderWithDetail(cached, "milk", { meals: milkMeals() })).not.toMatch(/Didn(?:&#x27;|')t count/);
   });
 });

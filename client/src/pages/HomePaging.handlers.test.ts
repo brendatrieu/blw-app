@@ -549,10 +549,17 @@ describe("Home's Food log: fixed-height pages, a tap opens the meal (ledger 1121
     expect((find(tree, MealDeleteDialog)!.props.meal as { id: string }).id).toBe("meal-0");
   });
 
-  it("/meals (no limit) keeps its cards and their edit link: no fixed rows", () => {
-    const tree = (ServeLogList as unknown as (p: unknown) => unknown)({ babyId: "b", showHeading: false });
+  it("/meals (no limit, ledger 1146): no pages, but the same rows, and a tap opens the same sheet", () => {
+    h.store.i = 0;
+    h.store.r = 0;
+    let tree = (ServeLogList as unknown as (p: unknown) => unknown)({ babyId: "b", showHeading: false });
     expect(find(tree, PageTrack)).toBeNull();
-    expect(find(tree, MealCard)!.props.onOpen).toBeUndefined();
+    const row = find(tree, MealCard)!;
+    (row.props.onOpen as (meal: unknown) => void)(row.props.meal);
+    h.store.i = 0;
+    h.store.r = 0;
+    tree = (ServeLogList as unknown as (p: unknown) => unknown)({ babyId: "b", showHeading: false });
+    expect(sheet(tree).meal?.id).toBe((row.props.meal as { id: string }).id);
   });
 });
 
