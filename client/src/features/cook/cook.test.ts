@@ -144,5 +144,9 @@ describe("scrollCue: the long step's scroll cue (ledger 1153b/c, 1141b)", () => 
     const moved = scrollCue(up, el(58));
     expect(moved).not.toBe(up);
     expect(moved!.size).toBe(up.size);
+    // Same top (scrollTop 0), new size (a resize or reflow): a new state, never the stale thumb.
+    const atTop = scrollCue(null, el(0))!;
+    expect(scrollCue(atTop, el(0, 600))).toEqual({ top: 0, size: 433 / 600 });
+    expect(scrollCue(atTop, el(0, 547, 400))).toEqual({ top: 0, size: 400 / 547 });
   });
 });

@@ -301,11 +301,11 @@ describe("CookPage: the long step's scroll cue (ledger 1153b/c)", () => {
   const SCROLLER = 1;
   const CUE = 2;
 
-  function fakeScroller(scrollTop = 0) {
+  function fakeScroller(scrollTop = 0, scrollHeight = 547) {
     const on = new Map<string, () => void>();
     const el = {
       scrollTop,
-      scrollHeight: 547,
+      scrollHeight,
       clientHeight: 433,
       firstElementChild: {},
       addEventListener: (type: string, fn: () => void) => on.set(type, fn),
@@ -361,6 +361,15 @@ describe("CookPage: the long step's scroll cue (ledger 1153b/c)", () => {
     expect(Array.isArray(deps[i])).toBe(true);
     expect(deps[i]).toContain(2);
     expect(deps[i]).toContain(RECIPE);
+  });
+
+  it("hides the cue when only the bottom padding overflows (reads the scroller's paddingBottom)", () => {
+    render("?stage=9&step=2");
+    h.store.state[CUE] = { top: 0, size: 0.5 };
+    for (const overflow of [24, 21]) {
+      measuring(fakeScroller(0, 433 + overflow).el);
+      expect(h.store.state[CUE]).toBeNull();
+    }
   });
 
   it("keeps the same cue state for the same numbers (a measure never re-renders)", () => {
