@@ -1019,12 +1019,25 @@ input[type="search"]::-webkit-search-cancel-button {
   animation: cook-slide-in var(--duration-base) var(--ease-out) both;
 }
 /* Ledger 1153b (1141b): the step's scroll cue track, frosted like the bars
-   (bar glass + blur + hairline). No transition, so nothing to reduce. */
+   (bar glass + blur + hairline). No transition, so nothing to reduce. Without
+   blur, or with less transparency asked for, near-opaque as .app-frost (1154b). */
 .cook-cue {
   background-color: var(--color-bar-glass);
   box-shadow: inset 0 0 0 0.5px var(--color-bar-hairline);
   -webkit-backdrop-filter: var(--bar-filter);
   backdrop-filter: var(--bar-filter);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .cook-cue {
+    background-color: var(--color-app-solid);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .cook-cue {
+    background-color: var(--color-app-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 /* -------------------------------------------------------------------------

@@ -172,12 +172,12 @@ export function CookPage() {
           {/* Ledger 1147: amounts mid-cook without leaving; the title truncates first. */}
           {!waiting && recipe && showsIngredients(screen, recipe) ? (
             <>
-              {/* Ledger 1153a: frosted, the card glass + hairline, a lifting shadow and the
-                  bars' 22px blur (Tailwind emits the -webkit- twin for iOS Safari). */}
+              {/* Ledger 1154a (proto option C): the nutrient chip's sea tint and its
+                  on-glass ink, a gated pairing; no border, shadow or blur. */}
               <Button
                 type="button"
                 variant="quiet"
-                className="shrink-0 !border-[var(--color-card-glass-border)] !bg-[var(--color-card-glass)] shadow-[var(--shadow-md)] backdrop-blur-[22px]"
+                className="shrink-0 !bg-[var(--color-primary-soft)] !text-[var(--color-primary-soft-text)]"
                 onClick={() => setIngredientsOpen(true)}
               >
                 Ingredients

@@ -303,24 +303,39 @@ describe("CookPage: the long step's scroll cue (ledger 1153b/c)", () => {
 
   function fakeScroller(scrollTop = 0, scrollHeight = 547) {
     const on = new Map<string, () => void>();
+    const child = {};
     const el = {
       scrollTop,
       scrollHeight,
       clientHeight: 433,
-      firstElementChild: {},
+      firstElementChild: child,
       addEventListener: (type: string, fn: () => void) => on.set(type, fn),
-      removeEventListener: (type: string) => on.delete(type),
+      // Ledger 1154c: like the DOM, only the same function comes off.
+      removeEventListener: (type: string, fn: () => void) => on.get(type) === fn && on.delete(type),
     };
-    return { el, on };
+    return { el, on, child };
   }
+
+  // What the ResizeObserver stub saw: its callback, the targets, disconnects.
+  const ro = { callback: null as (() => void) | null, observed: [] as unknown[], disconnects: 0 };
 
   beforeEach(() => {
     vi.stubGlobal("getComputedStyle", () => ({ paddingBottom: "24px" }));
+    ro.callback = null;
+    ro.observed = [];
+    ro.disconnects = 0;
     vi.stubGlobal(
       "ResizeObserver",
       class {
-        observe() {}
-        disconnect() {}
+        constructor(callback: () => void) {
+          ro.callback = callback;
+        }
+        observe(target: unknown) {
+          ro.observed.push(target);
+        }
+        disconnect() {
+          ro.disconnects++;
+        }
       },
     );
   });
@@ -342,6 +357,18 @@ describe("CookPage: the long step's scroll cue (ledger 1153b/c)", () => {
     expect((h.store.state[CUE] as { top: number }).top).toBeCloseTo(1 - 433 / 547, 12);
     runs.forEach((run) => typeof run.cleanup === "function" && run.cleanup());
     expect(on.has("scroll")).toBe(false);
+    expect(ro.disconnects).toBe(1);
+  });
+
+  it("re-measures when the scroller or its content resizes (ResizeObserver on both, ledger 1154c)", () => {
+    render("?stage=9&step=2");
+    const { el, child } = fakeScroller();
+    measuring(el);
+    expect(ro.observed).toEqual([el, child]);
+    expect(h.store.state[CUE]).toEqual({ top: 0, size: 433 / 547 });
+    el.scrollHeight = 866;
+    ro.callback!();
+    expect(h.store.state[CUE]).toEqual({ top: 0, size: 0.5 });
   });
 
   it("has a deps list with the step index (no run-every-render loop; the scroller is keyed by step)", () => {
@@ -388,6 +415,8 @@ describe("CookPage: the long step's scroll cue (ledger 1153b/c)", () => {
     expect(String(cue.props.className).split(" ")).toEqual(expect.arrayContaining(["cook-cue", "pointer-events-none", "absolute"]));
     const thumb = cue.props.children as El;
     expect(thumb.props.style).toEqual({ top: "25%", height: "50%" });
+    // Ledger 1154c: the solid thumb in the muted ink (its glass shade on the ground).
+    expect(String(thumb.props.className).split(" ")).toContain("bg-[var(--color-text-muted)]");
     h.store.state[CUE] = null;
     expect(all(render("?stage=9&step=2").tree).some((el) => "data-cook-cue" in el.props)).toBe(false);
   });

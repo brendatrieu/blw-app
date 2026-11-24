@@ -136,17 +136,11 @@ describe("CookPage screens (ledger 1095, copy 1098)", () => {
     expect(renderCook("?stage=6&step=1", { ...RECIPE, ingredients: [], extraIngredients: [] })).not.toContain(">Ingredients<");
   });
 
-  it("frosts the Ingredients button: card glass + hairline over the quiet fill, a lifting shadow, the 22px blur (ledger 1153a)", () => {
+  it("tints the Ingredients button sea: the nutrient chip's soft fill and ink, nothing frosted (ledger 1154a, option C)", () => {
     const html = renderCook("?stage=6&step=1");
     const cls = html.match(/<button[^>]*class="([^"]*)"[^>]*>Ingredients<\/button>/)![1]!.split(" ");
-    for (const c of [
-      "!border-[var(--color-card-glass-border)]",
-      "!bg-[var(--color-card-glass)]",
-      "shadow-[var(--shadow-md)]",
-      "backdrop-blur-[22px]",
-    ]) {
-      expect(cls).toContain(c);
-    }
+    expect(cls).toEqual(expect.arrayContaining(["!bg-[var(--color-primary-soft)]", "!text-[var(--color-primary-soft-text)]"]));
+    expect(cls.filter((c) => /card-glass|shadow-|backdrop-|apricot/.test(c))).toEqual([]);
   });
 
   it("frosts the scroll cue's track like the bars, -webkit- twin for iOS Safari (ledger 1153b)", () => {
@@ -156,6 +150,14 @@ describe("CookPage screens (ledger 1095, copy 1098)", () => {
     expect(rule).toContain("box-shadow: inset 0 0 0 0.5px var(--color-bar-hairline);");
     expect(rule).toContain("-webkit-backdrop-filter: var(--bar-filter);");
     expect(rule).toMatch(/\n\s*backdrop-filter: var\(--bar-filter\);/);
+  });
+
+  it("gives the cue track .app-frost's near-opaque fallbacks: no blur, or less transparency asked for (ledger 1154b)", () => {
+    const css = readFileSync(new URL("../../styles/index.css", import.meta.url), "utf8");
+    const after = css.slice(css.indexOf(".cook-cue {"));
+    expect(after).toMatch(
+      /^\.cook-cue \{[^}]*\}\s*@supports not \(\(backdrop-filter: blur\(1px\)\) or \(-webkit-backdrop-filter: blur\(1px\)\)\) \{\s*\.cook-cue \{\s*background-color: var\(--color-app-solid\);\s*\}\s*\}\s*@media \(prefers-reduced-transparency: reduce\) \{\s*\.cook-cue \{\s*background-color: var\(--color-app-solid\);\s*-webkit-backdrop-filter: none;\s*backdrop-filter: none;\s*\}\s*\}/,
+    );
   });
 
   it("shows no scroll cue before anything is measured (a reload lands on the step's top)", () => {
